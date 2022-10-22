@@ -1,5 +1,5 @@
 """Mixin classes with reduction operations."""
-# This file was generated using xarray.util.generate_reductions. Do not edit manually.
+# This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
 
@@ -21,831 +21,7 @@ except ImportError:
     flox = None  # type: ignore
 
 
-class DatasetCumulatives:
-    __slots__ = ()
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> Dataset:
-        raise NotImplementedError()
-
-    def cumsum(
-        self,
-        dim: Dims = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, or None, default: None
-            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumsum`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : Dataset
-            New Dataset with ``cumsum`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumsum
-        dask.array.cumsum
-        DataArray.cumsum
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
-
-        >>> ds.cumsum()
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 3.0 6.0 10.0 6.0 ... 67.0 28.0 60.0 85.0 125.0
-        >>> ds.cumsum()["da"]
-        <xarray.DataArray 'da' (x: 4, y: 4)>
-        array([[  1.,   3.,   6.,  10.],
-               [  6.,  14.,  24.,  36.],
-               [ 15.,  33.,  43.,  67.],
-               [ 28.,  60.,  85., 125.]])
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-    def cumprod(
-        self,
-        dim: Dims = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, or None, default: None
-            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumprod`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : Dataset
-            New Dataset with ``cumprod`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumprod
-        dask.array.cumprod
-        DataArray.cumprod
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
-
-        >>> ds.cumprod()
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 2.0 6.0 24.0 ... 9.828e+05 3.096e+08 1.902e+12
-        >>> ds.cumprod()["da"]
-        <xarray.DataArray 'da' (x: 4, y: 4)>
-        array([[1.00000000e+00, 2.00000000e+00, 6.00000000e+00, 2.40000000e+01],
-               [5.00000000e+00, 6.00000000e+01, 1.26000000e+03, 4.03200000e+04],
-               [4.50000000e+01, 5.40000000e+03, 1.13400000e+05, 4.35456000e+07],
-               [5.85000000e+02, 9.82800000e+05, 3.09582000e+08, 1.90207181e+12]])
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-
-class DataArrayCumulatives:
-    __slots__ = ()
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> DataArray:
-        raise NotImplementedError()
-
-    def cumsum(
-        self,
-        dim: Dims = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, or None, default: None
-            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumsum`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray with ``cumsum`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumsum
-        dask.array.cumsum
-        Dataset.cumsum
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> da
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 1.,  2.,  3.,  4.],
-               [ 5.,  6.,  7.,  8.],
-               [ 9., 10., nan, 12.],
-               [13., 14., 15., 16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-
-        >>> da.cumsum()
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[  1.,   3.,   6.,  10.],
-               [  6.,  14.,  24.,  36.],
-               [ 15.,  33.,  43.,  67.],
-               [ 28.,  60.,  85., 125.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-    def cumprod(
-        self,
-        dim: Dims = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, or None, default: None
-            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumprod`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray with ``cumprod`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumprod
-        dask.array.cumprod
-        Dataset.cumprod
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> da
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 1.,  2.,  3.,  4.],
-               [ 5.,  6.,  7.,  8.],
-               [ 9., 10., nan, 12.],
-               [13., 14., 15., 16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-
-        >>> da.cumprod()
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[1.00000000e+00, 2.00000000e+00, 6.00000000e+00, 2.40000000e+01],
-               [5.00000000e+00, 6.00000000e+01, 1.26000000e+03, 4.03200000e+04],
-               [4.50000000e+01, 5.40000000e+03, 1.13400000e+05, 4.35456000e+07],
-               [5.85000000e+02, 9.82800000e+05, 3.09582000e+08, 1.90207181e+12]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-
-class DataArrayGroupByCumulatives:
-    _obj: DataArray
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> DataArray:
-        raise NotImplementedError()
-
-    def cumsum(
-        self,
-        dim: Dims | ellipsis = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, "..." or None, default: None
-            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
-            If "...", will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumsum`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray with ``cumsum`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumsum
-        dask.array.cumsum
-        DataArray.cumsum
-        :ref:`groupby`
-            User guide on groupby operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> da
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 1.,  2.,  3.,  4.],
-               [ 5.,  6.,  7.,  8.],
-               [ 9., 10., nan, 12.],
-               [13., 14., 15., 16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-
-        >>> da.groupby("labels").cumsum()
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 1.,  3.,  3.,  4.],
-               [ 5., 11.,  7.,  8.],
-               [ 9., 19.,  0., 12.],
-               [13., 27., 15., 16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-    def cumprod(
-        self,
-        dim: Dims | ellipsis = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, "..." or None, default: None
-            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
-            If "...", will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumprod`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray with ``cumprod`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumprod
-        dask.array.cumprod
-        DataArray.cumprod
-        :ref:`groupby`
-            User guide on groupby operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> da
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 1.,  2.,  3.,  4.],
-               [ 5.,  6.,  7.,  8.],
-               [ 9., 10., nan, 12.],
-               [13., 14., 15., 16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-
-        >>> da.groupby("labels").cumprod()
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[  1.,   2.,   3.,   4.],
-               [  5.,  30.,   7.,   8.],
-               [  9.,  90.,   1.,  12.],
-               [ 13., 182.,  15.,  16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-
-class DatasetGroupByCumulatives:
-    _obj: Dataset
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> Dataset:
-        raise NotImplementedError()
-
-    def cumsum(
-        self,
-        dim: Dims | ellipsis = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, "..." or None, default: None
-            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
-            If "...", will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumsum`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : Dataset
-            New Dataset with ``cumsum`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumsum
-        dask.array.cumsum
-        DataArray.cumsum
-        :ref:`groupby`
-            User guide on groupby operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
-
-        >>> ds.groupby("labels").cumsum()
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 3.0 3.0 4.0 5.0 ... 12.0 13.0 27.0 15.0 16.0
-        >>> ds.groupby("labels").cumsum()["da"]
-        <xarray.DataArray 'da' (x: 4, y: 4)>
-        array([[ 1.,  3.,  3.,  4.],
-               [ 5., 11.,  7.,  8.],
-               [ 9., 19.,  0., 12.],
-               [13., 27., 15., 16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-    def cumprod(
-        self,
-        dim: Dims | ellipsis = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str, Iterable of Hashable, "..." or None, default: None
-            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
-            If "...", will reduce over all dimensions.
-        skipna : bool or None, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or ``skipna=True`` has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool or None, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
-        **kwargs : Any
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``cumprod`` on this object's data.
-            These could include dask-specific kwargs like ``split_every``.
-
-        Returns
-        -------
-        reduced : Dataset
-            New Dataset with ``cumprod`` applied to its data and the
-            indicated dimension(s) removed
-
-        See Also
-        --------
-        numpy.cumprod
-        dask.array.cumprod
-        DataArray.cumprod
-        :ref:`groupby`
-            User guide on groupby operations.
-
-        Examples
-        --------
-
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-            lat      (y) int64 40 45 50 55
-            labels   (y) <U1 'a' 'a' 'b' 'c'
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
-
-        >>> ds.groupby("labels").cumprod()
-        <xarray.Dataset>
-        Dimensions:  (x: 4, y: 4)
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-        Dimensions without coordinates: x, y
-        Data variables:
-            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 ... 12.0 13.0 182.0 15.0 16.0
-        >>> ds.groupby("labels").cumprod()["da"]
-        <xarray.DataArray 'da' (x: 4, y: 4)>
-        array([[  1.,   2.,   3.,   4.],
-               [  5.,  30.,   7.,   8.],
-               [  9.,  90.,   1.,  12.],
-               [ 13., 182.,  15.,  16.]])
-        Coordinates:
-            lon      (x) int64 10 15 20 25
-        Dimensions without coordinates: x, y
-        """
-        return self.reduce(
-            duck_array_ops.cumprod,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-
-
-class DatasetReductions:
+class DatasetAggregations:
     __slots__ = ()
 
     def reduce(
@@ -908,10 +84,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -925,7 +98,7 @@ class DatasetReductions:
         <xarray.Dataset>
         Dimensions:  ()
         Data variables:
-            da       int64 5
+            da       int32 5
         """
         return self.reduce(
             duck_array_ops.count,
@@ -983,10 +156,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1058,10 +228,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1139,10 +306,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1229,10 +393,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1323,10 +484,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1424,10 +582,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1534,10 +689,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1641,10 +793,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1748,10 +897,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1851,10 +997,7 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1887,8 +1030,186 @@ class DatasetReductions:
             **kwargs,
         )
 
+    def cumsum(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
 
-class DataArrayReductions:
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        DataArray.cumsum
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.cumsum()
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 3.0 6.0 7.0 9.0 9.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.cumsum(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 3.0 6.0 7.0 9.0 nan
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        DataArray.cumprod
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.cumprod()
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 2.0 6.0 6.0 12.0 12.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.cumprod(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 2.0 6.0 6.0 12.0 nan
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+
+class DataArrayAggregations:
     __slots__ = ()
 
     def reduce(
@@ -1951,7 +1272,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2018,7 +1338,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -2085,7 +1404,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -2158,7 +1476,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2238,7 +1555,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2322,7 +1638,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2413,7 +1728,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2511,7 +1825,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2606,7 +1919,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2701,7 +2013,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2792,7 +2103,6 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2818,8 +2128,178 @@ class DataArrayReductions:
             **kwargs,
         )
 
+    def cumsum(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
 
-class DatasetGroupByReductions:
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        Dataset.cumsum
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.cumsum()
+        <xarray.DataArray (time: 6)>
+        array([1., 3., 6., 7., 9., 9.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.cumsum(skipna=False)
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  3.,  6.,  7.,  9., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        Dataset.cumprod
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.cumprod()
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  6.,  6., 12., 12.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.cumprod(skipna=False)
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  6.,  6., 12., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+
+class DatasetGroupByAggregations:
     _obj: Dataset
 
     def reduce(
@@ -2890,10 +2370,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -2978,10 +2455,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3066,10 +2540,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3160,10 +2631,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3266,10 +2734,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3376,10 +2841,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3493,10 +2955,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3622,10 +3081,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3748,10 +3204,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3874,10 +3327,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3996,10 +3446,7 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4036,8 +3483,188 @@ class DatasetGroupByReductions:
             **kwargs,
         )
 
+    def cumsum(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
 
-class DatasetResampleReductions:
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        Dataset.cumsum
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.groupby("labels").cumsum()
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 4.0 4.0 1.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.groupby("labels").cumsum(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 4.0 4.0 nan
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        Dataset.cumprod
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.groupby("labels").cumprod()
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 3.0 4.0 1.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.groupby("labels").cumprod(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Dimensions without coordinates: time
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 3.0 4.0 nan
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+
+class DatasetResampleAggregations:
     _obj: Dataset
 
     def reduce(
@@ -4108,10 +3735,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4196,10 +3820,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4284,10 +3905,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4378,10 +3996,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4484,10 +4099,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4594,10 +4206,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4711,10 +4320,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4840,10 +4446,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4966,10 +4569,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -5092,10 +4692,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -5214,10 +4811,7 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
-        >>> ds = xr.Dataset(
-        ...     dict(da=da),
-        ... )
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -5254,8 +4848,168 @@ class DatasetResampleReductions:
             **kwargs,
         )
 
+    def cumsum(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
 
-class DataArrayGroupByReductions:
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        Dataset.cumsum
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.resample(time="3M").cumsum()
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.resample(time="3M").cumsum(skipna=False)
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """
+        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        Dataset.cumprod
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.resample(time="3M").cumprod()
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.resample(time="3M").cumprod(skipna=False)
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+
+class DataArrayGroupByAggregations:
     _obj: DataArray
 
     def reduce(
@@ -5326,7 +5080,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5336,7 +5089,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").count()
         <xarray.DataArray (labels: 3)>
-        array([1, 2, 2])
+        array([1, 2, 2], dtype=int64)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
@@ -5405,7 +5158,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -5484,7 +5236,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -5569,7 +5320,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5664,7 +5414,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5763,7 +5512,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5869,7 +5617,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5985,7 +5732,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6098,7 +5844,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6211,7 +5956,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6320,7 +6064,6 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6350,8 +6093,180 @@ class DataArrayGroupByReductions:
             **kwargs,
         )
 
+    def cumsum(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
 
-class DataArrayResampleReductions:
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        DataArray.cumsum
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.groupby("labels").cumsum()
+        <xarray.DataArray (time: 6)>
+        array([1., 2., 3., 4., 4., 1.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.groupby("labels").cumsum(skipna=False)
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  4.,  4., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        DataArray.cumprod
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.groupby("labels").cumprod()
+        <xarray.DataArray (time: 6)>
+        array([1., 2., 3., 3., 4., 1.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.groupby("labels").cumprod(skipna=False)
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  3.,  4., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+
+class DataArrayResampleAggregations:
     _obj: DataArray
 
     def reduce(
@@ -6422,7 +6337,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6432,7 +6346,7 @@ class DataArrayResampleReductions:
 
         >>> da.resample(time="3M").count()
         <xarray.DataArray (time: 3)>
-        array([1, 3, 1])
+        array([1, 3, 1], dtype=int64)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
@@ -6501,7 +6415,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -6580,7 +6493,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -6665,7 +6577,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6760,7 +6671,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6859,7 +6769,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6965,7 +6874,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7081,7 +6989,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7194,7 +7101,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7307,7 +7213,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7416,7 +7321,6 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7440,6 +7344,178 @@ class DataArrayResampleReductions:
         """
         return self.reduce(
             duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumsum(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumsum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``cumsum`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumsum
+        dask.array.cumsum
+        DataArray.cumsum
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.resample(time="3M").cumsum()
+        <xarray.DataArray (time: 6)>
+        array([1., 2., 5., 6., 2., 2.])
+        Coordinates:
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.resample(time="3M").cumsum(skipna=False)
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  5.,  6.,  2., nan])
+        Coordinates:
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
+        """
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
+    def cumprod(
+        self,
+        dim: Dims | ellipsis = None,
+        *,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        """
+        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool or None, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False, the new object will be
+            returned without attributes.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``cumprod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``cumprod`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.cumprod
+        dask.array.cumprod
+        DataArray.cumprod
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.resample(time="3M").cumprod()
+        <xarray.DataArray (time: 6)>
+        array([1., 2., 6., 6., 2., 2.])
+        Coordinates:
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.resample(time="3M").cumprod(skipna=False)
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  6.,  6.,  2., nan])
+        Coordinates:
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
+        """
+        return self.reduce(
+            duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,

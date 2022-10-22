@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
-# This file was generated using xarray.util.generate_reductions. Do not edit manually.
+# This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
 
@@ -41,24 +41,7 @@ except ImportError:
 
 DEFAULT_PREAMBLE = """
 
-class {obj}{cls}Reductions:
-    __slots__ = ()
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> {obj}:
-        raise NotImplementedError()"""
-
-DEFAULT_CUMULATIVE_PREAMBLE = """
-
-class {obj}{cls}Cumulatives:
+class {obj}{cls}Aggregations:
     __slots__ = ()
 
     def reduce(
@@ -75,7 +58,7 @@ class {obj}{cls}Cumulatives:
 
 GROUPBY_PREAMBLE = """
 
-class {obj}{cls}Reductions:
+class {obj}{cls}Aggregations:
     _obj: {obj}
 
     def reduce(
@@ -97,26 +80,9 @@ class {obj}{cls}Reductions:
     ) -> {obj}:
         raise NotImplementedError()"""
 
-GROUPBY_CUMULATIVE_PREAMBLE = """
-
-class {obj}{cls}Cumulatives:
-    _obj: {obj}
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> {obj}:
-        raise NotImplementedError()"""
-
 RESAMPLE_PREAMBLE = """
 
-class {obj}{cls}Reductions:
+class {obj}{cls}Aggregations:
     _obj: {obj}
 
     def reduce(
@@ -204,12 +170,6 @@ _DIM_DOCSTRING_GROUPBY = """dim : str, Iterable of Hashable, "..." or None, defa
     or ``dim=["x", "y"]``. If None, will reduce over the {cls} dimensions.
     If "...", will reduce over all dimensions."""
 
-CUMULATIVE_DIM_DOCSTRING = """dim: str or sequence of str, optional
-    Dimension over which to apply `{method}`."""
-
-_AXIS_DOCSTRING = """axis: int or sequence of int, optional
-    Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied."""
-
 _SKIPNA_DOCSTRING = """skipna : bool or None, optional
     If True, skip missing values (as marked by NaN). By default, only
     skips missing values for float dtypes; other dtypes either do not
@@ -237,8 +197,6 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
-NAN_CUM_METHODS = ["cumsum", "cumprod"]
-NUMERIC_ONLY_METHODS = ["cumsum", "cumprod"]
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
@@ -294,7 +252,7 @@ class Method:
         ...     np.array([1, 2, 3, 1, 2, np.nan])"""
 
 
-class ReductionGenerator:
+class AggregationGenerator:
 
     _dim_docstring = _DIM_DOCSTRING
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE
@@ -365,11 +323,11 @@ class ReductionGenerator:
         if method.numeric_only:
             yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
 
-        if method.name in ["cumsum", "cumprod"]:
-            yield textwrap.indent(self.generate_cum_example(method=method), "")
-        else:
-            yield textwrap.indent(self.generate_example(method=method), "")
-
+        # if method.name in ["cumsum", "cumprod"]:
+        #     yield textwrap.indent(self.generate_cum_example(method=method), "")
+        # else:
+        #     yield textwrap.indent(self.generate_example(method=method), "")
+        yield textwrap.indent(self.generate_example(method=method), "")
         yield '        """'
 
         yield self.generate_code(method)
@@ -433,7 +391,7 @@ class ReductionGenerator:
         >>> {calculation}()"""
 
 
-class GroupByReductionGenerator(ReductionGenerator):
+class GroupByAggregationGenerator(AggregationGenerator):
     _dim_docstring = _DIM_DOCSTRING_GROUPBY
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE_GROUPBY
 
@@ -445,7 +403,8 @@ class GroupByReductionGenerator(ReductionGenerator):
 
         # numpy_groupies & flox do not support median
         # https://github.com/ml31415/numpy-groupies/issues/43
-        if method.name == "median":
+        method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
+        if method_is_not_flox_supported:
             indent = 12
         else:
             indent = 16
@@ -455,7 +414,7 @@ class GroupByReductionGenerator(ReductionGenerator):
         else:
             extra_kwargs = ""
 
-        if method.name == "median":
+        if method_is_not_flox_supported:
             return f"""\
         return self.reduce(
             duck_array_ops.{method.array_method},
@@ -483,33 +442,7 @@ class GroupByReductionGenerator(ReductionGenerator):
             )"""
 
 
-class CumulativeGroupByReductionGenerator(ReductionGenerator):
-    _dim_docstring = _DIM_DOCSTRING_GROUPBY
-    _template_signature = TEMPLATE_REDUCTION_SIGNATURE_GROUPBY
-
-    def generate_code(self, method):
-        extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
-
-        if self.datastructure.numeric_only:
-            extra_kwargs.append(f"numeric_only={method.numeric_only},")
-
-        indent = 16
-
-        if extra_kwargs:
-            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), indent * " ")
-        else:
-            extra_kwargs = ""
-
-        return f"""\
-        return self.reduce(
-            duck_array_ops.{method.array_method},
-            dim=dim,{extra_kwargs}
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )"""
-
-
-class GenericReductionGenerator(ReductionGenerator):
+class GenericAggregationGenerator(AggregationGenerator):
     def generate_code(self, method):
         extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
 
@@ -529,7 +462,8 @@ class GenericReductionGenerator(ReductionGenerator):
         )"""
 
 
-REDUCTION_METHODS = (
+AGGREGATION_METHODS = (
+    # Reductions:
     Method("count"),
     Method("all", bool_reduce=True),
     Method("any", bool_reduce=True),
@@ -541,9 +475,7 @@ REDUCTION_METHODS = (
     Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method("median", extra_kwargs=(skipna,), numeric_only=True),
-)
-
-CUM_METHODS = (
+    # Cumulatives:
     Method("cumsum", extra_kwargs=(skipna,)),
     Method("cumprod", extra_kwargs=(skipna,)),
 )
@@ -561,7 +493,7 @@ class DataStructure:
 DATASET_OBJECT = DataStructure(
     name="Dataset",
     docstring_create="""
-        >>> ds = xr.Dataset(dict(da=da),)
+        >>> ds = xr.Dataset(dict(da=da))
         >>> ds""",
     example_var_name="ds",
     example_var_key="['da']",
@@ -575,32 +507,10 @@ DATAARRAY_OBJECT = DataStructure(
     example_var_key="",
     numeric_only=False,
 )
-DATASET_CUMULATIVE_GENERATOR = GenericReductionGenerator(
+DATASET_GENERATOR = GenericAggregationGenerator(
     cls="",
     datastructure=DATASET_OBJECT,
-    methods=CUM_METHODS,
-    docref="agg",
-    docref_description="reduction or aggregation operations",
-    example_call_preamble="",
-    see_also_obj="DataArray",
-    definition_preamble=DEFAULT_CUMULATIVE_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
-)
-DATAARRAY_CUMULATIVE_GENERATOR = GenericReductionGenerator(
-    cls="",
-    datastructure=DATAARRAY_OBJECT,
-    methods=CUM_METHODS,
-    docref="agg",
-    docref_description="reduction or aggregation operations",
-    example_call_preamble="",
-    see_also_obj="Dataset",
-    definition_preamble=DEFAULT_CUMULATIVE_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
-)
-DATASET_GENERATOR = GenericReductionGenerator(
-    cls="",
-    datastructure=DATASET_OBJECT,
-    methods=REDUCTION_METHODS,
+    methods=AGGREGATION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
@@ -608,10 +518,10 @@ DATASET_GENERATOR = GenericReductionGenerator(
     definition_preamble=DEFAULT_PREAMBLE,
     template_see_also=TEMPLATE_SEE_ALSO,
 )
-DATAARRAY_GENERATOR = GenericReductionGenerator(
+DATAARRAY_GENERATOR = GenericAggregationGenerator(
     cls="",
     datastructure=DATAARRAY_OBJECT,
-    methods=REDUCTION_METHODS,
+    methods=AGGREGATION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
@@ -619,64 +529,40 @@ DATAARRAY_GENERATOR = GenericReductionGenerator(
     definition_preamble=DEFAULT_PREAMBLE,
     template_see_also=TEMPLATE_SEE_ALSO,
 )
-DATAARRAY_GROUPBY_GENERATOR = GroupByReductionGenerator(
+DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
     datastructure=DATAARRAY_OBJECT,
-    methods=REDUCTION_METHODS,
+    methods=AGGREGATION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
     template_see_also=TEMPLATE_SEE_ALSO,
 )
-DATAARRAY_CUMULATIVE_GROUPBY_GENERATOR = CumulativeGroupByReductionGenerator(
-    cls="GroupBy",
-    datastructure=DATAARRAY_OBJECT,
-    methods=CUM_METHODS,
-    docref="groupby",
-    docref_description="groupby operations",
-    example_call_preamble='.groupby("labels")',
-    definition_preamble=GROUPBY_CUMULATIVE_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
-)
-
-DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
+DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
     datastructure=DATAARRAY_OBJECT,
-    methods=REDUCTION_METHODS,
+    methods=AGGREGATION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
     template_see_also=TEMPLATE_SEE_ALSO,
 )
-DATASET_GROUPBY_GENERATOR = GroupByReductionGenerator(
+DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
     datastructure=DATASET_OBJECT,
-    methods=REDUCTION_METHODS,
+    methods=AGGREGATION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
     template_see_also=TEMPLATE_SEE_ALSO,
 )
-
-DATASET_CUMULATIVE_GROUPBY_GENERATOR = CumulativeGroupByReductionGenerator(
-    cls="GroupBy",
-    datastructure=DATASET_OBJECT,
-    methods=CUM_METHODS,
-    docref="groupby",
-    docref_description="groupby operations",
-    example_call_preamble='.groupby("labels")',
-    see_also_obj="DataArray",
-    definition_preamble=GROUPBY_CUMULATIVE_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
-)
-
-DATASET_RESAMPLE_GENERATOR = GroupByReductionGenerator(
+DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
     datastructure=DATASET_OBJECT,
-    methods=REDUCTION_METHODS,
+    methods=AGGREGATION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
@@ -691,14 +577,10 @@ if __name__ == "__main__":
 
     p = Path(os.getcwd())
     filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
-    # filepath = p.parent / "core" / "_reductions.py"  # Run from script location
-    with open(filepath, mode="w", encoding="utf-8") as f:
+    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
+    with open(str(filepath), mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [
-            DATASET_CUMULATIVE_GENERATOR,
-            DATAARRAY_CUMULATIVE_GENERATOR,
-            DATAARRAY_CUMULATIVE_GROUPBY_GENERATOR,
-            DATASET_CUMULATIVE_GROUPBY_GENERATOR,
             DATASET_GENERATOR,
             DATAARRAY_GENERATOR,
             DATASET_GROUPBY_GENERATOR,

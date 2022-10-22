@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
-from ._aggregations import DataArrayResampleReductions, DatasetResampleReductions
+from ._aggregations import DataArrayResampleAggregations, DatasetResampleAggregations
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 from .types import Dims, InterpOptions, T_Xarray
 
@@ -200,7 +200,7 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleReductions):  # type: ignore[misc]
+class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -296,7 +296,7 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleReductions):  # type: ignore[misc]
+class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(

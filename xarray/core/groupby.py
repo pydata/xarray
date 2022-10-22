@@ -22,10 +22,8 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from ._aggregations import (
-    DataArrayGroupByCumulatives,
-    DataArrayGroupByReductions,
-    DatasetGroupByCumulatives,
-    DatasetGroupByReductions,
+    DataArrayGroupByAggregations,
+    DataArrayGroupByAggregations,
 )
 from .alignment import align
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
@@ -1212,8 +1210,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 # https://github.com/python/mypy/issues/9031
 class DataArrayGroupBy(  # type: ignore[misc]
     DataArrayGroupByBase,
-    DataArrayGroupByReductions,
-    DataArrayGroupByCumulatives,
+    DataArrayGroupByAggregations,
     ImplementsArrayReduce,
 ):
     __slots__ = ()
@@ -1375,8 +1372,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 # https://github.com/python/mypy/issues/9031
 class DatasetGroupBy(  # type: ignore[misc]
     DatasetGroupByBase,
-    DatasetGroupByReductions,
-    DatasetGroupByCumulatives,
+    DataArrayGroupByAggregations,
     ImplementsDatasetReduce,
 ):
     __slots__ = ()
