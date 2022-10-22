@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import sys
 from importlib.metadata import EntryPoint
 from unittest import mock
 
@@ -184,3 +186,46 @@ def test_engines_not_installed() -> None:
 
     with pytest.raises(ValueError, match=r"found the following matches with the input"):
         plugins.guess_engine("foo.nc")
+
+
+def test_lazy_import() -> None:
+    """Test that some modules are imported in a lazy manner.
+
+    When importing xarray these should not be imported as well.
+    Only when running code for the first time that requires them.
+    """
+    blacklisted = [
+        "cfgrib",
+        "h5netcdf",
+        "netCDF4",
+        "PseudoNetCDF",
+        "pydap",
+        "Nio",
+        "scipy.io",
+        "zarr",
+        "dask.distributed",
+        "matplotlib",
+    ]
+    # ensure that none of the above modules has been imported before
+    modules_copy = copy.copy(sys.modules)
+    for pkg in modules_copy:
+        if pkg.startswith("xarray"):
+            del sys.modules[pkg]
+            continue
+        for blk in blacklisted:
+            if pkg.startswith(blk):
+                del sys.modules[pkg]
+                break
+
+    import xarray  # noqa: F401
+    from xarray.backends import list_engines
+
+    list_engines()
+
+    # ensure that non of the modules that are supposed to be
+    # lazy loaded are loaded when importing xarray
+    for pkg in blacklisted:
+        assert pkg not in sys.modules
+
+    # restore original
+    sys.modules.update(modules_copy)
