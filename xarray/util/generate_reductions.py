@@ -27,16 +27,13 @@ from typing import TYPE_CHECKING, Any, Callable, Sequence
 from . import duck_array_ops
 from .options import OPTIONS
 from .types import Dims
-from .utils import contains_only_dask_or_numpy
+from .utils import contains_only_dask_or_numpy, module_available
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
-try:
-    import flox
-except ImportError:
-    flox = None  # type: ignore'''
+flox_available = module_available("flox")'''
 
 DEFAULT_PREAMBLE = """
 
@@ -378,7 +375,11 @@ class GroupByReductionGenerator(ReductionGenerator):
 
         else:
             return f"""\
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}

@@ -205,6 +205,7 @@ def test_lazy_import() -> None:
         "zarr",
         "dask.distributed",
         "matplotlib",
+        "flox",
     ]
     # ensure that none of the above modules has been imported before
     modules_copy = copy.copy(sys.modules)
