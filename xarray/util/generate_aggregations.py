@@ -477,7 +477,7 @@ class DataStructure:
     name: str
     docstring_create: str
     example_var_name: str
-    example_var_key: str
+    # example_var_key: str
     numeric_only: bool = False
 
 
@@ -487,7 +487,7 @@ DATASET_OBJECT = DataStructure(
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds""",
     example_var_name="ds",
-    example_var_key="['da']",
+    # example_var_key="['da']",
     numeric_only=True,
 )
 DATAARRAY_OBJECT = DataStructure(
@@ -495,7 +495,7 @@ DATAARRAY_OBJECT = DataStructure(
     docstring_create="""
         >>> da""",
     example_var_name="da",
-    example_var_key="",
+    # example_var_key="",
     numeric_only=False,
 )
 DATASET_GENERATOR = GenericAggregationGenerator(
