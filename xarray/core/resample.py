@@ -44,7 +44,6 @@ class Resample(GroupBy[T_Xarray]):
                 f"cannot have the same name as actual dimension ('{dim}')!"
             )
         self._dim = dim
-        self._resample_dim = resample_dim
 
         super().__init__(*args, **kwargs)
 
@@ -263,8 +262,8 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         if self._dim in combined.coords:
             combined = combined.drop_vars(self._dim)
 
-        if self._resample_dim in combined.dims:
-            combined = combined.rename({self._resample_dim: self._dim})
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
 
         return combined
 
@@ -339,8 +338,16 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
-        # return combined.rename({self._resample_dim: self._dim})
-        return combined.rename({self._group_dim: self._dim})
+        # If the aggregation function didn't drop the original resampling
+        # dimension, then we need to do so before we can rename the proxy
+        # dimension we used.
+        if self._dim in combined.coords:
+            combined = combined.drop_vars(self._dim)
+
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
+
+        return combined
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
