@@ -200,30 +200,36 @@ def test_lazy_import() -> None:
         "PseudoNetCDF",
         "pydap",
         "Nio",
-        "scipy.io",
+        "scipy",
         "zarr",
         "dask.distributed",
         "matplotlib",
         "flox",
+        "dask",
+        "sparse",
+        "cupy",
+        "pint",
     ]
     # ensure that none of the above modules has been imported before
-    modules_copy = {}
+    modules_backup = {}
     for pkg in list(sys.modules.keys()):
         for mod in blacklisted + ["xarray"]:
             if pkg.startswith(mod):
-                modules_copy[pkg] = sys.modules[pkg]
+                modules_backup[pkg] = sys.modules[pkg]
                 del sys.modules[pkg]
                 break
 
-    import xarray  # noqa: F401
-    from xarray.backends import list_engines
+    try:
+        import xarray  # noqa: F401
+        from xarray.backends import list_engines
 
-    list_engines()
+        list_engines()
 
-    # ensure that non of the modules that are supposed to be
-    # lazy loaded are loaded when importing xarray
-    for pkg in blacklisted:
-        assert pkg not in sys.modules
+        # ensure that none of the modules that are supposed to be
+        # lazy loaded are loaded when importing xarray
+        for pkg in blacklisted:
+            assert pkg not in sys.modules
 
-    # restore original
-    sys.modules.update(modules_copy)
+    finally:
+        # restore original
+        sys.modules.update(modules_backup)

@@ -25,7 +25,7 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     VectorizedIndexer,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
@@ -43,6 +43,8 @@ from . import (
     requires_sparse,
     source_ndarray,
 )
+
+dask_array_type = array_type("dask")
 
 _PAD_XR_NP_ARGS = [
     [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],

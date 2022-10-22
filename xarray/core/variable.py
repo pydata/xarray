@@ -36,13 +36,7 @@ from .indexing import (
     as_indexable,
 )
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import (
-    DuckArrayModule,
-    cupy_array_type,
-    integer_types,
-    is_duck_dask_array,
-    sparse_array_type,
-)
+from .pycompat import array_type, integer_types, is_duck_dask_array
 from .utils import (
     Frozen,
     NdimSizeLenMixin,
@@ -1192,13 +1186,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
             data = data.compute()
-        if isinstance(data, cupy_array_type):
+        if isinstance(data, array_type("cupy")):
             data = data.get()
         # pint has to be imported dynamically as pint imports xarray
-        pint_array_type = DuckArrayModule("pint").type
-        if isinstance(data, pint_array_type):
+        if isinstance(data, array_type("pint")):
             data = data.magnitude
-        if isinstance(data, sparse_array_type):
+        if isinstance(data, array_type("sparse")):
             data = data.todense()
         data = np.asarray(data)
 
