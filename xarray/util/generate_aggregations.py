@@ -382,8 +382,7 @@ class ReductionGenerator:
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
-        ... )
-        """
+        ... )"""
 
         calculation = f"{self.datastructure.example_var_name}{self.example_call_preamble}.{method.name}"
         if method.extra_kwargs:
@@ -463,8 +462,7 @@ class GroupByReductionGenerator(ReductionGenerator):
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
             **kwargs,
-        )
-        """
+        )"""
 
         else:
             return f"""\
@@ -482,8 +480,7 @@ class GroupByReductionGenerator(ReductionGenerator):
                 dim=dim,{extra_kwargs}
                 keep_attrs=keep_attrs,
                 **kwargs,
-            )
-            """
+            )"""
 
 
 class CumulativeGroupByReductionGenerator(ReductionGenerator):
@@ -529,8 +526,7 @@ class GenericReductionGenerator(ReductionGenerator):
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
             **kwargs,
-        )
-        """
+        )"""
 
 
 REDUCTION_METHODS = (
