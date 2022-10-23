@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -175,6 +176,12 @@ def open_rasterio(
     """
     Open a rasterio dataset from the online repository (requires internet).
 
+    .. deprecated:: 0.20.0
+
+        Deprecated in favor of rioxarray.
+        For information about transitioning, see:
+        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
+
     If a local copy is found then always use that to avoid network traffic.
 
     Available datasets:
@@ -204,6 +211,13 @@ def open_rasterio(
     ----------
     .. [1] https://github.com/rasterio/rasterio
     """
+    warnings.warn(
+        "open_rasterio is Deprecated in favor of rioxarray. "
+        "For information about transitioning, see: "
+        "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         import pooch
     except ImportError as e:
