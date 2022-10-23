@@ -194,7 +194,7 @@ def test_lazy_import() -> None:
     Only when running code for the first time that requires them.
     """
     blacklisted = [
-        "cfgrib",
+        # "cfgrib",  # TODO: cfgrib has its own plugin now, deprecate?
         "h5netcdf",
         "netCDF4",
         "PseudoNetCDF",
@@ -228,12 +228,12 @@ def test_lazy_import() -> None:
 
         # ensure that none of the modules that are supposed to be
         # lazy loaded are loaded when importing xarray
-        is_imported = []
+        is_imported = set()
         for pkg in sys.modules:
             for mod in blacklisted:
                 if pkg.startswith(mod):
-                    is_imported.append(mod)
-                break
+                    is_imported.add(mod)
+                    break
         assert (
             len(is_imported) == 0
         ), f"{is_imported} have been imported but should be lazy"
