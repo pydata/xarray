@@ -94,7 +94,7 @@ class FacetGrid(Generic[T_Xarray]):
 
     Attributes
     ----------
-    axes : ndarray of matplotlib.axes.Axes
+    axs : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
     col_labels : list of matplotlib.text.Annotation
@@ -112,7 +112,7 @@ class FacetGrid(Generic[T_Xarray]):
     data: T_Xarray
     name_dicts: np.ndarray
     fig: Figure
-    axes: np.ndarray
+    axs: np.ndarray
     row_names: list[np.ndarray]
     col_names: list[np.ndarray]
     figlegend: Legend | None
@@ -223,7 +223,7 @@ class FacetGrid(Generic[T_Xarray]):
             cbar_space = 1
             figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
-        fig, axes = plt.subplots(
+        fig, axs = plt.subplots(
             nrow,
             ncol,
             sharex=sharex,
@@ -258,7 +258,7 @@ class FacetGrid(Generic[T_Xarray]):
         self.data = data
         self.name_dicts = name_dicts
         self.fig = fig
-        self.axes = axes
+        self.axs = axs
         self.row_names = row_names
         self.col_names = col_names
 
@@ -283,12 +283,36 @@ class FacetGrid(Generic[T_Xarray]):
         self._finalized = False
 
     @property
+    def axes(self) -> np.ndarray:
+        warnings.warn(
+            (
+                "self.axes is deprecated since 2022.11 in order to align with "
+                "matplotlibs plt.subplots, use self.axs instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.axs
+
+    @axes.setter
+    def axes(self, axs: np.ndarray) -> None:
+        warnings.warn(
+            (
+                "self.axes is deprecated since 2022.11 in order to align with "
+                "matplotlibs plt.subplots, use self.axs instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.axs = axs
+
+    @property
     def _left_axes(self) -> np.ndarray:
-        return self.axes[:, 0]
+        return self.axs[:, 0]
 
     @property
     def _bottom_axes(self) -> np.ndarray:
-        return self.axes[-1, :]
+        return self.axs[-1, :]
 
     def map_dataarray(
         self: T_FacetGrid,
@@ -347,7 +371,7 @@ class FacetGrid(Generic[T_Xarray]):
             rgb=kwargs.get("rgb", None),
         )
 
-        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+        for d, ax in zip(self.name_dicts.flat, self.axs.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -449,7 +473,7 @@ class FacetGrid(Generic[T_Xarray]):
         func_kwargs["add_legend"] = False
         func_kwargs["add_title"] = False
 
-        add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
+        add_labels_ = np.zeros(self.axs.shape + (3,), dtype=bool)
         if kwargs.get("z") is not None:
             # 3d plots looks better with all labels. 3d plots can't sharex either so it
             # is easy to get lost while rotating the plots:
@@ -478,7 +502,7 @@ class FacetGrid(Generic[T_Xarray]):
 
         # Plot the data for each subplot:
         for add_lbls, d, ax in zip(
-            add_labels_.reshape((self.axes.size, -1)), name_dicts.flat, self.axes.flat
+            add_labels_.reshape((self.axs.size, -1)), name_dicts.flat, self.axs.flat
         ):
             func_kwargs["add_labels"] = add_lbls
             # None is the sentinel value
@@ -542,7 +566,7 @@ class FacetGrid(Generic[T_Xarray]):
     ) -> T_FacetGrid:
         from .dataarray_plot import _infer_line_data
 
-        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+        for d, ax in zip(self.name_dicts.flat, self.axs.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -609,7 +633,7 @@ class FacetGrid(Generic[T_Xarray]):
             raise ValueError("Please provide scale.")
             # TODO: come up with an algorithm for reasonable scale choice
 
-        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+        for d, ax in zip(self.name_dicts.flat, self.axs.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -643,7 +667,7 @@ class FacetGrid(Generic[T_Xarray]):
             self.set_titles()
             self.fig.tight_layout()
 
-            for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+            for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
                 if namedict is None:
                     ax.set_visible(False)
 
@@ -703,7 +727,7 @@ class FacetGrid(Generic[T_Xarray]):
         if "label" not in kwargs:
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
-            self._mappables[-1], ax=list(self.axes.flat), **kwargs
+            self._mappables[-1], ax=list(self.axs.flat), **kwargs
         )
 
     def add_quiverkey(self, u: Hashable, v: Hashable, **kwargs: Any) -> None:
@@ -711,7 +735,7 @@ class FacetGrid(Generic[T_Xarray]):
 
         magnitude = _get_nice_quiver_magnitude(self.data[u], self.data[v])
         units = self.data[u].attrs.get("units", "")
-        self.quiverkey = self.axes.flat[-1].quiverkey(
+        self.quiverkey = self.axs.flat[-1].quiverkey(
             self._mappables[-1],
             X=0.8,
             Y=0.9,
@@ -747,7 +771,7 @@ class FacetGrid(Generic[T_Xarray]):
         for axis in ("x", "y", "z"):
             # Find the plot with the largest xlim values:
             lower, upper = lims_largest[axis]
-            for ax in self.axes.flat:
+            for ax in self.axs.flat:
                 get_lim: None | Callable[[], tuple[float, float]] = getattr(
                     ax, f"get_{axis}lim", None
                 )
@@ -781,13 +805,13 @@ class FacetGrid(Generic[T_Xarray]):
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
         >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
-        >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim()
+        >>> fg.axs[0, 0].get_xlim(), fg.axs[0, 0].get_ylim()
         ((-0.3, 0.3), (0.0, 2.0))
         """
         lims_largest = self._get_largest_lims()
 
         # Set limits:
-        for ax in self.axes.flat:
+        for ax in self.axs.flat:
             for (axis, data_limit), parameter_limit in zip(
                 lims_largest.items(), (x, y, z)
             ):
@@ -858,7 +882,7 @@ class FacetGrid(Generic[T_Xarray]):
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar, template=template)
 
         if self._single_group:
-            for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            for d, ax in zip(self.name_dicts.flat, self.axs.flat):
                 # Only label the ones with data
                 if d is not None:
                     coord, value = list(d.items()).pop()
@@ -867,7 +891,7 @@ class FacetGrid(Generic[T_Xarray]):
         else:
             # The row titles on the right edge of the grid
             for index, (ax, row_name, handle) in enumerate(
-                zip(self.axes[:, -1], self.row_names, self.row_labels)
+                zip(self.axs[:, -1], self.row_names, self.row_labels)
             ):
                 title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
                 if not handle:
@@ -886,7 +910,7 @@ class FacetGrid(Generic[T_Xarray]):
 
             # The column titles on the top row
             for index, (ax, col_name, handle) in enumerate(
-                zip(self.axes[0, :], self.col_names, self.col_labels)
+                zip(self.axs[0, :], self.col_names, self.col_labels)
             ):
                 title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
                 if not handle:
@@ -922,7 +946,7 @@ class FacetGrid(Generic[T_Xarray]):
         x_major_locator = MaxNLocator(nbins=max_xticks)
         y_major_locator = MaxNLocator(nbins=max_yticks)
 
-        for ax in self.axes.flat:
+        for ax in self.axs.flat:
             ax.xaxis.set_major_locator(x_major_locator)
             ax.yaxis.set_major_locator(y_major_locator)
             for tick in itertools.chain(
@@ -957,7 +981,7 @@ class FacetGrid(Generic[T_Xarray]):
         """
         plt = import_matplotlib_pyplot()
 
-        for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+        for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
             if namedict is not None:
                 data = self.data.loc[namedict]
                 plt.sca(ax)

@@ -156,18 +156,18 @@ Keyword arguments work the same way, and are more explicit.
 
 To add the plot to an existing axis pass in the axis as a keyword argument
 ``ax``. This works for all xarray plotting methods.
-In this example ``axes`` is an array consisting of the left and right
+In this example ``axs`` is an array consisting of the left and right
 axes created by ``plt.subplots``.
 
 .. ipython:: python
     :okwarning:
 
-    fig, axes = plt.subplots(ncols=2)
+    fig, axs = plt.subplots(ncols=2)
 
-    axes
+    axs
 
-    air1d.plot(ax=axes[0])
-    air1d.plot.hist(ax=axes[1])
+    air1d.plot(ax=axs[0])
+    air1d.plot.hist(ax=axs[1])
 
     plt.tight_layout()
 
@@ -348,8 +348,8 @@ The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes d
 
 In addition, one can use ``xscale, yscale`` to set axes scaling;
 ``xticks, yticks`` to set axes ticks and ``xlim, ylim`` to set axes limits.
-These accept the same values as the matplotlib methods ``Axes.set_(x,y)scale()``,
-``Axes.set_(x,y)ticks()``, ``Axes.set_(x,y)lim()`` respectively.
+These accept the same values as the matplotlib methods ``ax.set_(x,y)scale()``,
+``ax.set_(x,y)ticks()``, ``ax.set_(x,y)lim()``, respectively.
 
 
 Two Dimensions
@@ -701,12 +701,12 @@ that links a :py:class:`DataArray` to a matplotlib figure with a particular stru
 This object can be used to control the behavior of the multiple plots.
 It borrows an API and code from `Seaborn's FacetGrid
 <https://seaborn.pydata.org/tutorial/axis_grids.html>`_.
-The structure is contained within the ``axes`` and ``name_dicts``
+The structure is contained within the ``axs`` and ``name_dicts``
 attributes, both 2d NumPy object arrays.
 
 .. ipython:: python
 
-    g.axes
+    g.axs
 
     g.name_dicts
 
@@ -726,10 +726,10 @@ they have been plotted.
 
     g = t.plot.imshow(x="lon", y="lat", col="time", col_wrap=3, robust=True)
 
-    for i, ax in enumerate(g.axes.flat):
+    for i, ax in enumerate(g.axs.flat):
         ax.set_title("Air Temperature %d" % i)
 
-    bottomright = g.axes[-1, -1]
+    bottomright = g.axs[-1, -1]
     bottomright.annotate("bottom right", (240, 40))
 
     @savefig plot_facet_iterator.png
@@ -928,7 +928,7 @@ by faceting are accessible in the object returned by ``plot``:
         col="time",
         subplot_kws={"projection": ccrs.Orthographic(-80, 35)},
     )
-    for ax in p.axes.flat:
+    for ax in p.axs.flat:
         ax.coastlines()
         ax.gridlines()
     @savefig plotting_maps_cartopy_facetting.png width=100%
@@ -958,11 +958,11 @@ These are provided for user convenience; they all call the same code.
     import xarray.plot as xplt
 
     da = xr.DataArray(range(5))
-    fig, axes = plt.subplots(ncols=2, nrows=2)
-    da.plot(ax=axes[0, 0])
-    da.plot.line(ax=axes[0, 1])
-    xplt.plot(da, ax=axes[1, 0])
-    xplt.line(da, ax=axes[1, 1])
+    fig, axs = plt.subplots(ncols=2, nrows=2)
+    da.plot(ax=axs[0, 0])
+    da.plot.line(ax=axs[0, 1])
+    xplt.plot(da, ax=axs[1, 0])
+    xplt.line(da, ax=axs[1, 1])
     plt.tight_layout()
     @savefig plotting_ways_to_use.png width=6in
     plt.draw()

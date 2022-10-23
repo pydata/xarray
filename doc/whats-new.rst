@@ -42,6 +42,10 @@ Deprecations
 
 - Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- ``xarray.plot.FacetGrid.axes`` has been renamed to ``xarray.plot.FacetGrid.axs``
+  because it's not clear if ``axes`` refers to single or multiple ``Axes`` instances.
+  This aligns with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -60,7 +64,8 @@ Documentation
   By `Jessica Scheick <https://github.com/jessicas11>`_.
 - Add example of using :py:meth:`DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
