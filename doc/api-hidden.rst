@@ -580,6 +580,33 @@
    backends.ScipyBackendEntrypoint.guess_can_open
    backends.ScipyBackendEntrypoint.open_dataset
 
+   backends.ZarrStore.close
+   backends.ZarrStore.encode_attribute
+   backends.ZarrStore.encode_variable
+   backends.ZarrStore.get_attrs
+   backends.ZarrStore.get_dimensions
+   backends.ZarrStore.get_variables
+   backends.ZarrStore.open_group
+   backends.ZarrStore.open_store_variable
+   backends.ZarrStore.set_attributes
+   backends.ZarrStore.set_dimensions
+   backends.ZarrStore.set_variables
+   backends.ZarrStore.store
+   backends.ZarrStore.sync
+   backends.ZarrStore.ds
+
+   backends.ZarrBackendEntrypoint.available
+   backends.ZarrBackendEntrypoint.description
+   backends.ZarrBackendEntrypoint.url
+   backends.ZarrBackendEntrypoint.guess_can_open
+   backends.ZarrBackendEntrypoint.open_dataset
+
+   backends.StoreBackendEntrypoint.available
+   backends.StoreBackendEntrypoint.description
+   backends.StoreBackendEntrypoint.url
+   backends.StoreBackendEntrypoint.guess_can_open
+   backends.StoreBackendEntrypoint.open_dataset
+
    backends.FileManager.acquire
    backends.FileManager.acquire_context
    backends.FileManager.close

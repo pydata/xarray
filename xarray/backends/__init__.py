@@ -14,7 +14,8 @@ from .pseudonetcdf_ import PseudoNetCDFBackendEntrypoint, PseudoNetCDFDataStore
 from .pydap_ import PydapBackendEntrypoint, PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyBackendEntrypoint, ScipyDataStore
-from .zarr import ZarrStore
+from .store import StoreBackendEntrypoint
+from .zarr import ZarrBackendEntrypoint, ZarrStore
 
 __all__ = [
     "AbstractDataStore",
@@ -37,5 +38,7 @@ __all__ = [
     "PseudoNetCDFBackendEntrypoint",
     "PydapBackendEntrypoint",
     "ScipyBackendEntrypoint",
+    "StoreBackendEntrypoint",
+    "ZarrBackendEntrypoint",
     "list_engines",
 ]

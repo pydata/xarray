@@ -1112,6 +1112,7 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
    backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.ZarrStore
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
@@ -1127,9 +1128,8 @@ used filetypes in the xarray universe.
    backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
-   backends.FileManager
-   backends.CachingFileManager
-   backends.DummyFileManager
+   backends.StoreBackendEntrypoint
+   backends.ZarrBackendEntrypoint
 
 Deprecated / Pending Deprecation
 ================================
