@@ -29,16 +29,3 @@ class TestLoadDataset:
         ).load()
         ds_cache = tutorial.open_dataset(self.testfile, cache_dir=cache_dir).load()
         assert_identical(ds_cache, ds_nocache)
-
-    def test_download_rasterio_from_github_load_without_cache(
-        self, tmp_path, monkeypatch
-    ):
-        cache_dir = tmp_path / tutorial._default_cache_dir_name
-        with pytest.warns(DeprecationWarning):
-            arr_nocache = tutorial.open_rasterio(
-                "RGB.byte", cache=False, cache_dir=cache_dir
-            ).load()
-            arr_cache = tutorial.open_rasterio(
-                "RGB.byte", cache=True, cache_dir=cache_dir
-            ).load()
-        assert_identical(arr_cache, arr_nocache)
