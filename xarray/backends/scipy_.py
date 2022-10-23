@@ -242,6 +242,8 @@ class ScipyDataStore(WritableCFDataStore):
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
     available = has_scipy
+    description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
 

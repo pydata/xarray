@@ -517,6 +517,8 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
     available = has_netcdf4
+    description = "Open netCDF files (.nc, .nc4 and .cdf) using netCDF4 in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):

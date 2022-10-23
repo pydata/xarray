@@ -353,6 +353,8 @@ class H5NetCDFStore(WritableCFDataStore):
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     available = has_h5netcdf
+    description = "Open netCDF files (.nc, .nc4 and .cdf) using h5netcdf in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)

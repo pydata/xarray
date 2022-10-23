@@ -140,6 +140,8 @@ class PydapDataStore(AbstractDataStore):
 
 class PydapBackendEntrypoint(BackendEntrypoint):
     available = has_pydap
+    description = "Open remote datasets via OPeNDAP using pydap in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
