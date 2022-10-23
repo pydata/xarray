@@ -957,7 +957,7 @@ def contains_only_dask_or_numpy(obj) -> bool:
 
 
 def module_available(module: str) -> bool:
-    """Checks wether a module is installed without importing it.
+    """Checks whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
 
@@ -969,6 +969,6 @@ def module_available(module: str) -> bool:
     Returns
     -------
     available : bool
-        Wether the module is installed.
+        Whether the module is installed.
     """
     return importlib.util.find_spec(module) is not None
