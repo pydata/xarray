@@ -341,40 +341,6 @@ class AggregationGenerator:
 
         >>> {calculation}(){extra_examples}"""
 
-    def generate_cum_example(self, method):
-        create_da = """
-        >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
-        >>> temperature[2, 2] = np.nan
-        >>> da = xr.DataArray(
-        ...     temperature,
-        ...     dims=["x", "y"],
-        ...     coords=dict(
-        ...         lon=("x", np.arange(10, 30, 5)),
-        ...         lat=("y", np.arange(40, 60, 5)),
-        ...         labels=("y", ["a", "a", "b", "c"]),
-        ...     ),
-        ... )
-        """
-
-        calculation = f"{self.datastructure.example_var_name}{self.example_call_preamble}.{method.name}"
-        calculation_ds = f"{self.datastructure.example_var_name}{self.example_call_preamble}.{method.name}(){self.datastructure.example_var_key}"
-
-        if self.datastructure.name == "Dataset":
-            return f"""
-        Examples
-        --------
-        {create_da}{self.datastructure.docstring_create}
-
-        >>> {calculation}()
-        >>> {calculation_ds}"""
-        else:
-            return f"""
-        Examples
-        --------
-        {create_da}{self.datastructure.docstring_create}
-
-        >>> {calculation}()"""
-
 
 class GroupByAggregationGenerator(AggregationGenerator):
     _dim_docstring = _DIM_DOCSTRING_GROUPBY
