@@ -14,7 +14,7 @@ from ._typed_ops import (
     VariableOpsMixin,
 )
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
-from .ops import IncludeNumpySameMethods, IncludeReduceMethods
+from .ops import IncludeCumMethods, IncludeNumpySameMethods, IncludeReduceMethods
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_array
 
@@ -96,6 +96,7 @@ class SupportsArithmetic:
 class VariableArithmetic(
     ImplementsArrayReduce,
     IncludeReduceMethods,
+    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     VariableOpsMixin,
