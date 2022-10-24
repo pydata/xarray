@@ -6,25 +6,29 @@ import os
 
 import numpy as np
 
-from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import (
-    Frozen,
-    FrozenDict,
-    close_on_error,
-    try_read_magic_number_from_file_or_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
-from .store import StoreBackendEntrypoint
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import ensure_lock, get_write_lock
+from xarray.backends.netcdf3 import (
+    encode_nc3_attr_value,
+    encode_nc3_variable,
+    is_valid_nc3_name,
+)
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core.indexing import NumpyIndexingAdapter
+from xarray.core.utils import (
+    Frozen,
+    FrozenDict,
+    close_on_error,
+    try_read_magic_number_from_file_or_path,
+)
+from xarray.core.variable import Variable
 
 try:
     import scipy.io

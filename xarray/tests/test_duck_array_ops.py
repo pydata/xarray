@@ -29,8 +29,7 @@ from xarray.core.duck_array_ops import (
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_array_equal,
     has_dask,

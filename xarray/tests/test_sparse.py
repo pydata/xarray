@@ -12,8 +12,7 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Variable
 from xarray.core.pycompat import sparse_array_type, sparse_version
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param

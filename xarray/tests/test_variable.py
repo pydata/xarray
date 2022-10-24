@@ -28,15 +28,14 @@ from xarray.core.indexing import (
 from xarray.core.pycompat import dask_array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.tests import requires_bottleneck
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     assert_no_warnings,
     raise_if_dask_computes,
+    requires_bottleneck,
     requires_cupy,
     requires_dask,
     requires_pint,

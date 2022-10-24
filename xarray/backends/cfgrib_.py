@@ -5,18 +5,18 @@ import warnings
 
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .locks import SerializableLock, ensure_lock
-from .store import StoreBackendEntrypoint
+from xarray.backends.locks import SerializableLock, ensure_lock
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error
+from xarray.core.variable import Variable
 
 try:
     import cfgrib

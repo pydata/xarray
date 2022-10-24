@@ -6,7 +6,7 @@ from typing import Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from .utils import is_duck_array
+from xarray.core.utils import is_duck_array
 
 integer_types = (int, np.integer)
 

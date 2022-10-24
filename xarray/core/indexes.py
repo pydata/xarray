@@ -20,13 +20,17 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import formatting, nputils, utils
-from .indexing import IndexSelResult, PandasIndexingAdapter, PandasMultiIndexingAdapter
-from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
+from xarray.core import formatting, nputils, utils
+from xarray.core.indexing import (
+    IndexSelResult,
+    PandasIndexingAdapter,
+    PandasMultiIndexingAdapter,
+)
+from xarray.core.utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .types import ErrorOptions, T_Index
-    from .variable import Variable
+    from xarray.core.types import ErrorOptions, T_Index
+    from xarray.core.variable import Variable
 
 IndexVars = Dict[Any, "Variable"]
 
@@ -138,7 +142,7 @@ class Index:
 
 
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
     if len(index) > 0 and index.dtype == "O":
         try:
@@ -158,8 +162,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     this function will not attempt to do automatic type conversion but will
     always return an index with dtype=object.
     """
-    from .dataarray import DataArray
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if isinstance(array, pd.Index):
         index = array
@@ -180,8 +184,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
 
 def _sanitize_slice_element(x):
-    from .dataarray import DataArray
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if not isinstance(x, tuple) and len(np.shape(x)) != 0:
         raise ValueError(
@@ -382,7 +386,7 @@ class PandasIndex(Index):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-        from .variable import IndexVariable
+        from xarray.core.variable import IndexVariable
 
         name = self.index.name
         attrs: Mapping[Hashable, Any] | None
@@ -406,7 +410,7 @@ class PandasIndex(Index):
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> PandasIndex | None:
-        from .variable import Variable
+        from xarray.core.variable import Variable
 
         indxr = indexers[self.dim]
         if isinstance(indxr, Variable):
@@ -424,8 +428,8 @@ class PandasIndex(Index):
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
-        from .dataarray import DataArray
-        from .variable import Variable
+        from xarray.core.dataarray import DataArray
+        from xarray.core.variable import Variable
 
         if method is not None and not isinstance(method, str):
             raise TypeError("``method`` must be a string")
@@ -806,7 +810,7 @@ class PandasMultiIndex(PandasIndex):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-        from .variable import IndexVariable
+        from xarray.core.variable import IndexVariable
 
         if variables is None:
             variables = {}
@@ -840,8 +844,8 @@ class PandasMultiIndex(PandasIndex):
         return index_vars
 
     def sel(self, labels, method=None, tolerance=None) -> IndexSelResult:
-        from .dataarray import DataArray
-        from .variable import Variable
+        from xarray.core.dataarray import DataArray
+        from xarray.core.variable import Variable
 
         if method is not None or tolerance is not None:
             raise ValueError(
@@ -1149,7 +1153,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     @property
     def dims(self) -> Mapping[Hashable, int]:
-        from .variable import calculate_dimensions
+        from xarray.core.variable import calculate_dimensions
 
         if self._dims is None:
             self._dims = calculate_dimensions(self._variables)
@@ -1229,7 +1233,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             A dictionary of all dimensions shared by an index.
 
         """
-        from .variable import calculate_dimensions
+        from xarray.core.variable import calculate_dimensions
 
         return calculate_dimensions(self.get_all_coords(key, errors=errors))
 
