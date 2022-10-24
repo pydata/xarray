@@ -257,7 +257,6 @@ class AggregationGenerator:
         docref_description,
         example_call_preamble,
         definition_preamble,
-        template_see_also,
         see_also_obj=None,
     ):
         self.datastructure = datastructure
@@ -267,7 +266,6 @@ class AggregationGenerator:
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
         self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
-        self.template_see_also = template_see_also
         if not see_also_obj:
             self.see_also_obj = self.datastructure.name
         else:
@@ -304,7 +302,7 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        yield self.template_see_also.format(
+        yield TEMPLATE_SEE_ALSO.format(
             **template_kwargs,
             docref=self.docref,
             docref_description=self.docref_description,
@@ -507,7 +505,6 @@ DATASET_GENERATOR = GenericAggregationGenerator(
     example_call_preamble="",
     see_also_obj="DataArray",
     definition_preamble=DEFAULT_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
 )
 DATAARRAY_GENERATOR = GenericAggregationGenerator(
     cls="",
@@ -518,7 +515,6 @@ DATAARRAY_GENERATOR = GenericAggregationGenerator(
     example_call_preamble="",
     see_also_obj="Dataset",
     definition_preamble=DEFAULT_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
 )
 DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
@@ -528,7 +524,6 @@ DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
 )
 DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
@@ -538,7 +533,6 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
 )
 DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
@@ -548,7 +542,6 @@ DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
 )
 DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
@@ -558,7 +551,6 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
-    template_see_also=TEMPLATE_SEE_ALSO,
 )
 
 
