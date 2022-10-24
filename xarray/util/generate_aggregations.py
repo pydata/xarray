@@ -314,10 +314,6 @@ class AggregationGenerator:
         if method.numeric_only:
             yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
 
-        # if method.name in ["cumsum", "cumprod"]:
-        #     yield textwrap.indent(self.generate_cum_example(method=method), "")
-        # else:
-        #     yield textwrap.indent(self.generate_example(method=method), "")
         yield textwrap.indent(self.generate_example(method=method), "")
         yield '        """'
 
@@ -477,7 +473,6 @@ class DataStructure:
     name: str
     docstring_create: str
     example_var_name: str
-    # example_var_key: str
     numeric_only: bool = False
 
 
@@ -487,7 +482,6 @@ DATASET_OBJECT = DataStructure(
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds""",
     example_var_name="ds",
-    # example_var_key="['da']",
     numeric_only=True,
 )
 DATAARRAY_OBJECT = DataStructure(
@@ -495,7 +489,6 @@ DATAARRAY_OBJECT = DataStructure(
     docstring_create="""
         >>> da""",
     example_var_name="da",
-    # example_var_key="",
     numeric_only=False,
 )
 DATASET_GENERATOR = GenericAggregationGenerator(
