@@ -32,6 +32,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- __repr__ may not show the same result because it doesn't load small,
+  lazy data anymore. (:issue:`6722`, :pull:`7203`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
   shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
