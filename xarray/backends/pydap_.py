@@ -139,6 +139,21 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
+    """
+    Backend for steaming datasets over the internet using
+    the Data Access Protocol, also known as DODS or OPeNDAP
+    based on the pydap package.
+
+    This backend is selected by default for urls.
+
+    For more information about the underlying library, visit:
+    https://www.pydap.org
+
+    See Also
+    --------
+    backends.PydapDataStore
+    """
+
     available = has_pydap
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"

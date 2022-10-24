@@ -352,8 +352,31 @@ class H5NetCDFStore(WritableCFDataStore):
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
+    """
+    Backend for netCDF files based on the h5netcdf package.
+
+    It can open ".nc", ".nc4", ".cdf" files but will only be
+    selected as the default if the "netcdf4" engine is not available.
+
+    Additionally it can open valid HDF5 files, see
+    https://h5netcdf.org/#invalid-netcdf-files for more info.
+    It will not be detected as valid backend for such files, so make
+    sure to specify ``engine="h5netcdf"`` in ``open_dataset``.
+
+    For more information about the underlying library, visit:
+    https://h5netcdf.org
+
+    See Also
+    --------
+    backends.H5NetCDFStore
+    backends.NetCDF4BackendEntrypoint
+    backends.ScipyBackendEntrypoint
+    """
+
     available = has_h5netcdf
-    description = "Open netCDF files (.nc, .nc4 and .cdf) using h5netcdf in Xarray"
+    description = (
+        "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
+    )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
