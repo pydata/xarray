@@ -10,7 +10,7 @@ repos:
       - id: mixed-line-ending
     # This wants to go before isort & flake8
   - repo: https://github.com/PyCQA/autoflake
-    rev: "v1.7.6"
+    rev: "v1.7.7"
     hooks:
       - id: autoflake # isort should run before black as black sometimes tweaks the isort output
         args: ["--in-place", "--ignore-init-module-imports"]
