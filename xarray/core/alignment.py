@@ -474,7 +474,7 @@ class Aligner(Generic[DataAlignable]):
                 if obj_idx is not None:
                     for name, var in self.aligned_index_vars[key].items():
                         new_indexes[name] = aligned_idx
-                        new_variables[name] = var.copy()
+                        new_variables[name] = var.copy(deep=self.copy)
 
             objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
 
@@ -514,7 +514,7 @@ class Aligner(Generic[DataAlignable]):
             if obj_idx is not None:
                 for name, var in index_vars.items():
                     new_indexes[name] = aligned_idx
-                    new_variables[name] = var.copy()
+                    new_variables[name] = var.copy(deep=self.copy)
 
         return new_indexes, new_variables
 
