@@ -581,7 +581,7 @@ def test_repr_file_collapsed(tmp_path) -> None:
     with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
         display_expand_data=False
     ):
-        actual = arr.__repr__()
+        actual = repr(arr)
         expected = dedent(
             """\
         <xarray.DataArray (test: 300)>
