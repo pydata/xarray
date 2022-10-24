@@ -32,7 +32,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- __repr__ may not show the same result because it doesn't load small,
+- ``repr(ds)`` may not show the same result because it doesn't load small,
   lazy data anymore. (:issue:`6722`, :pull:`7203`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
