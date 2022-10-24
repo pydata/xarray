@@ -271,6 +271,9 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     return indexer
 
 
+T_PandasIndex = TypeVar("T_PandasIndex", bound="PandasIndex")
+
+
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
@@ -535,8 +538,8 @@ class PandasIndex(Index):
         return self._replace(index, dim=new_dim)
 
     def _copy(
-        self: T_Index, deep: bool = True, memo: dict[int, Any] | None = None
-    ) -> T_Index:
+        self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
+    ) -> T_PandasIndex:
         if deep:
             # pandas is not using the memo
             index = self.index.copy(deep=True)
