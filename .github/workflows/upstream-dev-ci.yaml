@@ -72,7 +72,7 @@ jobs:
           conda info -a
           conda list
           python xarray/util/print_versions.py
-      - name: import xarray
+      - name: Import xarray
         run: |
           python -c 'import xarray'
       - name: Run Tests
@@ -81,7 +81,7 @@ jobs:
         run: |
           python -m pytest --timeout=60 -rf \
             --report-log output-${{ matrix.python-version }}-log.jsonl
-      - name: generate and publish the report
+      - name: Generate and publish the report
         if: |
           failure()
           && steps.status.outcome == 'failure'
