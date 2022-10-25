@@ -83,43 +83,13 @@ jobs:
         id: status
         run: |
           python -m pytest --timeout=60 -rf \
-            --report-log output-${{ matrix.python-version }}-log.jsonl \
-            || (
-              echo 'ARTIFACTS_AVAILABLE=true' >> $GITHUB_OUTPUT
-              && echo 'ARTIFACT_NAME=output-${{ matrix.python-version }}-log.jsonl' >> $GITHUB_OUTPUT
-              && false
-            )
-      - name: Upload artifacts
+            --report-log output-${{ matrix.python-version }}-log.jsonl
+      - name: generate and publish the report
         if: |
           failure()
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
-          && github.repository == 'pydata/xarray'
-        uses: actions/upload-artifact@v3
+          && github.repository_owner == 'pydata'
+        uses: xarray-contrib/issue-from-pytest-log
         with:
-          name: output-${{ matrix.python-version }}-log.jsonl
-          path: output-${{ matrix.python-version }}-log.jsonl
-          retention-days: 5
-
-  report:
-    name: report
-    needs: upstream-dev
-    if: |
-      failure()
-      && github.event_name == 'schedule'
-      && needs.upstream-dev.outputs.artifacts_availability == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-      - uses: actions/download-artifact@v3
-        with:
-          path: /tmp/workspace/logs
-      - uses: xarray-contrib/issue-from-pytest-log@v0.1
-        with:
-          log-path: /tmp/workspace/logs/${{ needs.upstream-dev.outputs.artifact_name }}
+          log-path: output-${{ matrix.python-version }}-log.jsonl
