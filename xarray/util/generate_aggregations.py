@@ -427,8 +427,8 @@ AGGREGATION_METHODS = (
     Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method("median", extra_kwargs=(skipna,), numeric_only=True),
     # Cumulatives:
-    Method("cumsum", extra_kwargs=(skipna,)),
-    Method("cumprod", extra_kwargs=(skipna,)),
+    Method("cumsum", extra_kwargs=(skipna,), numeric_only=True),
+    Method("cumprod", extra_kwargs=(skipna,), numeric_only=True),
 )
 
 

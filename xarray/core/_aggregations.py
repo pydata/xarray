@@ -1073,6 +1073,10 @@ class DatasetAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1113,7 +1117,7 @@ class DatasetAggregations:
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
-            numeric_only=False,
+            numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -1162,6 +1166,10 @@ class DatasetAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1202,7 +1210,7 @@ class DatasetAggregations:
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
-            numeric_only=False,
+            numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -2171,6 +2179,10 @@ class DataArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2255,6 +2267,10 @@ class DataArrayAggregations:
         Dataset.cumprod
         :ref:`agg`
             User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         Examples
         --------
@@ -3527,6 +3543,10 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3567,7 +3587,7 @@ class DatasetGroupByAggregations:
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
-            numeric_only=False,
+            numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -3617,6 +3637,10 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3657,7 +3681,7 @@ class DatasetGroupByAggregations:
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
-            numeric_only=False,
+            numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -4892,6 +4916,10 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4932,7 +4960,7 @@ class DatasetResampleAggregations:
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
-            numeric_only=False,
+            numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -4982,6 +5010,10 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5022,7 +5054,7 @@ class DatasetResampleAggregations:
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
-            numeric_only=False,
+            numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -6157,6 +6189,10 @@ class DataArrayGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -6242,6 +6278,10 @@ class DataArrayGroupByAggregations:
         DataArray.cumprod
         :ref:`groupby`
             User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         Examples
         --------
@@ -7414,6 +7454,10 @@ class DataArrayResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -7499,6 +7543,10 @@ class DataArrayResampleAggregations:
         DataArray.cumprod
         :ref:`resampling`
             User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         Examples
         --------
