@@ -43,7 +43,7 @@ from .indexes import (
     isel_indexes,
 )
 from .indexing import is_fancy_indexer, map_index_queries
-from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords, merge_indexes
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -288,6 +288,11 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
+    indexes : py:class:`~xarray.Indexes` or list of py:class`~xarray.Indexes`, optional
+        One or more collections of Xarray-compatible indexes and their
+        coordinates variables. Provide an empty list or collection if you
+        want to skip the creation of default (pandas) indexes for dimension
+        coordinates.
 
     Examples
     --------
@@ -376,21 +381,20 @@ class DataArray(
         dims: Hashable | Sequence[Hashable] | None = None,
         name: Hashable = None,
         attrs: Mapping = None,
+        indexes: Indexes[Index]
+        | Sequence[Indexes[Index]]
+        | dict[Hashable, Index]
+        | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
             variable = data
             assert dims is None
             assert attrs is None
-            assert indexes is not None
+            assert isinstance(indexes, dict)
+            da_indexes = indexes
         else:
-            # TODO: (benbovy - explicit indexes) remove
-            # once it becomes part of the public interface
-            if indexes is not None:
-                raise ValueError("Providing explicit indexes is not supported yet")
-
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
 
@@ -410,21 +414,47 @@ class DataArray(
             if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
 
+            if indexes is not None and len(indexes) == 0:
+                create_default_indexes = False
+            else:
+                create_default_indexes = True
+
+            if indexes is None:
+                indexes = []
+            elif isinstance(indexes, Indexes):
+                indexes = [indexes]
+            else:
+                if any(not isinstance(idxs, Indexes) for idxs in indexes):
+                    raise TypeError(
+                        "indexes only accept one or more instances of `Indexes`"
+                    )
+
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
-            indexes, coords = _create_indexes_from_coords(coords)
+            if create_default_indexes:
+                da_indexes, coords = _create_indexes_from_coords(coords)
+            else:
+                da_indexes = {}
+
+            idx_indexes, idx_variables = merge_indexes(cast(Sequence[Indexes], indexes))
+
+            both_indexes_and_coords = set(idx_indexes) & set(coords)
+            if both_indexes_and_coords:
+                raise ValueError(
+                    f"{both_indexes_and_coords} are found in both indexes and coords"
+                )
+
+            coords.update(idx_variables)
+            da_indexes.update(idx_indexes)
 
         # These fully describe a DataArray
         self._variable = variable
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-
-        # TODO(shoyer): document this argument, once it becomes part of the
-        # public interface.
-        self._indexes = indexes  # type: ignore[assignment]
+        self._indexes = da_indexes
 
         self._close = None
 
