@@ -49,9 +49,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
-    outputs:
-      artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
-      artifact_name: ${{ steps.status.outputs.ARTIFACT_NAME }}
     steps:
       - uses: actions/checkout@v3
         with:
