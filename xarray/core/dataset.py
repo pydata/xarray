@@ -64,6 +64,7 @@ from .merge import (
     dataset_update_method,
     merge_coordinates_without_align,
     merge_data_and_coords,
+    merge_indexes,
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
@@ -440,8 +441,10 @@ class Dataset(
     Dataset implements the mapping interface with keys given by variable
     names and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are
-    index coordinates used for label based indexing.
+    By default, pandas indexes are created for one dimensional variables with
+    name equal to their dimension so those variables can be used as coordinates
+    for label based indexing. Xarray-compatible indexes may also be provided
+    via the `indexes` argument.
 
     To load data from a file or file-like object, use the `open_dataset`
     function.
@@ -492,6 +495,11 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
+    indexes : py:class:`~xarray.Indexes` or list of py:class`~xarray.Indexes`, optional
+        One or more collections of Xarray-compatible indexes and their
+        coordinates variables. Provide an empty list or collection if you
+        want to skip the creation of default (pandas) indexes for dimension
+        coordinates.
 
     Examples
     --------
@@ -551,6 +559,7 @@ class Dataset(
         precipitation   float64 8.326
     Attributes:
         description:  Weather related data.
+
     """
 
     _attrs: dict[Hashable, Any] | None
@@ -581,13 +590,27 @@ class Dataset(
         data_vars: Mapping[Any, Any] | None = None,
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
+        indexes: Indexes[Index] | Sequence[Indexes[Index]] | None = None,
     ) -> None:
-        # TODO(shoyer): expose indexes as a public argument in __init__
-
         if data_vars is None:
             data_vars = {}
         if coords is None:
             coords = {}
+
+        if indexes is not None and len(indexes) == 0:
+            create_default_indexes = False
+        else:
+            create_default_indexes = True
+
+        if indexes is None:
+            indexes = []
+        elif isinstance(indexes, Indexes):
+            indexes = [indexes]
+        else:
+            if any(not isinstance(idxs, Indexes) for idxs in indexes):
+                raise TypeError(
+                    "indexes only accept one or more instances of `Indexes`"
+                )
 
         both_data_and_coords = set(data_vars) & set(coords)
         if both_data_and_coords:
@@ -598,9 +621,24 @@ class Dataset(
         if isinstance(coords, Dataset):
             coords = coords.variables
 
-        variables, coord_names, dims, indexes, _ = merge_data_and_coords(
-            data_vars, coords, compat="broadcast_equals"
+        variables, coord_names, dims, ds_indexes, _ = merge_data_and_coords(
+            data_vars,
+            coords,
+            compat="broadcast_equals",
+            create_default_indexes=create_default_indexes,
         )
+
+        idx_indexes, idx_variables = merge_indexes(indexes)
+
+        both_indexes_and_coords = set(idx_indexes) & coord_names
+        if both_indexes_and_coords:
+            raise ValueError(
+                f"{both_indexes_and_coords} are found in both indexes and coords"
+            )
+
+        variables.update(idx_variables)
+        coord_names.update(idx_variables)
+        ds_indexes.update(idx_indexes)
 
         self._attrs = dict(attrs) if attrs is not None else None
         self._close = None
@@ -608,7 +646,7 @@ class Dataset(
         self._variables = variables
         self._coord_names = coord_names
         self._dims = dims
-        self._indexes = indexes
+        self._indexes = ds_indexes
 
     @classmethod
     def load_store(cls: type[T_Dataset], store, decoder=None) -> T_Dataset:

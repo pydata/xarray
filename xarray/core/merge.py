@@ -567,9 +567,18 @@ def merge_coords(
     return variables, out_indexes
 
 
-def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="outer"):
+def merge_data_and_coords(
+    data_vars,
+    coords,
+    compat="broadcast_equals",
+    join="outer",
+    create_default_indexes=True,
+):
     """Used in Dataset.__init__."""
-    indexes, coords = _create_indexes_from_coords(coords, data_vars)
+    if create_default_indexes:
+        indexes, coords = _create_indexes_from_coords(coords, data_vars)
+    else:
+        indexes = {}
     objects = [data_vars, coords]
     explicit_coords = coords.keys()
     return merge_core(
@@ -579,6 +588,27 @@ def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="ou
         explicit_coords=explicit_coords,
         indexes=Indexes(indexes, coords),
     )
+
+
+def merge_indexes(
+    indexes: Iterable[Indexes],
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    indexes_: dict[Hashable, Index] = {}
+    variables_: dict[Hashable, Variable] = {}
+
+    duplicates = set()
+
+    for idxs in indexes:
+        for k, v in idxs.items():
+            if k in indexes:
+                duplicates.add(k)
+            indexes_[k] = v
+            variables_[k] = v.variables[k]
+
+    if duplicates:
+        raise ValueError(f"found duplicate indexes {duplicates}")
+
+    return indexes_, variables_
 
 
 def _create_indexes_from_coords(coords, data_vars=None):
