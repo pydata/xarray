@@ -425,7 +425,10 @@ def summarize_index(
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    preformatted = [pretty_print(f"    {name} ", col_width) for name in names]
+    preformatted = [
+        pretty_print(f"  {'-' if index == 0 else ' '} {name} ", col_width)
+        for index, name in enumerate(names)
+    ]
 
     head, *tail = preformatted
     index_width = max_width - len(head)
