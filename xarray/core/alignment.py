@@ -551,6 +551,7 @@ class Aligner(Generic[DataAlignable]):
             # fast path for the trivial case
             (obj,) = self.objects
             self.results = (obj.copy(deep=self.copy),)
+            return
 
         self.find_matching_indexes()
         self.find_matching_unindexed_dims()
