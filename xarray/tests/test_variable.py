@@ -2847,7 +2847,7 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
-        # DatetimeIndex, and thus is hidden within the PandasIndexAdaptor class.
+        # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("US/Eastern")
         )
@@ -2878,7 +2878,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
     else:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
-        # DatetimeIndex, and thus is hidden within the PandasIndexAdaptor class.
+        # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("US/Eastern")
         )
@@ -2892,7 +2892,6 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         (np.array([np.timedelta64(10, "ns")]), False),
         (np.array([np.timedelta64(10, "s")]), True),
         (pd.timedelta_range("1", periods=1), False),
-        (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), True),
         (timedelta(days=1), False),
         (np.array([timedelta(days=1)]), False),
     ],
@@ -2907,5 +2906,16 @@ def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) ->
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             var = Variable(dims, values)
+
+    assert var.dtype == np.dtype("timedelta64[ns]")
+
+
+@requires_pandas_version_two
+def test_pandas_two_only_timedelta_conversion_warning() -> None:
+    # Note this test relies on a pandas feature that is only present in pandas
+    # 2.0.0 and above, and so for now cannot be parametrized.
+    data = pd.timedelta_range("1", periods=1).astype("timedelta64[s]")
+    with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
+        var = Variable(["time"], data)
 
     assert var.dtype == np.dtype("timedelta64[ns]")
