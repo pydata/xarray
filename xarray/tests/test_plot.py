@@ -3178,3 +3178,13 @@ def test_assert_valid_xy() -> None:
     # A hashable that is not valid should error:
     with pytest.raises(ValueError, match="x must be one of"):
         _assert_valid_xy(darray=darray, xy="error_now", name="x")
+
+
+@pytest.mark.parametrize(
+    "val", [pytest.param([], id="empty"), pytest.param(0, id="scalar")]
+)
+def test_plot_empty_raises(val: list | float) -> None:
+
+    da = xr.DataArray(val)
+    with pytest.raises(TypeError, match="No numeric data"):
+        da.plot()

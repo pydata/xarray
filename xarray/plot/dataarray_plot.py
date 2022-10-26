@@ -280,7 +280,10 @@ def plot(
     ndims = len(plot_dims)
 
     plotfunc: Callable
-    if ndims in [1, 2]:
+
+    if ndims == 0 or darray.size == 0:
+        raise TypeError("No numeric data to plot.")
+    elif ndims in (1, 2):
         if row or col:
             kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
