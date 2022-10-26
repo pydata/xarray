@@ -57,6 +57,8 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix handling of coordinate attributes in ``xarray.where``. (:issue:`7220`, :pull:`7229`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~
