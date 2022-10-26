@@ -1865,7 +1865,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 40 30 20 10
           * y        (y) int64 90 80 70
-        Reindexing with both DataArrays having the same coordinates set, but in different order
+
+        Reindexing with both DataArrays having the same coordinates set, but in different order:
+
         >>> da1.reindex_like(da2)
         <xarray.DataArray (x: 4, y: 3)>
         array([[11, 10,  9],
@@ -1875,7 +1877,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 40 30 20 10
           * y        (y) int64 90 80 70
-        Reindexing with the other array having coordinates which the source array doesn't have
+
+        Reindexing with the other array having coordinates which the source array doesn't have:
+
         >>> data = np.arange(12).reshape(4, 3)
         >>> da1 = xr.DataArray(
         ...     data=data,
@@ -1896,7 +1900,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 20 10 29 39
           * y        (y) int64 70 80 90
-        Filling missing values with the previous valid index with respect to the coordinates' value
+
+        Filling missing values with the previous valid index with respect to the coordinates' value:
+
         >>> da1.reindex_like(da2, method="ffill")
         <xarray.DataArray (x: 4, y: 3)>
         array([[3, 4, 5],
@@ -1906,7 +1912,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 20 10 29 39
           * y        (y) int64 70 80 90
-        Filling missing values while tolerating specified error for inexact matches
+
+        Filling missing values while tolerating specified error for inexact matches:
+
         >>> da1.reindex_like(da2, method="ffill", tolerance=5)
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 3.,  4.,  5.],
@@ -1916,7 +1924,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 20 10 29 39
           * y        (y) int64 70 80 90
-        Filling missing values with manually specified values
+
+        Filling missing values with manually specified values:
+
         >>> da1.reindex_like(da2, fill_value=19)
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 3,  4,  5],
@@ -2254,7 +2264,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 10 20 29 39
           * y        (y) int64 70 80 90
-        Interpolate the values in the coordinates of the other DataArray with respect to the source's values
+
+        Interpolate the values in the coordinates of the other DataArray with respect to the source's values:
+
         >>> da2.interp_like(da1)
         <xarray.DataArray (x: 4, y: 3)>
         array([[0. , 1. , 2. ],
@@ -2264,7 +2276,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 10 20 30 40
           * y        (y) int64 70 80 90
-        Could also extrapolate missing values
+
+        Could also extrapolate missing values:
+
         >>> da2.interp_like(da1, kwargs={"fill_value": "extrapolate"})
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0. ,  1. ,  2. ],
@@ -2954,7 +2968,9 @@ class DataArray(
         Coordinates:
           * x        (x) int64 10 20 30 40
           * y        (y) int64 70 80 90
-        Removing a single variable
+
+        Removing a single variable:
+
         >>> da.drop_vars("x")
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
@@ -2964,7 +2980,9 @@ class DataArray(
         Coordinates:
           * y        (y) int64 70 80 90
         Dimensions without coordinates: x
-        Removing a list of variables
+
+        Removing a list of variables:
+
         >>> da.drop_vars(["x", "y"])
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
