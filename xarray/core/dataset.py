@@ -633,6 +633,10 @@ class Dataset(
         coord_names.update(indexes.variables)
         ds_indexes.update(indexes)
 
+        # re-calculate dimensions if indexes are given explicitly
+        if indexes:
+            dims = calculate_dimensions(variables)
+
         self._attrs = dict(attrs) if attrs is not None else None
         self._close = None
         self._encoding = None

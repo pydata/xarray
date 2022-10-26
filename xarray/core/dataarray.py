@@ -441,6 +441,8 @@ class DataArray(
                     f"{both_indexes_and_coords} are found in both indexes and coords"
                 )
 
+            # TODO: also check shape and dims of indexes (coordinate variables)
+
             da_coords.update(indexes.variables)
             da_indexes.update(indexes)
 
