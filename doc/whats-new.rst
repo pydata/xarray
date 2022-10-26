@@ -76,6 +76,13 @@ Internal Changes
   encoding times to preserve existing behavior and prevent future errors when it
   is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Emit a warning under the development version of pandas when we convert
+  non-nanosecond precision datetime or timedelta values to nanosecond precision.
+  This was required in the past, because pandas previously was not compatible
+  with non-nanosecond precision values.  However pandas is currently working
+  towards removing this restriction.  When things stabilize in pandas we will
+  likely consider relaxing this behavior in xarray as well (:issue:`7175`,
+  :pull:`7201`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 
