@@ -14,7 +14,6 @@ class Creation:
             d[f"var{i}"] = i
         self.dataset = xr.merge([d])
 
-    @parameterized(["elements"], [(0, 10, 100, 1000)])
     def time_dataset_creation(self, elements):
         dataset = self.dataset
         for i in range(5):
