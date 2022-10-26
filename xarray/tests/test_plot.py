@@ -3201,8 +3201,7 @@ def test_assert_valid_xy() -> None:
 def test_plot_empty_raises(val: list | float, method: str | None) -> None:
     da = xr.DataArray(val)
     with pytest.raises(TypeError, match="No numeric data"):
-        with figure_context():
-            if method == "plot":
-                da.plot()
-            else:
-                getattr(da.plot, method)()
+        if method == "plot":
+            da.plot()
+        else:
+            getattr(da.plot, method)()
