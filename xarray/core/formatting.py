@@ -419,15 +419,18 @@ def inline_index_repr(index, max_width=None):
     return repr_
 
 
-def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+def summarize_index(
+    names: tuple[Hashable], index, col_width: int, max_width: int = None
+):
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    preformatted = pretty_print(f"    {name} ", col_width)
+    preformatted = [pretty_print(f"    {name} ", col_width) for name in names]
 
-    index_width = max_width - len(preformatted)
+    head, *tail = preformatted
+    index_width = max_width - len(head)
     repr_ = inline_index_repr(index, max_width=index_width)
-    return preformatted + repr_
+    return "\n".join([head + repr_] + [line.rstrip() for line in tail])
 
 
 def filter_nondefault_indexes(indexes, filter_indexes):
@@ -446,18 +449,10 @@ def filter_nondefault_indexes(indexes, filter_indexes):
 
 
 def indexes_repr(indexes, max_rows=None):
-    def format_names(names):
-        if len(names) == 1:
-            return str(names[0])
-        else:
-            return f"[{', '.join(str(n) for n in names)}]"
-
-    indexes_ = {format_names(names): idx for names, idx in indexes.items()}
-
-    col_width = _calculate_col_width(indexes_)
+    col_width = _calculate_col_width(chain.from_iterable(indexes))
 
     return _mapping_repr(
-        indexes_,
+        indexes,
         "Indexes",
         summarize_index,
         "display_expand_indexes",
