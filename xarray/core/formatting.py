@@ -422,27 +422,23 @@ def inline_index_repr(index, max_width=None):
 def summarize_index(
     names: tuple[Hashable], index, col_width: int, max_width: int = None
 ):
-    from .indexes import Index
-
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    def suffix(index, length):
+    def prefix(index, length):
         if index == 0 and length == 1:
             return " "
         elif index == 0:
-            return "┐"
+            return "┌"
         elif index >= length - 1:
-            return "┘"
+            return "└"
         else:
             return "│"
 
-    preformatted = [pretty_print(f"    {name}", col_width) for name in names]
-    if isinstance(index, Index):
-        preformatted = [
-            f"{name} {suffix(position, len(names))} "
-            for position, name in enumerate(preformatted)
-        ]
+    preformatted = [
+        pretty_print(f"  {prefix(position, len(names))} {name}", col_width)
+        for position, name in enumerate(names)
+    ]
 
     head, *tail = preformatted
     index_width = max_width - len(head)
