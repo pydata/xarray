@@ -6,15 +6,16 @@ formats. They should not be used directly, but rather through Dataset objects.
 from .cfgrib_ import CfGribDataStore
 from .common import AbstractDataStore, BackendArray, BackendEntrypoint
 from .file_manager import CachingFileManager, DummyFileManager, FileManager
-from .h5netcdf_ import H5NetCDFStore
+from .h5netcdf_ import H5netcdfBackendEntrypoint, H5NetCDFStore
 from .memory import InMemoryDataStore
-from .netCDF4_ import NetCDF4DataStore
+from .netCDF4_ import NetCDF4BackendEntrypoint, NetCDF4DataStore
 from .plugins import list_engines
-from .pseudonetcdf_ import PseudoNetCDFDataStore
-from .pydap_ import PydapDataStore
+from .pseudonetcdf_ import PseudoNetCDFBackendEntrypoint, PseudoNetCDFDataStore
+from .pydap_ import PydapBackendEntrypoint, PydapDataStore
 from .pynio_ import NioDataStore
-from .scipy_ import ScipyDataStore
-from .zarr import ZarrStore
+from .scipy_ import ScipyBackendEntrypoint, ScipyDataStore
+from .store import StoreBackendEntrypoint
+from .zarr import ZarrBackendEntrypoint, ZarrStore
 
 __all__ = [
     "AbstractDataStore",
@@ -32,5 +33,12 @@ __all__ = [
     "H5NetCDFStore",
     "ZarrStore",
     "PseudoNetCDFDataStore",
+    "H5netcdfBackendEntrypoint",
+    "NetCDF4BackendEntrypoint",
+    "PseudoNetCDFBackendEntrypoint",
+    "PydapBackendEntrypoint",
+    "ScipyBackendEntrypoint",
+    "StoreBackendEntrypoint",
+    "ZarrBackendEntrypoint",
     "list_engines",
 ]

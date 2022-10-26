@@ -66,6 +66,8 @@ Documentation
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add documentation of specific BackendEntrypoints (:pull:`7200`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
