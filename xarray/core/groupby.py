@@ -771,10 +771,7 @@ class GroupBy(Generic[T_Xarray]):
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
             assert self._full_index is not None
-            new_coord = [
-                pd.Interval(inter.left, inter.right) for inter in self._full_index
-            ]
-            result[self._group.name] = new_coord
+            result[self._group.name] = self._full_index
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!

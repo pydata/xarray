@@ -1370,6 +1370,9 @@ class TestDataArrayGroupBy:
         actual = array.groupby_bins("dim_0", bins=bins).sum()
         assert_identical(expected, actual)
 
+        actual = array.groupby_bins("dim_0", bins=bins, labels=[1.2, 3.5]).sum()
+        assert_identical(expected.assign_coords(dim_0_bins=[1.2, 3.5]), actual)
+
         actual = array.groupby_bins("dim_0", bins=bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
 
