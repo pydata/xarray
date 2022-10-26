@@ -23,6 +23,7 @@ from .duck_array_ops import lazy_array_equiv
 from .indexes import (
     Index,
     Indexes,
+    PandasIndex,
     create_default_index_implicit,
     filter_indexes_from_coords,
     indexes_equal,
@@ -590,28 +591,9 @@ def merge_data_and_coords(
     )
 
 
-def merge_indexes(
-    indexes: Iterable[Indexes],
-) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    indexes_: dict[Hashable, Index] = {}
-    variables_: dict[Hashable, Variable] = {}
-
-    duplicates = set()
-
-    for idxs in indexes:
-        for k, v in idxs.items():
-            if k in indexes:
-                duplicates.add(k)
-            indexes_[k] = v
-            variables_[k] = v.variables[k]
-
-    if duplicates:
-        raise ValueError(f"found duplicate indexes {duplicates}")
-
-    return indexes_, variables_
-
-
-def _create_indexes_from_coords(coords, data_vars=None):
+def _create_indexes_from_coords(
+    coords: Mapping[Any, Variable], data_vars: Mapping[Any, Variable] | None = None
+) -> tuple[dict[Any, PandasIndex], dict[Any, Variable]]:
     """Maybe create default indexes from a mapping of coordinates.
 
     Return those indexes and updated coordinates.

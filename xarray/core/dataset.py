@@ -64,7 +64,6 @@ from .merge import (
     dataset_update_method,
     merge_coordinates_without_align,
     merge_data_and_coords,
-    merge_indexes,
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
@@ -495,11 +494,11 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
-    indexes : py:class:`~xarray.Indexes` or list of py:class`~xarray.Indexes`, optional
-        One or more collections of Xarray-compatible indexes and their
-        coordinates variables. Provide an empty list or collection if you
-        want to skip the creation of default (pandas) indexes for dimension
-        coordinates.
+    indexes : py:class:`~xarray.Indexes` or dict-like, optional
+        A collection of :py:class:`~xarray.indexes.Index` objects and
+        their coordinates variables. If an empty collection is given,
+        it will skip the creation of default (pandas) indexes for
+        dimension coordinates.
 
     Examples
     --------
@@ -590,27 +589,23 @@ class Dataset(
         data_vars: Mapping[Any, Any] | None = None,
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
-        indexes: Indexes[Index] | Sequence[Indexes[Index]] | None = None,
+        indexes: Mapping[Any, Index] | None = None,
     ) -> None:
         if data_vars is None:
             data_vars = {}
         if coords is None:
             coords = {}
 
-        if indexes is not None and len(indexes) == 0:
+        if indexes is None:
+            create_default_indexes = True
+            indexes = Indexes()
+        elif len(indexes) == 0:
             create_default_indexes = False
+            indexes = Indexes()
         else:
             create_default_indexes = True
-
-        if indexes is None:
-            indexes = []
-        elif isinstance(indexes, Indexes):
-            indexes = [indexes]
-        else:
-            if any(not isinstance(idxs, Indexes) for idxs in indexes):
-                raise TypeError(
-                    "indexes only accept one or more instances of `Indexes`"
-                )
+            if not isinstance(indexes, Indexes):
+                raise TypeError("non-empty indexes must be an instance of `Indexes`")
 
         both_data_and_coords = set(data_vars) & set(coords)
         if both_data_and_coords:
@@ -628,17 +623,15 @@ class Dataset(
             create_default_indexes=create_default_indexes,
         )
 
-        idx_indexes, idx_variables = merge_indexes(indexes)
-
-        both_indexes_and_coords = set(idx_indexes) & coord_names
+        both_indexes_and_coords = set(indexes) & coord_names
         if both_indexes_and_coords:
             raise ValueError(
                 f"{both_indexes_and_coords} are found in both indexes and coords"
             )
 
-        variables.update(idx_variables)
-        coord_names.update(idx_variables)
-        ds_indexes.update(idx_indexes)
+        variables.update(indexes.variables)
+        coord_names.update(indexes.variables)
+        ds_indexes.update(indexes)
 
         self._attrs = dict(attrs) if attrs is not None else None
         self._close = None
