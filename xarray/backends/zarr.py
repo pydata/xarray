@@ -808,7 +808,20 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
+    """
+    Backend for ".zarr" files based on the zarr package.
+
+    For more information about the underlying library, visit:
+    https://zarr.readthedocs.io/en/stable
+
+    See Also
+    --------
+    backends.ZarrStore
+    """
+
     available = has_zarr
+    description = "Open zarr files (.zarr) using zarr in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         try:
