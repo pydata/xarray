@@ -6,7 +6,7 @@ class DatasetInMemoryOperations:
 
     def setup(self, elements):
         self.datasets = {}
-        # Dictionary insertion is fast(er) than xarray.Dataser insertion
+        # Dictionary insertion is fast(er) than xarray.Dataset insertion
         d = {}
         for i in range(elements):
             d[f"var{i}"] = i
