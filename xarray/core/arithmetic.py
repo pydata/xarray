@@ -108,7 +108,6 @@ class VariableArithmetic(
 
 class DatasetArithmetic(
     ImplementsDatasetReduce,
-    IncludeCumMethods,
     SupportsArithmetic,
     DatasetOpsMixin,
 ):
@@ -118,7 +117,6 @@ class DatasetArithmetic(
 
 class DataArrayArithmetic(
     ImplementsArrayReduce,
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     DataArrayOpsMixin,

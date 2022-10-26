@@ -754,6 +754,7 @@ Dataset
    DatasetGroupBy.any
    DatasetGroupBy.count
    DatasetGroupBy.cumsum
+   DatasetGroupBy.cumprod
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -784,6 +785,7 @@ DataArray
    DataArrayGroupBy.any
    DataArrayGroupBy.count
    DataArrayGroupBy.cumsum
+   DataArrayGroupBy.cumprod
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median

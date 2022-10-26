@@ -28,6 +28,9 @@ New Features
 - Display the indexes in a new section of the text and HTML reprs
   (:pull:`6795`, :pull:`7183`, :pull:`7185`)
   By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
+- Added methods :py:meth:`DataArrayGroupBy.cumprod` and :py:meth:`DatasetGroupBy.cumprod`.
+  (:pull:`5816`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -62,6 +65,8 @@ Documentation
   Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
   and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Created docstring examples for :py:meth:`DataArray.cumsum`, :py:meth:`DataArray.cumprod`, :py:meth:`Dataset.cumsum`, :py:meth:`Dataset.cumprod`, :py:meth:`DatasetGroupBy.cumsum`, :py:meth:`DataArrayGroupBy.cumsum`. (:issue:`5816`, :pull:`7152`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 - Add example of using :py:meth:`DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
