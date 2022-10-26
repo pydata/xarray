@@ -1100,8 +1100,8 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     def __init__(
         self,
-        indexes: dict[Any, T_PandasOrXarrayIndex],
-        variables: dict[Any, Variable],
+        indexes: dict[Any, T_PandasOrXarrayIndex] | None = None,
+        variables: dict[Any, Variable] | None = None,
     ):
         """Constructor not for public consumption.
 
@@ -1113,6 +1113,17 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             Indexed coordinate variables in this object.
 
         """
+        if indexes is None:
+            indexes = {}
+        if variables is None:
+            variables = {}
+
+        unmatched_keys = set(indexes) ^ set(variables)
+        if unmatched_keys:
+            raise ValueError(
+                f"unmatched keys found in indexes and variables: {unmatched_keys}"
+            )
+
         self._indexes = indexes
         self._variables = variables
 

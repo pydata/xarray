@@ -586,7 +586,7 @@ def merge_data_and_coords(
         compat,
         join,
         explicit_coords=explicit_coords,
-        indexes=Indexes(indexes, coords),
+        indexes=Indexes(indexes, {k: coords[k] for k in indexes}),
     )
 
 
