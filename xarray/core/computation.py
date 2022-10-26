@@ -1860,7 +1860,7 @@ def where(cond, x, y, keep_attrs=None):
     if keep_attrs is True:
         # keep the attributes of x, the second parameter, by default to
         # be consistent with the `where` method of `DataArray` and `Dataset`
-        keep_attrs = lambda attrs, context: getattr(x, "attrs", {})
+        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) > 1 else {}
 
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
