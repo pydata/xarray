@@ -3187,7 +3187,7 @@ def test_assert_valid_xy() -> None:
 @pytest.mark.parametrize(
     "method",
     [
-        "plot",
+        "__call__",
         "line",
         "step",
         "contour",
@@ -3199,10 +3199,7 @@ def test_assert_valid_xy() -> None:
         "surface",
     ],
 )
-def test_plot_empty_raises(val: list | float, method: str | None) -> None:
+def test_plot_empty_raises(val: list | float, method: str) -> None:
     da = xr.DataArray(val)
     with pytest.raises(TypeError, match="No numeric data"):
-        if method == "plot":
-            da.plot()
-        else:
-            getattr(da.plot, method)()
+        getattr(da.plot, method)()
