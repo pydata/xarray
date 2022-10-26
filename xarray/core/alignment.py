@@ -549,11 +549,8 @@ class Aligner(Generic[DataAlignable]):
     def align(self) -> None:
         if not self.indexes and len(self.objects) == 1:
             # fast path for the trivial case
-            if self.copy:
-                (obj,) = self.objects
-                self.results = (obj.copy(deep=True),)
-            else:
-                self.results = self.objects
+            (obj,) = self.objects
+            self.results = (obj.copy(deep=self.copy),)
             return
 
         self.find_matching_indexes()
