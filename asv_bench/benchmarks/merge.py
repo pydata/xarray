@@ -1,7 +1,7 @@
 import xarray as xr
 
 
-class DatasetInMemoryOperations:
+class DatasetAddVariable:
     params = [0, 10, 100, 1000]
 
     def setup(self, elements):
@@ -12,7 +12,7 @@ class DatasetInMemoryOperations:
             d[f"var{i}"] = i
         self.dataset = xr.merge([d])
 
-    def time_dataset_insertion(self, elements):
+    def time_variable_insertion(self):
         dataset = self.dataset
         for i in range(5):
             dataset[f"new_var{i}"] = i
