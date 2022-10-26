@@ -5,7 +5,7 @@ from . import parameterized
 
 class Creation:
     params = [0, 10, 100, 1000]
-    
+
     def setup(self, elements):
         self.datasets = {}
         # Dictionary insertion is fast(er) than xarray.Dataser insertion
