@@ -33,7 +33,8 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - ``repr(ds)`` may not show the same result because it doesn't load small,
-  lazy data anymore. (:issue:`6722`, :pull:`7203`).
+  lazy data anymore. Use ``ds.head().load()`` when wanting to see just a sample
+  of the data. (:issue:`6722`, :pull:`7203`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
