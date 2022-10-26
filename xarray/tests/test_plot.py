@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import inspect
 import math
+import warnings
 from copy import copy
 from datetime import datetime
 from typing import Any, Callable, Hashable, Literal
@@ -3178,3 +3179,18 @@ def test_assert_valid_xy() -> None:
     # A hashable that is not valid should error:
     with pytest.raises(ValueError, match="x must be one of"):
         _assert_valid_xy(darray=darray, xy="error_now", name="x")
+
+
+@requires_matplotlib
+def test_facetgrid_axes_raises_deprecation_warning():
+    with pytest.warns(
+        DeprecationWarning,
+        match=(
+            "self.axes is deprecated since 2022.11 in order to align with "
+            "matplotlibs plt.subplots, use self.axs instead."
+        ),
+    ):
+        with figure_context():
+            ds = xr.tutorial.scatter_example_dataset()
+            g = ds.plot.scatter(x="A", y="B", col="x")
+            g.axes
