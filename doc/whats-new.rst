@@ -26,7 +26,7 @@ New Features
 - Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Display the indexes in a new section of the text and HTML reprs
-  (:pull:`6795`, :pull:`7183`, :pull:`7185`)
+  (:pull:`6795`, :pull:`7183`, :pull:`7185`, :pull:`7225`)
   By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
