@@ -443,7 +443,9 @@ class DataArray(
 
             # TODO: also check shape and dims of indexes (coordinate variables)
 
-            da_coords.update(indexes.variables)
+            da_coords.update(
+                {k: v.copy(deep=False) for k, v in indexes.variables.items()}
+            )
             da_indexes.update(indexes)
 
         # These fully describe a DataArray

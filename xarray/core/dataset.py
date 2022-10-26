@@ -629,7 +629,7 @@ class Dataset(
                 f"{both_indexes_and_coords} are found in both indexes and coords"
             )
 
-        variables.update(indexes.variables)
+        variables.update({k: v.copy(deep=False) for k, v in indexes.variables.items()})
         coord_names.update(indexes.variables)
         ds_indexes.update(indexes)
 
