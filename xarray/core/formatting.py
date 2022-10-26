@@ -420,12 +420,12 @@ def inline_index_repr(index, max_width=None):
 
 
 def summarize_index(
-    names: tuple[Hashable], index, col_width: int, max_width: int = None
-):
+    names: tuple[Hashable, ...], index, col_width: int, max_width: int | None = None
+) -> str:
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    def prefix(index, length):
+    def prefix(index: int, length: int) -> str:
         if index == 0 and length == 1:
             return " "
         elif index == 0:
@@ -446,7 +446,7 @@ def summarize_index(
     return "\n".join([head + repr_] + [line.rstrip() for line in tail])
 
 
-def filter_nondefault_indexes(indexes, filter_indexes):
+def filter_nondefault_indexes(indexes, filter_indexes: bool):
     from .indexes import PandasIndex, PandasMultiIndex
 
     if not filter_indexes:
@@ -461,7 +461,7 @@ def filter_nondefault_indexes(indexes, filter_indexes):
     }
 
 
-def indexes_repr(indexes, max_rows=None):
+def indexes_repr(indexes, max_rows: int | None = None) -> str:
     col_width = _calculate_col_width(chain.from_iterable(indexes))
 
     return _mapping_repr(
