@@ -2836,11 +2836,21 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two):
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
     if warns_under_pandas_version_two and has_pandas_version_two:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
-            Variable(dims, values)
+            var = Variable(dims, values)
     else:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            Variable(dims, values)
+            var = Variable(dims, values)
+
+    if var.dtype.kind == "M":
+        assert var.dtype == np.dtype("datetime64[ns]")
+    else:
+        # The only case where a non-datetime64 dtype can occur currently is in
+        # the case that the variable is backed by a timezone-aware
+        # DatetimeIndex, and thus is hidden within the PandasIndexAdaptor class.
+        assert var._data.array.dtype == pd.DatetimeTZDtype(
+            "ns", pytz.timezone("US/Eastern")
+        )
 
 
 @requires_pandas_version_two
@@ -2861,7 +2871,17 @@ def test_pandas_two_only_datetime_conversion_warnings():
     ]
     for data, dtype in cases:
         with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
-            Variable(["time"], data.astype(dtype))
+            var = Variable(["time"], data.astype(dtype))
+
+    if var.dtype.kind == "M":
+        assert var.dtype == np.dtype("datetime64[ns]")
+    else:
+        # The only case where a non-datetime64 dtype can occur currently is in
+        # the case that the variable is backed by a timezone-aware
+        # DatetimeIndex, and thus is hidden within the PandasIndexAdaptor class.
+        assert var._data.array.dtype == pd.DatetimeTZDtype(
+            "ns", pytz.timezone("US/Eastern")
+        )
 
 
 @pytest.mark.parametrize(
@@ -2882,8 +2902,10 @@ def test_timedelta_conversion_warning(values, warns_under_pandas_version_two):
     dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
     if warns_under_pandas_version_two and has_pandas_version_two:
         with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
-            Variable(dims, values)
+            var = Variable(dims, values)
     else:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            Variable(dims, values)
+            var = Variable(dims, values)
+
+    assert var.dtype == np.dtype("timedelta64[ns]")
