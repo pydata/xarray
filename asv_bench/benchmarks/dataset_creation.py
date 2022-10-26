@@ -14,5 +14,5 @@ class Creation:
 
     def time_dataset_creation(self):
         dataset = self.dataset
-        for i in range(1000):
+        for i in range(100):
             dataset[f"var{i}"] = i
