@@ -6933,7 +6933,8 @@ class Dataset(
         ...     },
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
-        >>> ds.sortby("x")
+        >>> ds = ds.sortby("x")
+        >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
