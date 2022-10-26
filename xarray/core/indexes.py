@@ -1309,7 +1309,8 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return self._indexes[key]
 
     def __repr__(self):
-        return formatting.indexes_repr(self)
+        indexes = formatting._get_indexes_dict(self)
+        return formatting.indexes_repr(indexes)
 
 
 def default_indexes(
