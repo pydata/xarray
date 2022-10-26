@@ -42,6 +42,10 @@ Deprecations
 
 - Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- ``xarray.plot.FacetGrid.axes`` has been renamed to ``xarray.plot.FacetGrid.axs``
+  because it's not clear if ``axes`` refers to single or multiple ``Axes`` instances.
+  This aligns with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -58,7 +62,10 @@ Documentation
   Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
   and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
-
+- Add example of using :py:meth:`DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -2995,7 +3002,7 @@ Highlights include:
 - Removed support for Python 2. This is the first version of xarray that is
   Python 3 only!
 - New :py:meth:`~xarray.DataArray.coarsen` and
-  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`comput.coarsen`
+  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`compute.coarsen`
   and :ref:`compute.using_coordinates` for details.
 - Many improvements to cftime support. See below for details.
 
@@ -3051,7 +3058,7 @@ Other enhancements
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`DataArray.coarsen` and
   :py:meth:`Dataset.coarsen` are newly added.
-  See :ref:`comput.coarsen` for details.
+  See :ref:`compute.coarsen` for details.
   (:issue:`2525`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Upsampling an array via interpolation with resample is now dask-compatible,

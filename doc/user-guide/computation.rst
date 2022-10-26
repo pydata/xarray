@@ -360,14 +360,14 @@ and ``mean``, ``std`` and ``var`` return ``NaN``:
   ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
   Missing values can be replaced manually by ``weights.fillna(0)``.
 
-.. _comput.coarsen:
+.. _compute.coarsen:
 
 Coarsen large arrays
 ====================
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include a
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
-methods. This supports the block aggregation along multiple dimensions,
+methods. This supports block aggregation along multiple dimensions,
 
 .. ipython:: python
 
@@ -403,6 +403,7 @@ function or method name to ``coord_func`` option,
 
     da.coarsen(time=7, x=2, coord_func={"time": "min"}).mean()
 
+You can also :ref:`use coarsen to reshape<reshape.coarsen>` without applying a computation.
 
 .. _compute.using_coordinates:
 
