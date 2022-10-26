@@ -283,7 +283,7 @@ def plot(
 
     if ndims == 0 or darray.size == 0:
         raise TypeError("No numeric data to plot.")
-    elif ndims in (1, 2):
+    if ndims in (1, 2):
         if row or col:
             kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
@@ -486,6 +486,9 @@ def line(
         return _easy_facetgrid(darray, line, kind="line", **allargs)
 
     ndims = len(darray.dims)
+    if ndims == 0 or darray.size == 0:
+        # TypeError to be consistent with pandas
+        raise TypeError("No numeric data to plot.")
     if ndims > 2:
         raise ValueError(
             "Line plots are for 1- or 2-dimensional DataArrays. "
@@ -702,6 +705,10 @@ def hist(
     """
     assert len(args) == 0
 
+    if darray.ndim == 0 or darray.size == 0:
+        # TypeError to be consistent with pandas
+        raise TypeError("No numeric data to plot.")
+
     ax = get_axis(figsize, size, aspect, ax)
 
     no_nan = np.ravel(darray.to_numpy())
@@ -901,6 +908,10 @@ def _plot1d(plotfunc):
             allargs["plotfunc"] = globals()[plotfunc.__name__]
 
             return _easy_facetgrid(darray, kind="plot1d", **allargs)
+
+        if darray.ndim == 0 or darray.size == 0:
+            # TypeError to be consistent with pandas
+            raise TypeError("No numeric data to plot.")
 
         # The allargs dict passed to _easy_facetgrid above contains args
         if args == ():
@@ -1498,6 +1509,10 @@ def _plot2d(plotfunc):
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
+
+        if darray.ndim == 0 or darray.size == 0:
+            # TypeError to be consistent with pandas
+            raise TypeError("No numeric data to plot.")
 
         plt = import_matplotlib_pyplot()
 

@@ -3183,8 +3183,26 @@ def test_assert_valid_xy() -> None:
 @pytest.mark.parametrize(
     "val", [pytest.param([], id="empty"), pytest.param(0, id="scalar")]
 )
-def test_plot_empty_raises(val: list | float) -> None:
-
+@pytest.mark.parametrize(
+    "method",
+    [
+        "plot",
+        "line",
+        "step",
+        "contour",
+        "contourf",
+        "hist",
+        "imshow",
+        "pcolormesh",
+        "scatter",
+        "surface",
+    ],
+)
+def test_plot_empty_raises(val: list | float, method: str | None) -> None:
     da = xr.DataArray(val)
     with pytest.raises(TypeError, match="No numeric data"):
-        da.plot()
+        with figure_context():
+            if method == "plot":
+                da.plot()
+            else:
+                getattr(da.plot, method)()
