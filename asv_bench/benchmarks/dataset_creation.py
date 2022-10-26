@@ -1,18 +1,18 @@
 import xarray as xr
+from . import parameterized
 
 
 class Creation:
-    def setup(self):
-        # Everybody is lazy loading these days
-        # so lets force modules to get instantiated here, instead of
-        # in the benchmark
-        dummy_dataset = xr.Dataset()
-        dummy_dataset["a"] = 1
-        dummy_dataset["b"] = 1
+    def setup(self, elements):
+        self.datasets = {}
+        # Dictionary insertion is fast(er) than xarray.Dataser insertion
+        d = {}
+        for i in range(elements):
+            d[f"var{i}"] = i
+        self.dataset = xr.merge([d])
 
-        self.dataset = xr.Dataset()
-
-    def time_dataset_creation(self):
+    @parameterized(["elements"], [(0, 10, 100, 1000)])
+    def time_dataset_creation(self, elements):
         dataset = self.dataset
-        for i in range(100):
-            dataset[f"var{i}"] = i
+        for i in range(5):
+            dataset[f"new_var{i}"] = i
