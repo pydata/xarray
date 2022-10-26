@@ -1,7 +1,7 @@
 import xarray as xr
 
 
-class DatasetOperations:
+class DatasetInMemoryOperations:
     params = [0, 10, 100, 1000]
 
     def setup(self, elements):
