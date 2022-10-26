@@ -28,6 +28,9 @@ New Features
 - Display the indexes in a new section of the text and HTML reprs
   (:pull:`6795`, :pull:`7183`, :pull:`7185`)
   By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
+- Added methods :py:meth:`DataArrayGroupBy.cumprod` and :py:meth:`DatasetGroupBy.cumprod`.
+  (:pull:`5816`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -42,6 +45,10 @@ Deprecations
 
 - Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- ``xarray.plot.FacetGrid.axes`` has been renamed to ``xarray.plot.FacetGrid.axs``
+  because it's not clear if ``axes`` refers to single or multiple ``Axes`` instances.
+  This aligns with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -58,9 +65,14 @@ Documentation
   Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
   and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Created docstring examples for :py:meth:`DataArray.cumsum`, :py:meth:`DataArray.cumprod`, :py:meth:`Dataset.cumsum`, :py:meth:`Dataset.cumprod`, :py:meth:`DatasetGroupBy.cumsum`, :py:meth:`DataArrayGroupBy.cumsum`. (:issue:`5816`, :pull:`7152`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 - Add example of using :py:meth:`DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add documentation of specific BackendEntrypoints (:pull:`7200`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -73,6 +85,13 @@ Internal Changes
   `Spencer Clark <https://github.com/spencerkclark>`_.
 - Improved import time by lazily importing backend modules, matplotlib, dask.array and flox. (:issue:`6726`, :pull:`7179`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Emit a warning under the development version of pandas when we convert
+  non-nanosecond precision datetime or timedelta values to nanosecond precision.
+  This was required in the past, because pandas previously was not compatible
+  with non-nanosecond precision values.  However pandas is currently working
+  towards removing this restriction.  When things stabilize in pandas we will
+  likely consider relaxing this behavior in xarray as well (:issue:`7175`,
+  :pull:`7201`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 

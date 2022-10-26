@@ -97,7 +97,35 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
 
 class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
+    """
+    Backend for netCDF-like data formats in the air quality field
+    based on the PseudoNetCDF package.
+
+    It can open:
+    - CAMx
+    - RACM2 box-model outputs
+    - Kinetic Pre-Processor outputs
+    - ICARTT Data files (ffi1001)
+    - CMAQ Files
+    - GEOS-Chem Binary Punch/NetCDF files
+    - and many more
+
+    This backend is not selected by default for any files, so make
+    sure to specify ``engine="pseudonetcdf"`` in ``open_dataset``.
+
+    For more information about the underlying library, visit:
+    https://pseudonetcdf.readthedocs.io
+
+    See Also
+    --------
+    backends.PseudoNetCDFDataStore
+    """
+
     available = module_available("PseudoNetCDF")
+    description = (
+        "Open many atmospheric science data formats using PseudoNetCDF in Xarray"
+    )
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PseudoNetCDFBackendEntrypoint.html"
 
     # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
     # unless the open_dataset_parameters are explicitly defined like this:
