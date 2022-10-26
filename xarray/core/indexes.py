@@ -1505,3 +1505,33 @@ def assert_no_index_corrupted(
                 f"the following index built from coordinates {index_names_str}:\n"
                 f"{index}"
             )
+
+
+def wrap_pandas_multiindex(midx: pd.MultiIndex, dim: str) -> Indexes:
+    """Wrap a pandas multi-index as Xarray-compatible indexes
+    and coordinates.
+
+    This function returns an object that can be directly assigned to a
+    :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` (via the
+    ``indexes`` argument of their constructor).
+
+    Parameters
+    ----------
+    midx : :py:class:`pandas.MultiIndex`
+        The pandas multi-index object to wrap.
+    dim : str
+        Dimension name.
+
+    Returns
+    -------
+    indexes : :py:class`~xarray.Indexes`
+        An object that contains both the wrapped Xarray index and
+        its coordinate variables (dimension + levels).
+
+    """
+    xr_idx = PandasMultiIndex(midx, dim)
+
+    variables = xr_idx.create_variables()
+    indexes = {k: xr_idx for k in variables}
+
+    return Indexes(indexes=indexes, variables=variables)

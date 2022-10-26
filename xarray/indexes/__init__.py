@@ -2,6 +2,6 @@
 DataArray objects.
 
 """
-from ..core.indexes import Index, PandasIndex, PandasMultiIndex
+from ..core.indexes import Index, PandasIndex, PandasMultiIndex, wrap_pandas_multiindex
 
-__all__ = ["Index", "PandasIndex", "PandasMultiIndex"]
+__all__ = ["Index", "PandasIndex", "PandasMultiIndex", "wrap_pandas_multiindex"]
