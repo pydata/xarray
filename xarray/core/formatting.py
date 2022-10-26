@@ -408,10 +408,26 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def summarize_index(
-    name: str, index, col_width: int, max_width: int = None, is_index: bool = False
-):
-    return pretty_print(f"    {name} ", col_width) + f"{repr(index)}"
+def inline_index_repr(index, max_width=None):
+    if hasattr(index, "_repr_inline_"):
+        repr_ = index._repr_inline_(max_width=max_width)
+    else:
+        # fallback for the `pandas.Index` subclasses from
+        # `Indexes.get_pandas_indexes` / `xr_obj.indexes`
+        repr_ = repr(index)
+
+    return repr_
+
+
+def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+    if max_width is None:
+        max_width = OPTIONS["display_width"]
+
+    preformatted = pretty_print(f"    {name} ", col_width)
+
+    index_width = max_width - len(preformatted)
+    repr_ = inline_index_repr(index, max_width=index_width)
+    return preformatted + repr_
 
 
 def filter_nondefault_indexes(indexes, filter_indexes):
