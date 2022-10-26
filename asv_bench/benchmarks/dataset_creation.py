@@ -7,8 +7,8 @@ class Creation:
         # so lets force modules to get instantiated here, instead of
         # in the benchmark
         dummy_dataset = xr.Dataset()
-        dummy_dataset['a'] = 1
-        dummy_dataset['b'] = 1
+        dummy_dataset["a"] = 1
+        dummy_dataset["b"] = 1
 
         self.dataset = xr.Dataset()
 
