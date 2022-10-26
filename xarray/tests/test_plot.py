@@ -3180,6 +3180,7 @@ def test_assert_valid_xy() -> None:
         _assert_valid_xy(darray=darray, xy="error_now", name="x")
 
 
+@requires_matplotlib
 @pytest.mark.parametrize(
     "val", [pytest.param([], id="empty"), pytest.param(0, id="scalar")]
 )
