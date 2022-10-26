@@ -98,6 +98,32 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
+def _check_coords_dims(shape, coords, dims):
+    sizes = dict(zip(dims, shape))
+    for k, v in coords.items():
+        if any(d not in dims for d in v.dims):
+            raise ValueError(
+                f"coordinate {k} has dimensions {v.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dims}"
+            )
+
+        for d, s in zip(v.dims, v.shape):
+            if s != sizes[d]:
+                raise ValueError(
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
+                )
+
+        if k in sizes and v.shape != (sizes[k],):
+            raise ValueError(
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
+            )
+
+
 def _infer_coords_and_dims(
     shape, coords, dims
 ) -> tuple[dict[Hashable, Variable], tuple[Hashable, ...]]:
@@ -149,29 +175,7 @@ def _infer_coords_and_dims(
             var.dims = (dim,)
             new_coords[dim] = var.to_index_variable()
 
-    sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
-        if any(d not in dims for d in v.dims):
-            raise ValueError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dims}"
-            )
-
-        for d, s in zip(v.dims, v.shape):
-            if s != sizes[d]:
-                raise ValueError(
-                    f"conflicting sizes for dimension {d!r}: "
-                    f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
-                )
-
-        if k in sizes and v.shape != (sizes[k],):
-            raise ValueError(
-                f"coordinate {k!r} is a DataArray dimension, but "
-                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
-                "matching the dimension size"
-            )
+    _check_coords_dims(shape, new_coords, dims)
 
     return new_coords, dims
 
@@ -441,7 +445,7 @@ class DataArray(
                     f"{both_indexes_and_coords} are found in both indexes and coords"
                 )
 
-            # TODO: also check shape and dims of indexes (coordinate variables)
+            _check_coords_dims(data.shape, indexes.variables, dims)
 
             da_coords.update(
                 {k: v.copy(deep=False) for k, v in indexes.variables.items()}
