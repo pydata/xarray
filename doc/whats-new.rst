@@ -25,6 +25,12 @@ New Features
 
 - Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Display the indexes in a new section of the text and HTML reprs
+  (:pull:`6795`, :pull:`7183`, :pull:`7185`)
+  By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
+- Added methods :py:meth:`DataArrayGroupBy.cumprod` and :py:meth:`DatasetGroupBy.cumprod`.
+  (:pull:`5816`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -39,21 +45,51 @@ Deprecations
 
 - Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- ``xarray.plot.FacetGrid.axes`` has been renamed to ``xarray.plot.FacetGrid.axs``
+  because it's not clear if ``axes`` refers to single or multiple ``Axes`` instances.
+  This aligns with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Explicitly opening a file multiple times (e.g., after modifying it on disk)
+  now reopens the file from scratch for h5netcdf and scipy netCDF backends,
+  rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
+  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
+  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Created docstring examples for :py:meth:`DataArray.cumsum`, :py:meth:`DataArray.cumprod`, :py:meth:`Dataset.cumsum`, :py:meth:`Dataset.cumprod`, :py:meth:`DatasetGroupBy.cumsum`, :py:meth:`DataArrayGroupBy.cumsum`. (:issue:`5816`, :pull:`7152`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
+- Add example of using :py:meth:`DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add documentation of specific BackendEntrypoints (:pull:`7200`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Doctests fail on any warnings (:pull:`7166`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
-
+- Improve import time by lazy loading ``dask.distributed`` (:pull: `7172`).
+- Explicitly specify ``longdouble=False`` in :py:func:`cftime.date2num` when
+  encoding times to preserve existing behavior and prevent future errors when it
+  is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Emit a warning under the development version of pandas when we convert
+  non-nanosecond precision datetime or timedelta values to nanosecond precision.
+  This was required in the past, because pandas previously was not compatible
+  with non-nanosecond precision values.  However pandas is currently working
+  towards removing this restriction.  When things stabilize in pandas we will
+  likely consider relaxing this behavior in xarray as well (:issue:`7175`,
+  :pull:`7201`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 
@@ -2980,7 +3016,7 @@ Highlights include:
 - Removed support for Python 2. This is the first version of xarray that is
   Python 3 only!
 - New :py:meth:`~xarray.DataArray.coarsen` and
-  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`comput.coarsen`
+  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`compute.coarsen`
   and :ref:`compute.using_coordinates` for details.
 - Many improvements to cftime support. See below for details.
 
@@ -3036,7 +3072,7 @@ Other enhancements
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`DataArray.coarsen` and
   :py:meth:`Dataset.coarsen` are newly added.
-  See :ref:`comput.coarsen` for details.
+  See :ref:`compute.coarsen` for details.
   (:issue:`2525`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Upsampling an array via interpolation with resample is now dask-compatible,

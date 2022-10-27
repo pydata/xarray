@@ -592,30 +592,30 @@ Dataset methods
 .. autosummary::
    :toctree: generated/
 
-   open_dataset
    load_dataset
+   open_dataset
    open_mfdataset
    open_rasterio
    open_zarr
-   Dataset.to_netcdf
-   Dataset.to_pandas
-   Dataset.as_numpy
-   Dataset.to_zarr
    save_mfdataset
+   Dataset.as_numpy
+   Dataset.from_dataframe
+   Dataset.from_dict
    Dataset.to_array
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
-   Dataset.from_dataframe
-   Dataset.from_dict
+   Dataset.to_netcdf
+   Dataset.to_pandas
+   Dataset.to_zarr
+   Dataset.chunk
    Dataset.close
    Dataset.compute
-   Dataset.persist
-   Dataset.load
-   Dataset.chunk
-   Dataset.unify_chunks
    Dataset.filter_by_attrs
    Dataset.info
+   Dataset.load
+   Dataset.persist
+   Dataset.unify_chunks
 
 DataArray methods
 -----------------
@@ -623,29 +623,29 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
-   open_dataarray
    load_dataarray
-   DataArray.to_dataset
-   DataArray.to_netcdf
-   DataArray.to_pandas
-   DataArray.to_series
-   DataArray.to_dataframe
-   DataArray.to_numpy
+   open_dataarray
    DataArray.as_numpy
-   DataArray.to_index
-   DataArray.to_masked_array
-   DataArray.to_cdms2
-   DataArray.to_iris
-   DataArray.from_iris
-   DataArray.to_dict
-   DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
+   DataArray.from_iris
+   DataArray.from_series
+   DataArray.to_cdms2
+   DataArray.to_dataframe
+   DataArray.to_dataset
+   DataArray.to_dict
+   DataArray.to_index
+   DataArray.to_iris
+   DataArray.to_masked_array
+   DataArray.to_netcdf
+   DataArray.to_numpy
+   DataArray.to_pandas
+   DataArray.to_series
+   DataArray.chunk
    DataArray.close
    DataArray.compute
    DataArray.persist
    DataArray.load
-   DataArray.chunk
    DataArray.unify_chunks
 
 Coordinates objects
@@ -754,6 +754,7 @@ Dataset
    DatasetGroupBy.any
    DatasetGroupBy.count
    DatasetGroupBy.cumsum
+   DatasetGroupBy.cumprod
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -784,6 +785,7 @@ DataArray
    DataArrayGroupBy.any
    DataArrayGroupBy.count
    DataArrayGroupBy.cumsum
+   DataArrayGroupBy.cumprod
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median
@@ -1093,6 +1095,7 @@ Advanced API
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+   backends.list_engines
 
 Default, pandas-backed indexes built-in Xarray:
 
@@ -1108,11 +1111,27 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
+   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.ZarrStore
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+These BackendEntrypoints provide a basic interface to the most commonly
+used filetypes in the xarray universe.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4BackendEntrypoint
+   backends.H5netcdfBackendEntrypoint
+   backends.PseudoNetCDFBackendEntrypoint
+   backends.PydapBackendEntrypoint
+   backends.ScipyBackendEntrypoint
+   backends.StoreBackendEntrypoint
+   backends.ZarrBackendEntrypoint
 
 Deprecated / Pending Deprecation
 ================================
