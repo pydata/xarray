@@ -57,6 +57,8 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed bug where :py:meth:`Dataset.coarsen.construct` would demote non-dimension coordinates to variables. (:pull:`7233`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
