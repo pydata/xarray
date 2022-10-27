@@ -606,6 +606,8 @@ class Dataset(
             create_default_indexes = True
             if not isinstance(indexes, Indexes):
                 raise TypeError("non-empty indexes must be an instance of `Indexes`")
+            elif indexes._index_type != Index:
+                raise TypeError("indexes must only contain Xarray `Index` objects")
 
         both_data_and_coords = set(data_vars) & set(coords)
         if both_data_and_coords:

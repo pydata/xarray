@@ -428,6 +428,8 @@ class DataArray(
                     raise TypeError(
                         "non-empty indexes must be an instance of `Indexes`"
                     )
+                elif indexes._index_type != Index:
+                    raise TypeError("indexes must only contain Xarray `Index` objects")
 
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
