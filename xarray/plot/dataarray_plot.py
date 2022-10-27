@@ -211,7 +211,7 @@ def _infer_line_data2(
 
         # Array is now ready to be stacked:
         _stacked_dims = (
-            set(darray.dims) - set((dims_plot["hue"],))
+            set(darray.dims) - {dims_plot["hue"]}
             if plotfunc_name == "line"  # plt.plot allows hue's only in matrix form.
             else darray.dims
         )
