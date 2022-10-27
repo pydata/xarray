@@ -383,22 +383,25 @@ class ZarrStore(AbstractWritableDataStore):
             try:
                 zarr_group = zarr.open_consolidated(store, **open_kwargs)
             except KeyError:
-                warnings.warn(
-                    "Failed to open Zarr store with consolidated metadata, "
-                    "falling back to try reading non-consolidated metadata. "
-                    "This is typically much slower for opening a dataset. "
-                    "To silence this warning, consider:\n"
-                    "1. Consolidating metadata in this existing store with "
-                    "zarr.consolidate_metadata().\n"
-                    "2. Explicitly setting consolidated=False, to avoid trying "
-                    "to read consolidate metadata, or\n"
-                    "3. Explicitly setting consolidated=True, to raise an "
-                    "error in this case instead of falling back to try "
-                    "reading non-consolidated metadata.",
-                    RuntimeWarning,
-                    stacklevel=stacklevel,
-                )
-                zarr_group = zarr.open_group(store, **open_kwargs)
+                try:
+                    zarr_group = zarr.open_group(store, **open_kwargs)
+                    warnings.warn(
+                        "Failed to open Zarr store with consolidated metadata, "
+                        "but successfully read with non-consolidated metadata. "
+                        "This is typically much slower for opening a dataset. "
+                        "To silence this warning, consider:\n"
+                        "1. Consolidating metadata in this existing store with "
+                        "zarr.consolidate_metadata().\n"
+                        "2. Explicitly setting consolidated=False, to avoid trying "
+                        "to read consolidate metadata, or\n"
+                        "3. Explicitly setting consolidated=True, to raise an "
+                        "error in this case instead of falling back to try "
+                        "reading non-consolidated metadata.",
+                        RuntimeWarning,
+                        stacklevel=stacklevel,
+                    )
+                except zarr.errors.GroupNotFoundError:
+                    raise FileNotFoundError(f"No such file or directory: '{store}'")
         elif consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
@@ -805,7 +808,20 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
+    """
+    Backend for ".zarr" files based on the zarr package.
+
+    For more information about the underlying library, visit:
+    https://zarr.readthedocs.io/en/stable
+
+    See Also
+    --------
+    backends.ZarrStore
+    """
+
     available = has_zarr
+    description = "Open zarr files (.zarr) using zarr in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         try:

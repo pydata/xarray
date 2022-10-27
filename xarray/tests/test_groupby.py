@@ -538,7 +538,6 @@ def test_groupby_drops_nans() -> None:
         .rename({"xy": "id"})
         .to_dataset()
         .reset_index("id", drop=True)
-        .drop_vars(["lon", "lat"])
         .assign(id=stacked.id.values)
         .dropna("id")
         .transpose(*actual2.dims)
@@ -796,7 +795,7 @@ def test_groupby_math_more() -> None:
     with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
         ds + grouped
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + 1
+        grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
         grouped + grouped
     with pytest.raises(TypeError, match=r"in-place operations"):
@@ -1370,6 +1369,9 @@ class TestDataArrayGroupBy:
         )
         actual = array.groupby_bins("dim_0", bins=bins).sum()
         assert_identical(expected, actual)
+
+        actual = array.groupby_bins("dim_0", bins=bins, labels=[1.2, 3.5]).sum()
+        assert_identical(expected.assign_coords(dim_0_bins=[1.2, 3.5]), actual)
 
         actual = array.groupby_bins("dim_0", bins=bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
@@ -2010,7 +2012,7 @@ def test_groupby_cumsum() -> None:
         {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
         coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
     )
-    actual = ds.groupby("group_id").cumsum(dim="x")  # type: ignore[attr-defined]  # TODO: move cumsum to generate_reductions.py
+    actual = ds.groupby("group_id").cumsum(dim="x")
     expected = xr.Dataset(
         {
             "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
@@ -2028,6 +2030,61 @@ def test_groupby_cumsum() -> None:
     expected.coords["group_id"] = ds.group_id
     expected.coords["x"] = np.arange(7)
     assert_identical(expected.foo, actual)
+
+
+def test_groupby_cumprod() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x",), [7, 3, 0, 1, 1, 2, 1])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+    )
+    actual = ds.groupby("group_id").cumprod(dim="x")
+    expected = xr.Dataset(
+        {
+            "foo": (("x",), [7, 21, 0, 0, 1, 2, 2]),
+        },
+        coords={
+            "x": [0, 1, 2, 3, 4, 5, 6],
+            "group_id": ds.group_id,
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+
+    actual = ds.foo.groupby("group_id").cumprod(dim="x")
+    expected.coords["group_id"] = ds.group_id
+    expected.coords["x"] = np.arange(7)
+    assert_identical(expected.foo, actual)
+
+
+@pytest.mark.parametrize(
+    "method, expected_array",
+    [
+        ("cumsum", [1.0, 2.0, 5.0, 6.0, 2.0, 2.0]),
+        ("cumprod", [1.0, 2.0, 6.0, 6.0, 2.0, 2.0]),
+    ],
+)
+def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
+    ds = xr.Dataset(
+        {"foo": ("time", [1, 2, 3, 1, 2, np.nan])},
+        coords={
+            "time": pd.date_range("01-01-2001", freq="M", periods=6),
+        },
+    )
+    actual = getattr(ds.resample(time="3M"), method)(dim="time")
+    expected = xr.Dataset(
+        {"foo": (("time",), expected_array)},
+        coords={
+            "time": pd.date_range("01-01-2001", freq="M", periods=6),
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["time"]), actual)
+
+    actual = getattr(ds.foo.resample(time="3M"), method)(dim="time")
+    expected.coords["time"] = ds.time
+    assert_identical(expected.drop_vars(["time"]).foo, actual)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

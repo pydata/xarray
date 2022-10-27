@@ -141,7 +141,7 @@ def maybe_encode_bools(var):
     ):
         dims, data, attrs, encoding = _var_as_tuple(var)
         attrs["dtype"] = "bool"
-        data = data.astype(dtype="i1", copy=True)
+        data = duck_array_ops.astype(data, dtype="i1", copy=True)
         var = Variable(dims, data, attrs, encoding)
     return var
 
@@ -407,7 +407,8 @@ def _update_bounds_attributes(variables):
     # For all time variables with bounds
     for v in variables.values():
         attrs = v.attrs
-        has_date_units = "units" in attrs and "since" in attrs["units"]
+        units = attrs.get("units")
+        has_date_units = isinstance(units, str) and "since" in units
         if has_date_units and "bounds" in attrs:
             if attrs["bounds"] in variables:
                 bounds_attrs = variables[attrs["bounds"]].attrs
@@ -518,16 +519,19 @@ def decode_cf_variables(
             and v.ndim > 0
             and stackable(v.dims[-1])
         )
-        new_vars[k] = decode_cf_variable(
-            k,
-            v,
-            concat_characters=concat_characters,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            stack_char_dim=stack_char_dim,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+        try:
+            new_vars[k] = decode_cf_variable(
+                k,
+                v,
+                concat_characters=concat_characters,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                stack_char_dim=stack_char_dim,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        except Exception as e:
+            raise type(e)(f"Failed to decode variable {k!r}: {e}")
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
