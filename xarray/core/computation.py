@@ -1789,7 +1789,8 @@ def where(cond, x, y, keep_attrs=None):
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
     keep_attrs : bool or str or callable, optional
-        How to treat attrs. If True, keep the attrs of `x`.
+        How to treat attrs. If True, keep the attrs of `x`,
+        unless `x` is a scalar, then keep the attrs of `y`.
 
     Returns
     -------
