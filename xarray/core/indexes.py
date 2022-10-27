@@ -1087,10 +1087,12 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     """
 
+    _index_type: type[Index] | type[pd.Index]
     _indexes: dict[Any, T_PandasOrXarrayIndex]
     _variables: dict[Any, Variable]
 
     __slots__ = (
+        "_index_type",
         "_indexes",
         "_variables",
         "_dims",
@@ -1101,8 +1103,9 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     def __init__(
         self,
-        indexes: dict[Any, T_PandasOrXarrayIndex] | None = None,
-        variables: dict[Any, Variable] | None = None,
+        indexes: Mapping[Any, T_PandasOrXarrayIndex] | None = None,
+        variables: Mapping[Any, Variable] | None = None,
+        index_type: type[Index] | type[pd.Index] = Index,
     ):
         """Constructor not for public consumption.
 
@@ -1113,6 +1116,9 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         variables : dict
             Indexed coordinate variables in this object. Entries must
             match those of `indexes`.
+        index_type : type
+            The type of all indexes, i.e., either :py:class:`xarray.indexes.Index`
+            or :py:class:`pandas.Index`.
 
         """
         if indexes is None:
@@ -1126,8 +1132,15 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
                 f"unmatched keys found in indexes and variables: {unmatched_keys}"
             )
 
-        self._indexes = indexes
-        self._variables = variables
+        if any(not isinstance(idx, index_type) for idx in indexes.values()):
+            index_type_str = f"{index_type.__module__}.{index_type.__name__}"
+            raise TypeError(
+                f"values of indexes must all be instances of {index_type_str}"
+            )
+
+        self._index_type = index_type
+        self._indexes = dict(**indexes)
+        self._variables = dict(**variables)
 
         self._dims: Mapping[Hashable, int] | None = None
         self.__coord_name_id: dict[Any, int] | None = None
@@ -1275,7 +1288,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             elif isinstance(idx, Index):
                 indexes[k] = idx.to_pandas_index()
 
-        return Indexes(indexes, self._variables)
+        return Indexes(indexes, self._variables, index_type=pd.Index)
 
     def copy_indexes(
         self, deep: bool = True
