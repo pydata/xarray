@@ -14,5 +14,4 @@ class DatasetAddVariable:
 
     def time_variable_insertion(self, elements):
         dataset = self.dataset
-        for i in range(5):
-            dataset[f"new_var{i}"] = i
+        dataset[f"new_var"] = 0
