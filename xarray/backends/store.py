@@ -7,6 +7,8 @@ from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 class StoreBackendEntrypoint(BackendEntrypoint):
     available = True
+    description = "Open AbstractDataStore instances in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, AbstractDataStore)

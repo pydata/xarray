@@ -25,7 +25,7 @@ from ..coding.cftimeindex import CFTimeIndex
 from ..plot.accessor import DataArrayPlotAccessor
 from ..plot.utils import _get_units_from_attrs
 from . import alignment, computation, dtypes, indexing, ops, utils
-from ._reductions import DataArrayReductions
+from ._aggregations import DataArrayAggregations
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
@@ -223,7 +223,10 @@ _THIS_ARRAY = ReprObject("<this-array>")
 
 
 class DataArray(
-    AbstractArray, DataWithCoords, DataArrayArithmetic, DataArrayReductions
+    AbstractArray,
+    DataWithCoords,
+    DataArrayArithmetic,
+    DataArrayAggregations,
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
