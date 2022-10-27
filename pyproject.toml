@@ -39,6 +39,7 @@ module = [
   "cf_units.*",
   "cfgrib.*",
   "cftime.*",
+  "cubed.*",
   "cupy.*",
   "dask.*",
   "distributed.*",
