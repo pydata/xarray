@@ -89,6 +89,11 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+# _importorskip does not work for development versions
+has_pandas_version_two = Version(pd.__version__).major >= 2
+requires_pandas_version_two = pytest.mark.skipif(
+    not has_pandas_version_two, reason="requires pandas 2.0.0"
+)
 
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
