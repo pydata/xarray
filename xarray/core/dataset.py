@@ -6089,6 +6089,30 @@ class Dataset(
         data.update(results)
         return data
 
+    def assign_indexes(self, indexes: Indexes[Index]):
+        """Assign new indexes to this dataset.
+
+        Returns a new dataset with all the original data in addition to the new
+        indexes (and their corresponding coordinates).
+
+        Parameters
+        ----------
+        indexes : :py:class:`~xarray.Indexes`.
+            A collection of :py:class:`~xarray.indexes.Index` objects
+            to assign (including their coordinate variables).
+
+        Returns
+        -------
+        assigned : Dataset
+            A new dataset with the new indexes and coordinates in addition to
+            the existing data.
+        """
+        ds_indexes = Dataset(indexes=indexes)
+        dropped = self.drop_vars(indexes, errors="ignore")
+        return dropped.merge(
+            ds_indexes, compat="minimal", join="override", combine_attrs="no_conflicts"
+        )
+
     def to_array(
         self, dim: Hashable = "variable", name: Hashable | None = None
     ) -> DataArray:

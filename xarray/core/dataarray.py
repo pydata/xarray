@@ -3490,6 +3490,28 @@ class DataArray(
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
+    def assign_indexes(self, indexes: Indexes[Index]):
+        """Assign new indexes to this dataarray.
+
+        Returns a new dataarray with all the original data in addition to the new
+        indexes (and their corresponding coordinates).
+
+        Parameters
+        ----------
+        indexes : :py:class:`~xarray.Indexes`.
+            A collection of :py:class:`~xarray.indexes.Index` objects
+            to assign (including their coordinate variables).
+
+        Returns
+        -------
+        assigned : DataArray
+            A new dataarray with the new indexes and coordinates in addition to
+            the existing data.
+        """
+        # TODO: check indexes.dims must be a subset of self.dims
+        ds = self._to_temp_dataset().assign_indexes(indexes)
+        return self._from_temp_dataset(ds)
+
     def to_pandas(self) -> DataArray | pd.Series | pd.DataFrame:
         """Convert this array into a pandas object with the same shape.
 
