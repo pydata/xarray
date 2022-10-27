@@ -5734,7 +5734,7 @@ class TestPlots(PlotTestCase):
         fig, (ax, cax) = plt.subplots(1, 2)
         fgrid = da.plot.line(x="x", col="y")
 
-        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+        assert fgrid.axs[0, 0].get_ylabel() == "pressure [pascal]"
 
     def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
         arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa

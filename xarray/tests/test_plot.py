@@ -152,9 +152,9 @@ class PlotTestCase:
         plt.close("all")
 
     def pass_in_axis(self, plotmethod, subplot_kw=None):
-        fig, axes = plt.subplots(ncols=2, subplot_kw=subplot_kw)
-        plotmethod(ax=axes[0])
-        assert axes[0].has_data()
+        fig, axs = plt.subplots(ncols=2, subplot_kw=subplot_kw)
+        plotmethod(ax=axs[0])
+        assert axs[0].has_data()
 
     @pytest.mark.slow
     def imshow_called(self, plotmethod):
@@ -602,8 +602,8 @@ class TestPlot(PlotTestCase):
         d.coords["z"] = list("abcd")
         g = d.plot(x="x", y="y", col="z", col_wrap=2, cmap="cool")
 
-        assert_array_equal(g.axes.shape, [2, 2])
-        for ax in g.axes.flat:
+        assert_array_equal(g.axs.shape, [2, 2])
+        for ax in g.axs.flat:
             assert ax.has_data()
 
         with pytest.raises(ValueError, match=r"[Ff]acet"):
@@ -625,7 +625,7 @@ class TestPlot(PlotTestCase):
             cmap="cool",
             subplot_kws=dict(facecolor="r"),
         )
-        for ax in g.axes.flat:
+        for ax in g.axs.flat:
             # mpl V2
             assert ax.get_facecolor()[0:3] == mpl.colors.to_rgb("r")
 
@@ -662,8 +662,8 @@ class TestPlot(PlotTestCase):
         d = DataArray(a, dims=["y", "x", "columns", "rows"])
         g = d.plot(x="x", y="y", col="columns", row="rows")
 
-        assert_array_equal(g.axes.shape, [3, 2])
-        for ax in g.axes.flat:
+        assert_array_equal(g.axs.shape, [3, 2])
+        for ax in g.axs.flat:
             assert ax.has_data()
 
         with pytest.raises(ValueError, match=r"[Ff]acet"):
@@ -1529,7 +1529,7 @@ class Common2dMixin:
         d = DataArray(a, dims=["y", "x", "z"])
         g = xplt.FacetGrid(d, col="z", subplot_kws=self.subplot_kws)
         g.map_dataarray(self.plotfunc, "x", "y")
-        for ax in g.axes.flat:
+        for ax in g.axs.flat:
             assert ax.has_data()
 
     def test_2d_function_and_method_signature_same(self) -> None:
@@ -1544,8 +1544,8 @@ class Common2dMixin:
         d = DataArray(a, dims=["y", "x", "z"])
         g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
 
-        assert_array_equal(g.axes.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axes):
+        assert_array_equal(g.axs.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             if x == 0:
                 assert "y" == ax.get_ylabel()
@@ -1558,8 +1558,8 @@ class Common2dMixin:
 
         # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
-        assert_array_equal(g.axes.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axes):
+        assert_array_equal(g.axs.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             if x == 0:
                 assert "y" == ax.get_ylabel()
@@ -1576,8 +1576,8 @@ class Common2dMixin:
         d = DataArray(a, dims=["y", "x", "columns", "rows"])
         g = self.plotfunc(d, x="x", y="y", col="columns", row="rows")
 
-        assert_array_equal(g.axes.shape, [3, 2])
-        for ax in g.axes.flat:
+        assert_array_equal(g.axs.shape, [3, 2])
+        for ax in g.axs.flat:
             assert ax.has_data()
 
     @pytest.mark.filterwarnings("ignore:This figure includes")
@@ -2035,16 +2035,16 @@ class TestSurface(Common2dMixin, PlotTestCase):
         d = DataArray(a, dims=["y", "x", "z"])
         g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
 
-        assert_array_equal(g.axes.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axes):
+        assert_array_equal(g.axs.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
         # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
-        assert_array_equal(g.axes.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axes):
+        assert_array_equal(g.axs.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
@@ -2077,14 +2077,14 @@ class TestFacetGrid(PlotTestCase):
         alltxt = text_in_fig()
         assert "None" not in alltxt
 
-        for ax in self.g.axes.flat:
+        for ax in self.g.axs.flat:
             assert ax.has_data()
 
     @pytest.mark.slow
     def test_names_appear_somewhere(self) -> None:
         self.darray.name = "testvar"
         self.g.map_dataarray(xplt.contourf, "x", "y")
-        for k, ax in zip("abc", self.g.axes.flat):
+        for k, ax in zip("abc", self.g.axs.flat):
             assert f"z = {k}" == ax.get_title()
 
         alltxt = text_in_fig()
@@ -2101,7 +2101,7 @@ class TestFacetGrid(PlotTestCase):
         maxlen = max(len(txt) for txt in alltxt)
         assert maxlen < 50
 
-        t0 = g.axes[0, 0].get_title()
+        t0 = g.axs[0, 0].get_title()
         assert t0.endswith("...")
 
     @pytest.mark.slow
@@ -2123,7 +2123,7 @@ class TestFacetGrid(PlotTestCase):
         g = xplt.FacetGrid(self.darray, col="z", col_wrap=2)
         g.map_dataarray(xplt.imshow, "x", "y")
 
-        bottomright = g.axes[-1, -1]
+        bottomright = g.axs[-1, -1]
         assert not bottomright.has_data()
         assert not bottomright.get_visible()
 
@@ -2230,7 +2230,7 @@ class TestFacetGrid(PlotTestCase):
         self.g.map_dataarray(xplt.imshow, "x", "y")
         self.g.set_ticks(max_xticks=nticks, max_yticks=nticks)
 
-        for ax in self.g.axes.flat:
+        for ax in self.g.axs.flat:
             xticks = len(ax.get_xticks())
             yticks = len(ax.get_yticks())
             assert xticks <= maxticks
@@ -2314,36 +2314,36 @@ class TestFacetGrid4d(PlotTestCase):
         g.set_titles(template="{value}", weight="bold")
 
         # Rightmost column titles should be bold
-        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
             assert property_in_axes_text("weight", "bold", label, ax)
 
         # Top row titles should be bold
-        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
             assert property_in_axes_text("weight", "bold", label, ax)
 
     @pytest.mark.slow
     def test_default_labels(self) -> None:
         g = xplt.FacetGrid(self.darray, col="col", row="row")
-        assert (2, 3) == g.axes.shape
+        assert (2, 3) == g.axs.shape
 
         g.map_dataarray(xplt.imshow, "x", "y")
 
         # Rightmost column should be labeled
-        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
             assert substring_in_axes(label, ax)
 
         # Top row should be labeled
-        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
             assert substring_in_axes(label, ax)
 
         # ensure that row & col labels can be changed
         g.set_titles("abc={value}")
-        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
             assert substring_in_axes(f"abc={label}", ax)
             # previous labels were "row=row0" etc.
             assert substring_not_in_axes("row=", ax)
 
-        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
             assert substring_in_axes(f"abc={label}", ax)
             # previous labels were "col=row0" etc.
             assert substring_not_in_axes("col=", ax)
@@ -2381,15 +2381,15 @@ class TestFacetedLinePlots(PlotTestCase):
 
     def test_facetgrid_shape(self) -> None:
         g = self.darray.plot(row="row", col="col", hue="hue")
-        assert g.axes.shape == (len(self.darray.row), len(self.darray.col))
+        assert g.axs.shape == (len(self.darray.row), len(self.darray.col))
 
         g = self.darray.plot(row="col", col="row", hue="hue")
-        assert g.axes.shape == (len(self.darray.col), len(self.darray.row))
+        assert g.axs.shape == (len(self.darray.col), len(self.darray.row))
 
     def test_unnamed_args(self) -> None:
         g = self.darray.plot.line("o--", row="row", col="col", hue="hue")
         lines = [
-            q for q in g.axes.flat[0].get_children() if isinstance(q, mpl.lines.Line2D)
+            q for q in g.axs.flat[0].get_children() if isinstance(q, mpl.lines.Line2D)
         ]
         # passing 'o--' as argument should set marker and linestyle
         assert lines[0].get_marker() == "o"
@@ -2398,15 +2398,15 @@ class TestFacetedLinePlots(PlotTestCase):
     def test_default_labels(self) -> None:
         g = self.darray.plot(row="row", col="col", hue="hue")
         # Rightmost column should be labeled
-        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+        for label, ax in zip(self.darray.coords["row"].values, g.axs[:, -1]):
             assert substring_in_axes(label, ax)
 
         # Top row should be labeled
-        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+        for label, ax in zip(self.darray.coords["col"].values, g.axs[0, :]):
             assert substring_in_axes(str(label), ax)
 
         # Leftmost column should have array name
-        for ax in g.axes[:, 0]:
+        for ax in g.axs[:, 0]:
             assert substring_in_axes(self.darray.name, ax)
 
     def test_test_empty_cell(self) -> None:
@@ -2415,7 +2415,7 @@ class TestFacetedLinePlots(PlotTestCase):
             .drop_vars("row")
             .plot(col="col", hue="hue", col_wrap=2)
         )
-        bottomright = g.axes[-1, -1]
+        bottomright = g.axs[-1, -1]
         assert not bottomright.has_data()
         assert not bottomright.get_visible()
 
@@ -2641,24 +2641,24 @@ class TestDatasetScatterPlots(PlotTestCase):
 
     def test_facetgrid_shape(self) -> None:
         g = self.ds.plot.scatter(x="A", y="B", row="row", col="col")
-        assert g.axes.shape == (len(self.ds.row), len(self.ds.col))
+        assert g.axs.shape == (len(self.ds.row), len(self.ds.col))
 
         g = self.ds.plot.scatter(x="A", y="B", row="col", col="row")
-        assert g.axes.shape == (len(self.ds.col), len(self.ds.row))
+        assert g.axs.shape == (len(self.ds.col), len(self.ds.row))
 
     def test_default_labels(self) -> None:
         g = self.ds.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
 
         # Top row should be labeled
-        for label, ax in zip(self.ds.coords["col"].values, g.axes[0, :]):
+        for label, ax in zip(self.ds.coords["col"].values, g.axs[0, :]):
             assert substring_in_axes(str(label), ax)
 
         # Bottom row should have name of x array name and units
-        for ax in g.axes[-1, :]:
+        for ax in g.axs[-1, :]:
             assert ax.get_xlabel() == "A [Aunits]"
 
         # Leftmost column should have name of y array name and units
-        for ax in g.axes[:, 0]:
+        for ax in g.axs[:, 0]:
             assert ax.get_ylabel() == "B [Bunits]"
 
     def test_axes_in_faceted_plot(self) -> None:
@@ -3178,3 +3178,18 @@ def test_assert_valid_xy() -> None:
     # A hashable that is not valid should error:
     with pytest.raises(ValueError, match="x must be one of"):
         _assert_valid_xy(darray=darray, xy="error_now", name="x")
+
+
+@requires_matplotlib
+def test_facetgrid_axes_raises_deprecation_warning():
+    with pytest.warns(
+        DeprecationWarning,
+        match=(
+            "self.axes is deprecated since 2022.11 in order to align with "
+            "matplotlibs plt.subplots, use self.axs instead."
+        ),
+    ):
+        with figure_context():
+            ds = xr.tutorial.scatter_example_dataset()
+            g = ds.plot.scatter(x="A", y="B", col="x")
+            g.axes
