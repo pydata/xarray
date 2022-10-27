@@ -1077,12 +1077,13 @@ T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex", Index, pd.Index)
 
 
 class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
-    """Immutable proxy for Dataset or DataArrary indexes.
+    """Immutable proxy for Dataset or DataArray indexes.
 
-    Keys are coordinate names and values may correspond to either pandas or
-    xarray indexes.
+    It is a mapping where keys are coordinate names and values are either pandas
+    or xarray indexes.
 
-    Also provides some utility methods.
+    It also contains the indexed coordinate variables and provides some utility
+    methods.
 
     """
 
@@ -1110,7 +1111,8 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         indexes : dict
             Indexes held by this object.
         variables : dict
-            Indexed coordinate variables in this object.
+            Indexed coordinate variables in this object. Entries must
+            match those of `indexes`.
 
         """
         if indexes is None:
