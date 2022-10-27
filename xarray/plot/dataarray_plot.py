@@ -210,7 +210,12 @@ def _infer_line_data2(
         darray = darray.transpose(..., *dims_T)
 
         # Array is now ready to be stacked:
-        darray = darray.stack(_stacked_dim=darray.dims)
+        _stacked_dims = (
+            set(darray.dims) - set((dims_plot["hue"],))
+            if plotfunc_name == "line"  # plt.plot allows hue's only in matrix form.
+            else darray.dims
+        )
+        darray = darray.stack(_stacked_dim=_stacked_dims)
 
     # Broadcast together all the chosen variables:
     out = dict(y=darray)
@@ -678,22 +683,40 @@ def _plot1d(plotfunc):
         if args:
             assert "args" not in kwargs
             # TODO: Deprecated since 2022.10:
-            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
-            assert x is None
-            x = args[0]
-            if len(args) > 1:
-                assert y is None
-                y = args[1]
-            if len(args) > 2:
-                assert z is None
-                z = args[2]
-            if len(args) > 3:
-                assert hue is None
-                hue = args[3]
-            if len(args) > 4:
-                raise ValueError(msg)
+            msg = (
+                "Using positional arguments is deprecated for plot methods, "
+                "use keyword arguments instead."
+            )
+            if plotfunc.__name__ == "scatter":
+                assert x is None
+                x = args[0]
+                if len(args) > 1:
+                    assert y is None
+                    y = args[1]
+                if len(args) > 2:
+                    assert z is None
+                    z = args[2]
+                if len(args) > 3:
+                    assert hue is None
+                    hue = args[3]
+                if len(args) > 4:
+                    raise ValueError(msg)
+                else:
+                    warnings.warn(msg, DeprecationWarning, stacklevel=2)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                # line:
+                from matplotlib.axes._base import _process_plot_format
+
+                if len(args) == 1:
+                    __ls, __m, __c = _process_plot_format(args[0])
+                    _ls = kwargs.get("linestyle", __ls)
+                    _m = kwargs.get("marker", __m)
+                    _c = kwargs.get("color", __c)
+                    kwargs.update(linestyle=_ls, marker=_m, color=_c)
+                if len(args) > 1:
+                    raise ValueError(msg)
+                else:
+                    warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
@@ -799,9 +822,7 @@ def _plot1d(plotfunc):
             else:
                 hueplt_norm_values: list[np.ndarray | None]
                 if hueplt_norm.data is not None:
-                    hueplt_norm_values = list(
-                        cast("DataArray", hueplt_norm.data).to_numpy()
-                    )
+                    hueplt_norm_values = list(hueplt_norm._data_unique)
                 else:
                     hueplt_norm_values = [hueplt_norm.data]
 
@@ -1111,9 +1132,9 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     norm = kwargs.pop("norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
 
     # if hueplt is not None:
-    # ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
-    # kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
-    # kwargs.update(colors=hueplt.to_numpy().ravel())
+    #     ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
+    #     kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
+    #     kwargs.update(colors=hueplt.to_numpy().ravel())
 
     # if sizeplt is not None:
     #     kwargs.update(linewidths=sizeplt.to_numpy().ravel())
@@ -1124,7 +1145,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     _ensure_plottable(xplt_val, yplt_val)
 
-    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+    primitive = ax.plot(xplt_val.T, yplt_val.T, *args, **kwargs)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
