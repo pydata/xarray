@@ -762,10 +762,10 @@ class GroupBy(Generic[T_Xarray]):
         ):
             raise ValueError(f"cannot reduce over dimensions {dim}.")
 
+        # Xarray's behaviour is that empty bins have np.nan regardless of dtype
+        # flox's default would not set np.nan for integer dtypes
+        kwargs.setdefault("fill_value", np.nan)
         if self._bins is not None:
-            # empty bins have np.nan regardless of dtype
-            # flox's default would not set np.nan for integer dtypes
-            kwargs.setdefault("fill_value", np.nan)
             if kwargs["func"] == "count":
                 # This is an annoying hack. Xarray returns np.nan
                 # when there are no observations in a bin, instead of 0.
