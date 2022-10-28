@@ -1609,6 +1609,13 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
+    if zarr_version is None:
+        # default to 2 if store doesn't specify it's version (e.g. a path)
+        zarr_version = getattr(store, "_store_version", 2)
+
+    if consolidated is None and zarr_version > 2:
+        consolidated = False
+
     if mode == "r+":
         already_consolidated = consolidated
         consolidate_on_close = False

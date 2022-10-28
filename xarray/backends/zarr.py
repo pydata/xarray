@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from typing import Optional
 
 import numpy as np
 
@@ -375,6 +374,17 @@ class ZarrStore(AbstractWritableDataStore):
         if zarr_version > 2:
             open_kwargs["zarr_version"] = zarr_version
 
+            if consolidated or consolidate_on_close:
+                raise ValueError(
+                    "consolidated metadata has not been implemented for zarr "
+                    f"version {zarr_version} yet. Set consolidated=False for "
+                    f"zarr version {zarr_version}. See also "
+                    "https://github.com/zarr-developers/zarr-specs/issues/136"
+                )
+
+            if consolidated is None:
+                consolidated = False
+
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
             if consolidated is None:
@@ -745,6 +755,9 @@ def open_zarr(
         capability. Only works for stores that have already been consolidated.
         By default (`consolidate=None`), attempts to read consolidated metadata,
         falling back to read non-consolidated metadata if that fails.
+
+        When the experimental ``zarr_version=3``, ``consolidated`` must be
+        either be ``None`` or ``False``.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
     storage_options : dict, optional

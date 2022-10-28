@@ -1753,6 +1753,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 class ZarrBase(CFEncodedBase):
 
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+    zarr_version = 2
     version_kwargs = {}
 
     def create_zarr_target(self):
@@ -1790,16 +1791,22 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated) -> None:
+        if consolidated and self.zarr_version > 2:
+            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
         expected = create_test_data()
         with self.roundtrip(
             expected,
-            save_kwargs={"consolidated": True},
-            open_kwargs={"backend_kwargs": {"consolidated": True}},
+            save_kwargs={"consolidated": consolidated},
+            open_kwargs={"backend_kwargs": {"consolidated": consolidated}},
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
     def test_read_non_consolidated_warning(self) -> None:
+
+        if self.zarr_version > 2:
+            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
+
         expected = create_test_data()
         with self.create_zarr_target() as store:
             expected.to_zarr(store, consolidated=False, **self.version_kwargs)
@@ -2214,11 +2221,10 @@ class ZarrBase(CFEncodedBase):
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="Mismatched dtypes for variable"):
                 ds_to_append.to_zarr(
-                    store_target,
-                    append_dim="time",
+                    store_target, append_dim="time", **self.version_kwargs
                 )
 
     def test_check_encoding_is_consistent_after_append(self) -> None:
@@ -2336,12 +2342,14 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
                 assert_identical(ds, ds_reload)
 
-    @pytest.mark.parametrize("consolidated", [False, True])
+    @pytest.mark.parametrize("consolidated", [False, True, None])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
     def test_write_region(self, consolidated, compute, use_dask) -> None:
         if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
+        if consolidated and self.zarr_version > 2:
+            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
 
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
@@ -2576,14 +2584,14 @@ class ZarrBase(CFEncodedBase):
         obj.attrs["good"] = {"key": "value"}
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target)
-            assert_identical(ds, xr.open_zarr(store_target))
+            ds.to_zarr(store_target, **self.version_kwargs)
+            assert_identical(ds, xr.open_zarr(store_target, **self.version_kwargs))
 
         obj.attrs["bad"] = DataArray()
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
         with self.create_zarr_target() as store_target:
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
-                ds.to_zarr(store_target)
+                ds.to_zarr(store_target, **self.version_kwargs)
 
 
 @requires_zarr
@@ -2615,6 +2623,8 @@ class TestZarrDirectoryStore(ZarrBase):
 
 
 class ZarrBaseV3(ZarrBase):
+    zarr_version = 3
+
     def test_roundtrip_coordinates_with_space(self):
         original = Dataset(coords={"x": 0, "y z": 1})
         with pytest.warns(SerializationWarning):
