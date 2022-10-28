@@ -593,13 +593,8 @@ class ZarrStore(AbstractWritableDataStore):
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
-        zarr_version = getattr(self.zarr_group.store, "_store_version", 3)
-        consolidate_kwargs = {}
-        if zarr_version > 2:
-            # If the group has a path, it needs to also be passed to consolidate_metadata
-            consolidate_kwargs["path"] = self.zarr_group.path
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(self.zarr_group.store, **consolidate_kwargs)
+            zarr.consolidate_metadata(self.zarr_group.store)
 
     def sync(self):
         pass
