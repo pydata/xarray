@@ -10,7 +10,7 @@ from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
 from .core.dtypes import get_fill_value
-from .core.pycompat import dask_array_type
+from .core.pycompat import array_type
 
 cdms2_ignored_attrs = {"name", "tileIndex"}
 iris_forbidden_keys = {
@@ -281,6 +281,7 @@ def from_iris(cube):
     cube_data = cube.core_data() if hasattr(cube, "core_data") else cube.data
 
     # Deal with dask and numpy masked arrays
+    dask_array_type = array_type("dask")
     if isinstance(cube_data, dask_array_type):
         from dask.array import ma as dask_ma
 

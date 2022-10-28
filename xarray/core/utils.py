@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
 import io
 import itertools
 import math
@@ -953,3 +954,21 @@ def contains_only_dask_or_numpy(obj) -> bool:
             for var in obj.variables.values()
         ]
     )
+
+
+def module_available(module: str) -> bool:
+    """Checks whether a module is installed without importing it.
+
+    Use this for a lightweight check and lazy imports.
+
+    Parameters
+    ----------
+    module : str
+        Name of the module.
+
+    Returns
+    -------
+    available : bool
+        Whether the module is installed.
+    """
+    return importlib.util.find_spec(module) is not None

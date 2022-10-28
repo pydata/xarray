@@ -5,7 +5,14 @@ from packaging.version import Version
 
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
+from ..core.utils import (
+    Frozen,
+    FrozenDict,
+    close_on_error,
+    is_dict_like,
+    is_remote_uri,
+    module_available,
+)
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -15,15 +22,6 @@ from .common import (
     robust_getitem,
 )
 from .store import StoreBackendEntrypoint
-
-try:
-    import pydap.client
-    import pydap.lib
-
-    pydap_version = pydap.lib.__version__
-    has_pydap = True
-except ModuleNotFoundError:
-    has_pydap = False
 
 
 class PydapArrayWrapper(BackendArray):
@@ -101,6 +99,8 @@ class PydapDataStore(AbstractDataStore):
         verify=None,
         user_charset=None,
     ):
+        import pydap.client
+        import pydap.lib
 
         if timeout is None:
             from pydap.lib import DEFAULT_TIMEOUT
@@ -114,7 +114,7 @@ class PydapDataStore(AbstractDataStore):
             "output_grid": output_grid or True,
             "timeout": timeout,
         }
-        if Version(pydap_version) >= Version("3.3.0"):
+        if Version(pydap.lib.__version__) >= Version("3.3.0"):
             if verify is not None:
                 kwargs.update({"verify": verify})
             if user_charset is not None:
@@ -154,7 +154,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     backends.PydapDataStore
     """
 
-    available = has_pydap
+    available = module_available("pydap")
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 

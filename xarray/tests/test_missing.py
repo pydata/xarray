@@ -14,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -26,6 +26,8 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
+
+dask_array_type = array_type("dask")
 
 
 @pytest.fixture

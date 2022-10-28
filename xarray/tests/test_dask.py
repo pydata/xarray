@@ -14,7 +14,7 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
-from xarray.core.pycompat import dask_version
+from xarray.core.pycompat import mod_version
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
@@ -34,6 +34,7 @@ from .test_backends import create_tmp_file
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
+dask_version = mod_version("dask")
 
 ON_WINDOWS = sys.platform == "win32"
 

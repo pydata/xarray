@@ -23,9 +23,11 @@ from xarray.core.computation import (
     result_name,
     unified_dim_sizes,
 )
-from xarray.core.pycompat import dask_version
+from xarray.core.pycompat import mod_version
 
 from . import has_dask, raise_if_dask_computes, requires_cftime, requires_dask
+
+dask_version = mod_version("dask")
 
 
 def assert_identical(a, b):

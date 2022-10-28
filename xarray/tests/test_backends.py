@@ -49,7 +49,7 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.tests import mock
 
 from . import (
@@ -104,7 +104,7 @@ except ImportError:
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
-
+dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes

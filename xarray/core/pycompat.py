@@ -6,7 +6,7 @@ from typing import Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from .utils import is_duck_array
+from .utils import is_duck_array, module_available
 
 integer_types = (int, np.integer)
 
@@ -53,24 +53,22 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
-dsk = DuckArrayModule("dask")
-dask_version = dsk.version
-dask_array_type = dsk.type
+def array_type(mod: ModType) -> tuple[type[Any]]:
+    """Quick wrapper to get the array class of the module."""
+    return DuckArrayModule(mod).type
 
-sp = DuckArrayModule("sparse")
-sparse_array_type = sp.type
-sparse_version = sp.version
 
-cupy_array_type = DuckArrayModule("cupy").type
+def mod_version(mod: ModType) -> Version:
+    """Quick wrapper to get the version of the module."""
+    return DuckArrayModule(mod).version
 
 
 def is_dask_collection(x):
-    if dsk.available:
+    if module_available("dask"):
         from dask.base import is_dask_collection
 
         return is_dask_collection(x)
-    else:
-        return False
+    return False
 
 
 def is_duck_dask_array(x):

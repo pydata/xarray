@@ -27,7 +27,7 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 
 from . import (
@@ -40,6 +40,8 @@ from . import (
     requires_cftime,
     requires_dask,
 )
+
+dask_array_type = array_type("dask")
 
 
 class TestOps:

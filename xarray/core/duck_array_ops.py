@@ -10,6 +10,7 @@ import datetime
 import inspect
 import warnings
 from functools import partial
+from importlib import import_module
 
 import numpy as np
 import pandas as pd
@@ -33,14 +34,10 @@ from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from . import dask_array_ops, dtypes, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, is_duck_dask_array
-from .utils import is_duck_array
+from .pycompat import array_type, is_duck_dask_array
+from .utils import is_duck_array, module_available
 
-try:
-    import dask.array as dask_array
-    from dask.base import tokenize
-except ImportError:
-    dask_array = None  # type: ignore
+dask_available = module_available("dask")
 
 
 def get_array_namespace(x):
@@ -53,13 +50,18 @@ def get_array_namespace(x):
 def _dask_or_eager_func(
     name,
     eager_module=np,
-    dask_module=dask_array,
+    dask_module="dask.array",
 ):
     """Create a function that dispatches to dask for dask array inputs."""
 
     def f(*args, **kwargs):
         if any(is_duck_dask_array(a) for a in args):
-            wrapped = getattr(dask_module, name)
+            mod = (
+                import_module(dask_module)
+                if isinstance(dask_module, str)
+                else dask_module
+            )
+            wrapped = getattr(mod, name)
         else:
             wrapped = getattr(eager_module, name)
         return wrapped(*args, **kwargs)
@@ -77,7 +79,7 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
-pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module=dask_array)
+pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
 
 # np.around has failing doctests, overwrite it so they pass:
 # https://github.com/numpy/numpy/issues/19759
@@ -145,7 +147,7 @@ def notnull(data):
 
 # TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
 masked_invalid = _dask_or_eager_func(
-    "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
+    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
 
@@ -191,8 +193,7 @@ def asarray(data, xp=np):
 
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-
-    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
+    if any(isinstance(x, array_type("cupy")) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -219,7 +220,9 @@ def lazy_array_equiv(arr1, arr2):
     arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
+    if dask_available and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
+        from dask.base import tokenize
+
         # GH3068, GH4221
         if tokenize(arr1) == tokenize(arr2):
             return True
