@@ -974,7 +974,9 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
                 reshaped[key] = var
 
         # should handle window_dim being unindexed
-        should_be_coords = (set(window_dim) & set(self.obj.coords)) | set(self.obj.coords)
+        should_be_coords = (set(window_dim) & set(self.obj.coords)) | set(
+            self.obj.coords
+        )
         result = reshaped.set_coords(should_be_coords)
         if isinstance(self.obj, DataArray):
             return self.obj._from_temp_dataset(result)
