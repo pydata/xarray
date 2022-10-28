@@ -846,12 +846,6 @@ def deep_align(
         else:
             out[position][key] = aligned_obj  # type: ignore[index]  # maybe someone can fix this?
 
-    # something went wrong: we should have replaced all sentinel values
-    for arg in out:
-        assert arg is not not_replaced
-        if is_dict_like(arg):
-            assert all(value is not not_replaced for value in arg.values())
-
     return out
 
 
