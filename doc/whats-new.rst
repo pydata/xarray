@@ -63,6 +63,8 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fixed bug where :py:meth:`Dataset.coarsen.construct` would demote non-dimension coordinates to variables. (:pull:`7233`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Raise a TypeError when trying to plot empty data (:issue:`7156`, :pull:`7228`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
