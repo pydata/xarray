@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1.1
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
@@ -49,8 +49,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
-    outputs:
-      artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -74,7 +72,7 @@ jobs:
           conda info -a
           conda list
           python xarray/util/print_versions.py
-      - name: import xarray
+      - name: Import xarray
         run: |
           python -c 'import xarray'
       - name: Run Tests
@@ -82,102 +80,13 @@ jobs:
         id: status
         run: |
           python -m pytest --timeout=60 -rf \
-            --report-log output-${{ matrix.python-version }}-log.jsonl \
-            || (
-              echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
-            )
-      - name: Upload artifacts
+            --report-log output-${{ matrix.python-version }}-log.jsonl
+      - name: Generate and publish the report
         if: |
           failure()
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
-          && github.repository == 'pydata/xarray'
-        uses: actions/upload-artifact@v3
+          && github.repository_owner == 'pydata'
+        uses: xarray-contrib/issue-from-pytest-log@v0.1
         with:
-          name: output-${{ matrix.python-version }}-log.jsonl
-          path: output-${{ matrix.python-version }}-log.jsonl
-          retention-days: 5
-
-  report:
-    name: report
-    needs: upstream-dev
-    if: |
-      failure()
-      && github.event_name == 'schedule'
-      && needs.upstream-dev.outputs.artifacts_availability == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-      - uses: actions/download-artifact@v3
-        with:
-          path: /tmp/workspace/logs
-      - name: Move all log files into a single directory
-        run: |
-          rsync -a /tmp/workspace/logs/output-*/ ./logs
-          ls -R ./logs
-      - name: install dependencies
-        run: |
-          python -m pip install pytest
-      - name: Parse logs
-        run: |
-          shopt -s globstar
-          python .github/workflows/parse_logs.py logs/**/*-log*
-          cat pytest-logs.txt
-      - name: Report failures
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const pytest_logs = fs.readFileSync('pytest-logs.txt', 'utf8');
-            const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
-            const workflow_url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-            const issue_body = `[Workflow Run URL](${workflow_url})\n${pytest_logs}`
-
-            // Run GraphQL query against GitHub API to find the most recent open issue used for reporting failures
-            const query = `query($owner:String!, $name:String!, $creator:String!, $label:String!){
-              repository(owner: $owner, name: $name) {
-                issues(first: 1, states: OPEN, filterBy: {createdBy: $creator, labels: [$label]}, orderBy: {field: CREATED_AT, direction: DESC}) {
-                  edges {
-                    node {
-                      body
-                      id
-                      number
-                    }
-                  }
-                }
-              }
-            }`;
-
-            const variables = {
-                owner: context.repo.owner,
-                name: context.repo.repo,
-                label: 'CI',
-                creator: "github-actions[bot]"
-            }
-            const result = await github.graphql(query, variables)
-
-            // If no issue is open, create a new issue,
-            // else update the body of the existing issue.
-            if (result.repository.issues.edges.length === 0) {
-                github.rest.issues.create({
-                    owner: variables.owner,
-                    repo: variables.name,
-                    body: issue_body,
-                    title: title,
-                    labels: [variables.label]
-                })
-            } else {
-                github.rest.issues.update({
-                    owner: variables.owner,
-                    repo: variables.name,
-                    issue_number: result.repository.issues.edges[0].node.number,
-                    body: issue_body
-                })
-            }
+          log-path: output-${{ matrix.python-version }}-log.jsonl

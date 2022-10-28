@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
+from ..core.utils import Frozen, FrozenDict, close_on_error, module_available
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -17,20 +17,6 @@ from .common import (
 )
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint
-
-try:
-    import cfgrib
-
-    has_cfgrib = True
-except ModuleNotFoundError:
-    has_cfgrib = False
-# cfgrib throws a RuntimeError if eccodes is not installed
-except (ImportError, RuntimeError):
-    warnings.warn(
-        "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
-        "Try `import cfgrib` to get the full error message"
-    )
-    has_cfgrib = False
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -61,6 +47,15 @@ class CfGribDataStore(AbstractDataStore):
     """
 
     def __init__(self, filename, lock=None, **backend_kwargs):
+        try:
+            import cfgrib
+        # cfgrib throws a RuntimeError if eccodes is not installed
+        except (ImportError, RuntimeError) as err:
+            warnings.warn(
+                "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
+                "Try `import cfgrib` to get the full error message"
+            )
+            raise err
 
         if lock is None:
             lock = ECCODES_LOCK
@@ -96,7 +91,7 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
-    available = has_cfgrib
+    available = module_available("cfgrib")
 
     def guess_can_open(self, filename_or_obj):
         try:

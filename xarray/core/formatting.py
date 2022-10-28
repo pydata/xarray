@@ -8,6 +8,7 @@ import math
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
+from reprlib import recursive_repr
 from typing import Collection, Hashable
 
 import numpy as np
@@ -17,7 +18,7 @@ from pandas.errors import OutOfBoundsDatetime
 from .duck_array_ops import array_equiv
 from .indexing import MemoryCachedArray
 from .options import OPTIONS, _get_boolean_with_default
-from .pycompat import dask_array_type, sparse_array_type
+from .pycompat import array_type
 from .utils import is_duck_array
 
 
@@ -229,11 +230,11 @@ def format_array_flat(array, max_width: int):
     return pprint_str
 
 
-_KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}
-with contextlib.suppress(ImportError):
-    import sparse
-
-    _KNOWN_TYPE_REPRS[sparse.COO] = "sparse.COO"
+# mapping of tuple[modulename, classname] to repr
+_KNOWN_TYPE_REPRS = {
+    ("numpy", "ndarray"): "np.ndarray",
+    ("sparse._coo.core", "COO"): "sparse.COO",
+}
 
 
 def inline_dask_repr(array):
@@ -241,16 +242,14 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert isinstance(array, dask_array_type), array
+    assert isinstance(array, array_type("dask")), array
 
     chunksize = tuple(c[0] for c in array.chunks)
 
     if hasattr(array, "_meta"):
         meta = array._meta
-        if type(meta) in _KNOWN_TYPE_REPRS:
-            meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
-        else:
-            meta_repr = type(meta).__name__
+        identifier = (type(meta).__module__, type(meta).__name__)
+        meta_repr = _KNOWN_TYPE_REPRS.get(identifier, ".".join(identifier))
         meta_string = f", meta={meta_repr}"
     else:
         meta_string = ""
@@ -260,6 +259,7 @@ def inline_dask_repr(array):
 
 def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
+    sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
     return "<{}: nnz={:d}, fill_value={!s}>".format(
         type(array).__name__, array.nnz, array.fill_value
@@ -270,17 +270,18 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    elif var._in_memory:
+    if var._in_memory:
         return format_array_flat(var, max_width)
-    elif isinstance(var._data, dask_array_type):
+    dask_array_type = array_type("dask")
+    if isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
-    elif isinstance(var._data, sparse_array_type):
+    sparse_array_type = array_type("sparse")
+    if isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "__array_function__"):
+    if hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
-    else:
-        # internal xarray array type
-        return "..."
+    # internal xarray array type
+    return "..."
 
 
 def summarize_variable(
@@ -385,7 +386,6 @@ data_vars_repr = functools.partial(
     expand_option_name="display_expand_data_vars",
 )
 
-
 attrs_repr = functools.partial(
     _mapping_repr,
     title="Attributes",
@@ -408,14 +408,49 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def indexes_repr(indexes):
-    summary = ["Indexes:"]
-    if indexes:
-        for k, v in indexes.items():
-            summary.append(wrap_indent(repr(v), f"{k}: "))
+def inline_index_repr(index, max_width=None):
+    if hasattr(index, "_repr_inline_"):
+        repr_ = index._repr_inline_(max_width=max_width)
     else:
-        summary += [EMPTY_REPR]
-    return "\n".join(summary)
+        # fallback for the `pandas.Index` subclasses from
+        # `Indexes.get_pandas_indexes` / `xr_obj.indexes`
+        repr_ = repr(index)
+
+    return repr_
+
+
+def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+    if max_width is None:
+        max_width = OPTIONS["display_width"]
+
+    preformatted = pretty_print(f"    {name} ", col_width)
+
+    index_width = max_width - len(preformatted)
+    repr_ = inline_index_repr(index, max_width=index_width)
+    return preformatted + repr_
+
+
+def nondefault_indexes(indexes):
+    from .indexes import PandasIndex, PandasMultiIndex
+
+    default_indexes = (PandasIndex, PandasMultiIndex)
+
+    return {
+        key: index
+        for key, index in indexes.items()
+        if not isinstance(index, default_indexes)
+    }
+
+
+def indexes_repr(indexes, col_width=None, max_rows=None):
+    return _mapping_repr(
+        indexes,
+        "Indexes",
+        summarize_index,
+        "display_expand_indexes",
+        col_width=col_width,
+        max_rows=max_rows,
+    )
 
 
 def dim_summary(obj):
@@ -544,13 +579,14 @@ def short_data_repr(array):
         return short_numpy_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
-    elif array._in_memory or array.size < 1e5:
+    elif array._in_memory:
         return short_numpy_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
 
 
+@recursive_repr("<recursive array>")
 def array_repr(arr):
     from .variable import Variable
 
@@ -591,12 +627,26 @@ def array_repr(arr):
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
+        display_default_indexes = _get_boolean_with_default(
+            "display_default_indexes", False
+        )
+        if display_default_indexes:
+            xindexes = arr.xindexes
+        else:
+            xindexes = nondefault_indexes(arr.xindexes)
+
+        if xindexes:
+            summary.append(
+                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
+            )
+
     if arr.attrs:
-        summary.append(attrs_repr(arr.attrs))
+        summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
 
     return "\n".join(summary)
 
 
+@recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
     summary = [f"<xarray.{type(ds).__name__}>"]
 
@@ -615,6 +665,16 @@ def dataset_repr(ds):
         summary.append(unindexed_dims_str)
 
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
+
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    if display_default_indexes:
+        xindexes = ds.xindexes
+    else:
+        xindexes = nondefault_indexes(ds.xindexes)
+    if xindexes:
+        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
