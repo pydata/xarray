@@ -579,7 +579,7 @@ def short_data_repr(array):
         return short_numpy_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
-    elif array._in_memory or array.size < 1e5:
+    elif array._in_memory:
         return short_numpy_repr(array)
     else:
         # internal xarray array type
