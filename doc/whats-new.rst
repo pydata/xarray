@@ -35,6 +35,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``repr(ds)`` may not show the same result because it doesn't load small,
+  lazy data anymore. Use ``ds.head().load()`` when wanting to see just a sample
+  of the data. (:issue:`6722`, :pull:`7203`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
   shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
@@ -85,6 +89,8 @@ Internal Changes
   encoding times to preserve existing behavior and prevent future errors when it
   is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improved import time by lazily importing backend modules, matplotlib, dask.array and flox. (:issue:`6726`, :pull:`7179`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Emit a warning under the development version of pandas when we convert
   non-nanosecond precision datetime or timedelta values to nanosecond precision.
   This was required in the past, because pandas previously was not compatible
