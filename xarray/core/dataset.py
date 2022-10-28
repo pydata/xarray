@@ -1695,6 +1695,7 @@ class Dataset(
         See Also
         --------
         Dataset.swap_dims
+        Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
