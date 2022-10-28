@@ -18,7 +18,7 @@ from pandas.errors import OutOfBoundsDatetime
 from .duck_array_ops import array_equiv
 from .indexing import MemoryCachedArray
 from .options import OPTIONS, _get_boolean_with_default
-from .pycompat import dask_array_type, sparse_array_type
+from .pycompat import array_type
 from .utils import is_duck_array
 
 
@@ -230,11 +230,11 @@ def format_array_flat(array, max_width: int):
     return pprint_str
 
 
-_KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}
-with contextlib.suppress(ImportError):
-    import sparse
-
-    _KNOWN_TYPE_REPRS[sparse.COO] = "sparse.COO"
+# mapping of tuple[modulename, classname] to repr
+_KNOWN_TYPE_REPRS = {
+    ("numpy", "ndarray"): "np.ndarray",
+    ("sparse._coo.core", "COO"): "sparse.COO",
+}
 
 
 def inline_dask_repr(array):
@@ -242,16 +242,14 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert isinstance(array, dask_array_type), array
+    assert isinstance(array, array_type("dask")), array
 
     chunksize = tuple(c[0] for c in array.chunks)
 
     if hasattr(array, "_meta"):
         meta = array._meta
-        if type(meta) in _KNOWN_TYPE_REPRS:
-            meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
-        else:
-            meta_repr = type(meta).__name__
+        identifier = (type(meta).__module__, type(meta).__name__)
+        meta_repr = _KNOWN_TYPE_REPRS.get(identifier, ".".join(identifier))
         meta_string = f", meta={meta_repr}"
     else:
         meta_string = ""
@@ -261,6 +259,7 @@ def inline_dask_repr(array):
 
 def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
+    sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
     return "<{}: nnz={:d}, fill_value={!s}>".format(
         type(array).__name__, array.nnz, array.fill_value
@@ -271,17 +270,18 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    elif var._in_memory:
+    if var._in_memory:
         return format_array_flat(var, max_width)
-    elif isinstance(var._data, dask_array_type):
+    dask_array_type = array_type("dask")
+    if isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
-    elif isinstance(var._data, sparse_array_type):
+    sparse_array_type = array_type("sparse")
+    if isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "__array_function__"):
+    if hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
-    else:
-        # internal xarray array type
-        return "..."
+    # internal xarray array type
+    return "..."
 
 
 def summarize_variable(
