@@ -3181,6 +3181,31 @@ def test_assert_valid_xy() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize(
+    "val", [pytest.param([], id="empty"), pytest.param(0, id="scalar")]
+)
+@pytest.mark.parametrize(
+    "method",
+    [
+        "__call__",
+        "line",
+        "step",
+        "contour",
+        "contourf",
+        "hist",
+        "imshow",
+        "pcolormesh",
+        "scatter",
+        "surface",
+    ],
+)
+def test_plot_empty_raises(val: list | float, method: str) -> None:
+    da = xr.DataArray(val)
+    with pytest.raises(TypeError, match="No numeric data"):
+        getattr(da.plot, method)()
+
+
+@requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning():
     with pytest.warns(
         DeprecationWarning,
