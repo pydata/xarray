@@ -13,6 +13,6 @@ class DatasetAddVariable:
             d[f"var{i}"] = i
         self.dataset = xr.merge([d])
 
-    def time_variable_insertion(self, existin_elements):
+    def time_variable_insertion(self, existing_elements):
         dataset = self.dataset
         dataset["new_var"] = 0
