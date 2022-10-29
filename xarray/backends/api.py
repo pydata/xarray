@@ -1503,6 +1503,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1524,6 +1525,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> Delayed:
     ...
 
@@ -1611,7 +1613,7 @@ def to_zarr(
 
     if zarr_version is None:
         # default to 2 if store doesn't specify it's version (e.g. a path)
-        zarr_version = getattr(store, "_store_version", 2)
+        zarr_version = int(getattr(store, "_store_version", 2))
 
     if consolidated is None and zarr_version > 2:
         consolidated = False

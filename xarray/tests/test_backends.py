@@ -1754,7 +1754,7 @@ class ZarrBase(CFEncodedBase):
 
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     zarr_version = 2
-    version_kwargs = {}
+    version_kwargs: dict[str, Any] = {}
 
     def create_zarr_target(self):
         raise NotImplementedError
