@@ -66,4 +66,6 @@ class DatasetCreation:
 
     def time_dataset_creation(self, strategy, count):
         data_vars = self.create_data_vars()
-        xr.Dataset(data_vars=data_vars, coords=self.dataset_coords, attrs=self.dataset_attrs)
+        xr.Dataset(
+            data_vars=data_vars, coords=self.dataset_coords, attrs=self.dataset_attrs
+        )
