@@ -31,10 +31,10 @@ from numpy import (  # noqa
 )
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
-from xarray.core import dask_array_ops, dtypes, nputils
-from xarray.core.nputils import nanfirst, nanlast
-from xarray.core.pycompat import cupy_array_type, is_duck_dask_array
-from xarray.core.utils import is_duck_array
+from . import dask_array_ops, dtypes, nputils
+from .nputils import nanfirst, nanlast
+from .pycompat import cupy_array_type, is_duck_dask_array
+from .utils import is_duck_array
 
 try:
     import dask.array as dask_array
@@ -333,7 +333,7 @@ def _ignore_warnings_if(condition):
 
 
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
-    from xarray.core import nanops
+    from . import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
@@ -578,7 +578,7 @@ def py_timedelta_to_float(array, datetime_unit):
 def mean(array, axis=None, skipna=None, **kwargs):
     """inhouse mean that can handle np.datetime64 or cftime.datetime
     dtypes"""
-    from xarray.core.common import _contains_cftime_datetimes
+    from .common import _contains_cftime_datetimes
 
     array = asarray(array)
     if array.dtype.kind in "Mm":

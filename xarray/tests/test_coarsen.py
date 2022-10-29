@@ -6,7 +6,8 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
-from xarray.tests import (
+
+from . import (
     assert_allclose,
     assert_equal,
     assert_identical,

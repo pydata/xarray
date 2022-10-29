@@ -50,7 +50,9 @@ from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
-from xarray.tests import (
+from xarray.tests import mock
+
+from . import (
     arm_xfail,
     assert_allclose,
     assert_array_equal,
@@ -61,7 +63,6 @@ from xarray.tests import (
     has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
-    mock,
     network,
     requires_cfgrib,
     requires_cftime,
@@ -79,12 +80,12 @@ from xarray.tests import (
     requires_scipy_or_netCDF4,
     requires_zarr,
 )
-from xarray.tests.test_coding_times import (
+from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from xarray.tests.test_dataset import (
+from .test_dataset import (
     create_append_string_length_mismatch_test_data,
     create_append_test_data,
     create_test_data,
@@ -520,7 +521,7 @@ class DatasetIOBase:
 
     @requires_cftime
     def test_roundtrip_cftime_datetime_data(self) -> None:
-        from xarray.tests.test_coding_times import _all_cftime_date_types
+        from .test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():
@@ -3484,7 +3485,7 @@ class TestDask(DatasetIOBase):
     def test_roundtrip_cftime_datetime_data(self) -> None:
         # Override method in DatasetIOBase - remove not applicable
         # save_kwargs
-        from xarray.tests.test_coding_times import _all_cftime_date_types
+        from .test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():

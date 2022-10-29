@@ -8,13 +8,13 @@ import warnings
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
-from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 if TYPE_CHECKING:
     import os
     from io import BufferedIOBase
 
-    from xarray.backends.common import AbstractDataStore
+    from .common import AbstractDataStore
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 

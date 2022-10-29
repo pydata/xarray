@@ -4,15 +4,8 @@ import warnings
 
 import numpy as np
 
-from xarray.core import dtypes, nputils, utils
-from xarray.core.duck_array_ops import (
-    count,
-    fillna,
-    isnull,
-    sum_where,
-    where,
-    where_method,
-)
+from . import dtypes, nputils, utils
+from .duck_array_ops import count, fillna, isnull, sum_where, where, where_method
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
@@ -100,7 +93,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from xarray.core.duck_array_ops import count, fillna, where_method
+    from .duck_array_ops import count, fillna, where_method
 
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)

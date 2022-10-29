@@ -34,7 +34,8 @@ from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
-from xarray.tests import (
+
+from . import (
     InaccessibleArray,
     UnexpectedDataAccess,
     assert_allclose,

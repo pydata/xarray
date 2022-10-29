@@ -14,13 +14,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from xarray.backends.api import open_dataset as _open_dataset
-from xarray.backends.rasterio_ import open_rasterio as _open_rasterio
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
+from .backends.api import open_dataset as _open_dataset
+from .backends.rasterio_ import open_rasterio as _open_rasterio
+from .core.dataarray import DataArray
+from .core.dataset import Dataset
 
 if TYPE_CHECKING:
-    from xarray.backends.api import T_Engine
+    from .backends.api import T_Engine
 
 
 _default_cache_dir_name = "xarray_tutorial_data"

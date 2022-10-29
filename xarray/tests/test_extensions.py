@@ -5,7 +5,8 @@ import pickle
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_identical
+
+from . import assert_identical
 
 
 @xr.register_dataset_accessor("example_accessor")

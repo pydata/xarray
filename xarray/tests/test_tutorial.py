@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 from xarray import DataArray, tutorial
-from xarray.tests import assert_identical, network
+
+from . import assert_identical, network
 
 
 @network

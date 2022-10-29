@@ -20,10 +20,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
-from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
+from . import dtypes, duck_array_ops, formatting, formatting_html, ops
+from .options import OPTIONS, _get_keep_attrs
+from .pycompat import is_duck_dask_array
+from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
 try:
     import cftime
@@ -39,18 +39,13 @@ if TYPE_CHECKING:
 
     from numpy.typing import DTypeLike
 
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-    from xarray.core.indexes import Index
-    from xarray.core.resample import Resample
-    from xarray.core.rolling_exp import RollingExp
-    from xarray.core.types import (
-        DTypeLikeSave,
-        ScalarOrArray,
-        SideOptions,
-        T_DataWithCoords,
-    )
-    from xarray.core.variable import Variable
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .indexes import Index
+    from .resample import Resample
+    from .rolling_exp import RollingExp
+    from .types import DTypeLikeSave, ScalarOrArray, SideOptions, T_DataWithCoords
+    from .variable import Variable
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
@@ -447,7 +442,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.clip : equivalent function
         """
-        from xarray.core.computation import apply_ufunc
+        from .computation import apply_ufunc
 
         if keep_attrs is None:
             # When this was a unary func, the default was True, so retaining the
@@ -801,7 +796,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
-        from xarray.core import rolling_exp
+        from . import rolling_exp
 
         if "keep_attrs" in window_kwargs:
             warnings.warn(
@@ -922,9 +917,9 @@ class DataWithCoords(AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from xarray.coding.cftimeindex import CFTimeIndex
-        from xarray.core.dataarray import DataArray
-        from xarray.core.resample import RESAMPLE_DIM
+        from ..coding.cftimeindex import CFTimeIndex
+        from .dataarray import DataArray
+        from .resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
             warnings.warn(
@@ -962,7 +957,7 @@ class DataWithCoords(AttrAccessMixin):
             )
 
             if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
-                from xarray.core.resample_cftime import CFTimeGrouper
+                from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)
             else:
@@ -1065,9 +1060,9 @@ class DataWithCoords(AttrAccessMixin):
         numpy.where : corresponding numpy function
         where : equivalent function
         """
-        from xarray.core.alignment import align
-        from xarray.core.dataarray import DataArray
-        from xarray.core.dataset import Dataset
+        from .alignment import align
+        from .dataarray import DataArray
+        from .dataset import Dataset
 
         if callable(cond):
             cond = cond(self)
@@ -1158,7 +1153,7 @@ class DataWithCoords(AttrAccessMixin):
         array([False,  True, False])
         Dimensions without coordinates: x
         """
-        from xarray.core.computation import apply_ufunc
+        from .computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1203,7 +1198,7 @@ class DataWithCoords(AttrAccessMixin):
         array([ True, False,  True])
         Dimensions without coordinates: x
         """
-        from xarray.core.computation import apply_ufunc
+        from .computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1242,10 +1237,10 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.isin
         """
-        from xarray.core.computation import apply_ufunc
-        from xarray.core.dataarray import DataArray
-        from xarray.core.dataset import Dataset
-        from xarray.core.variable import Variable
+        from .computation import apply_ufunc
+        from .dataarray import DataArray
+        from .dataset import Dataset
+        from .variable import Variable
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
@@ -1327,7 +1322,7 @@ class DataWithCoords(AttrAccessMixin):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from xarray.core.computation import apply_ufunc
+        from .computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1497,9 +1492,9 @@ def full_like(
     ones_like
 
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-    from xarray.core.variable import Variable
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .variable import Variable
 
     if not is_scalar(fill_value) and not (
         isinstance(other, Dataset) and isinstance(fill_value, dict)
@@ -1547,7 +1542,7 @@ def _full_like_variable(
     other: Variable, fill_value: Any, dtype: DTypeLike = None
 ) -> Variable:
     """Inner function of full_like, where other must be a variable"""
-    from xarray.core.variable import Variable
+    from .variable import Variable
 
     if fill_value is dtypes.NA:
         fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)

@@ -20,8 +20,9 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
-from xarray.tests import assert_array_equal, assert_identical, requires_cftime
-from xarray.tests.test_coding_times import _all_cftime_date_types
+
+from . import assert_array_equal, assert_identical, requires_cftime
+from .test_coding_times import _all_cftime_date_types
 
 
 def test_asarray_tuplesafe() -> None:

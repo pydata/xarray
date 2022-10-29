@@ -19,10 +19,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.core.indexes import PandasMultiIndex
-from xarray.core.options import OPTIONS
-from xarray.core.pycompat import DuckArrayModule
-from xarray.core.utils import is_scalar
+from ..core.indexes import PandasMultiIndex
+from ..core.options import OPTIONS
+from ..core.pycompat import DuckArrayModule
+from ..core.utils import is_scalar
 
 try:
     import nc_time_axis  # noqa: F401
@@ -44,9 +44,9 @@ if TYPE_CHECKING:
     from matplotlib.ticker import FuncFormatter
     from numpy.typing import ArrayLike
 
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-    from xarray.core.types import AspectOptions, ScaleOptions
+    from ..core.dataarray import DataArray
+    from ..core.dataset import Dataset
+    from ..core.types import AspectOptions, ScaleOptions
 
     try:
         import matplotlib.pyplot as plt
