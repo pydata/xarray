@@ -44,19 +44,19 @@ class DatasetCreation:
         # https://github.com/pydata/xarray/issues/7224#issuecomment-1292216344
         if strategy == "dict_of_DataArrays":
             data_vars = {
-                "long_variable_name_{i}": xr.DataArray(
+                f"long_variable_name_{i}": xr.DataArray(
                     data=self.dataset_value, dims=("time")
                 )
                 for i in range(count)
             }
         elif strategy == "dict_of_Variables":
             data_vars = {
-                "long_variable_name_{i}": xr.Variable("time", self.dataset_value)
+                f"long_variable_name_{i}": xr.Variable("time", self.dataset_value)
                 for i in range(count)
             }
         elif strategy == "dict_of_Tuples":
             data_vars = {
-                "long_variable_name_{i}": ("time", self.dataset_value)
+                f"long_variable_name_{i}": ("time", self.dataset_value)
                 for i in range(count)
             }
 
