@@ -36,13 +36,7 @@ from .indexing import (
     as_indexable,
 )
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import (
-    DuckArrayModule,
-    cupy_array_type,
-    integer_types,
-    is_duck_dask_array,
-    sparse_array_type,
-)
+from .pycompat import array_type, integer_types, is_duck_dask_array
 from .utils import (
     Frozen,
     NdimSizeLenMixin,
@@ -73,6 +67,12 @@ if TYPE_CHECKING:
         QuantileMethods,
         T_Variable,
     )
+
+NON_NANOSECOND_WARNING = (
+    "Converting non-nanosecond precision {case} values to nanosecond precision. "
+    "This behavior can eventually be relaxed in xarray, as it is an artifact from "
+    "pandas which is now beginning to support non-nanosecond precision values."
+)
 
 
 class MissingDimensionsError(ValueError):
@@ -180,13 +180,58 @@ def _maybe_wrap_data(data):
     return data
 
 
+def _as_nanosecond_precision(data):
+    dtype = data.dtype
+    non_ns_datetime64 = (
+        dtype.kind == "M"
+        and isinstance(dtype, np.dtype)
+        and dtype != np.dtype("datetime64[ns]")
+    )
+    non_ns_datetime_tz_dtype = (
+        isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
+    )
+    if non_ns_datetime64 or non_ns_datetime_tz_dtype:
+        warnings.warn(NON_NANOSECOND_WARNING.format(case="datetime"))
+        if isinstance(dtype, pd.DatetimeTZDtype):
+            nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
+        else:
+            nanosecond_precision_dtype = "datetime64[ns]"
+        return data.astype(nanosecond_precision_dtype)
+    elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
+        warnings.warn(NON_NANOSECOND_WARNING.format(case="timedelta"))
+        return data.astype("timedelta64[ns]")
+    else:
+        return data
+
+
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention. Also used for
-    validating that datetime64 and timedelta64 objects are within the valid date
-    range for ns precision, as pandas will raise an error if they are not.
+    datetime64 and timedelta64, according to the pandas convention. For the time
+    being, convert any non-nanosecond precision DatetimeIndex or TimedeltaIndex
+    objects to nanosecond precision.  While pandas is relaxing this in version
+    2.0.0, in xarray we will need to make sure we are ready to handle
+    non-nanosecond precision datetimes or timedeltas in our code before allowing
+    such values to pass through unchanged.  Converting to nanosecond precision
+    through pandas.Series objects ensures that datetimes and timedeltas are
+    within the valid date range for ns precision, as pandas will raise an error
+    if they are not.
     """
-    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
+    as_series = pd.Series(values.ravel())
+    if as_series.dtype.kind in "mM":
+        as_series = _as_nanosecond_precision(as_series)
+    return np.asarray(as_series).reshape(values.shape)
+
+
+def _possibly_convert_datetime_or_timedelta_index(data):
+    """For the time being, convert any non-nanosecond precision DatetimeIndex or
+    TimedeltaIndex objects to nanosecond precision.  While pandas is relaxing
+    this in version 2.0.0, in xarray we will need to make sure we are ready to
+    handle non-nanosecond precision datetimes or timedeltas in our code
+    before allowing such values to pass through unchanged."""
+    if isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        return _as_nanosecond_precision(data)
+    else:
+        return data
 
 
 def as_compatible_data(data, fastpath=False):
@@ -210,6 +255,7 @@ def as_compatible_data(data, fastpath=False):
         return data.data
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+        data = _possibly_convert_datetime_or_timedelta_index(data)
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -1192,13 +1238,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
             data = data.compute()
-        if isinstance(data, cupy_array_type):
+        if isinstance(data, array_type("cupy")):
             data = data.get()
         # pint has to be imported dynamically as pint imports xarray
-        pint_array_type = DuckArrayModule("pint").type
-        if isinstance(data, pint_array_type):
+        if isinstance(data, array_type("pint")):
             data = data.magnitude
-        if isinstance(data, sparse_array_type):
+        if isinstance(data, array_type("sparse")):
             data = data.todense()
         data = np.asarray(data)
 

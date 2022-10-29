@@ -11,6 +11,7 @@ from ..core import indexing
 from ..core.utils import (
     FrozenDict,
     is_remote_uri,
+    module_available,
     read_magic_number_from_file,
     try_read_magic_number_from_file_or_path,
 )
@@ -32,16 +33,6 @@ from .netCDF4_ import (
     _nc4_require_group,
 )
 from .store import StoreBackendEntrypoint
-
-try:
-    import h5netcdf
-
-    has_h5netcdf = True
-except ImportError:
-    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
-    # where errors have mismatched versions of c-dependencies. This can happen
-    # when developers are making changes them.
-    has_h5netcdf = False
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -110,6 +101,7 @@ class H5NetCDFStore(WritableCFDataStore):
     )
 
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+        import h5netcdf
 
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
             if group is None:
@@ -147,6 +139,7 @@ class H5NetCDFStore(WritableCFDataStore):
         phony_dims=None,
         decode_vlen_strings=True,
     ):
+        import h5netcdf
 
         if isinstance(filename, bytes):
             raise ValueError(
@@ -237,12 +230,16 @@ class H5NetCDFStore(WritableCFDataStore):
         return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
+        import h5netcdf
+
         if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
             return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
         else:
             return self.ds.dimensions
 
     def get_encoding(self):
+        import h5netcdf
+
         if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
             return {
                 "unlimited_dims": {
@@ -352,7 +349,32 @@ class H5NetCDFStore(WritableCFDataStore):
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    available = has_h5netcdf
+    """
+    Backend for netCDF files based on the h5netcdf package.
+
+    It can open ".nc", ".nc4", ".cdf" files but will only be
+    selected as the default if the "netcdf4" engine is not available.
+
+    Additionally it can open valid HDF5 files, see
+    https://h5netcdf.org/#invalid-netcdf-files for more info.
+    It will not be detected as valid backend for such files, so make
+    sure to specify ``engine="h5netcdf"`` in ``open_dataset``.
+
+    For more information about the underlying library, visit:
+    https://h5netcdf.org
+
+    See Also
+    --------
+    backends.H5NetCDFStore
+    backends.NetCDF4BackendEntrypoint
+    backends.ScipyBackendEntrypoint
+    """
+
+    available = module_available("h5netcdf")
+    description = (
+        "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
+    )
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)

@@ -21,16 +21,6 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .pycompat import is_dask_collection
 
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
-
-
 if TYPE_CHECKING:
     from .types import T_Xarray
 
@@ -108,6 +98,8 @@ def make_meta(obj):
         obj_array = None
     else:
         return obj
+
+    from dask.array.utils import meta_from_array
 
     meta = Dataset()
     for name, variable in obj.variables.items():
@@ -333,6 +325,14 @@ def map_blocks(
 
     if not is_dask_collection(obj):
         return func(obj, *args, **kwargs)
+
+    try:
+        import dask
+        import dask.array
+        from dask.highlevelgraph import HighLevelGraph
+
+    except ImportError:
+        pass
 
     all_args = [obj] + list(args)
     is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in all_args]
