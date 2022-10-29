@@ -285,14 +285,18 @@ def _get_index_and_items(index, grouper):
 
     s = pd.Series(np.arange(index.size), index)
     if isinstance(grouper, CFTimeGrouper):
-        first_items = grouper.first_items(index)
+        first_items, codes = grouper.first_items(index)
     else:
         first_items = s.groupby(grouper).first()
+        # This way we generate codes for the final output index: full_index.
+        # So for _flox_reduce we avoid one reindex and copy by avoiding
+        # _maybe_restore_empty_groups
+        codes = first_items.index.searchsorted(index, side=grouper.closed)
         _apply_loffset(grouper, first_items)
     full_index = first_items.index
     if first_items.isnull().any():
         first_items = first_items.dropna()
-    return full_index, first_items
+    return full_index, first_items, codes
 
 
 def _factorize_grouper(
@@ -306,17 +310,12 @@ def _factorize_grouper(
     if not index.is_monotonic_increasing:
         # TODO: sort instead of raising an error
         raise ValueError("index must be monotonic for resampling")
-    loffset = grouper.loffset if grouper.loffset is not None else pd.DateOffset(hours=0)
-    full_index, first_items = _get_index_and_items(index, grouper)
+    full_index, first_items, codes = _get_index_and_items(index, grouper)
     sbins = first_items.values.astype(np.int64)
     group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
         slice(sbins[-1], None)
     ]
     unique_coord = IndexVariable(group.name, first_items.index)
-    # This way we generate codes for the final output index: full_index.
-    # So for _flox_reduce we avoid one reindex and copy by avoiding
-    # _maybe_restore_empty_groups
-    codes = (full_index - loffset).searchsorted(group, side="right") - 1
     return unique_coord, group_indices, codes, full_index
 
 

@@ -91,6 +91,7 @@ class CFTimeGrouper:
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.base
         )
+        codes = np.searchsorted(labels, index, side=self.closed)
         if self.loffset is not None:
             if isinstance(self.loffset, datetime.timedelta):
                 labels = labels + self.loffset
@@ -108,7 +109,7 @@ class CFTimeGrouper:
 
         # Mask duplicate values with NaNs, preserving the last values
         non_duplicate = ~first_items.duplicated("last")
-        return first_items.where(non_duplicate)
+        return first_items.where(non_duplicate), codes
 
 
 def _get_time_bins(index, freq, closed, label, base):
