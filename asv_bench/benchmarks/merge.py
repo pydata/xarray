@@ -40,6 +40,7 @@ class DatasetCreation:
     def setup(self, strategy, count):
         data = np.array(["0", "b"], dtype=str)
         self.dataset_coords = dict(time=np.array([0, 1]))
+        self.dataset_attrs = dict(units="Celcius")
         if strategy == "dict_of_DataArrays":
 
             def create_data_vars():
@@ -65,4 +66,4 @@ class DatasetCreation:
 
     def time_dataset_creation(self, strategy, count):
         data_vars = self.create_data_vars()
-        xr.Dataset(data_vars=data_vars, coords=self.dataset_coords)
+        xr.Dataset(data_vars=data_vars, coords=self.dataset_coords, attrs=self.dataset_attrs)
