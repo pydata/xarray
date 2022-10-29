@@ -15,7 +15,7 @@ class DatasetAddVariable:
             d[f"var{i}"] = i
         self.dataset = xr.merge([d])
 
-        d = {"set_2_{i}": i for i in range(existing_elements)}
+        d = {f"set_2_{i}": i for i in range(existing_elements)}
         self.dataset2 = xr.merge([d])
 
     def time_variable_insertion(self, existing_elements):
