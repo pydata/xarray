@@ -42,7 +42,7 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from ..coding.cftime_offsets import (
+from xarray.coding.cftime_offsets import (
     CFTIME_TICKS,
     Day,
     MonthEnd,
@@ -52,7 +52,7 @@ from ..coding.cftime_offsets import (
     normalize_date,
     to_offset,
 )
-from ..coding.cftimeindex import CFTimeIndex
+from xarray.coding.cftimeindex import CFTimeIndex
 
 
 class CFTimeGrouper:

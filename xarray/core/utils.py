@@ -34,7 +34,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .types import ErrorOptionsWithWarn
+    from xarray.core.types import ErrorOptionsWithWarn
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -88,7 +88,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
-    from . import dtypes
+    from xarray.core import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)
@@ -120,7 +120,7 @@ def equivalent(first: T, second: T) -> bool:
     equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
-    from . import duck_array_ops
+    from xarray.core import duck_array_ops
 
     if first is second:
         return True
@@ -248,7 +248,7 @@ def either_dict_or_kwargs(
 
 
 def _is_scalar(value, include_0d):
-    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+    from xarray.core.variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
         include_0d = getattr(value, "ndim", None) == 0
@@ -942,8 +942,8 @@ def contains_only_dask_or_numpy(obj) -> bool:
     """Returns True if xarray object contains only numpy or dask arrays.
 
     Expects obj to be Dataset or DataArray"""
-    from .dataarray import DataArray
-    from .pycompat import is_duck_dask_array
+    from xarray.core.dataarray import DataArray
+    from xarray.core.pycompat import is_duck_dask_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()

@@ -33,20 +33,27 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..coding.calendar_ops import convert_calendar, interp_calendar
-from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from ..plot.accessor import DatasetPlotAccessor
-from . import alignment
-from . import dtypes as xrdtypes
-from . import duck_array_ops, formatting, formatting_html, ops, utils
-from ._aggregations import DatasetAggregations
-from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
-from .arithmetic import DatasetArithmetic
-from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
-from .computation import unify_chunks
-from .coordinates import DatasetCoordinates, assert_coordinate_consistent
-from .duck_array_ops import datetime_to_numeric
-from .indexes import (
+from xarray.coding.calendar_ops import convert_calendar, interp_calendar
+from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
+from xarray.core import alignment
+from xarray.core import dtypes as xrdtypes
+from xarray.core import duck_array_ops, formatting, formatting_html, ops, utils
+from xarray.core._aggregations import DatasetAggregations
+from xarray.core.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.core.arithmetic import DatasetArithmetic
+from xarray.core.common import (
+    DataWithCoords,
+    _contains_datetime_like_objects,
+    get_chunksizes,
+)
+from xarray.core.computation import unify_chunks
+from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.duck_array_ops import datetime_to_numeric
+from xarray.core.indexes import (
     Index,
     Indexes,
     PandasIndex,
@@ -58,18 +65,18 @@ from .indexes import (
     remove_unused_levels_categories,
     roll_indexes,
 )
-from .indexing import is_fancy_indexer, map_index_queries
-from .merge import (
+from xarray.core.indexing import is_fancy_indexer, map_index_queries
+from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from .missing import get_clean_interp_index
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import array_type, is_duck_dask_array
-from .types import QuantileMethods, T_Dataset
-from .utils import (
+from xarray.core.missing import get_clean_interp_index
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.types import QuantileMethods, T_Dataset
+from xarray.core.utils import (
     Default,
     Frozen,
     HybridMappingProxy,
@@ -83,26 +90,27 @@ from .utils import (
     is_scalar,
     maybe_wrap_array,
 )
-from .variable import (
+from xarray.core.variable import (
     IndexVariable,
     Variable,
     as_variable,
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.plot.accessor import DatasetPlotAccessor
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    from ..backends import AbstractDataStore, ZarrStore
-    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from .coordinates import Coordinates
-    from .dataarray import DataArray
-    from .groupby import DatasetGroupBy
-    from .merge import CoercibleMapping
-    from .resample import DatasetResample
-    from .rolling import DatasetCoarsen, DatasetRolling
-    from .types import (
+    from xarray.backends import AbstractDataStore, ZarrStore
+    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.core.coordinates import Coordinates
+    from xarray.core.dataarray import DataArray
+    from xarray.core.groupby import DatasetGroupBy
+    from xarray.core.merge import CoercibleMapping
+    from xarray.core.resample import DatasetResample
+    from xarray.core.rolling import DatasetCoarsen, DatasetRolling
+    from xarray.core.types import (
         CFCalendar,
         CoarsenBoundaryOptions,
         CombineAttrsOptions,
@@ -121,7 +129,7 @@ if TYPE_CHECKING:
         SideOptions,
         T_Xarray,
     )
-    from .weighted import DatasetWeighted
+    from xarray.core.weighted import DatasetWeighted
 
     try:
         from dask.delayed import Delayed
@@ -159,7 +167,7 @@ def _get_virtual_variable(
     objects (if possible)
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if dim_sizes is None:
         dim_sizes = {}
@@ -1333,7 +1341,7 @@ class Dataset(
 
     def _construct_dataarray(self, name: Hashable) -> DataArray:
         """Construct a DataArray by indexing this dataset"""
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         try:
             variable = self._variables[name]
@@ -1453,7 +1461,7 @@ class Dataset(
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
@@ -1511,8 +1519,8 @@ class Dataset(
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from .alignment import align
-        from .dataarray import DataArray
+        from xarray.core.alignment import align
+        from xarray.core.dataarray import DataArray
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -1752,7 +1760,7 @@ class Dataset(
 
     def dump_to_store(self, store: AbstractDataStore, **kwargs) -> None:
         """Store dataset contents to a backends.*DataStore object."""
-        from ..backends.api import dump_to_store
+        from xarray.backends.api import dump_to_store
 
         # TODO: rename and/or cleanup this method to make it more consistent
         # with to_netcdf()
@@ -1898,7 +1906,7 @@ class Dataset(
         """
         if encoding is None:
             encoding = {}
-        from ..backends.api import to_netcdf
+        from xarray.backends.api import to_netcdf
 
         return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
             self,
@@ -2076,7 +2084,7 @@ class Dataset(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from ..backends.api import to_zarr
+        from xarray.backends.api import to_zarr
 
         return to_zarr(  # type: ignore
             self,
@@ -2256,8 +2264,8 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from ..coding.cftimeindex import CFTimeIndex
-        from .dataarray import DataArray
+        from xarray.coding.cftimeindex import CFTimeIndex
+        from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
@@ -2318,7 +2326,7 @@ class Dataset(
         Only coordinate with a name different from any of self.variables will
         be attached.
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         coords_list = []
         for k, v in indexers.items():
@@ -3283,7 +3291,7 @@ class Dataset(
             a        (x) float64 5.0 6.5 6.25 4.75
             b        (x, y) float64 2.5 3.0 nan 4.0 5.625 nan nan nan nan nan nan nan
         """
-        from . import missing
+        from xarray.core import missing
 
         if kwargs is None:
             kwargs = {}
@@ -4652,7 +4660,7 @@ class Dataset(
         Dimensions without coordinates: x
 
         """
-        from .concat import concat
+        from xarray.core.concat import concat
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
@@ -5008,7 +5016,7 @@ class Dataset(
         --------
         Dataset.update
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         other = other.to_dataset() if isinstance(other, DataArray) else other
         merge_result = dataset_merge_method(
@@ -5695,7 +5703,7 @@ class Dataset(
             C        (x) float64 20.0 15.0 10.0 5.0 0.0
             D        (x) float64 5.0 3.0 1.0 -1.0 4.0
         """
-        from .missing import _apply_over_vars_with_dim, interp_na
+        from xarray.core.missing import _apply_over_vars_with_dim, interp_na
 
         new = _apply_over_vars_with_dim(
             interp_na,
@@ -5730,7 +5738,7 @@ class Dataset(
         -------
         Dataset
         """
-        from .missing import _apply_over_vars_with_dim, ffill
+        from xarray.core.missing import _apply_over_vars_with_dim, ffill
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
@@ -5756,7 +5764,7 @@ class Dataset(
         -------
         Dataset
         """
-        from .missing import _apply_over_vars_with_dim, bfill
+        from xarray.core.missing import _apply_over_vars_with_dim, bfill
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
@@ -6077,7 +6085,7 @@ class Dataset(
         -------
         array : xarray.DataArray
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         data_vars = [self.variables[k] for k in self.data_vars]
         broadcast_vars = broadcast_variables(*data_vars)
@@ -6559,8 +6567,8 @@ class Dataset(
         return self._replace_with_new_dims(variables, attrs=attrs)
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
-        from .dataarray import DataArray
-        from .groupby import GroupBy
+        from xarray.core.dataarray import DataArray
+        from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
             return NotImplemented
@@ -6572,8 +6580,8 @@ class Dataset(
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:
-        from .dataarray import DataArray
-        from .groupby import GroupBy
+        from xarray.core.dataarray import DataArray
+        from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
             raise TypeError(
@@ -6949,7 +6957,7 @@ class Dataset(
             A        (x, y) int64 3 4 1 2
             B        (x, y) int64 7 8 5 6
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         if not isinstance(variables, list):
             variables = [variables]
@@ -7238,7 +7246,7 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from .variable import Variable
+        from xarray.core.variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
             raise ValueError(f"Coordinate {coord} does not exist.")
@@ -7340,7 +7348,7 @@ class Dataset(
         return result
 
     def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
-        from .variable import Variable
+        from xarray.core.variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
             raise ValueError(f"Coordinate {coord} does not exist.")
@@ -7703,7 +7711,7 @@ class Dataset(
         Data variables:
             a        (time) float64 dask.array<chunksize=(24,), meta=np.ndarray>
         """
-        from .parallel import map_blocks
+        from xarray.core.parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs, template)
 
@@ -7775,7 +7783,7 @@ class Dataset(
         numpy.polyval
         xarray.polyval
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         variables = {}
         skipna_da = skipna
@@ -8556,9 +8564,9 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
-        from .alignment import broadcast
-        from .computation import apply_ufunc
-        from .dataarray import _THIS_ARRAY, DataArray
+        from xarray.core.alignment import broadcast
+        from xarray.core.computation import apply_ufunc
+        from xarray.core.dataarray import _THIS_ARRAY, DataArray
 
         if p0 is None:
             p0 = {}
@@ -8898,7 +8906,7 @@ class Dataset(
         core.groupby.DatasetGroupBy
         pandas.DataFrame.groupby
         """
-        from .groupby import DatasetGroupBy
+        from xarray.core.groupby import DatasetGroupBy
 
         # While we don't generally check the type of every arg, passing
         # multiple dimensions as multiple arguments is common enough, and the
@@ -8981,7 +8989,7 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from .groupby import DatasetGroupBy
+        from xarray.core.groupby import DatasetGroupBy
 
         return DatasetGroupBy(
             self,
@@ -9021,7 +9029,7 @@ class Dataset(
         --------
         DataArray.weighted
         """
-        from .weighted import DatasetWeighted
+        from xarray.core.weighted import DatasetWeighted
 
         return DatasetWeighted(self, weights)
 
@@ -9059,7 +9067,7 @@ class Dataset(
         core.rolling.DatasetRolling
         DataArray.rolling
         """
-        from .rolling import DatasetRolling
+        from xarray.core.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
@@ -9097,7 +9105,7 @@ class Dataset(
         core.rolling.DatasetCoarsen
         DataArray.coarsen
         """
-        from .rolling import DatasetCoarsen
+        from xarray.core.rolling import DatasetCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DatasetCoarsen(
@@ -9167,7 +9175,7 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
-        from .resample import DatasetResample
+        from xarray.core.resample import DatasetResample
 
         return self._resample(
             resample_cls=DatasetResample,
