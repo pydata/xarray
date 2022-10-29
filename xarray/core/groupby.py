@@ -291,7 +291,12 @@ def _get_index_and_items(index, grouper):
         # This way we generate codes for the final output index: full_index.
         # So for _flox_reduce we avoid one reindex and copy by avoiding
         # _maybe_restore_empty_groups
-        codes = first_items.index.searchsorted(index, side=grouper.closed)
+        codes = (
+            first_items.index.searchsorted(
+                index, side="right" if grouper.closed == "left" else "left"
+            )
+            - 1
+        )
         _apply_loffset(grouper, first_items)
     full_index = first_items.index
     if first_items.isnull().any():

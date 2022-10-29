@@ -91,7 +91,12 @@ class CFTimeGrouper:
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.base
         )
-        codes = np.searchsorted(labels, index, side=self.closed)
+        codes = (
+            np.searchsorted(
+                labels, index, side="right" if self.closed == "left" else "left"
+            )
+            - 1
+        )
         if self.loffset is not None:
             if isinstance(self.loffset, datetime.timedelta):
                 labels = labels + self.loffset

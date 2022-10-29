@@ -1483,6 +1483,10 @@ class TestDataArrayResample:
         actual = array.resample(time="24H").reduce(np.mean)
         assert_identical(expected, actual)
 
+        actual = array.resample(time="24H", closed="right").mean()
+        expected = DataArray(array.to_series().resample("24H", closed="right").mean())
+        assert_identical(expected, actual)
+
         # Our use of `loffset` may change if we align our API with pandas' changes.
         # ref https://github.com/pydata/xarray/pull/4537
         actual = array.resample(time="24H", loffset="-12H").mean()
