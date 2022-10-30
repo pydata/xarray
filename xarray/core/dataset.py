@@ -67,7 +67,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, sparse_array_type
+from .pycompat import array_type, is_duck_dask_array
 from .types import QuantileMethods, T_Dataset
 from .utils import (
     Default,
@@ -1695,6 +1695,7 @@ class Dataset(
         See Also
         --------
         Dataset.swap_dims
+        Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -4866,6 +4867,7 @@ class Dataset(
         #    Once that is resolved, explicitly exclude pint arrays.
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
+        sparse_array_type = array_type("sparse")
         needs_full_reindex = any(
             is_duck_dask_array(v.data)
             or isinstance(v.data, sparse_array_type)

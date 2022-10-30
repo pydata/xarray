@@ -22,14 +22,9 @@ import pandas as pd
 from ..core.indexes import PandasMultiIndex
 from ..core.options import OPTIONS
 from ..core.pycompat import DuckArrayModule
-from ..core.utils import is_scalar
+from ..core.utils import is_scalar, module_available
 
-try:
-    import nc_time_axis  # noqa: F401
-
-    nc_time_axis_available = True
-except ImportError:
-    nc_time_axis_available = False
+nc_time_axis_available = module_available("nc_time_axis")
 
 
 try:
