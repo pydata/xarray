@@ -40,12 +40,13 @@ class DatasetCreation:
     def setup(self, strategy, count):
         data = np.array(["0", "b"], dtype=str)
         self.dataset_coords = dict(time=np.array([0, 1]))
-        self.dataset_attrs = dict(units="Celcius")
+        self.dataset_attrs = dict(description="Test data")
+        attrs = dict(units="Celcius")
         if strategy == "dict_of_DataArrays":
 
             def create_data_vars():
                 return {
-                    f"long_variable_name_{i}": xr.DataArray(data=data, dims=("time"))
+                    f"long_variable_name_{i}": xr.DataArray(data=data, dims=("time"). attrs=attrs)
                     for i in range(count)
                 }
 
@@ -53,14 +54,14 @@ class DatasetCreation:
 
             def create_data_vars():
                 return {
-                    f"long_variable_name_{i}": xr.Variable("time", data)
+                    f"long_variable_name_{i}": xr.Variable("time", data, attrs=attrs)
                     for i in range(count)
                 }
 
         elif strategy == "dict_of_Tuples":
 
             def create_data_vars():
-                return {f"long_variable_name_{i}": ("time", data) for i in range(count)}
+                return {f"long_variable_name_{i}": ("time", data, attrs) for i in range(count)}
 
         self.create_data_vars = create_data_vars
 
