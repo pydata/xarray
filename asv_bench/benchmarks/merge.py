@@ -46,7 +46,9 @@ class DatasetCreation:
 
             def create_data_vars():
                 return {
-                    f"long_variable_name_{i}": xr.DataArray(data=data, dims=("time"), attrs=attrs)
+                    f"long_variable_name_{i}": xr.DataArray(
+                        data=data, dims=("time"), attrs=attrs
+                    )
                     for i in range(count)
                 }
 
@@ -61,7 +63,10 @@ class DatasetCreation:
         elif strategy == "dict_of_Tuples":
 
             def create_data_vars():
-                return {f"long_variable_name_{i}": ("time", data, attrs) for i in range(count)}
+                return {
+                    f"long_variable_name_{i}": ("time", data, attrs)
+                    for i in range(count)
+                }
 
         self.create_data_vars = create_data_vars
 
