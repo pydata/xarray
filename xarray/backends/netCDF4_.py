@@ -6,7 +6,6 @@ import os
 from contextlib import suppress
 
 import numpy as np
-from packaging.version import Version
 
 from .. import coding
 from ..coding.variables import pop_to
@@ -249,14 +248,6 @@ def _extract_nc4_variable_encoding(
         valid_encodings.add("least_significant_digit")
     if h5py_okay:
         valid_encodings.add("compression_opts")
-
-    if backend == "netCDF4" and has_netcdf4:
-        # if using netCDF4 check the versions are updated enough for supporting the new
-        # compression
-        if Version(netCDF4.__version__) < Version("1.6.0") or Version(
-            netCDF4.getlibversion().split(" ")[0]
-        ) < Version("4.9.0"):
-            valid_encodings.remove("compression")
 
     if not raise_on_invalid and encoding.get("chunksizes") is not None:
         # It's possible to get encoded chunksizes larger than a dimension size
