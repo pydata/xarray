@@ -39,7 +39,7 @@ from ..plot.accessor import DatasetPlotAccessor
 from . import alignment
 from . import dtypes as xrdtypes
 from . import duck_array_ops, formatting, formatting_html, ops, utils
-from ._reductions import DatasetReductions
+from ._aggregations import DatasetAggregations
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
@@ -67,7 +67,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, sparse_array_type
+from .pycompat import array_type, is_duck_dask_array
 from .types import QuantileMethods, T_Dataset
 from .utils import (
     Default,
@@ -429,7 +429,10 @@ class _LocIndexer(Generic[T_Dataset]):
 
 
 class Dataset(
-    DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping[Hashable, "DataArray"]
+    DataWithCoords,
+    DatasetAggregations,
+    DatasetArithmetic,
+    Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
 
@@ -1692,6 +1695,7 @@ class Dataset(
         See Also
         --------
         Dataset.swap_dims
+        Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -4863,6 +4867,7 @@ class Dataset(
         #    Once that is resolved, explicitly exclude pint arrays.
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
+        sparse_array_type = array_type("sparse")
         needs_full_reindex = any(
             is_duck_dask_array(v.data)
             or isinstance(v.data, sparse_array_type)
@@ -6933,7 +6938,8 @@ class Dataset(
         ...     },
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
-        >>> ds.sortby("x")
+        >>> ds = ds.sortby("x")
+        >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:

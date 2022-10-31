@@ -32,7 +32,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.pycompat import integer_types, sparse_array_type
+from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
 
 from . import (
@@ -68,6 +68,8 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+sparse_array_type = array_type("sparse")
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),

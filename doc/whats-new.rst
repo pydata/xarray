@@ -28,10 +28,17 @@ New Features
 - Display the indexes in a new section of the text and HTML reprs
   (:pull:`6795`, :pull:`7183`, :pull:`7185`)
   By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
+- Added methods :py:meth:`DataArrayGroupBy.cumprod` and :py:meth:`DatasetGroupBy.cumprod`.
+  (:pull:`5816`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``repr(ds)`` may not show the same result because it doesn't load small,
+  lazy data anymore. Use ``ds.head().load()`` when wanting to see just a sample
+  of the data. (:issue:`6722`, :pull:`7203`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
   shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
@@ -54,6 +61,10 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed bug where :py:meth:`Dataset.coarsen.construct` would demote non-dimension coordinates to variables. (:pull:`7233`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Raise a TypeError when trying to plot empty data (:issue:`7156`, :pull:`7228`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -62,10 +73,14 @@ Documentation
   Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
   and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
+- Created docstring examples for :py:meth:`DataArray.cumsum`, :py:meth:`DataArray.cumprod`, :py:meth:`Dataset.cumsum`, :py:meth:`Dataset.cumprod`, :py:meth:`DatasetGroupBy.cumsum`, :py:meth:`DataArrayGroupBy.cumsum`. (:issue:`5816`, :pull:`7152`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 - Add example of using :py:meth:`DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Rename ``axes`` to ``axs`` in plotting to align with ``matplotlib.pyplot.subplots``. (:pull:`7194`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add documentation of specific BackendEntrypoints (:pull:`7200`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -76,6 +91,15 @@ Internal Changes
   encoding times to preserve existing behavior and prevent future errors when it
   is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improved import time by lazily importing backend modules, matplotlib, dask.array and flox. (:issue:`6726`, :pull:`7179`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Emit a warning under the development version of pandas when we convert
+  non-nanosecond precision datetime or timedelta values to nanosecond precision.
+  This was required in the past, because pandas previously was not compatible
+  with non-nanosecond precision values.  However pandas is currently working
+  towards removing this restriction.  When things stabilize in pandas we will
+  likely consider relaxing this behavior in xarray as well (:issue:`7175`,
+  :pull:`7201`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 
