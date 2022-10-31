@@ -94,6 +94,7 @@ jobs:
           cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
           extra-specs: |
             python=${{matrix.python-version}}
+            conda
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
