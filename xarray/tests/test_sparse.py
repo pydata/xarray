@@ -11,7 +11,7 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type, sparse_version
+from xarray.core.pycompat import array_type, mod_version
 
 from . import assert_equal, assert_identical, requires_dask
 
@@ -20,6 +20,8 @@ param = pytest.param
 xfail = pytest.mark.xfail
 
 sparse = pytest.importorskip("sparse")
+sparse_array_type = array_type("sparse")
+sparse_version = mod_version("sparse")
 
 
 def assert_sparse_equal(a, b):

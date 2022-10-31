@@ -23,9 +23,11 @@ from xarray.core.computation import (
     result_name,
     unified_dim_sizes,
 )
-from xarray.core.pycompat import dask_version
+from xarray.core.pycompat import mod_version
 
 from . import has_dask, raise_if_dask_computes, requires_cftime, requires_dask
+
+dask_version = mod_version("dask")
 
 
 def assert_identical(a, b):
@@ -1732,7 +1734,7 @@ def test_output_wrong_dim_size() -> None:
 
 
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_dot(use_dask) -> None:
+def test_dot(use_dask: bool) -> None:
     if use_dask:
         if not has_dask:
             pytest.skip("test for dask.")
@@ -1862,7 +1864,7 @@ def test_dot(use_dask) -> None:
 
 
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_dot_align_coords(use_dask) -> None:
+def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
 
     if use_dask:

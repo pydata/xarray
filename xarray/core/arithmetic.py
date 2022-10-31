@@ -16,7 +16,7 @@ from ._typed_ops import (
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import IncludeCumMethods, IncludeNumpySameMethods, IncludeReduceMethods
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_array
 
 
 class SupportsArithmetic:
@@ -33,12 +33,11 @@ class SupportsArithmetic:
 
     # TODO: allow extending this with some sort of registration system
     _HANDLED_TYPES = (
-        np.ndarray,
         np.generic,
         numbers.Number,
         bytes,
         str,
-    ) + dask_array_type
+    )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         from .computation import apply_ufunc
@@ -46,7 +45,9 @@ class SupportsArithmetic:
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())
         for x in inputs + out:
-            if not isinstance(x, self._HANDLED_TYPES + (SupportsArithmetic,)):
+            if not is_duck_array(x) and not isinstance(
+                x, self._HANDLED_TYPES + (SupportsArithmetic,)
+            ):
                 return NotImplemented
 
         if ufunc.signature is not None:
@@ -107,7 +108,6 @@ class VariableArithmetic(
 
 class DatasetArithmetic(
     ImplementsDatasetReduce,
-    IncludeCumMethods,
     SupportsArithmetic,
     DatasetOpsMixin,
 ):
@@ -117,7 +117,6 @@ class DatasetArithmetic(
 
 class DataArrayArithmetic(
     ImplementsArrayReduce,
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     DataArrayOpsMixin,

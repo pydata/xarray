@@ -166,7 +166,9 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / self.count(keep_attrs=False)
+        result = self.sum(keep_attrs=False, **kwargs) / self.count(
+            keep_attrs=False
+        ).astype(self.obj.dtype, copy=False)
         if keep_attrs:
             result.attrs = self.obj.attrs
         return result
@@ -281,7 +283,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         for (label, start, stop) in zip(self.window_labels, starts, stops):
             window = self.obj.isel({dim0: slice(start, stop)})
 
-            counts = window.count(dim=dim0)
+            counts = window.count(dim=[dim0])
             window = window.where(counts >= self.min_periods)
 
             yield (label, window)
@@ -971,7 +973,10 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             else:
                 reshaped[key] = var
 
-        should_be_coords = set(window_dim) & set(self.obj.coords)
+        # should handle window_dim being unindexed
+        should_be_coords = (set(window_dim) & set(self.obj.coords)) | set(
+            self.obj.coords
+        )
         result = reshaped.set_coords(should_be_coords)
         if isinstance(self.obj, DataArray):
             return self.obj._from_temp_dataset(result)

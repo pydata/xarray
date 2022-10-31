@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1.1
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
@@ -72,7 +72,10 @@ jobs:
           python xarray/util/print_versions.py
       - name: Run doctests
         run: |
-          python -m pytest --doctest-modules xarray --ignore xarray/tests
+          # Raise an error if there are warnings in the doctests, with `-Werror`.
+          # This is a trial; if it presents an problem, feel free to remove.
+          # See https://github.com/pydata/xarray/issues/7164 for more info.
+          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
 
   mypy:
     name: Mypy
@@ -118,7 +121,16 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+
+      - name: Upload mypy coverage to Codecov
+        uses: codecov/codecov-action@v3.1.1
+        with:
+          file: mypy_report/cobertura.xml
+          flags: mypy
+          env_vars: PYTHON_VERSION
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   min-version-policy:
     name: Minimum Version Policy

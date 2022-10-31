@@ -6,8 +6,15 @@ import itertools
 import sys
 import warnings
 from importlib.metadata import entry_points
+from typing import TYPE_CHECKING, Any
 
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+
+if TYPE_CHECKING:
+    import os
+    from io import BufferedIOBase
+
+    from .common import AbstractDataStore
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -83,7 +90,7 @@ def sort_backends(backend_entrypoints):
     return ordered_backends_entrypoints
 
 
-def build_engines(entrypoints):
+def build_engines(entrypoints) -> dict[str, BackendEntrypoint]:
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
         if backend.available:
@@ -97,8 +104,21 @@ def build_engines(entrypoints):
 
 
 @functools.lru_cache(maxsize=1)
-def list_engines():
+def list_engines() -> dict[str, BackendEntrypoint]:
+    """
+    Return a dictionary of available engines and their BackendEntrypoint objects.
+
+    Returns
+    -------
+    dictionary
+
+    Notes
+    -----
+    This function lives in the backends namespace (``engs=xr.backends.list_engines()``).
+    If available, more information is available about each backend via ``engs["eng_name"]``.
+
     # New selection mechanism introduced with Python 3.10. See GH6514.
+    """
     if sys.version_info >= (3, 10):
         entrypoints = entry_points(group="xarray.backends")
     else:
@@ -106,7 +126,9 @@ def list_engines():
     return build_engines(entrypoints)
 
 
-def guess_engine(store_spec):
+def guess_engine(
+    store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+):
     engines = list_engines()
 
     for engine, backend in engines.items():
@@ -155,7 +177,7 @@ def guess_engine(store_spec):
     raise ValueError(error_msg)
 
 
-def get_backend(engine):
+def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
     """Select open_dataset method based on current engine."""
     if isinstance(engine, str):
         engines = list_engines()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -43,6 +44,8 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
+    from io import BufferedIOBase
+
     from ..core.types import (
         CombineAttrsOptions,
         CompatOptions,
@@ -231,7 +234,7 @@ def _get_mtime(filename_or_obj):
 
 def _protect_dataset_variables_inplace(dataset, cache):
     for name, variable in dataset.variables.items():
-        if name not in variable.dims:
+        if name not in dataset._indexes:
             # no need to protect IndexVariable objects
             data = indexing.CopyOnWriteArray(variable._data)
             if cache:
@@ -243,6 +246,11 @@ def _finalize_store(write, store):
     """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
+
+
+def _multi_file_closer(closers):
+    for closer in closers:
+        closer()
 
 
 def load_dataset(filename_or_obj, **kwargs) -> Dataset:
@@ -358,15 +366,15 @@ def _dataset_from_backend_dataset(
 
     ds.set_close(backend_ds._close)
 
-    # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding and isinstance(filename_or_obj, str):
-        ds.encoding["source"] = filename_or_obj
+    # Ensure source filename always stored in dataset object
+    if "source" not in ds.encoding and isinstance(filename_or_obj, (str, os.PathLike)):
+        ds.encoding["source"] = _normalize_path(filename_or_obj)
 
     return ds
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -550,7 +558,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1031,11 +1039,7 @@ def open_mfdataset(
             ds.close()
         raise
 
-    def multi_file_closer():
-        for closer in closers:
-            closer()
-
-    combined.set_close(multi_file_closer)
+    combined.set_close(partial(_multi_file_closer, closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
@@ -1188,7 +1192,7 @@ def to_netcdf(
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
-    have_chunks = any(v.chunks for v in dataset.variables.values())
+    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
 
     autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
     if autoclose and engine == "scipy":

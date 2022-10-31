@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
 import io
 import itertools
 import math
@@ -62,18 +63,6 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
-
-    if len(index) > 0 and index.dtype == "O":
-        try:
-            return CFTimeIndex(index)
-        except (ImportError, TypeError):
-            return index
-    else:
-        return index
-
-
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
@@ -112,34 +101,6 @@ def maybe_coerce_to_str(index, original_coords):
     return index
 
 
-def safe_cast_to_index(array: Any) -> pd.Index:
-    """Given an array, safely cast it to a pandas.Index.
-
-    If it is already a pandas.Index, return it unchanged.
-
-    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
-    this function will not attempt to do automatic type conversion but will
-    always return an index with dtype=object.
-    """
-    if isinstance(array, pd.Index):
-        index = array
-    elif hasattr(array, "to_index"):
-        # xarray Variable
-        index = array.to_index()
-    elif hasattr(array, "to_pandas_index"):
-        # xarray Index
-        index = array.to_pandas_index()
-    elif hasattr(array, "array") and isinstance(array.array, pd.Index):
-        # xarray PandasIndexingAdapter
-        index = array.array
-    else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
-        index = pd.Index(np.asarray(array), **kwargs)
-    return _maybe_cast_to_cftimeindex(index)
-
-
 def maybe_wrap_array(original, new_array):
     """Wrap a transformed array with __array_wrap__ if it can be done safely.
 
@@ -161,16 +122,13 @@ def equivalent(first: T, second: T) -> bool:
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
 
+    if first is second:
+        return True
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
-    elif isinstance(first, list) or isinstance(second, list):
+    if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)
-    else:
-        return (
-            (first is second)
-            or (first == second)
-            or (pd.isnull(first) and pd.isnull(second))
-        )
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))
 
 
 def list_equiv(first, second):
@@ -555,10 +513,26 @@ class NdimSizeLenMixin:
 
     @property
     def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
         return len(self.shape)
 
     @property
     def size(self: Any) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
         return math.prod(self.shape)
 
     def __len__(self: Any) -> int:
@@ -980,3 +954,21 @@ def contains_only_dask_or_numpy(obj) -> bool:
             for var in obj.variables.values()
         ]
     )
+
+
+def module_available(module: str) -> bool:
+    """Checks whether a module is installed without importing it.
+
+    Use this for a lightweight check and lazy imports.
+
+    Parameters
+    ----------
+    module : str
+        Name of the module.
+
+    Returns
+    -------
+    available : bool
+        Whether the module is installed.
+    """
+    return importlib.util.find_spec(module) is not None

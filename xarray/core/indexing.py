@@ -15,20 +15,20 @@ import pandas as pd
 from packaging.version import Version
 
 from . import duck_array_ops
-from .npcompat import DTypeLike
 from .nputils import NumpyVIndexAdapter
 from .options import OPTIONS
-from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
+from .pycompat import array_type, integer_types, is_duck_dask_array, mod_version
 from .types import T_Xarray
 from .utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
-    safe_cast_to_index,
     to_0d_array,
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from .indexes import Index
     from .variable import Variable
 
@@ -1101,7 +1101,7 @@ def _masked_result_drop_slice(key, data=None):
         if isinstance(k, np.ndarray):
             if is_duck_dask_array(data):
                 new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
-            elif isinstance(data, sparse_array_type):
+            elif isinstance(data, array_type("sparse")):
                 import sparse
 
                 new_keys.append(sparse.COO.from_numpy(k))
@@ -1381,7 +1381,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if dask_version >= Version("2021.04.1"):
+        if mod_version("dask") >= Version("2021.04.1"):
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):
@@ -1415,6 +1415,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
+        from .indexes import safe_cast_to_index
+
         self.array = safe_cast_to_index(array)
 
         if dtype is None:
