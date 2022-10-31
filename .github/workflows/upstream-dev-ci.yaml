@@ -54,13 +54,14 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set up conda environment
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@v14
         with:
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           extra-specs: |
             python=${{ matrix.python-version }}
             pytest-reportlog
+            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
