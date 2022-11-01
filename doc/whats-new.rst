@@ -81,6 +81,8 @@ Documentation
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add documentation of specific BackendEntrypoints (:pull:`7200`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add examples to docstring for :py:meth:`DataArray.drop_vars`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`. (:issue:`6793`, :pull:`7123`)
+  By `Daniel Goman <https://github.com/DanielGoman>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
