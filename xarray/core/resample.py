@@ -52,7 +52,6 @@ class Resample(GroupBy[T_Xarray]):
         **kwargs,
     ) -> T_Xarray:
 
-        kwargs.setdefault("method", "cohorts")
         result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result

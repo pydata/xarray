@@ -655,12 +655,11 @@ class GroupBy(Generic[T_Xarray]):
                     other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
                 )
 
-        # need to handle NaNs in group or
-        # elements that don't belong to any bins
-        mask = self._codes == -1
+        # need to handle NaNs in group or elements that don't belong to any bins
+        mask = codes == -1
         if mask.any():
-            obj = self._original_obj.where(~mask, drop=True)
-            codes = self._codes.where(~mask, drop=True).astype(int)
+            obj = obj.where(~mask, drop=True)
+            codes = codes.where(~mask, drop=True).astype(int)
 
         other, _ = align(other, coord, join="outer")
         expanded = other.isel({name: codes})
@@ -720,7 +719,7 @@ class GroupBy(Generic[T_Xarray]):
         # preserve current strategy (approximately) for dask groupby.
         # We want to control the default anyway to prevent surprises
         # if flox decides to change its default
-        kwargs.setdefault("method", "split-reduce")
+        kwargs.setdefault("method", "cohorts")
 
         numeric_only = kwargs.pop("numeric_only", None)
         if numeric_only:
@@ -773,14 +772,13 @@ class GroupBy(Generic[T_Xarray]):
         # Xarray's behaviour is that empty bins have np.nan regardless of dtype
         # flox's default would not set np.nan for integer dtypes
         kwargs.setdefault("fill_value", np.nan)
-        if self._bins is not None:
-            if kwargs["func"] == "count":
-                # This is an annoying hack. Xarray returns np.nan
-                # when there are no observations in a bin, instead of 0.
-                # We can fake that here by forcing min_count=1.
-                # note min_count makes no sense in the xarray world
-                # as a kwarg for count, so this should be OK
-                kwargs["min_count"] = 1
+        if self._bins is not None and kwargs["func"] == "count":
+            # This is an annoying hack. Xarray returns np.nan
+            # when there are no observations in a bin, instead of 0.
+            # We can fake that here by forcing min_count=1.
+            # note min_count makes no sense in the xarray world
+            # as a kwarg for count, so this should be OK
+            kwargs["min_count"] = 1
 
         output_index = self._get_output_index()
         result = xarray_reduce(
@@ -798,10 +796,7 @@ class GroupBy(Generic[T_Xarray]):
         # in the grouped variable
         if set(self._codes.dims).issubset(set(parsed_dim)):
             result[self._unique_coord.name] = output_index
-
-        # Ignore error when the groupby reduction is effectively
-        # a reduction of the underlying dataset
-        result = result.drop_vars(unindexed_dims, errors="ignore")
+            result = result.drop_vars(unindexed_dims)
 
         # broadcast and restore non-numeric data variables (backcompat)
         for name, var in non_numeric.items():
