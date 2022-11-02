@@ -15,10 +15,16 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2022.10.1:
+.. _whats-new.2022.11.0:
 
-v2022.10.1 (unreleased)
+v2022.11.0 (Nov 3, 2022)
 -----------------------
+
+This release brings a number of bugfixes and documentation improvements. Both text and HTML
+reprs now have a new "Indexes" section, which we expect will help with development of new
+Index objects. This release also features more support for the Python Array API.
+
+Many thanks to the 16 contributors to this release: Daniel Goman, Deepak Cherian, Illviljan, Jessica Scheick, Justus Magin, Mark Harfouche, Maximilian Roos, Mick, Patrick Naylor, Pierre, Spencer Clark, Stephan Hoyer, Tom Nicholas, Tom White
 
 New Features
 ~~~~~~~~~~~~
