@@ -18,7 +18,7 @@ What's New
 .. _whats-new.2022.11.0:
 
 v2022.11.0 (Nov 3, 2022)
------------------------
+------------------------
 
 This release brings a number of bugfixes and documentation improvements. Both text and HTML
 reprs now have a new "Indexes" section, which we expect will help with development of new
