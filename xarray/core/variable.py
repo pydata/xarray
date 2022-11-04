@@ -194,14 +194,14 @@ def _as_nanosecond_precision(data):
         isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
     )
     if non_ns_datetime64 or non_ns_datetime_tz_dtype:
-        warnings.warn(NON_NANOSECOND_WARNING.format(case="datetime"), stacklevel=5)
+        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="datetime"))
         if isinstance(dtype, pd.DatetimeTZDtype):
             nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
         else:
             nanosecond_precision_dtype = "datetime64[ns]"
         return data.astype(nanosecond_precision_dtype)
     elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
-        warnings.warn(NON_NANOSECOND_WARNING.format(case="timedelta"), stacklevel=5)
+        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
         return data.astype("timedelta64[ns]")
     else:
         return data
