@@ -35,6 +35,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``repr(ds)`` may not show the same result because it doesn't load small,
+  lazy data anymore. Use ``ds.head().load()`` when wanting to see just a sample
+  of the data. (:issue:`6722`, :pull:`7203`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
   shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
@@ -59,6 +63,10 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix handling of coordinate attributes in ``xarray.where``. (:issue:`7220`, :pull:`7229`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Fixed bug where :py:meth:`Dataset.coarsen.construct` would demote non-dimension coordinates to variables. (:pull:`7233`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Raise a TypeError when trying to plot empty data (:issue:`7156`, :pull:`7228`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -75,6 +83,8 @@ Documentation
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add documentation of specific BackendEntrypoints (:pull:`7200`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add examples to docstring for :py:meth:`DataArray.drop_vars`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`. (:issue:`6793`, :pull:`7123`)
+  By `Daniel Goman <https://github.com/DanielGoman>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -85,6 +95,8 @@ Internal Changes
   encoding times to preserve existing behavior and prevent future errors when it
   is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improved import time by lazily importing backend modules, matplotlib, dask.array and flox. (:issue:`6726`, :pull:`7179`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Emit a warning under the development version of pandas when we convert
   non-nanosecond precision datetime or timedelta values to nanosecond precision.
   This was required in the past, because pandas previously was not compatible
