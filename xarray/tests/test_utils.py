@@ -266,3 +266,13 @@ def test_infix_dims_errors(supplied, all_):
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected
+
+
+def test_find_stack_level():
+    assert utils.find_stack_level() == 1
+    assert utils.find_stack_level(test_mode=True) == 2
+
+    def f():
+        return utils.find_stack_level(test_mode=True)
+
+    assert f() == 3
