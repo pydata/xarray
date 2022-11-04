@@ -35,11 +35,11 @@ import pandas as pd
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from ..plot.dataset_plot import _Dataset_PlotMethods
+from ..plot.accessor import DatasetPlotAccessor
 from . import alignment
 from . import dtypes as xrdtypes
 from . import duck_array_ops, formatting, formatting_html, ops, utils
-from ._reductions import DatasetReductions
+from ._aggregations import DatasetAggregations
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
@@ -66,10 +66,9 @@ from .merge import (
     merge_data_and_coords,
 )
 from .missing import get_clean_interp_index
-from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, sparse_array_type
-from .types import T_Dataset
+from .pycompat import array_type, is_duck_dask_array
+from .types import QuantileMethods, T_Dataset
 from .utils import (
     Default,
     Frozen,
@@ -93,6 +92,8 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .coordinates import Coordinates
@@ -428,7 +429,10 @@ class _LocIndexer(Generic[T_Dataset]):
 
 
 class Dataset(
-    DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping[Hashable, "DataArray"]
+    DataWithCoords,
+    DatasetAggregations,
+    DatasetArithmetic,
+    Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
 
@@ -1221,6 +1225,14 @@ class Dataset(
         --------
         pandas.DataFrame.copy
         """
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_Dataset,
+        deep: bool = False,
+        data: Mapping[Any, ArrayLike] | None = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_Dataset:
         if data is None:
             data = {}
         elif not utils.is_dict_like(data):
@@ -1249,12 +1261,20 @@ class Dataset(
             if k in index_vars:
                 variables[k] = index_vars[k]
             else:
-                variables[k] = v.copy(deep=deep, data=data.get(k))
+                variables[k] = v._copy(deep=deep, data=data.get(k), memo=memo)
 
-        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
-        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+        attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
+        encoding = (
+            copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
+        )
 
         return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
+
+    def __copy__(self: T_Dataset) -> T_Dataset:
+        return self._copy(deep=False)
+
+    def __deepcopy__(self: T_Dataset, memo: dict[int, Any] | None = None) -> T_Dataset:
+        return self._copy(deep=True, memo=memo)
 
     def as_numpy(self: T_Dataset) -> T_Dataset:
         """
@@ -1331,14 +1351,6 @@ class Dataset(
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
-
-    def __copy__(self: T_Dataset) -> T_Dataset:
-        return self.copy(deep=False)
-
-    def __deepcopy__(self: T_Dataset, memo=None) -> T_Dataset:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
@@ -1683,6 +1695,7 @@ class Dataset(
         See Also
         --------
         Dataset.swap_dims
+        Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -2167,7 +2180,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        **chunks_kwargs: Any,
+        **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2969,7 +2982,7 @@ class Dataset(
             pressure     (station) float64 211.8 322.9 218.8 445.9
         >>> x.indexes
         Indexes:
-        station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
+            station  Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
 
         Create a new index and reindex the dataset. By default values in the new index that
         do not have corresponding records in the dataset are assigned `NaN`.
@@ -4854,6 +4867,7 @@ class Dataset(
         #    Once that is resolved, explicitly exclude pint arrays.
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
+        sparse_array_type = array_type("sparse")
         needs_full_reindex = any(
             is_duck_dask_array(v.data)
             or isinstance(v.data, sparse_array_type)
@@ -5401,6 +5415,13 @@ class Dataset(
         numpy.transpose
         DataArray.transpose
         """
+        # Raise error if list is passed as dims
+        if (len(dims) > 0) and (isinstance(dims[0], list)):
+            list_fix = [f"{repr(x)}" if isinstance(x, str) else f"{x}" for x in dims[0]]
+            raise TypeError(
+                f'transpose requires dims to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dims[0]}` instead'
+            )
+
         # Use infix_dims to check once for missing dimensions
         if len(dims) != 0:
             _ = list(infix_dims(dims, self.dims, missing_dims))
@@ -6917,7 +6938,8 @@ class Dataset(
         ...     },
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
-        >>> ds.sortby("x")
+        >>> ds = ds.sortby("x")
+        >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -6954,11 +6976,11 @@ class Dataset(
         self: T_Dataset,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
         skipna: bool = None,
-        interpolation: QUANTILE_METHODS = None,
+        interpolation: QuantileMethods = None,
     ) -> T_Dataset:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -7467,7 +7489,7 @@ class Dataset(
         """
         return self.map(lambda x: x.imag, keep_attrs=True)
 
-    plot = utils.UncachedAccessor(_Dataset_PlotMethods)
+    plot = utils.UncachedAccessor(DatasetPlotAccessor)
 
     def filter_by_attrs(self: T_Dataset, **kwargs) -> T_Dataset:
         """Returns a ``Dataset`` with variables that match specific conditions.
@@ -8559,7 +8581,9 @@ class Dataset(
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
-        coords_ = [self[coord] if isinstance(coord, str) else coord for coord in coords]
+        coords_: Sequence[DataArray] = [
+            self[coord] if isinstance(coord, str) else coord for coord in coords
+        ]
 
         # Determine whether any coords are dims on self
         for coord in coords_:

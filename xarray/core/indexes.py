@@ -112,25 +112,71 @@ class Index:
         return self
 
     def __copy__(self) -> Index:
-        return self.copy(deep=False)
+        return self._copy(deep=False)
 
-    def __deepcopy__(self, memo=None) -> Index:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Index:
+        return self._copy(deep=True, memo=memo)
 
     def copy(self, deep: bool = True) -> Index:
+        return self._copy(deep=deep)
+
+    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Index:
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:
             for k, v in self.__dict__.items():
-                setattr(copied, k, copy.deepcopy(v))
+                setattr(copied, k, copy.deepcopy(v, memo))
         else:
             copied.__dict__.update(self.__dict__)
         return copied
 
     def __getitem__(self, indexer: Any):
         raise NotImplementedError()
+
+    def _repr_inline_(self, max_width):
+        return self.__class__.__name__
+
+
+def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if len(index) > 0 and index.dtype == "O":
+        try:
+            return CFTimeIndex(index)
+        except (ImportError, TypeError):
+            return index
+    else:
+        return index
+
+
+def safe_cast_to_index(array: Any) -> pd.Index:
+    """Given an array, safely cast it to a pandas.Index.
+
+    If it is already a pandas.Index, return it unchanged.
+
+    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
+    this function will not attempt to do automatic type conversion but will
+    always return an index with dtype=object.
+    """
+    from .dataarray import DataArray
+    from .variable import Variable
+
+    if isinstance(array, pd.Index):
+        index = array
+    elif isinstance(array, (DataArray, Variable)):
+        # returns the original multi-index for pandas.MultiIndex level coordinates
+        index = array._to_index()
+    elif isinstance(array, Index):
+        index = array.to_pandas_index()
+    elif isinstance(array, PandasIndexingAdapter):
+        index = array.array
+    else:
+        kwargs = {}
+        if hasattr(array, "dtype") and array.dtype.kind == "O":
+            kwargs["dtype"] = object
+        index = pd.Index(np.asarray(array), **kwargs)
+
+    return _maybe_cast_to_cftimeindex(index)
 
 
 def _sanitize_slice_element(x):
@@ -236,7 +282,7 @@ class PandasIndex(Index):
         # make a shallow copy: cheap and because the index name may be updated
         # here or in other constructors (cannot use pd.Index.rename as this
         # constructor is also called from PandasMultiIndex)
-        index = utils.safe_cast_to_index(array).copy()
+        index = safe_cast_to_index(array).copy()
 
         if index.name is None:
             index.name = dim
@@ -497,6 +543,9 @@ class PandasIndex(Index):
     def __getitem__(self, indexer: Any):
         return self._replace(self.index[indexer])
 
+    def __repr__(self):
+        return f"PandasIndex({repr(self.index)})"
+
 
 def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
     """Check that all multi-index variable candidates are 1-dimensional and
@@ -637,7 +686,7 @@ class PandasMultiIndex(PandasIndex):
         """
         _check_dim_compat(variables, all_dims="different")
 
-        level_indexes = [utils.safe_cast_to_index(var) for var in variables.values()]
+        level_indexes = [safe_cast_to_index(var) for var in variables.values()]
         for name, idx in zip(variables, level_indexes):
             if isinstance(idx, pd.MultiIndex):
                 raise ValueError(
