@@ -876,7 +876,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
         stacklevel=3,
-        zarr_version: int | None = None,
+        zarr_version=None,
     ):
 
         filename_or_obj = _normalize_path(filename_or_obj)
