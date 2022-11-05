@@ -2,32 +2,26 @@ import numpy as np
 
 import xarray as xr
 
-from . import parameterized
-
-nx = {"s": 1000, "m": int(1e5), "l": int(1e7)}
-
 
 class SwapDims:
-    def setup(self) -> None:
-        self.ds = {
-            size: xr.Dataset(
-                {"a": (("x", "t"), np.ones((n, 2)))},
-                coords={
-                    "x": np.arange(n),
-                    "y": np.arange(n),
-                    "z": np.arange(n),
-                    "x2": ("x", np.arange(n)),
-                    "y2": ("y", np.arange(n)),
-                    "z2": ("z", np.arange(n)),
-                },
-            )
-            for size, n in nx.items()
-        }
+    param_names = ["size"]
+    params = [[int(1e3), int(1e5), int(1e7)]]
 
-    @parameterized(["size"], [list(nx.keys())])
-    def time_swap_dims(self, size: str) -> None:
-        self.ds[size].swap_dims({"x": "xn", "y": "yn", "z": "zn"})
+    def setup(self, size: int) -> None:
+        self.ds = xr.Dataset(
+            {"a": (("x", "t"), np.ones((size, 2)))},
+            coords={
+                "x": np.arange(size),
+                "y": np.arange(size),
+                "z": np.arange(size),
+                "x2": ("x", np.arange(size)),
+                "y2": ("y", np.arange(size)),
+                "z2": ("z", np.arange(size)),
+            },
+        )
 
-    @parameterized(["size"], [list(nx.keys())])
-    def time_swap_dims_newindex(self, size: str) -> None:
-        self.ds[size].swap_dims({"x": "x2", "y": "y2", "z": "z2"})
+    def time_swap_dims(self, size: int) -> None:
+        self.ds.swap_dims({"x": "xn", "y": "yn", "z": "zn"})
+
+    def time_swap_dims_newindex(self, size: int) -> None:
+        self.ds.swap_dims({"x": "x2", "y": "y2", "z": "z2"})
