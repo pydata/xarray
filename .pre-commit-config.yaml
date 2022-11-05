@@ -19,7 +19,7 @@ repos:
     hooks:
       - id: isort
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.1.0
+    rev: v3.2.0
     hooks:
       - id: pyupgrade
         args:
@@ -34,7 +34,7 @@ repos:
     rev: v0.3.7
     hooks:
       - id: blackdoc
-        exclude: "generate_reductions.py"
+        exclude: "generate_aggregations.py"
         additional_dependencies: ["black==22.10.0"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/PyCQA/flake8

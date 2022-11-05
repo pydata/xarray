@@ -551,6 +551,7 @@ class Aligner(Generic[DataAlignable]):
             # fast path for the trivial case
             (obj,) = self.objects
             self.results = (obj.copy(deep=self.copy),)
+            return
 
         self.find_matching_indexes()
         self.find_matching_unindexed_dims()
@@ -845,12 +846,6 @@ def deep_align(
             out[position] = aligned_obj
         else:
             out[position][key] = aligned_obj  # type: ignore[index]  # maybe someone can fix this?
-
-    # something went wrong: we should have replaced all sentinel values
-    for arg in out:
-        assert arg is not not_replaced
-        if is_dict_like(arg):
-            assert all(value is not not_replaced for value in arg.values())
 
     return out
 

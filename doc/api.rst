@@ -754,6 +754,7 @@ Dataset
    DatasetGroupBy.any
    DatasetGroupBy.count
    DatasetGroupBy.cumsum
+   DatasetGroupBy.cumprod
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -784,6 +785,7 @@ DataArray
    DataArrayGroupBy.any
    DataArrayGroupBy.count
    DataArrayGroupBy.cumsum
+   DataArrayGroupBy.cumprod
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median
@@ -1109,11 +1111,27 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
+   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.ZarrStore
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+These BackendEntrypoints provide a basic interface to the most commonly
+used filetypes in the xarray universe.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4BackendEntrypoint
+   backends.H5netcdfBackendEntrypoint
+   backends.PseudoNetCDFBackendEntrypoint
+   backends.PydapBackendEntrypoint
+   backends.ScipyBackendEntrypoint
+   backends.StoreBackendEntrypoint
+   backends.ZarrBackendEntrypoint
 
 Deprecated / Pending Deprecation
 ================================

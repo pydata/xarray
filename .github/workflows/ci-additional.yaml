@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1.1
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
@@ -53,12 +53,13 @@ jobs:
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@v14
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           extra-specs: |
             python=${{env.PYTHON_VERSION}}
+            conda
           cache-env: true
           cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
 
@@ -99,12 +100,13 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@v14
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           extra-specs: |
             python=${{env.PYTHON_VERSION}}
+            conda
           cache-env: true
           cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
       - name: Install xarray
@@ -152,7 +154,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@v14
         with:
           environment-name: xarray-tests
           environment-file: false
