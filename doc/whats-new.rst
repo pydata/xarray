@@ -25,9 +25,38 @@ New Features
 - Add experimental support for Zarr's V3 specification. (:pull:`6475`).
   By `Gregory Lee  <https://github.com/grlee77>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
+.. _whats-new.2022.11.1:
+
+v2022.11.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2022.11.0:
 
-v2022.11.0 (Nov 3, 2022)
+v2022.11.0 (Nov 4, 2022)
 ------------------------
 
 This release brings a number of bugfixes and documentation improvements. Both text and HTML
