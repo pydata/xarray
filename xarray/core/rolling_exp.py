@@ -5,10 +5,10 @@ from typing import Any, Generic, Mapping
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.options import _get_keep_attrs
-from xarray.core.pdcompat import count_not_none
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import T_DataWithCoords
+from .options import _get_keep_attrs
+from .pdcompat import count_not_none
+from .pycompat import is_duck_dask_array
+from .types import T_DataWithCoords
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):

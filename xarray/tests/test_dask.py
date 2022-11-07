@@ -14,21 +14,22 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
-from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.pycompat import mod_version
 from xarray.testing import assert_chunks_equal
-from xarray.tests import (
+from xarray.tests import mock
+
+from ..core.duck_array_ops import lazy_array_equiv
+from . import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_frame_equal,
     assert_identical,
-    mock,
     raise_if_dask_computes,
     requires_pint,
     requires_scipy_or_netCDF4,
 )
-from xarray.tests.test_backends import create_tmp_file
+from .test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
@@ -1428,7 +1429,7 @@ def test_map_blocks_hlg_layers():
 
 
 def test_make_meta(map_ds):
-    from xarray.core.parallel import make_meta
+    from ..core.parallel import make_meta
 
     meta = make_meta(map_ds)
 

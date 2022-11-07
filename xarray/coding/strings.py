@@ -5,7 +5,10 @@ from functools import partial
 
 import numpy as np
 
-from xarray.coding.variables import (
+from ..core import indexing
+from ..core.pycompat import is_duck_dask_array
+from ..core.variable import Variable
+from .variables import (
     VariableCoder,
     lazy_elemwise_func,
     pop_to,
@@ -13,9 +16,6 @@ from xarray.coding.variables import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-from xarray.core import indexing
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.variable import Variable
 
 
 def create_vlen_dtype(element_type):

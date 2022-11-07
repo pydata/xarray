@@ -7,7 +7,8 @@ import xarray as xr
 from xarray.core import dtypes, merge
 from xarray.core.merge import MergeError
 from xarray.testing import assert_equal, assert_identical
-from xarray.tests.test_dataset import create_test_data
+
+from .test_dataset import create_test_data
 
 
 class TestMergeInternals:

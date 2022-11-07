@@ -20,48 +20,39 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.coding.calendar_ops import convert_calendar, interp_calendar
-from xarray.coding.cftimeindex import CFTimeIndex
-from xarray.core import alignment, computation, dtypes, indexing, ops, utils
-from xarray.core._aggregations import DataArrayAggregations
-from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
-from xarray.core.accessor_str import StringAccessor
-from xarray.core.alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-)
-from xarray.core.arithmetic import DataArrayArithmetic
-from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
-from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DataArrayCoordinates, assert_coordinate_consistent
-from xarray.core.dataset import Dataset
-from xarray.core.formatting import format_item
-from xarray.core.indexes import (
+from ..coding.calendar_ops import convert_calendar, interp_calendar
+from ..coding.cftimeindex import CFTimeIndex
+from ..plot.accessor import DataArrayPlotAccessor
+from ..plot.utils import _get_units_from_attrs
+from . import alignment, computation, dtypes, indexing, ops, utils
+from ._aggregations import DataArrayAggregations
+from .accessor_dt import CombinedDatetimelikeAccessor
+from .accessor_str import StringAccessor
+from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
+from .arithmetic import DataArrayArithmetic
+from .common import AbstractArray, DataWithCoords, get_chunksizes
+from .computation import unify_chunks
+from .coordinates import DataArrayCoordinates, assert_coordinate_consistent
+from .dataset import Dataset
+from .formatting import format_item
+from .indexes import (
     Index,
     Indexes,
     PandasMultiIndex,
     filter_indexes_from_coords,
     isel_indexes,
 )
-from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
-from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.utils import (
+from .indexing import is_fancy_indexer, map_index_queries
+from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from .options import OPTIONS, _get_keep_attrs
+from .utils import (
     Default,
     HybridMappingProxy,
     ReprObject,
     _default,
     either_dict_or_kwargs,
 )
-from xarray.core.variable import (
-    IndexVariable,
-    Variable,
-    as_compatible_data,
-    as_variable,
-)
-from xarray.plot.accessor import DataArrayPlotAccessor
-from xarray.plot.utils import _get_units_from_attrs
+from .variable import IndexVariable, Variable, as_compatible_data, as_variable
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
@@ -81,11 +72,11 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from xarray.core.groupby import DataArrayGroupBy
-    from xarray.core.resample import DataArrayResample
-    from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
-    from xarray.core.types import (
+    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from .groupby import DataArrayGroupBy
+    from .resample import DataArrayResample
+    from .rolling import DataArrayCoarsen, DataArrayRolling
+    from .types import (
         CoarsenBoundaryOptions,
         DatetimeUnitOptions,
         Dims,
@@ -102,7 +93,7 @@ if TYPE_CHECKING:
         T_DataArray,
         T_Xarray,
     )
-    from xarray.core.weighted import DataArrayWeighted
+    from .weighted import DataArrayWeighted
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
@@ -809,7 +800,7 @@ class DataArray(
         return dict(zip(self.dims, key))
 
     def _getitem_coord(self: T_DataArray, key: Any) -> T_DataArray:
-        from xarray.core.dataset import _get_virtual_variable
+        from .dataset import _get_virtual_variable
 
         try:
             var = self._coords[key]
@@ -3217,7 +3208,7 @@ class DataArray(
         Coordinates:
           * x        (x) int64 0 1 2 3 4
         """
-        from xarray.core.missing import interp_na
+        from .missing import interp_na
 
         return interp_na(
             self,
@@ -3312,7 +3303,7 @@ class DataArray(
             lon      (X) float64 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
         """
-        from xarray.core.missing import ffill
+        from .missing import ffill
 
         return ffill(self, dim, limit=limit)
 
@@ -3398,7 +3389,7 @@ class DataArray(
             lon      (X) float64 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
         """
-        from xarray.core.missing import bfill
+        from .missing import bfill
 
         return bfill(self, dim, limit=limit)
 
@@ -3747,7 +3738,7 @@ class DataArray(
         --------
         Dataset.to_netcdf
         """
-        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
+        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -3908,27 +3899,27 @@ class DataArray(
 
     def to_cdms2(self) -> cdms2_Variable:
         """Convert this array into a cdms2.Variable"""
-        from xarray.convert import to_cdms2
+        from ..convert import to_cdms2
 
         return to_cdms2(self)
 
     @classmethod
     def from_cdms2(cls, variable: cdms2_Variable) -> DataArray:
         """Convert a cdms2.Variable into an xarray.DataArray"""
-        from xarray.convert import from_cdms2
+        from ..convert import from_cdms2
 
         return from_cdms2(variable)
 
     def to_iris(self) -> iris_Cube:
         """Convert this array into a iris.cube.Cube"""
-        from xarray.convert import to_iris
+        from ..convert import to_iris
 
         return to_iris(self)
 
     @classmethod
     def from_iris(cls, cube: iris_Cube) -> DataArray:
         """Convert a iris.cube.Cube into an xarray.DataArray"""
-        from xarray.convert import from_iris
+        from ..convert import from_iris
 
         return from_iris(cube)
 
@@ -4153,7 +4144,7 @@ class DataArray(
         f: Callable,
         reflexive: bool = False,
     ) -> T_DataArray:
-        from xarray.core.groupby import GroupBy
+        from .groupby import GroupBy
 
         if isinstance(other, (Dataset, GroupBy)):
             return NotImplemented
@@ -4174,7 +4165,7 @@ class DataArray(
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _inplace_binary_op(self: T_DataArray, other: Any, f: Callable) -> T_DataArray:
-        from xarray.core.groupby import GroupBy
+        from .groupby import GroupBy
 
         if isinstance(other, GroupBy):
             raise TypeError(
@@ -4987,7 +4978,7 @@ class DataArray(
           * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
             month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
         """
-        from xarray.core.parallel import map_blocks
+        from .parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs, template)
 
@@ -6060,7 +6051,7 @@ class DataArray(
         core.groupby.DataArrayGroupBy
         pandas.DataFrame.groupby
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from .groupby import DataArrayGroupBy
 
         # While we don't generally check the type of every arg, passing
         # multiple dimensions as multiple arguments is common enough, and the
@@ -6143,7 +6134,7 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from .groupby import DataArrayGroupBy
 
         return DataArrayGroupBy(
             self,
@@ -6183,7 +6174,7 @@ class DataArray(
         --------
         Dataset.weighted
         """
-        from xarray.core.weighted import DataArrayWeighted
+        from .weighted import DataArrayWeighted
 
         return DataArrayWeighted(self, weights)
 
@@ -6255,7 +6246,7 @@ class DataArray(
         core.rolling.DataArrayRolling
         Dataset.rolling
         """
-        from xarray.core.rolling import DataArrayRolling
+        from .rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
@@ -6324,7 +6315,7 @@ class DataArray(
         core.rolling.DataArrayCoarsen
         Dataset.coarsen
         """
-        from xarray.core.rolling import DataArrayCoarsen
+        from .rolling import DataArrayCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(
@@ -6441,7 +6432,7 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
-        from xarray.core.resample import DataArrayResample
+        from .resample import DataArrayResample
 
         return self._resample(
             resample_cls=DataArrayResample,

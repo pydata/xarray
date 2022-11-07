@@ -4,7 +4,7 @@ import functools
 
 import numpy as np
 
-from xarray.core import utils
+from . import utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")

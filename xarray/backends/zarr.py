@@ -6,8 +6,12 @@ import warnings
 
 import numpy as np
 
-from xarray import coding, conventions
-from xarray.backends.common import (
+from .. import coding, conventions
+from ..core import indexing
+from ..core.pycompat import integer_types
+from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error, module_available
+from ..core.variable import Variable
+from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
@@ -15,16 +19,7 @@ from xarray.backends.common import (
     _encode_variable_name,
     _normalize_path,
 )
-from xarray.backends.store import StoreBackendEntrypoint
-from xarray.core import indexing
-from xarray.core.pycompat import integer_types
-from xarray.core.utils import (
-    FrozenDict,
-    HiddenKeyDict,
-    close_on_error,
-    module_available,
-)
-from xarray.core.variable import Variable
+from .store import StoreBackendEntrypoint
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -765,7 +760,7 @@ def open_zarr(
     ----------
     http://zarr.readthedocs.io/
     """
-    from xarray.backends.api import open_dataset
+    from .api import open_dataset
 
     if chunks == "auto":
         try:

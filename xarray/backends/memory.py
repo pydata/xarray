@@ -4,8 +4,8 @@ import copy
 
 import numpy as np
 
-from xarray.backends.common import AbstractWritableDataStore
-from xarray.core.variable import Variable
+from ..core.variable import Variable
+from .common import AbstractWritableDataStore
 
 
 class InMemoryDataStore(AbstractWritableDataStore):

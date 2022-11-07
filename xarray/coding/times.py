@@ -10,7 +10,12 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
-from xarray.coding.variables import (
+from ..core import indexing
+from ..core.common import contains_cftime_datetimes, is_np_datetime_like
+from ..core.formatting import first_n_items, format_timestamp, last_item
+from ..core.pycompat import is_duck_dask_array
+from ..core.variable import Variable
+from .variables import (
     SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
@@ -19,11 +24,6 @@ from xarray.coding.variables import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-from xarray.core import indexing
-from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
-from xarray.core.formatting import first_n_items, format_timestamp, last_item
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.variable import Variable
 
 try:
     import cftime
@@ -31,7 +31,7 @@ except ImportError:
     cftime = None
 
 if TYPE_CHECKING:
-    from xarray.core.types import CFCalendar
+    from ..core.types import CFCalendar
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
