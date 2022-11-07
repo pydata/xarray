@@ -96,6 +96,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.iter_lineage
    DataTree.find_common_ancestor
    map_over_subtree
+   DataTree.pipe
 
 DataTree Contents
 -----------------

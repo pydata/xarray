@@ -1014,6 +1014,66 @@ class DataTree(
             if node.has_data:
                 node.ds = func(node.ds, *args, **kwargs)
 
+    def pipe(
+        self, func: Callable | tuple[Callable, str], *args: Any, **kwargs: Any
+    ) -> Any:
+        """Apply ``func(self, *args, **kwargs)``
+
+        This method replicates the pandas method of the same name.
+
+        Parameters
+        ----------
+        func : callable
+            function to apply to this xarray object (Dataset/DataArray).
+            ``args``, and ``kwargs`` are passed into ``func``.
+            Alternatively a ``(callable, data_keyword)`` tuple where
+            ``data_keyword`` is a string indicating the keyword of
+            ``callable`` that expects the xarray object.
+        *args
+            positional arguments passed into ``func``.
+        **kwargs
+            a dictionary of keyword arguments passed into ``func``.
+
+        Returns
+        -------
+        object : Any
+            the return type of ``func``.
+
+        Notes
+        -----
+        Use ``.pipe`` when chaining together functions that expect
+        xarray or pandas objects, e.g., instead of writing
+
+        .. code:: python
+
+            f(g(h(dt), arg1=a), arg2=b, arg3=c)
+
+        You can write
+
+        .. code:: python
+
+            (dt.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c))
+
+        If you have a function that takes the data as (say) the second
+        argument, pass a tuple indicating which keyword expects the
+        data. For example, suppose ``f`` takes its data as ``arg2``:
+
+        .. code:: python
+
+            (dt.pipe(h).pipe(g, arg1=a).pipe((f, "arg2"), arg1=a, arg3=c))
+
+        """
+        if isinstance(func, tuple):
+            func, target = func
+            if target in kwargs:
+                raise ValueError(
+                    f"{target} is both the pipe target and a keyword argument"
+                )
+            kwargs[target] = self
+        else:
+            args = (self,) + args
+        return func(*args, **kwargs)
+
     def render(self):
         """Print tree structure, including any data stored at each node."""
         for pre, fill, node in RenderTree(self):
