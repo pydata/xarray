@@ -7,32 +7,32 @@ import os
 import numpy as np
 from packaging.version import Version
 
-from ..core import indexing
-from ..core.utils import (
-    FrozenDict,
-    is_remote_uri,
-    module_available,
-    read_magic_number_from_file,
-    try_read_magic_number_from_file_or_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
     find_root_and_group,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
-from .netCDF4_ import (
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
+from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _encode_nc4_variable,
     _extract_nc4_variable_encoding,
     _get_datatype,
     _nc4_require_group,
 )
-from .store import StoreBackendEntrypoint
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import (
+    FrozenDict,
+    is_remote_uri,
+    module_available,
+    read_magic_number_from_file,
+    try_read_magic_number_from_file_or_path,
+)
+from xarray.core.variable import Variable
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):

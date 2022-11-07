@@ -15,11 +15,11 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from .duck_array_ops import array_equiv
-from .indexing import MemoryCachedArray
-from .options import OPTIONS, _get_boolean_with_default
-from .pycompat import array_type
-from .utils import is_duck_array
+from xarray.core.duck_array_ops import array_equiv
+from xarray.core.indexing import MemoryCachedArray
+from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.pycompat import array_type
+from xarray.core.utils import is_duck_array
 
 
 def pretty_print(x, numchars: int):
@@ -431,7 +431,7 @@ def summarize_index(name: Hashable, index, col_width: int, max_width: int = None
 
 
 def nondefault_indexes(indexes):
-    from .indexes import PandasIndex, PandasMultiIndex
+    from xarray.core.indexes import PandasIndex, PandasMultiIndex
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -588,7 +588,7 @@ def short_data_repr(array):
 
 @recursive_repr("<recursive array>")
 def array_repr(arr):
-    from .variable import Variable
+    from xarray.core.variable import Variable
 
     max_rows = OPTIONS["display_max_rows"]
 

@@ -7,15 +7,20 @@ from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, ca
 import numpy as np
 import pandas as pd
 
-from . import formatting
-from .indexes import Index, Indexes, PandasMultiIndex, assert_no_index_corrupted
-from .merge import merge_coordinates_without_align, merge_coords
-from .utils import Frozen, ReprObject
-from .variable import Variable, calculate_dimensions
+from xarray.core import formatting
+from xarray.core.indexes import (
+    Index,
+    Indexes,
+    PandasMultiIndex,
+    assert_no_index_corrupted,
+)
+from xarray.core.merge import merge_coordinates_without_align, merge_coords
+from xarray.core.utils import Frozen, ReprObject
+from xarray.core.variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -215,7 +220,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         merged : Dataset
             A new Dataset with merged coordinates.
         """
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         if other is None:
             return self.to_dataset()
@@ -400,7 +405,7 @@ class DataArrayCoordinates(Coordinates):
         return Frozen(self._data._coords)
 
     def to_dataset(self) -> Dataset:
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
         indexes = dict(self._data.xindexes)
