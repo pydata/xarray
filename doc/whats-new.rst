@@ -15,10 +15,45 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2022.10.1:
+.. _whats-new.2022.11.1:
 
-v2022.10.1 (unreleased)
+v2022.11.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2022.11.0:
+
+v2022.11.0 (Nov 4, 2022)
+------------------------
+
+This release brings a number of bugfixes and documentation improvements. Both text and HTML
+reprs now have a new "Indexes" section, which we expect will help with development of new
+Index objects. This release also features more support for the Python Array API.
+
+Many thanks to the 16 contributors to this release: Daniel Goman, Deepak Cherian, Illviljan, Jessica Scheick, Justus Magin, Mark Harfouche, Maximilian Roos, Mick, Patrick Naylor, Pierre, Spencer Clark, Stephan Hoyer, Tom Nicholas, Tom White
 
 New Features
 ~~~~~~~~~~~~
@@ -81,6 +116,8 @@ Documentation
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add documentation of specific BackendEntrypoints (:pull:`7200`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add examples to docstring for :py:meth:`DataArray.drop_vars`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`. (:issue:`6793`, :pull:`7123`)
+  By `Daniel Goman <https://github.com/DanielGoman>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
