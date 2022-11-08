@@ -34,7 +34,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix handling of coordinate attributes in ``xarray.where``. (:issue:`7220`, :pull:`7229`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~
