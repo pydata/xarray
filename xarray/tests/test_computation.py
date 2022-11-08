@@ -1938,9 +1938,9 @@ def test_where_attrs() -> None:
     expected["x"].attrs = {"attr": "x_coord"}
     assert_identical(expected, actual)
 
-    # x as a scalar, takes attrs from y
+    # x as a scalar, takes coord attrs only from y
     actual = xr.where(cond, 0, y, keep_attrs=True)
-    expected = xr.DataArray([0, 0], coords={"x": [0, 1]}, attrs={"attr": "y_da"})
+    expected = xr.DataArray([0, 0], coords={"x": [0, 1]})
     expected["x"].attrs = {"attr": "y_coord"}
     assert_identical(expected, actual)
 
@@ -1954,6 +1954,12 @@ def test_where_attrs() -> None:
     actual = xr.where(cond, 1, 0, keep_attrs=True)
     expected = xr.DataArray([1, 0], coords={"x": [0, 1]})
     expected["x"].attrs = {"attr": "cond_coord"}
+    assert_identical(expected, actual)
+
+    # cond and y as a scalar, takes attrs from x
+    actual = xr.where(True, x, y, keep_attrs=True)
+    expected = xr.DataArray([1, 1], coords={"x": [0, 1]}, attrs={"attr": "x_da"})
+    expected["x"].attrs = {"attr": "x_coord"}
     assert_identical(expected, actual)
 
 

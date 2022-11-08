@@ -25,7 +25,7 @@ from typing import (
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .alignment import align, deep_align
+from .alignment import align, broadcast, deep_align
 from .common import zeros_like
 from .duck_array_ops import datetime_to_numeric
 from .indexes import Index, filter_indexes_from_coords
@@ -1789,8 +1789,7 @@ def where(cond, x, y, keep_attrs=None):
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
     keep_attrs : bool or str or callable, optional
-        How to treat attrs. If True, keep the attrs of `x`,
-        unless `x` is a scalar, then keep the attrs of `y`.
+        How to treat attrs. If True, keep the attrs of `x`.
 
     Returns
     -------
@@ -1856,12 +1855,19 @@ def where(cond, x, y, keep_attrs=None):
     Dataset.where, DataArray.where :
         equivalent methods
     """
+    from .dataarray import DataArray
+
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
     if keep_attrs is True:
         # keep the attributes of x, the second parameter, by default to
         # be consistent with the `where` method of `DataArray` and `Dataset`
-        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) > 1 else {}
+        keep_attrs = lambda attrs, context: attrs[1]
+        # cast non-xarray objects to DataArray to get empty attrs
+        cond, x, y = (v if hasattr(v, "attrs") else DataArray(v) for v in [cond, x, y])
+        # explicitly broadcast to ensure we also get empty coord attrs
+        # take coord attrs preferentially from x, then y, then cond
+        x, y, cond = broadcast(x, y, cond)
 
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
