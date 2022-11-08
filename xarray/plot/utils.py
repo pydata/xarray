@@ -1518,6 +1518,12 @@ class _Normalize(Sequence):
         <xarray.DataArray (dim_0: 6)>
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
+
+        >>> _Normalize(a * 0, width=[18, 72]).values
+        <xarray.DataArray (dim_0: 6)>
+        array([27., 18., 18., 27., 54., 72.])
+        Dimensions without coordinates: dim_0
+
         """
         if self.data is None:
             return None
