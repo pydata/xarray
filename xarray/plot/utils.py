@@ -1521,7 +1521,7 @@ class _Normalize(Sequence):
 
         >>> _Normalize(a * 0, width=[18, 72]).values
         <xarray.DataArray (dim_0: 6)>
-        array([27., 18., 18., 27., 54., 72.])
+        array([18., 18., 18., 18., 18., 18.])
         Dimensions without coordinates: dim_0
 
         """
