@@ -926,11 +926,16 @@ class VariableSubclassobjects:
         keep_attrs_ = "default" if keep_attrs is None else keep_attrs
 
         with set_options(keep_attrs=keep_attrs_):
-            actual = v.pad(mode="constant", constant_values=np.nan)
+            actual = v.pad({"x": (1, 1)}, mode="constant", constant_values=np.nan)
 
             assert actual.attrs == expected
 
-        actual = v.pad(mode="constant", constant_values=np.nan, keep_attrs=keep_attrs)
+        actual = v.pad(
+            {"x": (1, 1)},
+            mode="constant",
+            constant_values=np.nan,
+            keep_attrs=keep_attrs,
+        )
         assert actual.attrs == expected
 
     @pytest.mark.parametrize("d, w", (("x", 3), ("y", 5)))
