@@ -8086,7 +8086,8 @@ class Dataset(
                     indexes[name] = index
                     variables[name] = index_vars[name]
 
-        return self._replace_with_new_dims(variables, indexes=indexes)
+        attrs = self._attrs if keep_attrs else None
+        return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
     def idxmin(
         self: T_Dataset,
