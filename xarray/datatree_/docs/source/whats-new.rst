@@ -40,6 +40,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added ``Reading and Writing Files`` page. (:pull:`158`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 

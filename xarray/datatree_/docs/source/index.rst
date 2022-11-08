@@ -12,6 +12,7 @@ Datatree
    Quick Overview <quick-overview>
    Tutorial <tutorial>
    Data Model <data-structures>
+   Reading and Writing Files <io>
    API Reference <api>
    How do I ... <howdoi>
    Contributing Guide <contributing>
