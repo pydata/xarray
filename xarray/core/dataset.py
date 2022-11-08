@@ -8044,6 +8044,9 @@ class Dataset(
             coord_pad_mode = "constant"
             coord_pad_options = {}
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         variables = {}
 
         # keep indexes that won't be affected by pad and drop all other indexes
