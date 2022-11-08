@@ -1459,12 +1459,18 @@ class _Normalize(Sequence):
         ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
+        """
+        Normalize the values so they're inbetween self._width.
+        """
         if self._width is None:
             return y
 
         x0, x1 = self._width
 
-        k = (y - np.min(y)) / (np.max(y) - np.min(y))
+        # If y is constant, then add a small number to avoid division with zero:
+        diff_maxy_miny = np.max(y) - np.min(y)
+        eps = np.finfo(np.float64).eps if diff_maxy_miny == 0 else 0
+        k = (y - np.min(y)) / (diff_maxy_miny + eps)
         widths = x0 + k * (x1 - x0)
 
         return widths
