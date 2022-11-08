@@ -6112,13 +6112,16 @@ class TestDataset:
     )
     def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
         ds = xr.Dataset(
-            {"a": ("x", [1, 2], attrs)},
-            coords={"c": ("x", [-1, 1], attrs)},
+            {"a": ("x", [1, 2], attrs), "b": ("y", [1, 2], attrs)},
+            coords={"c": ("x", [-1, 1], attrs), "d": ("y", [-1, 1], attrs)},
             attrs=attrs,
         )
         expected = xr.Dataset(
-            {"a": ("x", [0, 1, 2, 0], expected)},
-            coords={"c": ("x", [np.nan, -1, 1, np.nan], expected)},
+            {"a": ("x", [0, 1, 2, 0], expected), "b": ("y", [1, 2], attrs)},
+            coords={
+                "c": ("x", [np.nan, -1, 1, np.nan], expected),
+                "d": ("y", [-1, 1], attrs),
+            },
             attrs=expected,
         )
 
