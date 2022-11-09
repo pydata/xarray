@@ -656,7 +656,9 @@ def _resolve_intervals_2dplot(val, func_name):
     return val, label_extra
 
 
-def _valid_other_type(x: object, types: type[object] | tuple[type[object]]) -> bool:
+def _valid_other_type(
+    x: ArrayLike, types: type[object] | tuple[type[object], ...]
+) -> bool:
     """
     Do all elements of x have a type from types?
     """
@@ -680,7 +682,7 @@ def _ensure_plottable(*args) -> None:
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = (
+    numpy_types: tuple[type[object], ...] = (
         np.floating,
         np.integer,
         np.timedelta64,
@@ -688,7 +690,7 @@ def _ensure_plottable(*args) -> None:
         np.bool_,
         np.str_,
     )
-    other_types = (datetime,)
+    other_types: tuple[type[object], ...] = (datetime,)
     if cftime is not None:
         cftime_datetime_types = (cftime.datetime,)
         other_types += cftime_datetime_types
