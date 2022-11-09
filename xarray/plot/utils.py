@@ -709,7 +709,8 @@ def _ensure_plottable(*args) -> None:
             )
         if _valid_other_type(np.asarray(x), cftime_datetime_types):
             if nc_time_axis_available:
-                # needs to be imported or it will raise an error
+                # Register cftime datetypes to matplotlib.units.registry, 
+                # otherwise matplotlib will raise an error:
                 import nc_time_axis  # noqa: F401
             else:
                 raise ImportError(
