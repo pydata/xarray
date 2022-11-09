@@ -97,8 +97,6 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-- Fix handling of coordinate attributes in ``xarray.where``. (:issue:`7220`, :pull:`7229`)
-  By `Sam Levang <https://github.com/slevang>`_.
 - Fixed bug where :py:meth:`Dataset.coarsen.construct` would demote non-dimension coordinates to variables. (:pull:`7233`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Raise a TypeError when trying to plot empty data (:issue:`7156`, :pull:`7228`).
