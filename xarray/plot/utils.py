@@ -609,8 +609,8 @@ def _resolve_intervals_1dplot(
         remove_drawstyle = False
 
         # Convert intervals to double points
-        x_is_interval = _valid_other_type(xval, [pd.Interval])
-        y_is_interval = _valid_other_type(yval, [pd.Interval])
+        x_is_interval = _valid_other_type(xval, pd.Interval)
+        y_is_interval = _valid_other_type(yval, pd.Interval)
         if x_is_interval and y_is_interval:
             raise TypeError("Can't step plot intervals against intervals.")
         elif x_is_interval:
@@ -628,10 +628,10 @@ def _resolve_intervals_1dplot(
     else:
 
         # Convert intervals to mid points and adjust labels
-        if _valid_other_type(xval, [pd.Interval]):
+        if _valid_other_type(xval, pd.Interval):
             xval = _interval_to_mid_points(xval)
             x_suffix = "_center"
-        if _valid_other_type(yval, [pd.Interval]):
+        if _valid_other_type(yval, pd.Interval):
             yval = _interval_to_mid_points(yval)
             y_suffix = "_center"
 
@@ -646,7 +646,7 @@ def _resolve_intervals_2dplot(val, func_name):
     increases length by 1.
     """
     label_extra = ""
-    if _valid_other_type(val, [pd.Interval]):
+    if _valid_other_type(val, pd.Interval):
         if func_name == "pcolormesh":
             val = _interval_to_bound_points(val)
         else:
@@ -656,11 +656,11 @@ def _resolve_intervals_2dplot(val, func_name):
     return val, label_extra
 
 
-def _valid_other_type(x, types):
+def _valid_other_type(x: object, types: type[object] | tuple[type[object]]) -> bool:
     """
     Do all elements of x have a type from types?
     """
-    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
+    return all(isinstance(el, types) for el in np.ravel(x))
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -675,47 +675,48 @@ def _valid_numpy_subdtype(x, numpy_types):
     return any(np.issubdtype(x.dtype, t) for t in numpy_types)
 
 
-def _ensure_plottable(*args):
+def _ensure_plottable(*args) -> None:
     """
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [
+    numpy_types = (
         np.floating,
         np.integer,
         np.timedelta64,
         np.datetime64,
         np.bool_,
         np.str_,
-    ]
-    other_types = [datetime]
+    )
+    other_types = (datetime,)
     if cftime is not None:
-        cftime_datetime_types = [cftime.datetime]
-        other_types = other_types + cftime_datetime_types
+        cftime_datetime_types = (cftime.datetime,)
+        other_types += cftime_datetime_types
     else:
-        cftime_datetime_types = []
+        cftime_datetime_types = ()
     for x in args:
         if not (
-            _valid_numpy_subdtype(np.array(x), numpy_types)
-            or _valid_other_type(np.array(x), other_types)
+            _valid_numpy_subdtype(np.asarray(x), numpy_types)
+            or _valid_other_type(np.asarray(x), other_types)
         ):
             raise TypeError(
                 "Plotting requires coordinates to be numeric, boolean, "
                 "or dates of type numpy.datetime64, "
                 "datetime.datetime, cftime.datetime or "
-                f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
+                f"pandas.Interval. Received data of type {np.asarray(x).dtype} instead."
             )
-        if (
-            _valid_other_type(np.array(x), cftime_datetime_types)
-            and not nc_time_axis_available
-        ):
-            raise ImportError(
-                "Plotting of arrays of cftime.datetime "
-                "objects or arrays indexed by "
-                "cftime.datetime objects requires the "
-                "optional `nc-time-axis` (v1.2.0 or later) "
-                "package."
-            )
+        if _valid_other_type(np.asarray(x), cftime_datetime_types):
+            if nc_time_axis_available:
+                # needs to be imported or it will raise an error
+                import nc_time_axis  # noqa: F401
+            else:
+                raise ImportError(
+                    "Plotting of arrays of cftime.datetime "
+                    "objects or arrays indexed by "
+                    "cftime.datetime objects requires the "
+                    "optional `nc-time-axis` (v1.2.0 or later) "
+                    "package."
+                )
 
 
 def _is_numeric(arr):

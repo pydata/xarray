@@ -3206,7 +3206,7 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 
 @requires_matplotlib
-def test_facetgrid_axes_raises_deprecation_warning():
+def test_facetgrid_axes_raises_deprecation_warning() -> None:
     with pytest.warns(
         DeprecationWarning,
         match=(
@@ -3218,3 +3218,19 @@ def test_facetgrid_axes_raises_deprecation_warning():
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
             g.axes
+
+
+@requires_matplotlib
+@requires_nc_time_axis
+def test_plot_nc_time() -> None:
+    da = xr.DataArray(
+        range(10),
+        dims="time",
+        coords={
+            "time": xr.cftime_range(
+                "1900-01-01", periods=10, calendar="noleap", freq="D"
+            )
+        },
+    )
+    with figure_context():
+        da.plot()
