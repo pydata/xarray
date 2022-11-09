@@ -691,11 +691,11 @@ def _ensure_plottable(*args) -> None:
         np.str_,
     )
     other_types: tuple[type[object], ...] = (datetime,)
-    if cftime is not None:
-        cftime_datetime_types = (cftime.datetime,)
-        other_types += cftime_datetime_types
-    else:
-        cftime_datetime_types = ()
+    cftime_datetime_types: tuple[type[object], ...] = (
+        () if cftime is None else (cftime.datetime,)
+    )
+    other_types += cftime_datetime_types
+
     for x in args:
         if not (
             _valid_numpy_subdtype(np.asarray(x), numpy_types)
