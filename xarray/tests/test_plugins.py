@@ -203,6 +203,7 @@ def test_lazy_import() -> None:
         "scipy",
         "zarr",
         "matplotlib",
+        "nc_time_axis",
         "flox",
         # "dask",  # TODO: backends.locks is not lazy yet :(
         "dask.array",
