@@ -154,7 +154,7 @@ def _infer_plot_dims(
     kwargs: dict,
     default_guess: tuple[str, ...] = ("x", "hue", "size"),
     # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
-    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((), ("c", "color"), ("s")),
+    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((), ("c", "color"), ("s",)),
 ) -> MutableMapping[str, Hashable]:
     """
     Guess what dims to plot if some of the values in dims_plot are None which
