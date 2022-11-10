@@ -14,6 +14,7 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
+from xarray.core.utils import module_available
 from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.utils import (
@@ -29,13 +30,14 @@ from xarray.plot.utils import (
 from . import (
     assert_array_equal,
     assert_equal,
-    has_nc_time_axis,
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
-    requires_nc_time_axis,
     requires_seaborn,
 )
+
+# this should not be imported to test if the automatic lazy import works
+has_nc_time_axis = module_available("nc_time_axis")
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -2823,8 +2825,8 @@ class TestDatetimePlot(PlotTestCase):
 
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
-@requires_nc_time_axis
 @requires_cftime
+@pytest.mark.skipif(not has_nc_time_axis, reason="nc_time_axis is not installed")
 class TestCFDatetimePlot(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
@@ -3218,19 +3220,3 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
             g.axes
-
-
-@requires_matplotlib
-@requires_nc_time_axis
-def test_plot_nc_time() -> None:
-    da = xr.DataArray(
-        range(10),
-        dims="time",
-        coords={
-            "time": xr.cftime_range(
-                "1900-01-01", periods=10, calendar="noleap", freq="D"
-            )
-        },
-    )
-    with figure_context():
-        da.plot()
