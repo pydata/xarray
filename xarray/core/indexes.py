@@ -52,7 +52,7 @@ class Index:
         cls: type[T_Index],
         indexes: Sequence[T_Index],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> T_Index:
         raise NotImplementedError()
 
@@ -368,7 +368,7 @@ class PandasIndex(Index):
         cls,
         indexes: Sequence[PandasIndex],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> PandasIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -656,7 +656,7 @@ class PandasMultiIndex(PandasIndex):
         cls,
         indexes: Sequence[PandasMultiIndex],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> PandasMultiIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -1346,7 +1346,7 @@ def indexes_equal(
     other_index: Index,
     variable: Variable,
     other_variable: Variable,
-    cache: dict[tuple[int, int], bool | None] = None,
+    cache: dict[tuple[int, int], bool | None] | None = None,
 ) -> bool:
     """Check if two indexes are equal, possibly with cached results.
 
