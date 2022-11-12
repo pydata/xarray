@@ -205,9 +205,9 @@ def _infer_plot_dims(
     # one of related mpl kwargs has been used. This should have similiar behaviour as
     # * plt.plot(x, y) -> Multple lines with different colors if y is 2d.
     # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
-    for k, dim, ign in zip(default_guess, dims_avail, ignore_guess_kwargs):
+    for k, dim, ign_kws in zip(default_guess, dims_avail, ignore_guess_kwargs):
         if dims_plot.get(k, None) is None and all(
-            kwargs.get(k, None) is None for k in ign
+            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
         ):
             dims_plot[k] = dim
 
