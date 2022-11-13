@@ -238,6 +238,8 @@ class DatasetCoordinates(Coordinates):
     objects.
     """
 
+    _data: Dataset
+
     __slots__ = ("_data",)
 
     def __init__(self, dataset: Dataset):
@@ -340,6 +342,8 @@ class DataArrayCoordinates(Coordinates):
     Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
+
+    _data: T_DataArray
 
     __slots__ = ("_data",)
 
