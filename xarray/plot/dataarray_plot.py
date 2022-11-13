@@ -949,7 +949,7 @@ def _plot1d(plotfunc):
             size_r = _LINEWIDTH_RANGE
 
         # Get data to plot:
-        coords_to_plot = dict(x=x, z=z, hue=hue, size=size_)
+        coords_to_plot: dict[str, Hashable | None] = dict(x=x, z=z, hue=hue, size=size_)
         if not _is_facetgrid:
             # Guess what coords to use if some of the values in coords_to_plot are None:
             coords_to_plot = _guess_coords_to_plot(darray, coords_to_plot, kwargs)
