@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -15,6 +16,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 from packaging.version import Version
 
 if TYPE_CHECKING:
@@ -126,9 +128,11 @@ Interp1dOptions = Literal[
 InterpolantOptions = Literal["barycentric", "krog", "pchip", "spline", "akima"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 
+DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64]
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
+
 
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]

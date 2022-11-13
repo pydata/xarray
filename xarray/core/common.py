@@ -44,7 +44,13 @@ if TYPE_CHECKING:
     from .indexes import Index
     from .resample import Resample
     from .rolling_exp import RollingExp
-    from .types import DTypeLikeSave, ScalarOrArray, SideOptions, T_DataWithCoords
+    from .types import (
+        DatetimeLike,
+        DTypeLikeSave,
+        ScalarOrArray,
+        SideOptions,
+        T_DataWithCoords,
+    )
     from .variable import Variable
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
@@ -817,7 +823,9 @@ class DataWithCoords(AttrAccessMixin):
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
-        base: int,
+        base: int | None,
+        offset: pd.Timedelta | datetime.timedelta | str | None,
+        origin: str | DatetimeLike,
         keep_attrs: bool | None,
         loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
@@ -845,6 +853,18 @@ class DataWithCoords(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+        origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
+            The datetime on which to adjust the grouping. The timezone of origin
+            must match the timezone of the index.
+
+            If a datetime is not used, these values are also supported:
+            - 'epoch': `origin` is 1970-01-01
+            - 'start': `origin` is the first value of the timeseries
+            - 'start_day': `origin` is the first day at midnight of the timeseries
+            - 'end': `origin` is the last value of the timeseries
+            - 'end_day': `origin` is the ceiling midnight of the last day
+        offset : pd.Timedelta, datetime.timedelta, or str, default is None
+            An offset timedelta added to the origin.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
@@ -960,10 +980,18 @@ class DataWithCoords(AttrAccessMixin):
             if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
-                grouper = CFTimeGrouper(freq, closed, label, base, loffset)
+                grouper = CFTimeGrouper(
+                    freq, closed, label, base, loffset, origin, offset
+                )
             else:
                 grouper = pd.Grouper(
-                    freq=freq, closed=closed, label=label, base=base, loffset=loffset
+                    freq=freq,
+                    closed=closed,
+                    label=label,
+                    base=base,
+                    offset=offset,
+                    origin=origin,
+                    loffset=loffset,
                 )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM

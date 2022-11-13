@@ -1810,6 +1810,33 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
+    def test_resample_base(self):
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        base = 11
+        actual = array.resample(time="24H", base=base).mean()
+        expected = DataArray(array.to_series().resample("24H", base=base).mean())
+        assert_identical(expected, actual)
+
+    def test_resample_offset(self):
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        offset = pd.Timedelta("11H")
+        actual = array.resample(time="24H", offset=offset).mean()
+        expected = DataArray(array.to_series().resample("24H", offset=offset).mean())
+        assert_identical(expected, actual)
+
+    def test_resample_origin(self):
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        origin = "start"
+        actual = array.resample(time="24H", origin=origin).mean()
+        expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
+        assert_identical(expected, actual)
+
 
 class TestDatasetResample:
     def test_resample_and_first(self):

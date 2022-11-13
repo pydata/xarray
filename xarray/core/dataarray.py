@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from .rolling import DataArrayCoarsen, DataArrayRolling
     from .types import (
         CoarsenBoundaryOptions,
+        DatetimeLike,
         DatetimeUnitOptions,
         Dims,
         ErrorOptions,
@@ -6531,7 +6532,9 @@ class DataArray(
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int = 0,
+        base: int | None = None,
+        offset: pd.Timedelta | datetime.timedelta | str | None = None,
+        origin: str | DatetimeLike = "start_day",
         keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
@@ -6555,10 +6558,22 @@ class DataArray(
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, default = 0
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+        origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
+            The datetime on which to adjust the grouping. The timezone of origin
+            must match the timezone of the index.
+
+            If a datetime is not used, these values are also supported:
+            - 'epoch': `origin` is 1970-01-01
+            - 'start': `origin` is the first value of the timeseries
+            - 'start_day': `origin` is the first day at midnight of the timeseries
+            - 'end': `origin` is the last value of the timeseries
+            - 'end_day': `origin` is the ceiling midnight of the last day
+        offset : pd.Timedelta, datetime.timedelta, or str, default is None
+            An offset timedelta added to the origin.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
@@ -6640,6 +6655,8 @@ class DataArray(
             closed=closed,
             label=label,
             base=base,
+            offset=offset,
+            origin=origin,
             keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,

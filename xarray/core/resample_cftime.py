@@ -55,17 +55,40 @@ from ..coding.cftime_offsets import (
 from ..coding.cftimeindex import CFTimeIndex
 
 
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
+
 class CFTimeGrouper:
     """This is a simple container for the grouping parameters that implements a
     single method, the only one required for resampling in xarray.  It cannot
     be used in a call to groupby like a pandas.Grouper object can."""
 
-    def __init__(self, freq, closed=None, label=None, base=0, loffset=None):
+    def __init__(
+        self,
+        freq,
+        closed=None,
+        label=None,
+        base=None,
+        loffset=None,
+        origin="start_day",
+        offset=None,
+    ):
+        if base is not None and offset is not None:
+            raise ValueError("base and offset cannot be provided at the same time")
+
         self.freq = to_offset(freq)
         self.closed = closed
         self.label = label
-        self.base = base
         self.loffset = loffset
+        self.origin = origin
+
+        if base is not None and isinstance(self.freq, CFTIME_TICKS):
+            self.offset = type(self.freq)(n=base % self.freq.n)
+        else:
+            self.offset = offset
 
         if isinstance(self.freq, (MonthEnd, QuarterEnd, YearEnd)):
             if self.closed is None:
@@ -73,10 +96,31 @@ class CFTimeGrouper:
             if self.label is None:
                 self.label = "right"
         else:
-            if self.closed is None:
-                self.closed = "left"
-            if self.label is None:
-                self.label = "left"
+            # The backward resample sets ``closed`` to ``'right'`` by default
+            # since the last value should be considered as the edge point for
+            # the last bin. When origin in "end" or "end_day", the value for a
+            # specific ``cftime.datetime`` index stands for the resample result
+            # from the current ``cftime.datetime`` minus ``freq`` to the current
+            # ``cftime.datetime`` with a right close.
+            if self.origin in ["end", "end_day"]:
+                if self.closed is None:
+                    self.closed = "right"
+                if self.label is None:
+                    self.label = "right"
+            else:
+                if self.closed is None:
+                    self.closed = "left"
+                if self.label is None:
+                    self.label = "left"
+
+        if self.offset is not None:
+            try:
+                self.offset = _convert_offset_to_timedelta(self.offset)
+            except (ValueError, AttributeError):
+                raise ValueError(
+                    f"offset must be a datetime.timedelta object or an offset string "
+                    f"that can be converted to a timedelta.  Got {offset} instead."
+                )
 
     def first_items(self, index):
         """Meant to reproduce the results of the following
@@ -89,7 +133,7 @@ class CFTimeGrouper:
         """
 
         datetime_bins, labels = _get_time_bins(
-            index, self.freq, self.closed, self.label, self.base
+            index, self.freq, self.closed, self.label, self.origin, self.offset
         )
         if self.loffset is not None:
             if isinstance(self.loffset, datetime.timedelta):
@@ -111,7 +155,7 @@ class CFTimeGrouper:
         return first_items.where(non_duplicate)
 
 
-def _get_time_bins(index, freq, closed, label, base):
+def _get_time_bins(index, freq, closed, label, origin, offset):
     """Obtain the bins and their respective labels for resampling operations.
 
     Parameters
@@ -130,10 +174,18 @@ def _get_time_bins(index, freq, closed, label, base):
         Which bin edge label to label bucket with.
         The default is 'left' for all frequency offsets except for 'M' and 'A',
         which have a default of 'right'.
-    base : int, optional
-        For frequencies that evenly subdivide 1 day, the "origin" of the
-        aggregated intervals. For example, for '5min' frequency, base could
-        range from 0 through 4. Defaults to 0.
+    origin : {'epoch', 'start', 'start_day', 'end', 'end_day'} or cftime.datetime, default 'start_day'
+        The datetime on which to adjust the grouping. The timezone of origin
+        must match the timezone of the index.
+
+        If a datetime is not used, these values are also supported:
+        - 'epoch': `origin` is 1970-01-01
+        - 'start': `origin` is the first value of the timeseries
+        - 'start_day': `origin` is the first day at midnight of the timeseries
+        - 'end': `origin` is the last value of the timeseries
+        - 'end_day': `origin` is the ceiling midnight of the last day
+    offset : datetime.timedelta, default is None
+        An offset timedelta added to the origin.
 
     Returns
     -------
@@ -154,7 +206,7 @@ def _get_time_bins(index, freq, closed, label, base):
         return datetime_bins, labels
 
     first, last = _get_range_edges(
-        index.min(), index.max(), freq, closed=closed, base=base
+        index.min(), index.max(), freq, closed=closed, origin=origin, offset=offset
     )
     datetime_bins = labels = cftime_range(
         freq=freq, start=first, end=last, name=index.name
@@ -172,7 +224,7 @@ def _get_time_bins(index, freq, closed, label, base):
     return datetime_bins, labels
 
 
-def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
+def _adjust_bin_edges(datetime_bins, freq, closed, index, labels):
     """This is required for determining the bin edges resampling with
     daily frequencies greater than one day, month end, and year end
     frequencies.
@@ -207,8 +259,8 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     This is also required for daily frequencies longer than one day and
     year-end frequencies.
     """
-    is_super_daily = isinstance(offset, (MonthEnd, QuarterEnd, YearEnd)) or (
-        isinstance(offset, Day) and offset.n > 1
+    is_super_daily = isinstance(freq, (MonthEnd, QuarterEnd, YearEnd)) or (
+        isinstance(freq, Day) and freq.n > 1
     )
     if is_super_daily:
         if closed == "right":
@@ -220,7 +272,7 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     return datetime_bins, labels
 
 
-def _get_range_edges(first, last, offset, closed="left", base=0):
+def _get_range_edges(first, last, freq, closed="left", origin="start_day", offset=None):
     """Get the correct starting and ending datetimes for the resampled
     CFTimeIndex range.
 
@@ -232,16 +284,24 @@ def _get_range_edges(first, last, offset, closed="left", base=0):
     last : cftime.datetime
         Uncorrected ending datetime object for resampled CFTimeIndex range.
         Usually the max of the original CFTimeIndex.
-    offset : xarray.coding.cftime_offsets.BaseCFTimeOffset
+    freq : xarray.coding.cftime_offsets.BaseCFTimeOffset
         The offset object representing target conversion a.k.a. resampling
         frequency. Contains information on offset type (e.g. Day or 'D') and
         offset magnitude (e.g., n = 3).
     closed : 'left' or 'right', optional
         Which side of bin interval is closed. Defaults to 'left'.
-    base : int, optional
-        For frequencies that evenly subdivide 1 day, the "origin" of the
-        aggregated intervals. For example, for '5min' frequency, base could
-        range from 0 through 4. Defaults to 0.
+    origin : {'epoch', 'start', 'start_day', 'end', 'end_day'} or cftime.datetime, default 'start_day'
+        The datetime on which to adjust the grouping. The timezone of origin
+        must match the timezone of the index.
+
+        If a datetime is not used, these values are also supported:
+        - 'epoch': `origin` is 1970-01-01
+        - 'start': `origin` is the first value of the timeseries
+        - 'start_day': `origin` is the first day at midnight of the timeseries
+        - 'end': `origin` is the last value of the timeseries
+        - 'end_day': `origin` is the ceiling midnight of the last day
+    offset : datetime.timedelta, default is None
+        An offset timedelta added to the origin.
 
     Returns
     -------
@@ -250,21 +310,23 @@ def _get_range_edges(first, last, offset, closed="left", base=0):
     last : cftime.datetime
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
-    if isinstance(offset, CFTIME_TICKS):
+    if isinstance(freq, CFTIME_TICKS):
         first, last = _adjust_dates_anchored(
-            first, last, offset, closed=closed, base=base
+            first, last, freq, closed=closed, origin=origin, offset=offset
         )
         return first, last
     else:
         first = normalize_date(first)
         last = normalize_date(last)
 
-    first = offset.rollback(first) if closed == "left" else first - offset
-    last = last + offset
+    first = freq.rollback(first) if closed == "left" else first - freq
+    last = last + freq
     return first, last
 
 
-def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
+def _adjust_dates_anchored(
+    first, last, freq, closed="right", origin="start_day", offset=None
+):
     """First and last offsets should be calculated from the start day to fix
     an error cause by resampling across multiple days when a one day period is
     not a multiple of the frequency.
@@ -276,16 +338,24 @@ def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
         A datetime object representing the start of a CFTimeIndex range.
     last : cftime.datetime
         A datetime object representing the end of a CFTimeIndex range.
-    offset : xarray.coding.cftime_offsets.BaseCFTimeOffset
+    freq : xarray.coding.cftime_offsets.BaseCFTimeOffset
         The offset object representing target conversion a.k.a. resampling
         frequency. Contains information on offset type (e.g. Day or 'D') and
         offset magnitude (e.g., n = 3).
     closed : 'left' or 'right', optional
         Which side of bin interval is closed. Defaults to 'right'.
-    base : int, optional
-        For frequencies that evenly subdivide 1 day, the "origin" of the
-        aggregated intervals. For example, for '5min' frequency, base could
-        range from 0 through 4. Defaults to 0.
+    origin : {'epoch', 'start', 'start_day', 'end', 'end_day'} or cftime.datetime, default 'start_day'
+        The datetime on which to adjust the grouping. The timezone of origin
+        must match the timezone of the index.
+
+        If a datetime is not used, these values are also supported:
+        - 'epoch': `origin` is 1970-01-01
+        - 'start': `origin` is the first value of the timeseries
+        - 'start_day': `origin` is the first day at midnight of the timeseries
+        - 'end': `origin` is the last value of the timeseries
+        - 'end_day': `origin` is the ceiling midnight of the last day
+    offset : datetime.timedelta, default is None
+        An offset timedelta added to the origin.
 
     Returns
     -------
@@ -296,29 +366,56 @@ def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
         A datetime object representing the end of a date range that has been
         adjusted to fix resampling errors.
     """
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
-    base = base % offset.n
-    start_day = normalize_date(first)
-    base_td = type(offset)(n=base).as_timedelta()
-    start_day += base_td
-    foffset = exact_cftime_datetime_difference(start_day, first) % offset.as_timedelta()
-    loffset = exact_cftime_datetime_difference(start_day, last) % offset.as_timedelta()
+    if origin == "start_day":
+        origin_date = normalize_date(first)
+    elif origin == "start":
+        origin_date = first
+    elif origin == "epoch":
+        origin_date = type(first)(1970, 1, 1)
+    elif origin in ["end", "end_day"]:
+        origin_last = last if origin == "end" else _ceil_via_cftimeindex(last, "D")
+        sub_freq_times = (origin_last - first) // freq.as_timedelta()
+        if closed == "left":
+            sub_freq_times += 1
+        first = origin_last - sub_freq_times * freq
+        origin_date = first
+    elif isinstance(origin, cftime.datetime):
+        origin_date = origin
+    else:
+        raise ValueError(
+            f"origin must be one of {{'epoch', 'start_day', 'start', 'end', 'end_day'}} "
+            f"or a cftime.datetime object.  Got {origin}."
+        )
+
+    if offset is not None:
+        origin_date = origin_date + offset
+
+    foffset = (first - origin_date) % freq.as_timedelta()
+    loffset = (last - origin_date) % freq.as_timedelta()
+
     if closed == "right":
         if foffset.total_seconds() > 0:
             fresult = first - foffset
         else:
-            fresult = first - offset.as_timedelta()
+            fresult = first - freq.as_timedelta()
 
         if loffset.total_seconds() > 0:
-            lresult = last + (offset.as_timedelta() - loffset)
+            lresult = last + (freq.as_timedelta() - loffset)
         else:
             lresult = last
     else:
-        fresult = first - foffset if foffset.total_seconds() > 0 else first
-        if loffset.total_seconds() > 0:
-            lresult = last + (offset.as_timedelta() - loffset)
+        if foffset.total_seconds() > 0:
+            fresult = first - foffset
         else:
-            lresult = last + offset.as_timedelta()
+            fresult = first
+
+        if loffset.total_seconds() > 0:
+            lresult = last + (freq.as_timedelta() - loffset)
+        else:
+            lresult = last + freq
     return fresult, lresult
 
 
@@ -360,3 +457,17 @@ def exact_cftime_datetime_difference(a, b):
     seconds = int(round(seconds.total_seconds()))
     microseconds = b.microsecond - a.microsecond
     return datetime.timedelta(seconds=seconds, microseconds=microseconds)
+
+
+def _convert_offset_to_timedelta(offset):
+    if isinstance(offset, datetime.timedelta):
+        return offset
+    elif isinstance(offset, str):
+        return to_offset(offset).as_timedelta()
+    else:
+        raise ValueError
+
+
+def _ceil_via_cftimeindex(date, freq):
+    index = CFTimeIndex([date])
+    return index.ceil(freq).item()
