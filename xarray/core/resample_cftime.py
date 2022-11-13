@@ -54,7 +54,6 @@ from ..coding.cftime_offsets import (
 )
 from ..coding.cftimeindex import CFTimeIndex
 
-
 try:
     import cftime
 except ImportError:
@@ -462,7 +461,7 @@ def exact_cftime_datetime_difference(a, b):
 def _convert_offset_to_timedelta(offset):
     if isinstance(offset, datetime.timedelta):
         return offset
-    elif isinstance(offset, str):
+    elif isinstance(offset, (str, *CFTIME_TICKS)):
         return to_offset(offset).as_timedelta()
     else:
         raise ValueError
