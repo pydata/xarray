@@ -29,6 +29,7 @@ from .utils import (
     _assert_valid_xy,
     _determine_guide,
     _ensure_plottable,
+    _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
     _Normalize,
@@ -148,85 +149,9 @@ def _infer_line_data(
     return xplt, yplt, hueplt, huelabel
 
 
-def _guess_coords_to_plot(
-    darray: DataArray,
-    coords_to_plot: MutableMapping[str, Hashable],
-    kwargs: dict,
-    default_guess: tuple[str, ...] = ("x", "hue", "size"),
-    # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
-    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((), ("c", "color"), ("s",)),
-) -> MutableMapping[str, Hashable]:
-    """
-    Guess what coords to plot if some of the values in coords_to_plot are None which
-    happens when the user has not defined all available ways of visualizing
-    the data.
-
-    Parameters
-    ----------
-    darray : DataArray
-        The DataArray to check for available coords.
-    coords_to_plot : MutableMapping[str, Hashable]
-        Coords defined by the user to plot.
-    kwargs : dict
-        Extra kwargs that will be sent to matplotlib.
-    default_guess : Iterable[str], optional
-        Default values and order to retrieve dims if values in dims_plot is
-        missing, default: ("x", "hue", "size").
-    ignore_guess_kwargs : tuple[tuple[str, ...], ...]
-        Matplotlib arguments to ignore.
-
-    Examples
-    --------
-    >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-    >>> # Guess all plot dims:
-    >>> xr.plot.dataarray_plot._guess_coords_to_plot(
-    ...     ds.A,
-    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
-    ...     kwargs={},
-    ... )
-    {'x': 'x', 'z': None, 'hue': 'y', 'size': 'z'}
-
-    >>> # Don't guess ´size´, since the matplotlib kwarg ´s´ has been defined:
-    >>> xr.plot.dataarray_plot._guess_coords_to_plot(
-    ...     ds.A,
-    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
-    ...     kwargs={"s": 5},
-    ... )
-    {'x': 'x', 'z': None, 'hue': 'y', 'size': None}
-
-    >>> # Prioritize ´size´ over ´s´:
-    >>> xr.plot.dataarray_plot._guess_coords_to_plot(
-    ...     ds.A,
-    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": "x"},
-    ...     kwargs={"s": 5},
-    ... )
-    {'x': 'y', 'z': None, 'hue': 'z', 'size': 'x'}
-    """
-    coords_to_plot_exist = {k: v for k, v in coords_to_plot.items() if v is not None}
-    available_coords = tuple(
-        k for k in darray.coords.keys() if k not in coords_to_plot_exist.values()
-    )
-
-    # If dims_plot[k] isn't defined then fill with one of the available dims, unless
-    # one of related mpl kwargs has been used. This should have similiar behaviour as
-    # * plt.plot(x, y) -> Multple lines with different colors if y is 2d.
-    # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
-    for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
-        if coords_to_plot.get(k, None) is None and all(
-            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
-        ):
-            coords_to_plot[k] = dim
-
-    for k, dim in coords_to_plot.items():
-        _assert_valid_xy(darray, dim, k)
-
-    return coords_to_plot
-
-
 def _infer_line_data2(
     darray: T_DataArray,
     coords_to_plot: MutableMapping[str, Hashable],
-    kwargs: dict,
     plotfunc_name: str | None = None,
     _is_facetgrid: bool = False,
 ) -> dict[str, T_DataArray]:
@@ -238,9 +163,7 @@ def _infer_line_data2(
     darray : T_DataArray
         Base DataArray.
     coords_to_plot : MutableMapping[str, Hashable]
-        Coords defined by the user to plot.
-    kwargs : dict
-        Extra kwargs that will be sent to matplotlib.
+        Coords that will be plotted.
     plotfunc_name : str | None
         Name of the plotting function that will be used.
 
@@ -260,17 +183,12 @@ def _infer_line_data2(
     ... )
     >>> plts = xr.plot.dataarray_plot._infer_line_data2(
     ...     a,
-    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
-    ...     kwargs={},
+    ...     coords_to_plot={"x": 1, "z": None, "hue": None, "size": None}
     ... )
     >>> # Check which coords to plot:
     >>> print({k: v.name for k, v in plts.items()})
     {'y': 'a', 'x': 1}
     """
-    # Guess what dims to use if some of the values in plot_dims are None:
-    if not _is_facetgrid:
-        coords_to_plot = _guess_coords_to_plot(darray, coords_to_plot, kwargs)
-
     # If there are more than 1 dimension in the array than stack all the
     # dimensions so the plotter can plot anything:
     if darray.ndim > 1:
@@ -1024,21 +942,18 @@ def _plot1d(plotfunc):
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "scatter":
-            size_ = markersize
+            size_ = kwargs.pop("_size", markersize)
             size_r = _MARKERSIZE_RANGE
         else:
-            size_ = linewidth
+            size_ = kwargs.pop("_size", linewidth)
             size_r = _LINEWIDTH_RANGE
 
         # Get data to plot:
         coords_to_plot = dict(x=x, z=z, hue=hue, size=size_)
-        plts = _infer_line_data2(
-            darray,
-            coords_to_plot,
-            kwargs,
-            plotfunc.__name__,
-            _is_facetgrid=_is_facetgrid,
-        )
+        if not _is_facetgrid:
+            # Guess what coords to use if some of the values in coords_to_plot are None:
+            coords_to_plot = _guess_coords_to_plot(darray, coords_to_plot, kwargs)
+        plts = _infer_line_data2(darray, coords_to_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
