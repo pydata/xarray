@@ -14,7 +14,6 @@ from .utils import Frozen, ReprObject
 from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
     from .dataset import Dataset
     from .types import T_DataArray
 
@@ -23,10 +22,10 @@ if TYPE_CHECKING:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class Coordinates(Mapping[Hashable, "DataArray"]):
+class Coordinates(Mapping[Hashable, "T_DataArray"]):
     __slots__ = ()
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
@@ -276,10 +275,10 @@ class DatasetCoordinates(Coordinates):
             {k: v for k, v in self._data.variables.items() if k in self._names}
         )
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
-        return cast("DataArray", self._data[key])
+        return cast("T_DataArray", self._data[key])
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
@@ -453,7 +452,7 @@ def drop_coords(
 
 
 def assert_coordinate_consistent(
-    obj: DataArray | Dataset, coords: Mapping[Any, Variable]
+    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 
