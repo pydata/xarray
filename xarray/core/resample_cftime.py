@@ -54,7 +54,6 @@ from ..coding.cftime_offsets import (
 )
 from ..coding.cftimeindex import CFTimeIndex
 
-
 try:
     import cftime
 except ImportError:
