@@ -253,7 +253,10 @@ def _infer_line_data2(
     --------
     >>> # Make sure int coords are plotted:
     >>> a = xr.DataArray(
-    ...     data=[1, 2], coords={1: ("x", [0, 1], {"units": "s"})}, dims=("x",), name="a"
+    ...     data=[1, 2],
+    ...     coords={1: ("x", [0, 1], {"units": "s"})},
+    ...     dims=("x",),
+    ...     name="a",
     ... )
     >>> plts = xr.plot.dataarray_plot._infer_line_data2(
     ...     a,
