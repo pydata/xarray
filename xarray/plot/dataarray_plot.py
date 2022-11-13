@@ -182,8 +182,7 @@ def _infer_line_data2(
     ...     name="a",
     ... )
     >>> plts = xr.plot.dataarray_plot._infer_line_data2(
-    ...     a,
-    ...     coords_to_plot={"x": 1, "z": None, "hue": None, "size": None}
+    ...     a, coords_to_plot={"x": 1, "z": None, "hue": None, "size": None}
     ... )
     >>> # Check which coords to plot:
     >>> print({k: v.name for k, v in plts.items()})
