@@ -16,6 +16,7 @@ from .variable import Variable, calculate_dimensions
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import T_DataArray
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -343,7 +344,7 @@ class DataArrayCoordinates(Coordinates):
 
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: DataArray):
+    def __init__(self, dataarray: T_DataArray):
         self._data = dataarray
 
     @property
@@ -366,7 +367,7 @@ class DataArrayCoordinates(Coordinates):
     def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         return self._data._getitem_coord(key)
 
     def _update_coords(
