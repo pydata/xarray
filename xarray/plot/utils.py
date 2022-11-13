@@ -1752,7 +1752,7 @@ def _add_legend(
 
 def _guess_coords_to_plot(
     darray: DataArray,
-    coords_to_plot: MutableMapping[str, Hashable],
+    coords_to_plot: MutableMapping[str, Hashable | None],
     kwargs: dict,
     default_guess: tuple[str, ...] = ("x", "hue", "size"),
     # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
