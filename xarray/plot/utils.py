@@ -1781,7 +1781,7 @@ def _guess_coords_to_plot(
     --------
     >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
     >>> # Guess all plot dims:
-    >>> xr.plot.dataarray_plot._guess_coords_to_plot(
+    >>> xr.plot.utils._guess_coords_to_plot(
     ...     ds.A,
     ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
     ...     kwargs={},
@@ -1789,7 +1789,7 @@ def _guess_coords_to_plot(
     {'x': 'x', 'z': None, 'hue': 'y', 'size': 'z'}
 
     >>> # Don't guess ´size´, since the matplotlib kwarg ´s´ has been defined:
-    >>> xr.plot.dataarray_plot._guess_coords_to_plot(
+    >>> xr.plot.utils._guess_coords_to_plot(
     ...     ds.A,
     ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
     ...     kwargs={"s": 5},
@@ -1797,7 +1797,7 @@ def _guess_coords_to_plot(
     {'x': 'x', 'z': None, 'hue': 'y', 'size': None}
 
     >>> # Prioritize ´size´ over ´s´:
-    >>> xr.plot.dataarray_plot._guess_coords_to_plot(
+    >>> xr.plot.utils._guess_coords_to_plot(
     ...     ds.A,
     ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": "x"},
     ...     kwargs={"s": 5},
