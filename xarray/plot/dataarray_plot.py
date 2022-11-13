@@ -231,7 +231,7 @@ def _infer_line_data2(
     _is_facetgrid: bool = False,
 ) -> dict[str, T_DataArray]:
     """
-    Infer data to plot. If no
+    Infer data to plot.
 
     Parameters
     ----------
@@ -265,7 +265,7 @@ def _infer_line_data2(
     {'y': 'a', 'x': 1}
     """
     # Guess what dims to use if some of the values in plot_dims are None:
-    if _is_facetgrid:
+    if not _is_facetgrid:
         coords_to_plot = _guess_coords_to_plot(darray, coords_to_plot, kwargs)
 
     # If there are more than 1 dimension in the array than stack all the
