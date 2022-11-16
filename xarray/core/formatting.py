@@ -285,7 +285,11 @@ def inline_variable_array_repr(var, max_width):
 
 
 def summarize_variable(
-    name: Hashable, var, col_width: int, max_width: int = None, is_index: bool = False
+    name: Hashable,
+    var,
+    col_width: int,
+    max_width: int | None = None,
+    is_index: bool = False,
 ):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     variable = getattr(var, "variable", var)
@@ -419,7 +423,9 @@ def inline_index_repr(index, max_width=None):
     return repr_
 
 
-def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+def summarize_index(
+    name: Hashable, index, col_width: int, max_width: int | None = None
+):
     if max_width is None:
         max_width = OPTIONS["display_width"]
 

@@ -36,6 +36,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix handling of coordinate attributes in :py:func:`where`. (:issue:`7220`, :pull:`7229`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Import ``nc_time_axis`` when needed (:issue:`7275`, :pull:`7276`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
