@@ -308,12 +308,12 @@ def get_clean_interp_index(
 
 def interp_na(
     self,
-    dim: Hashable = None,
+    dim: Hashable | None = None,
     use_coordinate: bool | str = True,
     method: InterpOptions = "linear",
-    limit: int = None,
+    limit: int | None = None,
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
-    keep_attrs: bool = None,
+    keep_attrs: bool | None = None,
     **kwargs,
 ):
     """Interpolate values according to different methods."""

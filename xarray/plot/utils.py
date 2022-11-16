@@ -1679,7 +1679,7 @@ def _determine_guide(
     sizeplt_norm: _Normalize,
     add_colorbar: None | bool = None,
     add_legend: None | bool = None,
-    plotfunc_name: str = None,
+    plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
         return False, False
