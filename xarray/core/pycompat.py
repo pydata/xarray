@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from types import ModuleType
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from packaging.version import Version
@@ -11,8 +11,9 @@ from .utils import is_duck_array, module_available
 
 integer_types = (int, np.integer)
 
-ModType = Literal["dask", "pint", "cupy", "sparse"]
-DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
+if TYPE_CHECKING:
+    ModType = Literal["dask", "pint", "cupy", "sparse"]
+    DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
 
 
 class DuckArrayModule:
