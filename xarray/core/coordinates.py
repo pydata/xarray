@@ -2,17 +2,7 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Hashable,
-    Iterator,
-    Mapping,
-    Protocol,
-    Sequence,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
