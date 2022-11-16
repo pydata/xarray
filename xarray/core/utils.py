@@ -507,7 +507,7 @@ class OrderedSet(MutableSet[T]):
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: Iterable[T] = None):
+    def __init__(self, values: Iterable[T] | None = None):
         self._d = {}
         if values is not None:
             self.update(values)

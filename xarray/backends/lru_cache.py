@@ -30,7 +30,7 @@ class LRUCache(MutableMapping[K, V]):
 
     __slots__ = ("_cache", "_lock", "_maxsize", "_on_evict")
 
-    def __init__(self, maxsize: int, on_evict: Callable[[K, V], Any] = None):
+    def __init__(self, maxsize: int, on_evict: Callable[[K, V], Any] | None = None):
         """
         Parameters
         ----------

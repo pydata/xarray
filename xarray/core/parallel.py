@@ -157,7 +157,7 @@ def map_blocks(
     func: Callable[..., T_Xarray],
     obj: DataArray | Dataset,
     args: Sequence[Any] = (),
-    kwargs: Mapping[str, Any] = None,
+    kwargs: Mapping[str, Any] | None = None,
     template: DataArray | Dataset | None = None,
 ) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.

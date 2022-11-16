@@ -770,7 +770,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def rolling_exp(
         self: T_DataWithCoords,
-        window: Mapping[Any, int] = None,
+        window: Mapping[Any, int] | None = None,
         window_type: str = "span",
         **window_kwargs,
     ) -> RollingExp[T_DataWithCoords]:

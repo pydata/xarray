@@ -669,7 +669,7 @@ def combine_by_coords(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
-    datasets: Iterable[Dataset] = None,
+    datasets: Iterable[Dataset] | None = None,
 ) -> Dataset | DataArray:
     """
 
