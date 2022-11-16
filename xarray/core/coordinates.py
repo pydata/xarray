@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Hashable,
+    Iterator,
+    Mapping,
+    Protocol,
+    Sequence,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -14,6 +24,7 @@ from .utils import Frozen, ReprObject
 from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
+    from .dataarray import DataArray
     from .dataset import Dataset
     from .types import T_DataArray
 
@@ -277,10 +288,10 @@ class DatasetCoordinates(Coordinates):
             {k: v for k, v in self._data.variables.items() if k in self._names}
         )
 
-    def __getitem__(self, key: Hashable) -> T_DataArray:
+    def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
-        return cast("T_DataArray", self._data[key])
+        return self._data[key]
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
@@ -343,11 +354,9 @@ class DataArrayCoordinates(Coordinates):
     dimensions and the values given by corresponding DataArray objects.
     """
 
-    _data: T_DataArray
-
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: T_DataArray):
+    def __init__(self, dataarray: T_DataArray) -> None:
         self._data = dataarray
 
     @property
