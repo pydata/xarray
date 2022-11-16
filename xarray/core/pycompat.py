@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from types import ModuleType
 from typing import Any, Literal
 
 import numpy as np
@@ -11,6 +12,7 @@ from .utils import is_duck_array, module_available
 integer_types = (int, np.integer)
 
 ModType = Literal["dask", "pint", "cupy", "sparse"]
+DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
 
 
 class DuckArrayModule:
@@ -21,12 +23,15 @@ class DuckArrayModule:
     https://github.com/pydata/xarray/pull/5561#discussion_r664815718
     """
 
-    module: ModType | None
+    module: ModuleType | None
     version: Version
-    type: tuple[type[Any]]  # TODO: improve this? maybe Generic
+    type: DuckArrayTypes
     available: bool
 
     def __init__(self, mod: ModType) -> None:
+        duck_array_module: ModuleType | None = None
+        duck_array_version: Version
+        duck_array_type: DuckArrayTypes
         try:
             duck_array_module = import_module(mod)
             duck_array_version = Version(duck_array_module.__version__)
@@ -53,7 +58,7 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
-def array_type(mod: ModType) -> tuple[type[Any]]:
+def array_type(mod: ModType) -> DuckArrayTypes:
     """Quick wrapper to get the array class of the module."""
     return DuckArrayModule(mod).type
 
