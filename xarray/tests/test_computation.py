@@ -1963,25 +1963,25 @@ def test_where_attrs() -> None:
     # DataArray and 2 Datasets, takes attrs from x
     ds_x = xr.Dataset(data_vars={"x": x}, attrs={"attr": "x_ds"})
     ds_y = xr.Dataset(data_vars={"x": y}, attrs={"attr": "y_ds"})
-    actual = xr.where(cond, ds_x, ds_y, keep_attrs=True)
-    expected = xr.Dataset(
+    ds_actual = xr.where(cond, ds_x, ds_y, keep_attrs=True)
+    ds_expected = xr.Dataset(
         data_vars={
             "x": xr.DataArray([1, 0], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
         },
         attrs={"attr": "x_ds"},
     )
-    expected["a"].attrs = {"attr": "x_coord"}
-    assert_identical(expected, actual)
+    ds_expected["a"].attrs = {"attr": "x_coord"}
+    assert_identical(ds_expected, ds_actual)
 
     # 2 DataArrays and 1 Dataset, takes attrs from x
-    actual = xr.where(cond, x.rename("x"), ds_y, keep_attrs=True)
-    expected = xr.Dataset(
+    ds_actual = xr.where(cond, x.rename("x"), ds_y, keep_attrs=True)
+    ds_expected = xr.Dataset(
         data_vars={
             "x": xr.DataArray([1, 0], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
         },
     )
-    expected["a"].attrs = {"attr": "x_coord"}
-    assert_identical(expected, actual)
+    ds_expected["a"].attrs = {"attr": "x_coord"}
+    assert_identical(ds_expected, ds_actual)
 
 
 @pytest.mark.parametrize(
