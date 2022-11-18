@@ -459,9 +459,8 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
-        # TODO: how to properly handle 'filters' for v3 stores
-        #       currently these use a hack to store 'filters' within attributes
-        #       need to drop this here for V3 store tests to succeed
+        # TODO: this should not be needed once
+        # https://github.com/zarr-developers/zarr-python/issues/1269 is resolved.
         attributes.pop("filters", None)
 
         encoding = {
