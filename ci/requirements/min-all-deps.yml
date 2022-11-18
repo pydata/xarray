@@ -32,7 +32,7 @@ dependencies:
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
   # bumping the netCDF4 version is currently blocked by #4491
-  - netcdf4=1.5.3
+  - netcdf4=1.5.7
   - numba=0.54
   - numpy=1.20
   - packaging=21.3

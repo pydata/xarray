@@ -193,7 +193,7 @@ def main() -> None:
         for pkg, major, minor, patch in parse_requirements(fname)
     ]
 
-    print("Package           Required             Policy               Status")
+    print("\nPackage           Required             Policy               Status")
     print("----------------- -------------------- -------------------- ------")
     fmt = "{:17} {:7} ({:10}) {:7} ({:10}) {}"
     for row in rows:
