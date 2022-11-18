@@ -30,12 +30,12 @@ IGNORE_DEPS = {
 POLICY_MONTHS = {"python": 24, "numpy": 18}
 POLICY_MONTHS_DEFAULT = 12
 POLICY_OVERRIDE: Dict[str, Tuple[int, int]] = {}
-has_errors = False
+errors = []
 
 
 def error(msg: str) -> None:
-    global has_errors
-    has_errors = True
+    global errors
+    errors.append(msg)
     print("ERROR:", msg)
 
 
@@ -48,7 +48,7 @@ def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
 
     Yield (package name, major version, minor version, [patch version])
     """
-    global has_errors
+    global errors
 
     with open(fname) as fh:
         contents = yaml.safe_load(fh)
@@ -157,9 +157,9 @@ def process_pkg(
         status = "> (!)"
         delta = relativedelta(datetime.now(), policy_published_actual).normalized()
         n_months = delta.years * 12 + delta.months
-        error(
-            f"Package is too new: {pkg}={req_major}.{req_minor} was "
-            f"published on {versions[req_major, req_minor]:%Y-%m-%d} "
+        warning(
+            f"Package is too new: {pkg}={policy_major}.{policy_minor} was "
+            f"published on {versions[policy_major, policy_minor]:%Y-%m-%d} "
             f"which was {n_months} months ago (policy is {policy_months} months)"
         )
     else:
@@ -199,7 +199,12 @@ def main() -> None:
     for row in rows:
         print(fmt.format(*row))
 
-    assert not has_errors
+    if errors:
+        print("\nErrors:")
+        print("-------")
+        for i, e in enumerate(errors):
+            print(f"{i+1}. {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
