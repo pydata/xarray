@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Hashable
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs, iterate_nested
 
-from . import assert_array_equal, requires_cftime, requires_dask
-from .test_coding_times import _all_cftime_date_types
+from . import assert_array_equal, requires_dask
 
 
 class TestAlias:
@@ -24,21 +21,6 @@ class TestAlias:
         assert "deprecated" in old_method.__doc__
         with pytest.warns(Warning, match="deprecated"):
             old_method()
-
-
-def test_safe_cast_to_index():
-    dates = pd.date_range("2000-01-01", periods=10)
-    x = np.arange(5)
-    td = x * np.timedelta64(1, "D")
-    for expected, array in [
-        (dates, dates.values),
-        (pd.Index(x, dtype=object), x.astype(object)),
-        (pd.Index(td), td),
-        (pd.Index(td, dtype=object), td.astype(object)),
-    ]:
-        actual = utils.safe_cast_to_index(array)
-        assert_array_equal(expected, actual)
-        assert expected.dtype == actual.dtype
 
 
 @pytest.mark.parametrize(
@@ -66,29 +48,6 @@ def test_maybe_coerce_to_str_minimal_str_dtype():
 
     assert_array_equal(expected, actual)
     assert expected.dtype == actual.dtype
-
-
-@requires_cftime
-def test_safe_cast_to_index_cftimeindex():
-    date_types = _all_cftime_date_types()
-    for date_type in date_types.values():
-        dates = [date_type(1, 1, day) for day in range(1, 20)]
-        expected = CFTimeIndex(dates)
-        actual = utils.safe_cast_to_index(np.array(dates))
-        assert_array_equal(expected, actual)
-        assert expected.dtype == actual.dtype
-        assert isinstance(actual, type(expected))
-
-
-# Test that datetime.datetime objects are never used in a CFTimeIndex
-@requires_cftime
-def test_safe_cast_to_index_datetime_datetime():
-    dates = [datetime(1, 1, day) for day in range(1, 20)]
-
-    expected = pd.Index(dates)
-    actual = utils.safe_cast_to_index(np.array(dates))
-    assert_array_equal(expected, actual)
-    assert isinstance(actual, pd.Index)
 
 
 class TestArrayEquiv:
@@ -307,3 +266,13 @@ def test_infix_dims_errors(supplied, all_):
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected
+
+
+def test_find_stack_level():
+    assert utils.find_stack_level() == 1
+    assert utils.find_stack_level(test_mode=True) == 2
+
+    def f():
+        return utils.find_stack_level(test_mode=True)
+
+    assert f() == 3

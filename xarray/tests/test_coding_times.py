@@ -36,9 +36,7 @@ from . import (
     assert_array_equal,
     assert_no_warnings,
     has_cftime,
-    has_cftime_1_4_1,
     requires_cftime,
-    requires_cftime_1_4_1,
     requires_dask,
 )
 
@@ -1031,8 +1029,8 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 def test_encode_cf_datetime_defaults_to_correct_dtype(
     encoding_units, freq, date_range
 ) -> None:
-    if not has_cftime_1_4_1 and date_range == cftime_range:
-        pytest.skip("Test requires cftime 1.4.1.")
+    if not has_cftime and date_range == cftime_range:
+        pytest.skip("Test requires cftime")
     if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
@@ -1059,7 +1057,7 @@ def test_encode_decode_roundtrip_datetime64(freq) -> None:
     assert_equal(variable, decoded)
 
 
-@requires_cftime_1_4_1
+@requires_cftime
 @pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
 def test_encode_decode_roundtrip_cftime(freq) -> None:
     initial_time = cftime_range("0001", periods=1)
@@ -1082,7 +1080,14 @@ def test__encode_datetime_with_cftime() -> None:
     times = cftime.num2date([0, 1], "hours since 2000-01-01", calendar)
 
     encoding_units = "days since 2000-01-01"
-    expected = cftime.date2num(times, encoding_units, calendar)
+    # Since netCDF files do not support storing float128 values, we ensure that
+    # float64 values are used by setting longdouble=False in num2date.  This try
+    # except logic can be removed when xarray's minimum version of cftime is at
+    # least 1.6.2.
+    try:
+        expected = cftime.date2num(times, encoding_units, calendar, longdouble=False)
+    except TypeError:
+        expected = cftime.date2num(times, encoding_units, calendar)
     result = _encode_datetime_with_cftime(times, encoding_units, calendar)
     np.testing.assert_equal(result, expected)
 

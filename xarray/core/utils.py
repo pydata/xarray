@@ -1,8 +1,44 @@
 """Internal utilities; not for external use"""
+# Some functions in this module are derived from functions in pandas. For
+# reference, here is a copy of the pandas copyright notice:
+
+# BSD 3-Clause License
+
+# Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
+# All rights reserved.
+
+# Copyright (c) 2011-2022, Open source contributors.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
+import inspect
 import io
 import itertools
 import math
@@ -62,18 +98,6 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
-
-    if len(index) > 0 and index.dtype == "O":
-        try:
-            return CFTimeIndex(index)
-        except (ImportError, TypeError):
-            return index
-    else:
-        return index
-
-
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
@@ -110,34 +134,6 @@ def maybe_coerce_to_str(index, original_coords):
             index = np.asarray(index, dtype=result_type.type)
 
     return index
-
-
-def safe_cast_to_index(array: Any) -> pd.Index:
-    """Given an array, safely cast it to a pandas.Index.
-
-    If it is already a pandas.Index, return it unchanged.
-
-    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
-    this function will not attempt to do automatic type conversion but will
-    always return an index with dtype=object.
-    """
-    if isinstance(array, pd.Index):
-        index = array
-    elif hasattr(array, "to_index"):
-        # xarray Variable
-        index = array.to_index()
-    elif hasattr(array, "to_pandas_index"):
-        # xarray Index
-        index = array.to_pandas_index()
-    elif hasattr(array, "array") and isinstance(array.array, pd.Index):
-        # xarray PandasIndexingAdapter
-        index = array.array
-    else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
-        index = pd.Index(np.asarray(array), **kwargs)
-    return _maybe_cast_to_cftimeindex(index)
 
 
 def maybe_wrap_array(original, new_array):
@@ -511,7 +507,7 @@ class OrderedSet(MutableSet[T]):
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: Iterable[T] = None):
+    def __init__(self, values: Iterable[T] | None = None):
         self._d = {}
         if values is not None:
             self.update(values)
@@ -993,3 +989,64 @@ def contains_only_dask_or_numpy(obj) -> bool:
             for var in obj.variables.values()
         ]
     )
+
+
+def module_available(module: str) -> bool:
+    """Checks whether a module is installed without importing it.
+
+    Use this for a lightweight check and lazy imports.
+
+    Parameters
+    ----------
+    module : str
+        Name of the module.
+
+    Returns
+    -------
+    available : bool
+        Whether the module is installed.
+    """
+    return importlib.util.find_spec(module) is not None
+
+
+def find_stack_level(test_mode=False) -> int:
+    """Find the first place in the stack that is not inside xarray.
+
+    This is unless the code emanates from a test, in which case we would prefer
+    to see the xarray source.
+
+    This function is taken from pandas.
+
+    Parameters
+    ----------
+    test_mode : bool
+        Flag used for testing purposes to switch off the detection of test
+        directories in the stack trace.
+
+    Returns
+    -------
+    stacklevel : int
+        First level in the stack that is not part of xarray.
+    """
+    import xarray as xr
+
+    pkg_dir = os.path.dirname(xr.__file__)
+    test_dir = os.path.join(pkg_dir, "tests")
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    n = 0
+    while frame:
+        fname = inspect.getfile(frame)
+        if fname.startswith(pkg_dir) and (not fname.startswith(test_dir) or test_mode):
+            frame = frame.f_back
+            n += 1
+        else:
+            break
+    return n
+
+
+def emit_user_level_warning(message, category=None):
+    """Emit a warning at the user level by inspecting the stack trace."""
+    stacklevel = find_stack_level()
+    warnings.warn(message, category=category, stacklevel=stacklevel)
