@@ -153,7 +153,7 @@ _DATETIMEINDEX_COMPONENTS = [
 
 
 def _get_virtual_variable(
-    variables, key: Hashable, dim_sizes: Mapping = None
+    variables, key: Hashable, dim_sizes: Mapping | None = None
 ) -> tuple[Hashable, Hashable, Variable]:
     """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
     objects (if possible)
@@ -831,7 +831,7 @@ class Dataset(
         )
 
     def _dask_postpersist(
-        self: T_Dataset, dsk: Mapping, *, rename: Mapping[str, str] = None
+        self: T_Dataset, dsk: Mapping, *, rename: Mapping[str, str] | None = None
     ) -> T_Dataset:
         from dask import is_dask_collection
         from dask.highlevelgraph import HighLevelGraph
@@ -971,7 +971,7 @@ class Dataset(
 
     def _replace(
         self: T_Dataset,
-        variables: dict[Hashable, Variable] = None,
+        variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
@@ -1767,7 +1767,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
@@ -1783,7 +1783,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
@@ -1799,7 +1799,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         *,
         compute: Literal[False],
@@ -1814,7 +1814,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
@@ -2494,8 +2494,8 @@ class Dataset(
 
     def sel(
         self: T_Dataset,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         drop: bool = False,
         **indexers_kwargs: Any,
@@ -2759,7 +2759,9 @@ class Dataset(
         return self.isel(indexers_slices)
 
     def broadcast_like(
-        self: T_Dataset, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
+        self: T_Dataset,
+        other: Dataset | DataArray,
+        exclude: Iterable[Hashable] | None = None,
     ) -> T_Dataset:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
@@ -3127,8 +3129,8 @@ class Dataset(
 
     def _reindex(
         self: T_Dataset,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
@@ -3154,7 +3156,7 @@ class Dataset(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        kwargs: Mapping[str, Any] = None,
+        kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> T_Dataset:
@@ -3704,7 +3706,9 @@ class Dataset(
         return self._replace(variables, coord_names, dims=sizes, indexes=indexes)
 
     def rename_vars(
-        self: T_Dataset, name_dict: Mapping[Any, Hashable] = None, **names: Hashable
+        self: T_Dataset,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
     ) -> T_Dataset:
         """Returns a new object with renamed variables including coordinates
 
@@ -3742,7 +3746,7 @@ class Dataset(
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def swap_dims(
-        self: T_Dataset, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
+        self: T_Dataset, dims_dict: Mapping[Any, Hashable] | None = None, **dims_kwargs
     ) -> T_Dataset:
         """Returns a new object with swapped dimensions.
 
@@ -5588,7 +5592,7 @@ class Dataset(
         self: T_Dataset,
         dim: Hashable | None = None,
         method: InterpOptions = "linear",
-        limit: int = None,
+        limit: int | None = None,
         use_coordinate: bool | Hashable = True,
         max_gap: (
             int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
@@ -6988,9 +6992,9 @@ class Dataset(
         dim: Dims = None,
         method: QuantileMethods = "linear",
         numeric_only: bool = False,
-        keep_attrs: bool = None,
-        skipna: bool = None,
-        interpolation: QuantileMethods = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_Dataset:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -7915,7 +7919,7 @@ class Dataset(
 
     def pad(
         self: T_Dataset,
-        pad_width: Mapping[Any, int | tuple[int, int]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
