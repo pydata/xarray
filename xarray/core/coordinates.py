@@ -339,7 +339,7 @@ class DatasetCoordinates(Coordinates):
         ]
 
 
-class DataArrayCoordinates(Coordinates[T_DataArray]):
+class DataArrayCoordinates(Coordinates["T_DataArray"]):
     """Dictionary like container for DataArray coordinates.
 
     Essentially a dict with keys given by the array's
