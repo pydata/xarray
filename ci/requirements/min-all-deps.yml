@@ -19,7 +19,7 @@ dependencies:
   - distributed=2021.11
   - flox=0.5
   - h5netcdf=0.11
-  # h5py and hdf5 tend to cause conflicrs
+  # h5py and hdf5 tend to cause conflicts
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
   - h5py=3.6
@@ -40,7 +40,7 @@ dependencies:
   - pip
   - pseudonetcdf=3.2
   - pydap=3.2
-  # - pynio=1.5.5
+  # - pynio=1.5.5  # see: https://github.com/pydata/xarray/issues/4491
   - pytest
   - pytest-cov
   - pytest-env
