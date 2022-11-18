@@ -14,6 +14,7 @@ from .utils import Frozen, ReprObject
 from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
     from .types import T_DataArray
@@ -24,6 +25,7 @@ _THIS_ARRAY = ReprObject("<this-array>")
 
 
 class Coordinates(Mapping[Hashable, "T_DataArray"]):
+    _data: DataWithCoords
     __slots__ = ()
 
     def __getitem__(self, key: Hashable) -> T_DataArray:
@@ -337,12 +339,14 @@ class DatasetCoordinates(Coordinates):
         ]
 
 
-class DataArrayCoordinates(Coordinates):
+class DataArrayCoordinates(Coordinates[T_DataArray]):
     """Dictionary like container for DataArray coordinates.
 
     Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
+
+    _data: T_DataArray
 
     __slots__ = ("_data",)
 
