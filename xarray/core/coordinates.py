@@ -80,7 +80,7 @@ class Coordinates(Mapping[Hashable, "T_DataArray"]):
     def to_dataset(self) -> Dataset:
         raise NotImplementedError()
 
-    def to_index(self, ordered_dims: Sequence[Hashable] = None) -> pd.Index:
+    def to_index(self, ordered_dims: Sequence[Hashable] | None = None) -> pd.Index:
         """Convert all index coordinates into a :py:class:`pandas.Index`.
 
         Parameters

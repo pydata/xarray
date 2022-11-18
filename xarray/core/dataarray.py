@@ -377,10 +377,10 @@ class DataArray(
         | Mapping[Any, Any]
         | None = None,
         dims: Hashable | Sequence[Hashable] | None = None,
-        name: Hashable = None,
-        attrs: Mapping = None,
+        name: Hashable | None = None,
+        attrs: Mapping | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] = None,
+        indexes: dict[Hashable, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -452,7 +452,7 @@ class DataArray(
 
     def _replace(
         self: T_DataArray,
-        variable: Variable = None,
+        variable: Variable | None = None,
         coords=None,
         name: Hashable | None | Default = _default,
         indexes=None,
@@ -495,9 +495,9 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] = None,
-        drop_coords: list[Hashable] = None,
-        rename_dims: Mapping[Any, Any] = None,
+        coords: Mapping[Any, Variable] | None = None,
+        drop_coords: list[Hashable] | None = None,
+        rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
         """Maybe replace indexes and their corresponding coordinates."""
         if not indexes:
@@ -1415,8 +1415,8 @@ class DataArray(
 
     def sel(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any,
@@ -1953,7 +1953,7 @@ class DataArray(
 
     def reindex(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         method: ReindexMethodOptions = None,
         tolerance: float | Iterable[float] | None = None,
         copy: bool = True,
@@ -2515,7 +2515,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
         self,
-        indexes: Mapping[Any, Hashable | Sequence[Hashable]] = None,
+        indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
     ) -> DataArray:
@@ -4724,7 +4724,7 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
