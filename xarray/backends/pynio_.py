@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from ..core import indexing
@@ -55,6 +57,12 @@ class NioDataStore(AbstractDataStore):
     def __init__(self, filename, mode="r", lock=None, **kwargs):
         import Nio
 
+        warnings.warn(
+            "The PyNIO backend is Deprecated and will be removed from Xarray in a future release. "
+            "See https://github.com/pydata/xarray/issues/4491 for more information",
+            FutureWarning,
+        )
+
         if lock is None:
             lock = PYNIO_LOCK
         self.lock = ensure_lock(lock)
@@ -94,6 +102,15 @@ class NioDataStore(AbstractDataStore):
 
 
 class PynioBackendEntrypoint(BackendEntrypoint):
+    """
+    PyNIO backend
+
+        .. deprecated:: 0.20.0
+
+        Deprecated as PyNIO is no longer supported. See
+        https://github.com/pydata/xarray/issues/4491 for more information
+    """
+
     available = module_available("Nio")
 
     def open_dataset(
