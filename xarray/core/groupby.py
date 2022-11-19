@@ -596,19 +596,8 @@ class GroupBy(Generic[T_Xarray]):
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
         """Iterate over each element in this group"""
-        print(self._group_indices)
-        if isinstance(self._group_indices[0], slice):
-            for indices in self._group_indices:
-                yield self._obj.isel({self._group_dim: indices})
-        else:
-            for code in np.sort(pd.unique(self._codes.data.reshape(-1))):
-                if code == -1:
-                    continue
-                subset = self._original_obj.where(self._codes == code, drop=True)
-                if self._squeeze:
-                    squeeze_dims = tuple(dim for dim in self._codes.dims if subset.sizes[dim] == 1)
-                    subset = subset.squeeze(squeeze_dims)
-                yield subset
+        for indices in self._group_indices:
+            yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
         if self._group_dim in applied_example.dims:
