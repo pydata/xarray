@@ -60,7 +60,7 @@ class NioDataStore(AbstractDataStore):
         warnings.warn(
             "The PyNIO backend is Deprecated and will be removed from Xarray in a future release. "
             "See https://github.com/pydata/xarray/issues/4491 for more information",
-            FutureWarning,
+            DeprecationWarning,
         )
 
         if lock is None:
