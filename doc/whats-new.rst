@@ -27,6 +27,25 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed (:pull:`7300`):
+
+  ========================== =========  ========
+   Package                         Old      New
+  ========================== =========  ========
+   boto                           1.18     1.20
+   cartopy                        0.19     0.20
+   distributed                 2021.09  2021.11
+   dask                        2021.09  2021.11
+   h5py                            3.1      3.6
+   hdf5                           1.10     1.12
+   matplotlib-base                 3.4      3.5
+   nc-time-axis                    1.3      1.4
+   netcdf4                       1.5.3    1.5.7
+   packaging                      20.3     21.3
+   pint                           0.17     0.18
+   pseudonetcdf                    3.1      3.2
+   typing_extensions              3.10      4.0
+  ========================== =========  ========
 
 Deprecations
 ~~~~~~~~~~~~
@@ -2572,7 +2591,7 @@ Breaking changes
   have removed the internal use of the ``OrderedDict`` in favor of Python's builtin
   ``dict`` object which is now ordered itself. This change will be most obvious when
   interacting with the ``attrs`` property on Dataset and DataArray objects.
-  (:issue:`3380`, :pull:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
+  (:issue:`3380`, :pull:`3389`).  HBy `Joeamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
