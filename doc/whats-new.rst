@@ -16,23 +16,14 @@ What's New
 
 .. _whats-new.2022.11.1:
 
-v2022.11.1 (Nov TK, 2022)
-------------------------
-
-New Features
-~~~~~~~~~~~~
-
-- Add experimental support for Zarr's V3 specification. (:pull:`6475`).
-  By `Gregory Lee  <https://github.com/grlee77>`_ and `Joe Hamman <https://github.com/jhamman>`_.
-
-.. _whats-new.2022.11.1:
-
 v2022.11.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- Add experimental support for Zarr's V3 specification. (:pull:`6475`).
+  By `Gregory Lee  <https://github.com/grlee77>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
