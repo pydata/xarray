@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
-_MARKERSIZE_RANGE = (18.0, 72.0)
-_LINEWIDTH_RANGE = (1.5, 6.0)
+_MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
+_LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
 
 
 def import_matplotlib_pyplot():
@@ -1342,7 +1342,7 @@ def _parse_size(
     else:
         levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, max_width = _MARKERSIZE_RANGE
+    min_width, default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:
@@ -1379,8 +1379,8 @@ class _Normalize(Sequence):
     ----------
     data : DataArray
         DataArray to normalize.
-    width : Sequence of two numbers, optional
-        Normalize the data to theses min and max values.
+    width : Sequence of three numbers, optional
+        Normalize the data to these (min, default, max) values.
         The default is None.
     """
 
@@ -1389,7 +1389,7 @@ class _Normalize(Sequence):
     _data_unique_index: np.ndarray
     _data_unique_inverse: np.ndarray
     _data_is_numeric: bool
-    _width: tuple[float, float] | None
+    _width: tuple[float, float, float] | None
 
     __slots__ = (
         "_data",
@@ -1403,7 +1403,7 @@ class _Normalize(Sequence):
     def __init__(
         self,
         data: DataArray | None,
-        width: tuple[float, float] | None = None,
+        width: tuple[float, float, float] | None = None,
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data
@@ -1470,14 +1470,16 @@ class _Normalize(Sequence):
         if self._width is None:
             return y
 
-        x0, x1 = self._width
+        xmin, xdefault, xmax = self._width
 
-        # If y is constant, then add a small number to avoid division with zero:
         diff_maxy_miny = np.max(y) - np.min(y)
-        eps = np.finfo(np.float64).eps if diff_maxy_miny == 0 else 0
-        k = (y - np.min(y)) / (diff_maxy_miny + eps)
-        widths = x0 + k * (x1 - x0)
-
+        if diff_maxy_miny == 0:
+            # Use default with if y is constant:
+            widths = xdefault + 0 * y
+        else:
+            # Normalize inbetween xmin and xmax:
+            k = (y - np.min(y)) / diff_maxy_miny
+            widths = xmin + k * (xmax - xmin)
         return widths
 
     @overload
@@ -1508,7 +1510,7 @@ class _Normalize(Sequence):
         array([3, 1, 1, 3, 5])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a, width=[18, 72]).values
+        >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 5)>
         array([45., 18., 18., 45., 72.])
         Dimensions without coordinates: dim_0
@@ -1519,14 +1521,14 @@ class _Normalize(Sequence):
         array([0.5, 0. , 0. , 0.5, 2. , 3. ])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a, width=[18, 72]).values
+        >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 6)>
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a * 0, width=[18, 72]).values
+        >>> _Normalize(a * 0, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 6)>
-        array([18., 18., 18., 18., 18., 18.])
+        array([36., 36., 36., 36., 36., 36.])
         Dimensions without coordinates: dim_0
 
         """
@@ -1553,14 +1555,14 @@ class _Normalize(Sequence):
         >>> _Normalize(a)._values_unique
         array([1, 3, 5])
 
-        >>> _Normalize(a, width=[18, 72])._values_unique
+        >>> _Normalize(a, width=(18, 36, 72))._values_unique
         array([18., 45., 72.])
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a)._values_unique
         array([0. , 0.5, 2. , 3. ])
 
-        >>> _Normalize(a, width=[18, 72])._values_unique
+        >>> _Normalize(a, width=(18, 36, 72))._values_unique
         array([18., 27., 54., 72.])
         """
         if self.data is None:
@@ -1632,7 +1634,7 @@ class _Normalize(Sequence):
         Examples
         --------
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa = _Normalize(a, width=(0, 0.5, 1))
         >>> aa._lookup
         0.000000    0.0
         0.166667    0.5
@@ -1658,7 +1660,7 @@ class _Normalize(Sequence):
         Examples
         --------
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa = _Normalize(a, width=(0, 0.5, 1))
         >>> aa._lookup
         0.000000    0.0
         0.166667    0.5
@@ -1680,7 +1682,7 @@ def _determine_guide(
     sizeplt_norm: _Normalize,
     add_colorbar: None | bool = None,
     add_legend: None | bool = None,
-    plotfunc_name: str = None,
+    plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
         return False, False
