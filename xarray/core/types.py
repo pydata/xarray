@@ -22,6 +22,7 @@ from packaging.version import Version
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
+    from ..backends.common import BackendEntrypoint
     from .common import AbstractArray, DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -87,6 +88,7 @@ else:
     DTypeLikeSave: Any = None
 
 
+T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
@@ -164,7 +166,10 @@ CFCalendar = Literal[
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 
+ScaleOptions = Literal["linear", "symlog", "log", "logit", None]
 HueStyleOptions = Literal["continuous", "discrete", None]
+AspectOptions = Union[Literal["auto", "equal"], float, None]
+ExtendOptions = Literal["neither", "both", "min", "max", None]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")

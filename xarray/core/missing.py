@@ -15,7 +15,7 @@ from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array
+from .pycompat import is_duck_dask_array, mod_version
 from .types import Interp1dOptions, InterpOptions
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
@@ -308,12 +308,12 @@ def get_clean_interp_index(
 
 def interp_na(
     self,
-    dim: Hashable = None,
+    dim: Hashable | None = None,
     use_coordinate: bool | str = True,
     method: InterpOptions = "linear",
-    limit: int = None,
+    limit: int | None = None,
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
-    keep_attrs: bool = None,
+    keep_attrs: bool | None = None,
     **kwargs,
 ):
     """Interpolate values according to different methods."""
@@ -740,7 +740,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         else:
             dtype = var.dtype
 
-        if dask_version < Version("2020.12"):
+        if mod_version("dask") < Version("2020.12"):
             # Using meta and dtype at the same time doesn't work.
             # Remove this whenever the minimum requirement for dask is 2020.12:
             meta = None

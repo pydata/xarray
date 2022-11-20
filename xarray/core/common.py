@@ -601,6 +601,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         Dataset.assign
         Dataset.swap_dims
+        Dataset.set_coords
         """
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
@@ -769,7 +770,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def rolling_exp(
         self: T_DataWithCoords,
-        window: Mapping[Any, int] = None,
+        window: Mapping[Any, int] | None = None,
         window_type: str = "span",
         **window_kwargs,
     ) -> RollingExp[T_DataWithCoords]:

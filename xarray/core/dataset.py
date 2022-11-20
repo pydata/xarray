@@ -35,11 +35,11 @@ import pandas as pd
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from ..plot.dataset_plot import _Dataset_PlotMethods
+from ..plot.accessor import DatasetPlotAccessor
 from . import alignment
 from . import dtypes as xrdtypes
 from . import duck_array_ops, formatting, formatting_html, ops, utils
-from ._reductions import DatasetReductions
+from ._aggregations import DatasetAggregations
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
@@ -67,7 +67,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, sparse_array_type
+from .pycompat import array_type, is_duck_dask_array
 from .types import QuantileMethods, T_Dataset
 from .utils import (
     Default,
@@ -153,7 +153,7 @@ _DATETIMEINDEX_COMPONENTS = [
 
 
 def _get_virtual_variable(
-    variables, key: Hashable, dim_sizes: Mapping = None
+    variables, key: Hashable, dim_sizes: Mapping | None = None
 ) -> tuple[Hashable, Hashable, Variable]:
     """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
     objects (if possible)
@@ -429,7 +429,10 @@ class _LocIndexer(Generic[T_Dataset]):
 
 
 class Dataset(
-    DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping[Hashable, "DataArray"]
+    DataWithCoords,
+    DatasetAggregations,
+    DatasetArithmetic,
+    Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
 
@@ -828,7 +831,7 @@ class Dataset(
         )
 
     def _dask_postpersist(
-        self: T_Dataset, dsk: Mapping, *, rename: Mapping[str, str] = None
+        self: T_Dataset, dsk: Mapping, *, rename: Mapping[str, str] | None = None
     ) -> T_Dataset:
         from dask import is_dask_collection
         from dask.highlevelgraph import HighLevelGraph
@@ -968,7 +971,7 @@ class Dataset(
 
     def _replace(
         self: T_Dataset,
-        variables: dict[Hashable, Variable] = None,
+        variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
@@ -1692,6 +1695,7 @@ class Dataset(
         See Also
         --------
         Dataset.swap_dims
+        Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -1763,7 +1767,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
@@ -1779,7 +1783,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
@@ -1795,7 +1799,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         *,
         compute: Literal[False],
@@ -1810,7 +1814,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
@@ -2480,8 +2484,8 @@ class Dataset(
 
     def sel(
         self: T_Dataset,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         drop: bool = False,
         **indexers_kwargs: Any,
@@ -2745,7 +2749,9 @@ class Dataset(
         return self.isel(indexers_slices)
 
     def broadcast_like(
-        self: T_Dataset, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
+        self: T_Dataset,
+        other: Dataset | DataArray,
+        exclude: Iterable[Hashable] | None = None,
     ) -> T_Dataset:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
@@ -3113,8 +3119,8 @@ class Dataset(
 
     def _reindex(
         self: T_Dataset,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
@@ -3140,7 +3146,7 @@ class Dataset(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        kwargs: Mapping[str, Any] = None,
+        kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> T_Dataset:
@@ -3690,7 +3696,9 @@ class Dataset(
         return self._replace(variables, coord_names, dims=sizes, indexes=indexes)
 
     def rename_vars(
-        self: T_Dataset, name_dict: Mapping[Any, Hashable] = None, **names: Hashable
+        self: T_Dataset,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
     ) -> T_Dataset:
         """Returns a new object with renamed variables including coordinates
 
@@ -3728,7 +3736,7 @@ class Dataset(
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def swap_dims(
-        self: T_Dataset, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
+        self: T_Dataset, dims_dict: Mapping[Any, Hashable] | None = None, **dims_kwargs
     ) -> T_Dataset:
         """Returns a new object with swapped dimensions.
 
@@ -4863,6 +4871,7 @@ class Dataset(
         #    Once that is resolved, explicitly exclude pint arrays.
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
+        sparse_array_type = array_type("sparse")
         needs_full_reindex = any(
             is_duck_dask_array(v.data)
             or isinstance(v.data, sparse_array_type)
@@ -5573,7 +5582,7 @@ class Dataset(
         self: T_Dataset,
         dim: Hashable | None = None,
         method: InterpOptions = "linear",
-        limit: int = None,
+        limit: int | None = None,
         use_coordinate: bool | Hashable = True,
         max_gap: (
             int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
@@ -6933,7 +6942,8 @@ class Dataset(
         ...     },
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
-        >>> ds.sortby("x")
+        >>> ds = ds.sortby("x")
+        >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -6972,9 +6982,9 @@ class Dataset(
         dim: Dims = None,
         method: QuantileMethods = "linear",
         numeric_only: bool = False,
-        keep_attrs: bool = None,
-        skipna: bool = None,
-        interpolation: QuantileMethods = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_Dataset:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -7483,7 +7493,7 @@ class Dataset(
         """
         return self.map(lambda x: x.imag, keep_attrs=True)
 
-    plot = utils.UncachedAccessor(_Dataset_PlotMethods)
+    plot = utils.UncachedAccessor(DatasetPlotAccessor)
 
     def filter_by_attrs(self: T_Dataset, **kwargs) -> T_Dataset:
         """Returns a ``Dataset`` with variables that match specific conditions.
@@ -7899,7 +7909,7 @@ class Dataset(
 
     def pad(
         self: T_Dataset,
-        pad_width: Mapping[Any, int | tuple[int, int]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
@@ -8575,7 +8585,9 @@ class Dataset(
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
-        coords_ = [self[coord] if isinstance(coord, str) else coord for coord in coords]
+        coords_: Sequence[DataArray] = [
+            self[coord] if isinstance(coord, str) else coord for coord in coords
+        ]
 
         # Determine whether any coords are dims on self
         for coord in coords_:

@@ -10,6 +10,7 @@ import datetime
 import inspect
 import warnings
 from functools import partial
+from importlib import import_module
 
 import numpy as np
 import pandas as pd
@@ -18,34 +19,49 @@ from numpy import any as array_any  # noqa
 from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
-from numpy import einsum, gradient, isclose, isin, isnan, isnat  # noqa
-from numpy import stack as _stack
-from numpy import take, tensordot, transpose, unravel_index  # noqa
-from numpy import where as _where
+from numpy import (  # noqa
+    einsum,
+    gradient,
+    isclose,
+    isin,
+    isnat,
+    take,
+    tensordot,
+    transpose,
+    unravel_index,
+)
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from . import dask_array_ops, dtypes, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, is_duck_dask_array
-from .utils import is_duck_array
+from .pycompat import array_type, is_duck_dask_array
+from .utils import is_duck_array, module_available
 
-try:
-    import dask.array as dask_array
-    from dask.base import tokenize
-except ImportError:
-    dask_array = None  # type: ignore
+dask_available = module_available("dask")
+
+
+def get_array_namespace(x):
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()
+    else:
+        return np
 
 
 def _dask_or_eager_func(
     name,
     eager_module=np,
-    dask_module=dask_array,
+    dask_module="dask.array",
 ):
     """Create a function that dispatches to dask for dask array inputs."""
 
     def f(*args, **kwargs):
         if any(is_duck_dask_array(a) for a in args):
-            wrapped = getattr(dask_module, name)
+            mod = (
+                import_module(dask_module)
+                if isinstance(dask_module, str)
+                else dask_module
+            )
+            wrapped = getattr(mod, name)
         else:
             wrapped = getattr(eager_module, name)
         return wrapped(*args, **kwargs)
@@ -63,7 +79,7 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
-pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module=dask_array)
+pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask.array")
 
 # np.around has failing doctests, overwrite it so they pass:
 # https://github.com/numpy/numpy/issues/19759
@@ -108,7 +124,8 @@ def isnull(data):
         return isnat(data)
     elif issubclass(scalar_type, np.inexact):
         # float types use NaN for null
-        return isnan(data)
+        xp = get_array_namespace(data)
+        return xp.isnan(data)
     elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
         return zeros_like(data, dtype=bool)
@@ -130,7 +147,7 @@ def notnull(data):
 
 # TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
 masked_invalid = _dask_or_eager_func(
-    "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
+    "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
 
@@ -164,6 +181,9 @@ def cumulative_trapezoid(y, x, axis):
 
 
 def astype(data, dtype, **kwargs):
+    if hasattr(data, "__array_namespace__"):
+        xp = get_array_namespace(data)
+        return xp.astype(data, dtype, **kwargs)
     return data.astype(dtype, **kwargs)
 
 
@@ -171,21 +191,20 @@ def asarray(data, xp=np):
     return data if is_duck_array(data) else xp.asarray(data)
 
 
-def as_shared_dtype(scalars_or_arrays):
+def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-
-    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
+    if any(isinstance(x, array_type("cupy")) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
     else:
-        arrays = [asarray(x) for x in scalars_or_arrays]
+        arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
     # evaluating them.
     out_type = dtypes.result_type(*arrays)
-    return [x.astype(out_type, copy=False) for x in arrays]
+    return [astype(x, out_type, copy=False) for x in arrays]
 
 
 def lazy_array_equiv(arr1, arr2):
@@ -201,7 +220,9 @@ def lazy_array_equiv(arr1, arr2):
     arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
+    if dask_available and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
+        from dask.base import tokenize
+
         # GH3068, GH4221
         if tokenize(arr1) == tokenize(arr2):
             return True
@@ -259,9 +280,20 @@ def count(data, axis=None):
     return np.sum(np.logical_not(isnull(data)), axis=axis)
 
 
+def sum_where(data, axis=None, dtype=None, where=None):
+    xp = get_array_namespace(data)
+    if where is not None:
+        a = where_method(xp.zeros_like(data), where, data)
+    else:
+        a = data
+    result = xp.sum(a, axis=axis, dtype=dtype)
+    return result
+
+
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
-    return _where(condition, *as_shared_dtype([x, y]))
+    xp = get_array_namespace(condition)
+    return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
 def where_method(data, cond, other=dtypes.NA):
@@ -284,7 +316,13 @@ def concatenate(arrays, axis=0):
 
 def stack(arrays, axis=0):
     """stack() with better dtype promotion rules."""
-    return _stack(as_shared_dtype(arrays), axis=axis)
+    xp = get_array_namespace(arrays[0])
+    return xp.stack(as_shared_dtype(arrays, xp=xp), axis=axis)
+
+
+def reshape(array, shape):
+    xp = get_array_namespace(array)
+    return xp.reshape(array, shape)
 
 
 @contextlib.contextmanager
@@ -323,11 +361,8 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            if hasattr(values, "__array_namespace__"):
-                xp = values.__array_namespace__()
-                func = getattr(xp, name)
-            else:
-                func = getattr(np, name)
+            xp = get_array_namespace(values)
+            func = getattr(xp, name)
 
         try:
             with warnings.catch_warnings():
