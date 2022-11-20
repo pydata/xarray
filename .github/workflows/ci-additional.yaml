@@ -89,7 +89,7 @@ jobs:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: "3.8"
 
     steps:
       - uses: actions/checkout@v3
