@@ -123,7 +123,7 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report -v
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       # - name: Run mypy with python3.8
       #   # silent all imports, since external repos might not support this
@@ -184,7 +184,7 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report -v
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
 
 
