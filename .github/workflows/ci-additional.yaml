@@ -125,10 +125,10 @@ jobs:
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
-      # - name: Run mypy with python3.8
-      #   # silent all imports, since external repos might not support this
-      #   run: |
-      #     python -m mypy --install-types --non-interactive --python-version 3.8 -v --follow-imports=silent
+      - name: Run mypy with python3.8
+        # silent all imports, since external repos might not support this
+        run: |
+          python -m mypy --install-types --non-interactive --python-version 3.8 --follow-imports=silent
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v3.1.1
@@ -186,6 +186,14 @@ jobs:
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
+      - name: Upload mypy coverage to Codecov
+        uses: codecov/codecov-action@v3.1.1
+        with:
+          file: mypy_report/cobertura.xml
+          flags: mypy
+          env_vars: PYTHON_VERSION
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
 
 
