@@ -31,8 +31,8 @@ class Coordinates(Mapping[Hashable, "T_DataArray"]):
     _data: DataWithCoords
     __slots__ = ("_data",)
 
-    # # TODO: Remove when min python version >= 3.9:
-    # __class_getitem__ = classmethod(GenericAlias)
+    # TODO: Remove when min python version >= 3.9:
+    __class_getitem__ = classmethod(GenericAlias)
 
     def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()
