@@ -129,7 +129,7 @@ def show_versions(file=sys.stdout):
         ("pip", lambda mod: mod.__version__),
         ("conda", lambda mod: mod.__version__),
         ("pytest", lambda mod: mod.__version__),
-        ("mypy", lambda mod: importlib.metadata.version("mypy")),
+        ("mypy", lambda mod: importlib.metadata.version(mod.__name__)),
         # Misc.
         ("IPython", lambda mod: mod.__version__),
         ("sphinx", lambda mod: mod.__version__),
