@@ -190,7 +190,7 @@ jobs:
         uses: codecov/codecov-action@v3.1.1
         with:
           file: mypy_report/cobertura.xml
-          flags: mypy
+          flags: mypy38
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
