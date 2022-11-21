@@ -664,7 +664,7 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         magic_number = filename_or_obj.read(count)
         filename_or_obj.seek(0)
     else:
-        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+        raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     return magic_number
 
 
