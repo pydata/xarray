@@ -3069,15 +3069,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(
-                    ValueError,
-                    match="match in any of xarray's currently installed IO",
-                ):
-                    with pytest.warns(
-                        RuntimeWarning,
-                        match=re.escape("'h5netcdf' fails while guessing"),
-                    ):
-                        open_dataset(f)
+                open_dataset(f)
 
 
 @requires_h5netcdf
