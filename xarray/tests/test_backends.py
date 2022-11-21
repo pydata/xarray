@@ -3031,7 +3031,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
     def test_open_twice(self) -> None:
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with pytest.raises(ValueError, match=r"read/write pointer not at the start"):
+        with pytest.warns(match=r"read/write pointer not at the start"):
             with create_tmp_file() as tmp_file:
                 expected.to_netcdf(tmp_file, engine="h5netcdf")
                 with open(tmp_file, "rb") as f:
