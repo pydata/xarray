@@ -40,9 +40,9 @@ if TYPE_CHECKING:
     ArrayLike = Any
     VariableLike = Union[
         ArrayLike,
-        tuple[DimsLike, ArrayLike],
-        tuple[DimsLike, ArrayLike, Mapping],
-        tuple[DimsLike, ArrayLike, Mapping, Mapping],
+        Tuple[DimsLike, ArrayLike],
+        Tuple[DimsLike, ArrayLike, Mapping],
+        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
