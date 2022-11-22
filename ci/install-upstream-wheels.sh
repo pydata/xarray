@@ -18,7 +18,7 @@ conda uninstall -y --force \
     scipy \
     sparse \
     xarray
-    zarr \
+    zarr
 # new matplotlib dependency
 python -m pip install --upgrade contourpy
 # to limit the runtime of Upstream CI
@@ -47,5 +47,5 @@ python -m pip install \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/xarray-contrib/flox \
-    git+https://github.com/zarr-developers/zarr \
+    git+https://github.com/zarr-developers/zarr
 python -m pip install pytest-timeout
