@@ -3993,8 +3993,8 @@ class DataArray(
         """
         d = self.variable.to_dict(data=data)
         d.update({"coords": {}, "name": self.name})
-        for k in self.coords:
-            d["coords"][k] = self.coords[k].variable.to_dict(data=data)
+        for k, coord in self.coords.items():
+            d["coords"][k] = coord.variable.to_dict(data=data)
         if encoding:
             d["encoding"] = dict(self.encoding)
         return d
