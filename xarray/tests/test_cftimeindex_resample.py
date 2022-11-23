@@ -211,7 +211,6 @@ def test_origin(closed, origin) -> None:
         closed=closed,
         origin=origin,
     )
-    assert 1 == 0
 
 
 def test_base_and_offset_error():

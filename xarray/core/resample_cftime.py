@@ -41,7 +41,6 @@ import datetime
 
 import numpy as np
 import pandas as pd
-from core.utils import module_available
 
 from ..coding.cftime_offsets import (
     CFTIME_TICKS,
@@ -55,6 +54,7 @@ from ..coding.cftime_offsets import (
     to_offset,
 )
 from ..coding.cftimeindex import CFTimeIndex
+from .utils import module_available
 
 
 class CFTimeGrouper:
