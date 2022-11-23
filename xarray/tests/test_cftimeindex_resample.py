@@ -60,7 +60,7 @@ def compare_against_pandas(
     offset=None,
     origin=None,
     loffset=None,
-):
+) -> None:
     if isinstance(origin, tuple):
         origin_pandas = pd.Timestamp(datetime.datetime(*origin))
         origin_cftime = cftime.DatetimeGregorian(*origin)
@@ -106,7 +106,7 @@ def compare_against_pandas(
     xr.testing.assert_identical(result_cftimeindex, result_datetimeindex)
 
 
-def da(index):
+def da(index) -> xr.DataArray:
     return xr.DataArray(
         np.arange(100.0, 100.0 + index.size), coords=[index], dims=["time"]
     )
@@ -195,7 +195,7 @@ def test_calendars(calendar) -> None:
     ["start_day", "start", "end", "end_day", "epoch", (1970, 1, 1, 3, 2)],
     ids=lambda x: f"{x}",
 )
-def test_origin(closed, origin):
+def test_origin(closed, origin) -> None:
     initial_freq, resample_freq = ("3H", "9H")
     start = "1969-12-31T12:07:01"
     index_kwargs = dict(start=start, periods=12, freq=initial_freq)
@@ -222,14 +222,14 @@ def test_base_and_offset_error():
 
 
 @pytest.mark.parametrize("offset", ["foo", "5MS", 10])
-def test_invalid_offset_error(offset):
+def test_invalid_offset_error(offset) -> None:
     cftime_index = xr.cftime_range("2000", periods=5)
     da_cftime = da(cftime_index)
     with pytest.raises(ValueError, match="offset must be"):
         da_cftime.resample(time="2D", offset=offset)
 
 
-def test_timedelta_offset():
+def test_timedelta_offset() -> None:
     timedelta = datetime.timedelta(seconds=5)
     string = "5S"
 

@@ -981,7 +981,13 @@ class DataWithCoords(AttrAccessMixin):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(
-                    freq, closed, label, base, loffset, origin, offset
+                    freq=freq,
+                    closed=closed,
+                    label=label,
+                    base=base,
+                    loffset=loffset,
+                    origin=origin,
+                    offset=offset,
                 )
             else:
                 grouper = pd.Grouper(

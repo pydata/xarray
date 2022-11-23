@@ -115,11 +115,11 @@ class CFTimeGrouper:
         if self.offset is not None:
             try:
                 self.offset = _convert_offset_to_timedelta(self.offset)
-            except (ValueError, AttributeError):
+            except (ValueError, AttributeError) as error:
                 raise ValueError(
                     f"offset must be a datetime.timedelta object or an offset string "
                     f"that can be converted to a timedelta.  Got {offset} instead."
-                )
+                ) from error
 
     def first_items(self, index):
         """Meant to reproduce the results of the following
