@@ -62,6 +62,11 @@ if TYPE_CHECKING:
     )
     from .facetgrid import FacetGrid
 
+_styles: MutableMapping[str, Any] = {
+    # Add a white border to make it easier seeing overlapping markers:
+    "scatter.edgecolors": "w",
+}
+
 
 def _infer_line_data(
     darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
@@ -938,6 +943,8 @@ def _plot1d(plotfunc):
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
 
+        plt = import_matplotlib_pyplot()
+
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "scatter":
@@ -984,29 +991,29 @@ def _plot1d(plotfunc):
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        if z is not None:
-            if ax is None:
-                subplot_kws.update(projection="3d")
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
-            # Using 30, 30 minimizes rotation of the plot. Making it easier to
-            # build on your intuition from 2D plots:
-            plt = import_matplotlib_pyplot()
-            if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-                ax.view_init(azim=30, elev=30)
+        with plt.rc_context(_styles):
+            if z is not None:
+                if ax is None:
+                    subplot_kws.update(projection="3d")
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                # Using 30, 30 minimizes rotation of the plot. Making it easier to
+                # build on your intuition from 2D plots:
+                if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+                    ax.view_init(azim=30, elev=30)
+                else:
+                    # https://github.com/matplotlib/matplotlib/pull/19873
+                    ax.view_init(azim=30, elev=30, vertical_axis="y")
             else:
-                # https://github.com/matplotlib/matplotlib/pull/19873
-                ax.view_init(azim=30, elev=30, vertical_axis="y")
-        else:
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-        primitive = plotfunc(
-            xplt,
-            yplt,
-            ax=ax,
-            add_labels=add_labels,
-            **cmap_params_subset,
-            **kwargs,
-        )
+            primitive = plotfunc(
+                xplt,
+                yplt,
+                ax=ax,
+                add_labels=add_labels,
+                **cmap_params_subset,
+                **kwargs,
+            )
 
         if np.any(np.asarray(add_labels)) and add_title:
             ax.set_title(darray._title_for_slice())
@@ -1250,9 +1257,6 @@ def scatter(
     zplt: DataArray | None = kwargs.pop("zplt", None)
     hueplt: DataArray | None = kwargs.pop("hueplt", None)
     sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
-
-    # Add a white border to make it easier seeing overlapping markers:
-    kwargs.update(edgecolors=kwargs.pop("edgecolors", "w"))
 
     if hueplt is not None:
         kwargs.update(c=hueplt.to_numpy().ravel())
