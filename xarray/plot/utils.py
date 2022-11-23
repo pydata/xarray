@@ -1756,9 +1756,9 @@ def _guess_coords_to_plot(
     darray: DataArray,
     coords_to_plot: MutableMapping[str, Hashable | None],
     kwargs: dict,
-    default_guess: tuple[str, ...] = ("x", "hue", "size"),
+    default_guess: tuple[str, ...] = ("x",),
     # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
-    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((), ("c", "color"), ("s",)),
+    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
 ) -> MutableMapping[str, Hashable]:
     """
     Guess what coords to plot if some of the values in coords_to_plot are None which
@@ -1782,11 +1782,21 @@ def _guess_coords_to_plot(
     Examples
     --------
     >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-    >>> # Guess all plot dims:
+    >>> # Only guess x by default:
     >>> xr.plot.utils._guess_coords_to_plot(
     ...     ds.A,
     ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
     ...     kwargs={},
+    ... )
+    {'x': 'x', 'z': None, 'hue': None, 'size': None}
+
+    >>> # Guess all plot dims with other default values:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
     ... )
     {'x': 'x', 'z': None, 'hue': 'y', 'size': 'z'}
 
@@ -1795,6 +1805,8 @@ def _guess_coords_to_plot(
     ...     ds.A,
     ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
     ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
     ... )
     {'x': 'x', 'z': None, 'hue': 'y', 'size': None}
 
@@ -1803,6 +1815,8 @@ def _guess_coords_to_plot(
     ...     ds.A,
     ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": "x"},
     ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
     ... )
     {'x': 'y', 'z': None, 'hue': 'z', 'size': 'x'}
     """
