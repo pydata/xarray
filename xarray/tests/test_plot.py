@@ -6,6 +6,7 @@ import math
 from copy import copy
 from datetime import datetime
 from typing import Any, Callable, Hashable, Literal
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -3220,3 +3221,21 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
             g.axes
+
+
+@requires_matplotlib
+def test_scatter_edgecolor() -> None:
+    import matplotlib as mpl
+
+    ds = xr.Dataset({"a": ("dim", np.arange(3, 10))}, {"dim": np.arange(7)})
+
+    with figure_context():
+        fig, ax = plt.subplots(1, 1)
+        ds.plot.scatter(x="dim", y="a", marker="o", ax=ax)
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.plot.scatter(x="dim", y="a", marker="x")
