@@ -50,6 +50,62 @@ FREQS = [
 ]
 
 
+def compare_against_pandas(
+    da_datetimeindex,
+    da_cftimeindex,
+    freq,
+    closed=None,
+    label=None,
+    base=None,
+    offset=None,
+    origin=None,
+    loffset=None,
+):
+    if isinstance(origin, tuple):
+        origin_pandas = pd.Timestamp(datetime.datetime(*origin))
+        origin_cftime = cftime.DatetimeGregorian(*origin)
+    else:
+        origin_pandas = origin
+        origin_cftime = origin
+
+    try:
+        result_datetimeindex = da_datetimeindex.resample(
+            time=freq,
+            closed=closed,
+            label=label,
+            base=base,
+            loffset=loffset,
+            offset=offset,
+            origin=origin_pandas,
+        ).mean()
+    except ValueError:
+        with pytest.raises(ValueError):
+            da_cftimeindex.resample(
+                time=freq,
+                closed=closed,
+                label=label,
+                base=base,
+                loffset=loffset,
+                origin=origin_cftime,
+                offset=offset,
+            ).mean()
+    else:
+        result_cftimeindex = da_cftimeindex.resample(
+            time=freq,
+            closed=closed,
+            label=label,
+            base=base,
+            loffset=loffset,
+            origin=origin_cftime,
+            offset=offset,
+        ).mean()
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    result_cftimeindex["time"] = (
+        result_cftimeindex.xindexes["time"].to_pandas_index().to_datetimeindex()
+    )
+    xr.testing.assert_identical(result_cftimeindex, result_datetimeindex)
+
+
 def da(index):
     return xr.DataArray(
         np.arange(100.0, 100.0 + index.size), coords=[index], dims=["time"]
@@ -62,68 +118,28 @@ def da(index):
 @pytest.mark.parametrize(
     ("base", "offset"), [(24, None), (31, None), (None, "5S")], ids=lambda x: f"{x}"
 )
-@pytest.mark.parametrize(
-    "origin", ["start_day", "start", "end", "end_day", "epoch", (2000, 1, 1, 3)]
-)
 def test_resample(freqs, closed, label, base, offset, origin) -> None:
     initial_freq, resample_freq = freqs
     start = "2000-01-01T12:07:01"
+    loffset = "12H"
+    origin = "start"
     index_kwargs = dict(start=start, periods=5, freq=initial_freq)
     datetime_index = pd.date_range(**index_kwargs)
     cftime_index = xr.cftime_range(**index_kwargs)
+    da_datetimeindex = da(datetime_index)
+    da_cftimeindex = da(cftime_index)
 
-    if isinstance(origin, tuple):
-        origin_pandas = pd.Timestamp(datetime.datetime(*origin))
-        origin_cftime = cftime.DatetimeGregorian(*origin)
-    else:
-        origin_pandas = origin
-        origin_cftime = origin
-
-    loffset = "12H"
-    try:
-        da_datetime = (
-            da(datetime_index)
-            .resample(
-                time=resample_freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-                origin=origin_pandas,
-                offset=offset,
-            )
-            .mean()
-        )
-    except ValueError:
-        with pytest.raises(ValueError):
-            da(cftime_index).resample(
-                time=resample_freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-                origin=origin_cftime,
-                offset=offset,
-            ).mean()
-    else:
-        da_cftime = (
-            da(cftime_index)
-            .resample(
-                time=resample_freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-                origin=origin_cftime,
-                offset=offset,
-            )
-            .mean()
-        )
-        # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
-        da_cftime["time"] = (
-            da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
-        )
-        xr.testing.assert_identical(da_cftime, da_datetime)
+    compare_against_pandas(
+        da_datetimeindex,
+        da_cftimeindex,
+        resample_freq,
+        closed=closed,
+        label=label,
+        base=base,
+        offset=offset,
+        origin=origin,
+        loffset=loffset,
+    )
 
 
 @pytest.mark.parametrize(
@@ -171,6 +187,31 @@ def test_calendars(calendar) -> None:
     # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
     da_cftime["time"] = da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)
+
+
+@pytest.mark.parametrize("closed", ["left", "right"])
+@pytest.mark.parametrize(
+    "origin",
+    ["start_day", "start", "end", "end_day", "epoch", (1970, 1, 1, 3, 2)],
+    ids=lambda x: f"{x}",
+)
+def test_origin(closed, origin):
+    initial_freq, resample_freq = ("3H", "9H")
+    start = "1969-12-31T12:07:01"
+    index_kwargs = dict(start=start, periods=12, freq=initial_freq)
+    datetime_index = pd.date_range(**index_kwargs)
+    cftime_index = xr.cftime_range(**index_kwargs)
+    da_datetimeindex = da(datetime_index)
+    da_cftimeindex = da(cftime_index)
+
+    compare_against_pandas(
+        da_datetimeindex,
+        da_cftimeindex,
+        resample_freq,
+        closed=closed,
+        origin=origin,
+    )
+    assert 1 == 0
 
 
 def test_base_and_offset_error():
