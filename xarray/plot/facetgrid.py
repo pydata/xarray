@@ -11,6 +11,7 @@ from typing import (
     Hashable,
     Iterable,
     Literal,
+    MutableMapping,
     TypeVar,
     cast,
 )
@@ -438,7 +439,9 @@ class FacetGrid(Generic[T_Xarray]):
             size_r = _LINEWIDTH_RANGE
 
         # Guess what coords to use if some of the values in coords_to_plot are None:
-        coords_to_plot: dict[str, Hashable | None] = dict(x=x, z=z, hue=hue, size=size_)
+        coords_to_plot: MutableMapping[str, Hashable | None] = dict(
+            x=x, z=z, hue=hue, size=size_
+        )
         coords_to_plot = _guess_coords_to_plot(self.data, coords_to_plot, kwargs)
 
         # Handle hues:
