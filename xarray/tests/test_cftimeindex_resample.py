@@ -118,7 +118,7 @@ def da(index) -> xr.DataArray:
 @pytest.mark.parametrize(
     ("base", "offset"), [(24, None), (31, None), (None, "5S")], ids=lambda x: f"{x}"
 )
-def test_resample(freqs, closed, label, base, offset, origin) -> None:
+def test_resample(freqs, closed, label, base, offset) -> None:
     initial_freq, resample_freq = freqs
     start = "2000-01-01T12:07:01"
     loffset = "12H"
