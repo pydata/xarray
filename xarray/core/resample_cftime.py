@@ -41,6 +41,7 @@ import datetime
 
 import numpy as np
 import pandas as pd
+from core.utils import module_available
 
 from ..coding.cftime_offsets import (
     CFTIME_TICKS,
@@ -54,11 +55,6 @@ from ..coding.cftime_offsets import (
     to_offset,
 )
 from ..coding.cftimeindex import CFTimeIndex
-
-try:
-    import cftime
-except ImportError:
-    cftime = None
 
 
 class CFTimeGrouper:
@@ -366,7 +362,9 @@ def _adjust_dates_anchored(
         A datetime object representing the end of a date range that has been
         adjusted to fix resampling errors.
     """
-    if cftime is None:
+    if module_available("cftime"):
+        import cftime
+    else:
         raise ModuleNotFoundError("No module named 'cftime'")
 
     if origin == "start_day":
