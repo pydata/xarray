@@ -44,6 +44,7 @@ import pandas as pd
 
 from ..coding.cftime_offsets import (
     CFTIME_TICKS,
+    BaseCFTimeOffset,
     Day,
     MonthEnd,
     QuarterEnd,
@@ -458,7 +459,9 @@ def exact_cftime_datetime_difference(a, b):
     return datetime.timedelta(seconds=seconds, microseconds=microseconds)
 
 
-def _convert_offset_to_timedelta(offset):
+def _convert_offset_to_timedelta(
+    offset: datetime.timedelta | str | BaseCFTimeOffset,
+) -> datetime.timedelta:
     if isinstance(offset, datetime.timedelta):
         return offset
     elif isinstance(offset, (str, *CFTIME_TICKS)):
