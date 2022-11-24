@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Literal, Type, Tuple
+from typing import TYPE_CHECKING, Any, Literal, Tuple, Type
 
 import numpy as np
 from packaging.version import Version
