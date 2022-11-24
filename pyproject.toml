@@ -67,8 +67,6 @@ module = [
   "zarr.*",
 ]
 
-# version spanning code is hard to type annotate (and most of this module will
-# be going away soon anyways)
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = "xarray.core.pycompat"
+module = []
