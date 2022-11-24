@@ -50,7 +50,6 @@ module = [
   "Nio.*",
   "nc_time_axis.*",
   "numbagg.*",
-  "numpy.*",
   "netCDF4.*",
   "netcdftime.*",
   "pandas.*",
