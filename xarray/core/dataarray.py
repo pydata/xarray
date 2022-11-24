@@ -3613,7 +3613,7 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -4600,7 +4600,7 @@ class DataArray(
     def dot(
         self: T_DataArray,
         other: T_DataArray,
-        dims: Dims | ellipsis = None,
+        dims: Dims = None,
     ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -5604,7 +5604,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5706,7 +5706,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,

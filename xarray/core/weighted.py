@@ -207,7 +207,7 @@ class Weighted(Generic[T_Xarray]):
     def _reduce(
         da: DataArray,
         weights: DataArray,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
