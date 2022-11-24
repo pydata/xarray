@@ -3230,12 +3230,15 @@ def test_scatter_edgecolor() -> None:
     ds = xr.Dataset({"a": ("dim", np.arange(3, 10))}, {"dim": np.arange(7)})
 
     with figure_context():
+        # scatter markers should by default have white edgecolor to better
+        # see overlapping markers:
         fig, ax = plt.subplots(1, 1)
         ds.plot.scatter(x="dim", y="a", marker="o", ax=ax)
         np.testing.assert_allclose(
             ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
         )
 
+        # scatter should not emit any warnings when using unfilled markers:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             ds.plot.scatter(x="dim", y="a", marker="x")
