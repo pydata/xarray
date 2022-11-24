@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence, cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from . import duck_array_ops, utils
 from .alignment import align, broadcast
 from .computation import apply_ufunc, dot
-from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
 from .types import Dims, T_Xarray
 
@@ -312,7 +312,7 @@ class Weighted(Generic[T_Xarray]):
         da: DataArray,
         q: ArrayLike,
         dim: Dims = None,
-        skipna: bool = None,
+        skipna: bool | None = None,
     ) -> DataArray:
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
@@ -516,7 +516,7 @@ class Weighted(Generic[T_Xarray]):
         q: ArrayLike,
         *,
         dim: Dims = None,
-        keep_attrs: bool = None,
+        keep_attrs: bool | None = None,
         skipna: bool = True,
     ) -> T_Xarray:
 

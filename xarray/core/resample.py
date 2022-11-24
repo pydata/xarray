@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
-from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
+from ._aggregations import DataArrayResampleAggregations, DatasetResampleAggregations
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 from .types import Dims, InterpOptions, T_Xarray
 
@@ -44,7 +44,6 @@ class Resample(GroupBy[T_Xarray]):
                 f"cannot have the same name as actual dimension ('{dim}')!"
             )
         self._dim = dim
-        self._resample_dim = resample_dim
 
         super().__init__(*args, **kwargs)
 
@@ -200,7 +199,7 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleReductions):  # type: ignore[misc]
+class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -263,8 +262,8 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         if self._dim in combined.coords:
             combined = combined.drop_vars(self._dim)
 
-        if self._resample_dim in combined.dims:
-            combined = combined.rename({self._resample_dim: self._dim})
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
 
         return combined
 
@@ -296,7 +295,7 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleReductions):  # type: ignore[misc]
+class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(
@@ -339,7 +338,16 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
-        return combined.rename({self._resample_dim: self._dim})
+        # If the aggregation function didn't drop the original resampling
+        # dimension, then we need to do so before we can rename the proxy
+        # dimension we used.
+        if self._dim in combined.coords:
+            combined = combined.drop_vars(self._dim)
+
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
+
+        return combined
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """

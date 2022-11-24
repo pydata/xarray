@@ -21,29 +21,26 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
-from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
+from ._aggregations import DataArrayGroupByAggregations, DatasetGroupByAggregations
 from .alignment import align
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
-from .indexes import create_default_index_implicit, filter_indexes_from_coords
-from .npcompat import QUANTILE_METHODS, ArrayLike
-from .ops import IncludeCumMethods
-from .options import _get_keep_attrs
-from .pycompat import integer_types
-from .types import Dims, T_Xarray
-from .utils import (
-    either_dict_or_kwargs,
-    hashable,
-    is_scalar,
-    maybe_wrap_array,
-    peek_at,
+from .indexes import (
+    create_default_index_implicit,
+    filter_indexes_from_coords,
     safe_cast_to_index,
 )
+from .options import _get_keep_attrs
+from .pycompat import integer_types
+from .types import Dims, QuantileMethods, T_Xarray
+from .utils import either_dict_or_kwargs, hashable, is_scalar, maybe_wrap_array, peek_at
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .utils import Frozen
@@ -415,11 +412,12 @@ class GroupBy(Generic[T_Xarray]):
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
-            group_indices = np.arange(group.size)
             if not squeeze:
                 # use slices to do views instead of fancy indexing
                 # equivalent to: group_indices = group_indices.reshape(-1, 1)
-                group_indices = [slice(i, i + 1) for i in group_indices]
+                group_indices = [slice(i, i + 1) for i in range(group.size)]
+            else:
+                group_indices = np.arange(group.size)
             unique_coord = group
         else:
             if isinstance(group, DataArray) and group.isnull().any():
@@ -772,10 +770,7 @@ class GroupBy(Generic[T_Xarray]):
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
             assert self._full_index is not None
-            new_coord = [
-                pd.Interval(inter.left, inter.right) for inter in self._full_index
-            ]
-            result[self._group.name] = new_coord
+            result[self._group.name] = self._full_index
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
@@ -814,10 +809,10 @@ class GroupBy(Generic[T_Xarray]):
         self,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QUANTILE_METHODS | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
@@ -1209,9 +1204,8 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 # https://github.com/python/mypy/issues/9031
 class DataArrayGroupBy(  # type: ignore[misc]
     DataArrayGroupByBase,
-    DataArrayGroupByReductions,
+    DataArrayGroupByAggregations,
     ImplementsArrayReduce,
-    IncludeCumMethods,
 ):
     __slots__ = ()
 
@@ -1372,8 +1366,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 # https://github.com/python/mypy/issues/9031
 class DatasetGroupBy(  # type: ignore[misc]
     DatasetGroupByBase,
-    DatasetGroupByReductions,
+    DatasetGroupByAggregations,
     ImplementsDatasetReduce,
-    IncludeCumMethods,
 ):
     __slots__ = ()

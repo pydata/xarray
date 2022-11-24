@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -8,6 +9,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
     Final,
     Hashable,
     Iterable,
@@ -43,6 +45,8 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
+    from io import BufferedIOBase
+
     from ..core.types import (
         CombineAttrsOptions,
         CompatOptions,
@@ -59,7 +63,7 @@ if TYPE_CHECKING:
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+    T_Chunks = Union[int, Dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
@@ -231,7 +235,7 @@ def _get_mtime(filename_or_obj):
 
 def _protect_dataset_variables_inplace(dataset, cache):
     for name, variable in dataset.variables.items():
-        if name not in variable.dims:
+        if name not in dataset._indexes:
             # no need to protect IndexVariable objects
             data = indexing.CopyOnWriteArray(variable._data)
             if cache:
@@ -243,6 +247,11 @@ def _finalize_store(write, store):
     """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
+
+
+def _multi_file_closer(closers):
+    for closer in closers:
+        closer()
 
 
 def load_dataset(filename_or_obj, **kwargs) -> Dataset:
@@ -366,7 +375,7 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -550,7 +559,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -908,7 +917,7 @@ def open_mfdataset(
     >>> lon_bnds, lat_bnds = (-110, -105), (40, 45)
     >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
     >>> ds = xr.open_mfdataset(
-    ...     "file_*.nc", concat_dim="time", preprocess=_preprocess
+    ...     "file_*.nc", concat_dim="time", preprocess=partial_func
     ... )  # doctest: +SKIP
 
     References
@@ -1031,11 +1040,7 @@ def open_mfdataset(
             ds.close()
         raise
 
-    def multi_file_closer():
-        for closer in closers:
-            closer()
-
-    combined.set_close(multi_file_closer)
+    combined.set_close(partial(_multi_file_closer, closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:

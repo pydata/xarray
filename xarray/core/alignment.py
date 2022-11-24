@@ -24,14 +24,21 @@ import pandas as pd
 
 from . import dtypes
 from .common import DataWithCoords
-from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_all_equal
-from .utils import is_dict_like, is_full_slice, safe_cast_to_index
+from .indexes import (
+    Index,
+    Indexes,
+    PandasIndex,
+    PandasMultiIndex,
+    indexes_all_equal,
+    safe_cast_to_index,
+)
+from .utils import is_dict_like, is_full_slice
 from .variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import JoinOptions, T_DataArray, T_DataArrayOrSet, T_Dataset
+    from .types import JoinOptions, T_DataArray, T_Dataset, T_DataWithCoords
 
 DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
@@ -134,10 +141,10 @@ class Aligner(Generic[DataAlignable]):
         self,
         objects: Iterable[DataAlignable],
         join: str = "inner",
-        indexes: Mapping[Any, Any] = None,
+        indexes: Mapping[Any, Any] | None = None,
         exclude_dims: Iterable = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
-        method: str = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
@@ -544,6 +551,7 @@ class Aligner(Generic[DataAlignable]):
             # fast path for the trivial case
             (obj,) = self.objects
             self.results = (obj.copy(deep=self.copy),)
+            return
 
         self.find_matching_indexes()
         self.find_matching_unindexed_dims()
@@ -839,19 +847,13 @@ def deep_align(
         else:
             out[position][key] = aligned_obj  # type: ignore[index]  # maybe someone can fix this?
 
-    # something went wrong: we should have replaced all sentinel values
-    for arg in out:
-        assert arg is not not_replaced
-        if is_dict_like(arg):
-            assert all(value is not not_replaced for value in arg.values())
-
     return out
 
 
 def reindex(
     obj: DataAlignable,
     indexers: Mapping[Any, Any],
-    method: str = None,
+    method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
@@ -890,7 +892,7 @@ def reindex(
 def reindex_like(
     obj: DataAlignable,
     other: Dataset | DataArray,
-    method: str = None,
+    method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
@@ -937,8 +939,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 
 def _broadcast_helper(
-    arg: T_DataArrayOrSet, exclude, dims_map, common_coords
-) -> T_DataArrayOrSet:
+    arg: T_DataWithCoords, exclude, dims_map, common_coords
+) -> T_DataWithCoords:
 
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -969,14 +971,16 @@ def _broadcast_helper(
 
     # remove casts once https://github.com/python/mypy/issues/12800 is resolved
     if isinstance(arg, DataArray):
-        return cast("T_DataArrayOrSet", _broadcast_array(arg))
+        return cast("T_DataWithCoords", _broadcast_array(arg))
     elif isinstance(arg, Dataset):
-        return cast("T_DataArrayOrSet", _broadcast_dataset(arg))
+        return cast("T_DataWithCoords", _broadcast_dataset(arg))
     else:
         raise ValueError("all input must be Dataset or DataArray objects")
 
 
-def broadcast(*args, exclude=None):
+# TODO: this typing is too restrictive since it cannot deal with mixed
+# DataArray and Dataset types...? Is this a problem?
+def broadcast(*args: T_DataWithCoords, exclude=None) -> tuple[T_DataWithCoords, ...]:
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
