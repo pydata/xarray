@@ -40,8 +40,6 @@ module = [
   "cfgrib.*",
   "cftime.*",
   "cupy.*",
-  "dask.*",
-  "distributed.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
