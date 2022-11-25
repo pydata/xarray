@@ -54,7 +54,7 @@ from ..coding.cftime_offsets import (
     to_offset,
 )
 from ..coding.cftimeindex import CFTimeIndex
-from .utils import module_available
+from .types import CFTimeDatetime, SideOptions
 
 
 class CFTimeGrouper:
@@ -64,13 +64,13 @@ class CFTimeGrouper:
 
     def __init__(
         self,
-        freq,
-        closed=None,
-        label=None,
-        base=None,
-        loffset=None,
-        origin="start_day",
-        offset=None,
+        freq: str | BaseCFTimeOffset,
+        closed: SideOptions = None,
+        label: SideOptions = None,
+        base: int | None = None,
+        loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
+        origin: str | CFTimeDatetime = "start_day",
+        offset: str | datetime.timedelta | None = None,
     ):
         if base is not None and offset is not None:
             raise ValueError("base and offset cannot be provided at the same time")
@@ -118,7 +118,7 @@ class CFTimeGrouper:
                     f"that can be converted to a timedelta.  Got {offset} instead."
                 ) from error
 
-    def first_items(self, index):
+    def first_items(self, index: CFTimeIndex):
         """Meant to reproduce the results of the following
 
         grouper = pandas.Grouper(...)
@@ -151,7 +151,14 @@ class CFTimeGrouper:
         return first_items.where(non_duplicate)
 
 
-def _get_time_bins(index, freq, closed, label, origin, offset):
+def _get_time_bins(
+    index: CFTimeIndex,
+    freq: BaseCFTimeOffset,
+    closed: SideOptions,
+    label: SideOptions,
+    origin: str | CFTimeDatetime,
+    offset: str | datetime.timedelta,
+):
     """Obtain the bins and their respective labels for resampling operations.
 
     Parameters
@@ -220,7 +227,13 @@ def _get_time_bins(index, freq, closed, label, origin, offset):
     return datetime_bins, labels
 
 
-def _adjust_bin_edges(datetime_bins, freq, closed, index, labels):
+def _adjust_bin_edges(
+    datetime_bins: np.array,
+    freq: BaseCFTimeOffset,
+    closed: SideOptions,
+    index: CFTimeIndex,
+    labels: np.array,
+):
     """This is required for determining the bin edges resampling with
     daily frequencies greater than one day, month end, and year end
     frequencies.
@@ -268,7 +281,14 @@ def _adjust_bin_edges(datetime_bins, freq, closed, index, labels):
     return datetime_bins, labels
 
 
-def _get_range_edges(first, last, freq, closed="left", origin="start_day", offset=None):
+def _get_range_edges(
+    first: CFTimeDatetime,
+    last: CFTimeDatetime,
+    freq,
+    closed: SideOptions = "left",
+    origin: str | CFTimeDatetime = "start_day",
+    offset: str | datetime.timedelta | None = None,
+):
     """Get the correct starting and ending datetimes for the resampled
     CFTimeIndex range.
 
@@ -321,7 +341,12 @@ def _get_range_edges(first, last, freq, closed="left", origin="start_day", offse
 
 
 def _adjust_dates_anchored(
-    first, last, freq, closed="right", origin="start_day", offset=None
+    first: CFTimeDatetime,
+    last: CFTimeDatetime,
+    freq: BaseCFTimeOffset,
+    closed: SideOptions = "right",
+    origin: str | CFTimeDatetime = "start_day",
+    offset: str | datetime.timedelta | None = None,
 ):
     """First and last offsets should be calculated from the start day to fix
     an error cause by resampling across multiple days when a one day period is
@@ -362,10 +387,7 @@ def _adjust_dates_anchored(
         A datetime object representing the end of a date range that has been
         adjusted to fix resampling errors.
     """
-    if module_available("cftime"):
-        import cftime
-    else:
-        raise ModuleNotFoundError("No module named 'cftime'")
+    import cftime
 
     if origin == "start_day":
         origin_date = normalize_date(first)
@@ -417,7 +439,7 @@ def _adjust_dates_anchored(
     return fresult, lresult
 
 
-def exact_cftime_datetime_difference(a, b):
+def exact_cftime_datetime_difference(a: CFTimeDatetime, b: CFTimeDatetime):
     """Exact computation of b - a
 
     Assumes:
@@ -468,6 +490,6 @@ def _convert_offset_to_timedelta(
         raise ValueError
 
 
-def _ceil_via_cftimeindex(date, freq):
+def _ceil_via_cftimeindex(date: CFTimeDatetime, freq: BaseCFTimeOffset):
     index = CFTimeIndex([date])
     return index.ceil(freq).item()
