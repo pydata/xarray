@@ -284,7 +284,7 @@ def _adjust_bin_edges(
 def _get_range_edges(
     first: CFTimeDatetime,
     last: CFTimeDatetime,
-    freq,
+    freq: BaseCFTimeOffset,
     closed: SideOptions = "left",
     origin: str | CFTimeDatetime = "start_day",
     offset: str | datetime.timedelta | None = None,
