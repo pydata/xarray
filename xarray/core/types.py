@@ -91,11 +91,6 @@ else:
     Self: Any = None
     DTypeLikeSave: Any = None
 
-# if module_available("cftime"):
-#     import cftime.datetime as CFTimeDatetime
-# else:
-#     CFTimeDatetime = Any
-
 
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
