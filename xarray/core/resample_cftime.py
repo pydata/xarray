@@ -38,23 +38,27 @@
 from __future__ import annotations
 
 import datetime
+import typing
 
 import numpy as np
 import pandas as pd
 
 from ..coding.cftime_offsets import (
-    CFTIME_TICKS,
     BaseCFTimeOffset,
     Day,
     MonthEnd,
     QuarterEnd,
+    Tick,
     YearEnd,
     cftime_range,
     normalize_date,
     to_offset,
 )
 from ..coding.cftimeindex import CFTimeIndex
-from .types import CFTimeDatetime, SideOptions
+from .types import SideOptions
+
+if typing.TYPE_CHECKING:
+    from .types import CFTimeDatetime
 
 
 class CFTimeGrouper:
@@ -72,25 +76,26 @@ class CFTimeGrouper:
         origin: str | CFTimeDatetime = "start_day",
         offset: str | datetime.timedelta | None = None,
     ):
+        self.offset: datetime.timedelta | None
+        self.closed: SideOptions
+        self.label: SideOptions
+
         if base is not None and offset is not None:
             raise ValueError("base and offset cannot be provided at the same time")
 
         self.freq = to_offset(freq)
-        self.closed = closed
-        self.label = label
         self.loffset = loffset
         self.origin = origin
 
-        if base is not None and isinstance(self.freq, CFTIME_TICKS):
-            self.offset = type(self.freq)(n=base % self.freq.n)
-        else:
-            self.offset = offset
-
         if isinstance(self.freq, (MonthEnd, QuarterEnd, YearEnd)):
-            if self.closed is None:
+            if closed is None:
                 self.closed = "right"
-            if self.label is None:
+            else:
+                self.closed = closed
+            if label is None:
                 self.label = "right"
+            else:
+                self.label = label
         else:
             # The backward resample sets ``closed`` to ``'right'`` by default
             # since the last value should be considered as the edge point for
@@ -99,24 +104,37 @@ class CFTimeGrouper:
             # from the current ``cftime.datetime`` minus ``freq`` to the current
             # ``cftime.datetime`` with a right close.
             if self.origin in ["end", "end_day"]:
-                if self.closed is None:
+                if closed is None:
                     self.closed = "right"
-                if self.label is None:
+                else:
+                    self.closed = closed
+                if label is None:
                     self.label = "right"
+                else:
+                    self.label = label
             else:
-                if self.closed is None:
+                if closed is None:
                     self.closed = "left"
-                if self.label is None:
+                else:
+                    self.closed = closed
+                if label is None:
                     self.label = "left"
+                else:
+                    self.label = label
 
-        if self.offset is not None:
+        if base is not None and isinstance(self.freq, Tick):
+            offset = type(self.freq)(n=base % self.freq.n).as_timedelta()
+
+        if offset is not None:
             try:
-                self.offset = _convert_offset_to_timedelta(self.offset)
+                self.offset = _convert_offset_to_timedelta(offset)
             except (ValueError, AttributeError) as error:
                 raise ValueError(
                     f"offset must be a datetime.timedelta object or an offset string "
                     f"that can be converted to a timedelta.  Got {offset} instead."
                 ) from error
+        else:
+            self.offset = None
 
     def first_items(self, index: CFTimeIndex):
         """Meant to reproduce the results of the following
@@ -157,7 +175,7 @@ def _get_time_bins(
     closed: SideOptions,
     label: SideOptions,
     origin: str | CFTimeDatetime,
-    offset: str | datetime.timedelta,
+    offset: datetime.timedelta | None,
 ):
     """Obtain the bins and their respective labels for resampling operations.
 
@@ -169,11 +187,11 @@ def _get_time_bins(
         The offset object representing target conversion a.k.a. resampling
         frequency (e.g., 'MS', '2D', 'H', or '3T' with
         coding.cftime_offsets.to_offset() applied to it).
-    closed : 'left' or 'right', optional
+    closed : 'left' or 'right'
         Which side of bin interval is closed.
         The default is 'left' for all frequency offsets except for 'M' and 'A',
         which have a default of 'right'.
-    label : 'left' or 'right', optional
+    label : 'left' or 'right'
         Which bin edge label to label bucket with.
         The default is 'left' for all frequency offsets except for 'M' and 'A',
         which have a default of 'right'.
@@ -228,11 +246,11 @@ def _get_time_bins(
 
 
 def _adjust_bin_edges(
-    datetime_bins: np.array,
+    datetime_bins: np.ndarray,
     freq: BaseCFTimeOffset,
     closed: SideOptions,
     index: CFTimeIndex,
-    labels: np.array,
+    labels: np.ndarray,
 ):
     """This is required for determining the bin edges resampling with
     daily frequencies greater than one day, month end, and year end
@@ -287,7 +305,7 @@ def _get_range_edges(
     freq: BaseCFTimeOffset,
     closed: SideOptions = "left",
     origin: str | CFTimeDatetime = "start_day",
-    offset: str | datetime.timedelta | None = None,
+    offset: datetime.timedelta | None = None,
 ):
     """Get the correct starting and ending datetimes for the resampled
     CFTimeIndex range.
@@ -304,7 +322,7 @@ def _get_range_edges(
         The offset object representing target conversion a.k.a. resampling
         frequency. Contains information on offset type (e.g. Day or 'D') and
         offset magnitude (e.g., n = 3).
-    closed : 'left' or 'right', optional
+    closed : 'left' or 'right'
         Which side of bin interval is closed. Defaults to 'left'.
     origin : {'epoch', 'start', 'start_day', 'end', 'end_day'} or cftime.datetime, default 'start_day'
         The datetime on which to adjust the grouping. The timezone of origin
@@ -326,7 +344,7 @@ def _get_range_edges(
     last : cftime.datetime
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
-    if isinstance(freq, CFTIME_TICKS):
+    if isinstance(freq, Tick):
         first, last = _adjust_dates_anchored(
             first, last, freq, closed=closed, origin=origin, offset=offset
         )
@@ -343,10 +361,10 @@ def _get_range_edges(
 def _adjust_dates_anchored(
     first: CFTimeDatetime,
     last: CFTimeDatetime,
-    freq: BaseCFTimeOffset,
+    freq: Tick,
     closed: SideOptions = "right",
     origin: str | CFTimeDatetime = "start_day",
-    offset: str | datetime.timedelta | None = None,
+    offset: datetime.timedelta | None = None,
 ):
     """First and last offsets should be calculated from the start day to fix
     an error cause by resampling across multiple days when a one day period is
@@ -363,7 +381,7 @@ def _adjust_dates_anchored(
         The offset object representing target conversion a.k.a. resampling
         frequency. Contains information on offset type (e.g. Day or 'D') and
         offset magnitude (e.g., n = 3).
-    closed : 'left' or 'right', optional
+    closed : 'left' or 'right'
         Which side of bin interval is closed. Defaults to 'right'.
     origin : {'epoch', 'start', 'start_day', 'end', 'end_day'} or cftime.datetime, default 'start_day'
         The datetime on which to adjust the grouping. The timezone of origin
@@ -484,12 +502,12 @@ def _convert_offset_to_timedelta(
 ) -> datetime.timedelta:
     if isinstance(offset, datetime.timedelta):
         return offset
-    elif isinstance(offset, (str, *CFTIME_TICKS)):
+    elif isinstance(offset, (str, Tick)):
         return to_offset(offset).as_timedelta()
     else:
         raise ValueError
 
 
-def _ceil_via_cftimeindex(date: CFTimeDatetime, freq: BaseCFTimeOffset):
+def _ceil_via_cftimeindex(date: CFTimeDatetime, freq: str | BaseCFTimeOffset):
     index = CFTimeIndex([date])
     return index.ceil(freq).item()

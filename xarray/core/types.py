@@ -19,8 +19,6 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from .utils import module_available
-
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
@@ -84,17 +82,19 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType,
     ]
-
+    try:
+        from cftime import datetime as CFTimeDatetime
+    except ImportError:
+        CFTimeDatetime = Any
+    DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
     Self: Any = None
     DTypeLikeSave: Any = None
 
-if module_available("cftime"):
-    import cftime
-
-    CFTimeDatetime = cftime.datetime
-else:
-    CFTimeDatetime = Any
+# if module_available("cftime"):
+#     import cftime.datetime as CFTimeDatetime
+# else:
+#     CFTimeDatetime = Any
 
 
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
@@ -137,7 +137,6 @@ Interp1dOptions = Literal[
 InterpolantOptions = Literal["barycentric", "krog", "pchip", "spline", "akima"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 
-DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
