@@ -65,8 +65,8 @@ class CFTimeGrouper:
     def __init__(
         self,
         freq: str | BaseCFTimeOffset,
-        closed: SideOptions = None,
-        label: SideOptions = None,
+        closed: SideOptions | None = None,
+        label: SideOptions | None = None,
         base: int | None = None,
         loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
         origin: str | CFTimeDatetime = "start_day",
