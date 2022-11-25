@@ -208,6 +208,7 @@ class Tick(BaseCFTimeOffset):
         return type(self)(n=other * self.n)
 
     def as_timedelta(self):
+        """All Tick subclasses must implement an as_timedelta method."""
         raise NotImplementedError
 
 
