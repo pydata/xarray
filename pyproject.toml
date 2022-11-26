@@ -40,8 +40,6 @@ module = [
   "cfgrib.*",
   "cftime.*",
   "cupy.*",
-  "dask.*",
-  "distributed.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
@@ -52,11 +50,9 @@ module = [
   "Nio.*",
   "nc_time_axis.*",
   "numbagg.*",
-  "numpy.*",
   "netCDF4.*",
   "netcdftime.*",
   "pandas.*",
-  "pint.*",
   "pooch.*",
   "PseudoNetCDF.*",
   "pydap.*",
@@ -70,8 +66,6 @@ module = [
   "zarr.*",
 ]
 
-# version spanning code is hard to type annotate (and most of this module will
-# be going away soon anyways)
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = "xarray.core.pycompat"
+module = []
