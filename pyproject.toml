@@ -52,7 +52,6 @@ module = [
   "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
-  "pandas.*",
   "pooch.*",
   "PseudoNetCDF.*",
   "pydap.*",
