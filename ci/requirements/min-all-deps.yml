@@ -40,7 +40,6 @@ dependencies:
   - pip
   - pseudonetcdf=3.2
   - pydap=3.2
-  # - pynio=1.5.5  # see: https://github.com/pydata/xarray/issues/4491
   - pytest
   - pytest-cov
   - pytest-env

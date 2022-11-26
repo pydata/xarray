@@ -30,7 +30,6 @@ dependencies:
   - pre-commit
   - pseudonetcdf
   - pydap
-  # - pynio  # Not available on Windows
   - pytest
   - pytest-cov
   - pytest-env
