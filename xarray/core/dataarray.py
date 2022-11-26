@@ -4020,6 +4020,36 @@ class DataArray(
             the_data = np.delete(the_data, 0)
         return lst_to_return
 
+    def _genlist(self):
+        """
+        Covert this Xarray.DataArray to a list while freeing up memory as it rids of the original DataArray
+        Useful when returning data values in json format of large datasets after dataset no longer in use to avoid memory issues
+        More effecient than to_dict() and slighly more effiecnt than data_to_list_save_memory() regarding memory usage
+
+        to use:
+            lst_of_dataJSON = []
+            for i in _gennumpy(<Xarray.DataArray>):
+                lst_of_dataJSON.append(i)
+
+        (lst_of_dataJSON will hold all the data values in a list)
+
+        
+
+        Returns
+        --------
+        generator
+        """
+        
+        if 0 in self.shape:
+            return []
+
+        the_data = self.data.values
+
+        for i in range(len(self.data)):
+            yield (the_data[0].tolist())
+            the_data = np.delete(the_data, 0)
+            
+
     @classmethod
     def from_dict(cls: type[T_DataArray], d: Mapping[str, Any]) -> T_DataArray:
         """Convert a dictionary into an xarray.DataArray
