@@ -3224,7 +3224,7 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
 
 
 @requires_matplotlib
-def test_scatter_edgecolor() -> None:
+def test_plot1d_default_rcparams() -> None:
     import matplotlib as mpl
 
     ds = xr.Dataset({"a": ("dim", np.arange(3, 10))}, {"dim": np.arange(7)})
@@ -3242,3 +3242,10 @@ def test_scatter_edgecolor() -> None:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             ds.plot.scatter(x="dim", y="a", marker="x")
+
+        # Prioritize edgecolor argument over default plot1d values:
+        fig, ax = plt.subplots(1, 1)
+        ds.plot.scatter(x="dim", y="a", marker="o", ax=ax, edgecolor="k")
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
+        )
