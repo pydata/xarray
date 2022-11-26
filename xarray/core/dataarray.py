@@ -4014,7 +4014,7 @@ class DataArray(
             return lst_to_return
 
         the_data = self.data.values
-        
+
         for i in range(len(the_data)):
             lst_to_return.append(the_data[0].tolist())
             the_data = np.delete(the_data, 0)
