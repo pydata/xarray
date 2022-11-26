@@ -3999,6 +3999,29 @@ class DataArray(
             d["encoding"] = dict(self.encoding)
         return d
 
+
+    def data_to_list_save_memory(self):
+        """
+            Covert this Xarray.DataArray to a list while freeing up memory as it rids of the original DataArray
+            Useful when returning data values in json format of large datasets after dataset no longer in use to avoid memory issues
+            More effecient than to_dict() regarding memory usage
+
+            Returns
+            --------
+            lst_to_return: list
+        """
+        lst_to_return = []
+        the_data = self.data.values
+        if 0 in self.shape:
+            return lst_to_return
+        for i in range(len(the_data)):
+            lst_to_return.append(the_data[0].tolist())
+            the_data = np.delete(the_data, 0)
+        return lst_to_return
+
+
+
+       
     @classmethod
     def from_dict(cls: type[T_DataArray], d: Mapping[str, Any]) -> T_DataArray:
         """Convert a dictionary into an xarray.DataArray
