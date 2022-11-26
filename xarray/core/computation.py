@@ -1876,22 +1876,30 @@ def where(cond, x, y, keep_attrs=None):
 
 
 @overload
-def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+def polyval(
+    coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> DataArray:
     ...
 
 
 @overload
-def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: DataArray, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
