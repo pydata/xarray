@@ -49,7 +49,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The PyNIO backend has been deprecated (:issue:`4491`, :pull:`7301`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
