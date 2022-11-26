@@ -56,6 +56,9 @@ Bug fixes
 
 - Import ``nc_time_axis`` when needed (:issue:`7275`, :pull:`7276`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix matplotlib raising a UserWarning when plotting a scatter plot
+  with an unfilled marker (:issue:`7313`, :pull:`7318`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
