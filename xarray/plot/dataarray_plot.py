@@ -851,7 +851,6 @@ def _plot1d(plotfunc):
         The same type of primitive artist that the wrapped matplotlib
         function returns
     """
-    plt = import_matplotlib_pyplot()
 
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
@@ -859,7 +858,6 @@ def _plot1d(plotfunc):
     @functools.wraps(
         plotfunc, assigned=("__module__", "__name__", "__qualname__", "__doc__")
     )
-    @plt.rc_context(_styles)
     def newplotfunc(
         darray: DataArray,
         *args: Any,
@@ -900,6 +898,8 @@ def _plot1d(plotfunc):
     ) -> Any:
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
+
+        plt = import_matplotlib_pyplot()
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -992,28 +992,29 @@ def _plot1d(plotfunc):
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        if z is not None:
-            if ax is None:
-                subplot_kws.update(projection="3d")
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
-            # Using 30, 30 minimizes rotation of the plot. Making it easier to
-            # build on your intuition from 2D plots:
-            if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-                ax.view_init(azim=30, elev=30)
+        with plt.rc_context(_styles):
+            if z is not None:
+                if ax is None:
+                    subplot_kws.update(projection="3d")
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                # Using 30, 30 minimizes rotation of the plot. Making it easier to
+                # build on your intuition from 2D plots:
+                if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+                    ax.view_init(azim=30, elev=30)
+                else:
+                    # https://github.com/matplotlib/matplotlib/pull/19873
+                    ax.view_init(azim=30, elev=30, vertical_axis="y")
             else:
-                # https://github.com/matplotlib/matplotlib/pull/19873
-                ax.view_init(azim=30, elev=30, vertical_axis="y")
-        else:
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-        primitive = plotfunc(
-            xplt,
-            yplt,
-            ax=ax,
-            add_labels=add_labels,
-            **cmap_params_subset,
-            **kwargs,
-        )
+            primitive = plotfunc(
+                xplt,
+                yplt,
+                ax=ax,
+                add_labels=add_labels,
+                **cmap_params_subset,
+                **kwargs,
+            )
 
         if np.any(np.asarray(add_labels)) and add_title:
             ax.set_title(darray._title_for_slice())
