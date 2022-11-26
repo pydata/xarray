@@ -49,7 +49,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The PyNIO backend has been deprecated (:issue:`4491`, :pull:`7301`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -59,6 +60,8 @@ Bug fixes
 - Fix matplotlib raising a UserWarning when plotting a scatter plot
   with an unfilled marker (:issue:`7313`, :pull:`7318`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix static typing of :py:meth:`xr.polyval` (:issue:`7312`, :pull:`7315`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
