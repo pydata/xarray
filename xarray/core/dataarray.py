@@ -4033,13 +4033,13 @@ class DataArray(
 
         (lst_of_dataJSON will hold all the data values in a list)
 
-        
+
 
         Returns
         --------
         generator
         """
-        
+
         if 0 in self.shape:
             return []
 
@@ -4048,7 +4048,6 @@ class DataArray(
         for i in range(len(self.data)):
             yield (the_data[0].tolist())
             the_data = np.delete(the_data, 0)
-            
 
     @classmethod
     def from_dict(cls: type[T_DataArray], d: Mapping[str, Any]) -> T_DataArray:
