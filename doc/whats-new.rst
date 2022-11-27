@@ -14,7 +14,6 @@ What's New
 
     np.random.seed(123456)
 
-
 .. _whats-new.2022.11.1:
 
 v2022.11.1 (unreleased)
@@ -23,6 +22,8 @@ v2022.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add experimental support for Zarr's in-progress V3 specification. (:pull:`6475`).
+  By `Gregory Lee  <https://github.com/grlee77>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

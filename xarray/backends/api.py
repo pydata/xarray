@@ -1504,6 +1504,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1525,6 +1526,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> Delayed:
     ...
 
@@ -1543,6 +1545,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1609,6 +1612,13 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
+    if zarr_version is None:
+        # default to 2 if store doesn't specify it's version (e.g. a path)
+        zarr_version = int(getattr(store, "_store_version", 2))
+
+    if consolidated is None and zarr_version > 2:
+        consolidated = False
+
     if mode == "r+":
         already_consolidated = consolidated
         consolidate_on_close = False
@@ -1627,6 +1637,7 @@ def to_zarr(
         write_region=region,
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
+        zarr_version=zarr_version,
     )
 
     if mode in ["a", "r+"]:
