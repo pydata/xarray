@@ -9,7 +9,7 @@ import numpy as np
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
+from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error, module_available
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -20,14 +20,6 @@ from .common import (
     _normalize_path,
 )
 from .store import StoreBackendEntrypoint
-
-try:
-    import zarr
-
-    has_zarr = True
-except ModuleNotFoundError:
-    has_zarr = False
-
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -361,11 +353,17 @@ class ZarrStore(AbstractWritableDataStore):
         write_region=None,
         safe_chunks=True,
         stacklevel=2,
+        zarr_version=None,
     ):
+        import zarr
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, os.PathLike):
             store = os.fspath(store)
+
+        if zarr_version is None:
+            # default to 2 if store doesn't specify it's version (e.g. a path)
+            zarr_version = getattr(store, "_store_version", 2)
 
         open_kwargs = dict(
             mode=mode,
@@ -373,6 +371,19 @@ class ZarrStore(AbstractWritableDataStore):
             path=group,
         )
         open_kwargs["storage_options"] = storage_options
+        if zarr_version > 2:
+            open_kwargs["zarr_version"] = zarr_version
+
+            if consolidated or consolidate_on_close:
+                raise ValueError(
+                    "consolidated metadata has not been implemented for zarr "
+                    f"version {zarr_version} yet. Set consolidated=False for "
+                    f"zarr version {zarr_version}. See also "
+                    "https://github.com/zarr-developers/zarr-specs/issues/136"
+                )
+
+            if consolidated is None:
+                consolidated = False
 
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
@@ -383,22 +394,25 @@ class ZarrStore(AbstractWritableDataStore):
             try:
                 zarr_group = zarr.open_consolidated(store, **open_kwargs)
             except KeyError:
-                warnings.warn(
-                    "Failed to open Zarr store with consolidated metadata, "
-                    "falling back to try reading non-consolidated metadata. "
-                    "This is typically much slower for opening a dataset. "
-                    "To silence this warning, consider:\n"
-                    "1. Consolidating metadata in this existing store with "
-                    "zarr.consolidate_metadata().\n"
-                    "2. Explicitly setting consolidated=False, to avoid trying "
-                    "to read consolidate metadata, or\n"
-                    "3. Explicitly setting consolidated=True, to raise an "
-                    "error in this case instead of falling back to try "
-                    "reading non-consolidated metadata.",
-                    RuntimeWarning,
-                    stacklevel=stacklevel,
-                )
-                zarr_group = zarr.open_group(store, **open_kwargs)
+                try:
+                    zarr_group = zarr.open_group(store, **open_kwargs)
+                    warnings.warn(
+                        "Failed to open Zarr store with consolidated metadata, "
+                        "but successfully read with non-consolidated metadata. "
+                        "This is typically much slower for opening a dataset. "
+                        "To silence this warning, consider:\n"
+                        "1. Consolidating metadata in this existing store with "
+                        "zarr.consolidate_metadata().\n"
+                        "2. Explicitly setting consolidated=False, to avoid trying "
+                        "to read consolidate metadata, or\n"
+                        "3. Explicitly setting consolidated=True, to raise an "
+                        "error in this case instead of falling back to try "
+                        "reading non-consolidated metadata.",
+                        RuntimeWarning,
+                        stacklevel=stacklevel,
+                    )
+                except zarr.errors.GroupNotFoundError:
+                    raise FileNotFoundError(f"No such file or directory: '{store}'")
         elif consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
@@ -444,6 +458,11 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
+
+        # TODO: this should not be needed once
+        # https://github.com/zarr-developers/zarr-python/issues/1269 is resolved.
+        attributes.pop("filters", None)
+
         encoding = {
             "chunks": zarr_array.chunks,
             "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
@@ -529,6 +548,8 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
+        import zarr
+
         existing_variable_names = {
             vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
         }
@@ -670,6 +691,7 @@ def open_zarr(
     storage_options=None,
     decode_timedelta=None,
     use_cftime=None,
+    zarr_version=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -727,6 +749,9 @@ def open_zarr(
         capability. Only works for stores that have already been consolidated.
         By default (`consolidate=None`), attempts to read consolidated metadata,
         falling back to read non-consolidated metadata if that fails.
+
+        When the experimental ``zarr_version=3``, ``consolidated`` must be
+        either be ``None`` or ``False``.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
     storage_options : dict, optional
@@ -747,6 +772,10 @@ def open_zarr(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    zarr_version : int or None, optional
+        The desired zarr spec version to target (currently 2 or 3). The default
+        of None will attempt to determine the zarr version from ``store`` when
+        possible, otherwise defaulting to 2.
 
     Returns
     -------
@@ -784,6 +813,7 @@ def open_zarr(
         "chunk_store": chunk_store,
         "storage_options": storage_options,
         "stacklevel": 4,
+        "zarr_version": zarr_version,
     }
 
     ds = open_dataset(
@@ -800,12 +830,26 @@ def open_zarr(
         backend_kwargs=backend_kwargs,
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
+        zarr_version=zarr_version,
     )
     return ds
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
-    available = has_zarr
+    """
+    Backend for ".zarr" files based on the zarr package.
+
+    For more information about the underlying library, visit:
+    https://zarr.readthedocs.io/en/stable
+
+    See Also
+    --------
+    backends.ZarrStore
+    """
+
+    available = module_available("zarr")
+    description = "Open zarr files (.zarr) using zarr in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         try:
@@ -831,6 +875,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
         stacklevel=3,
+        zarr_version=None,
     ):
 
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -844,6 +889,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             chunk_store=chunk_store,
             storage_options=storage_options,
             stacklevel=stacklevel + 1,
+            zarr_version=zarr_version,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

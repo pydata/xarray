@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, List, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -14,18 +14,27 @@ from .utils import Frozen, ReprObject
 from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import T_DataArray
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
 _THIS_ARRAY = ReprObject("<this-array>")
 
+# TODO: Remove when min python version >= 3.9:
+GenericAlias = type(List[int])
 
-class Coordinates(Mapping[Hashable, "DataArray"]):
-    __slots__ = ()
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+class Coordinates(Mapping[Hashable, "T_DataArray"]):
+    _data: DataWithCoords
+    __slots__ = ("_data",)
+
+    # TODO: Remove when min python version >= 3.9:
+    __class_getitem__ = classmethod(GenericAlias)
+
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
@@ -79,7 +88,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     def to_dataset(self) -> Dataset:
         raise NotImplementedError()
 
-    def to_index(self, ordered_dims: Sequence[Hashable] = None) -> pd.Index:
+    def to_index(self, ordered_dims: Sequence[Hashable] | None = None) -> pd.Index:
         """Convert all index coordinates into a :py:class:`pandas.Index`.
 
         Parameters
@@ -238,6 +247,8 @@ class DatasetCoordinates(Coordinates):
     objects.
     """
 
+    _data: Dataset
+
     __slots__ = ("_data",)
 
     def __init__(self, dataset: Dataset):
@@ -278,7 +289,7 @@ class DatasetCoordinates(Coordinates):
     def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
-        return cast("DataArray", self._data[key])
+        return self._data[key]
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
@@ -315,6 +326,7 @@ class DatasetCoordinates(Coordinates):
         variables, indexes = drop_coords(
             coords, self._data._variables, self._data.xindexes
         )
+        self._data._coord_names.intersection_update(variables)
         self._data._variables = variables
         self._data._indexes = indexes
 
@@ -333,16 +345,18 @@ class DatasetCoordinates(Coordinates):
         ]
 
 
-class DataArrayCoordinates(Coordinates):
+class DataArrayCoordinates(Coordinates["T_DataArray"]):
     """Dictionary like container for DataArray coordinates.
 
     Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
 
+    _data: T_DataArray
+
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: DataArray):
+    def __init__(self, dataarray: T_DataArray) -> None:
         self._data = dataarray
 
     @property
@@ -365,7 +379,7 @@ class DataArrayCoordinates(Coordinates):
     def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         return self._data._getitem_coord(key)
 
     def _update_coords(
@@ -441,7 +455,7 @@ def drop_coords(
                 f"other variables: {list(maybe_midx.index.names)!r}. "
                 f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
                 "assigning new coordinate values.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=4,
             )
             for k in idx_coord_names:
@@ -451,7 +465,7 @@ def drop_coords(
 
 
 def assert_coordinate_consistent(
-    obj: DataArray | Dataset, coords: Mapping[Any, Variable]
+    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 

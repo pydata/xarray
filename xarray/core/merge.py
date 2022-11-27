@@ -40,9 +40,9 @@ if TYPE_CHECKING:
     ArrayLike = Any
     VariableLike = Union[
         ArrayLike,
-        tuple[DimsLike, ArrayLike],
-        tuple[DimsLike, ArrayLike, Mapping],
-        tuple[DimsLike, ArrayLike, Mapping, Mapping],
+        Tuple[DimsLike, ArrayLike],
+        Tuple[DimsLike, ArrayLike, Mapping],
+        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
@@ -207,7 +207,7 @@ def _assert_prioritized_valid(
 
 def merge_collected(
     grouped: dict[Hashable, list[MergeElement]],
-    prioritized: Mapping[Any, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] | None = None,
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Hashable, bool] | None = None,
@@ -391,7 +391,7 @@ def collect_from_coordinates(
 
 def merge_coordinates_without_align(
     objects: list[Coordinates],
-    prioritized: Mapping[Any, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] | None = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
@@ -487,7 +487,7 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
         else:
             variables = {}
             if isinstance(obj, PANDAS_TYPES):
-                obj = dict(obj.iteritems())
+                obj = dict(obj.items())
             for k, v in obj.items():
                 if isinstance(v, PANDAS_TYPES):
                     v = DataArray(v)
@@ -796,21 +796,23 @@ def merge(
     objects : iterable of Dataset or iterable of DataArray or iterable of dict-like
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
+              "override", "minimal"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts:
 
-        - "broadcast_equals": all values must be equal when variables are
-          broadcast against each other to ensure common dimensions.
-        - "equals": all values and dimensions must be the same.
         - "identical": all values, dimensions and attributes must be the
           same.
+        - "equals": all values and dimensions must be the same.
+        - "broadcast_equals": all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
         - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
+        - "minimal": drop conflicting coordinates
 
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact", "override"}, default: "outer"
         String indicating how to combine differing indexes in objects.
 
         - "outer": use the union of object indexes
@@ -828,7 +830,7 @@ def merge(
         variable names to fill values. Use a data array's name to
         refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                    "override"} or callable, default: "override"
+                     "override"} or callable, default: "override"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
 

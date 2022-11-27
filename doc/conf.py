@@ -393,39 +393,6 @@ def html_page_context(app, pagename, templatename, context, doctree):
         context["theme_use_edit_page_button"] = False
 
 
-def update_team(app: Sphinx):
-    """Update the team members list."""
-
-    LOGGER.info("Updating team members page...")
-
-    team = yaml.safe_load(pathlib.Path(app.srcdir, "team.yml").read_bytes())
-    items = []
-    for member in team:
-        item = f"""
-        .. grid-item-card::
-            :text-align: center
-            :link: https://github.com/{member['gh_login']}
-
-            .. image:: {member['avatar']}
-                :alt: {member['name']}
-            +++
-            {member['name']}
-        """
-        items.append(item)
-
-    items_md = indent(dedent("\n".join(items)), prefix="    ")
-
-    markdown = f"""
-.. grid:: 1 2 3 3
-    :gutter: 2
-
-    {items_md}
-    """
-
-    pathlib.Path(app.srcdir, "team-panel.txt").write_text(markdown)
-    LOGGER.info("Team members page updated.")
-
-
 def update_gallery(app: Sphinx):
     """Update the gallery page."""
 
@@ -496,6 +463,5 @@ def update_videos(app: Sphinx):
 
 def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
-    app.connect("builder-inited", update_team)
     app.connect("builder-inited", update_gallery)
     app.connect("builder-inited", update_videos)

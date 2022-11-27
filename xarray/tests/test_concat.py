@@ -219,7 +219,9 @@ class TestConcatDataset:
             concat([data, data], "new_dim", coords=["not_found"])
 
         with pytest.raises(ValueError, match=r"global attributes not"):
-            data0, data1 = deepcopy(split_data)
+            # call deepcopy seperately to get unique attrs
+            data0 = deepcopy(split_data[0])
+            data1 = deepcopy(split_data[1])
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
@@ -512,6 +514,16 @@ class TestConcatDataset:
         )
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
+
+    def test_concat_along_new_dim_multiindex(self) -> None:
+        # see https://github.com/pydata/xarray/issues/6881
+        level_names = ["x_level_0", "x_level_1"]
+        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]], names=level_names)
+        ds = Dataset(coords={"x": x})
+        concatenated = concat([ds], "new")
+        actual = list(concatenated.xindexes.get_all_coords("x"))
+        expected = ["x"] + level_names
+        assert actual == expected
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_concat_fill_value(self, fill_value) -> None:

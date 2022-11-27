@@ -846,7 +846,7 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
 def apply_ufunc(
     func: Callable,
     *args: Any,
-    input_core_dims: Sequence[Sequence] = None,
+    input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
@@ -1622,7 +1622,11 @@ def cross(
     return c
 
 
-def dot(*arrays, dims=None, **kwargs):
+def dot(
+    *arrays,
+    dims: str | Iterable[Hashable] | ellipsis | None = None,
+    **kwargs: Any,
+):
     """Generalized dot product for xarray objects. Like np.einsum, but
     provides a simpler interface based on array dimensions.
 
@@ -1711,10 +1715,7 @@ def dot(*arrays, dims=None, **kwargs):
     if len(arrays) == 0:
         raise TypeError("At least one array should be given.")
 
-    if isinstance(dims, str):
-        dims = (dims,)
-
-    common_dims = set.intersection(*[set(arr.dims) for arr in arrays])
+    common_dims: set[Hashable] = set.intersection(*(set(arr.dims) for arr in arrays))
     all_dims = []
     for arr in arrays:
         all_dims += [d for d in arr.dims if d not in all_dims]
@@ -1724,21 +1725,25 @@ def dot(*arrays, dims=None, **kwargs):
 
     if dims is ...:
         dims = all_dims
+    elif isinstance(dims, str):
+        dims = (dims,)
     elif dims is None:
         # find dimensions that occur more than one times
-        dim_counts = Counter()
+        dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
         dims = tuple(d for d, c in dim_counts.items() if c > 1)
 
-    dims = tuple(dims)  # make dims a tuple
+    dot_dims: set[Hashable] = set(dims)  # type:ignore[arg-type]
 
     # dimensions to be parallelized
-    broadcast_dims = tuple(d for d in all_dims if d in common_dims and d not in dims)
+    broadcast_dims = common_dims - dot_dims
     input_core_dims = [
         [d for d in arr.dims if d not in broadcast_dims] for arr in arrays
     ]
-    output_core_dims = [tuple(d for d in all_dims if d not in dims + broadcast_dims)]
+    output_core_dims = [
+        [d for d in all_dims if d not in dot_dims and d not in broadcast_dims]
+    ]
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
@@ -1871,22 +1876,30 @@ def where(cond, x, y, keep_attrs=None):
 
 
 @overload
-def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+def polyval(
+    coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> DataArray:
     ...
 
 
 @overload
-def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: DataArray, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
@@ -1996,10 +2009,10 @@ def _calc_idxminmax(
     *,
     array,
     func: Callable,
-    dim: Hashable = None,
-    skipna: bool = None,
+    dim: Hashable | None = None,
+    skipna: bool | None = None,
     fill_value: Any = dtypes.NA,
-    keep_attrs: bool = None,
+    keep_attrs: bool | None = None,
 ):
     """Apply common operations for idxmin and idxmax."""
     # This function doesn't make sense for scalars so don't try

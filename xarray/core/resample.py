@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
-from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
+from ._aggregations import DataArrayResampleAggregations, DatasetResampleAggregations
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
-from .types import InterpOptions, T_Xarray
+from .types import Dims, InterpOptions, T_Xarray
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -44,11 +44,15 @@ class Resample(GroupBy[T_Xarray]):
                 f"cannot have the same name as actual dimension ('{dim}')!"
             )
         self._dim = dim
-        self._resample_dim = resample_dim
 
         super().__init__(*args, **kwargs)
 
-    def _flox_reduce(self, dim, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
+    def _flox_reduce(
+        self,
+        dim: Dims | ellipsis,
+        keep_attrs: bool | None = None,
+        **kwargs,
+    ) -> T_Xarray:
 
         from .dataarray import DataArray
 
@@ -195,7 +199,7 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleReductions):  # type: ignore[misc]
+class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -258,8 +262,8 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         if self._dim in combined.coords:
             combined = combined.drop_vars(self._dim)
 
-        if self._resample_dim in combined.dims:
-            combined = combined.rename({self._resample_dim: self._dim})
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
 
         return combined
 
@@ -287,11 +291,11 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         resampled : DataArray
         """
         self._obj = self._drop_coords()
-        return self.mean(self._dim)
+        return self.mean(None if self._dim is None else [self._dim])
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleReductions):  # type: ignore[misc]
+class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(
@@ -334,7 +338,16 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
-        return combined.rename({self._resample_dim: self._dim})
+        # If the aggregation function didn't drop the original resampling
+        # dimension, then we need to do so before we can rename the proxy
+        # dimension we used.
+        if self._dim in combined.coords:
+            combined = combined.drop_vars(self._dim)
+
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
+
+        return combined
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
@@ -355,10 +368,10 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
-        keep_attrs: bool = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
@@ -372,7 +385,7 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : Hashable or Iterable of Hashable, optional
+        dim : "...", str, Iterable of Hashable or None, optional
             Dimension(s) over which to apply `func`.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
@@ -406,4 +419,4 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
         resampled : Dataset
         """
         self._obj = self._drop_coords()
-        return self.mean(self._dim)
+        return self.mean(None if self._dim is None else [self._dim])
