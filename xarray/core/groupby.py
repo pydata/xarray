@@ -287,16 +287,13 @@ def _get_index_and_items(index, grouper):
     if isinstance(grouper, CFTimeGrouper):
         first_items, codes = grouper.first_items(index)
     else:
-        first_items = s.groupby(grouper).first()
+        grouped = s.groupby(grouper)
+        first_items = grouped.first()
+        counts = grouped.count()
         # This way we generate codes for the final output index: full_index.
         # So for _flox_reduce we avoid one reindex and copy by avoiding
         # _maybe_restore_empty_groups
-        codes = (
-            first_items.index.searchsorted(
-                index, side="right" if grouper.closed == "left" else "left"
-            )
-            - 1
-        )
+        codes = np.repeat(np.arange(len(first_items)), counts)
         _apply_loffset(grouper, first_items)
     full_index = first_items.index
     if first_items.isnull().any():
@@ -769,9 +766,8 @@ class GroupBy(Generic[T_Xarray]):
         ):
             raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        # Xarray's behaviour is that empty bins have np.nan regardless of dtype
-        # flox's default would not set np.nan for integer dtypes
-        kwargs.setdefault("fill_value", np.nan)
+        if kwargs["func"] not in ["all", "any", "count"]:
+            kwargs.setdefault("fill_value", np.nan)
         if self._bins is not None and kwargs["func"] == "count":
             # This is an annoying hack. Xarray returns np.nan
             # when there are no observations in a bin, instead of 0.
