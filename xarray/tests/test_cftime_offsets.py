@@ -1385,3 +1385,9 @@ def test_date_range_like_errors():
         match="'source' must be a 1D array of datetime objects for inferring its range.",
     ):
         date_range_like(da, "noleap")
+
+
+def as_timedelta_not_implemented_error():
+    tick = Tick()
+    with pytest.raises(NotImplementedError):
+        tick.as_timedelta()

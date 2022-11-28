@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -17,6 +18,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 from packaging.version import Version
 
 if TYPE_CHECKING:
@@ -82,7 +84,11 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType,
     ]
-
+    try:
+        from cftime import datetime as CFTimeDatetime
+    except ImportError:
+        CFTimeDatetime = Any
+    DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
     Self: Any = None
     DTypeLikeSave: Any = None
