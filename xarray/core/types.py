@@ -7,10 +7,12 @@ from typing import (
     Callable,
     Hashable,
     Iterable,
+    List,
     Literal,
     Protocol,
     Sequence,
     SupportsIndex,
+    Tuple,
     TypeVar,
     Union,
 )
@@ -72,13 +74,13 @@ if TYPE_CHECKING:
         # character codes, type strings or comma-separated fields, e.g., 'float64'
         str,
         # (flexible_dtype, itemsize)
-        tuple[_DTypeLikeNested, int],
+        Tuple[_DTypeLikeNested, int],
         # (fixed_dtype, shape)
-        tuple[_DTypeLikeNested, _ShapeLike],
+        Tuple[_DTypeLikeNested, _ShapeLike],
         # (base_dtype, new_dtype)
-        tuple[_DTypeLikeNested, _DTypeLikeNested],
+        Tuple[_DTypeLikeNested, _DTypeLikeNested],
         # because numpy does the same?
-        list[Any],
+        List[Any],
         # anything with a dtype attribute
         _SupportsDType,
     ]

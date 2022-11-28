@@ -8,7 +8,7 @@ Required dependencies
 
 - Python (3.8 or later)
 - `numpy <https://www.numpy.org/>`__ (1.20 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.0 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.3 or later)
 - `pandas <https://pandas.pydata.org/>`__ (1.3 or later)
 
 .. _optional-dependencies:

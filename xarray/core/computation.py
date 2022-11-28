@@ -846,7 +846,7 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
 def apply_ufunc(
     func: Callable,
     *args: Any,
-    input_core_dims: Sequence[Sequence] = None,
+    input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
@@ -1876,22 +1876,30 @@ def where(cond, x, y, keep_attrs=None):
 
 
 @overload
-def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+def polyval(
+    coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> DataArray:
     ...
 
 
 @overload
-def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: DataArray, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
@@ -2001,10 +2009,10 @@ def _calc_idxminmax(
     *,
     array,
     func: Callable,
-    dim: Hashable = None,
-    skipna: bool = None,
+    dim: Hashable | None = None,
+    skipna: bool | None = None,
     fill_value: Any = dtypes.NA,
-    keep_attrs: bool = None,
+    keep_attrs: bool | None = None,
 ):
     """Apply common operations for idxmin and idxmax."""
     # This function doesn't make sense for scalars so don't try

@@ -1139,7 +1139,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             | tuple[tuple[int, ...], ...]
             | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},
-        name: str = None,
+        name: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         **chunks_kwargs: Any,
@@ -1288,7 +1288,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def isel(
         self: T_Variable,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> T_Variable:
@@ -2122,9 +2122,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QuantileMethods = "linear",
-        keep_attrs: bool = None,
-        skipna: bool = None,
-        interpolation: QuantileMethods = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2522,7 +2522,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return variable.data.reshape(shape), tuple(axes)
 
-    def isnull(self, keep_attrs: bool = None):
+    def isnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is a missing value.
 
         Returns
@@ -2556,7 +2556,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(self, keep_attrs: bool = None):
+    def notnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is not a missing value.
 
         Returns
@@ -2733,9 +2733,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def argmin(
         self,
         dim: Dims | ellipsis = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2778,9 +2778,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def argmax(
         self,
         dim: Dims | ellipsis = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
