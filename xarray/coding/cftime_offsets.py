@@ -207,6 +207,10 @@ class Tick(BaseCFTimeOffset):
             return new_self * other
         return type(self)(n=other * self.n)
 
+    def as_timedelta(self):
+        """All Tick subclasses must implement an as_timedelta method."""
+        raise NotImplementedError
+
 
 def _get_day_of_month(other, day_option):
     """Find the day in `other`'s month that satisfies a BaseCFTimeOffset's

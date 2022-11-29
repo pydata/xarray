@@ -1,20 +1,24 @@
 from __future__ import annotations
 
+import datetime
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Hashable,
     Iterable,
+    List,
     Literal,
     Protocol,
     Sequence,
     SupportsIndex,
+    Tuple,
     TypeVar,
     Union,
 )
 
 import numpy as np
+import pandas as pd
 from packaging.version import Version
 
 if TYPE_CHECKING:
@@ -70,17 +74,21 @@ if TYPE_CHECKING:
         # character codes, type strings or comma-separated fields, e.g., 'float64'
         str,
         # (flexible_dtype, itemsize)
-        tuple[_DTypeLikeNested, int],
+        Tuple[_DTypeLikeNested, int],
         # (fixed_dtype, shape)
-        tuple[_DTypeLikeNested, _ShapeLike],
+        Tuple[_DTypeLikeNested, _ShapeLike],
         # (base_dtype, new_dtype)
-        tuple[_DTypeLikeNested, _DTypeLikeNested],
+        Tuple[_DTypeLikeNested, _DTypeLikeNested],
         # because numpy does the same?
-        list[Any],
+        List[Any],
         # anything with a dtype attribute
         _SupportsDType,
     ]
-
+    try:
+        from cftime import datetime as CFTimeDatetime
+    except ImportError:
+        CFTimeDatetime = Any
+    DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
     Self: Any = None
     DTypeLikeSave: Any = None

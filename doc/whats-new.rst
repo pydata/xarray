@@ -14,7 +14,6 @@ What's New
 
     np.random.seed(123456)
 
-
 .. _whats-new.2022.11.1:
 
 v2022.11.1 (unreleased)
@@ -22,7 +21,11 @@ v2022.11.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Enable using `offset` and `origin` arguments in :py:meth:`DataArray.resample`
+  and :py:meth:`Dataset.resample` (:issue:`7266`, :pull:`6538`).  By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
+- Add experimental support for Zarr's in-progress V3 specification. (:pull:`6475`).
+  By `Gregory Lee  <https://github.com/grlee77>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -49,12 +52,15 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The PyNIO backend has been deprecated (:issue:`4491`, :pull:`7301`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
 
 - Import ``nc_time_axis`` when needed (:issue:`7275`, :pull:`7276`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix static typing of :py:meth:`xr.polyval` (:issue:`7312`, :pull:`7315`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix multiple reads on fsspec S3 files by resetting file pointer to 0 when reading file streams (:issue:`6813`, :pull:`7304`).
   By `David Hoese <https://github.com/djhoese>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
