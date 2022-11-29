@@ -3246,8 +3246,7 @@ def test_plot1d_default_rcparams() -> None:
         )
 
         # scatter should not emit any warnings when using unfilled markers:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
+        with assert_no_warnings():
             fig, ax = plt.subplots(1, 1)
             ds.plot.scatter(x="A", y="B", ax=ax, marker="x")
 
