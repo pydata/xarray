@@ -1414,7 +1414,7 @@ class _Normalize(Sequence):
             if isinstance(data if data is None else data.data, pint_array_type)
             else data
         )
-        data_unique, data_unique_inverse = np.unique(to_unique, return_inverse=True)
+        data_unique, data_unique_inverse = np.unique(to_unique, return_inverse=True)  # type: ignore[call-overload]
         self._data_unique = data_unique
         self._data_unique_index = np.arange(0, data_unique.size)
         self._data_unique_inverse = data_unique_inverse

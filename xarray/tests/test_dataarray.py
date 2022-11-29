@@ -512,7 +512,7 @@ class TestDataArray:
 
     def test_equals_failures(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
-        assert not orig.equals(np.arange(5))
+        assert not orig.equals(np.arange(5))  # type: ignore[arg-type]
         assert not orig.identical(123)  # type: ignore
         assert not orig.broadcast_equals({1: 2})  # type: ignore
 
@@ -2754,7 +2754,7 @@ class TestDataArray:
         actual = DataArray(self.va).quantile(q, method=method)
 
         if Version(np.__version__) >= Version("1.22.0"):
-            expected = np.nanquantile(self.dv.values, np.array(q), method=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.dv.values, np.array(q), method=method)
         else:
             expected = np.nanquantile(self.dv.values, np.array(q), interpolation=method)
 

@@ -2818,7 +2818,7 @@ class TestDataset:
         orig = create_test_data()
         new_var1 = np.arange(orig["var1"].size).reshape(orig["var1"].shape)
         with pytest.raises(ValueError, match=r"Data must be dict-like"):
-            orig.copy(data=new_var1)
+            orig.copy(data=new_var1)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match=r"only contain variables in original"):
             orig.copy(data={"not_in_original": new_var1})
         with pytest.raises(ValueError, match=r"contain all variables in original"):
