@@ -54,11 +54,11 @@ class Coordinates(Mapping[Hashable, "T_DataArray"]):
 
     @property
     def indexes(self) -> Indexes[pd.Index]:
-        return self._data.indexes  # type: ignore[attr-defined]
+        return self._data.indexes
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        return self._data.xindexes  # type: ignore[attr-defined]
+        return self._data.xindexes
 
     @property
     def variables(self):
@@ -116,11 +116,9 @@ class Coordinates(Mapping[Hashable, "T_DataArray"]):
             raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
-            return self._data.get_index(dim)  # type: ignore[attr-defined]
+            return self._data.get_index(dim)
         else:
-            indexes = [
-                self._data.get_index(k) for k in ordered_dims  # type: ignore[attr-defined]
-            ]
+            indexes = [self._data.get_index(k) for k in ordered_dims]
 
             # compute the sizes of the repeat and tile for the cartesian product
             # (taken from pandas.core.reshape.util)

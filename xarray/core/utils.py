@@ -109,7 +109,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
         dtype = np.dtype("O")
     elif hasattr(array, "categories"):
         # category isn't a real numpy dtype
-        dtype = array.categories.dtype  # type: ignore[union-attr]
+        dtype = array.categories.dtype
     elif not is_valid_numpy_dtype(array.dtype):
         dtype = np.dtype("O")
     else:

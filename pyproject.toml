@@ -27,6 +27,7 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 exclude = 'xarray/util/generate_.*\.py'
 files = "xarray"
 show_error_codes = true
+warn_unused_ignores = true
 
 # Most of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]

@@ -3153,7 +3153,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
-            with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):  # type: ignore[arg-type]
+            with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 
     def test_open_twice(self) -> None:
