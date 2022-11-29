@@ -1066,6 +1066,7 @@ def parse_ordered_dims(
         idx = dims.index(...)
         return dims[:idx] + other_dims + dims[idx + 1 :]
     else:
+        # mypy cannot resolve that the sequence cannot contain "..."
         return parse_dims(  # type: ignore[call-overload]
             dim=dim,
             all_dims=all_dims,
