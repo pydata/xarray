@@ -60,7 +60,7 @@ class {obj}{cls}Aggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -71,7 +71,7 @@ class {obj}{cls}Aggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -84,7 +84,7 @@ class {obj}{cls}Aggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -95,7 +95,7 @@ class {obj}{cls}Aggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -117,7 +117,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -149,9 +149,9 @@ TEMPLATE_NOTES = """
         -----
         {notes}"""
 
-_DIM_DOCSTRING = """dim : str, Iterable of Hashable, or None, default: None
+_DIM_DOCSTRING = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
-    or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
+    or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions."""
 
 _DIM_DOCSTRING_GROUPBY = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``

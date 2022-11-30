@@ -49,7 +49,7 @@ class Resample(GroupBy[T_Xarray]):
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
@@ -368,7 +368,7 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
