@@ -5798,7 +5798,7 @@ class Dataset(
     def reduce(
         self: T_Dataset,
         func: Callable,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
