@@ -4,7 +4,6 @@ import functools
 import io
 import os
 
-import numpy as np
 from packaging.version import Version
 
 from ..core import indexing
@@ -46,9 +45,6 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         )
 
     def _getitem(self, key):
-        # h5py requires using lists for fancy indexing:
-        # https://github.com/h5py/h5py/issues/992
-        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
         with self.datastore.lock:
             array = self.get_array(needs_lock=False)
             return array[key]
