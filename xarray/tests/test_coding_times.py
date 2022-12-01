@@ -614,7 +614,7 @@ def test_cf_timedelta_2d() -> None:
 
     actual = coding.times.decode_cf_timedelta(numbers, units)
     assert_array_equal(expected, actual)
-    assert expected.dtype == actual.dtype  # type: ignore
+    assert expected.dtype == actual.dtype
 
 
 @pytest.mark.parametrize(
@@ -651,7 +651,7 @@ def test_format_cftime_datetime(date_args, expected) -> None:
 def test_decode_cf(calendar) -> None:
     days = [1.0, 2.0, 3.0]
     # TODO: GH5690 — do we want to allow this type for `coords`?
-    da = DataArray(days, coords=[days], dims=["time"], name="test")  # type: ignore
+    da = DataArray(days, coords=[days], dims=["time"], name="test")
     ds = da.to_dataset()
 
     for v in ["test", "time"]:

@@ -71,7 +71,10 @@ if TYPE_CHECKING:
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "
     "This behavior can eventually be relaxed in xarray, as it is an artifact from "
-    "pandas which is now beginning to support non-nanosecond precision values."
+    "pandas which is now beginning to support non-nanosecond precision values. "
+    "This warning is caused by passing non-nanosecond np.datetime64 or "
+    "np.timedelta64 values to the DataArray or Variable constructor; it can be "
+    "silenced by converting the values to nanosecond precision ahead of time."
 )
 
 
@@ -191,14 +194,14 @@ def _as_nanosecond_precision(data):
         isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
     )
     if non_ns_datetime64 or non_ns_datetime_tz_dtype:
-        warnings.warn(NON_NANOSECOND_WARNING.format(case="datetime"))
+        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="datetime"))
         if isinstance(dtype, pd.DatetimeTZDtype):
             nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
         else:
             nanosecond_precision_dtype = "datetime64[ns]"
         return data.astype(nanosecond_precision_dtype)
     elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
-        warnings.warn(NON_NANOSECOND_WARNING.format(case="timedelta"))
+        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
         return data.astype("timedelta64[ns]")
     else:
         return data
@@ -1136,7 +1139,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             | tuple[tuple[int, ...], ...]
             | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},
-        name: str = None,
+        name: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         **chunks_kwargs: Any,
@@ -1285,7 +1288,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def isel(
         self: T_Variable,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> T_Variable:
@@ -1506,7 +1509,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if reflect_type is not None:
             pad_option_kwargs["reflect_type"] = reflect_type
 
-        array = np.pad(  # type: ignore[call-overload]
+        array = np.pad(
             self.data.astype(dtype, copy=False),
             pad_width_by_index,
             mode=mode,
@@ -1886,7 +1889,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -2119,9 +2122,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QuantileMethods = "linear",
-        keep_attrs: bool = None,
-        skipna: bool = None,
-        interpolation: QuantileMethods = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2519,7 +2522,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return variable.data.reshape(shape), tuple(axes)
 
-    def isnull(self, keep_attrs: bool = None):
+    def isnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is a missing value.
 
         Returns
@@ -2553,7 +2556,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(self, keep_attrs: bool = None):
+    def notnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is not a missing value.
 
         Returns
@@ -2660,7 +2663,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Dims | ellipsis,
+        dim: Dims,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2729,10 +2732,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Dims | ellipsis = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        dim: Dims = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2774,10 +2777,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: Dims | ellipsis = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        dim: Dims = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2996,7 +2999,7 @@ class IndexVariable(Variable):
 
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
-        return self.copy()
+        return self.copy(deep=False)
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
