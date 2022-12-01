@@ -40,9 +40,9 @@ if TYPE_CHECKING:
     ArrayLike = Any
     VariableLike = Union[
         ArrayLike,
-        tuple[DimsLike, ArrayLike],
-        tuple[DimsLike, ArrayLike, Mapping],
-        tuple[DimsLike, ArrayLike, Mapping, Mapping],
+        Tuple[DimsLike, ArrayLike],
+        Tuple[DimsLike, ArrayLike, Mapping],
+        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
@@ -207,7 +207,7 @@ def _assert_prioritized_valid(
 
 def merge_collected(
     grouped: dict[Hashable, list[MergeElement]],
-    prioritized: Mapping[Any, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] | None = None,
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Hashable, bool] | None = None,
@@ -391,7 +391,7 @@ def collect_from_coordinates(
 
 def merge_coordinates_without_align(
     objects: list[Coordinates],
-    prioritized: Mapping[Any, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] | None = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:

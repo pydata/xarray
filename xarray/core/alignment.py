@@ -141,10 +141,10 @@ class Aligner(Generic[DataAlignable]):
         self,
         objects: Iterable[DataAlignable],
         join: str = "inner",
-        indexes: Mapping[Any, Any] = None,
+        indexes: Mapping[Any, Any] | None = None,
         exclude_dims: Iterable = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
-        method: str = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
@@ -474,7 +474,7 @@ class Aligner(Generic[DataAlignable]):
                 if obj_idx is not None:
                     for name, var in self.aligned_index_vars[key].items():
                         new_indexes[name] = aligned_idx
-                        new_variables[name] = var.copy()
+                        new_variables[name] = var.copy(deep=self.copy)
 
             objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
 
@@ -490,7 +490,7 @@ class Aligner(Generic[DataAlignable]):
             obj_idx = matching_indexes.get(key)
             if obj_idx is not None:
                 if self.reindex[key]:
-                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)  # type: ignore[call-arg]
+                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
                     dim_pos_indexers.update(indexers)
 
         return dim_pos_indexers
@@ -514,7 +514,7 @@ class Aligner(Generic[DataAlignable]):
             if obj_idx is not None:
                 for name, var in index_vars.items():
                     new_indexes[name] = aligned_idx
-                    new_variables[name] = var.copy()
+                    new_variables[name] = var.copy(deep=self.copy)
 
         return new_indexes, new_variables
 
@@ -853,7 +853,7 @@ def deep_align(
 def reindex(
     obj: DataAlignable,
     indexers: Mapping[Any, Any],
-    method: str = None,
+    method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
@@ -892,7 +892,7 @@ def reindex(
 def reindex_like(
     obj: DataAlignable,
     other: Dataset | DataArray,
-    method: str = None,
+    method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
