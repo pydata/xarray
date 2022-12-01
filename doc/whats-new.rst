@@ -20,7 +20,7 @@ v2022.12.0 (2022 Dec 2)
 -----------------------
 
 This release includes a number of bug fixes and experimental support for Zarr V3.
-THanks to the 16 contributors to this release:
+Thanks to the 16 contributors to this release:
 Deepak Cherian, Francesco Zanetta, Gregory Lee, Illviljan, Joe Hamman, Justus Magin, Luke Conibear, Mark Harfouche, Mathias Hauser,
 Mick, Mike Taves, Sam Levang, Spencer Clark, Tom Nicholas, Wei Ji, templiert
 
