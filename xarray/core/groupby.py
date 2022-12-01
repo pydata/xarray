@@ -493,7 +493,7 @@ class GroupBy(Generic[T_Xarray]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -652,7 +652,7 @@ class GroupBy(Generic[T_Xarray]):
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ):
@@ -713,7 +713,7 @@ class GroupBy(Generic[T_Xarray]):
         elif dim is ...:
             parsed_dim = tuple(self._original_obj.dims)
         else:
-            parsed_dim = tuple(dim)  # type:ignore[arg-type]
+            parsed_dim = tuple(dim)
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
@@ -747,7 +747,7 @@ class GroupBy(Generic[T_Xarray]):
         result = xarray_reduce(
             self._original_obj.drop_vars(non_numeric),
             group,
-            dim=parsed_dim,  # type:ignore[arg-type]  # https://github.com/xarray-contrib/flox/issues/96
+            dim=parsed_dim,
             expected_groups=expected_groups,
             isbin=isbin,
             keep_attrs=keep_attrs,
@@ -1143,7 +1143,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1296,7 +1296,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,

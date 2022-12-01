@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from .rolling import DataArrayCoarsen, DataArrayRolling
     from .types import (
         CoarsenBoundaryOptions,
+        DatetimeLike,
         DatetimeUnitOptions,
         Dims,
         ErrorOptions,
@@ -377,10 +378,10 @@ class DataArray(
         | Mapping[Any, Any]
         | None = None,
         dims: Hashable | Sequence[Hashable] | None = None,
-        name: Hashable = None,
-        attrs: Mapping = None,
+        name: Hashable | None = None,
+        attrs: Mapping | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] = None,
+        indexes: dict[Hashable, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -427,7 +428,7 @@ class DataArray(
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
-        self._indexes = indexes  # type: ignore[assignment]
+        self._indexes = indexes
 
         self._close = None
 
@@ -452,7 +453,7 @@ class DataArray(
 
     def _replace(
         self: T_DataArray,
-        variable: Variable = None,
+        variable: Variable | None = None,
         coords=None,
         name: Hashable | None | Default = _default,
         indexes=None,
@@ -495,9 +496,9 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] = None,
-        drop_coords: list[Hashable] = None,
-        rename_dims: Mapping[Any, Any] = None,
+        coords: Mapping[Any, Variable] | None = None,
+        drop_coords: list[Hashable] | None = None,
+        rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
         """Maybe replace indexes and their corresponding coordinates."""
         if not indexes:
@@ -1415,8 +1416,8 @@ class DataArray(
 
     def sel(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any,
@@ -1834,6 +1835,109 @@ class DataArray(
             Another dataset array, with this array's data but coordinates from
             the other object.
 
+        Examples
+        --------
+        >>> data = np.arange(12).reshape(4, 3)
+        >>> da1 = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
+        ... )
+        >>> da1
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) int64 10 20 30 40
+          * y        (y) int64 70 80 90
+        >>> da2 = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [40, 30, 20, 10], "y": [90, 80, 70]},
+        ... )
+        >>> da2
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) int64 40 30 20 10
+          * y        (y) int64 90 80 70
+
+        Reindexing with both DataArrays having the same coordinates set, but in different order:
+
+        >>> da1.reindex_like(da2)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[11, 10,  9],
+               [ 8,  7,  6],
+               [ 5,  4,  3],
+               [ 2,  1,  0]])
+        Coordinates:
+          * x        (x) int64 40 30 20 10
+          * y        (y) int64 90 80 70
+
+        Reindexing with the other array having coordinates which the source array doesn't have:
+
+        >>> data = np.arange(12).reshape(4, 3)
+        >>> da1 = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
+        ... )
+        >>> da2 = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [20, 10, 29, 39], "y": [70, 80, 90]},
+        ... )
+        >>> da1.reindex_like(da2)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 3.,  4.,  5.],
+               [ 0.,  1.,  2.],
+               [nan, nan, nan],
+               [nan, nan, nan]])
+        Coordinates:
+          * x        (x) int64 20 10 29 39
+          * y        (y) int64 70 80 90
+
+        Filling missing values with the previous valid index with respect to the coordinates' value:
+
+        >>> da1.reindex_like(da2, method="ffill")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[3, 4, 5],
+               [0, 1, 2],
+               [3, 4, 5],
+               [6, 7, 8]])
+        Coordinates:
+          * x        (x) int64 20 10 29 39
+          * y        (y) int64 70 80 90
+
+        Filling missing values while tolerating specified error for inexact matches:
+
+        >>> da1.reindex_like(da2, method="ffill", tolerance=5)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 3.,  4.,  5.],
+               [ 0.,  1.,  2.],
+               [nan, nan, nan],
+               [nan, nan, nan]])
+        Coordinates:
+          * x        (x) int64 20 10 29 39
+          * y        (y) int64 70 80 90
+
+        Filling missing values with manually specified values:
+
+        >>> da1.reindex_like(da2, fill_value=19)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 3,  4,  5],
+               [ 0,  1,  2],
+               [19, 19, 19],
+               [19, 19, 19]])
+        Coordinates:
+          * x        (x) int64 20 10 29 39
+          * y        (y) int64 70 80 90
+
         See Also
         --------
         DataArray.reindex
@@ -1850,7 +1954,7 @@ class DataArray(
 
     def reindex(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         method: ReindexMethodOptions = None,
         tolerance: float | Iterable[float] | None = None,
         copy: bool = True,
@@ -2130,6 +2234,62 @@ class DataArray(
             Another dataarray by interpolating this dataarray's data along the
             coordinates of the other object.
 
+        Examples
+        --------
+        >>> data = np.arange(12).reshape(4, 3)
+        >>> da1 = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
+        ... )
+        >>> da1
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) int64 10 20 30 40
+          * y        (y) int64 70 80 90
+        >>> da2 = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [10, 20, 29, 39], "y": [70, 80, 90]},
+        ... )
+        >>> da2
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) int64 10 20 29 39
+          * y        (y) int64 70 80 90
+
+        Interpolate the values in the coordinates of the other DataArray with respect to the source's values:
+
+        >>> da2.interp_like(da1)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[0. , 1. , 2. ],
+               [3. , 4. , 5. ],
+               [6.3, 7.3, 8.3],
+               [nan, nan, nan]])
+        Coordinates:
+          * x        (x) int64 10 20 30 40
+          * y        (y) int64 70 80 90
+
+        Could also extrapolate missing values:
+
+        >>> da2.interp_like(da1, kwargs={"fill_value": "extrapolate"})
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0. ,  1. ,  2. ],
+               [ 3. ,  4. ,  5. ],
+               [ 6.3,  7.3,  8.3],
+               [ 9.3, 10.3, 11.3]])
+        Coordinates:
+          * x        (x) int64 10 20 30 40
+          * y        (y) int64 70 80 90
+
         Notes
         -----
         scipy is required.
@@ -2356,7 +2516,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
         self,
-        indexes: Mapping[Any, Hashable | Sequence[Hashable]] = None,
+        indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
     ) -> DataArray:
@@ -2791,6 +2951,46 @@ class DataArray(
         -------
         dropped : Dataset
             New Dataset copied from `self` with variables removed.
+
+        Examples
+        -------
+        >>> data = np.arange(12).reshape(4, 3)
+        >>> da = xr.DataArray(
+        ...     data=data,
+        ...     dims=["x", "y"],
+        ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) int64 10 20 30 40
+          * y        (y) int64 70 80 90
+
+        Removing a single variable:
+
+        >>> da.drop_vars("x")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * y        (y) int64 70 80 90
+        Dimensions without coordinates: x
+
+        Removing a list of variables:
+
+        >>> da.drop_vars(["x", "y"])
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Dimensions without coordinates: x, y
         """
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
@@ -3414,7 +3614,7 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -3794,8 +3994,8 @@ class DataArray(
         """
         d = self.variable.to_dict(data=data)
         d.update({"coords": {}, "name": self.name})
-        for k in self.coords:
-            d["coords"][k] = self.coords[k].variable.to_dict(data=data)
+        for k, coord in self.coords.items():
+            d["coords"][k] = coord.variable.to_dict(data=data)
         if encoding:
             d["encoding"] = dict(self.encoding)
         return d
@@ -4401,7 +4601,7 @@ class DataArray(
     def dot(
         self: T_DataArray,
         other: T_DataArray,
-        dims: Dims | ellipsis = None,
+        dims: Dims = None,
     ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -4525,7 +4725,7 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5405,7 +5605,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5507,7 +5707,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -6332,7 +6532,9 @@ class DataArray(
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int = 0,
+        base: int | None = None,
+        offset: pd.Timedelta | datetime.timedelta | str | None = None,
+        origin: str | DatetimeLike = "start_day",
         keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
@@ -6356,10 +6558,22 @@ class DataArray(
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, default = 0
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+        origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
+            The datetime on which to adjust the grouping. The timezone of origin
+            must match the timezone of the index.
+
+            If a datetime is not used, these values are also supported:
+            - 'epoch': `origin` is 1970-01-01
+            - 'start': `origin` is the first value of the timeseries
+            - 'start_day': `origin` is the first day at midnight of the timeseries
+            - 'end': `origin` is the last value of the timeseries
+            - 'end_day': `origin` is the ceiling midnight of the last day
+        offset : pd.Timedelta, datetime.timedelta, or str, default is None
+            An offset timedelta added to the origin.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
@@ -6441,6 +6655,8 @@ class DataArray(
             closed=closed,
             label=label,
             base=base,
+            offset=offset,
+            origin=origin,
             keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,

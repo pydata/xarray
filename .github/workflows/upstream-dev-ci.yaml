@@ -54,13 +54,14 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set up conda environment
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@v14
         with:
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           extra-specs: |
             python=${{ matrix.python-version }}
             pytest-reportlog
+            conda
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -79,6 +80,7 @@ jobs:
         if: success()
         id: status
         run: |
+          export ZARR_V3_EXPERIMENTAL_API=1
           python -m pytest --timeout=60 -rf \
             --report-log output-${{ matrix.python-version }}-log.jsonl
       - name: Generate and publish the report
@@ -87,6 +89,6 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: xarray-contrib/issue-from-pytest-log@v1.1
+        uses: xarray-contrib/issue-from-pytest-log@v1
         with:
           log-path: output-${{ matrix.python-version }}-log.jsonl

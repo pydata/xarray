@@ -1002,7 +1002,7 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             kwargs["skipna"] = None
 
         def wrapped_func(
-            self: DataArrayCoarsen, keep_attrs: bool = None, **kwargs
+            self: DataArrayCoarsen, keep_attrs: bool | None = None, **kwargs
         ) -> DataArray:
             from .dataarray import DataArray
 
@@ -1033,7 +1033,9 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
 
         return wrapped_func
 
-    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs) -> DataArray:
+    def reduce(
+        self, func: Callable, keep_attrs: bool | None = None, **kwargs
+    ) -> DataArray:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1088,7 +1090,7 @@ class DatasetCoarsen(Coarsen["Dataset"]):
             kwargs["skipna"] = None
 
         def wrapped_func(
-            self: DatasetCoarsen, keep_attrs: bool = None, **kwargs
+            self: DatasetCoarsen, keep_attrs: bool | None = None, **kwargs
         ) -> Dataset:
             from .dataset import Dataset
 
