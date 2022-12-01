@@ -428,7 +428,7 @@ class DataArray(
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
-        self._indexes = indexes  # type: ignore[assignment]
+        self._indexes = indexes
 
         self._close = None
 

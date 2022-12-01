@@ -1734,7 +1734,7 @@ def dot(
             dim_counts.update(arr.dims)
         dims = tuple(d for d, c in dim_counts.items() if c > 1)
 
-    dot_dims: set[Hashable] = set(dims)  # type:ignore[arg-type]
+    dot_dims: set[Hashable] = set(dims)
 
     # dimensions to be parallelized
     broadcast_dims = common_dims - dot_dims

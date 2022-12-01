@@ -490,7 +490,7 @@ class Aligner(Generic[DataAlignable]):
             obj_idx = matching_indexes.get(key)
             if obj_idx is not None:
                 if self.reindex[key]:
-                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)  # type: ignore[call-arg]
+                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
                     dim_pos_indexers.update(indexers)
 
         return dim_pos_indexers

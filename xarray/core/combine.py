@@ -377,7 +377,7 @@ def _nested_combine(
 
 # Define type for arbitrarily-nested list of lists recursively
 # Currently mypy cannot handle this but other linters can (https://stackoverflow.com/a/53845083/3154101)
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore
+DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore[misc]
 
 
 def combine_nested(

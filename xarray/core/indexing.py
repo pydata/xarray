@@ -180,7 +180,7 @@ def map_index_queries(
             # forward dimension indexers with no index/coordinate
             results.append(IndexSelResult(labels))
         else:
-            results.append(index.sel(labels, **options))  # type: ignore[call-arg]
+            results.append(index.sel(labels, **options))
 
     merged = merge_sel_results(results)
 
@@ -1422,7 +1422,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if dtype is None:
             self._dtype = get_valid_numpy_dtype(array)
         else:
-            self._dtype = np.dtype(dtype)  # type: ignore[assignment]
+            self._dtype = np.dtype(dtype)
 
     @property
     def dtype(self) -> np.dtype:

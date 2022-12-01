@@ -43,7 +43,7 @@ has_nc_time_axis = module_available("nc_time_axis")
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    import mpl_toolkits  # type: ignore
+    import mpl_toolkits
 except ImportError:
     pass
 

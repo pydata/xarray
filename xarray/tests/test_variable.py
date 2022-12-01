@@ -1769,9 +1769,9 @@ class TestVariable(VariableSubclassobjects):
         actual = v.quantile(q, dim="y", method=method)
 
         if Version(np.__version__) >= Version("1.22"):
-            expected = np.nanquantile(self.d, q, axis=1, method=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.d, q, axis=1, method=method)
         else:
-            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)
 
         if use_dask:
             assert isinstance(actual.data, dask_array_type)
