@@ -91,17 +91,8 @@ class CFTimeGrouper:
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.base
         )
-        codes = (
-            np.searchsorted(
-                labels, index, side="right" if self.closed == "left" else "left"
-            )
-            - 1
-        )
         if self.loffset is not None:
-            if isinstance(self.loffset, datetime.timedelta):
-                labels = labels + self.loffset
-            else:
-                labels = labels + to_offset(self.loffset)
+            labels = labels + pd.to_timedelta(self.loffset)
 
         # check binner fits data
         if index[0] < datetime_bins[0]:
@@ -109,8 +100,10 @@ class CFTimeGrouper:
         if index[-1] > datetime_bins[-1]:
             raise ValueError("Value falls after last bin")
 
-        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[:-1]
-        first_items = pd.Series(integer_bins, labels)
+        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)
+        counts = np.diff(integer_bins)
+        codes = np.repeat(np.arange(len(labels)), counts)
+        first_items = pd.Series(integer_bins[:-1], labels)
 
         # Mask duplicate values with NaNs, preserving the last values
         non_duplicate = ~first_items.duplicated("last")

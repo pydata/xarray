@@ -17,6 +17,7 @@ from . import (
     assert_equal,
     assert_identical,
     create_test_data,
+    has_cftime,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -1472,31 +1473,80 @@ class TestDataArrayGroupBy:
 
 
 class TestDataArrayResample:
-    def test_resample(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample(self, use_cftime):
+        if use_cftime and not has_cftime:
+            pytest.skip()
+        times = xr.date_range(
+            "2000-01-01", freq="6H", periods=10, use_cftime=use_cftime
+        )
+
+        def resample_as_pandas(array, *args, **kwargs):
+            array_ = array.copy(deep=True)
+            if use_cftime:
+                array_["time"] = times.to_datetimeindex()
+            result = DataArray.from_series(
+                array_.to_series().resample(*args, **kwargs).mean()
+            )
+            if use_cftime:
+                result = result.convert_calendar(
+                    calendar="standard", use_cftime=use_cftime
+                )
+            return result
+
         array = DataArray(np.arange(10), [("time", times)])
 
         actual = array.resample(time="24H").mean()
-        expected = DataArray(array.to_series().resample("24H").mean())
+        expected = resample_as_pandas(array, "24H")
         assert_identical(expected, actual)
 
         actual = array.resample(time="24H").reduce(np.mean)
         assert_identical(expected, actual)
 
         actual = array.resample(time="24H", closed="right").mean()
-        expected = DataArray(array.to_series().resample("24H", closed="right").mean())
+        expected = resample_as_pandas(array, "24H", closed="right")
         assert_identical(expected, actual)
 
         # Our use of `loffset` may change if we align our API with pandas' changes.
         # ref https://github.com/pydata/xarray/pull/4537
         actual = array.resample(time="24H", loffset="-12H").mean()
-        expected_ = array.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
+        expected = resample_as_pandas(array, "24H")
+        expected["time"] = expected.indexes["time"] + pd.to_timedelta("-12H")
         assert_identical(actual, expected)
 
         with pytest.raises(ValueError, match=r"index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
+
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample_doctest(self, use_cftime):
+        # run the doctest example here so we are not surprised
+        if use_cftime and not has_cftime:
+            pytest.skip()
+
+        da = xr.DataArray(
+            np.array([1, 2, 3, 1, 2, np.nan]),
+            dims="time",
+            coords=dict(
+                time=(
+                    "time",
+                    xr.date_range(
+                        "2001-01-01", freq="M", periods=6, use_cftime=use_cftime
+                    ),
+                ),
+                labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+            ),
+        )
+        actual = da.resample(time="3M").count()
+        expected = DataArray(
+            [1, 3, 1],
+            dims="time",
+            coords={
+                "time": xr.date_range(
+                    "2001-01-01", freq="3M", periods=3, use_cftime=use_cftime
+                )
+            },
+        )
+        assert_identical(actual, expected)
 
     def test_da_resample_func_args(self):
         def func(arg1, arg2, arg3=0.0):
