@@ -656,15 +656,11 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         magic_number = filename_or_obj[:count]
     elif isinstance(filename_or_obj, io.IOBase):
         if filename_or_obj.tell() != 0:
-            raise ValueError(
-                "cannot guess the engine, "
-                "file-like object read/write pointer not at the start of the file, "
-                "please close and reopen, or use a context manager"
-            )
+            filename_or_obj.seek(0)
         magic_number = filename_or_obj.read(count)
         filename_or_obj.seek(0)
     else:
-        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+        raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     return magic_number
 
 

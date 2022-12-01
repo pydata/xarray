@@ -3159,13 +3159,12 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
     def test_open_twice(self) -> None:
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with pytest.raises(ValueError, match=r"read/write pointer not at the start"):
-            with create_tmp_file() as tmp_file:
-                expected.to_netcdf(tmp_file, engine="h5netcdf")
-                with open(tmp_file, "rb") as f:
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine="h5netcdf")
+            with open(tmp_file, "rb") as f:
+                with open_dataset(f, engine="h5netcdf"):
                     with open_dataset(f, engine="h5netcdf"):
-                        with open_dataset(f, engine="h5netcdf"):
-                            pass
+                        pass
 
     @requires_scipy
     def test_open_fileobj(self) -> None:
@@ -3197,15 +3196,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(
-                    ValueError,
-                    match="match in any of xarray's currently installed IO",
-                ):
-                    with pytest.warns(
-                        RuntimeWarning,
-                        match=re.escape("'h5netcdf' fails while guessing"),
-                    ):
-                        open_dataset(f)
+                open_dataset(f)
 
 
 @requires_h5netcdf
