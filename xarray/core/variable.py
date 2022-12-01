@@ -1522,7 +1522,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         attrs = self._attrs if keep_attrs else None
 
         return type(self)(self.dims, array, attrs=attrs)

@@ -8045,7 +8045,7 @@ class Dataset(
             coord_pad_options = {}
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         variables = {}
 

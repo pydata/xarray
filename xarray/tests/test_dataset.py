@@ -6105,7 +6105,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         ["keep_attrs", "attrs", "expected"],
         [
-            pytest.param(None, {"a": 1, "b": 2}, {}, id="default"),
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
             pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
             pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
         ],
