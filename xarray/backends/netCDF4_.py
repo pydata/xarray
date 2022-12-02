@@ -232,11 +232,11 @@ def _extract_nc4_variable_encoding(
         "shuffle",
         "_FillValue",
         "dtype",
+        "compression",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
     if h5py_okay:
-        valid_encodings.add("compression")
         valid_encodings.add("compression_opts")
 
     if not raise_on_invalid and encoding.get("chunksizes") is not None:
