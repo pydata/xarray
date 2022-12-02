@@ -14,10 +14,15 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.11.1:
+.. _whats-new.2022.12.0:
 
-v2022.11.1 (unreleased)
+v2022.12.0 (2022 Dec 2)
 -----------------------
+
+This release includes a number of bug fixes and experimental support for Zarr V3.
+Thanks to the 16 contributors to this release:
+Deepak Cherian, Francesco Zanetta, Gregory Lee, Illviljan, Joe Hamman, Justus Magin, Luke Conibear, Mark Harfouche, Mathias Hauser,
+Mick, Mike Taves, Sam Levang, Spencer Clark, Tom Nicholas, Wei Ji, templiert
 
 New Features
 ~~~~~~~~~~~~
@@ -2603,7 +2608,7 @@ Breaking changes
   have removed the internal use of the ``OrderedDict`` in favor of Python's builtin
   ``dict`` object which is now ordered itself. This change will be most obvious when
   interacting with the ``attrs`` property on Dataset and DataArray objects.
-  (:issue:`3380`, :pull:`3389`).  HBy `Joeamman <https://github.com/jhamman>`_.
+  (:issue:`3380`, :pull:`3389`).  By `Joe Hamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
