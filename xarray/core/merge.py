@@ -355,12 +355,12 @@ def collect_variables_and_indexes(
 
         for name, variable in mapping.items():
             if isinstance(variable, DataArray):
-                coords = variable._coords.copy()  # use private API for speed
-                indexes = dict(variable._indexes)
+                coords_ = variable._coords.copy()  # use private API for speed
+                indexes_ = dict(variable._indexes)
                 # explicitly overwritten variables should take precedence
-                coords.pop(name, None)
-                indexes.pop(name, None)
-                append_all(coords, indexes)
+                coords_.pop(name, None)
+                indexes_.pop(name, None)
+                append_all(coords_, indexes_)
 
             variable = as_variable(variable, name=name)
             if name in indexes:
@@ -561,7 +561,7 @@ def merge_coords(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(aligned)
+    collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
     return variables, out_indexes
