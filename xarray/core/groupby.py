@@ -774,7 +774,8 @@ class GroupBy(Generic[T_Xarray]):
             # We can fake that here by forcing min_count=1.
             # note min_count makes no sense in the xarray world
             # as a kwarg for count, so this should be OK
-            kwargs["min_count"] = 1
+            kwargs.setdefault("fill_value", np.nan)
+            kwargs.setdefault("min_count", 1)
 
         output_index = self._get_output_index()
         result = xarray_reduce(
