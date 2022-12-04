@@ -22,7 +22,7 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  - numba
+  # - numba  # TODO: Waiting on python 3.11 support.
   - numpy
   - packaging
   - pandas
