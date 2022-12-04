@@ -22,7 +22,7 @@ dependencies:
   - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  - netcdf4
+  # - netcdf4  # TODO: Waiting on python 3.11 support.
   # - numba  # TODO: Waiting on python 3.11 support.
   - numexpr
   - numpy

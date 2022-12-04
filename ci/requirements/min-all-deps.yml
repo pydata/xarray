@@ -50,6 +50,6 @@ dependencies:
   - sparse=0.13
   - toolz=0.11
   - typing_extensions=4.0
-  # - zarr=2.10  # TODO: Waiting on python 3.11 support.
+  - zarr=2.10
   - pip:
     - numbagg==0.1
