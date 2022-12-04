@@ -40,6 +40,6 @@ dependencies:
   - sparse
   - toolz
   - typing_extensions
-  - zarr
+  # - zarr  # TODO: Waiting on python 3.11 support.
   - pip:
       - numbagg
