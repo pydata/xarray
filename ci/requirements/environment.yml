@@ -7,7 +7,7 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
+  # - cdms2  # TODO: Waiting on python 3.11 support.
   - cfgrib
   - cftime
   - dask-core
