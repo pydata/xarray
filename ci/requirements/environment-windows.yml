@@ -28,7 +28,7 @@ dependencies:
   - pint
   - pip
   - pre-commit
-  - pseudonetcdf
+  # - pseudonetcdf  # TODO: Waiting on python 3.11 support.
   - pydap
   - pytest
   - pytest-cov
