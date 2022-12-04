@@ -16,7 +16,7 @@ dependencies:
   - flox
   # - h5netcdf  # TODO: Waiting on python 3.11 support.
   - h5py
-  - hdf5
+  # - hdf5  # TODO: Waiting on python 3.11 support.
   - hypothesis
   - lxml  # Optional dep of pydap
   - matplotlib-base

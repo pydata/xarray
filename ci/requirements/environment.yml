@@ -16,7 +16,7 @@ dependencies:
   - fsspec!=2021.7.0
   # - h5netcdf  # TODO: Waiting on python 3.11 support.
   - h5py
-  - hdf5
+  # - hdf5  # TODO: Waiting on python 3.11 support.
   - hypothesis
   - iris
   - lxml  # Optional dep of pydap
