@@ -35,6 +35,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Accessing the property ``.nbytes`` of a DataArray, or Variable no longer
+  accidentally triggers loading the variable into memory.
+
 
 Documentation
 ~~~~~~~~~~~~~
