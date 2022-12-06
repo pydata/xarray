@@ -63,9 +63,9 @@ def open_datatree(filename_or_obj, engine=None, **kwargs) -> DataTree:
 def _open_datatree_netcdf(filename: str, **kwargs) -> DataTree:
     ncDataset = _get_nc_dataset_class(kwargs.get("engine", None))
 
+    ds = open_dataset(filename, **kwargs)
+    tree_root = DataTree.from_dict({"/": ds})
     with ncDataset(filename, mode="r") as ncds:
-        ds = open_dataset(filename, **kwargs)
-        tree_root = DataTree.from_dict({"/": ds})
         for path in _iter_nc_groups(ncds):
             subgroup_ds = open_dataset(filename, group=path, **kwargs)
 

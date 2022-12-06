@@ -46,6 +46,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Avoid reading from same file twice with fsspec3 (:pull:`130`)
+  By `William Roberts <https://github.com/wroberts4>`_.
+
+
 .. _whats-new.v0.0.9:
 
 v0.0.9 (07/14/2022)
