@@ -465,11 +465,11 @@ class CFTimeIndex(pd.Index):
         if isinstance(key, str):
             return self._get_string_slice(key)
         elif method is not None and tolerance is not None:
-            return pd.Index.get_loc(self, key)
+            return super().get_loc(key)
         elif Version(pd.__version__) < Version("2.0"):
-            return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
+            return super().get_loc(key, method=method, tolerance=tolerance)
         else:
-            return pd.Index.get_indexer(self, [key], method=method, tolerance=tolerance)
+            return super().get_indexer(self, [key], method=method, tolerance=tolerance)
 
     def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
