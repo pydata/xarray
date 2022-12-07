@@ -3261,21 +3261,6 @@ class TestDataArray:
         assert_identical(actual_sparse, actual_dense)
 
     @requires_sparse
-    def test_sparse_nbytes(self) -> None:
-        # https://github.com/pydata/xarray/issues/4842#issue-793245791
-        df = pd.DataFrame()
-        df["x"] = np.repeat(np.arange(10), 10)
-        df["y"] = np.repeat(np.arange(10), 10)
-        df["time"] = np.tile(pd.date_range("2000-01-01", "2000-03-10", freq="W"), 10)
-        df["rate"] = 10.0
-        df = df.set_index(["time", "y", "x"])
-
-        sparse_ds = xr.Dataset.from_dataframe(df, sparse=True)
-        rate = sparse_ds["rate"]
-        assert rate.nbytes < 8000
-        assert rate.size * rate.dtype.itemsize == 8000
-
-    @requires_sparse
     def test_from_multiindex_series_sparse(self) -> None:
         # regression test for GH4019
         import sparse
