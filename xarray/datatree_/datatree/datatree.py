@@ -114,9 +114,9 @@ class DatasetView(Dataset):
 
     def __init__(
         self,
-        data_vars: Mapping[Any, Any] = None,
-        coords: Mapping[Any, Any] = None,
-        attrs: Mapping[Any, Any] = None,
+        data_vars: Optional[Mapping[Any, Any]] = None,
+        coords: Optional[Mapping[Any, Any]] = None,
+        attrs: Optional[Mapping[Any, Any]] = None,
     ):
         raise AttributeError("DatasetView objects are not to be initialized directly")
 
@@ -173,11 +173,11 @@ class DatasetView(Dataset):
         cls,
         variables: dict[Any, Variable],
         coord_names: set[Hashable],
-        dims: dict[Any, int] = None,
-        attrs: dict = None,
-        indexes: dict[Any, Index] = None,
-        encoding: dict = None,
-        close: Callable[[], None] = None,
+        dims: Optional[dict[Any, int]] = None,
+        attrs: Optional[dict] = None,
+        indexes: Optional[dict[Any, Index]] = None,
+        encoding: Optional[dict] = None,
+        close: Optional[Callable[[], None]] = None,
     ) -> Dataset:
         """
         Overriding this method (along with ._replace) and modifying it to return a Dataset object
@@ -199,11 +199,11 @@ class DatasetView(Dataset):
 
     def _replace(
         self,
-        variables: dict[Hashable, Variable] = None,
-        coord_names: set[Hashable] = None,
-        dims: dict[Any, int] = None,
+        variables: Optional[dict[Hashable, Variable]] = None,
+        coord_names: Optional[set[Hashable]] = None,
+        dims: Optional[dict[Any, int]] = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
-        indexes: dict[Hashable, Index] = None,
+        indexes: Optional[dict[Hashable, Index]] = None,
         encoding: dict | None | Default = _default,
         inplace: bool = False,
     ) -> Dataset:
@@ -288,10 +288,10 @@ class DataTree(
 
     def __init__(
         self,
-        data: Dataset | DataArray = None,
-        parent: DataTree = None,
-        children: Mapping[str, DataTree] = None,
-        name: str = None,
+        data: Optional[Dataset | DataArray] = None,
+        parent: Optional[DataTree] = None,
+        children: Optional[Mapping[str, DataTree]] = None,
+        name: Optional[str] = None,
     ):
         """
         Create a single node of a DataTree.
@@ -368,7 +368,7 @@ class DataTree(
         return DatasetView._from_node(self)
 
     @ds.setter
-    def ds(self, data: Union[Dataset, DataArray] = None) -> None:
+    def ds(self, data: Optional[Union[Dataset, DataArray]] = None) -> None:
 
         ds = _coerce_to_dataset(data)
 
@@ -518,14 +518,14 @@ class DataTree(
         cls,
         variables: dict[Any, Variable],
         coord_names: set[Hashable],
-        dims: dict[Any, int] = None,
-        attrs: dict = None,
-        indexes: dict[Any, Index] = None,
-        encoding: dict = None,
+        dims: Optional[dict[Any, int]] = None,
+        attrs: Optional[dict] = None,
+        indexes: Optional[dict[Any, Index]] = None,
+        encoding: Optional[dict] = None,
         name: str | None = None,
         parent: DataTree | None = None,
-        children: OrderedDict[str, DataTree] = None,
-        close: Callable[[], None] = None,
+        children: Optional[OrderedDict[str, DataTree]] = None,
+        close: Optional[Callable[[], None]] = None,
     ) -> DataTree:
         """Shortcut around __init__ for internal use when we want to skip costly validation."""
 
@@ -555,15 +555,15 @@ class DataTree(
 
     def _replace(
         self: DataTree,
-        variables: dict[Hashable, Variable] = None,
-        coord_names: set[Hashable] = None,
-        dims: dict[Any, int] = None,
+        variables: Optional[dict[Hashable, Variable]] = None,
+        coord_names: Optional[set[Hashable]] = None,
+        dims: Optional[dict[Any, int]] = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
-        indexes: dict[Hashable, Index] = None,
+        indexes: Optional[dict[Hashable, Index]] = None,
         encoding: dict | None | Default = _default,
         name: str | None | Default = _default,
         parent: DataTree | None = _default,
-        children: OrderedDict[str, DataTree] = None,
+        children: Optional[OrderedDict[str, DataTree]] = None,
         inplace: bool = False,
     ) -> DataTree:
         """
@@ -755,7 +755,7 @@ class DataTree(
     def from_dict(
         cls,
         d: MutableMapping[str, Dataset | DataArray | None],
-        name: str = None,
+        name: Optional[str] = None,
     ) -> DataTree:
         """
         Create a datatree from a dictionary of data objects, organised by paths into the tree.

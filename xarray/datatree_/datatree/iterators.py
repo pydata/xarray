@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections import abc
-from typing import Callable, Iterator, List
+from typing import Callable, Iterator, List, Optional
 
 from .treenode import Tree
 
@@ -11,9 +11,9 @@ class AbstractIter(abc.Iterator):
     def __init__(
         self,
         node: Tree,
-        filter_: Callable = None,
-        stop: Callable = None,
-        maxlevel: int = None,
+        filter_: Optional[Callable] = None,
+        stop: Optional[Callable] = None,
+        maxlevel: Optional[int] = None,
     ):
         """
         Iterate over tree starting at `node`.

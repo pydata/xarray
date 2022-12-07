@@ -76,7 +76,7 @@ class TreeNode(Generic[Tree]):
     _parent: Optional[Tree]
     _children: OrderedDict[str, Tree]
 
-    def __init__(self, children: Mapping[str, Tree] = None):
+    def __init__(self, children: Optional[Mapping[str, Tree]] = None):
         """Create a parentless node."""
         self._parent = None
         self._children = OrderedDict()
@@ -88,7 +88,9 @@ class TreeNode(Generic[Tree]):
         """Parent of this node."""
         return self._parent
 
-    def _set_parent(self, new_parent: Tree | None, child_name: str = None) -> None:
+    def _set_parent(
+        self, new_parent: Tree | None, child_name: Optional[str] = None
+    ) -> None:
         # TODO is it possible to refactor in a way that removes this private method?
 
         if new_parent is not None and not isinstance(new_parent, TreeNode):
@@ -134,7 +136,7 @@ class TreeNode(Generic[Tree]):
             self._parent = None
             self._post_detach(parent)
 
-    def _attach(self, parent: Tree | None, child_name: str = None) -> None:
+    def _attach(self, parent: Tree | None, child_name: Optional[str] = None) -> None:
         if parent is not None:
             if child_name is None:
                 raise ValueError(
@@ -315,7 +317,7 @@ class TreeNode(Generic[Tree]):
         """Method call after attaching to `parent`."""
         pass
 
-    def get(self: Tree, key: str, default: Tree = None) -> Optional[Tree]:
+    def get(self: Tree, key: str, default: Optional[Tree] = None) -> Optional[Tree]:
         """
         Return the child node with the specified key.
 
