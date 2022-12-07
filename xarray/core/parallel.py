@@ -16,13 +16,13 @@ from typing import (
 
 import numpy as np
 
-from xarray.core.alignment import align
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
-from xarray.core.pycompat import is_dask_collection
+from .alignment import align
+from .dataarray import DataArray
+from .dataset import Dataset
+from .pycompat import is_dask_collection
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_Xarray
+    from .types import T_Xarray
 
 
 def unzip(iterable):

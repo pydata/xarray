@@ -30,7 +30,8 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal, assert_identical
-from xarray.tests import (
+
+from . import (
     arm_xfail,
     assert_array_equal,
     assert_no_warnings,

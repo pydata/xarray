@@ -4,27 +4,22 @@ from typing import TYPE_CHECKING, Any, Hashable, Iterable, cast, overload
 
 import pandas as pd
 
-from xarray.core import dtypes, utils
-from xarray.core.alignment import align
-from xarray.core.duck_array_ops import lazy_array_equiv
-from xarray.core.indexes import Index, PandasIndex
-from xarray.core.merge import (
+from . import dtypes, utils
+from .alignment import align
+from .duck_array_ops import lazy_array_equiv
+from .indexes import Index, PandasIndex
+from .merge import (
     _VALID_COMPAT,
     collect_variables_and_indexes,
     merge_attrs,
     merge_collected,
 )
-from xarray.core.types import T_DataArray, T_Dataset
-from xarray.core.variable import Variable
-from xarray.core.variable import concat as concat_vars
+from .types import T_DataArray, T_Dataset
+from .variable import Variable
+from .variable import concat as concat_vars
 
 if TYPE_CHECKING:
-    from xarray.core.types import (
-        CombineAttrsOptions,
-        CompatOptions,
-        ConcatOptions,
-        JoinOptions,
-    )
+    from .types import CombineAttrsOptions, CompatOptions, ConcatOptions, JoinOptions
 
 
 @overload
@@ -219,8 +214,8 @@ def concat(
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     try:
         first_obj, objs = utils.peek_at(objs)
@@ -270,7 +265,7 @@ def _calc_concat_dim_index(
     for concatenating along the new dimension.
 
     """
-    from xarray.core.dataarray import DataArray
+    from .dataarray import DataArray
 
     dim: Hashable | None
 
@@ -446,8 +441,8 @@ def _dataset_concat(
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     datasets = list(datasets)
 
@@ -633,7 +628,7 @@ def _dataarray_concat(
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
 ) -> T_DataArray:
-    from xarray.core.dataarray import DataArray
+    from .dataarray import DataArray
 
     arrays = list(arrays)
 

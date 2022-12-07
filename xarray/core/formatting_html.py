@@ -6,12 +6,8 @@ from functools import lru_cache, partial
 from html import escape
 from importlib.resources import read_binary
 
-from xarray.core.formatting import (
-    inline_index_repr,
-    inline_variable_array_repr,
-    short_data_repr,
-)
-from xarray.core.options import _get_boolean_with_default
+from .formatting import inline_index_repr, inline_variable_array_repr, short_data_repr
+from .options import _get_boolean_with_default
 
 STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),

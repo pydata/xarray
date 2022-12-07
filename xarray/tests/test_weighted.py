@@ -7,13 +7,9 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset
-from xarray.tests import (
-    assert_allclose,
-    assert_equal,
-    raise_if_dask_computes,
-    requires_cftime,
-    requires_dask,
-)
+from xarray.tests import assert_allclose, assert_equal
+
+from . import raise_if_dask_computes, requires_cftime, requires_dask
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))

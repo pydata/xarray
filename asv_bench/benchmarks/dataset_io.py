@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from asv_bench.benchmarks import _skip_slow, randint, randn, requires_dask
+
+from . import _skip_slow, randint, randn, requires_dask
 
 try:
     import dask

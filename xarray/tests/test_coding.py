@@ -9,7 +9,8 @@ import pytest
 import xarray as xr
 from xarray.coding import variables
 from xarray.conventions import decode_cf_variable, encode_cf_variable
-from xarray.tests import assert_allclose, assert_equal, assert_identical, requires_dask
+
+from . import assert_allclose, assert_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da

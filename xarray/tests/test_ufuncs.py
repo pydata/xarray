@@ -4,9 +4,10 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_array_equal
-from xarray.tests import assert_identical as assert_identical_
-from xarray.tests import mock
+
+from . import assert_array_equal
+from . import assert_identical as assert_identical_
+from . import mock
 
 
 def assert_identical(a, b):

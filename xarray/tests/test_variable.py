@@ -28,7 +28,9 @@ from xarray.core.indexing import (
 from xarray.core.pycompat import array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.tests import (
+from xarray.tests import requires_bottleneck
+
+from . import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -36,7 +38,6 @@ from xarray.tests import (
     assert_no_warnings,
     has_pandas_version_two,
     raise_if_dask_computes,
-    requires_bottleneck,
     requires_cupy,
     requires_dask,
     requires_pandas_version_two,

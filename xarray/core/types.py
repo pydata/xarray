@@ -20,13 +20,13 @@ from packaging.version import Version
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    from xarray.backends.common import BackendEntrypoint
-    from xarray.core.common import AbstractArray, DataWithCoords
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-    from xarray.core.groupby import DataArrayGroupBy, GroupBy
-    from xarray.core.indexes import Index
-    from xarray.core.variable import Variable
+    from ..backends.common import BackendEntrypoint
+    from .common import AbstractArray, DataWithCoords
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .groupby import DataArrayGroupBy, GroupBy
+    from .indexes import Index
+    from .variable import Variable
 
     try:
         from dask.array import Array as DaskArray

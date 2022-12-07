@@ -10,19 +10,19 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.core import utils
-from xarray.core.common import _contains_datetime_like_objects, ones_like
-from xarray.core.computation import apply_ufunc
-from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array, mod_version
-from xarray.core.types import Interp1dOptions, InterpOptions
-from xarray.core.utils import OrderedSet, is_scalar
-from xarray.core.variable import Variable, broadcast_variables
+from . import utils
+from .common import _contains_datetime_like_objects, ones_like
+from .computation import apply_ufunc
+from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
+from .options import OPTIONS, _get_keep_attrs
+from .pycompat import is_duck_dask_array, mod_version
+from .types import Interp1dOptions, InterpOptions
+from .utils import OrderedSet, is_scalar
+from .variable import Variable, broadcast_variables
 
 if TYPE_CHECKING:
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 def _get_nan_block_lengths(

@@ -8,7 +8,8 @@ import pytest
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs, iterate_nested
-from xarray.tests import assert_array_equal, requires_dask
+
+from . import assert_array_equal, requires_dask
 
 
 class TestAlias:

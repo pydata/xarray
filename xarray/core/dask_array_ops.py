@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xarray.core import dtypes, nputils
+from . import dtypes, nputils
 
 
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
