@@ -7,8 +7,7 @@ from xarray import DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
-
-from . import requires_cftime
+from xarray.tests import requires_cftime
 
 cftime = pytest.importorskip("cftime")
 
