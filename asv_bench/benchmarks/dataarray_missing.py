@@ -1,8 +1,7 @@
 import pandas as pd
 
 import xarray as xr
-
-from . import parameterized, randn, requires_dask
+from asv_bench.benchmarks import parameterized, randn, requires_dask
 
 
 def make_bench_data(shape, frac_nan, chunks):

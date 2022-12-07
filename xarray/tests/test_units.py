@@ -10,8 +10,7 @@ from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_duckarray_allclose,
     assert_equal,
@@ -19,8 +18,8 @@ from . import (
     requires_dask,
     requires_matplotlib,
 )
-from .test_plot import PlotTestCase
-from .test_variable import _PAD_XR_NP_ARGS
+from xarray.tests.test_plot import PlotTestCase
+from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
 try:
     import matplotlib.pyplot as plt

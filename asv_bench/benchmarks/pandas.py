@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-
-from . import parameterized
+from asv_bench.benchmarks import parameterized
 
 
 class MultiIndexSeries:

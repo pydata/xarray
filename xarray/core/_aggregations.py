@@ -5,14 +5,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
-from . import duck_array_ops
-from .options import OPTIONS
-from .types import Dims
-from .utils import contains_only_dask_or_numpy, module_available
+from xarray.core import duck_array_ops
+from xarray.core.options import OPTIONS
+from xarray.core.types import Dims
+from xarray.core.utils import contains_only_dask_or_numpy, module_available
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 flox_available = module_available("flox")
 

@@ -10,8 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-
-from . import requires_dask, requires_netCDF4
+from xarray.tests import requires_dask, requires_netCDF4
 
 
 class TestFormatting:

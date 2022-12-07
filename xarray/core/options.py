@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-from .utils import FrozenDict
+from xarray.core.utils import FrozenDict
 
 if TYPE_CHECKING:
     try:
@@ -106,7 +106,7 @@ _VALIDATORS = {
 
 
 def _set_file_cache_maxsize(value) -> None:
-    from ..backends.file_manager import FILE_CACHE
+    from xarray.backends.file_manager import FILE_CACHE
 
     FILE_CACHE.maxsize = value
 

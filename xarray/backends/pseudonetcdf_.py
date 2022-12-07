@@ -2,19 +2,19 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error, module_available
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .file_manager import CachingFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
-from .store import StoreBackendEntrypoint
+from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.variable import Variable
 
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])

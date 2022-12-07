@@ -5,8 +5,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-
-from . import (
+from xarray.tests import (
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -537,7 +536,7 @@ def test_dask_field_access(times_3d, data, field) -> None:
 
 @pytest.fixture()
 def cftime_date_type(calendar):
-    from .test_coding_times import _all_cftime_date_types
+    from xarray.tests.test_coding_times import _all_cftime_date_types
 
     return _all_cftime_date_types()[calendar]
 

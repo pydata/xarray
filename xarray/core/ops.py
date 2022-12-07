@@ -10,7 +10,7 @@ import operator
 
 import numpy as np
 
-from . import dtypes, duck_array_ops
+from xarray.core import dtypes, duck_array_ops
 
 try:
     import bottleneck as bn
@@ -141,7 +141,7 @@ def fillna(data, other, join="left", dataset_join="left"):
         - "left": take only variables from the first object
         - "right": take only variables from the last object
     """
-    from .computation import apply_ufunc
+    from xarray.core.computation import apply_ufunc
 
     return apply_ufunc(
         duck_array_ops.fillna,
@@ -170,7 +170,7 @@ def where_method(self, cond, other=dtypes.NA):
     -------
     Same type as caller.
     """
-    from .computation import apply_ufunc
+    from xarray.core.computation import apply_ufunc
 
     # alignment for three arguments is complicated, so don't support it yet
     join = "inner" if other is dtypes.NA else "exact"

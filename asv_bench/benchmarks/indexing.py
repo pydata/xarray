@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-
-from . import parameterized, randint, randn, requires_dask
+from asv_bench.benchmarks import parameterized, randint, randn, requires_dask
 
 nx = 2000
 ny = 1000

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import warnings
 
-from .dataarray import DataArray
-from .dataset import Dataset
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 
 class AccessorRegistrationWarning(Warning):

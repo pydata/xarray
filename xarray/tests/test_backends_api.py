@@ -7,8 +7,7 @@ import pytest
 
 import xarray as xr
 from xarray.backends.api import _get_default_engine
-
-from . import (
+from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,

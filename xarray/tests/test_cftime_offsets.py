@@ -33,8 +33,7 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.frequencies import infer_freq
 from xarray.core.dataarray import DataArray
-
-from . import _CFTIME_CALENDARS, requires_cftime
+from xarray.tests import _CFTIME_CALENDARS, requires_cftime
 
 cftime = pytest.importorskip("cftime")
 

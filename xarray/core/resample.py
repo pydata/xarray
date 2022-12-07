@@ -5,13 +5,16 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
-from ._aggregations import DataArrayResampleAggregations, DatasetResampleAggregations
-from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
-from .types import Dims, InterpOptions, T_Xarray
+from xarray.core._aggregations import (
+    DataArrayResampleAggregations,
+    DatasetResampleAggregations,
+)
+from xarray.core.groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
+from xarray.core.types import Dims, InterpOptions, T_Xarray
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 RESAMPLE_DIM = "__resample_dim__"
 
@@ -54,7 +57,7 @@ class Resample(GroupBy[T_Xarray]):
         **kwargs,
     ) -> T_Xarray:
 
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         kwargs.setdefault("method", "cohorts")
 

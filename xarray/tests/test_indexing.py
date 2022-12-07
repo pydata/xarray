@@ -11,8 +11,7 @@ from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
-
-from . import IndexerMaker, ReturnItem, assert_array_equal
+from xarray.tests import IndexerMaker, ReturnItem, assert_array_equal
 
 B = IndexerMaker(indexing.BasicIndexer)
 

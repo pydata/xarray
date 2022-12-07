@@ -17,9 +17,9 @@ from typing import (
 
 import numpy as np
 
-from ..core.formatting import format_item
-from ..core.types import HueStyleOptions, T_Xarray
-from .utils import (
+from xarray.core.formatting import format_item
+from xarray.core.types import HueStyleOptions, T_Xarray
+from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from matplotlib.quiver import QuiverKey
     from matplotlib.text import Annotation
 
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -564,7 +564,7 @@ class FacetGrid(Generic[T_Xarray]):
         _labels=None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        from .dataarray_plot import _infer_line_data
+        from xarray.plot.dataarray_plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axs.flat):
             # None is the sentinel value
@@ -606,7 +606,7 @@ class FacetGrid(Generic[T_Xarray]):
         add_guide: bool | None = None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        from .dataset_plot import _infer_meta_data
+        from xarray.plot.dataset_plot import _infer_meta_data
 
         kwargs["add_guide"] = False
 
@@ -821,7 +821,7 @@ class FacetGrid(Generic[T_Xarray]):
 
     def set_axis_labels(self, *axlabels: Hashable) -> None:
         """Set axis labels on the left column and bottom row of the grid."""
-        from ..core.dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         for var, axis in zip(axlabels, ["x", "y", "z"]):
             if var is not None:

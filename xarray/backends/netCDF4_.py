@@ -7,18 +7,8 @@ from contextlib import suppress
 
 import numpy as np
 
-from .. import coding
-from ..coding.variables import pop_to
-from ..core import indexing
-from ..core.utils import (
-    FrozenDict,
-    close_on_error,
-    is_remote_uri,
-    module_available,
-    try_read_magic_number_from_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray import coding
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
@@ -27,10 +17,26 @@ from .common import (
     find_root_and_group,
     robust_getitem,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
-from .store import StoreBackendEntrypoint
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    NETCDFC_LOCK,
+    combine_locks,
+    ensure_lock,
+    get_write_lock,
+)
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.variables import pop_to
+from xarray.core import indexing
+from xarray.core.utils import (
+    FrozenDict,
+    close_on_error,
+    is_remote_uri,
+    module_available,
+    try_read_magic_number_from_path,
+)
+from xarray.core.variable import Variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.

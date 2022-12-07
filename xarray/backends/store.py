@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from .. import conventions
-from ..core.dataset import Dataset
-from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
+from xarray import conventions
+from xarray.backends.common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendEntrypoint,
+)
+from xarray.core.dataset import Dataset
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):

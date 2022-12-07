@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from ..core.alignment import broadcast
-from ..core.concat import concat
-from .facetgrid import _easy_facetgrid
-from .utils import (
+from xarray.core.alignment import broadcast
+from xarray.core.concat import concat
+from xarray.plot.facetgrid import _easy_facetgrid
+from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
@@ -52,15 +52,15 @@ if TYPE_CHECKING:
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
     from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
-    from ..core.types import (
+    from xarray.core.dataarray import DataArray
+    from xarray.core.types import (
         AspectOptions,
         ExtendOptions,
         HueStyleOptions,
         ScaleOptions,
         T_DataArray,
     )
-    from .facetgrid import FacetGrid
+    from xarray.plot.facetgrid import FacetGrid
 
 
 def _infer_line_data(
