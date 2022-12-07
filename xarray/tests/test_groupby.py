@@ -235,13 +235,13 @@ def test_da_groupby_quantile() -> None:
         dims=("x", "y"),
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_x = array.groupby("x").quantile(0, dim=...)
     expected_x = xr.DataArray(
         data=[1, 4], coords={"x": [1, 2], "quantile": 0}, dims="x"
     )
     assert_identical(expected_x, actual_x)
 
-    actual_y = array.groupby("y").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_y = array.groupby("y").quantile(0, dim=...)
     expected_y = xr.DataArray(
         data=[1, 22], coords={"y": [0, 1], "quantile": 0}, dims="y"
     )
@@ -272,7 +272,7 @@ def test_da_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual = g.quantile(0, dim=...)
     expected = xr.DataArray(
         data=[
             0.0,
@@ -356,11 +356,11 @@ def test_ds_groupby_quantile() -> None:
         coords={"x": [1, 1, 1, 2, 2], "y": [0, 0, 1]},
     )
 
-    actual_x = ds.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_x = ds.groupby("x").quantile(0, dim=...)
     expected_x = xr.Dataset({"a": ("x", [1, 4])}, coords={"x": [1, 2], "quantile": 0})
     assert_identical(expected_x, actual_x)
 
-    actual_y = ds.groupby("y").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_y = ds.groupby("y").quantile(0, dim=...)
     expected_y = xr.Dataset({"a": ("y", [1, 22])}, coords={"y": [0, 1], "quantile": 0})
     assert_identical(expected_y, actual_y)
 
@@ -386,7 +386,7 @@ def test_ds_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual = g.quantile(0, dim=...)
     expected = xr.Dataset(
         {
             "a": (
@@ -1809,6 +1809,33 @@ class TestDataArrayResample:
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
+
+    def test_resample_base(self) -> None:
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        base = 11
+        actual = array.resample(time="24H", base=base).mean()
+        expected = DataArray(array.to_series().resample("24H", base=base).mean())
+        assert_identical(expected, actual)
+
+    def test_resample_offset(self) -> None:
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        offset = pd.Timedelta("11H")
+        actual = array.resample(time="24H", offset=offset).mean()
+        expected = DataArray(array.to_series().resample("24H", offset=offset).mean())
+        assert_identical(expected, actual)
+
+    def test_resample_origin(self) -> None:
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        origin = "start"
+        actual = array.resample(time="24H", origin=origin).mean()
+        expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
+        assert_identical(expected, actual)
 
 
 class TestDatasetResample:

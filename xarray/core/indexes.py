@@ -52,7 +52,7 @@ class Index:
         cls: type[T_Index],
         indexes: Sequence[T_Index],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> T_Index:
         raise NotImplementedError()
 
@@ -117,10 +117,12 @@ class Index:
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Index:
         return self._copy(deep=True, memo=memo)
 
-    def copy(self, deep: bool = True) -> Index:
+    def copy(self: T_Index, deep: bool = True) -> T_Index:
         return self._copy(deep=deep)
 
-    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Index:
+    def _copy(
+        self: T_Index, deep: bool = True, memo: dict[int, Any] | None = None
+    ) -> T_Index:
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:
@@ -269,6 +271,9 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     return indexer
 
 
+T_PandasIndex = TypeVar("T_PandasIndex", bound="PandasIndex")
+
+
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
@@ -368,7 +373,7 @@ class PandasIndex(Index):
         cls,
         indexes: Sequence[PandasIndex],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> PandasIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -532,8 +537,11 @@ class PandasIndex(Index):
         new_dim = dims_dict.get(self.dim, self.dim)
         return self._replace(index, dim=new_dim)
 
-    def copy(self, deep=True):
+    def _copy(
+        self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
+    ) -> T_PandasIndex:
         if deep:
+            # pandas is not using the memo
             index = self.index.copy(deep=True)
         else:
             # index will be copied in constructor
@@ -656,7 +664,7 @@ class PandasMultiIndex(PandasIndex):
         cls,
         indexes: Sequence[PandasMultiIndex],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> PandasMultiIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -1265,10 +1273,18 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return Indexes(indexes, self._variables)
 
     def copy_indexes(
-        self, deep: bool = True
+        self, deep: bool = True, memo: dict[int, Any] | None = None
     ) -> tuple[dict[Hashable, T_PandasOrXarrayIndex], dict[Hashable, Variable]]:
         """Return a new dictionary with copies of indexes, preserving
         unique indexes.
+
+        Parameters
+        ----------
+        deep : bool, default: True
+            Whether the indexes are deep or shallow copied onto the new object.
+        memo : dict if object id to copied objects or None, optional
+            To prevent infinite recursion deepcopy stores all copied elements
+            in this dict.
 
         """
         new_indexes = {}
@@ -1285,7 +1301,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             else:
                 convert_new_idx = False
 
-            new_idx = idx.copy(deep=deep)
+            new_idx = idx._copy(deep=deep, memo=memo)
             idx_vars = idx.create_variables(coords)
 
             if convert_new_idx:
@@ -1346,7 +1362,7 @@ def indexes_equal(
     other_index: Index,
     variable: Variable,
     other_variable: Variable,
-    cache: dict[tuple[int, int], bool | None] = None,
+    cache: dict[tuple[int, int], bool | None] | None = None,
 ) -> bool:
     """Check if two indexes are equal, possibly with cached results.
 

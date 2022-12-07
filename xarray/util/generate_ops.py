@@ -110,7 +110,7 @@ stub_da = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...
     @overload
     def {method}(self: T_DataArray, other: DaCompatible) -> T_DataArray: ..."""
 stub_var = """\
@@ -124,7 +124,7 @@ stub_dsgb = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DataArray") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DataArray") -> "Dataset": ...
     @overload
     def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
 stub_dagb = """\

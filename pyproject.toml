@@ -2,8 +2,7 @@
 build-backend = "setuptools.build_meta"
 requires = [
   "setuptools>=42",
-  "setuptools-scm[toml]>=3.4",
-  "setuptools-scm-git-archive",
+  "setuptools-scm>=7",
 ]
 
 [tool.setuptools_scm]
@@ -27,6 +26,7 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 exclude = 'xarray/util/generate_.*\.py'
 files = "xarray"
 show_error_codes = true
+warn_unused_ignores = true
 
 # Most of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
@@ -40,8 +40,6 @@ module = [
   "cfgrib.*",
   "cftime.*",
   "cupy.*",
-  "dask.*",
-  "distributed.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
@@ -52,11 +50,9 @@ module = [
   "Nio.*",
   "nc_time_axis.*",
   "numbagg.*",
-  "numpy.*",
   "netCDF4.*",
   "netcdftime.*",
   "pandas.*",
-  "pint.*",
   "pooch.*",
   "PseudoNetCDF.*",
   "pydap.*",
@@ -70,8 +66,6 @@ module = [
   "zarr.*",
 ]
 
-# version spanning code is hard to type annotate (and most of this module will
-# be going away soon anyways)
 [[tool.mypy.overrides]]
 ignore_errors = true
-module = "xarray.core.pycompat"
+module = []

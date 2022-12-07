@@ -61,7 +61,7 @@ def _get_lock_maker(scheduler=None):
         try:
             from dask.distributed import Lock as DistributedLock
         except ImportError:
-            DistributedLock = None  # type: ignore
+            DistributedLock = None
         return DistributedLock
     else:
         raise KeyError(scheduler)

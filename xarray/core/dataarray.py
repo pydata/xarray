@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from .rolling import DataArrayCoarsen, DataArrayRolling
     from .types import (
         CoarsenBoundaryOptions,
+        DatetimeLike,
         DatetimeUnitOptions,
         Dims,
         ErrorOptions,
@@ -377,10 +378,10 @@ class DataArray(
         | Mapping[Any, Any]
         | None = None,
         dims: Hashable | Sequence[Hashable] | None = None,
-        name: Hashable = None,
-        attrs: Mapping = None,
+        name: Hashable | None = None,
+        attrs: Mapping | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] = None,
+        indexes: dict[Hashable, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -427,7 +428,7 @@ class DataArray(
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
-        self._indexes = indexes  # type: ignore[assignment]
+        self._indexes = indexes
 
         self._close = None
 
@@ -452,7 +453,7 @@ class DataArray(
 
     def _replace(
         self: T_DataArray,
-        variable: Variable = None,
+        variable: Variable | None = None,
         coords=None,
         name: Hashable | None | Default = _default,
         indexes=None,
@@ -495,9 +496,9 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] = None,
-        drop_coords: list[Hashable] = None,
-        rename_dims: Mapping[Any, Any] = None,
+        coords: Mapping[Any, Variable] | None = None,
+        drop_coords: list[Hashable] | None = None,
+        rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
         """Maybe replace indexes and their corresponding coordinates."""
         if not indexes:
@@ -1415,8 +1416,8 @@ class DataArray(
 
     def sel(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any,
@@ -1953,7 +1954,7 @@ class DataArray(
 
     def reindex(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         method: ReindexMethodOptions = None,
         tolerance: float | Iterable[float] | None = None,
         copy: bool = True,
@@ -2515,7 +2516,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
         self,
-        indexes: Mapping[Any, Hashable | Sequence[Hashable]] = None,
+        indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
     ) -> DataArray:
@@ -3613,7 +3614,7 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -3993,8 +3994,8 @@ class DataArray(
         """
         d = self.variable.to_dict(data=data)
         d.update({"coords": {}, "name": self.name})
-        for k in self.coords:
-            d["coords"][k] = self.coords[k].variable.to_dict(data=data)
+        for k, coord in self.coords.items():
+            d["coords"][k] = coord.variable.to_dict(data=data)
         if encoding:
             d["encoding"] = dict(self.encoding)
         return d
@@ -4600,7 +4601,7 @@ class DataArray(
     def dot(
         self: T_DataArray,
         other: T_DataArray,
-        dims: Dims | ellipsis = None,
+        dims: Dims = None,
     ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -4724,7 +4725,7 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5604,7 +5605,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5706,7 +5707,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -6531,7 +6532,9 @@ class DataArray(
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int = 0,
+        base: int | None = None,
+        offset: pd.Timedelta | datetime.timedelta | str | None = None,
+        origin: str | DatetimeLike = "start_day",
         keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
@@ -6555,10 +6558,22 @@ class DataArray(
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, default = 0
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+        origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
+            The datetime on which to adjust the grouping. The timezone of origin
+            must match the timezone of the index.
+
+            If a datetime is not used, these values are also supported:
+            - 'epoch': `origin` is 1970-01-01
+            - 'start': `origin` is the first value of the timeseries
+            - 'start_day': `origin` is the first day at midnight of the timeseries
+            - 'end': `origin` is the last value of the timeseries
+            - 'end_day': `origin` is the ceiling midnight of the last day
+        offset : pd.Timedelta, datetime.timedelta, or str, default is None
+            An offset timedelta added to the origin.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
@@ -6640,6 +6655,8 @@ class DataArray(
             closed=closed,
             label=label,
             base=base,
+            offset=offset,
+            origin=origin,
             keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,
