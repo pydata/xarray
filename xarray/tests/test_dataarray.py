@@ -30,6 +30,7 @@ from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.tests import (
+    InaccessibleArray,
     ReturnItem,
     assert_allclose,
     assert_array_equal,
@@ -38,7 +39,6 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    InaccessibleArray,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -3294,7 +3294,7 @@ class TestDataArray:
         np.testing.assert_equal(actual_coords, expected_coords)
 
     def test_nbytes_does_not_load_data(self) -> None:
-        array = InaccessibleArray(np.zeros((3, 3), dtype='uint8'))
+        array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
         da = xr.DataArray(array, dims=["x", "y"])
 
         # If xarray tries to instantiate the InaccessibleArray to compute
@@ -3306,7 +3306,7 @@ class TestDataArray:
         # nbytes property, since it isn't really required by the array
         # interface. nbytes is more a property of arrays that have been
         # cast to numpy arrays.
-        assert not hasattr(array, 'nbytes')
+        assert not hasattr(array, "nbytes")
 
     def test_to_and_from_empty_series(self) -> None:
         # GH697
