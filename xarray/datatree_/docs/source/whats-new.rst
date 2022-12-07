@@ -15,10 +15,50 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.v0.0.11:
+
+v0.0.11 (unreleased)
+--------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add the ability to register accessors on ``DataTree`` objects, by using ``register_datatree_accessor``. (:pull:`144`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Allow method chaining with a new :py:meth:`DataTree.pipe` method (:issue:`151`, :pull:`156`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+Deprecations
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+- Allow ``Datatree`` objects as values in :py:meth:`DataTree.from_dict` (:pull:`159`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added ``Reading and Writing Files`` page. (:pull:`158`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Avoid reading from same file twice with fsspec3 (:pull:`130`)
+  By `William Roberts <https://github.com/wroberts4>`_.
+
+
 .. _whats-new.v0.0.10:
 
-v0.0.10 (unreleased)
--------------------
+v0.0.10 (12/07/2022)
+--------------------
+
+Adds accessors and a `.pipe()` method.
 
 New Features
 ~~~~~~~~~~~~
