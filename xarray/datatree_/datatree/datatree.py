@@ -754,7 +754,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: MutableMapping[str, Dataset | DataArray | None],
+        d: MutableMapping[str, Dataset | DataArray | DataTree | None],
         name: Optional[str] = None,
     ) -> DataTree:
         """
@@ -790,7 +790,12 @@ class DataTree(
             for path, data in d.items():
                 # Create and set new node
                 node_name = NodePath(path).name
-                new_node = cls(name=node_name, data=data)
+                if isinstance(data, cls):
+                    # TODO ignoring type error only needed whilst .copy() method is copied from Dataset.copy().
+                    new_node = data.copy()  # type: ignore[attr-defined]
+                    new_node.orphan()
+                else:
+                    new_node = cls(name=node_name, data=data)
                 obj._set_item(
                     path,
                     new_node,

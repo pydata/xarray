@@ -391,6 +391,15 @@ class TestTreeFromDict:
             "/set3",
         ]
 
+    def test_datatree_values(self):
+        dat1 = DataTree(data=xr.Dataset({"a": 1}))
+        expected = DataTree()
+        expected["a"] = dat1
+
+        actual = DataTree.from_dict({"a": dat1})
+
+        dtt.assert_identical(actual, expected)
+
     def test_roundtrip(self, simple_datatree):
         dt = simple_datatree
         roundtrip = DataTree.from_dict(dt.to_dict())
