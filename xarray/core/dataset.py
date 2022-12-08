@@ -454,8 +454,12 @@ class Dataset(
 
     By default, pandas indexes are created for one dimensional variables with
     name equal to their dimension so those variables can be used as coordinates
-    for label based indexing. Xarray-compatible indexes may also be provided
-    via the `indexes` argument.
+    for label based indexing. When an Xarray ``Coordinates`` object is passed to
+    ``coords``, any existing index(es) built from those coordinates will be
+    added to the Dataset (such ``Coordinates`` objects are returned by the
+    :py:attr:`~xarray.Dataset.coords` and :py:attr:`~xarray.DataArray.coords`
+    properties or may be created directly, e.g., with
+    :py:meth:`~xarray.IndexedCoordinates.from_pandas_multiindex`).
 
     To load data from a file or file-like object, use the `open_dataset`
     function.
@@ -488,8 +492,8 @@ class Dataset(
         varying/measured/dependent quantities that belong in
         `variables`. Coordinates values may be given by 1-dimensional
         arrays or scalars, in which case `dims` do not need to be
-        supplied: 1D arrays will be assumed to give index values along
-        the dimension with the same name.
+        supplied: by default 1D arrays will be assumed to give index
+        values along the dimension with the same name.
 
         The following notations are accepted:
 
@@ -601,25 +605,11 @@ class Dataset(
         data_vars: Mapping[Any, Any] | None = None,
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
-        indexes: Mapping[Any, Index] | None = None,
     ) -> None:
         if data_vars is None:
             data_vars = {}
         if coords is None:
             coords = {}
-
-        if indexes is None:
-            create_default_indexes = True
-            indexes = Indexes()
-        elif len(indexes) == 0:
-            create_default_indexes = False
-            indexes = Indexes()
-        else:
-            create_default_indexes = True
-            if not isinstance(indexes, Indexes):
-                raise TypeError("non-empty indexes must be an instance of `Indexes`")
-            elif indexes._index_type != Index:
-                raise TypeError("indexes must only contain Xarray `Index` objects")
 
         both_data_and_coords = set(data_vars) & set(coords)
         if both_data_and_coords:
@@ -630,26 +620,9 @@ class Dataset(
         if isinstance(coords, Dataset):
             coords = coords.variables
 
-        variables, coord_names, dims, ds_indexes, _ = merge_data_and_coords(
-            data_vars,
-            coords,
-            compat="broadcast_equals",
-            create_default_indexes=create_default_indexes,
+        variables, coord_names, dims, indexes, _ = merge_data_and_coords(
+            data_vars, coords, compat="broadcast_equals"
         )
-
-        both_indexes_and_coords = set(indexes) & coord_names
-        if both_indexes_and_coords:
-            raise ValueError(
-                f"{both_indexes_and_coords} are found in both indexes and coords"
-            )
-
-        variables.update({k: v.copy(deep=False) for k, v in indexes.variables.items()})
-        coord_names.update(indexes.variables)
-        ds_indexes.update(indexes)
-
-        # re-calculate dimensions if indexes are given explicitly
-        if indexes:
-            dims = calculate_dimensions(variables)
 
         self._attrs = dict(attrs) if attrs is not None else None
         self._close = None
@@ -657,7 +630,7 @@ class Dataset(
         self._variables = variables
         self._coord_names = coord_names
         self._dims = dims
-        self._indexes = ds_indexes
+        self._indexes = indexes
 
     @classmethod
     def load_store(cls: type[T_Dataset], store, decoder=None) -> T_Dataset:
@@ -6116,30 +6089,6 @@ class Dataset(
         # ... and then assign
         data.update(results)
         return data
-
-    def assign_indexes(self, indexes: Indexes[Index]):
-        """Assign new indexes to this dataset.
-
-        Returns a new dataset with all the original data in addition to the new
-        indexes (and their corresponding coordinates).
-
-        Parameters
-        ----------
-        indexes : :py:class:`~xarray.Indexes`.
-            A collection of :py:class:`~xarray.indexes.Index` objects
-            to assign (including their coordinate variables).
-
-        Returns
-        -------
-        assigned : Dataset
-            A new dataset with the new indexes and coordinates in addition to
-            the existing data.
-        """
-        ds_indexes = Dataset(indexes=indexes)
-        dropped = self.drop_vars(indexes, errors="ignore")
-        return dropped.merge(
-            ds_indexes, compat="minimal", join="override", combine_attrs="no_conflicts"
-        )
 
     def to_array(
         self, dim: Hashable = "variable", name: Hashable | None = None

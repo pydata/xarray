@@ -34,7 +34,11 @@ from xarray.core.alignment import (
 from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DataArrayCoordinates, assert_coordinate_consistent
+from xarray.core.coordinates import (
+    Coordinates,
+    DataArrayCoordinates,
+    assert_coordinate_consistent,
+)
 from xarray.core.dataset import Dataset
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -136,7 +140,7 @@ def _check_coords_dims(shape, coords, dims):
 
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> tuple[dict[Hashable, Variable], tuple[Hashable, ...]]:
+) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
     if (
@@ -174,16 +178,20 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError(f"dimension {d} is not a string")
 
-    new_coords: dict[Hashable, Variable] = {}
+    new_coords: Mapping[Hashable, Any]
 
-    if utils.is_dict_like(coords):
-        for k, v in coords.items():
-            new_coords[k] = as_variable(v, name=k)
-    elif coords is not None:
-        for dim, coord in zip(dims, coords):
-            var = as_variable(coord, name=dim)
-            var.dims = (dim,)
-            new_coords[dim] = var.to_index_variable()
+    if isinstance(coords, Coordinates):
+        new_coords = coords
+    else:
+        new_coords = {}
+        if utils.is_dict_like(coords):
+            for k, v in coords.items():
+                new_coords[k] = as_variable(v, name=k)
+        elif coords is not None:
+            for dim, coord in zip(dims, coords):
+                var = as_variable(coord, name=dim)
+                var.dims = (dim,)
+                new_coords[dim] = var.to_index_variable()
 
     _check_coords_dims(shape, new_coords, dims)
 
@@ -398,18 +406,22 @@ class DataArray(
         dims: Hashable | Sequence[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
-        indexes: Mapping[Any, Index] | None = None,
         # internal parameters
+        indexes: Mapping[Any, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
             variable = data
             assert dims is None
             assert attrs is None
-            assert isinstance(indexes, dict)
-            da_indexes = indexes
-            da_coords = coords
+            assert indexes is not None
         else:
+            if indexes is not None:
+                raise ValueError(
+                    "Explicitly passing indexes via the `indexes` argument is not supported "
+                    "when `fastpath=False`. Use the `coords` argument instead."
+                )
+
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
 
@@ -429,50 +441,23 @@ class DataArray(
             if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
 
-            if indexes is None:
-                create_default_indexes = True
-                indexes = Indexes()
-            elif len(indexes) == 0:
-                create_default_indexes = False
-                indexes = Indexes()
-            else:
-                create_default_indexes = True
-                if not isinstance(indexes, Indexes):
-                    raise TypeError(
-                        "non-empty indexes must be an instance of `Indexes`"
-                    )
-                elif indexes._index_type != Index:
-                    raise TypeError("indexes must only contain Xarray `Index` objects")
-
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
-            da_coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
+            coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
 
-            if create_default_indexes:
-                da_indexes, da_coords = _create_indexes_from_coords(da_coords)
+            if isinstance(coords, Coordinates):
+                indexes = dict(coords.xindexes)
+                coords = {k: v.copy() for k, v in coords.variables.items()}
             else:
-                da_indexes = {}
-
-            both_indexes_and_coords = set(indexes) & set(da_coords)
-            if both_indexes_and_coords:
-                raise ValueError(
-                    f"{both_indexes_and_coords} are found in both indexes and coords"
-                )
-
-            _check_coords_dims(data.shape, indexes.variables, dims)
-
-            da_coords.update(
-                {k: v.copy(deep=False) for k, v in indexes.variables.items()}
-            )
-            da_indexes.update(indexes)
+                indexes, coords = _create_indexes_from_coords(coords)
 
         # These fully describe a DataArray
         self._variable = variable
-        assert isinstance(da_coords, dict)
-        self._coords = da_coords
+        assert isinstance(coords, dict)
+        self._coords = coords
         self._name = name
-        self._indexes = da_indexes  # type: ignore[assignment]
+        self._indexes = indexes  # type: ignore[assignment]
 
         self._close = None
 
@@ -3701,28 +3686,6 @@ class DataArray(
 
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
-
-    def assign_indexes(self, indexes: Indexes[Index]):
-        """Assign new indexes to this dataarray.
-
-        Returns a new dataarray with all the original data in addition to the new
-        indexes (and their corresponding coordinates).
-
-        Parameters
-        ----------
-        indexes : :py:class:`~xarray.Indexes`.
-            A collection of :py:class:`~xarray.indexes.Index` objects
-            to assign (including their coordinate variables).
-
-        Returns
-        -------
-        assigned : DataArray
-            A new dataarray with the new indexes and coordinates in addition to
-            the existing data.
-        """
-        # TODO: check indexes.dims must be a subset of self.dims
-        ds = self._to_temp_dataset().assign_indexes(indexes)
-        return self._from_temp_dataset(ds)
 
     def to_pandas(self) -> DataArray | pd.Series | pd.DataFrame:
         """Convert this array into a pandas object with the same shape.
