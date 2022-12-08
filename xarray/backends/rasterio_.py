@@ -5,12 +5,12 @@ import warnings
 
 import numpy as np
 
-from ..core import indexing
-from ..core.dataarray import DataArray
-from ..core.utils import is_scalar
-from .common import BackendArray
-from .file_manager import CachingFileManager
-from .locks import SerializableLock
+from xarray.backends.common import BackendArray
+from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.locks import SerializableLock
+from xarray.core import indexing
+from xarray.core.dataarray import DataArray
+from xarray.core.utils import is_scalar
 
 # TODO: should this be GDAL_LOCK instead?
 RASTERIO_LOCK = SerializableLock()

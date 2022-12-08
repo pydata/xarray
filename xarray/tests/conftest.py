@@ -3,8 +3,7 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset
-
-from . import create_test_data, requires_dask
+from xarray.tests import create_test_data, requires_dask
 
 
 @pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
