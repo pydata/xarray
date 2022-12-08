@@ -454,6 +454,8 @@ class GroupBy(Generic[T_Xarray]):
             Extra keyword arguments to pass to `pandas.cut`
 
         """
+        from xarray.core.dataarray import DataArray
+
         if grouper is not None and bins is not None:
             raise TypeError("can't specify both `grouper` and `bins`")
 
