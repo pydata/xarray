@@ -12,6 +12,7 @@ repos:
     rev: v0.3.1
     hooks:
       - id: absolufy-imports
+        name: absolufy-imports
         files: ^xarray/
     # This wants to go before isort & flake8
   - repo: https://github.com/PyCQA/autoflake
