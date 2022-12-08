@@ -14,10 +14,47 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.11.1:
 
-v2022.11.1 (unreleased)
+.. _whats-new.2022.12.1:
+
+v2022.12.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Add the pre-commit hook `absolufy-imports` to convert relative xarray imports to
+  absolute imports (:pull:`7204`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+.. _whats-new.2022.12.0:
+
+v2022.12.0 (2022 Dec 2)
+-----------------------
+
+This release includes a number of bug fixes and experimental support for Zarr V3.
+Thanks to the 16 contributors to this release:
+Deepak Cherian, Francesco Zanetta, Gregory Lee, Illviljan, Joe Hamman, Justus Magin, Luke Conibear, Mark Harfouche, Mathias Hauser,
+Mick, Mike Taves, Sam Levang, Spencer Clark, Tom Nicholas, Wei Ji, templiert
 
 New Features
 ~~~~~~~~~~~~
@@ -65,6 +102,8 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix multiple reads on fsspec S3 files by resetting file pointer to 0 when reading file streams (:issue:`6813`, :pull:`7304`).
   By `David Hoese <https://github.com/djhoese>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
+- Fix :py:meth:`Dataset.assign_coords` resetting all dimension coordinates to default (pandas) index (:issue:`7346`, :pull:`7347`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -2601,7 +2640,7 @@ Breaking changes
   have removed the internal use of the ``OrderedDict`` in favor of Python's builtin
   ``dict`` object which is now ordered itself. This change will be most obvious when
   interacting with the ``attrs`` property on Dataset and DataArray objects.
-  (:issue:`3380`, :pull:`3389`).  HBy `Joeamman <https://github.com/jhamman>`_.
+  (:issue:`3380`, :pull:`3389`).  By `Joe Hamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~

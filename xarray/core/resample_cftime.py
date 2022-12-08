@@ -43,7 +43,7 @@ import typing
 import numpy as np
 import pandas as pd
 
-from ..coding.cftime_offsets import (
+from xarray.coding.cftime_offsets import (
     BaseCFTimeOffset,
     Day,
     MonthEnd,
@@ -54,11 +54,11 @@ from ..coding.cftime_offsets import (
     normalize_date,
     to_offset,
 )
-from ..coding.cftimeindex import CFTimeIndex
-from .types import SideOptions
+from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.core.types import SideOptions
 
 if typing.TYPE_CHECKING:
-    from .types import CFTimeDatetime
+    from xarray.core.types import CFTimeDatetime
 
 
 class CFTimeGrouper:
