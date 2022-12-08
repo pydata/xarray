@@ -585,12 +585,13 @@ def merge_data_and_coords(
 
     objects = [data_vars, coords]
     explicit_coords = coords.keys()
+    indexed_coords = {k: v for k, v in coords.items() if k in indexes}
     return merge_core(
         objects,
         compat,
         join,
         explicit_coords=explicit_coords,
-        indexes=Indexes(indexes, coords),
+        indexes=Indexes(indexes, indexed_coords),
     )
 
 
