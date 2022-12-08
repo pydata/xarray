@@ -8,7 +8,7 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: mixed-line-ending
-    - repo: https://github.com/MarcoGorelli/absolufy-imports
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.1
     hooks:
       - id: absolufy-imports
