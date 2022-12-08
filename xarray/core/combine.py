@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Union
 
 import pandas as pd
 
-from xarray.core import dtypes
-from xarray.core.concat import concat
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
-from xarray.core.merge import merge
-from xarray.core.utils import iterate_nested
+from . import dtypes
+from .concat import concat
+from .dataarray import DataArray
+from .dataset import Dataset
+from .merge import merge
+from .utils import iterate_nested
 
 if TYPE_CHECKING:
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
 
 
 def _infer_concat_order_from_positions(datasets):

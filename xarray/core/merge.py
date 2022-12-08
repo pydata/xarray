@@ -17,24 +17,24 @@ from typing import (
 
 import pandas as pd
 
-from xarray.core import dtypes
-from xarray.core.alignment import deep_align
-from xarray.core.duck_array_ops import lazy_array_equiv
-from xarray.core.indexes import (
+from . import dtypes
+from .alignment import deep_align
+from .duck_array_ops import lazy_array_equiv
+from .indexes import (
     Index,
     Indexes,
     create_default_index_implicit,
     filter_indexes_from_coords,
     indexes_equal,
 )
-from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
+from .variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
-    from xarray.core.coordinates import Coordinates
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from .coordinates import Coordinates
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
@@ -333,8 +333,8 @@ def collect_variables_and_indexes(
     with a matching key/name.
 
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -442,8 +442,8 @@ def determine_coords(
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     coord_names: set[Hashable] = set()
     noncoord_names: set[Hashable] = set()
@@ -477,8 +477,8 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
     List of Dataset or dictionary objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     out = []
     for obj in objects:
@@ -743,8 +743,8 @@ def merge_core(
     ------
     MergeError if the merge cannot be done successfully.
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     _assert_compat_valid(compat)
 
@@ -1008,8 +1008,8 @@ def merge(
     combine_nested
     combine_by_coords
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     dict_like_objects = []
     for obj in objects:
@@ -1085,8 +1085,8 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
     `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
     GH2180).
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
     if not isinstance(other, Dataset):
         other = dict(other)

@@ -6,7 +6,7 @@ Or use the methods on a DataArray or Dataset:
     DataArray.plot._____
     Dataset.plot._____
 """
-from xarray.plot.dataarray_plot import (
+from .dataarray_plot import (
     contour,
     contourf,
     hist,
@@ -17,8 +17,8 @@ from xarray.plot.dataarray_plot import (
     step,
     surface,
 )
-from xarray.plot.dataset_plot import scatter
-from xarray.plot.facetgrid import FacetGrid
+from .dataset_plot import scatter
+from .facetgrid import FacetGrid
 
 __all__ = [
     "plot",

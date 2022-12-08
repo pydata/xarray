@@ -49,15 +49,15 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 
-from xarray.coding.cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
-from xarray.coding.times import (
+from ..core.common import _contains_datetime_like_objects, is_np_datetime_like
+from ..core.pdcompat import count_not_none
+from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from .times import (
     _is_standard_calendar,
     _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,
 )
-from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
-from xarray.core.pdcompat import count_not_none
 
 try:
     import cftime
@@ -1124,7 +1124,7 @@ def date_range(
     cftime_range
     date_range_like
     """
-    from xarray.coding.times import _is_standard_calendar
+    from .times import _is_standard_calendar
 
     if tz is not None:
         use_cftime = False
@@ -1189,8 +1189,8 @@ def date_range_like(source, calendar, use_cftime=None):
         last day of the month. Then the output range will also end on the last
         day of the month in the new calendar.
     """
-    from xarray.coding.frequencies import infer_freq
-    from xarray.core.dataarray import DataArray
+    from ..core.dataarray import DataArray
+    from .frequencies import infer_freq
 
     if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
         isinstance(source, DataArray)

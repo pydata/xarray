@@ -36,7 +36,7 @@ from xarray.tests.test_backends import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-from xarray.tests import (
+from . import (
     assert_allclose,
     assert_identical,
     has_h5netcdf,

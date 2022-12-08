@@ -4,25 +4,19 @@ import warnings
 
 import numpy as np
 
-from xarray.backends.common import (
+from ..core import indexing
+from ..core.utils import Frozen, FrozenDict, close_on_error, module_available
+from ..core.variable import Variable
+from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from xarray.backends.file_manager import CachingFileManager
-from xarray.backends.locks import (
-    HDF5_LOCK,
-    NETCDFC_LOCK,
-    SerializableLock,
-    combine_locks,
-    ensure_lock,
-)
-from xarray.backends.store import StoreBackendEntrypoint
-from xarray.core import indexing
-from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
-from xarray.core.variable import Variable
+from .file_manager import CachingFileManager
+from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
+from .store import StoreBackendEntrypoint
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.

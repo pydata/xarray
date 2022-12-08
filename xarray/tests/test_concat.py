@@ -10,14 +10,15 @@ import pytest
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
 from xarray.core.indexes import PandasIndex
-from xarray.tests import (
+
+from . import (
     InaccessibleArray,
     assert_array_equal,
     assert_equal,
     assert_identical,
     requires_dask,
 )
-from xarray.tests.test_dataset import create_test_data
+from .test_dataset import create_test_data
 
 if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions

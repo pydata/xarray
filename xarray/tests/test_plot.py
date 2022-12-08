@@ -26,7 +26,8 @@ from xarray.plot.utils import (
     get_axis,
     label_from_attrs,
 )
-from xarray.tests import (
+
+from . import (
     assert_array_equal,
     assert_equal,
     requires_cartopy,
@@ -2604,7 +2605,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         self.ds = ds
 
     def test_accessor(self) -> None:
-        from xarray.plot.accessor import DatasetPlotAccessor
+        from ..plot.accessor import DatasetPlotAccessor
 
         assert Dataset.plot is DatasetPlotAccessor
         assert isinstance(self.ds.plot, DatasetPlotAccessor)
