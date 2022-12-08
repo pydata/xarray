@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Hashable
+from typing import Hashable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -8,8 +8,7 @@ import pytest
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs, iterate_nested
-
-from . import assert_array_equal, requires_dask
+from xarray.tests import assert_array_equal, requires_dask
 
 
 class TestAlias:
@@ -254,6 +253,90 @@ def test_infix_dims_errors(supplied, all_):
 
 
 @pytest.mark.parametrize(
+    ["dim", "expected"],
+    [
+        pytest.param("a", ("a",), id="str"),
+        pytest.param(["a", "b"], ("a", "b"), id="list_of_str"),
+        pytest.param(["a", 1], ("a", 1), id="list_mixed"),
+        pytest.param(("a", "b"), ("a", "b"), id="tuple_of_str"),
+        pytest.param(["a", ("b", "c")], ("a", ("b", "c")), id="list_with_tuple"),
+        pytest.param((("b", "c"),), (("b", "c"),), id="tuple_of_tuple"),
+        pytest.param(None, None, id="None"),
+        pytest.param(..., ..., id="ellipsis"),
+    ],
+)
+def test_parse_dims(
+    dim: str | Iterable[Hashable] | None,
+    expected: tuple[Hashable, ...],
+) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    actual = utils.parse_dims(dim, all_dims, replace_none=False)
+    assert actual == expected
+
+
+def test_parse_dims_set() -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    dim = {"a", 1}
+    actual = utils.parse_dims(dim, all_dims)
+    assert set(actual) == dim
+
+
+@pytest.mark.parametrize(
+    "dim", [pytest.param(None, id="None"), pytest.param(..., id="ellipsis")]
+)
+def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    actual = utils.parse_dims(dim, all_dims, replace_none=True)
+    assert actual == all_dims
+
+
+@pytest.mark.parametrize(
+    "dim",
+    [
+        pytest.param("x", id="str_missing"),
+        pytest.param(["a", "x"], id="list_missing_one"),
+        pytest.param(["x", 2], id="list_missing_all"),
+    ],
+)
+def test_parse_dims_raises(dim: str | Iterable[Hashable]) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    with pytest.raises(ValueError, match="'x'"):
+        utils.parse_dims(dim, all_dims, check_exists=True)
+
+
+@pytest.mark.parametrize(
+    ["dim", "expected"],
+    [
+        pytest.param("a", ("a",), id="str"),
+        pytest.param(["a", "b"], ("a", "b"), id="list"),
+        pytest.param([...], ("a", "b", "c"), id="list_only_ellipsis"),
+        pytest.param(["a", ...], ("a", "b", "c"), id="list_with_ellipsis"),
+        pytest.param(["a", ..., "b"], ("a", "c", "b"), id="list_with_middle_ellipsis"),
+    ],
+)
+def test_parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis],
+    expected: tuple[Hashable, ...],
+) -> None:
+    all_dims = ("a", "b", "c")
+    actual = utils.parse_ordered_dims(dim, all_dims)
+    assert actual == expected
+
+
+def test_parse_ordered_dims_raises() -> None:
+    all_dims = ("a", "b", "c")
+
+    with pytest.raises(ValueError, match="'x' do not exist"):
+        utils.parse_ordered_dims("x", all_dims, check_exists=True)
+
+    with pytest.raises(ValueError, match="repeated dims"):
+        utils.parse_ordered_dims(["a", ...], all_dims + ("a",))
+
+    with pytest.raises(ValueError, match="More than one ellipsis"):
+        utils.parse_ordered_dims(["a", ..., "b", ...], all_dims)
+
+
+@pytest.mark.parametrize(
     "nested_list, expected",
     [
         ([], []),
@@ -266,3 +349,13 @@ def test_infix_dims_errors(supplied, all_):
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected
+
+
+def test_find_stack_level():
+    assert utils.find_stack_level() == 1
+    assert utils.find_stack_level(test_mode=True) == 2
+
+    def f():
+        return utils.find_stack_level(test_mode=True)
+
+    assert f() == 3

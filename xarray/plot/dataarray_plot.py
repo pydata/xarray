@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from ..core.alignment import broadcast
-from ..core.concat import concat
-from .facetgrid import _easy_facetgrid
-from .utils import (
+from xarray.core.alignment import broadcast
+from xarray.core.concat import concat
+from xarray.plot.facetgrid import _easy_facetgrid
+from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
@@ -52,15 +52,15 @@ if TYPE_CHECKING:
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
     from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
-    from ..core.types import (
+    from xarray.core.dataarray import DataArray
+    from xarray.core.types import (
         AspectOptions,
         ExtendOptions,
         HueStyleOptions,
         ScaleOptions,
         T_DataArray,
     )
-    from .facetgrid import FacetGrid
+    from xarray.plot.facetgrid import FacetGrid
 
 
 def _infer_line_data(
@@ -280,7 +280,10 @@ def plot(
     ndims = len(plot_dims)
 
     plotfunc: Callable
-    if ndims in [1, 2]:
+
+    if ndims == 0 or darray.size == 0:
+        raise TypeError("No numeric data to plot.")
+    if ndims in (1, 2):
         if row or col:
             kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
@@ -483,6 +486,9 @@ def line(
         return _easy_facetgrid(darray, line, kind="line", **allargs)
 
     ndims = len(darray.dims)
+    if ndims == 0 or darray.size == 0:
+        # TypeError to be consistent with pandas
+        raise TypeError("No numeric data to plot.")
     if ndims > 2:
         raise ValueError(
             "Line plots are for 1- or 2-dimensional DataArrays. "
@@ -699,6 +705,10 @@ def hist(
     """
     assert len(args) == 0
 
+    if darray.ndim == 0 or darray.size == 0:
+        # TypeError to be consistent with pandas
+        raise TypeError("No numeric data to plot.")
+
     ax = get_axis(figsize, size, aspect, ax)
 
     no_nan = np.ravel(darray.to_numpy())
@@ -898,6 +908,10 @@ def _plot1d(plotfunc):
             allargs["plotfunc"] = globals()[plotfunc.__name__]
 
             return _easy_facetgrid(darray, kind="plot1d", **allargs)
+
+        if darray.ndim == 0 or darray.size == 0:
+            # TypeError to be consistent with pandas
+            raise TypeError("No numeric data to plot.")
 
         # The allargs dict passed to _easy_facetgrid above contains args
         if args == ():
@@ -1474,7 +1488,7 @@ def _plot2d(plotfunc):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
-                from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
+                from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
                 # delete so it does not end up in locals()
                 del Axes3D
@@ -1496,6 +1510,10 @@ def _plot2d(plotfunc):
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
+        if darray.ndim == 0 or darray.size == 0:
+            # TypeError to be consistent with pandas
+            raise TypeError("No numeric data to plot.")
+
         plt = import_matplotlib_pyplot()
 
         if (
@@ -1503,7 +1521,7 @@ def _plot2d(plotfunc):
             and not kwargs.get("_is_facetgrid", False)
             and ax is not None
         ):
-            import mpl_toolkits  # type: ignore
+            import mpl_toolkits
 
             if not isinstance(ax, mpl_toolkits.mplot3d.Axes3D):
                 raise ValueError(
@@ -2318,6 +2336,7 @@ def pcolormesh(
             y = _infer_interval_breaks(y, axis=1, scale=yscale)
             y = _infer_interval_breaks(y, axis=0, scale=yscale)
 
+    ax.grid(False)
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 
     # by default, pcolormesh picks "round" values for bounds

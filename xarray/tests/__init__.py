@@ -35,6 +35,8 @@ try:
 except ImportError:
     pass
 
+# https://github.com/pydata/xarray/issues/7322
+warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -68,7 +70,6 @@ has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
-has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
@@ -88,6 +89,11 @@ has_flox, requires_flox = _importorskip("flox")
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
+# _importorskip does not work for development versions
+has_pandas_version_two = Version(pd.__version__).major >= 2
+requires_pandas_version_two = pytest.mark.skipif(
+    not has_pandas_version_two, reason="requires pandas 2.0.0"
 )
 
 # change some global options for tests

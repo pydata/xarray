@@ -19,17 +19,12 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..core.indexes import PandasMultiIndex
-from ..core.options import OPTIONS
-from ..core.pycompat import DuckArrayModule
-from ..core.utils import is_scalar
+from xarray.core.indexes import PandasMultiIndex
+from xarray.core.options import OPTIONS
+from xarray.core.pycompat import DuckArrayModule
+from xarray.core.utils import is_scalar, module_available
 
-try:
-    import nc_time_axis  # noqa: F401
-
-    nc_time_axis_available = True
-except ImportError:
-    nc_time_axis_available = False
+nc_time_axis_available = module_available("nc_time_axis")
 
 
 try:
@@ -44,9 +39,9 @@ if TYPE_CHECKING:
     from matplotlib.ticker import FuncFormatter
     from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
-    from ..core.dataset import Dataset
-    from ..core.types import AspectOptions, ScaleOptions
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import AspectOptions, ScaleOptions
 
     try:
         import matplotlib.pyplot as plt
@@ -56,8 +51,8 @@ if TYPE_CHECKING:
 ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
-_MARKERSIZE_RANGE = (18.0, 72.0)
-_LINEWIDTH_RANGE = (1.5, 6.0)
+_MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
+_LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
 
 
 def import_matplotlib_pyplot():
@@ -614,8 +609,8 @@ def _resolve_intervals_1dplot(
         remove_drawstyle = False
 
         # Convert intervals to double points
-        x_is_interval = _valid_other_type(xval, [pd.Interval])
-        y_is_interval = _valid_other_type(yval, [pd.Interval])
+        x_is_interval = _valid_other_type(xval, pd.Interval)
+        y_is_interval = _valid_other_type(yval, pd.Interval)
         if x_is_interval and y_is_interval:
             raise TypeError("Can't step plot intervals against intervals.")
         elif x_is_interval:
@@ -633,10 +628,10 @@ def _resolve_intervals_1dplot(
     else:
 
         # Convert intervals to mid points and adjust labels
-        if _valid_other_type(xval, [pd.Interval]):
+        if _valid_other_type(xval, pd.Interval):
             xval = _interval_to_mid_points(xval)
             x_suffix = "_center"
-        if _valid_other_type(yval, [pd.Interval]):
+        if _valid_other_type(yval, pd.Interval):
             yval = _interval_to_mid_points(yval)
             y_suffix = "_center"
 
@@ -651,7 +646,7 @@ def _resolve_intervals_2dplot(val, func_name):
     increases length by 1.
     """
     label_extra = ""
-    if _valid_other_type(val, [pd.Interval]):
+    if _valid_other_type(val, pd.Interval):
         if func_name == "pcolormesh":
             val = _interval_to_bound_points(val)
         else:
@@ -661,11 +656,13 @@ def _resolve_intervals_2dplot(val, func_name):
     return val, label_extra
 
 
-def _valid_other_type(x, types):
+def _valid_other_type(
+    x: ArrayLike, types: type[object] | tuple[type[object], ...]
+) -> bool:
     """
     Do all elements of x have a type from types?
     """
-    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
+    return all(isinstance(el, types) for el in np.ravel(x))
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -680,47 +677,49 @@ def _valid_numpy_subdtype(x, numpy_types):
     return any(np.issubdtype(x.dtype, t) for t in numpy_types)
 
 
-def _ensure_plottable(*args):
+def _ensure_plottable(*args) -> None:
     """
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [
+    numpy_types: tuple[type[object], ...] = (
         np.floating,
         np.integer,
         np.timedelta64,
         np.datetime64,
         np.bool_,
         np.str_,
-    ]
-    other_types = [datetime]
-    if cftime is not None:
-        cftime_datetime_types = [cftime.datetime]
-        other_types = other_types + cftime_datetime_types
-    else:
-        cftime_datetime_types = []
+    )
+    other_types: tuple[type[object], ...] = (datetime,)
+    cftime_datetime_types: tuple[type[object], ...] = (
+        () if cftime is None else (cftime.datetime,)
+    )
+    other_types += cftime_datetime_types
+
     for x in args:
         if not (
-            _valid_numpy_subdtype(np.array(x), numpy_types)
-            or _valid_other_type(np.array(x), other_types)
+            _valid_numpy_subdtype(np.asarray(x), numpy_types)
+            or _valid_other_type(np.asarray(x), other_types)
         ):
             raise TypeError(
                 "Plotting requires coordinates to be numeric, boolean, "
                 "or dates of type numpy.datetime64, "
                 "datetime.datetime, cftime.datetime or "
-                f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
+                f"pandas.Interval. Received data of type {np.asarray(x).dtype} instead."
             )
-        if (
-            _valid_other_type(np.array(x), cftime_datetime_types)
-            and not nc_time_axis_available
-        ):
-            raise ImportError(
-                "Plotting of arrays of cftime.datetime "
-                "objects or arrays indexed by "
-                "cftime.datetime objects requires the "
-                "optional `nc-time-axis` (v1.2.0 or later) "
-                "package."
-            )
+        if _valid_other_type(np.asarray(x), cftime_datetime_types):
+            if nc_time_axis_available:
+                # Register cftime datetypes to matplotlib.units.registry,
+                # otherwise matplotlib will raise an error:
+                import nc_time_axis  # noqa: F401
+            else:
+                raise ImportError(
+                    "Plotting of arrays of cftime.datetime "
+                    "objects or arrays indexed by "
+                    "cftime.datetime objects requires the "
+                    "optional `nc-time-axis` (v1.2.0 or later) "
+                    "package."
+                )
 
 
 def _is_numeric(arr):
@@ -1342,7 +1341,7 @@ def _parse_size(
     else:
         levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, max_width = _MARKERSIZE_RANGE
+    min_width, default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:
@@ -1379,8 +1378,8 @@ class _Normalize(Sequence):
     ----------
     data : DataArray
         DataArray to normalize.
-    width : Sequence of two numbers, optional
-        Normalize the data to theses min and max values.
+    width : Sequence of three numbers, optional
+        Normalize the data to these (min, default, max) values.
         The default is None.
     """
 
@@ -1389,7 +1388,7 @@ class _Normalize(Sequence):
     _data_unique_index: np.ndarray
     _data_unique_inverse: np.ndarray
     _data_is_numeric: bool
-    _width: tuple[float, float] | None
+    _width: tuple[float, float, float] | None
 
     __slots__ = (
         "_data",
@@ -1403,7 +1402,7 @@ class _Normalize(Sequence):
     def __init__(
         self,
         data: DataArray | None,
-        width: tuple[float, float] | None = None,
+        width: tuple[float, float, float] | None = None,
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data
@@ -1464,14 +1463,22 @@ class _Normalize(Sequence):
         ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
+        """
+        Normalize the values so they're inbetween self._width.
+        """
         if self._width is None:
             return y
 
-        x0, x1 = self._width
+        xmin, xdefault, xmax = self._width
 
-        k = (y - np.min(y)) / (np.max(y) - np.min(y))
-        widths = x0 + k * (x1 - x0)
-
+        diff_maxy_miny = np.max(y) - np.min(y)
+        if diff_maxy_miny == 0:
+            # Use default with if y is constant:
+            widths = xdefault + 0 * y
+        else:
+            # Normalize inbetween xmin and xmax:
+            k = (y - np.min(y)) / diff_maxy_miny
+            widths = xmin + k * (xmax - xmin)
         return widths
 
     @overload
@@ -1502,7 +1509,7 @@ class _Normalize(Sequence):
         array([3, 1, 1, 3, 5])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a, width=[18, 72]).values
+        >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 5)>
         array([45., 18., 18., 45., 72.])
         Dimensions without coordinates: dim_0
@@ -1513,10 +1520,16 @@ class _Normalize(Sequence):
         array([0.5, 0. , 0. , 0.5, 2. , 3. ])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a, width=[18, 72]).values
+        >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 6)>
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
+
+        >>> _Normalize(a * 0, width=(18, 36, 72)).values
+        <xarray.DataArray (dim_0: 6)>
+        array([36., 36., 36., 36., 36., 36.])
+        Dimensions without coordinates: dim_0
+
         """
         if self.data is None:
             return None
@@ -1541,14 +1554,14 @@ class _Normalize(Sequence):
         >>> _Normalize(a)._values_unique
         array([1, 3, 5])
 
-        >>> _Normalize(a, width=[18, 72])._values_unique
+        >>> _Normalize(a, width=(18, 36, 72))._values_unique
         array([18., 45., 72.])
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a)._values_unique
         array([0. , 0.5, 2. , 3. ])
 
-        >>> _Normalize(a, width=[18, 72])._values_unique
+        >>> _Normalize(a, width=(18, 36, 72))._values_unique
         array([18., 27., 54., 72.])
         """
         if self.data is None:
@@ -1620,7 +1633,7 @@ class _Normalize(Sequence):
         Examples
         --------
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa = _Normalize(a, width=(0, 0.5, 1))
         >>> aa._lookup
         0.000000    0.0
         0.166667    0.5
@@ -1646,7 +1659,7 @@ class _Normalize(Sequence):
         Examples
         --------
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa = _Normalize(a, width=(0, 0.5, 1))
         >>> aa._lookup
         0.000000    0.0
         0.166667    0.5
@@ -1668,7 +1681,7 @@ def _determine_guide(
     sizeplt_norm: _Normalize,
     add_colorbar: None | bool = None,
     add_legend: None | bool = None,
-    plotfunc_name: str = None,
+    plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
         return False, False

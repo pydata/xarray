@@ -17,10 +17,10 @@ from typing import (
 
 import pandas as pd
 
-from . import dtypes
-from .alignment import deep_align
-from .duck_array_ops import lazy_array_equiv
-from .indexes import (
+from xarray.core import dtypes
+from xarray.core.alignment import deep_align
+from xarray.core.duck_array_ops import lazy_array_equiv
+from xarray.core.indexes import (
     Index,
     Indexes,
     PandasIndex,
@@ -28,22 +28,22 @@ from .indexes import (
     filter_indexes_from_coords,
     indexes_equal,
 )
-from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from .variable import Variable, as_variable, calculate_dimensions
+from xarray.core.utils import Frozen, compat_dict_union, dict_equiv, equivalent
+from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .coordinates import Coordinates
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.coordinates import Coordinates
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
     VariableLike = Union[
         ArrayLike,
-        tuple[DimsLike, ArrayLike],
-        tuple[DimsLike, ArrayLike, Mapping],
-        tuple[DimsLike, ArrayLike, Mapping, Mapping],
+        Tuple[DimsLike, ArrayLike],
+        Tuple[DimsLike, ArrayLike, Mapping],
+        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
@@ -208,7 +208,7 @@ def _assert_prioritized_valid(
 
 def merge_collected(
     grouped: dict[Hashable, list[MergeElement]],
-    prioritized: Mapping[Any, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] | None = None,
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Hashable, bool] | None = None,
@@ -335,8 +335,8 @@ def collect_variables_and_indexes(
     with a matching key/name.
 
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -357,12 +357,12 @@ def collect_variables_and_indexes(
 
         for name, variable in mapping.items():
             if isinstance(variable, DataArray):
-                coords = variable._coords.copy()  # use private API for speed
-                indexes = dict(variable._indexes)
+                coords_ = variable._coords.copy()  # use private API for speed
+                indexes_ = dict(variable._indexes)
                 # explicitly overwritten variables should take precedence
-                coords.pop(name, None)
-                indexes.pop(name, None)
-                append_all(coords, indexes)
+                coords_.pop(name, None)
+                indexes_.pop(name, None)
+                append_all(coords_, indexes_)
 
             variable = as_variable(variable, name=name)
             if name in indexes:
@@ -393,7 +393,7 @@ def collect_from_coordinates(
 
 def merge_coordinates_without_align(
     objects: list[Coordinates],
-    prioritized: Mapping[Any, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] | None = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
@@ -444,8 +444,8 @@ def determine_coords(
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     coord_names: set[Hashable] = set()
     noncoord_names: set[Hashable] = set()
@@ -479,8 +479,8 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
     List of Dataset or dictionary objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     out = []
     for obj in objects:
@@ -563,7 +563,7 @@ def merge_coords(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(aligned)
+    collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
     return variables, out_indexes
@@ -760,8 +760,8 @@ def merge_core(
     ------
     MergeError if the merge cannot be done successfully.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     _assert_compat_valid(compat)
 
@@ -1027,8 +1027,8 @@ def merge(
     combine_nested
     combine_by_coords
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     dict_like_objects = []
     for obj in objects:
@@ -1104,8 +1104,8 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
     `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
     GH2180).
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     if not isinstance(other, Dataset):
         other = dict(other)

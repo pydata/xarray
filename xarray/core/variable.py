@@ -24,26 +24,19 @@ from numpy.typing import ArrayLike
 from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
-
-from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
-from .arithmetic import VariableArithmetic
-from .common import AbstractArray
-from .indexing import (
+from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from xarray.core.arithmetic import VariableArithmetic
+from xarray.core.common import AbstractArray
+from xarray.core.indexing import (
     BasicIndexer,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
     as_indexable,
 )
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import (
-    DuckArrayModule,
-    cupy_array_type,
-    integer_types,
-    is_duck_dask_array,
-    sparse_array_type,
-)
-from .utils import (
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import array_type, integer_types, is_duck_dask_array
+from xarray.core.utils import (
     Frozen,
     NdimSizeLenMixin,
     OrderedSet,
@@ -65,7 +58,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import (
+    from xarray.core.types import (
         Dims,
         ErrorOptionsWithWarn,
         PadModeOptions,
@@ -73,6 +66,15 @@ if TYPE_CHECKING:
         QuantileMethods,
         T_Variable,
     )
+
+NON_NANOSECOND_WARNING = (
+    "Converting non-nanosecond precision {case} values to nanosecond precision. "
+    "This behavior can eventually be relaxed in xarray, as it is an artifact from "
+    "pandas which is now beginning to support non-nanosecond precision values. "
+    "This warning is caused by passing non-nanosecond np.datetime64 or "
+    "np.timedelta64 values to the DataArray or Variable constructor; it can be "
+    "silenced by converting the values to nanosecond precision ahead of time."
+)
 
 
 class MissingDimensionsError(ValueError):
@@ -109,7 +111,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
         The newly created variable.
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # TODO: consider extending this method to automatically handle Iris and
     if isinstance(obj, DataArray):
@@ -180,13 +182,58 @@ def _maybe_wrap_data(data):
     return data
 
 
+def _as_nanosecond_precision(data):
+    dtype = data.dtype
+    non_ns_datetime64 = (
+        dtype.kind == "M"
+        and isinstance(dtype, np.dtype)
+        and dtype != np.dtype("datetime64[ns]")
+    )
+    non_ns_datetime_tz_dtype = (
+        isinstance(dtype, pd.DatetimeTZDtype) and dtype.unit != "ns"
+    )
+    if non_ns_datetime64 or non_ns_datetime_tz_dtype:
+        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="datetime"))
+        if isinstance(dtype, pd.DatetimeTZDtype):
+            nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
+        else:
+            nanosecond_precision_dtype = "datetime64[ns]"
+        return data.astype(nanosecond_precision_dtype)
+    elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
+        utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
+        return data.astype("timedelta64[ns]")
+    else:
+        return data
+
+
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention. Also used for
-    validating that datetime64 and timedelta64 objects are within the valid date
-    range for ns precision, as pandas will raise an error if they are not.
+    datetime64 and timedelta64, according to the pandas convention. For the time
+    being, convert any non-nanosecond precision DatetimeIndex or TimedeltaIndex
+    objects to nanosecond precision.  While pandas is relaxing this in version
+    2.0.0, in xarray we will need to make sure we are ready to handle
+    non-nanosecond precision datetimes or timedeltas in our code before allowing
+    such values to pass through unchanged.  Converting to nanosecond precision
+    through pandas.Series objects ensures that datetimes and timedeltas are
+    within the valid date range for ns precision, as pandas will raise an error
+    if they are not.
     """
-    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
+    as_series = pd.Series(values.ravel())
+    if as_series.dtype.kind in "mM":
+        as_series = _as_nanosecond_precision(as_series)
+    return np.asarray(as_series).reshape(values.shape)
+
+
+def _possibly_convert_datetime_or_timedelta_index(data):
+    """For the time being, convert any non-nanosecond precision DatetimeIndex or
+    TimedeltaIndex objects to nanosecond precision.  While pandas is relaxing
+    this in version 2.0.0, in xarray we will need to make sure we are ready to
+    handle non-nanosecond precision datetimes or timedeltas in our code
+    before allowing such values to pass through unchanged."""
+    if isinstance(data, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        return _as_nanosecond_precision(data)
+    else:
+        return data
 
 
 def as_compatible_data(data, fastpath=False):
@@ -200,7 +247,7 @@ def as_compatible_data(data, fastpath=False):
 
     Finally, wrap it up with an adapter if necessary.
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
@@ -210,6 +257,7 @@ def as_compatible_data(data, fastpath=False):
         return data.data
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+        data = _possibly_convert_datetime_or_timedelta_index(data)
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -456,7 +504,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1090,7 +1138,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             | tuple[tuple[int, ...], ...]
             | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},
-        name: str = None,
+        name: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         **chunks_kwargs: Any,
@@ -1192,13 +1240,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
             data = data.compute()
-        if isinstance(data, cupy_array_type):
+        if isinstance(data, array_type("cupy")):
             data = data.get()
         # pint has to be imported dynamically as pint imports xarray
-        pint_array_type = DuckArrayModule("pint").type
-        if isinstance(data, pint_array_type):
+        if isinstance(data, array_type("pint")):
             data = data.magnitude
-        if isinstance(data, sparse_array_type):
+        if isinstance(data, array_type("sparse")):
             data = data.todense()
         data = np.asarray(data)
 
@@ -1240,7 +1287,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def isel(
         self: T_Variable,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> T_Variable:
@@ -1461,7 +1508,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if reflect_type is not None:
             pad_option_kwargs["reflect_type"] = reflect_type
 
-        array = np.pad(  # type: ignore[call-overload]
+        array = np.pad(
             self.data.astype(dtype, copy=False),
             pad_width_by_index,
             mode=mode,
@@ -1834,14 +1881,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         numpy.clip : equivalent function
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -1981,7 +2028,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        from .merge import merge_attrs
+        from xarray.core.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -2074,9 +2121,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QuantileMethods = "linear",
-        keep_attrs: bool = None,
-        skipna: bool = None,
-        interpolation: QuantileMethods = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2149,7 +2196,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
 
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if interpolation is not None:
             warnings.warn(
@@ -2474,7 +2521,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return variable.data.reshape(shape), tuple(axes)
 
-    def isnull(self, keep_attrs: bool = None):
+    def isnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is a missing value.
 
         Returns
@@ -2496,7 +2543,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         <xarray.Variable (x: 3)>
         array([False,  True, False])
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2508,7 +2555,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(self, keep_attrs: bool = None):
+    def notnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is not a missing value.
 
         Returns
@@ -2530,7 +2577,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         <xarray.Variable (x: 3)>
         array([ True, False,  True])
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2615,7 +2662,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Dims | ellipsis,
+        dim: Dims,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2684,10 +2731,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Dims | ellipsis = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        dim: Dims = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2729,10 +2776,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: Dims | ellipsis = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        dim: Dims = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
@@ -2856,7 +2903,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        from .merge import merge_attrs
+        from xarray.core.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -2951,7 +2998,7 @@ class IndexVariable(Variable):
 
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
-        return self.copy()
+        return self.copy(deep=False)
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 

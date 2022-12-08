@@ -5,13 +5,16 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
-from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
-from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
-from .types import Dims, InterpOptions, T_Xarray
+from xarray.core._aggregations import (
+    DataArrayResampleAggregations,
+    DatasetResampleAggregations,
+)
+from xarray.core.groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
+from xarray.core.types import Dims, InterpOptions, T_Xarray
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 RESAMPLE_DIM = "__resample_dim__"
 
@@ -44,18 +47,17 @@ class Resample(GroupBy[T_Xarray]):
                 f"cannot have the same name as actual dimension ('{dim}')!"
             )
         self._dim = dim
-        self._resample_dim = resample_dim
 
         super().__init__(*args, **kwargs)
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
 
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         kwargs.setdefault("method", "cohorts")
 
@@ -200,7 +202,7 @@ class Resample(GroupBy[T_Xarray]):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleReductions):  # type: ignore[misc]
+class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations):  # type: ignore[misc]
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -263,8 +265,8 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         if self._dim in combined.coords:
             combined = combined.drop_vars(self._dim)
 
-        if self._resample_dim in combined.dims:
-            combined = combined.rename({self._resample_dim: self._dim})
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
 
         return combined
 
@@ -296,7 +298,7 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleReductions):  # type: ignore[misc]
+class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations):  # type: ignore[misc]
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def map(
@@ -339,7 +341,16 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
-        return combined.rename({self._resample_dim: self._dim})
+        # If the aggregation function didn't drop the original resampling
+        # dimension, then we need to do so before we can rename the proxy
+        # dimension we used.
+        if self._dim in combined.coords:
+            combined = combined.drop_vars(self._dim)
+
+        if RESAMPLE_DIM in combined.dims:
+            combined = combined.rename({RESAMPLE_DIM: self._dim})
+
+        return combined
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
@@ -360,7 +371,7 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,

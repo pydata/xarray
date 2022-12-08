@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, Iterable
 
 import numpy as np
 
-from ..conventions import cf_encoder
-from ..core import indexing
-from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.conventions import cf_encoder
+from xarray.core import indexing
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -376,22 +376,25 @@ class BackendEntrypoint:
     Attributes
     ----------
 
-    open_dataset_parameters : tuple, default None
+    available : bool, default: True
+        Indicate wether this backend is available given the installed packages.
+        The setting of this attribute is not mandatory.
+    open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
-    description : str
+    description : str, default: ""
         A short string describing the engine.
         The setting of this attribute is not mandatory.
-    url : str
+    url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
     """
 
     available: ClassVar[bool] = True
 
-    open_dataset_parameters: tuple | None = None
-    description: str = ""
-    url: str = ""
+    open_dataset_parameters: ClassVar[tuple | None] = None
+    description: ClassVar[str] = ""
+    url: ClassVar[str] = ""
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
