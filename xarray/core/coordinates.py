@@ -482,3 +482,118 @@ def assert_coordinate_consistent(
                 f"dimension coordinate {k!r} conflicts between "
                 f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
             )
+
+
+class IndexedCoordinates(Coordinates):
+    """Dictionary like container for indexed coordinates.
+
+    Essentially an immutable dictionary with keys given by variable
+    names and the values given by the corresponding xarray.Variable
+    objects.
+
+    All coordinate variables in this collection are backed by one or more Xarray
+    indexes.
+
+    This collection can be passed directly to the :py:class:`~xarray.Dataset`
+    and :py:class:`~xarray.DataArray` constructors via their `coords` argument.
+    This will add both the coordinates and their index.
+    """
+
+    _data: Dataset
+    _indexes: Indexes[Index]
+
+    __slots__ = ("_data", "_indexes")
+
+    def __init__(
+        self,
+        indexes: Mapping[Any, Index] | None = None,
+        variables: Mapping[Any, Variable] | None = None,
+    ):
+        self._indexes = Indexes(indexes, variables)
+        self._data = self._to_dataset()
+
+    @classmethod
+    def from_pandas_multiindex(
+        cls, midx: pd.MultiIndex, dim: str
+    ) -> IndexedCoordinates:
+        """Wrap a pandas multi-index as Xarray-compatible indexes
+        and coordinates.
+
+        This function returns an object that
+
+        Parameters
+        ----------
+        midx : :py:class:`pandas.MultiIndex`
+            Pandas multi-index object.
+        dim : str
+            Dimension name.
+
+        Returns
+        -------
+        coords : :py:class`~xarray.IndexedCoordinates`
+            A collection of Xarray indexed coordinates created from the multi-index.
+            The returned coordinates can be directly assigned to a
+            :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` (via the
+            ``coords`` argument of their constructor).
+        """
+        xr_idx = PandasMultiIndex(midx, dim)
+
+        variables = xr_idx.create_variables()
+        indexes = {k: xr_idx for k in variables}
+
+        return cls(indexes=indexes, variables=variables)
+
+    @property
+    def _names(self) -> set[Hashable]:
+        return self._data._coord_names
+
+    @property
+    def dims(self) -> Mapping[Hashable, int]:
+        return self._data.dims
+
+    @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from coordinate names to dtypes.
+
+        Cannot be modified directly.
+
+        See Also
+        --------
+        Dataset.dtypes
+        """
+        return Frozen({n: v.dtype for n, v in self._data.variables.items()})
+
+    @property
+    def variables(self) -> Mapping[Hashable, Variable]:
+        return self._data.variables
+
+    def _to_dataset(self) -> Dataset:
+        """Convert these coordinates into a new Dataset"""
+        from xarray.core.dataset import Dataset
+
+        return Dataset._construct_direct(
+            coord_names=set(self._indexes),
+            dims=dict(self._indexes.dims),
+            variables=self._indexes._variables,
+            indexes=self._indexes._indexes,
+        )
+
+    def to_dataset(self) -> Dataset:
+        return self._data.copy()
+
+    def __getitem__(self, key: Hashable) -> DataArray:
+        return self._data[key]
+
+    def update(self, other: Mapping[Any, Any]) -> None:
+        raise TypeError(
+            "IndexedCoordinates is immutable and can not be modified inplace"
+        )
+
+    def __delitem__(self, key: Hashable) -> None:
+        raise TypeError(
+            "IndexedCoordinates is immutable and can not be modified inplace"
+        )
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython."""
+        return self._data._ipython_key_completions_()
