@@ -510,11 +510,6 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
-    indexes : py:class:`~xarray.Indexes` or dict-like, optional
-        A collection of :py:class:`~xarray.indexes.Index` objects and
-        their coordinates variables. If an empty collection is given,
-        it will skip the creation of default (pandas) indexes for
-        dimension coordinates.
 
     Examples
     --------

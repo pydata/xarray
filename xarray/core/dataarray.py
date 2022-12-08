@@ -314,10 +314,10 @@ class DataArray(
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
     indexes : py:class:`~xarray.Indexes` or dict-like, optional
-        A collection of :py:class:`~xarray.indexes.Index` objects and
-        their coordinates variables. If an empty collection is given,
-        it will skip the creation of default (pandas) indexes for
-        dimension coordinates.
+        For internal use only. For passing indexes objects to the
+        new DataArray, use the ``coords`` argument instead with an
+        Xarray ``Coordinate`` object (both coordinate variables and
+        indexes will be extracted from the latter).
 
     Examples
     --------
