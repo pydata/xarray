@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.tests import has_dask
+
+from . import has_dask
 
 try:
     from dask.array import from_array as dask_from_array

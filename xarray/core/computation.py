@@ -24,23 +24,23 @@ from typing import (
 
 import numpy as np
 
-from xarray.core import dtypes, duck_array_ops, utils
-from xarray.core.alignment import align, deep_align
-from xarray.core.common import zeros_like
-from xarray.core.duck_array_ops import datetime_to_numeric
-from xarray.core.indexes import Index, filter_indexes_from_coords
-from xarray.core.merge import merge_attrs, merge_coordinates_without_align
-from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import T_DataArray
-from xarray.core.utils import is_dict_like, is_scalar
-from xarray.core.variable import Variable
+from . import dtypes, duck_array_ops, utils
+from .alignment import align, deep_align
+from .common import zeros_like
+from .duck_array_ops import datetime_to_numeric
+from .indexes import Index, filter_indexes_from_coords
+from .merge import merge_attrs, merge_coordinates_without_align
+from .options import OPTIONS, _get_keep_attrs
+from .pycompat import is_duck_dask_array
+from .types import T_DataArray
+from .utils import is_dict_like, is_scalar
+from .variable import Variable
 
 if TYPE_CHECKING:
-    from xarray.core.coordinates import Coordinates
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
-    from xarray.core.types import CombineAttrsOptions, JoinOptions
+    from .coordinates import Coordinates
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .types import CombineAttrsOptions, JoinOptions
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -293,7 +293,7 @@ def apply_dataarray_vfunc(
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
     """
-    from xarray.core.dataarray import DataArray
+    from .dataarray import DataArray
 
     if len(args) > 1:
         args = deep_align(
@@ -436,7 +436,7 @@ def _fast_dataset(
 
     Beware: the `variables` dict is modified INPLACE.
     """
-    from xarray.core.dataset import Dataset
+    from .dataset import Dataset
 
     variables.update(coord_variables)
     coord_names = set(coord_variables)
@@ -456,7 +456,7 @@ def apply_dataset_vfunc(
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
     """
-    from xarray.core.dataset import Dataset
+    from .dataset import Dataset
 
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
@@ -504,7 +504,7 @@ def apply_dataset_vfunc(
 
 def _iter_over_selections(obj, dim, values):
     """Iterate over selections of an xarray object in the provided order."""
-    from xarray.core.groupby import _dummy_copy
+    from .groupby import _dummy_copy
 
     dummy = None
     for value in values:
@@ -521,8 +521,8 @@ def apply_groupby_func(func, *args):
     """Apply a dataset or datarray level function over GroupBy, Dataset,
     DataArray, Variable and/or ndarray objects.
     """
-    from xarray.core.groupby import GroupBy, peek_at
-    from xarray.core.variable import Variable
+    from .groupby import GroupBy, peek_at
+    from .variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"
@@ -670,7 +670,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
-    from xarray.core.variable import Variable, as_compatible_data
+    from .variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
@@ -1092,9 +1092,9 @@ def apply_ufunc(
     .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
     .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.groupby import GroupBy
-    from xarray.core.variable import Variable
+    from .dataarray import DataArray
+    from .groupby import GroupBy
+    from .variable import Variable
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
@@ -1286,7 +1286,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
-    from xarray.core.dataarray import DataArray
+    from .dataarray import DataArray
 
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
@@ -1364,7 +1364,7 @@ def corr(da_a, da_b, dim=None):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
-    from xarray.core.dataarray import DataArray
+    from .dataarray import DataArray
 
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
@@ -1703,8 +1703,8 @@ def dot(
     <xarray.DataArray ()>
     array(235)
     """
-    from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
+    from .dataarray import DataArray
+    from .variable import Variable
 
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError(
@@ -1855,7 +1855,7 @@ def where(cond, x, y, keep_attrs=None):
     Dataset.where, DataArray.where :
         equivalent methods
     """
-    from xarray.core.dataset import Dataset
+    from .dataset import Dataset
 
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
@@ -1995,7 +1995,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     DataArray or Dataset
         Variables with datetime64 dtypes converted to float64.
     """
-    from xarray.core.dataset import Dataset
+    from .dataset import Dataset
 
     def _cfoffset(x: DataArray) -> Any:
         scalar = x.compute().data[0]
@@ -2126,7 +2126,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     --------
     dask.array.core.unify_chunks
     """
-    from xarray.core.dataarray import DataArray
+    from .dataarray import DataArray
 
     # Convert all objects to datasets
     datasets = [

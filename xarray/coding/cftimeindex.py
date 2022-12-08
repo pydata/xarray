@@ -49,14 +49,11 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from xarray.coding.times import (
-    _STANDARD_CALENDARS,
-    cftime_to_nptime,
-    infer_calendar_name,
-)
-from xarray.core.common import _contains_cftime_datetimes
-from xarray.core.options import OPTIONS
 from xarray.core.utils import is_scalar
+
+from ..core.common import _contains_cftime_datetimes
+from ..core.options import OPTIONS
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 try:
     import cftime
@@ -552,7 +549,7 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
-            from xarray.coding.cftime_offsets import to_offset
+            from .cftime_offsets import to_offset
 
             return self + n * to_offset(freq)
         else:
@@ -682,7 +679,7 @@ class CFTimeIndex(pd.Index):
     @property
     def asi8(self):
         """Convert to integers with units of microseconds since 1970-01-01."""
-        from xarray.core.resample_cftime import exact_cftime_datetime_difference
+        from ..core.resample_cftime import exact_cftime_datetime_difference
 
         epoch = self.date_type(1970, 1, 1)
         return np.array(
@@ -696,20 +693,20 @@ class CFTimeIndex(pd.Index):
     @property
     def calendar(self):
         """The calendar used by the datetimes in the index."""
-        from xarray.coding.times import infer_calendar_name
+        from .times import infer_calendar_name
 
         return infer_calendar_name(self)
 
     @property
     def freq(self):
         """The frequency used by the dates in the index."""
-        from xarray.coding.frequencies import infer_freq
+        from .frequencies import infer_freq
 
         return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
-        from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
+        from .cftime_offsets import CFTIME_TICKS, to_offset
 
         offset = to_offset(freq)
         if not isinstance(offset, CFTIME_TICKS):

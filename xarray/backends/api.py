@@ -25,20 +25,20 @@ from typing import (
 
 import numpy as np
 
-from xarray import backends, conventions
-from xarray.backends import plugins
-from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
-from xarray.backends.locks import _get_scheduler
-from xarray.core import indexing
-from xarray.core.combine import (
+from .. import backends, conventions
+from ..core import indexing
+from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
 )
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
-from xarray.core.indexes import Index
-from xarray.core.utils import is_remote_uri
+from ..core.dataarray import DataArray
+from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
+from ..core.indexes import Index
+from ..core.utils import is_remote_uri
+from . import plugins
+from .common import AbstractDataStore, ArrayWriter, _normalize_path
+from .locks import _get_scheduler
 
 if TYPE_CHECKING:
     try:
@@ -47,13 +47,13 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from io import BufferedIOBase
 
-    from xarray.backends.common import BackendEntrypoint
-    from xarray.core.types import (
+    from ..core.types import (
         CombineAttrsOptions,
         CompatOptions,
         JoinOptions,
         NestedSequence,
     )
+    from .common import BackendEntrypoint
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[

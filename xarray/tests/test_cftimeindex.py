@@ -18,13 +18,10 @@ from xarray.coding.cftimeindex import (
     assert_all_valid_date_type,
     parse_iso8601_like,
 )
-from xarray.tests import (
-    assert_array_equal,
-    assert_identical,
-    has_cftime,
-    requires_cftime,
-)
-from xarray.tests.test_coding_times import (
+from xarray.tests import assert_array_equal, assert_identical
+
+from . import has_cftime, requires_cftime
+from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _all_cftime_date_types,

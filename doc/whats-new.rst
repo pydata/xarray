@@ -42,9 +42,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Add the pre-commit hook `absolufy-imports` to convert relative xarray imports to
-  absolute imports (:pull:`7204`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 
 .. _whats-new.2022.12.0:
 

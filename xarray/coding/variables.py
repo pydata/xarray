@@ -8,9 +8,9 @@ from typing import Any, Hashable
 import numpy as np
 import pandas as pd
 
-from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.variable import Variable
+from ..core import dtypes, duck_array_ops, indexing
+from ..core.pycompat import is_duck_dask_array
+from ..core.variable import Variable
 
 
 class SerializationWarning(RuntimeWarning):

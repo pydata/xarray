@@ -24,12 +24,8 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 from xarray.core.pycompat import mod_version
-from xarray.tests import (
-    has_dask,
-    raise_if_dask_computes,
-    requires_cftime,
-    requires_dask,
-)
+
+from . import has_dask, raise_if_dask_computes, requires_cftime, requires_dask
 
 dask_version = mod_version("dask")
 

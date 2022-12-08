@@ -3,17 +3,9 @@ from __future__ import annotations
 import numpy as np
 from packaging.version import Version
 
-from xarray.backends.common import (
-    BACKEND_ENTRYPOINTS,
-    AbstractDataStore,
-    BackendArray,
-    BackendEntrypoint,
-    robust_getitem,
-)
-from xarray.backends.store import StoreBackendEntrypoint
-from xarray.core import indexing
-from xarray.core.pycompat import integer_types
-from xarray.core.utils import (
+from ..core import indexing
+from ..core.pycompat import integer_types
+from ..core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
@@ -21,7 +13,15 @@ from xarray.core.utils import (
     is_remote_uri,
     module_available,
 )
-from xarray.core.variable import Variable
+from ..core.variable import Variable
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    robust_getitem,
+)
+from .store import StoreBackendEntrypoint
 
 
 class PydapArrayWrapper(BackendArray):
