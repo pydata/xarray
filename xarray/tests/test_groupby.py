@@ -10,8 +10,7 @@ from pandas.tseries.frequencies import to_offset
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
