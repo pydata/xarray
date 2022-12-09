@@ -1965,9 +1965,9 @@ def test_where_attrs() -> None:
     assert_identical(expected, actual)
 
     # no xarray objects, handle no attrs
-    actual = xr.where(True, 0, 1, keep_attrs=True)
-    expected = np.array(0)
-    assert_identical(expected, actual)
+    actual_np = xr.where(True, 0, 1, keep_attrs=True)
+    expected_np = np.array(0)
+    assert_identical(expected_np, actual_np)
 
     # DataArray and 2 Datasets, takes attrs from x
     ds_x = xr.Dataset(data_vars={"x": x}, attrs={"attr": "x_ds"})
