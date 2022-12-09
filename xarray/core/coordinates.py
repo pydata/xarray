@@ -581,6 +581,14 @@ class IndexedCoordinates(Coordinates):
     def to_dataset(self) -> Dataset:
         return self._data.copy()
 
+    def merge_coords(self, other: Mapping[Any, Any] | None = None) -> Coordinates:
+        from xarray.core.dataset import Dataset
+
+        if not isinstance(other, Coordinates):
+            other = Dataset(coords=other).coords
+
+        return self.merge(other).coords
+
     def __getitem__(self, key: Hashable) -> DataArray:
         return self._data[key]
 
