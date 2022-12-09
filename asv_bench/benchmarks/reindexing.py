@@ -1,7 +1,8 @@
 import numpy as np
 
 import xarray as xr
-from asv_bench.benchmarks import requires_dask
+
+from . import requires_dask
 
 ntime = 500
 nx = 50

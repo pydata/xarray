@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from asv_bench.benchmarks import parameterized, randn, requires_dask
+
+from . import parameterized, randn, requires_dask
 
 nx = 300
 long_nx = 30000

@@ -1,7 +1,8 @@
 import numpy as np
 
 import xarray as xr
-from asv_bench.benchmarks import parameterized, randn, requires_dask
+
+from . import parameterized, randn, requires_dask
 
 NDEGS = (2, 5, 20)
 NX = (10**2, 10**6)

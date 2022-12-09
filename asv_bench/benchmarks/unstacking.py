@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from asv_bench.benchmarks import requires_dask, requires_sparse
+
+from . import requires_dask, requires_sparse
 
 
 class Unstacking:
