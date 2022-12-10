@@ -34,7 +34,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Allow numpy-only objects in :py:func:`where` when ``keep_attrs=True`` (:issue:`7362`, :pull:`7364`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~
