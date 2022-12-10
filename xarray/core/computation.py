@@ -1876,7 +1876,7 @@ def where(cond, x, y, keep_attrs=None):
     # be consistent with the `where` method of `DataArray` and `Dataset`
     # rebuild the attrs from x at each level of the output, which could be
     # Dataset, DataArray, or Variable, and also handle coords
-    if keep_attrs is True:
+    if keep_attrs is True and hasattr(result, "attrs"):
         if isinstance(y, Dataset) and not isinstance(x, Dataset):
             # handle special case where x gets promoted to Dataset
             result.attrs = {}
