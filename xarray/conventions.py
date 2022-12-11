@@ -10,6 +10,7 @@ from typing import (
     Mapping,
     MutableMapping,
     Union,
+    Tuple,
 )
 
 import numpy as np
@@ -47,7 +48,7 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
 
-    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
+    T_VarTuple = Tuple[Tuple[Hashable, ...], Any, dict, dict]
     T_Name = Union[Hashable, None]
     T_Variables = Mapping[Any, Variable]
     T_Attrs = MutableMapping[Any, Any]
