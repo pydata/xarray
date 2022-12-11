@@ -4,12 +4,7 @@ import re
 import warnings
 from datetime import datetime, timedelta
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Hashable,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, Hashable, Union
 
 import numpy as np
 import pandas as pd
