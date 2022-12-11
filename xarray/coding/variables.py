@@ -3,16 +3,7 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    MutableMapping,
-    Type,
-    Union,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, Callable, Hashable, MutableMapping, Tuple, Union
 
 import numpy as np
 import pandas as pd
