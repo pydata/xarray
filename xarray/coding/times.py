@@ -575,7 +575,7 @@ def _should_cftime_be_used(
                     "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
                 )
             else:
-                use_cftime_out = use_cftime
+                use_cftime_out = True
         elif use_cftime is False:
             raise ValueError(
                 f"Calendar '{target_calendar}' is only valid with cftime. Try using `use_cftime=True`."
