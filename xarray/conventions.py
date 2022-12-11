@@ -369,8 +369,6 @@ def decode_cf_variable(
     out : Variable
         A variable holding the decoded equivalent of var.
     """
-    var = as_variable(var)
-
     # Ensure datetime-like Variables are passed through unmodified (GH 6453)
     if _contains_datetime_like_objects(var):
         return var
