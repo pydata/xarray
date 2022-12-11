@@ -697,23 +697,26 @@ class CFDatetimeCoder(VariableCoder):
         self.use_cftime = use_cftime
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_encoding(variable)
-        if np.issubdtype(data.dtype, np.datetime64) or contains_cftime_datetimes(
-            variable
-        ):
+        if np.issubdtype(
+            variable.data.dtype, np.datetime64
+        ) or contains_cftime_datetimes(variable):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+
             (data, units, calendar) = encode_cf_datetime(
                 data, encoding.pop("units", None), encoding.pop("calendar", None)
             )
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
-
-        units = attrs.get("units")
+        units = variable.attrs.get("units", None)
         if isinstance(units, str) and "since" in units:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
+
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
             dtype = _decode_cf_datetime_dtype(data, units, calendar, self.use_cftime)
@@ -725,27 +728,33 @@ class CFDatetimeCoder(VariableCoder):
             )
             data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
 
 class CFTimedeltaCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_encoding(variable)
+        if np.issubdtype(variable.data.dtype, np.timedelta64):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-        if np.issubdtype(data.dtype, np.timedelta64):
             data, units = encode_cf_timedelta(data, encoding.pop("units", None))
             safe_setitem(attrs, "units", units, name=name)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
-
-        units = attrs.get("units")
+        units = variable.attrs.get("units", None)
         if isinstance(units, str) and units in TIME_UNITS:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
+
             units = pop_to(attrs, encoding, "units")
             transform = partial(decode_cf_timedelta, units=units)
             dtype = np.dtype("timedelta64[ns]")
             data = lazy_elemwise_func(data, transform, dtype=dtype)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable

@@ -269,9 +269,10 @@ class CFScaleOffsetCoder(VariableCoder):
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
+        _attrs = variable.attrs
+        if "scale_factor" in _attrs or "add_offset" in _attrs:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "scale_factor" in attrs or "add_offset" in attrs:
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
@@ -287,18 +288,20 @@ class CFScaleOffsetCoder(VariableCoder):
             )
             data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
 
 class UnsignedIntegerCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_encoding(variable)
-
         # from netCDF best practices
         # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
-        if encoding.get("_Unsigned", "false") == "true":
+        if variable.encoding.get("_Unsigned", "false") == "true":
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+
             pop_to(encoding, attrs, "_Unsigned")
             signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
             if "_FillValue" in attrs:
@@ -306,12 +309,14 @@ class UnsignedIntegerCoder(VariableCoder):
                 attrs["_FillValue"] = new_fill
             data = duck_array_ops.around(data).astype(signed_dtype)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
+        if "_Unsigned" in variable.attrs:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")
 
             if data.dtype.kind == "i":
@@ -338,4 +343,6 @@ class UnsignedIntegerCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
