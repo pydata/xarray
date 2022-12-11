@@ -6,10 +6,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Hashable,
-    Union,
     Iterable,
     Mapping,
     MutableMapping,
+    Union,
 )
 
 import numpy as np
