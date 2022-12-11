@@ -261,7 +261,7 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in encoding:
             data /= pop_to(encoding, attrs, "scale_factor", name=name)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
@@ -282,7 +282,7 @@ class CFScaleOffsetCoder(VariableCoder):
             )
             data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
 
 class UnsignedIntegerCoder(VariableCoder):
@@ -301,7 +301,7 @@ class UnsignedIntegerCoder(VariableCoder):
                 attrs["_FillValue"] = new_fill
             data = duck_array_ops.around(data).astype(signed_dtype)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
@@ -333,4 +333,4 @@ class UnsignedIntegerCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
