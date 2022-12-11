@@ -6,12 +6,8 @@ from datetime import datetime, timedelta
 from functools import partial
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
     Union,
 )
 
@@ -42,11 +38,7 @@ except ImportError:
 if TYPE_CHECKING:
     from xarray.core.types import CFCalendar
 
-    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
     T_Name = Union[Hashable, None]
-    T_Variables = Mapping[Any, Variable]
-    T_Attrs = MutableMapping[Any, Any]
-    T_DropVariables = Union[str, Iterable[str], None]
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
