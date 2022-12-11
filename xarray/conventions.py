@@ -9,8 +9,8 @@ from typing import (
     Iterable,
     Mapping,
     MutableMapping,
-    Union,
     Tuple,
+    Union,
 )
 
 import numpy as np
