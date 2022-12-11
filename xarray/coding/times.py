@@ -7,12 +7,12 @@ from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Hashable,
+    Iterable,
     Mapping,
     MutableMapping,
     Union,
-    Iterable,
-    Callable,
 )
 
 import numpy as np
