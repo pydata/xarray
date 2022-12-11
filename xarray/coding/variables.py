@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Union, MutableMapping, Type
+from typing import TYPE_CHECKING, Any, Callable, Hashable, MutableMapping, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -229,7 +229,7 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTyp
     return data
 
 
-def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> Type[np.floating[Any]]:
+def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[Any]]:
     """Return a float dtype that can losslessly represent `dtype` values."""
     # Keep float32 as-is.  Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
