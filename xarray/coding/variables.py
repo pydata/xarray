@@ -176,7 +176,7 @@ class CFMaskCoder(VariableCoder):
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
@@ -212,7 +212,7 @@ class CFMaskCoder(VariableCoder):
                 )
                 data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
 
 def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
