@@ -247,6 +247,11 @@ class Coordinates(AbstractCoordinates):
             if not isinstance(idx, Index):
                 raise TypeError(f"'{k}' is not an Xarray Index")
 
+        # maybe convert to base variable
+        for k, v in variables.items():
+            if k not in indexes:
+                variables[k] = v.to_base_variable()
+
         self._data = Dataset._construct_direct(
             coord_names=set(variables), variables=variables, indexes=indexes
         )
