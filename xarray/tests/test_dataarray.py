@@ -4166,6 +4166,36 @@ class TestDataArray:
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
 
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
+        arr = xr.DataArray(
+            [1, 2], dims="x", coords={"c": ("x", [-1, 1], attrs)}, attrs=attrs
+        )
+        expected = xr.DataArray(
+            [0, 1, 2, 0],
+            dims="x",
+            coords={"c": ("x", [np.nan, -1, 1, np.nan], expected)},
+            attrs=expected,
+        )
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = arr.pad({"x": (1, 1)}, mode="constant", constant_values=0)
+            xr.testing.assert_identical(actual, expected)
+
+        actual = arr.pad(
+            {"x": (1, 1)}, mode="constant", constant_values=0, keep_attrs=keep_attrs
+        )
+        xr.testing.assert_identical(actual, expected)
+
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
