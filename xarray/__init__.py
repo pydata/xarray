@@ -27,7 +27,7 @@ from xarray.core.computation import (
     where,
 )
 from xarray.core.concat import concat
-from xarray.core.coordinates import IndexedCoordinates
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.extensions import (
@@ -101,9 +101,9 @@ __all__ = (
     "CFTimeIndex",
     "Context",
     "Coordinate",
+    "Coordinates",
     "DataArray",
     "Dataset",
-    "IndexedCoordinates",
     "IndexVariable",
     "Variable",
     # Exceptions
