@@ -213,22 +213,31 @@ class Coordinates(AbstractCoordinates):
 
     __slots__ = ("_data",)
 
-    def __init__(self, coords: Mapping[Any, Any], indexes: Mapping[Any, Index]):
+    def __init__(
+        self,
+        coords: Mapping[Any, Any] | None = None,
+        indexes: Mapping[Any, Index] | None = None,
+    ):
         from xarray.core.dataset import Dataset
 
-        if isinstance(coords, Coordinates):
+        if coords is None:
+            variables = {}
+        elif isinstance(coords, Coordinates):
             variables = dict(coords.variables)
         else:
             variables = {k: as_variable(v) for k, v in coords.items()}
 
-        indexes = {}
+        if indexes is None:
+            indexes = {}
+        else:
+            indexes = dict(indexes)
+
         for k, idx in indexes.items():
             if not isinstance(idx, Index):
                 raise TypeError(f"'{k}' is not an Xarray Index")
-            indexes[k] = idx
 
         self._data = Dataset._construct_direct(
-            coord_names=set(coords), variables=variables, indexes=indexes
+            coord_names=set(variables), variables=variables, indexes=indexes
         )
 
     @classmethod
