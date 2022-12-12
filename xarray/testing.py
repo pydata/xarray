@@ -363,14 +363,16 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
     assert all(
         ds._dims[k] == v.sizes[k] for v in ds._variables.values() for k in v.sizes
     ), (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
-    assert all(
-        isinstance(v, IndexVariable)
-        for (k, v) in ds._variables.items()
-        if v.dims == (k,)
-    ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
-    assert all(v.dims == (k,) for (k, v) in ds._variables.items() if k in ds._dims), {
-        k: v.dims for k, v in ds._variables.items() if k in ds._dims
-    }
+
+    if check_default_indexes:
+        assert all(
+            isinstance(v, IndexVariable)
+            for (k, v) in ds._variables.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
+        assert all(
+            v.dims == (k,) for (k, v) in ds._variables.items() if k in ds._dims
+        ), {k: v.dims for k, v in ds._variables.items() if k in ds._dims}
 
     if ds._indexes is not None:
         _assert_indexes_invariants_checks(
