@@ -51,6 +51,7 @@ class TestCoordinates:
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
         coords = Coordinates.from_pandas_multiindex(midx, "x")
 
+        assert isinstance(coords.xindexes["x"], PandasMultiIndex)
         assert coords.xindexes["x"].index.equals(midx)
         assert coords.xindexes["x"].dim == "x"
 
