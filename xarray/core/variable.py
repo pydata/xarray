@@ -402,8 +402,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
-        if hasattr(self.data, "nbytes"):
-            return self.data.nbytes
+        if hasattr(self._data, "nbytes"):
+            return self._data.nbytes
         else:
             return self.size * self.dtype.itemsize
 
