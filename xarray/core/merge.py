@@ -318,19 +318,22 @@ def merge_collected(
 def collect_variables_and_indexes(
     list_of_mappings: list[DatasetLike],
     indexes: Mapping[Any, Any] | None = None,
-    create_coords_with_default_indexes: bool = True,
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
-    Mappings must either be Dataset or Coordinates objects,
-    or have values of one of the following types:
+    Mappings can be Dataset or Coordinates objects, in which case both
+    variables and indexes are extracted from it.
+
+    It can also have values of one of the following types:
     - an xarray.Variable
     - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
       an xarray.Variable
     - or an xarray.DataArray
 
     If a mapping of indexes is given, those indexes are assigned to all variables
-    with a matching key/name.
+    with a matching key/name. For dimension variables with no matching index, a
+    default (pandas) index is assigned. DataArray indexes that don't match mapping
+    keys are also extracted.
 
     """
     from xarray.core.coordinates import Coordinates
@@ -366,7 +369,7 @@ def collect_variables_and_indexes(
             variable = as_variable(variable, name=name)
             if name in indexes:
                 append(name, variable, indexes[name])
-            elif variable.dims == (name,) and create_coords_with_default_indexes:
+            elif variable.dims == (name,):
                 idx, idx_vars = create_default_index_implicit(variable)
                 append_all(idx_vars, {k: idx for k in idx_vars})
             else:
