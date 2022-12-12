@@ -766,7 +766,8 @@ def create_coords_with_default_indexes(
                 if k != name:
                     updated_coords[k] = v.copy()
                     if k in obj._indexes:
-                        indexes[k] = obj._indexes[k]
+                        if name not in obj.xindexes.get_all_coords(k):
+                            indexes[k] = obj._indexes[k]
 
         variable = as_variable(obj, name=name)
 
