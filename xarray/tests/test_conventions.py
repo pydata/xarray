@@ -20,9 +20,13 @@ from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
-
-from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
-from .test_backends import CFEncodedBase
+from xarray.tests import (
+    assert_array_equal,
+    requires_cftime,
+    requires_dask,
+    requires_netCDF4,
+)
+from xarray.tests.test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray:

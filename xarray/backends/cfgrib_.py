@@ -5,18 +5,18 @@ import warnings
 
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error, module_available
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .locks import SerializableLock, ensure_lock
-from .store import StoreBackendEntrypoint
+from xarray.backends.locks import SerializableLock, ensure_lock
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.variable import Variable
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:

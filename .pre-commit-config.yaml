@@ -8,6 +8,12 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: mixed-line-ending
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
+    rev: v0.3.1
+    hooks:
+      - id: absolufy-imports
+        name: absolufy-imports
+        files: ^xarray/
     # This wants to go before isort & flake8
   - repo: https://github.com/PyCQA/autoflake
     rev: "v2.0.0"
