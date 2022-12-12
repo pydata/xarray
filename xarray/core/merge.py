@@ -22,8 +22,6 @@ from xarray.core.alignment import deep_align
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import (
     Index,
-    Indexes,
-    PandasIndex,
     create_default_index_implicit,
     filter_indexes_from_coords,
     indexes_equal,
@@ -46,7 +44,7 @@ if TYPE_CHECKING:
         Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
-    DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
+    DatasetLike = Union[Dataset, Coordinates, Mapping[Any, XarrayValue]]
     CoercibleValue = Union[XarrayValue, pd.Series, pd.DataFrame]
     CoercibleMapping = Union[Dataset, Mapping[Any, CoercibleValue]]
 
@@ -320,12 +318,12 @@ def merge_collected(
 def collect_variables_and_indexes(
     list_of_mappings: list[DatasetLike],
     indexes: Mapping[Any, Any] | None = None,
-    create_default_indexes: bool = True,
+    create_coords_with_default_indexes: bool = True,
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
-    Mappings must either be Dataset objects, or have values of one of the
-    following types:
+    Mappings must either be Dataset or Coordinates objects,
+    or have values of one of the following types:
     - an xarray.Variable
     - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
       an xarray.Variable
@@ -335,6 +333,7 @@ def collect_variables_and_indexes(
     with a matching key/name.
 
     """
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -351,8 +350,8 @@ def collect_variables_and_indexes(
             append(name, variable, indexes.get(name))
 
     for mapping in list_of_mappings:
-        if isinstance(mapping, Dataset):
-            append_all(mapping.variables, mapping._indexes)
+        if isinstance(mapping, (Coordinates, Dataset)):
+            append_all(mapping.variables, mapping.xindexes)
             continue
 
         for name, variable in mapping.items():
@@ -367,7 +366,7 @@ def collect_variables_and_indexes(
             variable = as_variable(variable, name=name)
             if name in indexes:
                 append(name, variable, indexes[name])
-            elif variable.dims == (name,) and create_default_indexes:
+            elif variable.dims == (name,) and create_coords_with_default_indexes:
                 idx, idx_vars = create_default_index_implicit(variable)
                 append_all(idx_vars, {k: idx for k in idx_vars})
             else:
@@ -479,12 +478,13 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
     List of Dataset or dictionary objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
     out = []
     for obj in objects:
-        if isinstance(obj, Dataset):
+        if isinstance(obj, (Dataset, Coordinates)):
             variables: DatasetLike = obj
         else:
             variables = {}
@@ -551,7 +551,6 @@ def merge_coords(
     priority_arg: int | None = None,
     indexes: Mapping[Any, Index] | None = None,
     fill_value: object = dtypes.NA,
-    create_default_indexes: bool = True,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge coordinate variables.
 
@@ -564,77 +563,10 @@ def merge_coords(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(
-        aligned, indexes=indexes, create_default_indexes=create_default_indexes
-    )
+    collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
     return variables, out_indexes
-
-
-def merge_data_and_coords(
-    data_vars,
-    coords,
-    compat="broadcast_equals",
-    join="outer",
-):
-    """Used in Dataset.__init__."""
-    from xarray.core.coordinates import Coordinates
-
-    if isinstance(coords, Coordinates):
-        indexes = coords.xindexes
-        coords = coords.variables
-    else:
-        indexes, coords = _create_indexes_from_coords(coords, data_vars)
-
-    objects = [data_vars, coords]
-    explicit_coords = coords.keys()
-    indexed_coords = {k: v for k, v in coords.items() if k in indexes}
-    return merge_core(
-        objects,
-        compat,
-        join,
-        explicit_coords=explicit_coords,
-        indexes=Indexes(indexes, indexed_coords),
-        create_default_indexes=False,
-    )
-
-
-def _create_indexes_from_coords(
-    coords: Mapping[Any, Variable], data_vars: Mapping[Any, Variable] | None = None
-) -> tuple[dict[Any, PandasIndex], dict[Any, Variable]]:
-    """Maybe create default indexes from a mapping of coordinates.
-
-    Return those indexes and updated coordinates.
-    """
-    all_variables = dict(coords)
-    if data_vars is not None:
-        all_variables.update(data_vars)
-
-    indexes = {}
-    updated_coords = {}
-
-    # this is needed for backward compatibility: when a pandas multi-index
-    # is given as data variable, it is promoted as index / level coordinates
-    # TODO: depreciate this implicit behavior
-    index_vars = {
-        k: v
-        for k, v in all_variables.items()
-        if k in coords or isinstance(v, pd.MultiIndex)
-    }
-
-    for name, obj in index_vars.items():
-        variable = as_variable(obj, name=name)
-
-        if variable.dims == (name,):
-            idx, idx_vars = create_default_index_implicit(variable, all_variables)
-            indexes.update({k: idx for k in idx_vars})
-            updated_coords.update(idx_vars)
-            all_variables.update(idx_vars)
-        else:
-            updated_coords[name] = obj
-
-    return indexes, updated_coords
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):
@@ -723,7 +655,6 @@ def merge_core(
     explicit_coords: Sequence | None = None,
     indexes: Mapping[Any, Any] | None = None,
     fill_value: object = dtypes.NA,
-    create_default_indexes: bool = True,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
 
@@ -749,8 +680,6 @@ def merge_core(
         may be cast to pandas.Index objects.
     fill_value : scalar, optional
         Value to use for newly missing values
-    create_default_indexes : bool, optional
-        If True, create default (pandas) indexes for dimension coordinates.
 
     Returns
     -------
@@ -776,9 +705,7 @@ def merge_core(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(
-        aligned, indexes=indexes, create_default_indexes=create_default_indexes
-    )
+    collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs

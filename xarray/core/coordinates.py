@@ -17,11 +17,13 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
+from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
     PandasMultiIndex,
     assert_no_index_corrupted,
+    create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import T_DataArray
@@ -288,6 +290,10 @@ class Coordinates(AbstractCoordinates):
         return self._data.dims
 
     @property
+    def sizes(self) -> Frozen[Hashable, int]:
+        return self._data.sizes
+
+    @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
         """Mapping from coordinate names to dtypes.
 
@@ -425,17 +431,13 @@ class Coordinates(AbstractCoordinates):
         self.update({key: value})
 
     def update(self, other: Mapping[Any, Any]) -> None:
-        other_obj: Dataset | Mapping[Hashable, Variable]
+        other_obj: Coordinates | Mapping[Hashable, Variable]
 
         if isinstance(other, Coordinates):
-            # special case: do not create default indexes
-            # converting to Dataset will allow reusing existing indexes
-            # when merging coordinates below
-            other_obj = other.to_dataset()
-            create_default_indexes = False
+            # special case: default indexes won't be created
+            other_obj = other
         else:
             other_obj = getattr(other, "variables", other)
-            create_default_indexes = True
 
         self._maybe_drop_multiindex_coords(set(other_obj))
 
@@ -443,14 +445,51 @@ class Coordinates(AbstractCoordinates):
             [self.variables, other_obj],
             priority_arg=1,
             indexes=self.xindexes,
-            create_default_indexes=create_default_indexes,
         )
 
         self._update_coords(coords, indexes)
 
+    def _overwrite_indexes(
+        self,
+        indexes: Mapping[Any, Index],
+        coords: Mapping[Any, Variable] | None = None,
+        drop_coords: list[Hashable] | None = None,
+        rename_dims: Mapping[Any, Any] | None = None,
+    ) -> Coordinates:
+        results = self._data._overwrite_indexes(
+            indexes, coords, drop_coords, rename_dims
+        )
+        return results.coords
+
+    def _reindex_callback(
+        self,
+        aligner: Aligner,
+        dim_pos_indexers: dict[Hashable, Any],
+        variables: dict[Hashable, Variable],
+        indexes: dict[Hashable, Index],
+        fill_value: Any,
+        exclude_dims: frozenset[Hashable],
+        exclude_vars: frozenset[Hashable],
+    ) -> Coordinates:
+        """Callback called from ``Aligner`` to create a new reindexed Coordinates."""
+        aligned = self._data._reindex_callback(
+            aligner,
+            dim_pos_indexers,
+            variables,
+            indexes,
+            fill_value,
+            exclude_dims,
+            exclude_vars,
+        )
+        return aligned.coords
+
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
+
+    def copy(self, deep=False):
+        # TODO: improve implementation
+        return self.to_dataset().coords
 
 
 class DatasetCoordinates(Coordinates):
@@ -694,3 +733,37 @@ def assert_coordinate_consistent(
                 f"dimension coordinate {k!r} conflicts between "
                 f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
             )
+
+
+def create_coords_with_default_indexes(
+    coords: Mapping[Any, Variable], data_vars: Mapping[Any, Variable] | None = None
+) -> Coordinates:
+    """Maybe create default indexes from a mapping of coordinates."""
+    all_variables = dict(coords)
+    if data_vars is not None:
+        all_variables.update(data_vars)
+
+    indexes = {}
+    updated_coords = {}
+
+    # this is needed for backward compatibility: when a pandas multi-index
+    # is given as data variable, it is promoted as index / level coordinates
+    # TODO: depreciate this implicit behavior
+    index_vars = {
+        k: v
+        for k, v in all_variables.items()
+        if k in coords or isinstance(v, pd.MultiIndex)
+    }
+
+    for name, obj in index_vars.items():
+        variable = as_variable(obj, name=name)
+
+        if variable.dims == (name,):
+            idx, idx_vars = create_default_index_implicit(variable, all_variables)
+            indexes.update({k: idx for k in idx_vars})
+            updated_coords.update(idx_vars)
+            all_variables.update(idx_vars)
+        else:
+            updated_coords[name] = obj
+
+    return Coordinates(coords=updated_coords, indexes=indexes)

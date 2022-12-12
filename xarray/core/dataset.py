@@ -51,7 +51,12 @@ from xarray.core.common import (
     get_chunksizes,
 )
 from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.coordinates import (
+    Coordinates,
+    DatasetCoordinates,
+    assert_coordinate_consistent,
+    create_coords_with_default_indexes,
+)
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -70,7 +75,7 @@ from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
-    merge_data_and_coords,
+    merge_core,
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -104,7 +109,6 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping
@@ -361,6 +365,19 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
+def merge_data_and_coords(data_vars, coords):
+    """Used in Dataset.__init__."""
+    if not isinstance(coords, Coordinates):
+        coords = create_coords_with_default_indexes(coords, data_vars)
+
+    return merge_core(
+        [data_vars, coords],
+        compat="broadcast_equals",
+        join="outer",
+        explicit_coords=tuple(coords),
+    )
+
+
 class DataVariables(Mapping[Any, "DataArray"]):
     __slots__ = ("_dataset",)
 
@@ -613,7 +630,7 @@ class Dataset(
             coords = coords.variables
 
         variables, coord_names, dims, indexes, _ = merge_data_and_coords(
-            data_vars, coords, compat="broadcast_equals"
+            data_vars, coords
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
@@ -2859,6 +2876,8 @@ class Dataset(
             reindexed = self._replace_with_new_dims(
                 new_variables, new_coord_names, indexes=new_indexes
             )
+
+        reindexed.encoding = self.encoding
 
         return reindexed
 

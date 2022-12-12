@@ -526,7 +526,7 @@ class Aligner(Generic[DataAlignable]):
         new_indexes, new_variables = self._get_indexes_and_vars(obj, matching_indexes)
         dim_pos_indexers = self._get_dim_pos_indexers(matching_indexes)
 
-        new_obj = obj._reindex_callback(
+        return obj._reindex_callback(
             self,
             dim_pos_indexers,
             new_variables,
@@ -535,8 +535,6 @@ class Aligner(Generic[DataAlignable]):
             self.exclude_dims,
             self.exclude_vars,
         )
-        new_obj.encoding = obj.encoding
-        return new_obj
 
     def reindex_all(self) -> None:
         self.results = tuple(
@@ -786,6 +784,7 @@ def deep_align(
 
     This function is not public API.
     """
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -793,7 +792,7 @@ def deep_align(
         indexes = {}
 
     def is_alignable(obj):
-        return isinstance(obj, (DataArray, Dataset))
+        return isinstance(obj, (Coordinates, DataArray, Dataset))
 
     positions = []
     keys = []

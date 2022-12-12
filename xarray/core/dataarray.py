@@ -38,6 +38,7 @@ from xarray.core.coordinates import (
     Coordinates,
     DataArrayCoordinates,
     assert_coordinate_consistent,
+    create_coords_with_default_indexes,
 )
 from xarray.core.dataset import Dataset
 from xarray.core.formatting import format_item
@@ -49,7 +50,7 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
     Default,
@@ -446,11 +447,10 @@ class DataArray(
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
 
-            if isinstance(coords, Coordinates):
-                indexes = dict(coords.xindexes)
-                coords = {k: v.copy() for k, v in coords.variables.items()}
-            else:
-                indexes, coords = _create_indexes_from_coords(coords)
+            if not isinstance(coords, Coordinates):
+                coords = create_coords_with_default_indexes(coords)
+            indexes = dict(coords.xindexes)
+            coords = {k: v.copy() for k, v in coords.variables.items()}
 
         # These fully describe a DataArray
         self._variable = variable
@@ -1817,7 +1817,11 @@ class DataArray(
             exclude_dims,
             exclude_vars,
         )
-        return self._from_temp_dataset(reindexed)
+
+        da = self._from_temp_dataset(reindexed)
+        da.encoding = self.encoding
+
+        return da
 
     def reindex_like(
         self: T_DataArray,
