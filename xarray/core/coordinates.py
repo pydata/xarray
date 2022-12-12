@@ -205,7 +205,7 @@ class Coordinates(AbstractCoordinates):
          Mapping of coordinate names to any object that can be converted
          into a :py:class:`Variable`.
     indexes: dict-like
-         Mapping of coordinate names to :py:class:`Index` objects.
+         Mapping of coordinate names to :py:class:`~indexes.Index` objects.
 
     """
 

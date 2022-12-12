@@ -1083,6 +1083,7 @@ Advanced API
 .. autosummary::
    :toctree: generated/
 
+   Coordinates
    Dataset.variables
    DataArray.variable
    Variable

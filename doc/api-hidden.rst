@@ -9,17 +9,36 @@
 .. autosummary::
    :toctree: generated/
 
+   Coordinates.from_pandas_multiindex
+   Coordinates.get
+   Coordinates.items
+   Coordinates.keys
+   Coordinates.values
+   Coordinates.dims
+   Coordinates.dtypes
+   Coordinates.variables
+   Coordinates.xindexes
+   Coordinates.indexes
+   Coordinates.to_dataset
+   Coordinates.to_index
+   Coordinates.update
+   Coordinates.merge
+   Coordinates.merge_coords
+
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
    core.coordinates.DatasetCoordinates.keys
-   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.values
+   core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.dtypes
+   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.xindexes
+   core.coordinates.DatasetCoordinates.indexes
    core.coordinates.DatasetCoordinates.to_dataset
    core.coordinates.DatasetCoordinates.to_index
    core.coordinates.DatasetCoordinates.update
-   core.coordinates.DatasetCoordinates.values
-   core.coordinates.DatasetCoordinates.dims
-   core.coordinates.DatasetCoordinates.indexes
-   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.merge_coords
 
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
@@ -47,14 +66,17 @@
    core.coordinates.DataArrayCoordinates.get
    core.coordinates.DataArrayCoordinates.items
    core.coordinates.DataArrayCoordinates.keys
-   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.values
+   core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.dtypes
+   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.xindexes
+   core.coordinates.DataArrayCoordinates.indexes
    core.coordinates.DataArrayCoordinates.to_dataset
    core.coordinates.DataArrayCoordinates.to_index
    core.coordinates.DataArrayCoordinates.update
-   core.coordinates.DataArrayCoordinates.values
-   core.coordinates.DataArrayCoordinates.dims
-   core.coordinates.DataArrayCoordinates.indexes
-   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.merge_coords
 
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
