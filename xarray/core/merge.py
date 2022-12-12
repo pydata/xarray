@@ -320,6 +320,7 @@ def merge_collected(
 def collect_variables_and_indexes(
     list_of_mappings: list[DatasetLike],
     indexes: Mapping[Any, Any] | None = None,
+    create_default_indexes: bool = True,
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
@@ -366,7 +367,7 @@ def collect_variables_and_indexes(
             variable = as_variable(variable, name=name)
             if name in indexes:
                 append(name, variable, indexes[name])
-            elif variable.dims == (name,):
+            elif variable.dims == (name,) and create_default_indexes:
                 idx, idx_vars = create_default_index_implicit(variable)
                 append_all(idx_vars, {k: idx for k in idx_vars})
             else:
@@ -592,6 +593,7 @@ def merge_data_and_coords(
         join,
         explicit_coords=explicit_coords,
         indexes=Indexes(indexes, indexed_coords),
+        create_default_indexes=False,
     )
 
 
@@ -718,6 +720,7 @@ def merge_core(
     explicit_coords: Sequence | None = None,
     indexes: Mapping[Any, Any] | None = None,
     fill_value: object = dtypes.NA,
+    create_default_indexes: bool = True,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
 
@@ -743,6 +746,8 @@ def merge_core(
         may be cast to pandas.Index objects.
     fill_value : scalar, optional
         Value to use for newly missing values
+    create_default_indexes : bool, optional
+        If True, create default (pandas) indexes for dimension coordinates.
 
     Returns
     -------
@@ -768,7 +773,9 @@ def merge_core(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(aligned, indexes=indexes)
+    collected = collect_variables_and_indexes(
+        aligned, indexes=indexes, create_default_indexes=create_default_indexes
+    )
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs
