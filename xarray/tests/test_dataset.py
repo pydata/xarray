@@ -30,7 +30,7 @@ from xarray import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
-from xarray.core.coordinates import DatasetCoordinates
+from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
@@ -576,6 +576,29 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
             Dataset({}, {"x": mindex, "y": mindex})
             Dataset({}, {"x": mindex, "level_1": range(4)})
+
+    def test_constructor_no_default_index(self) -> None:
+        # explicitly passing a Coordinates object skips the creation of default index
+        ds = Dataset(coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        assert "x" in ds
+        assert "x" not in ds.xindexes
+
+    def test_constructor_multiindex(self) -> None:
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        coords = Coordinates.from_pandas_multiindex(midx, "x")
+
+        ds = Dataset(coords=coords)
+        assert_identical(ds, coords.to_dataset())
+
+    def test_constructor_custom_index(self) -> None:
+        class CustomIndex(Index):
+            ...
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        ds = Dataset(coords=coords)
+        assert isinstance(ds.xindexes["x"], CustomIndex)
 
     def test_properties(self) -> None:
         ds = create_test_data()
@@ -6070,6 +6093,13 @@ class TestDataset:
         expected = ["dim1", "dim3", "numbers"]
         for item in actual:
             ds["var3"].coords[item]  # should not raise
+        assert sorted(actual) == sorted(expected)
+
+        coords = Coordinates(ds.coords)
+        actual = coords._ipython_key_completions_()
+        expected = ["time", "dim2", "dim3", "numbers"]
+        for item in actual:
+            coords[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
         # data_vars
