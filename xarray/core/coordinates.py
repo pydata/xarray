@@ -189,20 +189,27 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 class Coordinates(AbstractCoordinates):
     """Dictionary like container for Xarray coordinates (variables + indexes).
 
-    This collection can be passed directly to the :py:class:`~xarray.Dataset`
-    and :py:class:`~xarray.DataArray` constructors via their `coords` argument.
-    This will add both the coordinates variables and their index.
+    This collection is a mapping of coordinate names to
+    :py:class:`~xarray.DataArray` objects.
 
-    Most often coordinates are returned via the :py:attr:`Dataset.coords` and
-    :py:attr:`DataArray.coords` properties. In occasional cases they are built
-    from index objects (e.g., :py:meth:`Coordinates.from_pandas_multiindex`). In
-    rare cases they are built directly from coordinate data and index objects
-    (beware that no consistency check is done on those inputs).
+    It can be passed directly to the :py:class:`~xarray.Dataset` and
+    :py:class:`~xarray.DataArray` constructors via their `coords` argument. This
+    will add both the coordinates variables and their index.
+
+    Coordinates are either:
+
+    - returned via the :py:attr:`Dataset.coords` and :py:attr:`DataArray.coords`
+      properties.
+    - built from index objects (e.g., :py:meth:`Coordinates.from_pandas_multiindex`).
+    - built directly from coordinate data and index objects (beware that no consistency
+      check is done on those inputs).
+
+    In the latter case, no default (pandas) index is created.
 
     Parameters
     ----------
     coords: dict-like
-         Mapping of coordinate names to any object that can be converted
+         Mapping of coordinate names to any objects that can be converted
          into a :py:class:`Variable`.
     indexes: dict-like
          Mapping of coordinate names to :py:class:`~indexes.Index` objects.
@@ -218,6 +225,10 @@ class Coordinates(AbstractCoordinates):
         coords: Mapping[Any, Any] | None = None,
         indexes: Mapping[Any, Index] | None = None,
     ):
+        # When coordinates are constructed directly, an internal Dataset is
+        # created so that it is compatible with the DatasetCoordinates and
+        # DataArrayCoordinates classes serving as a proxy for the data.
+        # TODO: refactor DataArray / Dataset so that Coordinates store the data.
         from xarray.core.dataset import Dataset
 
         if coords is None:

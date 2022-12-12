@@ -454,12 +454,9 @@ class Dataset(
 
     By default, pandas indexes are created for one dimensional variables with
     name equal to their dimension so those variables can be used as coordinates
-    for label based indexing. When an Xarray ``Coordinates`` object is passed to
-    ``coords``, any existing index(es) built from those coordinates will be
-    added to the Dataset (such ``Coordinates`` objects are returned by the
-    :py:attr:`~xarray.Dataset.coords` and :py:attr:`~xarray.DataArray.coords`
-    properties or may be created directly, e.g., with
-    :py:meth:`~xarray.IndexedCoordinates.from_pandas_multiindex`).
+    for label based indexing. When a :py:class:`~xarray.Coordinates` object is
+    passed to ``coords``, any existing index(es) built from those coordinates
+    will be added to the Dataset.
 
     To load data from a file or file-like object, use the `open_dataset`
     function.
@@ -1679,13 +1676,19 @@ class Dataset(
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        """Mapping of xarray Index objects used for label based indexing."""
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
 
     @property
     def coords(self) -> DatasetCoordinates:
-        """Dictionary of xarray.DataArray objects corresponding to coordinate
-        variables
+        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
+        coordinate variables.
+
+        See Also
+        --------
+        Coordinates
         """
         return DatasetCoordinates(self)
 

@@ -315,9 +315,9 @@ class DataArray(
         attribute dictionary is initialized.
     indexes : py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
-        new DataArray, use the ``coords`` argument instead with an
-        Xarray ``Coordinate`` object (both coordinate variables and
-        indexes will be extracted from the latter).
+        new DataArray, use the ``coords`` argument instead with a
+        :py:class:`~xarray.Coordinate` object (both coordinate variables
+        and indexes will be extracted from the latter).
 
     Examples
     --------
@@ -925,12 +925,20 @@ class DataArray(
 
     @property
     def xindexes(self) -> Indexes:
-        """Mapping of xarray Index objects used for label based indexing."""
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
     def coords(self) -> DataArrayCoordinates:
-        """Dictionary-like container of coordinate arrays."""
+        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
+        coordinate variables.
+
+        See Also
+        --------
+        Coordinates
+        """
         return DataArrayCoordinates(self)
 
     @overload
