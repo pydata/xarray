@@ -311,7 +311,8 @@ class Coordinates(AbstractCoordinates):
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
-        return self._data.copy()
+        names = [name for name in self._data._variables if name in self._names]
+        return self._data._copy_listed(names)
 
     def __getitem__(self, key: Hashable) -> DataArray:
         return self._data[key]
@@ -736,9 +737,11 @@ def assert_coordinate_consistent(
 
 
 def create_coords_with_default_indexes(
-    coords: Mapping[Any, Variable], data_vars: Mapping[Any, Variable] | None = None
+    coords: Mapping[Any, Any], data_vars: Mapping[Any, Variable] | None = None
 ) -> Coordinates:
     """Maybe create default indexes from a mapping of coordinates."""
+    from xarray.core.dataarray import DataArray
+
     all_variables = dict(coords)
     if data_vars is not None:
         all_variables.update(data_vars)
@@ -756,6 +759,15 @@ def create_coords_with_default_indexes(
     }
 
     for name, obj in index_vars.items():
+        if isinstance(obj, DataArray):
+            # extract all coords/indexes from DataArray objects
+            # except if explicitly overwritten by DataArray data
+            for k, v in obj._coords.items():
+                if k != name:
+                    updated_coords[k] = v.copy()
+                    if k in obj._indexes:
+                        indexes[k] = obj._indexes[k]
+
         variable = as_variable(obj, name=name)
 
         if variable.dims == (name,):
