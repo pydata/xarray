@@ -25,9 +25,8 @@ from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _new_tile_id,
 )
-
-from . import assert_equal, assert_identical, requires_cftime
-from .test_dataset import create_test_data
+from xarray.tests import assert_equal, assert_identical, requires_cftime
+from xarray.tests.test_dataset import create_test_data
 
 
 def assert_combined_tile_ids_equal(dict1, dict2):

@@ -34,8 +34,7 @@ from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
-
-from . import (
+from xarray.tests import (
     InaccessibleArray,
     UnexpectedDataAccess,
     assert_allclose,
@@ -6115,6 +6114,40 @@ class TestDataset:
 
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
+
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
+        ds = xr.Dataset(
+            {"a": ("x", [1, 2], attrs), "b": ("y", [1, 2], attrs)},
+            coords={"c": ("x", [-1, 1], attrs), "d": ("y", [-1, 1], attrs)},
+            attrs=attrs,
+        )
+        expected = xr.Dataset(
+            {"a": ("x", [0, 1, 2, 0], expected), "b": ("y", [1, 2], attrs)},
+            coords={
+                "c": ("x", [np.nan, -1, 1, np.nan], expected),
+                "d": ("y", [-1, 1], attrs),
+            },
+            attrs=expected,
+        )
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = ds.pad({"x": (1, 1)}, mode="constant", constant_values=0)
+            xr.testing.assert_identical(actual, expected)
+
+        actual = ds.pad(
+            {"x": (1, 1)}, mode="constant", constant_values=0, keep_attrs=keep_attrs
+        )
+        xr.testing.assert_identical(actual, expected)
 
     def test_astype_attrs(self) -> None:
         data = create_test_data(seed=123)
