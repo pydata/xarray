@@ -243,6 +243,12 @@ class Coordinates(AbstractCoordinates):
         else:
             indexes = dict(indexes)
 
+        no_coord_index = set(indexes) - set(variables)
+        if no_coord_index:
+            raise ValueError(
+                f"no coordinate variables found for these indexes: {no_coord_index}"
+            )
+
         for k, idx in indexes.items():
             if not isinstance(idx, Index):
                 raise TypeError(f"'{k}' is not an Xarray Index")
