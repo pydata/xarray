@@ -551,6 +551,7 @@ def merge_coords(
     priority_arg: int | None = None,
     indexes: Mapping[Any, Index] | None = None,
     fill_value: object = dtypes.NA,
+    create_default_indexes: bool = True,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge coordinate variables.
 
@@ -563,7 +564,9 @@ def merge_coords(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(aligned, indexes=indexes)
+    collected = collect_variables_and_indexes(
+        aligned, indexes=indexes, create_default_indexes=create_default_indexes
+    )
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
     return variables, out_indexes

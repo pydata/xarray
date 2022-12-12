@@ -51,9 +51,6 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
     def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()
 
-    def __setitem__(self, key: Hashable, value: Any) -> None:
-        self.update({key: value})
-
     @property
     def _names(self) -> set[Hashable]:
         raise NotImplementedError()
@@ -176,14 +173,6 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
                 names += index.names
 
         return pd.MultiIndex(level_list, code_list, names=names)
-
-    def update(self, other: Mapping[Any, Any]) -> None:
-        other_vars = getattr(other, "variables", other)
-        self._maybe_drop_multiindex_coords(set(other_vars))
-        coords, indexes = merge_coords(
-            [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
-        )
-        self._update_coords(coords, indexes)
 
 
 class Coordinates(AbstractCoordinates):
@@ -431,6 +420,33 @@ class Coordinates(AbstractCoordinates):
             other = Dataset(coords=other).coords
 
         return self.merge(other).coords
+
+    def __setitem__(self, key: Hashable, value: Any) -> None:
+        self.update({key: value})
+
+    def update(self, other: Mapping[Any, Any]) -> None:
+        other_obj: Dataset | Mapping[Hashable, Variable]
+
+        if isinstance(other, Coordinates):
+            # special case: do not create default indexes
+            # converting to Dataset will allow reusing existing indexes
+            # when merging coordinates below
+            other_obj = other.to_dataset()
+            create_default_indexes = False
+        else:
+            other_obj = getattr(other, "variables", other)
+            create_default_indexes = True
+
+        self._maybe_drop_multiindex_coords(set(other_obj))
+
+        coords, indexes = merge_coords(
+            [self.variables, other_obj],
+            priority_arg=1,
+            indexes=self.xindexes,
+            create_default_indexes=create_default_indexes,
+        )
+
+        self._update_coords(coords, indexes)
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""

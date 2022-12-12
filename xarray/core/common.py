@@ -609,9 +609,17 @@ class DataWithCoords(AttrAccessMixin):
         Dataset.swap_dims
         Dataset.set_coords
         """
+        from xarray.core.coordinates import Coordinates
+
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results: dict[Hashable, Any] = self._calc_assign_results(coords_combined)
+
+        results: Coordinates | dict[Hashable, Any]
+        if isinstance(coords, Coordinates):
+            results = coords
+        else:
+            results = self._calc_assign_results(coords_combined)
+
         data.coords.update(results)
         return data
 
