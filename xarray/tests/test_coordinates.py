@@ -43,6 +43,10 @@ class TestCoordinates:
         with pytest.raises(TypeError, match=".* is not an Xarray Index"):
             Coordinates(coords={"x": ("x", [1, 2, 3])}, indexes={"x": "not_an_xarray_index"})  # type: ignore
 
+    def test_init_dim_sizes_conflict(self) -> None:
+        with pytest.raises(ValueError):
+            Coordinates(coords={"foo": ("x", [1, 2]), "bar": ("x", [1, 2, 3, 4])})
+
     def test_from_pandas_multiindex(self) -> None:
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
         coords = Coordinates.from_pandas_multiindex(midx, "x")
