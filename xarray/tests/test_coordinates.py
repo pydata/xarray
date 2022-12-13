@@ -127,8 +127,14 @@ class TestCoordinates:
 
     def test_align(self, coords) -> None:
         left = coords
-        right = coords.to_dataset().isel(x=[0, 1]).coords
 
         # test Coordinates._reindex_callback
+        right = coords.to_dataset().isel(x=[0, 1]).coords
         left2, right2 = align(left, right, join="inner")
+        assert_identical(left2, right2)
+
+        # test Coordinates._overwrite_indexes
+        right.update({"x": ("x", [4, 5, 6])})
+        left2, right2 = align(left, right, join="override")
+        assert_identical(left2, left)
         assert_identical(left2, right2)

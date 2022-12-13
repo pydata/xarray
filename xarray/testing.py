@@ -79,7 +79,10 @@ def assert_equal(a, b):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
+    try:
+        assert type(a) == type(b)
+    except AssertionError:
+        assert isinstance(a, Coordinates) and isinstance(b, Coordinates)
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -109,7 +112,10 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
+    try:
+        assert type(a) == type(b)
+    except AssertionError:
+        assert isinstance(a, Coordinates) and isinstance(b, Coordinates)
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
