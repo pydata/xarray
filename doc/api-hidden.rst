@@ -24,6 +24,9 @@
    Coordinates.update
    Coordinates.merge
    Coordinates.merge_coords
+   Coordinates.copy
+   Coordinates.equals
+   Coordinates.identical
 
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
@@ -39,6 +42,9 @@
    core.coordinates.DatasetCoordinates.update
    core.coordinates.DatasetCoordinates.merge
    core.coordinates.DatasetCoordinates.merge_coords
+   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DatasetCoordinates.equals
+   core.coordinates.DatasetCoordinates.identical
 
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
@@ -77,6 +83,9 @@
    core.coordinates.DataArrayCoordinates.update
    core.coordinates.DataArrayCoordinates.merge
    core.coordinates.DataArrayCoordinates.merge_coords
+   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DataArrayCoordinates.equals
+   core.coordinates.DataArrayCoordinates.identical
 
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func

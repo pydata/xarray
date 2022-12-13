@@ -67,10 +67,22 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
     @property
     def indexes(self) -> Indexes[pd.Index]:
+        """Mapping of pandas.Index objects used for label based indexing.
+
+        Raises an error if this Coordinates object has indexes that cannot
+        be coerced to pandas.Index objects.
+
+        See Also
+        --------
+        Coordinates.xindexes
+        """
         return self._data.indexes
 
     @property
     def xindexes(self) -> Indexes[Index]:
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return self._data.xindexes
 
     @property
@@ -287,10 +299,12 @@ class Coordinates(AbstractCoordinates):
 
     @property
     def dims(self) -> Mapping[Hashable, int] | tuple[Hashable, ...]:
+        """Mapping from dimension names to lengths or tuple of dimension names."""
         return self._data.dims
 
     @property
     def sizes(self) -> Frozen[Hashable, int]:
+        """Mapping from dimension names to lengths."""
         return self._data.sizes
 
     @property
@@ -307,10 +321,14 @@ class Coordinates(AbstractCoordinates):
 
     @property
     def variables(self) -> Mapping[Hashable, Variable]:
+        """Low level interface to Coordinates contents as dict of Variable objects.
+
+        This dictionary is frozen to prevent mutation.
+        """
         return self._data.variables
 
     def to_dataset(self) -> Dataset:
-        """Convert these coordinates into a new Dataset"""
+        """Convert these coordinates into a new Dataset."""
         names = [name for name in self._data._variables if name in self._names]
         return self._data._copy_listed(names)
 
@@ -455,6 +473,7 @@ class Coordinates(AbstractCoordinates):
         self.update({key: value})
 
     def update(self, other: Mapping[Any, Any]) -> None:
+        """Update this Coordinates variables with other coordinate variables."""
         other_obj: Coordinates | Mapping[Hashable, Variable]
 
         if isinstance(other, Coordinates):
@@ -511,9 +530,10 @@ class Coordinates(AbstractCoordinates):
         """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
-    def copy(self, deep=False):
-        # TODO: improve implementation
-        return self.to_dataset().coords
+    def copy(self, deep: bool = False) -> Coordinates:
+        """Return a copy of this Coordinates object."""
+        # TODO: improve implementation?
+        return self.to_dataset().copy(deep=deep).coords
 
 
 class DatasetCoordinates(Coordinates):
