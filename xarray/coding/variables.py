@@ -217,7 +217,9 @@ class CFMaskCoder(VariableCoder):
                 )
                 data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
 
 def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTypeLike):
