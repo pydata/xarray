@@ -83,7 +83,15 @@ class TestCoordinates:
         expected = DataArray([4, 5, 6], coords={"y": [4, 5, 6]}, name="y")
         assert_identical(coords["y"], expected)
 
-    def test_merge_coords(self, coords):
+    def test_equals(self, coords):
+        assert coords.equals(coords)
+        assert not coords.equals("no_a_coords")
+
+    def test_identical(self, coords):
+        assert coords.identical(coords)
+        assert not coords.identical("no_a_coords")
+
+    def test_merge_coords(self, coords) -> None:
         other = {"y": ("y", [4, 5, 6])}
         actual = coords.merge_coords(other)
         expected = coords.merge(other).coords

@@ -321,6 +321,29 @@ class Coordinates(AbstractCoordinates):
         # redirect to DatasetCoordinates.__delitem__
         del self._data.coords[key]
 
+    def equals(self, other: Coordinates) -> bool:
+        """Two Coordinates objects are equal if they have matching variables,
+        all of which are equal.
+
+        See Also
+        --------
+        Coordinates.identical
+        """
+        if not isinstance(other, Coordinates):
+            return False
+        return self.to_dataset().equals(other.to_dataset())
+
+    def identical(self, other: Coordinates) -> bool:
+        """Like equals, but also checks all variable attributes.
+
+        See Also
+        --------
+        Coordinates.equals
+        """
+        if not isinstance(other, Coordinates):
+            return False
+        return self.to_dataset().identical(other.to_dataset())
+
     def _update_coords(
         self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:

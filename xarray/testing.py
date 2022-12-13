@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import duck_array_ops, formatting, utils
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
@@ -67,9 +68,9 @@ def assert_equal(a, b):
 
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+    a : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The first object to compare.
-    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+    b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
 
     See Also
@@ -83,6 +84,8 @@ def assert_equal(a, b):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
+    elif isinstance(a, Coordinates):
+        assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -96,9 +99,9 @@ def assert_identical(a, b):
 
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+    a : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The first object to compare.
-    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+    b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
 
     See Also
@@ -114,6 +117,8 @@ def assert_identical(a, b):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, (Dataset, Variable)):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
+    elif isinstance(a, Coordinates):
+        assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -401,6 +406,10 @@ def _assert_internal_invariants(
     elif isinstance(xarray_obj, Dataset):
         _assert_dataset_invariants(
             xarray_obj, check_default_indexes=check_default_indexes
+        )
+    elif isinstance(xarray_obj, Coordinates):
+        _assert_dataset_invariants(
+            xarray_obj.to_dataset(), check_default_indexes=check_default_indexes
         )
     else:
         raise TypeError(
