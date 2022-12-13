@@ -23,6 +23,18 @@ v2022.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:class:`Coordinates` can now be constructed independently of any Dataset or
+  DataArray (it is still returned from :py:attr:`Dataset.coords` and
+  :py:attrs:`DataArray.coords` properties). ``Coordinates`` objects are useful for
+  passing both coordinate variables and indexes to new Dataset / DataArray objects,
+  e.g., via their constructor or via :py:meth:`Dataset.assign_coords`. It is also
+  useful to wrap coordinate variables in a ``Coordinates`` object in order to skip
+  the creation of default (pandas) indexes for dimension coordinates.
+  The :py:class:`Coordinates.from_pandas_multiindex` constructor may be used to
+  create coordinates directly from a :py:class:`pandas.MultiIndex` object (it is
+  preferred over passing it directly as coordinate data, which may be deprecated soon).
+  (:issue:`6392`, :pull:`7368`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
