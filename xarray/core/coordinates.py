@@ -237,7 +237,7 @@ class Coordinates(AbstractCoordinates):
         if coords is None:
             variables = {}
         elif isinstance(coords, Coordinates):
-            variables = dict(coords.variables)
+            variables = {k: v.copy() for k, v in coords.variables.items()}
         else:
             variables = {k: as_variable(v) for k, v in coords.items()}
 
@@ -530,10 +530,15 @@ class Coordinates(AbstractCoordinates):
         """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
-    def copy(self, deep: bool = False) -> Coordinates:
+    def copy(
+        self, deep: bool = False, memo: dict[int, Any] | None = None
+    ) -> Coordinates:
         """Return a copy of this Coordinates object."""
-        # TODO: improve implementation?
-        return self.to_dataset().copy(deep=deep).coords
+        variables = {
+            k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
+        }
+        indexes = {k: v._copy(deep=deep, memo=memo) for k, v in self.xindexes.items()}
+        return Coordinates(coords=variables, indexes=indexes)
 
 
 class DatasetCoordinates(Coordinates):

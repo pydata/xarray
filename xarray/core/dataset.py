@@ -367,7 +367,9 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
 
 def merge_data_and_coords(data_vars, coords):
     """Used in Dataset.__init__."""
-    if not isinstance(coords, Coordinates):
+    if isinstance(coords, Coordinates):
+        coords = coords.copy()
+    else:
         coords = create_coords_with_default_indexes(coords, data_vars)
 
     return merge_core(

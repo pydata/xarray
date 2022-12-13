@@ -27,6 +27,9 @@ class TestCoordinates:
         coords = Coordinates(coords=expected.coords)
         assert_identical(coords.to_dataset(), expected)
 
+        # test variables copied
+        assert coords.variables["foo"] is not expected.variables["foo"]
+
         # default index
         expected = Dataset(coords={"x": ("x", [0, 1, 2])})
         coords = Coordinates(coords=expected.coords, indexes=expected.xindexes)
@@ -107,17 +110,15 @@ class TestCoordinates:
         assert_identical(actual, expected, check_default_indexes=False)
         assert "y" not in actual.xindexes
 
-    def test_copy(self, coords) -> None:
-        copied = coords.copy()
-        assert_identical(coords.to_dataset(), copied.to_dataset())
-        v0 = coords.variables["x"]
-        v1 = copied.variables["x"]
+    def test_copy(self) -> None:
+        no_index_coords = Coordinates({"foo": ("x", [1, 2, 3])})
+        copied = no_index_coords.copy()
+        assert_identical(no_index_coords, copied)
+        v0 = no_index_coords.variables["foo"]
+        v1 = copied.variables["foo"]
         assert v0 is not v1
         assert source_ndarray(v0.data) is source_ndarray(v1.data)
 
-        # deep copy: use non-indexed coordinates
-        # (indexes are immutable so not deep-copied?)
-        no_index_coords = Coordinates({"foo": ("x", [1, 2, 3])})
         deep_copied = no_index_coords.copy(deep=True)
         assert_identical(no_index_coords.to_dataset(), deep_copied.to_dataset())
         v0 = no_index_coords.variables["foo"]

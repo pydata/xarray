@@ -600,6 +600,9 @@ class TestDataset:
         ds = Dataset(coords=coords)
         assert isinstance(ds.xindexes["x"], CustomIndex)
 
+        # test coordinate variables copied
+        assert ds.variables["x"] is not coords.variables["x"]
+
     def test_properties(self) -> None:
         ds = create_test_data()
 
