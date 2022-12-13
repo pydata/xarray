@@ -7968,6 +7968,7 @@ class Dataset(
         ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
+        keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ) -> T_Dataset:
         """Pad this dataset along one or more dimensions.
@@ -8045,6 +8046,10 @@ class Dataset(
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
+        keep_attrs : bool or None, optional
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one. If False, the new object
+            will be returned without attributes.
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
@@ -8091,6 +8096,9 @@ class Dataset(
             coord_pad_mode = "constant"
             coord_pad_options = {}
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
         variables = {}
 
         # keep indexes that won't be affected by pad and drop all other indexes
@@ -8113,11 +8121,13 @@ class Dataset(
                     constant_values=constant_values,
                     end_values=end_values,
                     reflect_type=reflect_type,
+                    keep_attrs=keep_attrs,
                 )
             else:
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=coord_pad_mode,
+                    keep_attrs=keep_attrs,
                     **coord_pad_options,  # type: ignore[arg-type]
                 )
                 # reset default index of dimension coordinates
@@ -8128,7 +8138,8 @@ class Dataset(
                     indexes[name] = index
                     variables[name] = index_vars[name]
 
-        return self._replace_with_new_dims(variables, indexes=indexes)
+        attrs = self._attrs if keep_attrs else None
+        return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
     def idxmin(
         self: T_Dataset,
