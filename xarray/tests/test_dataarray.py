@@ -26,6 +26,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
+from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
@@ -464,6 +465,32 @@ class TestDataArray:
         ecoord = np.arange(8)
         expected = DataArray(data, coords={"x": ecoord, "y": ecoord}, dims=["x", "y"])
         assert_equal(actual, expected)
+
+    def test_constructor_no_default_index(self) -> None:
+        # explicitly passing a Coordinates object skips the creation of default index
+        da = DataArray(range(3), coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        assert "x" in da.coords
+        assert "x" not in da.xindexes
+
+    def test_constructor_multiindex(self) -> None:
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        coords = Coordinates.from_pandas_multiindex(midx, "x")
+
+        da = DataArray(range(4), coords=coords, dims="x")
+        assert_identical(da.coords, coords)
+
+    def test_constructor_custom_index(self) -> None:
+        class CustomIndex(Index):
+            ...
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        da = DataArray(range(3), coords=coords)
+        assert isinstance(da.xindexes["x"], CustomIndex)
+
+        # test coordinate variables copied
+        assert da.coords["x"] is not coords.variables["x"]
 
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
@@ -1503,6 +1530,24 @@ class TestDataArray:
         data = self.mda
         with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign_coords(x=range(4))
+
+    def test_assign_coords_custom_index(self) -> None:
+        class CustomIndex(Index):
+            pass
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        da = xr.DataArray([0, 1, 2], dims="x")
+        actual = da.assign_coords(coords)
+        assert isinstance(actual.xindexes["x"], CustomIndex)
+
+    def test_assign_coords_no_default_index(self) -> None:
+        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        da = DataArray([1, 2, 3], dims="y")
+        actual = da.assign_coords(coords)
+        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert "y" not in actual.xindexes
 
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])

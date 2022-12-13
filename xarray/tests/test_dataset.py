@@ -4209,6 +4209,25 @@ class TestDataset:
         actual = ds.assign_coords(y=[4, 5, 6])
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
+    def test_assign_coords_custom_index(self) -> None:
+        class CustomIndex(Index):
+            pass
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        ds = Dataset()
+        actual = ds.assign_coords(coords)
+        assert isinstance(actual.xindexes["x"], CustomIndex)
+
+    def test_assign_coords_no_default_index(self) -> None:
+        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        ds = Dataset()
+        actual = ds.assign_coords(coords)
+        expected = coords.to_dataset()
+        assert_identical(expected, actual, check_default_indexes=False)
+        assert "y" not in actual.xindexes
+
     def test_merge_multiindex_level(self) -> None:
         data = create_test_multiindex()
 
