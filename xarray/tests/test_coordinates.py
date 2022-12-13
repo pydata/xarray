@@ -104,9 +104,9 @@ class TestCoordinates:
         expected = coords.merge(other).coords
         assert_identical(actual.to_dataset(), expected.to_dataset())
 
-        other = Coordinates(other)
-        actual = coords.merge_coords(other)
-        expected = coords.merge(other).coords
+        other_coords = Coordinates(other)
+        actual = coords.merge_coords(other_coords)
+        expected = coords.merge(other_coords).coords
         assert_identical(actual, expected, check_default_indexes=False)
         assert "y" not in actual.xindexes
 
