@@ -534,11 +534,13 @@ class Coordinates(AbstractCoordinates):
         self, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Coordinates:
         """Return a copy of this Coordinates object."""
+        # do not copy indexes (may corrupt multi-coordinate indexes)
+        # TODO: disable variables deepcopy? it may also be problematic when they
+        # encapsulate index objects like pd.Index
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        indexes = {k: v._copy(deep=deep, memo=memo) for k, v in self.xindexes.items()}
-        return Coordinates(coords=variables, indexes=indexes)
+        return Coordinates(coords=variables, indexes=self.xindexes)
 
 
 class DatasetCoordinates(Coordinates):
