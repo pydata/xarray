@@ -964,18 +964,23 @@ def merge(
     combine_nested
     combine_by_coords
     """
+
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
     dict_like_objects = []
     for obj in objects:
-        if not isinstance(obj, (DataArray, Dataset, dict)):
+        if not isinstance(obj, (DataArray, Dataset, Coordinates, dict)):
             raise TypeError(
                 "objects must be an iterable containing only "
                 "Dataset(s), DataArray(s), and dictionaries."
             )
 
-        obj = obj.to_dataset(promote_attrs=True) if isinstance(obj, DataArray) else obj
+        if isinstance(obj, DataArray):
+            obj = obj.to_dataset(promote_attrs=True)
+        elif isinstance(obj, Coordinates):
+            obj = obj.to_dataset()
         dict_like_objects.append(obj)
 
     merge_result = merge_core(
