@@ -817,7 +817,7 @@ def create_coords_with_default_indexes(
         all_variables.update(data_vars)
 
     indexes = {}
-    updated_coords = {}
+    variables = {}
 
     # this is needed for backward compatibility: when a pandas multi-index
     # is given as data variable, it is promoted as index / level coordinates
@@ -828,25 +828,31 @@ def create_coords_with_default_indexes(
         if k in coords or isinstance(v, pd.MultiIndex)
     }
 
+    dataarray_coords = []
+
     for name, obj in index_vars.items():
         if isinstance(obj, DataArray):
-            # extract all coords/indexes from DataArray objects
-            # except if explicitly overwritten by DataArray data
-            for k, v in obj._coords.items():
-                if k != name:
-                    updated_coords[k] = v.copy()
-                    if k in obj._indexes:
-                        if name not in obj.xindexes.get_all_coords(k):
-                            indexes[k] = obj._indexes[k]
+            dataarray_coords.append(obj.coords)
 
         variable = as_variable(obj, name=name)
 
         if variable.dims == (name,):
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
             indexes.update({k: idx for k in idx_vars})
-            updated_coords.update(idx_vars)
+            variables.update(idx_vars)
             all_variables.update(idx_vars)
         else:
-            updated_coords[name] = variable
+            variables[name] = variable
 
-    return Coordinates._construct_direct(coords=updated_coords, indexes=indexes)
+    new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
+
+    # extract and merge coordinates and indexes from input DataArrays
+    if dataarray_coords:
+        prioritized = {k: (v, indexes.get(k, None)) for k, v in variables.items()}
+        variables, indexes = merge_coordinates_without_align(
+            dataarray_coords + [new_coords],
+            prioritized=prioritized,
+        )
+        new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
+
+    return new_coords
