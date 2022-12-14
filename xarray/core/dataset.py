@@ -377,6 +377,7 @@ def merge_data_and_coords(data_vars, coords):
         compat="broadcast_equals",
         join="outer",
         explicit_coords=tuple(coords),
+        indexes=coords.xindexes,
     )
 
 
