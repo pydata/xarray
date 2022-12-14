@@ -810,6 +810,12 @@ def create_coords_with_default_indexes(
     coords: Mapping[Any, Any], data_vars: Mapping[Any, Variable] | None = None
 ) -> Coordinates:
     """Maybe create default indexes from a mapping of coordinates."""
+
+    # Note: data_vars are needed here only because a pd.MultiIndex object
+    # can be promoted as coordinates.
+    # TODO: It won't be relevant anymore when this behavior will be dropped
+    # in favor of the more explicit ``Coordinates.from_pandas_multiindex()``.
+
     from xarray.core.dataarray import DataArray
 
     all_variables = dict(coords)
@@ -821,7 +827,6 @@ def create_coords_with_default_indexes(
 
     # this is needed for backward compatibility: when a pandas multi-index
     # is given as data variable, it is promoted as index / level coordinates
-    # TODO: depreciate this implicit behavior
     index_vars = {
         k: v
         for k, v in all_variables.items()
