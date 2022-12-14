@@ -266,6 +266,24 @@ class Coordinates(AbstractCoordinates):
         )
 
     @classmethod
+    def _construct_direct(
+        cls,
+        coords: dict[Any, Variable],
+        indexes: dict[Any, Index],
+        dims: dict[Any, int] | None = None,
+    ) -> Coordinates:
+        from xarray.core.dataset import Dataset
+
+        obj = object.__new__(cls)
+        obj._data = Dataset._construct_direct(
+            coord_names=set(coords),
+            variables=coords,
+            indexes=indexes,
+            dims=dims,
+        )
+        return obj
+
+    @classmethod
     def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: str) -> Coordinates:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
@@ -540,7 +558,9 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return Coordinates(coords=variables, indexes=self.xindexes)
+        return Coordinates._construct_direct(
+            coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+        )
 
 
 class DatasetCoordinates(Coordinates):
@@ -827,6 +847,6 @@ def create_coords_with_default_indexes(
             updated_coords.update(idx_vars)
             all_variables.update(idx_vars)
         else:
-            updated_coords[name] = obj
+            updated_coords[name] = variable
 
-    return Coordinates(coords=updated_coords, indexes=indexes)
+    return Coordinates._construct_direct(coords=updated_coords, indexes=indexes)
