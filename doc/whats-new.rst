@@ -25,7 +25,7 @@ New Features
 
 - :py:class:`Coordinates` can now be constructed independently of any Dataset or
   DataArray (it is still returned from :py:attr:`Dataset.coords` and
-  :py:attrs:`DataArray.coords` properties). ``Coordinates`` objects are useful for
+  :py:attr:`DataArray.coords` properties). ``Coordinates`` objects are useful for
   passing both coordinate variables and indexes to new Dataset / DataArray objects,
   e.g., via their constructor or via :py:meth:`Dataset.assign_coords`. It is also
   useful to wrap coordinate variables in a ``Coordinates`` object in order to skip
