@@ -27,6 +27,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
+  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
 Deprecations
 ~~~~~~~~~~~~

@@ -463,12 +463,12 @@ class CFTimeIndex(pd.Index):
         indexer = np.where(distance <= tolerance, indexer, -1)
         return indexer
 
-    def get_loc(self, key, method=None, tolerance=None):
+    def get_loc(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
         if isinstance(key, str):
             return self._get_string_slice(key)
         else:
-            return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
+            return super().get_loc(key)
 
     def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
