@@ -517,7 +517,7 @@ class Coordinates(AbstractCoordinates):
         drop_coords: list[Hashable] | None = None,
         rename_dims: Mapping[Any, Any] | None = None,
     ) -> Coordinates:
-        results = self._data._overwrite_indexes(
+        results = self.to_dataset()._overwrite_indexes(
             indexes, coords, drop_coords, rename_dims
         )
         return results.coords
@@ -533,7 +533,7 @@ class Coordinates(AbstractCoordinates):
         exclude_vars: frozenset[Hashable],
     ) -> Coordinates:
         """Callback called from ``Aligner`` to create a new reindexed Coordinates."""
-        aligned = self._data._reindex_callback(
+        aligned = self.to_dataset()._reindex_callback(
             aligner,
             dim_pos_indexers,
             variables,
