@@ -514,12 +514,8 @@ class Coordinates(AbstractCoordinates):
         self,
         indexes: Mapping[Any, Index],
         coords: Mapping[Any, Variable] | None = None,
-        drop_coords: list[Hashable] | None = None,
-        rename_dims: Mapping[Any, Any] | None = None,
     ) -> Coordinates:
-        results = self.to_dataset()._overwrite_indexes(
-            indexes, coords, drop_coords, rename_dims
-        )
+        results = self.to_dataset()._overwrite_indexes(indexes, coords)
         return results.coords
 
     def _reindex_callback(
