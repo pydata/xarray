@@ -658,6 +658,7 @@ def merge_core(
     explicit_coords: Sequence | None = None,
     indexes: Mapping[Any, Any] | None = None,
     fill_value: object = dtypes.NA,
+    skip_align_args: list[int] | None = None,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
 
@@ -683,6 +684,8 @@ def merge_core(
         may be cast to pandas.Index objects.
     fill_value : scalar, optional
         Value to use for newly missing values
+    skip_align_args : list of int, optional
+        Optional arguments in `objects` that are not included in alignment.
 
     Returns
     -------
@@ -704,10 +707,20 @@ def merge_core(
 
     _assert_compat_valid(compat)
 
+    objects = list(objects)
+    if skip_align_args is None:
+        skip_align_args = []
+
+    skip_align_objs = [(pos, objects.pop(pos)) for pos in skip_align_args]
+
     coerced = coerce_pandas_values(objects)
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
+
+    for pos, obj in skip_align_objs:
+        aligned.insert(pos, obj)
+
     collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
