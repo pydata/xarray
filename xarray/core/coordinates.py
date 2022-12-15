@@ -822,8 +822,8 @@ def create_coords_with_default_indexes(
     if data_vars is not None:
         all_variables.update(data_vars)
 
-    indexes = {}
-    variables = {}
+    indexes: dict[Hashable, Index] = {}
+    variables: dict[Hashable, Variable] = {}
 
     # this is needed for backward compatibility: when a pandas multi-index
     # is given as data variable, it is promoted as index / level coordinates
