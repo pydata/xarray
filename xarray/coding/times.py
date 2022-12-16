@@ -10,12 +10,7 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
-from ..core import indexing
-from ..core.common import contains_cftime_datetimes, is_np_datetime_like
-from ..core.formatting import first_n_items, format_timestamp, last_item
-from ..core.pycompat import is_duck_dask_array
-from ..core.variable import Variable
-from .variables import (
+from xarray.coding.variables import (
     SerializationWarning,
     VariableCoder,
     lazy_elemwise_func,
@@ -24,6 +19,11 @@ from .variables import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
+from xarray.core import indexing
+from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
+from xarray.core.formatting import first_n_items, format_timestamp, last_item
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.variable import Variable
 
 try:
     import cftime
@@ -31,7 +31,7 @@ except ImportError:
     cftime = None
 
 if TYPE_CHECKING:
-    from ..core.types import CFCalendar
+    from xarray.core.types import CFCalendar
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -581,7 +581,18 @@ def _encode_datetime_with_cftime(dates, units, calendar):
         dates = dates.astype("M8[us]").astype(datetime)
 
     def encode_datetime(d):
-        return np.nan if d is None else cftime.date2num(d, units, calendar)
+        # Since netCDF files do not support storing float128 values, we ensure
+        # that float64 values are used by setting longdouble=False in num2date.
+        # This try except logic can be removed when xarray's minimum version of
+        # cftime is at least 1.6.2.
+        try:
+            return (
+                np.nan
+                if d is None
+                else cftime.date2num(d, units, calendar, longdouble=False)
+            )
+        except TypeError:
+            return np.nan if d is None else cftime.date2num(d, units, calendar)
 
     return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
@@ -681,7 +692,8 @@ class CFDatetimeCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "units" in attrs and "since" in attrs["units"]:
+        units = attrs.get("units")
+        if isinstance(units, str) and "since" in units:
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
             dtype = _decode_cf_datetime_dtype(data, units, calendar, self.use_cftime)

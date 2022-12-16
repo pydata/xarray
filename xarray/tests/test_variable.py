@@ -25,24 +25,27 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     VectorizedIndexer,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.tests import requires_bottleneck
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    has_pandas_version_two,
     raise_if_dask_computes,
+    requires_bottleneck,
     requires_cupy,
     requires_dask,
+    requires_pandas_version_two,
     requires_pint,
     requires_sparse,
     source_ndarray,
 )
+
+dask_array_type = array_type("dask")
 
 _PAD_XR_NP_ARGS = [
     [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
@@ -59,6 +62,8 @@ def var():
 
 
 class VariableSubclassobjects:
+    cls: staticmethod[Variable]
+
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(["time"], data, {"foo": "bar"})
@@ -521,7 +526,7 @@ class VariableSubclassobjects:
 
     @pytest.mark.parametrize("deep", [True, False])
     @pytest.mark.parametrize("astype", [float, int, str])
-    def test_copy(self, deep, astype):
+    def test_copy(self, deep: bool, astype: type[object]) -> None:
         v = self.cls("x", (0.5 * np.arange(10)).astype(astype), {"foo": "bar"})
         w = v.copy(deep=deep)
         assert type(v) is type(w)
@@ -534,6 +539,27 @@ class VariableSubclassobjects:
                 assert source_ndarray(v.values) is source_ndarray(w.values)
         assert_identical(v, copy(v))
 
+    def test_copy_deep_recursive(self) -> None:
+        # GH:issue:7111
+
+        # direct recursion
+        v = self.cls("x", [0, 1])
+        v.attrs["other"] = v
+
+        # TODO: cannot use assert_identical on recursive Vars yet...
+        # lets just ensure that deep copy works without RecursionError
+        v.copy(deep=True)
+
+        # indirect recusrion
+        v2 = self.cls("y", [2, 3])
+        v.attrs["other"] = v2
+        v2.attrs["other"] = v
+
+        # TODO: cannot use assert_identical on recursive Vars yet...
+        # lets just ensure that deep copy works without RecursionError
+        v.copy(deep=True)
+        v2.copy(deep=True)
+
     def test_copy_index(self):
         midx = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
@@ -545,7 +571,7 @@ class VariableSubclassobjects:
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
-    def test_copy_with_data(self):
+    def test_copy_with_data(self) -> None:
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = np.array([[2.5, 5.0], [7.1, 43]])
         actual = orig.copy(data=new_data)
@@ -553,20 +579,20 @@ class VariableSubclassobjects:
         expected.data = new_data
         assert_identical(expected, actual)
 
-    def test_copy_with_data_errors(self):
+    def test_copy_with_data_errors(self) -> None:
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
             orig.copy(data=new_data)
 
-    def test_copy_index_with_data(self):
+    def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 10)
         actual = orig.copy(data=new_data)
         expected = IndexVariable("x", np.arange(5, 10))
         assert_identical(expected, actual)
 
-    def test_copy_index_with_data_errors(self):
+    def test_copy_index_with_data_errors(self) -> None:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 20)
         with pytest.raises(ValueError, match=r"must match shape of object"):
@@ -883,6 +909,33 @@ class VariableSubclassobjects:
             np.array(v.data), np_arg, mode="constant", constant_values=False
         )
         assert_array_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected):
+        data = np.arange(10, dtype=float)
+        v = self.cls(["x"], data, attrs)
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = v.pad({"x": (1, 1)}, mode="constant", constant_values=np.nan)
+
+            assert actual.attrs == expected
+
+        actual = v.pad(
+            {"x": (1, 1)},
+            mode="constant",
+            constant_values=np.nan,
+            keep_attrs=keep_attrs,
+        )
+        assert actual.attrs == expected
 
     @pytest.mark.parametrize("d, w", (("x", 3), ("y", 5)))
     def test_rolling_window(self, d, w):
@@ -1742,9 +1795,9 @@ class TestVariable(VariableSubclassobjects):
         actual = v.quantile(q, dim="y", method=method)
 
         if Version(np.__version__) >= Version("1.22"):
-            expected = np.nanquantile(self.d, q, axis=1, method=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.d, q, axis=1, method=method)
         else:
-            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)
 
         if use_dask:
             assert isinstance(actual.data, dask_array_type)
@@ -2277,6 +2330,11 @@ class TestIndexVariable(VariableSubclassobjects):
         v = IndexVariable(["time"], data, {"foo": "bar"})
         assert pd.Index(data, name="time").identical(v.to_index())
 
+    def test_to_index_multiindex_level(self):
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        ds = Dataset(coords={"x": midx})
+        assert ds.one.variable.to_index().equals(midx.get_level_values("one"))
+
     def test_multiindex_default_level_names(self):
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]])
         v = IndexVariable(["x"], midx, {"foo": "bar"})
@@ -2491,6 +2549,26 @@ class TestAsCompatibleData:
         assert np.asarray(expected) == actual
         assert np.ndarray == type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
+
+    @requires_pandas_version_two
+    def test_tz_datetime(self) -> None:
+        tz = pytz.timezone("US/Eastern")
+        times_ns = pd.date_range("2000", periods=1, tz=tz)
+
+        times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            actual = as_compatible_data(times_s)
+        assert actual.array == times_s
+        assert actual.array.dtype == pd.DatetimeTZDtype("ns", tz)
+
+        series = pd.Series(times_s)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            actual = as_compatible_data(series)
+
+        np.testing.assert_array_equal(actual, series.values)
+        assert actual.dtype == np.dtype("datetime64[ns]")
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
@@ -2763,3 +2841,110 @@ class TestNumpyCoercion:
         result = v.as_numpy()
         assert_identical(result, Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
+
+
+@pytest.mark.parametrize(
+    ("values", "warns_under_pandas_version_two"),
+    [
+        (np.datetime64("2000-01-01", "ns"), False),
+        (np.datetime64("2000-01-01", "s"), True),
+        (np.array([np.datetime64("2000-01-01", "ns")]), False),
+        (np.array([np.datetime64("2000-01-01", "s")]), True),
+        (pd.date_range("2000", periods=1), False),
+        (datetime(2000, 1, 1), False),
+        (np.array([datetime(2000, 1, 1)]), False),
+        (pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")), False),
+        (
+            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
+            False,
+        ),
+    ],
+    ids=lambda x: f"{x}",
+)
+def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> None:
+    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index, pd.Series)) else []
+    if warns_under_pandas_version_two and has_pandas_version_two:
+        with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
+            var = Variable(dims, values)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            var = Variable(dims, values)
+
+    if var.dtype.kind == "M":
+        assert var.dtype == np.dtype("datetime64[ns]")
+    else:
+        # The only case where a non-datetime64 dtype can occur currently is in
+        # the case that the variable is backed by a timezone-aware
+        # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert var._data.array.dtype == pd.DatetimeTZDtype(
+            "ns", pytz.timezone("US/Eastern")
+        )
+
+
+@requires_pandas_version_two
+def test_pandas_two_only_datetime_conversion_warnings() -> None:
+    # Note these tests rely on pandas features that are only present in pandas
+    # 2.0.0 and above, and so for now cannot be parametrized.
+    cases = [
+        (pd.date_range("2000", periods=1), "datetime64[s]"),
+        (pd.Series(pd.date_range("2000", periods=1)), "datetime64[s]"),
+        (
+            pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")),
+            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+        ),
+        (
+            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
+            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+        ),
+    ]
+    for data, dtype in cases:
+        with pytest.warns(UserWarning, match="non-nanosecond precision datetime"):
+            var = Variable(["time"], data.astype(dtype))
+
+    if var.dtype.kind == "M":
+        assert var.dtype == np.dtype("datetime64[ns]")
+    else:
+        # The only case where a non-datetime64 dtype can occur currently is in
+        # the case that the variable is backed by a timezone-aware
+        # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert var._data.array.dtype == pd.DatetimeTZDtype(
+            "ns", pytz.timezone("US/Eastern")
+        )
+
+
+@pytest.mark.parametrize(
+    ("values", "warns_under_pandas_version_two"),
+    [
+        (np.timedelta64(10, "ns"), False),
+        (np.timedelta64(10, "s"), True),
+        (np.array([np.timedelta64(10, "ns")]), False),
+        (np.array([np.timedelta64(10, "s")]), True),
+        (pd.timedelta_range("1", periods=1), False),
+        (timedelta(days=1), False),
+        (np.array([timedelta(days=1)]), False),
+    ],
+    ids=lambda x: f"{x}",
+)
+def test_timedelta_conversion_warning(values, warns_under_pandas_version_two) -> None:
+    dims = ["time"] if isinstance(values, (np.ndarray, pd.Index)) else []
+    if warns_under_pandas_version_two and has_pandas_version_two:
+        with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
+            var = Variable(dims, values)
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            var = Variable(dims, values)
+
+    assert var.dtype == np.dtype("timedelta64[ns]")
+
+
+@requires_pandas_version_two
+def test_pandas_two_only_timedelta_conversion_warning() -> None:
+    # Note this test relies on a pandas feature that is only present in pandas
+    # 2.0.0 and above, and so for now cannot be parametrized.
+    data = pd.timedelta_range("1", periods=1).astype("timedelta64[s]")
+    with pytest.warns(UserWarning, match="non-nanosecond precision timedelta"):
+        var = Variable(["time"], data)
+
+    assert var.dtype == np.dtype("timedelta64[ns]")

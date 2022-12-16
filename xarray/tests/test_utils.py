@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Hashable
+from typing import Hashable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs, iterate_nested
-
-from . import assert_array_equal, requires_cftime, requires_dask
-from .test_coding_times import _all_cftime_date_types
+from xarray.tests import assert_array_equal, requires_dask
 
 
 class TestAlias:
@@ -24,21 +20,6 @@ class TestAlias:
         assert "deprecated" in old_method.__doc__
         with pytest.warns(Warning, match="deprecated"):
             old_method()
-
-
-def test_safe_cast_to_index():
-    dates = pd.date_range("2000-01-01", periods=10)
-    x = np.arange(5)
-    td = x * np.timedelta64(1, "D")
-    for expected, array in [
-        (dates, dates.values),
-        (pd.Index(x, dtype=object), x.astype(object)),
-        (pd.Index(td), td),
-        (pd.Index(td, dtype=object), td.astype(object)),
-    ]:
-        actual = utils.safe_cast_to_index(array)
-        assert_array_equal(expected, actual)
-        assert expected.dtype == actual.dtype
 
 
 @pytest.mark.parametrize(
@@ -66,29 +47,6 @@ def test_maybe_coerce_to_str_minimal_str_dtype():
 
     assert_array_equal(expected, actual)
     assert expected.dtype == actual.dtype
-
-
-@requires_cftime
-def test_safe_cast_to_index_cftimeindex():
-    date_types = _all_cftime_date_types()
-    for date_type in date_types.values():
-        dates = [date_type(1, 1, day) for day in range(1, 20)]
-        expected = CFTimeIndex(dates)
-        actual = utils.safe_cast_to_index(np.array(dates))
-        assert_array_equal(expected, actual)
-        assert expected.dtype == actual.dtype
-        assert isinstance(actual, type(expected))
-
-
-# Test that datetime.datetime objects are never used in a CFTimeIndex
-@requires_cftime
-def test_safe_cast_to_index_datetime_datetime():
-    dates = [datetime(1, 1, day) for day in range(1, 20)]
-
-    expected = pd.Index(dates)
-    actual = utils.safe_cast_to_index(np.array(dates))
-    assert_array_equal(expected, actual)
-    assert isinstance(actual, pd.Index)
 
 
 class TestArrayEquiv:
@@ -295,6 +253,90 @@ def test_infix_dims_errors(supplied, all_):
 
 
 @pytest.mark.parametrize(
+    ["dim", "expected"],
+    [
+        pytest.param("a", ("a",), id="str"),
+        pytest.param(["a", "b"], ("a", "b"), id="list_of_str"),
+        pytest.param(["a", 1], ("a", 1), id="list_mixed"),
+        pytest.param(("a", "b"), ("a", "b"), id="tuple_of_str"),
+        pytest.param(["a", ("b", "c")], ("a", ("b", "c")), id="list_with_tuple"),
+        pytest.param((("b", "c"),), (("b", "c"),), id="tuple_of_tuple"),
+        pytest.param(None, None, id="None"),
+        pytest.param(..., ..., id="ellipsis"),
+    ],
+)
+def test_parse_dims(
+    dim: str | Iterable[Hashable] | None,
+    expected: tuple[Hashable, ...],
+) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    actual = utils.parse_dims(dim, all_dims, replace_none=False)
+    assert actual == expected
+
+
+def test_parse_dims_set() -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    dim = {"a", 1}
+    actual = utils.parse_dims(dim, all_dims)
+    assert set(actual) == dim
+
+
+@pytest.mark.parametrize(
+    "dim", [pytest.param(None, id="None"), pytest.param(..., id="ellipsis")]
+)
+def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    actual = utils.parse_dims(dim, all_dims, replace_none=True)
+    assert actual == all_dims
+
+
+@pytest.mark.parametrize(
+    "dim",
+    [
+        pytest.param("x", id="str_missing"),
+        pytest.param(["a", "x"], id="list_missing_one"),
+        pytest.param(["x", 2], id="list_missing_all"),
+    ],
+)
+def test_parse_dims_raises(dim: str | Iterable[Hashable]) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    with pytest.raises(ValueError, match="'x'"):
+        utils.parse_dims(dim, all_dims, check_exists=True)
+
+
+@pytest.mark.parametrize(
+    ["dim", "expected"],
+    [
+        pytest.param("a", ("a",), id="str"),
+        pytest.param(["a", "b"], ("a", "b"), id="list"),
+        pytest.param([...], ("a", "b", "c"), id="list_only_ellipsis"),
+        pytest.param(["a", ...], ("a", "b", "c"), id="list_with_ellipsis"),
+        pytest.param(["a", ..., "b"], ("a", "c", "b"), id="list_with_middle_ellipsis"),
+    ],
+)
+def test_parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis],
+    expected: tuple[Hashable, ...],
+) -> None:
+    all_dims = ("a", "b", "c")
+    actual = utils.parse_ordered_dims(dim, all_dims)
+    assert actual == expected
+
+
+def test_parse_ordered_dims_raises() -> None:
+    all_dims = ("a", "b", "c")
+
+    with pytest.raises(ValueError, match="'x' do not exist"):
+        utils.parse_ordered_dims("x", all_dims, check_exists=True)
+
+    with pytest.raises(ValueError, match="repeated dims"):
+        utils.parse_ordered_dims(["a", ...], all_dims + ("a",))
+
+    with pytest.raises(ValueError, match="More than one ellipsis"):
+        utils.parse_ordered_dims(["a", ..., "b", ...], all_dims)
+
+
+@pytest.mark.parametrize(
     "nested_list, expected",
     [
         ([], []),
@@ -307,3 +349,13 @@ def test_infix_dims_errors(supplied, all_):
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected
+
+
+def test_find_stack_level():
+    assert utils.find_stack_level() == 1
+    assert utils.find_stack_level(test_mode=True) == 2
+
+    def f():
+        return utils.find_stack_level(test_mode=True)
+
+    assert f() == 3

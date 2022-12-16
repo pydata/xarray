@@ -1,10 +1,71 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "setuptools-scm[toml]>=3.4",
-    "setuptools-scm-git-archive",
-]
 build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "setuptools-scm>=7",
+]
 
 [tool.setuptools_scm]
 fallback_version = "999"
+
+[tool.coverage.run]
+omit = [
+  "*/xarray/tests/*",
+  "*/xarray/core/dask_array_compat.py",
+  "*/xarray/core/npcompat.py",
+  "*/xarray/core/pdcompat.py",
+  "*/xarray/core/pycompat.py",
+  "*/xarray/core/types.py",
+]
+source = ["xarray"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
+
+[tool.mypy]
+exclude = 'xarray/util/generate_.*\.py'
+files = "xarray"
+show_error_codes = true
+warn_unused_ignores = true
+
+# Most of the numerical computing stack doesn't have type annotations yet.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "affine.*",
+  "bottleneck.*",
+  "cartopy.*",
+  "cdms2.*",
+  "cf_units.*",
+  "cfgrib.*",
+  "cftime.*",
+  "cupy.*",
+  "fsspec.*",
+  "h5netcdf.*",
+  "h5py.*",
+  "importlib_metadata.*",
+  "iris.*",
+  "matplotlib.*",
+  "mpl_toolkits.*",
+  "Nio.*",
+  "nc_time_axis.*",
+  "numbagg.*",
+  "netCDF4.*",
+  "netcdftime.*",
+  "pandas.*",
+  "pooch.*",
+  "PseudoNetCDF.*",
+  "pydap.*",
+  "pytest.*",
+  "rasterio.*",
+  "scipy.*",
+  "seaborn.*",
+  "setuptools",
+  "sparse.*",
+  "toolz.*",
+  "zarr.*",
+]
+
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = []

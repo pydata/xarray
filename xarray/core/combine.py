@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Union
 
 import pandas as pd
 
-from . import dtypes
-from .concat import concat
-from .dataarray import DataArray
-from .dataset import Dataset
-from .merge import merge
-from .utils import iterate_nested
+from xarray.core import dtypes
+from xarray.core.concat import concat
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.merge import merge
+from xarray.core.utils import iterate_nested
 
 if TYPE_CHECKING:
-    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
 
 
 def _infer_concat_order_from_positions(datasets):
@@ -377,7 +377,7 @@ def _nested_combine(
 
 # Define type for arbitrarily-nested list of lists recursively
 # Currently mypy cannot handle this but other linters can (https://stackoverflow.com/a/53845083/3154101)
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore
+DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore[misc]
 
 
 def combine_nested(
@@ -669,7 +669,7 @@ def combine_by_coords(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
-    datasets: Iterable[Dataset] = None,
+    datasets: Iterable[Dataset] | None = None,
 ) -> Dataset | DataArray:
     """
 

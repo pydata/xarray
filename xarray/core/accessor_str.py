@@ -49,12 +49,13 @@ from unicodedata import normalize
 
 import numpy as np
 
-from .computation import apply_ufunc
-from .npcompat import DTypeLike
-from .types import T_DataArray
+from xarray.core.computation import apply_ufunc
+from xarray.core.types import T_DataArray
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
+    from numpy.typing import DTypeLike
+
+    from xarray.core.dataarray import DataArray
 
 _cpython_optimized_encoders = (
     "utf-8",
@@ -111,7 +112,7 @@ def _apply_str_ufunc(
     obj: Any,
     dtype: DTypeLike = None,
     output_core_dims: list | tuple = ((),),
-    output_sizes: Mapping[Any, int] = None,
+    output_sizes: Mapping[Any, int] | None = None,
     func_args: tuple = (),
     func_kwargs: Mapping = {},
 ) -> Any:
@@ -221,7 +222,7 @@ class StringAccessor(Generic[T_DataArray]):
         func: Callable,
         dtype: DTypeLike = None,
         output_core_dims: list | tuple = ((),),
-        output_sizes: Mapping[Any, int] = None,
+        output_sizes: Mapping[Any, int] | None = None,
         func_args: tuple = (),
         func_kwargs: Mapping = {},
     ) -> T_DataArray:
@@ -849,7 +850,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=lambda x: x.isupper(), dtype=bool)
 
     def count(
-        self, pat: str | bytes | Pattern | Any, flags: int = 0, case: bool = None
+        self, pat: str | bytes | Pattern | Any, flags: int = 0, case: bool | None = None
     ) -> T_DataArray:
         """
         Count occurrences of pattern in each string of the array.
@@ -1096,7 +1097,7 @@ class StringAccessor(Generic[T_DataArray]):
     def contains(
         self,
         pat: str | bytes | Pattern | Any,
-        case: bool = None,
+        case: bool | None = None,
         flags: int = 0,
         regex: bool = True,
     ) -> T_DataArray:
@@ -1169,7 +1170,7 @@ class StringAccessor(Generic[T_DataArray]):
     def match(
         self,
         pat: str | bytes | Pattern | Any,
-        case: bool = None,
+        case: bool | None = None,
         flags: int = 0,
     ) -> T_DataArray:
         """
@@ -1530,7 +1531,7 @@ class StringAccessor(Generic[T_DataArray]):
         pat: str | bytes | Pattern | Any,
         repl: str | bytes | Callable | Any,
         n: int | Any = -1,
-        case: bool = None,
+        case: bool | None = None,
         flags: int = 0,
         regex: bool = True,
     ) -> T_DataArray:
@@ -1602,7 +1603,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         pat: str | bytes | Pattern | Any,
         dim: Hashable,
-        case: bool = None,
+        case: bool | None = None,
         flags: int = 0,
     ) -> T_DataArray:
         r"""
@@ -1747,7 +1748,7 @@ class StringAccessor(Generic[T_DataArray]):
         pat: str | bytes | Pattern | Any,
         group_dim: Hashable,
         match_dim: Hashable,
-        case: bool = None,
+        case: bool | None = None,
         flags: int = 0,
     ) -> T_DataArray:
         r"""
@@ -1920,7 +1921,7 @@ class StringAccessor(Generic[T_DataArray]):
     def findall(
         self,
         pat: str | bytes | Pattern | Any,
-        case: bool = None,
+        case: bool | None = None,
         flags: int = 0,
     ) -> T_DataArray:
         r"""

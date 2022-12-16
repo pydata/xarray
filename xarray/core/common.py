@@ -21,11 +21,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .npcompat import DTypeLike, DTypeLikeSave
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array
-from .utils import Frozen, either_dict_or_kwargs, is_scalar
+from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
 
 try:
     import cftime
@@ -39,13 +38,23 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     import datetime
 
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .indexes import Index
-    from .resample import Resample
-    from .rolling_exp import RollingExp
-    from .types import ScalarOrArray, SideOptions, T_DataWithCoords
-    from .variable import Variable
+    from numpy.typing import DTypeLike
+
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.indexes import Index
+    from xarray.core.resample import Resample
+    from xarray.core.rolling_exp import RollingExp
+    from xarray.core.types import (
+        DatetimeLike,
+        DTypeLikeSave,
+        ScalarOrArray,
+        SideOptions,
+        T_DataWithCoords,
+    )
+    from xarray.core.variable import Variable
+
+    DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 T_Resample = TypeVar("T_Resample", bound="Resample")
@@ -473,7 +482,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.clip : equivalent function
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             # When this was a unary func, the default was True, so retaining the
@@ -632,6 +641,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         Dataset.assign
         Dataset.swap_dims
+        Dataset.set_coords
         """
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
@@ -800,7 +810,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def rolling_exp(
         self: T_DataWithCoords,
-        window: Mapping[Any, int] = None,
+        window: Mapping[Any, int] | None = None,
         window_type: str = "span",
         **window_kwargs,
     ) -> RollingExp[T_DataWithCoords]:
@@ -827,7 +837,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
-        from . import rolling_exp
+        from xarray.core import rolling_exp
 
         if "keep_attrs" in window_kwargs:
             warnings.warn(
@@ -847,7 +857,9 @@ class DataWithCoords(AttrAccessMixin):
         skipna: bool | None,
         closed: SideOptions | None,
         label: SideOptions | None,
-        base: int,
+        base: int | None,
+        offset: pd.Timedelta | datetime.timedelta | str | None,
+        origin: str | DatetimeLike,
         keep_attrs: bool | None,
         loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
@@ -875,6 +887,18 @@ class DataWithCoords(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+        origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
+            The datetime on which to adjust the grouping. The timezone of origin
+            must match the timezone of the index.
+
+            If a datetime is not used, these values are also supported:
+            - 'epoch': `origin` is 1970-01-01
+            - 'start': `origin` is the first value of the timeseries
+            - 'start_day': `origin` is the first day at midnight of the timeseries
+            - 'end': `origin` is the last value of the timeseries
+            - 'end_day': `origin` is the ceiling midnight of the last day
+        offset : pd.Timedelta, datetime.timedelta, or str, default is None
+            An offset timedelta added to the origin.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
@@ -948,9 +972,9 @@ class DataWithCoords(AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from ..coding.cftimeindex import CFTimeIndex
-        from .dataarray import DataArray
-        from .resample import RESAMPLE_DIM
+        from xarray.coding.cftimeindex import CFTimeIndex
+        from xarray.core.dataarray import DataArray
+        from xarray.core.resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
             warnings.warn(
@@ -988,12 +1012,26 @@ class DataWithCoords(AttrAccessMixin):
             )
 
             if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
-                from .resample_cftime import CFTimeGrouper
+                from xarray.core.resample_cftime import CFTimeGrouper
 
-                grouper = CFTimeGrouper(freq, closed, label, base, loffset)
+                grouper = CFTimeGrouper(
+                    freq=freq,
+                    closed=closed,
+                    label=label,
+                    base=base,
+                    loffset=loffset,
+                    origin=origin,
+                    offset=offset,
+                )
             else:
                 grouper = pd.Grouper(
-                    freq=freq, closed=closed, label=label, base=base, loffset=loffset
+                    freq=freq,
+                    closed=closed,
+                    label=label,
+                    base=base,
+                    offset=offset,
+                    origin=origin,
+                    loffset=loffset,
                 )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
@@ -1091,9 +1129,9 @@ class DataWithCoords(AttrAccessMixin):
         numpy.where : corresponding numpy function
         where : equivalent function
         """
-        from .alignment import align
-        from .dataarray import DataArray
-        from .dataset import Dataset
+        from xarray.core.alignment import align
+        from xarray.core.dataarray import DataArray
+        from xarray.core.dataset import Dataset
 
         if callable(cond):
             cond = cond(self)
@@ -1184,7 +1222,7 @@ class DataWithCoords(AttrAccessMixin):
         array([False,  True, False])
         Dimensions without coordinates: x
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1229,7 +1267,7 @@ class DataWithCoords(AttrAccessMixin):
         array([ True, False,  True])
         Dimensions without coordinates: x
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1268,10 +1306,10 @@ class DataWithCoords(AttrAccessMixin):
         --------
         numpy.isin
         """
-        from .computation import apply_ufunc
-        from .dataarray import DataArray
-        from .dataset import Dataset
-        from .variable import Variable
+        from xarray.core.computation import apply_ufunc
+        from xarray.core.dataarray import DataArray
+        from xarray.core.dataset import Dataset
+        from xarray.core.variable import Variable
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
@@ -1353,7 +1391,7 @@ class DataWithCoords(AttrAccessMixin):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1376,9 +1414,6 @@ class DataWithCoords(AttrAccessMixin):
     def __getitem__(self, value):
         # implementations of this class should implement this method
         raise NotImplementedError()
-
-
-DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 @overload
@@ -1526,9 +1561,9 @@ def full_like(
     ones_like
 
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.variable import Variable
 
     if not is_scalar(fill_value) and not (
         isinstance(other, Dataset) and isinstance(fill_value, dict)
@@ -1576,7 +1611,7 @@ def _full_like_variable(
     other: Variable, fill_value: Any, dtype: DTypeLike = None
 ) -> Variable:
     """Inner function of full_like, where other must be a variable"""
-    from .variable import Variable
+    from xarray.core.variable import Variable
 
     if fill_value is dtypes.NA:
         fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)

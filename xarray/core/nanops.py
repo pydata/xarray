@@ -4,8 +4,15 @@ import warnings
 
 import numpy as np
 
-from . import dtypes, nputils, utils
-from .duck_array_ops import count, fillna, isnull, where, where_method
+from xarray.core import dtypes, nputils, utils
+from xarray.core.duck_array_ops import (
+    count,
+    fillna,
+    isnull,
+    sum_where,
+    where,
+    where_method,
+)
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
@@ -84,7 +91,7 @@ def nanargmax(a, axis=None):
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
     mask = isnull(a)
-    result = np.nansum(a, axis=axis, dtype=dtype)
+    result = sum_where(a, axis=axis, dtype=dtype, where=mask)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -93,7 +100,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from .duck_array_ops import count, fillna, where_method
+    from xarray.core.duck_array_ops import count, fillna, where_method
 
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)

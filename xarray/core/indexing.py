@@ -26,23 +26,28 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from . import duck_array_ops
-from .npcompat import DTypeLike
-from .nputils import NumpyVIndexAdapter
-from .options import OPTIONS
-from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
-from .types import T_Xarray
-from .utils import (
+from xarray.core import duck_array_ops
+from xarray.core.nputils import NumpyVIndexAdapter
+from xarray.core.options import OPTIONS
+from xarray.core.pycompat import (
+    array_type,
+    integer_types,
+    is_duck_dask_array,
+    mod_version,
+)
+from xarray.core.types import T_Xarray
+from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
-    safe_cast_to_index,
     to_0d_array,
 )
 
 if TYPE_CHECKING:
-    from .indexes import Index
-    from .variable import Variable
+    from numpy.typing import DTypeLike
+
+    from xarray.core.indexes import Index
+    from xarray.core.variable import Variable
 
 
 @dataclass
@@ -175,7 +180,7 @@ def map_index_queries(
     and return the (merged) query results.
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # TODO benbovy - flexible indexes: remove when custom index options are available
     if method is None and tolerance is None:
@@ -192,7 +197,7 @@ def map_index_queries(
             # forward dimension indexers with no index/coordinate
             results.append(IndexSelResult(labels))
         else:
-            results.append(index.sel(labels, **options))  # type: ignore[call-arg]
+            results.append(index.sel(labels, **options))
 
     merged = merge_sel_results(results)
 
@@ -1136,7 +1141,7 @@ def _masked_result_drop_slice(key, data=None):
         if isinstance(k, np.ndarray):
             if is_duck_dask_array(data):
                 new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
-            elif isinstance(data, sparse_array_type):
+            elif isinstance(data, array_type("sparse")):
                 import sparse
 
                 new_keys.append(sparse.COO.from_numpy(k))
@@ -1416,7 +1421,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if dask_version >= Version("2021.04.1"):
+        if mod_version("dask") >= Version("2021.04.1"):
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):
@@ -1450,12 +1455,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
+        from xarray.core.indexes import safe_cast_to_index
+
         self.array = safe_cast_to_index(array)
 
         if dtype is None:
             self._dtype = get_valid_numpy_dtype(array)
         else:
-            self._dtype = np.dtype(dtype)  # type: ignore[assignment]
+            self._dtype = np.dtype(dtype)
 
     @property
     def dtype(self) -> np.dtype:
@@ -1599,7 +1606,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         return np.asarray(subset)
 
     def _repr_inline_(self, max_width: int) -> str:
-        from .formatting import format_array_flat
+        from xarray.core.formatting import format_array_flat
 
         if self.level is None:
             return "MultiIndex"
@@ -1607,7 +1614,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             return format_array_flat(self._get_array_subset(), max_width)
 
     def _repr_html_(self) -> str:
-        from .formatting import short_numpy_repr
+        from xarray.core.formatting import short_numpy_repr
 
         array_repr = short_numpy_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"

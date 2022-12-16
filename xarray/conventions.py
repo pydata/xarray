@@ -4,12 +4,15 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from .coding import strings, times, variables
-from .coding.variables import SerializationWarning, pop_to
-from .core import duck_array_ops, indexing
-from .core.common import _contains_datetime_like_objects, contains_cftime_datetimes
-from .core.pycompat import is_duck_dask_array
-from .core.variable import IndexVariable, Variable, as_variable
+from xarray.coding import strings, times, variables
+from xarray.coding.variables import SerializationWarning, pop_to
+from xarray.core import duck_array_ops, indexing
+from xarray.core.common import (
+    _contains_datetime_like_objects,
+    contains_cftime_datetimes,
+)
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.variable import IndexVariable, Variable, as_variable
 
 CF_RELATED_DATA = (
     "bounds",
@@ -141,7 +144,7 @@ def maybe_encode_bools(var):
     ):
         dims, data, attrs, encoding = _var_as_tuple(var)
         attrs["dtype"] = "bool"
-        data = data.astype(dtype="i1", copy=True)
+        data = duck_array_ops.astype(data, dtype="i1", copy=True)
         var = Variable(dims, data, attrs, encoding)
     return var
 
@@ -407,7 +410,8 @@ def _update_bounds_attributes(variables):
     # For all time variables with bounds
     for v in variables.values():
         attrs = v.attrs
-        has_date_units = "units" in attrs and "since" in attrs["units"]
+        units = attrs.get("units")
+        has_date_units = isinstance(units, str) and "since" in units
         if has_date_units and "bounds" in attrs:
             if attrs["bounds"] in variables:
                 bounds_attrs = variables[attrs["bounds"]].attrs
@@ -518,16 +522,19 @@ def decode_cf_variables(
             and v.ndim > 0
             and stackable(v.dims[-1])
         )
-        new_vars[k] = decode_cf_variable(
-            k,
-            v,
-            concat_characters=concat_characters,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            stack_char_dim=stack_char_dim,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+        try:
+            new_vars[k] = decode_cf_variable(
+                k,
+                v,
+                concat_characters=concat_characters,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                stack_char_dim=stack_char_dim,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        except Exception as e:
+            raise type(e)(f"Failed to decode variable {k!r}: {e}")
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
@@ -635,8 +642,8 @@ def decode_cf(
     -------
     decoded : Dataset
     """
-    from .backends.common import AbstractDataStore
-    from .core.dataset import Dataset
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
 
     if isinstance(obj, Dataset):
         vars = obj._variables
