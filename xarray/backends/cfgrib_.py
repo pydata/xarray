@@ -27,9 +27,12 @@ ECCODES_LOCK = SerializableLock()
 class CfGribArrayWrapper(BackendArray):
     def __init__(self, datastore, array):
         self.datastore = datastore
-        self.shape = array.shape
         self.dtype = array.dtype
         self.array = array
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        return self.array.shape
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
