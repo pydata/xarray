@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal  # noqa: F401
+from numpy.typing import DTypeLike
 from packaging.version import Version
 from pandas.testing import assert_frame_equal  # noqa: F401
 
@@ -18,7 +19,6 @@ from xarray import Dataset
 from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.core.npcompat import DTypeLike
 from xarray.core.options import set_options
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
@@ -35,6 +35,7 @@ try:
     mpl.use("Agg")
 except ImportError:
     pass
+
 
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")

@@ -2577,11 +2577,11 @@ class TestAsCompatibleData:
         )
 
         expect = orig.copy(deep=True)
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 

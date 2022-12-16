@@ -1527,7 +1527,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         else:
             return self._convert_scalar(result)
 
-    def transpose(self, order) -> pd.Index:  # type: ignore[override]
+    def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
 
     def __repr__(self) -> str:
