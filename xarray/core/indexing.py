@@ -298,10 +298,10 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-KeyTypes = TypeVar("KeyTypes", bound=Union[int, slice, np.ndarray])
+KeyType = TypeVar("KeyType", bound=Union[int, slice, np.ndarray])
 
 
-class ExplicitIndexer(Generic[KeyTypes]):
+class ExplicitIndexer(Generic[KeyType]):
     """Base class for explicit indexer objects.
 
     ExplicitIndexer objects wrap a tuple of values given by their ``tuple``
@@ -314,13 +314,13 @@ class ExplicitIndexer(Generic[KeyTypes]):
 
     __slots__ = ("_key",)
 
-    def __init__(self, key: Iterable[KeyTypes]) -> None:
+    def __init__(self, key: Iterable[KeyType]) -> None:
         if type(self) is ExplicitIndexer:
             raise TypeError("cannot instantiate base ExplicitIndexer objects")
         self._key = tuple(key)
 
     @property
-    def tuple(self) -> tuple[KeyTypes, ...]:
+    def tuple(self) -> tuple[KeyType, ...]:
         return self._key
 
     def __repr__(self) -> str:
