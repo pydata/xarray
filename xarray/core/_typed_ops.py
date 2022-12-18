@@ -3,7 +3,7 @@
 
 import operator
 
-from . import nputils, ops
+from xarray.core import nputils, ops
 
 
 class DatasetOpsMixin:

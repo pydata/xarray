@@ -25,20 +25,20 @@ from typing import (
 
 import numpy as np
 
-from .. import backends, conventions
-from ..core import indexing
-from ..core.combine import (
+from xarray import backends, conventions
+from xarray.backends import plugins
+from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
+from xarray.backends.locks import _get_scheduler
+from xarray.core import indexing
+from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
 )
-from ..core.dataarray import DataArray
-from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.indexes import Index
-from ..core.utils import is_remote_uri
-from . import plugins
-from .common import AbstractDataStore, ArrayWriter, _normalize_path
-from .locks import _get_scheduler
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.indexes import Index
+from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
     try:
@@ -47,13 +47,13 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from io import BufferedIOBase
 
-    from ..core.types import (
+    from xarray.backends.common import BackendEntrypoint
+    from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
         JoinOptions,
         NestedSequence,
     )
-    from .common import BackendEntrypoint
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -1504,6 +1504,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1525,6 +1526,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> Delayed:
     ...
 
@@ -1543,6 +1545,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1609,6 +1612,13 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
+    if zarr_version is None:
+        # default to 2 if store doesn't specify it's version (e.g. a path)
+        zarr_version = int(getattr(store, "_store_version", 2))
+
+    if consolidated is None and zarr_version > 2:
+        consolidated = False
+
     if mode == "r+":
         already_consolidated = consolidated
         consolidate_on_close = False
@@ -1627,6 +1637,7 @@ def to_zarr(
         write_region=region,
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
+        zarr_version=zarr_version,
     )
 
     if mode in ["a", "r+"]:

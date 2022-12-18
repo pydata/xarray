@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -17,18 +18,19 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 from packaging.version import Version
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    from ..backends.common import BackendEntrypoint
-    from .common import AbstractArray, DataWithCoords
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .groupby import DataArrayGroupBy, GroupBy
-    from .indexes import Index
-    from .variable import Variable
+    from xarray.backends.common import BackendEntrypoint
+    from xarray.core.common import AbstractArray, DataWithCoords
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.groupby import DataArrayGroupBy, GroupBy
+    from xarray.core.indexes import Index
+    from xarray.core.variable import Variable
 
     try:
         from dask.array import Array as DaskArray
@@ -82,7 +84,11 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType,
     ]
-
+    try:
+        from cftime import datetime as CFTimeDatetime
+    except ImportError:
+        CFTimeDatetime = Any
+    DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
     Self: Any = None
     DTypeLikeSave: Any = None
@@ -107,7 +113,8 @@ DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
 
-Dims = Union[str, Iterable[Hashable], None]
+Dims = Union[str, Iterable[Hashable], "ellipsis", None]
+OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
