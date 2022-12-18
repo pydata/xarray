@@ -36,7 +36,7 @@ from xarray.tests.test_backends import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_identical,
     has_h5netcdf,
@@ -189,7 +189,7 @@ def test_dask_distributed_zarr_integration_test(
         write_kwargs: dict[str, Any] = {"consolidated": True}
         read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
-        write_kwargs = read_kwargs = {}  # type: ignore
+        write_kwargs = read_kwargs = {}
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):

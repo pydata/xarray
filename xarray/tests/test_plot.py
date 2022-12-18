@@ -26,8 +26,7 @@ from xarray.plot.utils import (
     get_axis,
     label_from_attrs,
 )
-
-from . import (
+from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_no_warnings,
@@ -44,7 +43,7 @@ has_nc_time_axis = module_available("nc_time_axis")
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    import mpl_toolkits  # type: ignore
+    import mpl_toolkits
 except ImportError:
     pass
 
@@ -2606,7 +2605,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         self.ds = ds
 
     def test_accessor(self) -> None:
-        from ..plot.accessor import DatasetPlotAccessor
+        from xarray.plot.accessor import DatasetPlotAccessor
 
         assert Dataset.plot is DatasetPlotAccessor
         assert isinstance(self.ds.plot, DatasetPlotAccessor)

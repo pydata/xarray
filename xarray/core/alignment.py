@@ -22,9 +22,9 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes
-from .common import DataWithCoords
-from .indexes import (
+from xarray.core import dtypes
+from xarray.core.common import DataWithCoords
+from xarray.core.indexes import (
     Index,
     Indexes,
     PandasIndex,
@@ -32,13 +32,13 @@ from .indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
-from .utils import is_dict_like, is_full_slice
-from .variable import Variable, as_compatible_data, calculate_dimensions
+from xarray.core.utils import is_dict_like, is_full_slice
+from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .types import JoinOptions, T_DataArray, T_Dataset, T_DataWithCoords
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import JoinOptions, T_DataArray, T_Dataset, T_DataWithCoords
 
 DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
@@ -474,7 +474,7 @@ class Aligner(Generic[DataAlignable]):
                 if obj_idx is not None:
                     for name, var in self.aligned_index_vars[key].items():
                         new_indexes[name] = aligned_idx
-                        new_variables[name] = var.copy()
+                        new_variables[name] = var.copy(deep=self.copy)
 
             objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
 
@@ -490,7 +490,7 @@ class Aligner(Generic[DataAlignable]):
             obj_idx = matching_indexes.get(key)
             if obj_idx is not None:
                 if self.reindex[key]:
-                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)  # type: ignore[call-arg]
+                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
                     dim_pos_indexers.update(indexers)
 
         return dim_pos_indexers
@@ -514,7 +514,7 @@ class Aligner(Generic[DataAlignable]):
             if obj_idx is not None:
                 for name, var in index_vars.items():
                     new_indexes[name] = aligned_idx
-                    new_variables[name] = var.copy()
+                    new_variables[name] = var.copy(deep=self.copy)
 
         return new_indexes, new_variables
 
@@ -786,8 +786,8 @@ def deep_align(
 
     This function is not public API.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -942,8 +942,8 @@ def _broadcast_helper(
     arg: T_DataWithCoords, exclude, dims_map, common_coords
 ) -> T_DataWithCoords:
 
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map

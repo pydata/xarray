@@ -10,8 +10,7 @@ from pandas.tseries.frequencies import to_offset
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -235,13 +234,13 @@ def test_da_groupby_quantile() -> None:
         dims=("x", "y"),
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_x = array.groupby("x").quantile(0, dim=...)
     expected_x = xr.DataArray(
         data=[1, 4], coords={"x": [1, 2], "quantile": 0}, dims="x"
     )
     assert_identical(expected_x, actual_x)
 
-    actual_y = array.groupby("y").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_y = array.groupby("y").quantile(0, dim=...)
     expected_y = xr.DataArray(
         data=[1, 22], coords={"y": [0, 1], "quantile": 0}, dims="y"
     )
@@ -272,7 +271,7 @@ def test_da_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual = g.quantile(0, dim=...)
     expected = xr.DataArray(
         data=[
             0.0,
@@ -356,11 +355,11 @@ def test_ds_groupby_quantile() -> None:
         coords={"x": [1, 1, 1, 2, 2], "y": [0, 0, 1]},
     )
 
-    actual_x = ds.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_x = ds.groupby("x").quantile(0, dim=...)
     expected_x = xr.Dataset({"a": ("x", [1, 4])}, coords={"x": [1, 2], "quantile": 0})
     assert_identical(expected_x, actual_x)
 
-    actual_y = ds.groupby("y").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual_y = ds.groupby("y").quantile(0, dim=...)
     expected_y = xr.Dataset({"a": ("y", [1, 22])}, coords={"y": [0, 1], "quantile": 0})
     assert_identical(expected_y, actual_y)
 
@@ -386,7 +385,7 @@ def test_ds_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
+    actual = g.quantile(0, dim=...)
     expected = xr.Dataset(
         {
             "a": (
