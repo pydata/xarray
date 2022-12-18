@@ -45,5 +45,5 @@ dependencies:
   - toolz
   - typing_extensions
   # - zarr  # TODO: Waiting on python 3.11 support.
-  - pip:
+  # - pip:
       # - numbagg  # TODO: Waiting on python 3.11 support.
