@@ -33,7 +33,7 @@ dependencies:
   - pooch
   - pre-commit
   # - pseudonetcdf  # TODO: Waiting on python 3.11 support.
-  - pydap
+  # - pydap  # TODO: Waiting on python 3.11 support.
   - pytest
   - pytest-cov
   - pytest-env
