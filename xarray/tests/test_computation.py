@@ -24,8 +24,12 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 from xarray.core.pycompat import mod_version
-
-from . import has_dask, raise_if_dask_computes, requires_cftime, requires_dask
+from xarray.tests import (
+    has_dask,
+    raise_if_dask_computes,
+    requires_cftime,
+    requires_dask,
+)
 
 dask_version = mod_version("dask")
 
@@ -1959,6 +1963,11 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
     expected["a"].attrs = {"attr": "x_coord"}
     assert_identical(expected, actual)
+
+    # no xarray objects, handle no attrs
+    actual_np = xr.where(True, 0, 1, keep_attrs=True)
+    expected_np = np.array(0)
+    assert_identical(expected_np, actual_np)
 
     # DataArray and 2 Datasets, takes attrs from x
     ds_x = xr.Dataset(data_vars={"x": x}, attrs={"attr": "x_ds"})

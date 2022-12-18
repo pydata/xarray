@@ -30,6 +30,7 @@ from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.tests import (
+    InaccessibleArray,
     ReturnItem,
     assert_allclose,
     assert_array_equal,
@@ -3277,6 +3278,21 @@ class TestDataArray:
 
         np.testing.assert_equal(actual_coords, expected_coords)
 
+    def test_nbytes_does_not_load_data(self) -> None:
+        array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
+        da = xr.DataArray(array, dims=["x", "y"])
+
+        # If xarray tries to instantiate the InaccessibleArray to compute
+        # nbytes, the following will raise an error.
+        # However, it should still be able to accurately give us information
+        # about the number of bytes from the metadata
+        assert da.nbytes == 9
+        # Here we confirm that this does not depend on array having the
+        # nbytes property, since it isn't really required by the array
+        # interface. nbytes is more a property of arrays that have been
+        # cast to numpy arrays.
+        assert not hasattr(array, "nbytes")
+
     def test_to_and_from_empty_series(self) -> None:
         # GH697
         expected = pd.Series([], dtype=np.float64)
@@ -4165,6 +4181,36 @@ class TestDataArray:
 
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
+        arr = xr.DataArray(
+            [1, 2], dims="x", coords={"c": ("x", [-1, 1], attrs)}, attrs=attrs
+        )
+        expected = xr.DataArray(
+            [0, 1, 2, 0],
+            dims="x",
+            coords={"c": ("x", [np.nan, -1, 1, np.nan], expected)},
+            attrs=expected,
+        )
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = arr.pad({"x": (1, 1)}, mode="constant", constant_values=0)
+            xr.testing.assert_identical(actual, expected)
+
+        actual = arr.pad(
+            {"x": (1, 1)}, mode="constant", constant_values=0, keep_attrs=keep_attrs
+        )
+        xr.testing.assert_identical(actual, expected)
 
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
