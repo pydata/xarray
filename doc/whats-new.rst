@@ -45,6 +45,8 @@ Bug fixes
 - add a ``keep_attrs`` parameter to :py:meth:`Dataset.pad`, :py:meth:`DataArray.pad`,
   and :py:meth:`Variable.pad` (:pull:`7267`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` for complex valued arrays  (:issue:`7340`, :pull:`7392`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
