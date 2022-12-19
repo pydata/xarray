@@ -5849,6 +5849,18 @@ class TestDataset:
             actual = ds1 + ds2
             assert_equal(actual, expected)
 
+    def test_binary_ops_keep_attrs(self) -> None:
+        attrs = {"foo": "att_1", "bar": "att_2"}
+        ds1 = xr.Dataset({"a": 1, "b": 1}, attrs=attrs)
+        ds2 = xr.Dataset({"a": 1, "b": 1}, attrs=attrs)
+        # test unkept attrs
+        ds_result = ds1 - ds2
+        assert ds_result.attrs == {}
+        # test kept attrs
+        with xr.set_options(keep_attrs=True):
+            ds_result = ds1 + ds2
+        assert ds_result.attrs == attrs
+
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
