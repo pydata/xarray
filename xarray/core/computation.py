@@ -1391,6 +1391,7 @@ def _cov_corr(
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
     """
+    dim = None if dim is None else (dim,)
     # 1. Broadcast the two arrays
     da_a, da_b = align(da_a, da_b, join="inner", copy=False)
 
@@ -1412,14 +1413,14 @@ def _cov_corr(
     ) / (valid_count)
 
     if method == "cov":
-        return cov
+        return cov  # type: ignore[return-value]
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr
+        return corr  # type: ignore[return-value]
 
 
 def cross(
