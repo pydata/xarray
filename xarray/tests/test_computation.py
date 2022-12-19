@@ -1598,6 +1598,12 @@ def test_autocov(da_a, dim) -> None:
     assert_allclose(actual, expected)
 
 
+def test_complex_cov() -> None:
+    da = xr.DataArray([1j, -1j])
+    actual = xr.cov(da, da)
+    assert abs(actual.item()) == 2
+
+
 @requires_dask
 def test_vectorize_dask_new_output_dims() -> None:
     # regression test for GH3574

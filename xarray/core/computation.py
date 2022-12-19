@@ -15,6 +15,7 @@ from typing import (
     Callable,
     Hashable,
     Iterable,
+    Literal,
     Mapping,
     Sequence,
     TypeVar,
@@ -1217,7 +1218,9 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def cov(da_a, da_b, dim=None, ddof=1):
+def cov(
+    da_a: T_DataArray, da_b: T_DataArray, dim: Hashable | None = None, ddof: int = 1
+) -> T_DataArray:
     """
     Compute covariance between two DataArray objects along a shared dimension.
 
@@ -1227,9 +1230,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
         Array to compute.
     da_b : DataArray
         Array to compute.
-    dim : str, optional
+    dim : Hashable, optional
         The dimension along which the covariance will be computed
-    ddof : int, optional
+    ddof : int, default: 1
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
@@ -1297,7 +1300,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
-def corr(da_a, da_b, dim=None):
+def corr(
+    da_a: T_DataArray, da_b: T_DataArray, dim: Hashable | None = None
+) -> T_DataArray:
     """
     Compute the Pearson correlation coefficient between
     two DataArray objects along a shared dimension.
@@ -1308,7 +1313,7 @@ def corr(da_a, da_b, dim=None):
         Array to compute.
     da_b : DataArray
         Array to compute.
-    dim : str, optional
+    dim : Hashable, optional
         The dimension along which the correlation will be computed
 
     Returns
@@ -1376,7 +1381,11 @@ def corr(da_a, da_b, dim=None):
 
 
 def _cov_corr(
-    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+    da_a: T_DataArray,
+    da_b: T_DataArray,
+    dim: Hashable | None = None,
+    ddof: int = 0,
+    method: Literal["cov", "corr", None] = None,
 ) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
@@ -1396,12 +1405,11 @@ def _cov_corr(
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    #
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
-        valid_count
-    )
+    cov = (demeaned_da_a.conjugate() * demeaned_da_b).sum(
+        dim=dim, skipna=True, min_count=1
+    ) / (valid_count)
 
     if method == "cov":
         return cov
