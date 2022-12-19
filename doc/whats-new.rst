@@ -35,6 +35,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fixed performance regression in alignment between indexed and non-indexed objects
+  of the same shape (:pull:`7382`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
