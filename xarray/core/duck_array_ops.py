@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
+from numpy import full_like  # noqa
 from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
@@ -128,7 +129,7 @@ def isnull(data):
         return xp.isnan(data)
     elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
-        return zeros_like(data, dtype=bool)
+        return full_like(data, dtype=bool, fill_value=False)
     else:
         # at this point, array should have dtype=object
         if isinstance(data, np.ndarray):
