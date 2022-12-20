@@ -17,7 +17,6 @@ import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
 from numpy import full_like  # noqa
-from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
 from numpy import (  # noqa
