@@ -6594,7 +6594,7 @@ class Dataset(
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=False)
         if keep_attrs:
-            ds.attrs = self._attrs
+            ds.attrs = self.attrs
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:
