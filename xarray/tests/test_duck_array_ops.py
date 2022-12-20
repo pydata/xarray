@@ -551,17 +551,39 @@ def test_argmin_max_error():
 
 
 @pytest.mark.parametrize(
-    "array",
+    ["array", "expected"],
     [
-        np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
-        np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
-        np.array([0.0, np.nan]),
-        np.array([1j, np.nan]),
-        np.array(["foo", np.nan], dtype=object),
+        (
+            np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([0.0, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1j, np.nan]),
+            np.array([False, True]),
+        ),
+        (
+            np.array(["foo", np.nan], dtype=object),
+            np.array([False, True]),
+        ),
+        (
+            np.array([1, 2], dtype=int),
+            np.array([False, False]),
+        ),
+        (
+            np.array([True, False], dtype=bool),
+            np.array([False, False]),
+        ),
     ],
 )
-def test_isnull(array):
-    expected = np.array([False, True])
+def test_isnull(array, expected):
     actual = duck_array_ops.isnull(array)
     np.testing.assert_equal(expected, actual)
 
