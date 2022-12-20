@@ -45,6 +45,7 @@ Bug fixes
 - add a ``keep_attrs`` parameter to :py:meth:`Dataset.pad`, :py:meth:`DataArray.pad`,
   and :py:meth:`Variable.pad` (:pull:`7267`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Preserve original `dtype` on accessing MultiIndex levels (:issue:`7250`)
 
 Documentation
 ~~~~~~~~~~~~~
