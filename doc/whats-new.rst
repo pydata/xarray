@@ -27,6 +27,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
+  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -34,6 +37,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Accessing the property ``.nbytes`` of a DataArray, or Variable no longer
+  accidentally triggers loading the variable into memory.
 - Allow numpy-only objects in :py:func:`where` when ``keep_attrs=True`` (:issue:`7362`, :pull:`7364`).
   By `Sam Levang <https://github.com/slevang>`_.
 - add a ``keep_attrs`` parameter to :py:meth:`Dataset.pad`, :py:meth:`DataArray.pad`,
