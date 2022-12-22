@@ -207,7 +207,7 @@ def convert_calendar(
         # only mask if dim in variable coords.
         ds_mask = Dataset(
             {
-                v: (out[dim].notnull if dim in out[v].coords else True)
+                v: (out[dim].notnull() if dim in out[v].coords else True)
                 for v in out.data_vars
             }
         )
