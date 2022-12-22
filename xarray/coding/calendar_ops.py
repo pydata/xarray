@@ -144,7 +144,7 @@ def convert_calendar(
 
       This option is best used with data on a frequency coarser than daily.
     """
-    from xarray.core.dataarray import DataArray
+    from xarray.core.dataarray import Dataset, DataArray
 
     time = obj[dim]
     if not _contains_datetime_like_objects(time):
@@ -204,7 +204,9 @@ def convert_calendar(
         out[dim] = new_times
 
         # Remove NaN that where put on invalid dates in target calendar
-        out = out.where(out[dim].notnull(), drop=True)
+        # only mask if dim in variable coords.
+        ds_mask = Dataset({v : (out[dim].notnull if dim in out[v].coords else True) for v in out.data_vars })
+        out = out.where(ds_mask, drop=True)
 
     if missing is not None:
         time_target = date_range_like(time, calendar=calendar, use_cftime=use_cftime)
