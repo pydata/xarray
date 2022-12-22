@@ -35,14 +35,6 @@ def create_xdata(start, end, calendar, freq, xtype="da"):
     ],
 )
 def test_convert_calendar(source, target, use_cftime, freq, xtype):
-    src = DataArray(
-        date_range("2004-01-01", "2004-12-31", freq=freq, calendar=source),
-        dims=("time",),
-        name="time",
-    )
-    da_src = DataArray(
-        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
-    )
 
     da_src = create_xdata("2004-01-01", "2004-12-31", source, freq, xtype)
 
