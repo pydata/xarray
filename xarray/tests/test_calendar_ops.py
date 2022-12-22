@@ -69,6 +69,7 @@ def test_convert_calendar(source, target, use_cftime, freq, xtype):
     np.testing.assert_array_equal(conv.time, expected_times)
 
 
+@pytest.mark.parametrize("xtype", ["da", "ds"])
 @pytest.mark.parametrize(
     "source,target,freq",
     [
@@ -78,15 +79,9 @@ def test_convert_calendar(source, target, use_cftime, freq, xtype):
     ],
 )
 @pytest.mark.parametrize("align_on", ["date", "year"])
-def test_convert_calendar_360_days(source, target, freq, align_on):
-    src = DataArray(
-        date_range("2004-01-01", "2004-12-30", freq=freq, calendar=source),
-        dims=("time",),
-        name="time",
-    )
-    da_src = DataArray(
-        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
-    )
+def test_convert_calendar_360_days(source, target, freq, align_on, xtype):
+
+    da_src = create_xdata("2004-01-01", "2004-12-30", source, freq, xtype)
 
     conv = convert_calendar(da_src, target, align_on=align_on)
 
@@ -108,9 +103,9 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
             [30, 29, 30, 30, 31, 30, 30, 31, 30, 31, 29, 31],
         )
     if source == "360_day" and align_on == "year":
-        assert conv.size == 360 if freq == "D" else 360 * 4
+        assert conv.time.size == 360 if freq == "D" else 360 * 4
     else:
-        assert conv.size == 359 if freq == "D" else 359 * 4
+        assert conv.time.size == 359 if freq == "D" else 359 * 4
 
 
 @requires_cftime
