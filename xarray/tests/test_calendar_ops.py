@@ -12,6 +12,19 @@ from xarray.tests import requires_cftime
 cftime = pytest.importorskip("cftime")
 
 
+def create_xdata(start, end, calendar, freq, xtype="da"):
+    src = DataArray(
+        date_range(start, end, freq=freq, calendar=calendar),
+        dims=("time",),
+        name="time",
+    )
+    da = DataArray(np.linspace(0, 1, src.size), dims=("time",), coords={"time": src})
+    if xtype == "ds":
+        return da.to_dataset(name="dummy")
+    return da
+
+
+@pytest.mark.parametrize("xtype", ["da", "ds"])
 @pytest.mark.parametrize(
     "source, target, use_cftime, freq",
     [
@@ -21,7 +34,7 @@ cftime = pytest.importorskip("cftime")
         ("all_leap", "proleptic_gregorian", False, "4H"),
     ],
 )
-def test_convert_calendar(source, target, use_cftime, freq):
+def test_convert_calendar(source, target, use_cftime, freq, xtype):
     src = DataArray(
         date_range("2004-01-01", "2004-12-31", freq=freq, calendar=source),
         dims=("time",),
@@ -30,6 +43,8 @@ def test_convert_calendar(source, target, use_cftime, freq):
     da_src = DataArray(
         np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
     )
+
+    da_src = create_xdata("2004-01-01", "2004-12-31", source, freq, xtype)
 
     conv = convert_calendar(da_src, target, use_cftime=use_cftime)
 
