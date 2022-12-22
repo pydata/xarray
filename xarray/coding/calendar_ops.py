@@ -213,7 +213,7 @@ def convert_calendar(
                 }
             )
         else:
-            mask = out.notnull()
+            mask = out[dim].notnull()
         out = out.where(mask, drop=True)
 
     if missing is not None:
