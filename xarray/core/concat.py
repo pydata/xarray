@@ -379,7 +379,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             elif opt == "all":
                 concat_over.update(
                     set().union(
-                        *list((set(getattr(d, subset)) - set(d.dims) for d in datasets))
+                        *list(set(getattr(d, subset)) - set(d.dims) for d in datasets)
                     )
                 )
             elif opt == "minimal":
@@ -573,7 +573,10 @@ def _dataset_concat(
                     variables.append(ds.variables[name])
                     # add to variable index, needed for reindexing
                     variable_index.extend(
-                        [sum(concat_dim_lengths[:i]) + k for k in range(concat_dim_lengths[i])]
+                        [
+                            sum(concat_dim_lengths[:i]) + k
+                            for k in range(concat_dim_lengths[i])
+                        ]
                     )
                 else:
                     # raise if coordinate not in all datasets
