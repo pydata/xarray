@@ -205,15 +205,12 @@ def convert_calendar(
 
         # Remove NaN that where put on invalid dates in target calendar
         # in case of Dataset, only mask if dim in variable coords.
+        mask = out[dim].notnull()
+
         if isinstance(out, Dataset):
             mask = Dataset(
-                {
-                    v: (out[dim].notnull() if dim in out[v].coords else True)
-                    for v in out.data_vars
-                }
+                {v: (mask if dim in out[v].coords else True) for v in out.data_vars}
             )
-        else:
-            mask = out[dim].notnull()
         out = out.where(mask, drop=True)
 
     if missing is not None:
