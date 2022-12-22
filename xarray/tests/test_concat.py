@@ -50,8 +50,6 @@ def test_concat_compat() -> None:
         ValueError, match=r"coordinates in some datasets but not others"
     ):
         concat([ds1, ds2], dim="q")
-    with pytest.raises(ValueError, match=r"'q' is not present in all datasets"):
-        concat([ds2, ds1], dim="q")
 
 
 class TestConcatDataset:
@@ -776,7 +774,7 @@ def test_concat_merge_single_non_dim_coord():
         actual = concat([da1, da2], "x", coords=coords)
         assert_identical(actual, expected)
 
-    with pytest.raises(ValueError, match=r"'y' is not present in all datasets."):
+    with pytest.raises(ValueError, match=r"'y' not present in all datasets."):
         concat([da1, da2], dim="x", coords="all")
 
     da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3], "y": 1})
@@ -784,7 +782,7 @@ def test_concat_merge_single_non_dim_coord():
     da3 = DataArray([7, 8, 9], dims="x", coords={"x": [7, 8, 9], "y": 1})
     for coords in ["different", "all"]:
         with pytest.raises(ValueError, match=r"'y' not present in all datasets"):
-            concat([da1, da2, da3], dim="x")
+            concat([da1, da2, da3], dim="x", coords=coords)
 
 
 def test_concat_preserve_coordinate_order() -> None:
