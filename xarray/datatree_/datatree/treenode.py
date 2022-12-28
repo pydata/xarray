@@ -467,30 +467,6 @@ class TreeNode(Generic[Tree]):
         """True if other node is in the same tree as this node."""
         return self.root is other.root
 
-    def find_common_ancestor(self, other: Tree) -> Tree:
-        """
-        Find the first common ancestor of two nodes in the same tree.
-
-        Raise ValueError if they are not in the same tree.
-        """
-        common_ancestor = None
-        for node in other.iter_lineage():
-            if node in self.ancestors:
-                common_ancestor = node
-                break
-
-        if not common_ancestor:
-            raise ValueError(
-                "Cannot find relative path because nodes do not lie within the same tree"
-            )
-
-        return common_ancestor
-
-    def _path_to_ancestor(self, ancestor: Tree) -> NodePath:
-        generation_gap = list(self.lineage).index(ancestor)
-        path_upwards = "../" * generation_gap if generation_gap > 0 else "/"
-        return NodePath(path_upwards)
-
 
 class NamedNode(TreeNode, Generic[Tree]):
     """
@@ -553,7 +529,7 @@ class NamedNode(TreeNode, Generic[Tree]):
             )
 
         this_path = NodePath(self.path)
-        if other in self.lineage:
+        if other.path in list(ancestor.path for ancestor in self.lineage):
             return str(this_path.relative_to(other.path))
         else:
             common_ancestor = self.find_common_ancestor(other)
@@ -561,3 +537,39 @@ class NamedNode(TreeNode, Generic[Tree]):
             return str(
                 path_to_common_ancestor / this_path.relative_to(common_ancestor.path)
             )
+
+    def find_common_ancestor(self, other: NamedNode) -> NamedNode:
+        """
+        Find the first common ancestor of two nodes in the same tree.
+
+        Raise ValueError if they are not in the same tree.
+        """
+        common_ancestor = None
+        for node in other.iter_lineage():
+            if node.path in [ancestor.path for ancestor in self.ancestors]:
+                common_ancestor = node
+                break
+
+        if not common_ancestor:
+            raise ValueError(
+                "Cannot find relative path because nodes do not lie within the same tree"
+            )
+
+        return common_ancestor
+
+    def _path_to_ancestor(self, ancestor: NamedNode) -> NodePath:
+        """Return the relative path from this node to the given ancestor node"""
+
+        if not self.same_tree(ancestor):
+            raise ValueError(
+                "Cannot find relative path to ancestor because nodes do not lie within the same tree"
+            )
+        if ancestor.path not in list(a.path for a in self.ancestors):
+            raise ValueError(
+                "Cannot find relative path to ancestor because given node is not an ancestor of this node"
+            )
+
+        lineage_paths = list(ancestor.path for ancestor in self.lineage)
+        generation_gap = list(lineage_paths).index(ancestor.path)
+        path_upwards = "../" * generation_gap if generation_gap > 0 else "/"
+        return NodePath(path_upwards)

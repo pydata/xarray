@@ -326,10 +326,7 @@ class DataTree(
         ds = _coerce_to_dataset(data)
         _check_for_name_collisions(children, ds.variables)
 
-        # set tree attributes
-        super().__init__(children=children)
-        self.name = name
-        self.parent = parent
+        super().__init__(name=name)
 
         # set data attributes
         self._replace(
@@ -342,6 +339,10 @@ class DataTree(
             encoding=ds._encoding,
         )
         self._close = ds._close
+
+        # set tree attributes (must happen after variables set to avoid initialization errors)
+        self.children = children
+        self.parent = parent
 
     @property
     def parent(self: DataTree) -> DataTree | None:

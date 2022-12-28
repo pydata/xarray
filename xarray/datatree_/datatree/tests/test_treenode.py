@@ -224,56 +224,6 @@ class TestPruning:
             del john["Mary"]
 
 
-class TestNames:
-    def test_child_gets_named_on_attach(self):
-        sue = NamedNode()
-        mary = NamedNode(children={"Sue": sue})  # noqa
-        assert sue.name == "Sue"
-
-    @pytest.mark.xfail(reason="requires refactoring to retain name")
-    def test_grafted_subtree_retains_name(self):
-        subtree = NamedNode("original")
-        root = NamedNode(children={"new_name": subtree})  # noqa
-        assert subtree.name == "original"
-
-
-class TestPaths:
-    def test_path_property(self):
-        sue = NamedNode()
-        mary = NamedNode(children={"Sue": sue})
-        john = NamedNode(children={"Mary": mary})  # noqa
-        assert sue.path == "/Mary/Sue"
-        assert john.path == "/"
-
-    def test_path_roundtrip(self):
-        sue = NamedNode()
-        mary = NamedNode(children={"Sue": sue})
-        john = NamedNode(children={"Mary": mary})  # noqa
-        assert john._get_item(sue.path) == sue
-
-    def test_same_tree(self):
-        mary = NamedNode()
-        kate = NamedNode()
-        john = NamedNode(children={"Mary": mary, "Kate": kate})  # noqa
-        assert mary.same_tree(kate)
-
-    def test_relative_paths(self):
-        sue = NamedNode()
-        mary = NamedNode(children={"Sue": sue})
-        annie = NamedNode()
-        john = NamedNode(children={"Mary": mary, "Annie": annie})
-
-        assert sue.relative_to(john) == "Mary/Sue"
-        assert john.relative_to(sue) == "../.."
-        assert annie.relative_to(sue) == "../../Annie"
-        assert sue.relative_to(annie) == "../Mary/Sue"
-        assert sue.relative_to(sue) == "."
-
-        evil_kate = NamedNode()
-        with pytest.raises(ValueError, match="nodes do not lie within the same tree"):
-            sue.relative_to(evil_kate)
-
-
 def create_test_tree():
     f = NamedNode()
     b = NamedNode()

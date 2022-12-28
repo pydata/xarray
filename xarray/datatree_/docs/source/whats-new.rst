@@ -39,6 +39,8 @@ Bug fixes
 
 - Allow ``Datatree`` objects as values in :py:meth:`DataTree.from_dict` (:pull:`159`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Fix bug with :py:meth:`DataTree.relative_to` method (:issue:`133`, :pull:`160`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~

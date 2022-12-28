@@ -62,6 +62,57 @@ class TestFamilyTree:
         assert root.identical(expected)
 
 
+class TestNames:
+    def test_child_gets_named_on_attach(self):
+        sue = DataTree()
+        mary = DataTree(children={"Sue": sue})  # noqa
+        assert sue.name == "Sue"
+
+    @pytest.mark.xfail(reason="requires refactoring to retain name")
+    def test_grafted_subtree_retains_name(self):
+        subtree = DataTree("original")
+        root = DataTree(children={"new_name": subtree})  # noqa
+        assert subtree.name == "original"
+
+
+class TestPaths:
+    def test_path_property(self):
+        sue = DataTree()
+        mary = DataTree(children={"Sue": sue})
+        john = DataTree(children={"Mary": mary})  # noqa
+        assert sue.path == "/Mary/Sue"
+        assert john.path == "/"
+
+    def test_path_roundtrip(self):
+        sue = DataTree()
+        mary = DataTree(children={"Sue": sue})
+        john = DataTree(children={"Mary": mary})  # noqa
+        assert john[sue.path] is sue
+
+    def test_same_tree(self):
+        mary = DataTree()
+        kate = DataTree()
+        john = DataTree(children={"Mary": mary, "Kate": kate})  # noqa
+        assert mary.same_tree(kate)
+
+    def test_relative_paths(self):
+        sue = DataTree()
+        mary = DataTree(children={"Sue": sue})
+        annie = DataTree()
+        john = DataTree(children={"Mary": mary, "Annie": annie})
+
+        result = sue.relative_to(john)
+        assert result == "Mary/Sue"
+        assert john.relative_to(sue) == "../.."
+        assert annie.relative_to(sue) == "../../Annie"
+        assert sue.relative_to(annie) == "../Mary/Sue"
+        assert sue.relative_to(sue) == "."
+
+        evil_kate = DataTree()
+        with pytest.raises(ValueError, match="nodes do not lie within the same tree"):
+            sue.relative_to(evil_kate)
+
+
 class TestStoreDatasets:
     def test_create_with_data(self):
         dat = xr.Dataset({"a": 0})
