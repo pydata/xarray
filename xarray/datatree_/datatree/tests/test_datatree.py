@@ -7,7 +7,7 @@ import xarray.testing as xrt
 from xarray.tests import create_test_data, source_ndarray
 
 import datatree.testing as dtt
-from datatree import DataTree
+from datatree import DataTree, NotFoundInTreeError
 
 
 class TestTreeCreation:
@@ -109,7 +109,9 @@ class TestPaths:
         assert sue.relative_to(sue) == "."
 
         evil_kate = DataTree()
-        with pytest.raises(ValueError, match="nodes do not lie within the same tree"):
+        with pytest.raises(
+            NotFoundInTreeError, match="nodes do not lie within the same tree"
+        ):
             sue.relative_to(evil_kate)
 
 

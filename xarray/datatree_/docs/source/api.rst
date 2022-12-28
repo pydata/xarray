@@ -309,6 +309,8 @@ Exceptions raised when manipulating trees.
    :toctree: generated/
 
    TreeIsomorphismError
+   InvalidTreeError
+   NotFoundInTreeError
 
 Advanced API
 ============

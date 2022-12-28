@@ -1,7 +1,7 @@
 import pytest
 
 from datatree.iterators import LevelOrderIter, PreOrderIter
-from datatree.treenode import NamedNode, TreeError, TreeNode
+from datatree.treenode import InvalidTreeError, NamedNode, TreeNode
 
 
 class TestFamilyTree:
@@ -21,10 +21,10 @@ class TestFamilyTree:
     def test_no_time_traveller_loops(self):
         john = TreeNode()
 
-        with pytest.raises(TreeError, match="cannot be a parent of itself"):
+        with pytest.raises(InvalidTreeError, match="cannot be a parent of itself"):
             john._set_parent(john, "John")
 
-        with pytest.raises(TreeError, match="cannot be a parent of itself"):
+        with pytest.raises(InvalidTreeError, match="cannot be a parent of itself"):
             john.children = {"John": john}
 
         mary = TreeNode()
@@ -32,10 +32,10 @@ class TestFamilyTree:
         mary._set_parent(john, "Mary")
         rose._set_parent(mary, "Rose")
 
-        with pytest.raises(TreeError, match="is already a descendant"):
+        with pytest.raises(InvalidTreeError, match="is already a descendant"):
             john._set_parent(rose, "John")
 
-        with pytest.raises(TreeError, match="is already a descendant"):
+        with pytest.raises(InvalidTreeError, match="is already a descendant"):
             rose.children = {"John": john}
 
     def test_parent_swap(self):
@@ -73,7 +73,7 @@ class TestFamilyTree:
         with pytest.raises(TypeError):
             john.children = {"Kate": 666}
 
-        with pytest.raises(TreeError, match="Cannot add same node"):
+        with pytest.raises(InvalidTreeError, match="Cannot add same node"):
             john.children = {"Kate": kate, "Evil_Kate": kate}
 
         john = TreeNode(children={"Kate": kate})

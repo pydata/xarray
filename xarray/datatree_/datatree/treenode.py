@@ -19,10 +19,12 @@ if TYPE_CHECKING:
     from xarray.core.types import T_DataArray
 
 
-class TreeError(Exception):
-    """Exception type raised when user attempts to create an invalid tree in some way."""
+class InvalidTreeError(Exception):
+    """Raised when user attempts to create an invalid tree in some way."""
 
-    ...
+
+class NotFoundInTreeError(ValueError):
+    """Raised when operation can't be completed because one node is part of the expected tree."""
 
 
 class NodePath(PurePosixPath):
@@ -109,12 +111,12 @@ class TreeNode(Generic[Tree]):
         """Checks that assignment of this new parent will not create a cycle."""
         if new_parent is not None:
             if new_parent is self:
-                raise TreeError(
+                raise InvalidTreeError(
                     f"Cannot set parent, as node {self} cannot be a parent of itself."
                 )
 
             if self._is_descendant_of(new_parent):
-                raise TreeError(
+                raise InvalidTreeError(
                     "Cannot set parent, as intended parent is already a descendant of this node."
                 )
 
@@ -211,7 +213,7 @@ class TreeNode(Generic[Tree]):
             if childid not in seen:
                 seen.add(childid)
             else:
-                raise TreeError(
+                raise InvalidTreeError(
                     f"Cannot add same node {name} multiple times as different children."
                 )
 
@@ -524,7 +526,7 @@ class NamedNode(TreeNode, Generic[Tree]):
         If other is not in this tree, or it's otherwise impossible, raise a ValueError.
         """
         if not self.same_tree(other):
-            raise ValueError(
+            raise NotFoundInTreeError(
                 "Cannot find relative path because nodes do not lie within the same tree"
             )
 
@@ -551,7 +553,7 @@ class NamedNode(TreeNode, Generic[Tree]):
                 break
 
         if not common_ancestor:
-            raise ValueError(
+            raise NotFoundInTreeError(
                 "Cannot find relative path because nodes do not lie within the same tree"
             )
 
@@ -561,11 +563,11 @@ class NamedNode(TreeNode, Generic[Tree]):
         """Return the relative path from this node to the given ancestor node"""
 
         if not self.same_tree(ancestor):
-            raise ValueError(
+            raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"
             )
         if ancestor.path not in list(a.path for a in self.ancestors):
-            raise ValueError(
+            raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because given node is not an ancestor of this node"
             )
 

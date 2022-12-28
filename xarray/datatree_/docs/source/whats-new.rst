@@ -27,6 +27,7 @@ New Features
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Allow method chaining with a new :py:meth:`DataTree.pipe` method (:issue:`151`, :pull:`156`).
   By `Justus Magin <https://github.com/keewis>`_.
+- New, more specific exception types for tree-related errors (:pull:`169`).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
