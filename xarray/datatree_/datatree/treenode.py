@@ -474,15 +474,6 @@ class TreeNode(Generic[Tree]):
         else:
             raise KeyError("Cannot delete")
 
-    def update(self: Tree, other: Mapping[str, Tree]) -> None:
-        """
-        Update this node's children.
-
-        Just like `dict.update` this is an in-place operation.
-        """
-        new_children = {**self.children, **other}
-        self.children = new_children
-
     def same_tree(self, other: Tree) -> bool:
         """True if other node is in the same tree as this node."""
         return self.root is other.root
