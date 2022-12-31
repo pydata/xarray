@@ -23,6 +23,8 @@ v0.0.11 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added a :py:meth:`DataTree.drop_nodes` method (:issue:`161`, :pull:`175`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - New, more specific exception types for tree-related errors (:pull:`169`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added a new :py:meth:`DataTree.descendants` property (:pull:`170`).
