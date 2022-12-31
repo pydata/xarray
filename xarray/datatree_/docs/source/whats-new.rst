@@ -35,6 +35,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`DataTree.copy` copy method now only copies the subtree, not the parent nodes (:pull:`171`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 

@@ -31,9 +31,6 @@ _DATASET_DASK_METHODS_TO_MAP = [
 ]
 _DATASET_METHODS_TO_MAP = [
     "as_numpy",
-    "copy",
-    "__copy__",
-    "__deepcopy__",
     "set_coords",
     "reset_coords",
     "info",
