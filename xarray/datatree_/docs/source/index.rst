@@ -14,6 +14,7 @@ Datatree
    Data Model <data-structures>
    Reading and Writing Files <io>
    API Reference <api>
+   Terminology <terminology>
    How do I ... <howdoi>
    Contributing Guide <contributing>
    Development Roadmap <roadmap>
