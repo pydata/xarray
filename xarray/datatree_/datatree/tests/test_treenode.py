@@ -225,57 +225,106 @@ class TestPruning:
 
 
 def create_test_tree():
-    f = NamedNode()
+    a = NamedNode(name="a")
     b = NamedNode()
-    a = NamedNode()
-    d = NamedNode()
     c = NamedNode()
+    d = NamedNode()
     e = NamedNode()
+    f = NamedNode()
     g = NamedNode()
-    i = NamedNode()
     h = NamedNode()
+    i = NamedNode()
 
-    f.children = {"b": b, "g": g}
-    b.children = {"a": a, "d": d}
-    d.children = {"c": c, "e": e}
-    g.children = {"i": i}
-    i.children = {"h": h}
+    a.children = {"b": b, "c": c}
+    b.children = {"d": d, "e": e}
+    e.children = {"f": f, "g": g}
+    c.children = {"h": h}
+    h.children = {"i": i}
 
-    return f
+    return a, f
 
 
 class TestIterators:
     def test_preorderiter(self):
-        tree = create_test_tree()
-        result = [node.name for node in PreOrderIter(tree)]
+        root, _ = create_test_tree()
+        result = [node.name for node in PreOrderIter(root)]
         expected = [
-            None,  # root Node is unnamed
-            "b",
             "a",
+            "b",
             "d",
-            "c",
             "e",
+            "f",
             "g",
-            "i",
+            "c",
             "h",
+            "i",
         ]
         assert result == expected
 
     def test_levelorderiter(self):
-        tree = create_test_tree()
-        result = [node.name for node in LevelOrderIter(tree)]
+        root, _ = create_test_tree()
+        result = [node.name for node in LevelOrderIter(root)]
         expected = [
-            None,  # root Node is unnamed
+            "a",  # root Node is unnamed
             "b",
-            "g",
-            "a",
-            "d",
-            "i",
             "c",
+            "d",
             "e",
             "h",
+            "f",
+            "g",
+            "i",
         ]
         assert result == expected
+
+
+class TestAncestry:
+    def test_lineage(self):
+        _, leaf = create_test_tree()
+        lineage = leaf.lineage
+        expected = ["f", "e", "b", "a"]
+        for node, expected_name in zip(lineage, expected):
+            assert node.name == expected_name
+
+    def test_ancestors(self):
+        _, leaf = create_test_tree()
+        ancestors = leaf.ancestors
+        expected = ["a", "b", "e", "f"]
+        for node, expected_name in zip(ancestors, expected):
+            assert node.name == expected_name
+
+    def test_subtree(self):
+        root, _ = create_test_tree()
+        subtree = root.subtree
+        expected = [
+            "a",
+            "b",
+            "d",
+            "e",
+            "f",
+            "g",
+            "c",
+            "h",
+            "i",
+        ]
+        for node, expected_name in zip(subtree, expected):
+            assert node.name == expected_name
+
+    def test_descendants(self):
+        root, _ = create_test_tree()
+        descendants = root.descendants
+        expected = [
+            "b",
+            "d",
+            "e",
+            "f",
+            "g",
+            "c",
+            "h",
+            "i",
+        ]
+        for node, expected_name in zip(descendants, expected):
+            assert node.name == expected_name
 
 
 class TestRenderTree:

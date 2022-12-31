@@ -238,7 +238,6 @@ class TreeNode(Generic[Tree]):
 
     def iter_lineage(self: Tree) -> Iterator[Tree]:
         """Iterate up the tree, starting from the current node."""
-        # TODO should this instead return an OrderedDict, so as to include node names?
         node: Tree | None = self
         while node is not None:
             yield node
@@ -298,10 +297,29 @@ class TreeNode(Generic[Tree]):
         An iterator over all nodes in this tree, including both self and all descendants.
 
         Iterates depth-first.
+
+        See Also
+        --------
+        DataTree.descendants
         """
         from . import iterators
 
         return iterators.PreOrderIter(self)
+
+    @property
+    def descendants(self: Tree) -> Tuple[Tree]:
+        """
+        Child nodes and all their child nodes.
+
+        Returned in depth-first order.
+
+        See Also
+        --------
+        DataTree.subtree
+        """
+        all_nodes = tuple(self.subtree)
+        this_node, *descendants = all_nodes
+        return tuple(descendants)  # type: ignore[return-value]
 
     def _pre_detach(self: Tree, parent: Tree) -> None:
         """Method call before detaching from `parent`."""
