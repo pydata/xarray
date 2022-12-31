@@ -23,10 +23,6 @@ v0.0.11 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Add the ability to register accessors on ``DataTree`` objects, by using ``register_datatree_accessor``. (:pull:`144`)
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Allow method chaining with a new :py:meth:`DataTree.pipe` method (:issue:`151`, :pull:`156`).
-  By `Justus Magin <https://github.com/keewis>`_.
 - New, more specific exception types for tree-related errors (:pull:`169`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added a new :py:meth:`DataTree.descendants` property (:pull:`170`).
@@ -46,16 +42,12 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Allow ``Datatree`` objects as values in :py:meth:`DataTree.from_dict` (:pull:`159`).
-  By `Justus Magin <https://github.com/keewis>`_.
 - Fix bug with :py:meth:`DataTree.relative_to` method (:issue:`133`, :pull:`160`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Added ``Reading and Writing Files`` page. (:pull:`158`)
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Changed docs theme to match xarray's main documentation. (:pull:`173`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added ``Terminology`` page. (:pull:`174`)
@@ -63,9 +55,6 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-- Avoid reading from same file twice with fsspec3 (:pull:`130`)
-  By `William Roberts <https://github.com/wroberts4>`_.
 
 
 .. _whats-new.v0.0.10:
