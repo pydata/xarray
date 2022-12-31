@@ -754,9 +754,8 @@ class DataTree(
         Counterpart to the public .get method, and also only works on the immediate node, not other nodes in the tree.
         """
         if isinstance(val, DataTree):
-            # TODO shallow copy here so as not to alter name of node in original tree?
-            # new_node = copy.copy(val, deep=False)
-            new_node = val
+            # create and assign a shallow copy here so as not to alter original name of node in grafted tree
+            new_node = val.copy(deep=False)
             new_node.name = key
             new_node.parent = self
         else:

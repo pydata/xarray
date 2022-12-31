@@ -68,12 +68,6 @@ class TestNames:
         mary = DataTree(children={"Sue": sue})  # noqa
         assert sue.name == "Sue"
 
-    @pytest.mark.xfail(reason="requires refactoring to retain name")
-    def test_grafted_subtree_retains_name(self):
-        subtree = DataTree("original")
-        root = DataTree(children={"new_name": subtree})  # noqa
-        assert subtree.name == "original"
-
 
 class TestPaths:
     def test_path_property(self):
@@ -294,8 +288,11 @@ class TestSetItem:
     def test_setitem_new_child_node(self):
         john = DataTree(name="john")
         mary = DataTree(name="mary")
-        john["Mary"] = mary
-        assert john["Mary"] is mary
+        john["mary"] = mary
+
+        grafted_mary = john["mary"]
+        assert grafted_mary.parent is john
+        assert grafted_mary.name == "mary"
 
     def test_setitem_unnamed_child_node_becomes_named(self):
         john2 = DataTree(name="john2")
@@ -304,10 +301,19 @@ class TestSetItem:
 
     def test_setitem_new_grandchild_node(self):
         john = DataTree(name="john")
-        DataTree(name="mary", parent=john)
+        mary = DataTree(name="mary", parent=john)
         rose = DataTree(name="rose")
-        john["Mary/Rose"] = rose
-        assert john["Mary/Rose"] is rose
+        john["mary/rose"] = rose
+
+        grafted_rose = john["mary/rose"]
+        assert grafted_rose.parent is mary
+        assert grafted_rose.name == "rose"
+
+    def test_grafted_subtree_retains_name(self):
+        subtree = DataTree(name="original_subtree_name")
+        root = DataTree(name="root")
+        root["new_subtree_name"] = subtree  # noqa
+        assert subtree.name == "original_subtree_name"
 
     def test_setitem_new_empty_node(self):
         john = DataTree(name="john")

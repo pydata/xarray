@@ -68,8 +68,9 @@ class TestCheckTreesIsomorphic:
     def test_checking_from_root(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
-        real_root = DataTree()
-        real_root["fake_root"] = dt2
+        real_root = DataTree(name="real root")
+        dt2.name = "not_real_root"
+        dt2.parent = real_root
         with pytest.raises(TreeIsomorphismError):
             check_isomorphic(dt1, dt2, check_from_root=True)
 

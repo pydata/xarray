@@ -37,6 +37,8 @@ Breaking changes
 
 - :py:meth:`DataTree.copy` copy method now only copies the subtree, not the parent nodes (:pull:`171`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Grafting a subtree onto another tree now leaves name of original subtree object unchanged (:issue:`116`, :pull:`172`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Deprecations
 ~~~~~~~~~~~~
