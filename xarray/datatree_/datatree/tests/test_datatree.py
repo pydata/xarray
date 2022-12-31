@@ -515,7 +515,25 @@ class TestDatasetView:
 
 
 class TestRestructuring:
-    ...
+    def test_drop_nodes(self):
+        sue = DataTree.from_dict({"Mary": None, "Kate": None, "Ashley": None})
+
+        # test drop just one node
+        dropped_one = sue.drop_nodes(names="Mary")
+        assert "Mary" not in dropped_one.children
+
+        # test drop multiple nodes
+        dropped = sue.drop_nodes(names=["Mary", "Kate"])
+        assert not set(["Mary", "Kate"]).intersection(set(dropped.children))
+        assert "Ashley" in dropped.children
+
+        # test raise
+        with pytest.raises(KeyError, match="nodes {'Mary'} not present"):
+            dropped.drop_nodes(names=["Mary", "Ashley"])
+
+        # test ignore
+        childless = dropped.drop_nodes(names=["Mary", "Ashley"], errors="ignore")
+        assert childless.children == {}
 
 
 class TestPipe:

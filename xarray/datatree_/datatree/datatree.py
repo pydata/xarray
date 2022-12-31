@@ -45,6 +45,7 @@ from .treenode import NamedNode, NodePath, Tree
 
 if TYPE_CHECKING:
     from xarray.core.merge import CoercibleValue
+    from xarray.core.types import ErrorOptions
 
 # """
 # DEVELOPERS' NOTE
@@ -813,6 +814,42 @@ class DataTree(
         self._replace(
             inplace=True, children=merged_children, **vars_merge_result._asdict()
         )
+
+    def drop_nodes(
+        self: DataTree, names: str | Iterable[str], *, errors: ErrorOptions = "raise"
+    ) -> DataTree:
+        """
+        Drop child nodes from this node.
+
+        Parameters
+        ----------
+        names : str or iterable of str
+            Name(s) of nodes to drop.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a KeyError if any of the node names
+            passed are not present as children of this node. If 'ignore',
+            any given names that are present are dropped and no error is raised.
+
+        Returns
+        -------
+        dropped : DataTree
+            A copy of the node with the specified children dropped.
+        """
+        # the Iterable check is required for mypy
+        if isinstance(names, str) or not isinstance(names, Iterable):
+            names = {names}
+        else:
+            names = set(names)
+
+        if errors == "raise":
+            extra = names - set(self.children)
+            if extra:
+                raise KeyError(f"Cannot drop all nodes - nodes {extra} not present")
+
+        children_to_keep = OrderedDict(
+            {name: child for name, child in self.children.items() if name not in names}
+        )
+        return self._replace(children=children_to_keep)
 
     @classmethod
     def from_dict(

@@ -126,6 +126,11 @@ DataTree Node Contents
 
 Manipulate the contents of a single DataTree node.
 
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.drop_nodes
+
 Comparisons
 ===========
 
