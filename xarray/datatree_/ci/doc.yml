@@ -6,14 +6,18 @@ dependencies:
   - python>=3.8
   - netcdf4
   - scipy
-  - sphinx
+  - sphinx>=4.2.0
   - sphinx-copybutton
-  - numpydoc
+  - sphinx-panels
   - sphinx-autosummary-accessors
+  - sphinx-book-theme >= 0.0.38
+  - pydata-sphinx-theme>=0.4.3
+  - numpydoc
   - ipython
   - h5netcdf
   - zarr
   - pip:
       - git+https://github.com/xarray-contrib/datatree
-      - pangeo-sphinx-book-theme
+      - sphinxext-rediraffe
+      - sphinxext-opengraph
       - xarray>=2022.05.0.dev0

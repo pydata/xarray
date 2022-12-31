@@ -48,6 +48,8 @@ Documentation
 
 - Added ``Reading and Writing Files`` page. (:pull:`158`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Changed docs theme to match xarray's main documentation. (:pull:`173`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
