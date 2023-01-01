@@ -66,10 +66,12 @@ The overall structure is technically a `connected acyclic undirected rooted grap
 Again these are not normally used unless explicitly accessed by the user.
 
 
+.. _creating a datatree:
+
 Creating a DataTree
 ~~~~~~~~~~~~~~~~~~~
 
-There are two ways to create a ``DataTree`` from scratch. The first is to create each node individually,
+There are three ways to create a ``DataTree`` from scratch. The first is to create each node individually,
 specifying the nodes' relationship to one another as you create each one.
 
 The ``DataTree`` constructor takes:
@@ -144,8 +146,8 @@ we can construct a complex tree quickly using the alternative constructor ``:py:
 Notice that this method will also create any intermediate empty node necessary to reach the end of the specified path
 (i.e. the node labelled `"c"` in this case.)
 
-Finally if you have a file containing data on disk (such as a netCDF file or a Zarr Store), you can also create a datatree by opening the
-file using ``:py:func::~datatree.open_datatree``.
+Finally the third way is from a file. if you have a file containing data on disk (such as a netCDF file or a Zarr Store), you can also create a datatree by opening the
+file using ``:py:func::~datatree.open_datatree``. See the page on :ref:`reading and writing files <io>` for more details.
 
 
 DataTree Contents

@@ -1,4 +1,4 @@
-.. _data structures:
+.. _io:
 
 Reading and Writing Files
 =========================
