@@ -47,6 +47,7 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
   :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
+- Removed unexpected time axis for static variables in :py:meth:`Dataset.convert_calendar`. (:issue:`7398`, :pull:`7399`). By `Lars Buntemeyer <https://github.com/larsbuntemeyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
