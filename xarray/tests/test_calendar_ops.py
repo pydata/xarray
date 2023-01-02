@@ -109,6 +109,7 @@ def test_convert_calendar_360_days(source, target, freq, align_on, xtype):
 
 
 @requires_cftime
+@pytest.mark.parametrize("xtype", ["da", "ds"])
 @pytest.mark.parametrize(
     "source,target,freq",
     [
@@ -119,19 +120,13 @@ def test_convert_calendar_360_days(source, target, freq, align_on, xtype):
         ("noleap", "360_day", "D"),
     ],
 )
-def test_convert_calendar_missing(source, target, freq):
-    src = DataArray(
-        date_range(
-            "2004-01-01",
-            "2004-12-31" if source != "360_day" else "2004-12-30",
-            freq=freq,
-            calendar=source,
-        ),
-        dims=("time",),
-        name="time",
-    )
-    da_src = DataArray(
-        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
+def test_convert_calendar_missing(source, target, freq, xtype):
+    da_src = create_xdata(
+        "2004-01-01",
+        "2004-12-31" if source != "360_day" else "2004-12-30",
+        source,
+        freq,
+        xtype,
     )
     out = convert_calendar(da_src, target, missing=np.nan, align_on="date")
     assert infer_freq(out.time) == freq
@@ -216,6 +211,7 @@ def test_interp_calendar(source, target):
     da_src = DataArray(
         np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
     )
+
     conv = interp_calendar(da_src, tgt)
 
     assert_identical(tgt.time, conv.time)
