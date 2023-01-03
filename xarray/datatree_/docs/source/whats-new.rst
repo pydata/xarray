@@ -29,6 +29,8 @@ New Features
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added a new :py:meth:`DataTree.descendants` property (:pull:`170`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added a :py:meth:`DataTree.leaves` property (:pull:`177`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

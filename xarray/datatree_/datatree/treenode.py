@@ -267,13 +267,26 @@ class TreeNode(Generic[Tree]):
 
     @property
     def is_root(self) -> bool:
-        """Whether or not this node is the tree root."""
+        """Whether this node is the tree root."""
         return self.parent is None
 
     @property
     def is_leaf(self) -> bool:
-        """Whether or not this node is a leaf node."""
+        """
+        Whether this node is a leaf node.
+
+        Leaf nodes are defined as nodes which have no children.
+        """
         return self.children == {}
+
+    @property
+    def leaves(self: Tree) -> Tuple[Tree, ...]:
+        """
+        All leaf nodes.
+
+        Leaf nodes are defined as nodes which have no children.
+        """
+        return tuple([node for node in self.subtree if node.is_leaf])
 
     @property
     def siblings(self: Tree) -> OrderedDict[str, Tree]:
@@ -307,7 +320,7 @@ class TreeNode(Generic[Tree]):
         return iterators.PreOrderIter(self)
 
     @property
-    def descendants(self: Tree) -> Tuple[Tree]:
+    def descendants(self: Tree) -> Tuple[Tree, ...]:
         """
         Child nodes and all their child nodes.
 
@@ -319,7 +332,7 @@ class TreeNode(Generic[Tree]):
         """
         all_nodes = tuple(self.subtree)
         this_node, *descendants = all_nodes
-        return tuple(descendants)  # type: ignore[return-value]
+        return tuple(descendants)
 
     def _pre_detach(self: Tree, parent: Tree) -> None:
         """Method call before detaching from `parent`."""
@@ -563,7 +576,7 @@ class NamedNode(TreeNode, Generic[Tree]):
 
         if not common_ancestor:
             raise NotFoundInTreeError(
-                "Cannot find relative path because nodes do not lie within the same tree"
+                "Cannot find common ancestor because nodes do not lie within the same tree"
             )
 
         return common_ancestor

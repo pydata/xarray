@@ -30,6 +30,7 @@ Attributes relating to the recursive tree-like structure of a ``DataTree``.
    DataTree.root
    DataTree.is_root
    DataTree.is_leaf
+   DataTree.leaves
    DataTree.subtree
    DataTree.descendants
    DataTree.siblings
