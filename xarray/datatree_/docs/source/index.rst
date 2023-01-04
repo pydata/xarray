@@ -12,6 +12,7 @@ Datatree
    Quick Overview <quick-overview>
    Tutorial <tutorial>
    Data Model <data-structures>
+   Hierarchical Data <hierarchical-data>
    Reading and Writing Files <io>
    API Reference <api>
    Terminology <terminology>

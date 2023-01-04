@@ -58,6 +58,8 @@ Documentation
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added ``Terminology`` page. (:pull:`174`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added page on ``Working with Hierarchical Data`` (:pull:`179`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

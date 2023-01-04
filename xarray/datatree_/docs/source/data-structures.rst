@@ -71,7 +71,7 @@ Again these are not normally used unless explicitly accessed by the user.
 Creating a DataTree
 ~~~~~~~~~~~~~~~~~~~
 
-There are three ways to create a ``DataTree`` from scratch. The first is to create each node individually,
+One way to create a create a ``DataTree`` from scratch is to create each node individually,
 specifying the nodes' relationship to one another as you create each one.
 
 The ``DataTree`` constructor takes:
@@ -81,16 +81,16 @@ The ``DataTree`` constructor takes:
 - ``children``: The various child nodes (if there are any), given as a mapping from string keys to ``DataTree`` objects.
 - ``name``: A string to use as the name of this node.
 
-Let's make a datatree node without anything in it:
+Let's make a single datatree node with some example data in it:
 
 .. ipython:: python
 
     from datatree import DataTree
 
-    # create root node
-    node1 = DataTree(name="Oak")
+    ds1 = xr.Dataset({"foo": "orange"})
+    dt = DataTree(name="root", data=ds1)  # create root node
 
-    node1
+    dt
 
 At this point our node is also the root node, as every tree has a root node.
 
@@ -98,56 +98,38 @@ We can add a second node to this tree either by referring to the first node in t
 
 .. ipython:: python
 
+    ds2 = xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])})
     # add a child by referring to the parent node
-    node2 = DataTree(name="Bonsai", parent=node1)
+    node2 = DataTree(name="a", parent=dt, data=ds2)
 
 or by dynamically updating the attributes of one node to refer to another:
 
 .. ipython:: python
 
-    # add a grandparent by updating the .parent property of an existing node
-    node0 = DataTree(name="General Sherman")
-    node1.parent = node0
+    # add a second child by first creating a new node ...
+    ds3 = xr.Dataset({"zed": np.NaN})
+    node3 = DataTree(name="b", data=ds3)
+    # ... then updating its .parent property
+    node3.parent = dt
 
-Our tree now has three nodes within it, and one of the two new nodes has become the new root:
+Our tree now has three nodes within it:
 
 .. ipython:: python
 
-    node0
+    dt
 
-Is is at tree construction time that consistency checks are enforced. For instance, if we try to create a `cycle` the constructor will raise an error:
+It is at tree construction time that consistency checks are enforced. For instance, if we try to create a `cycle` the constructor will raise an error:
 
 .. ipython:: python
     :okexcept:
 
-    node0.parent = node2
+    dt.parent = node3
 
-The second way is to build the tree from a dictionary of filesystem-like paths and corresponding ``xarray.Dataset`` objects.
+Alternatively you can also create a ``DataTree`` object from
 
-This relies on a syntax inspired by unix-like filesystems, where the "path" to a node is specified by the keys of each intermediate node in sequence,
-separated by forward slashes. The root node is referred to by ``"/"``, so the path from our current root node to its grand-child would be ``"/Oak/Bonsai"``.
-A path specified from the root (as opposed to being specified relative to an arbitrary node in the tree) is sometimes also referred to as a
-`"fully qualified name" <https://www.unidata.ucar.edu/blogs/developer/en/entry/netcdf-zarr-data-model-specification#nczarr_fqn>`_.
-
-If we have a dictionary where each key is a valid path, and each value is either valid data or ``None``,
-we can construct a complex tree quickly using the alternative constructor ``:py:func::DataTree.from_dict``:
-
-.. ipython:: python
-
-    d = {
-        "/": xr.Dataset({"foo": "orange"}),
-        "/a": xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}),
-        "/a/b": xr.Dataset({"zed": np.NaN}),
-        "a/c/d": None,
-    }
-    dt = DataTree.from_dict(d)
-    dt
-
-Notice that this method will also create any intermediate empty node necessary to reach the end of the specified path
-(i.e. the node labelled `"c"` in this case.)
-
-Finally the third way is from a file. if you have a file containing data on disk (such as a netCDF file or a Zarr Store), you can also create a datatree by opening the
-file using ``:py:func::~datatree.open_datatree``. See the page on :ref:`reading and writing files <io>` for more details.
+- An ``xarray.Dataset`` using ``Dataset.to_node()`` (not yet implemented),
+- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using ``DataTree.from_dict()``,
+- A netCDF or Zarr file on disk with ``open_datatree()``. See :ref:`reading and writing files <io>`.
 
 
 DataTree Contents
@@ -187,8 +169,6 @@ Like with ``Dataset``, you can access the data and coordinate variables of a nod
 Dictionary-like methods
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-We can update the contents of the tree in-place using a dictionary-like syntax.
-
 We can update a datatree in-place using Python's standard dictionary syntax, similar to how we can for Dataset objects.
 For example, to create this example datatree from scratch, we could have written:
 
@@ -196,11 +176,10 @@ For example, to create this example datatree from scratch, we could have written
 
 .. ipython:: python
 
-    dt = DataTree()
+    dt = DataTree(name="root")
     dt["foo"] = "orange"
     dt["a"] = DataTree(data=xr.Dataset({"bar": 0}, coords={"y": ("y", [0, 1, 2])}))
     dt["a/b/zed"] = np.NaN
-    dt["a/c/d"] = DataTree()
     dt
 
 To change the variables in a node of a ``DataTree``, you can use all the standard dictionary
@@ -209,6 +188,6 @@ methods, including ``values``, ``items``, ``__delitem__``, ``get`` and
 Note that assigning a ``DataArray`` object to a ``DataTree`` variable using ``__setitem__`` or ``update`` will
 :ref:`automatically align<update>` the array(s) to the original node's indexes.
 
-If you copy a ``DataTree`` using the ``:py:func::copy`` function or the :py:meth:`~xarray.DataTree.copy` it will copy the entire tree,
-including all parents and children.
-Like for ``Dataset``, this copy is shallow by default, but you can copy all the data by calling ``dt.copy(deep=True)``.
+If you copy a ``DataTree`` using the ``:py:func::copy`` function or the :py:meth:`~xarray.DataTree.copy` it will copy the subtree,
+meaning that node and children below it, but no parents above it.
+Like for ``Dataset``, this copy is shallow by default, but you can copy all the underlying data arrays by calling ``dt.copy(deep=True)``.
