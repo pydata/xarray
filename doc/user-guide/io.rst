@@ -156,6 +156,9 @@ to the original netCDF file, regardless if they exist in the original dataset.
 Groups
 ~~~~~~
 
+Single groups as datasets
+.........................
+
 NetCDF groups are not supported as part of the :py:class:`Dataset` data model.
 Instead, groups can be loaded individually as Dataset objects.
 To do so, pass a ``group`` keyword argument to the
@@ -228,10 +231,34 @@ Either of these groups can be loaded from the file as an independent :py:class:`
     Data variables:
         b        int64 ...
 
-.. note::
+.. _io.netcdf_datatree_groups:
 
-    For native handling of multiple groups with xarray, including I/O, you might be interested in the experimental
-    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+Multiple Groups as a DataTree
+.............................
+
+For native handling of multiple groups with xarray, including I/O, you might be interested in the experimental
+`xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+If installed, this package's API can be imported directly from xarray, i.e. ``from xarray import DataTree``.
+
+Whilst netCDF groups can only be loaded individually as Dataset objects, a whole file of many nested groups can be loaded
+as a single :py:class:`DataTree` object.
+To open a whole netCDF file as a tree of groups use the :py:func:`open_datatree()` function.
+To save a DataTree object as a netCDF file containing many groups, use the :py:meth:`DataTree.to_netcdf()`` method.
+
+.. _netcdf.group.warning:
+
+.. warning::
+    ``DataTree`` objects do not follow the exact same data model as netCDF files, which means that perfect round-tripping
+    is not always possible.
+
+    In particular in the netCDF data model dimensions are entities that can exist regardless of whether any variable possesses them.
+    This is in contrast to `xarray's data model <https://docs.xarray.dev/en/stable/user-guide/data-structures.html>`_
+    (and hence `datatree's data model <https://xarray-datatree.readthedocs.io/en/latest/data-structures.html>`_) in which the dimensions of a (Dataset/Tree)
+    object are simply the set of dimensions present across all variables in that dataset.
+
+    This means that if a netCDF file contains dimensions but no variables which possess those dimensions,
+    these dimensions will not be present when that file is opened as a DataTree object.
+    Saving this DataTree object to file will therefore not preserve these "unused" dimensions.
 
 
 .. _io.encoding:
@@ -632,6 +659,21 @@ To read back a zarr dataset that has been created this way, we use the
 
     ds_zarr = xr.open_zarr("path/to/directory.zarr")
     ds_zarr
+
+Groups
+~~~~~~
+
+Like for netCDF, zarr groups can either be opened as individual :py:class:`Dataset` objects using the ``group`` keyword argument to :py:func:`open_dataset`,
+or alternatively nested groups in zarr stores can be represented by loading the store as a :py:class:`DataTree` object.
+(The latter option requires that you have the `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package installed.)
+
+To open a whole zarr store as a tree of groups use the :py:func:`open_datatree()` function.
+To save a DataTree object as a zarr store containing many groups, use the :py:meth:`DataTree.to_zarr()` method.
+
+.. note::
+    Note that perfect round-tripping should always be possible with a zarr store (:ref:`unlike for netCDF files<netcdf.group.warning>`),
+    as zarr does not support "unused" dimensions.
+
 
 Cloud Storage Buckets
 ~~~~~~~~~~~~~~~~~~~~~
