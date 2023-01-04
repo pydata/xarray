@@ -441,7 +441,7 @@ def _dataset_concat(
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
-    fill_value: object = dtypes.NA,
+    fill_value: Any = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
 ) -> T_Dataset:
