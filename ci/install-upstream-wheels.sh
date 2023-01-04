@@ -19,7 +19,8 @@ conda uninstall -y --force \
     h5netcdf \
     xarray
 # temporarily (?) remove numbagg and numba
-conda uninstall -y numbagg numba
+pip uninstall -y numbagg
+conda uninstall -y numba
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
