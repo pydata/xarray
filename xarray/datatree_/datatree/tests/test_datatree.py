@@ -206,6 +206,17 @@ class TestGetItem:
 
 
 class TestUpdate:
+    def test_update(self):
+        dt = DataTree()
+        dt.update({"foo": xr.DataArray(0), "a": DataTree()})
+        expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "a": None})
+        print(dt)
+        print(dt.children)
+        print(dt._children)
+        print(dt["a"])
+        print(expected)
+        dtt.assert_equal(dt, expected)
+
     def test_update_new_named_dataarray(self):
         da = xr.DataArray(name="temp", data=[0, 50])
         folder1 = DataTree(name="folder1")
@@ -541,6 +552,18 @@ class TestRestructuring:
         # test ignore
         childless = dropped.drop_nodes(names=["Mary", "Ashley"], errors="ignore")
         assert childless.children == {}
+
+    def test_assign(self):
+        dt = DataTree()
+        expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "/a": None})
+
+        # kwargs form
+        result = dt.assign(foo=xr.DataArray(0), a=DataTree())
+        dtt.assert_equal(result, expected)
+
+        # dict form
+        result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
+        dtt.assert_equal(result, expected)
 
 
 class TestPipe:

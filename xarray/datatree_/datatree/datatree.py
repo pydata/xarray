@@ -30,7 +30,7 @@ from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.utils import Default, Frozen, _default
+from xarray.core.utils import Default, Frozen, _default, either_dict_or_kwargs
 from xarray.core.variable import Variable, calculate_dimensions
 
 from . import formatting, formatting_html
@@ -820,6 +820,48 @@ class DataTree(
         self._replace(
             inplace=True, children=merged_children, **vars_merge_result._asdict()
         )
+
+    def assign(
+        self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
+    ) -> DataTree:
+        """
+        Assign new data variables or child nodes to a DataTree, returning a new object
+        with all the original items in addition to the new ones.
+
+        Parameters
+        ----------
+        items : mapping of hashable to Any
+            Mapping from variable or child node names to the new values. If the new values
+            are callable, they are computed on the Dataset and assigned to new
+            data variables. If the values are not callable, (e.g. a DataTree, DataArray,
+            scalar, or array), they are simply assigned.
+        **items_kwargs
+            The keyword arguments form of ``variables``.
+            One of variables or variables_kwargs must be provided.
+
+        Returns
+        -------
+        dt : DataTree
+            A new DataTree with the new variables or children in addition to all the
+            existing items.
+
+        Notes
+        -----
+        Since ``kwargs`` is a dictionary, the order of your arguments may not
+        be preserved, and so the order of the new variables is not well-defined.
+        Assigning multiple items within the same ``assign`` is
+        possible, but you cannot reference other variables created within the
+        same ``assign`` call.
+
+        See Also
+        --------
+        xarray.Dataset.assign
+        pandas.DataFrame.assign
+        """
+        items = either_dict_or_kwargs(items, items_kwargs, "assign")
+        dt = self.copy()
+        dt.update(items)
+        return dt
 
     def drop_nodes(
         self: DataTree, names: str | Iterable[str], *, errors: ErrorOptions = "raise"

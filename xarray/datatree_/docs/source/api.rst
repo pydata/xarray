@@ -109,7 +109,7 @@ Manipulate the contents of all nodes in a tree simultaneously.
    :toctree: generated/
 
    DataTree.copy
-   DataTree.assign
+
    DataTree.assign_coords
    DataTree.merge
    DataTree.rename
@@ -130,6 +130,7 @@ Manipulate the contents of a single DataTree node.
 .. autosummary::
    :toctree: generated/
 
+   DataTree.assign
    DataTree.drop_nodes
 
 Comparisons

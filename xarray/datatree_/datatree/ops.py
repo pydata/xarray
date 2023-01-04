@@ -68,7 +68,6 @@ _DATASET_METHODS_TO_MAP = [
     "combine_first",
     "reduce",
     "map",
-    "assign",
     "diff",
     "shift",
     "roll",
