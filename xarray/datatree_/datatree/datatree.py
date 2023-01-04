@@ -577,6 +577,9 @@ class DataTree(
         datatree. It is up to the caller to ensure that they have the right type
         and are not used elsewhere.
         """
+        # TODO Adding new children inplace using this method will cause bugs.
+        # You will end up with an inconsistency between the name of the child node and the key the child is stored under.
+        # Use ._set() instead for now
         if inplace:
             if variables is not None:
                 self._variables = variables
@@ -801,7 +804,10 @@ class DataTree(
         new_variables = {}
         for k, v in other.items():
             if isinstance(v, DataTree):
-                new_children[k] = v
+                # avoid named node being stored under inconsistent key
+                new_child = v.copy()
+                new_child.name = k
+                new_children[k] = new_child
             elif isinstance(v, (DataArray, Variable)):
                 # TODO this should also accommodate other types that can be coerced into Variables
                 new_variables[k] = v

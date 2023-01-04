@@ -213,6 +213,13 @@ class TestUpdate:
         expected = da.rename("results")
         xrt.assert_equal(folder1["results"], expected)
 
+    def test_update_doesnt_alter_child_name(self):
+        dt = DataTree()
+        dt.update({"foo": xr.DataArray(0), "a": DataTree(name="b")})
+        assert "a" in dt.children
+        child = dt["a"]
+        assert child.name == "a"
+
 
 class TestCopy:
     def test_copy(self, create_test_datatree):
