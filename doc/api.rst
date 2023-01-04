@@ -1133,6 +1133,20 @@ used filetypes in the xarray universe.
    backends.StoreBackendEntrypoint
    backends.ZarrBackendEntrypoint
 
+DataTree
+========
+
+Experimental API for handling nested groups of data.
+Requires the `xarray-datatree package <https://github.com/xarray-contrib/datatree>`_ to be installed.
+See the `datatree documentation <https://xarray-datatree.readthedocs.io/en/latest/>`_ for details.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree
+   open_datatree
+   register_datatree_accessor
+
 Deprecated / Pending Deprecation
 ================================
 
