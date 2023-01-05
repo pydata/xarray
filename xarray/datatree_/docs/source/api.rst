@@ -333,4 +333,5 @@ Relatively advanced API for users or developers looking to understand the intern
 
 ..
 
+   Missing:
    ``DataTree.set_close``
