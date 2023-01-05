@@ -576,7 +576,7 @@ class TestConcatDataset:
     def test_concat_fill_missing_variables(self, dim, coord):
         # create var names list with one missing value
         def get_var_names(var_cnt=10, list_cnt=10):
-            orig = [f'd{i:02d}' for i in range(var_cnt)]
+            orig = [f"d{i:02d}" for i in range(var_cnt)]
             var_names = []
             for i in range(0, list_cnt):
                 l1 = orig.copy()
@@ -603,15 +603,19 @@ class TestConcatDataset:
                     dsi = dsi.isel(time=0)
                 out_ds.append(dsi)
             return out_ds
+
         var_names = get_var_names()
 
         import random
+
         random.seed(42)
         drop_idx = [random.randrange(len(vlist)) for vlist in var_names]
-        expected = concat(create_ds(var_names, dim=dim, coord=coord), dim="time", data_vars="all")
+        expected = concat(
+            create_ds(var_names, dim=dim, coord=coord), dim="time", data_vars="all"
+        )
         for i, idx in enumerate(drop_idx):
             if dim:
-                expected[var_names[0][idx]][i * 2: i * 2 + 2] = np.nan
+                expected[var_names[0][idx]][i * 2 : i * 2 + 2] = np.nan
             else:
                 expected[var_names[0][idx]][i] = np.nan
 
