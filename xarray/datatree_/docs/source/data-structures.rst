@@ -14,6 +14,8 @@ Data Structures
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
 
+    %xmode minimal
+
 .. note::
 
     This page builds on the information given in xarray's main page on

@@ -14,6 +14,7 @@ Working With Hierarchical Data
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
 
+    %xmode minimal
 
 Why Hierarchical Data?
 ----------------------
