@@ -60,6 +60,8 @@ Documentation
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added page on ``Working with Hierarchical Data`` (:pull:`179`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added context content to ``Index`` page (:pull:`182`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
