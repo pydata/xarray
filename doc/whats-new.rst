@@ -48,6 +48,8 @@ Bug fixes
 - Fixed performance regression in alignment between indexed and non-indexed objects
   of the same shape (:pull:`7382`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
+  :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
 
 Documentation
 ~~~~~~~~~~~~~
