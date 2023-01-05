@@ -239,7 +239,7 @@ Aggregate data in all nodes in the subtree simultaneously.
 ndarray methods
 ===============
 
-Methods copied from `np.ndarray` objects, here applying to the data in all nodes in the subtree.
+Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data in all nodes in the subtree.
 
 .. autosummary::
    :toctree: generated/
