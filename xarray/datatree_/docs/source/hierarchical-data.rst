@@ -14,6 +14,7 @@ Working With Hierarchical Data
     np.random.seed(123456)
     np.set_printoptions(threshold=10)
 
+
 Why Hierarchical Data?
 ----------------------
 
@@ -33,7 +34,7 @@ Often datasets like this cannot easily fit into a single ``xarray.Dataset`` obje
 or are more usefully thought of as groups of related ``xarray.Dataset`` objects.
 For this purpose we provide the :py:class:`DataTree` class.
 
-This page explains in detail how to understand and use the different features of the :py:class:`DataTree` class for your own heirarchical data needs.
+This page explains in detail how to understand and use the different features of the :py:class:`DataTree` class for your own hierarchical data needs.
 
 .. _node relationships:
 

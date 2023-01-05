@@ -23,8 +23,8 @@ Data Structures
 DataTree
 --------
 
-:py:class:``DataTree`` is xarray's highest-level data structure, able to organise heterogeneous data which
-could not be stored inside a single ``Dataset`` object. This includes representing the recursive structure of multiple
+:py:class:`DataTree` is xarray's highest-level data structure, able to organise heterogeneous data which
+could not be stored inside a single :py:class:`Dataset` object. This includes representing the recursive structure of multiple
 `groups`_ within a netCDF file or `Zarr Store`_.
 
 .. _groups: https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html
@@ -128,8 +128,8 @@ It is at tree construction time that consistency checks are enforced. For instan
 Alternatively you can also create a ``DataTree`` object from
 
 - An ``xarray.Dataset`` using ``Dataset.to_node()`` (not yet implemented),
-- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using ``DataTree.from_dict()``,
-- A netCDF or Zarr file on disk with ``open_datatree()``. See :ref:`reading and writing files <io>`.
+- A dictionary mapping directory-like paths to either ``DataTree`` nodes or data, using :py:meth:`DataTree.from_dict()`,
+- A netCDF or Zarr file on disk with :py:func:`open_datatree()`. See :ref:`reading and writing files <io>`.
 
 
 DataTree Contents
@@ -152,7 +152,7 @@ We can also access all the data in a single node through a dataset-like view
 
 This demonstrates the fact that the data in any one node is equivalent to the contents of a single ``xarray.Dataset`` object.
 The ``DataTree.ds`` property returns an immutable view, but we can instead extract the node's data contents as a new (and mutable)
-``xarray.Dataset`` object via ``.to_dataset()``:
+``xarray.Dataset`` object via :py:meth:`DataTree.to_dataset()`:
 
 .. ipython:: python
 
@@ -184,10 +184,10 @@ For example, to create this example datatree from scratch, we could have written
 
 To change the variables in a node of a ``DataTree``, you can use all the standard dictionary
 methods, including ``values``, ``items``, ``__delitem__``, ``get`` and
-:py:meth:`~xarray.DataTree.update`.
+:py:meth:`DataTree.update`.
 Note that assigning a ``DataArray`` object to a ``DataTree`` variable using ``__setitem__`` or ``update`` will
-:ref:`automatically align<update>` the array(s) to the original node's indexes.
+:ref:`automatically align <update>` the array(s) to the original node's indexes.
 
-If you copy a ``DataTree`` using the ``:py:func::copy`` function or the :py:meth:`~xarray.DataTree.copy` it will copy the subtree,
+If you copy a ``DataTree`` using the :py:func:`copy` function or the :py:meth:`DataTree.copy` method it will copy the subtree,
 meaning that node and children below it, but no parents above it.
 Like for ``Dataset``, this copy is shallow by default, but you can copy all the underlying data arrays by calling ``dt.copy(deep=True)``.
