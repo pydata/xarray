@@ -1102,6 +1102,28 @@ class DataTree(
             for node, other_node in zip(self.subtree, other.subtree)
         )
 
+    def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
+        """
+        Filter nodes according to a specified condition.
+
+        Returns a new tree containing only the nodes in the original tree for which `fitlerfunc(node)` is True.
+        Will also contain empty nodes at intermediate positions if required to support leaves.
+
+        Parameters
+        ----------
+        filterfunc: function
+            A function which accepts only one DataTree - the node on which filterfunc will be called.
+
+        See Also
+        --------
+        pipe
+        map_over_subtree
+        """
+        filtered_nodes = {
+            node.path: node.ds for node in self.subtree if filterfunc(node)
+        }
+        return DataTree.from_dict(filtered_nodes, name=self.root.name)
+
     def map_over_subtree(
         self,
         func: Callable,
