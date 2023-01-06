@@ -22,9 +22,9 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes
-from .common import DataWithCoords
-from .indexes import (
+from xarray.core import dtypes
+from xarray.core.common import DataWithCoords
+from xarray.core.indexes import (
     Index,
     Indexes,
     PandasIndex,
@@ -32,13 +32,13 @@ from .indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
-from .utils import is_dict_like, is_full_slice
-from .variable import Variable, as_compatible_data, calculate_dimensions
+from xarray.core.utils import is_dict_like, is_full_slice
+from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .types import JoinOptions, T_DataArray, T_Dataset, T_DataWithCoords
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import JoinOptions, T_DataArray, T_Dataset, T_DataWithCoords
 
 DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
@@ -343,8 +343,33 @@ class Aligner(Generic[DataAlignable]):
           pandas). This is useful, e.g., for overwriting such duplicate indexes.
 
         """
-        has_unindexed_dims = any(dim in self.unindexed_dim_sizes for dim in dims)
-        return not (indexes_all_equal(cmp_indexes)) or has_unindexed_dims
+        if not indexes_all_equal(cmp_indexes):
+            # always reindex when matching indexes are not equal
+            return True
+
+        unindexed_dims_sizes = {}
+        for dim in dims:
+            if dim in self.unindexed_dim_sizes:
+                sizes = self.unindexed_dim_sizes[dim]
+                if len(sizes) > 1:
+                    # reindex if different sizes are found for unindexed dims
+                    return True
+                else:
+                    unindexed_dims_sizes[dim] = next(iter(sizes))
+
+        if unindexed_dims_sizes:
+            indexed_dims_sizes = {}
+            for cmp in cmp_indexes:
+                index_vars = cmp[1]
+                for var in index_vars.values():
+                    indexed_dims_sizes.update(var.sizes)
+
+            for dim, size in unindexed_dims_sizes.items():
+                if indexed_dims_sizes.get(dim, -1) != size:
+                    # reindex if unindexed dimension size doesn't match
+                    return True
+
+        return False
 
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:
@@ -786,8 +811,8 @@ def deep_align(
 
     This function is not public API.
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     if indexes is None:
         indexes = {}
@@ -942,8 +967,8 @@ def _broadcast_helper(
     arg: T_DataWithCoords, exclude, dims_map, common_coords
 ) -> T_DataWithCoords:
 
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     def _set_dims(var):
         # Add excluded dims to a copy of dims_map

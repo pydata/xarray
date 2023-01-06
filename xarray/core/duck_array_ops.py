@@ -16,8 +16,8 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
+from numpy import around  # noqa
 from numpy import zeros_like  # noqa
-from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
 from numpy import (  # noqa
     einsum,
@@ -32,10 +32,10 @@ from numpy import (  # noqa
 )
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
-from . import dask_array_ops, dtypes, nputils
-from .nputils import nanfirst, nanlast
-from .pycompat import array_type, is_duck_dask_array
-from .utils import is_duck_array, module_available
+from xarray.core import dask_array_ops, dtypes, nputils
+from xarray.core.nputils import nanfirst, nanlast
+from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.utils import is_duck_array, module_available
 
 dask_available = module_available("dask")
 
@@ -207,6 +207,11 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     return [astype(x, out_type, copy=False) for x in arrays]
 
 
+def broadcast_to(array, shape):
+    xp = get_array_namespace(array)
+    return xp.broadcast_to(array, shape)
+
+
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
     Returns True when arr1, arr2 identical or their dask tokens are equal.
@@ -311,6 +316,9 @@ def fillna(data, other):
 
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
+    if hasattr(arrays[0], "__array_namespace__"):
+        xp = get_array_namespace(arrays[0])
+        return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
     return _concatenate(as_shared_dtype(arrays), axis=axis)
 
 
@@ -336,7 +344,7 @@ def _ignore_warnings_if(condition):
 
 
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
-    from . import nanops
+    from xarray.core import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
@@ -581,7 +589,7 @@ def py_timedelta_to_float(array, datetime_unit):
 def mean(array, axis=None, skipna=None, **kwargs):
     """inhouse mean that can handle np.datetime64 or cftime.datetime
     dtypes"""
-    from .common import _contains_cftime_datetimes
+    from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
     if array.dtype.kind in "Mm":
