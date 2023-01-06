@@ -9,7 +9,7 @@ from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.groupby import _consolidate_slices
+from xarray.core.groupby import _consolidate_slices, DataArrayGroupBy
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -1468,6 +1468,17 @@ class TestDataArrayGroupBy:
             target.coords["b"] = ("x", [0, 0, 1, 1])
         actual = a.groupby("b").fillna(DataArray([0, 2], dims="b"))
         assert_identical(expected, actual)
+
+    def test_groupby_fastpath_for_monotonic(self):
+        # Fixes https://github.com/pydata/xarray/issues/6220
+        times = pd.date_range("2000-01-01 00:00:00", freq="6H", periods=12)
+        array = DataArray(np.arange(12), [("time", times)])
+
+        try:
+            DataArrayGroupBy(array, "time", grouper=pd.Grouper(level="time", freq="1D"))
+            DataArrayGroupBy(array[::-1], "time", grouper=pd.Grouper(level="time", freq="1D"))
+        except ValueError:
+            pytest.fail("Cannot use fastpath for monotonically increasing and decreasing values")
 
 
 class TestDataArrayResample:

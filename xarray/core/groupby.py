@@ -410,7 +410,7 @@ class GroupBy(Generic[T_Xarray]):
         unique_coord: DataArray | IndexVariable | _DummyGroup
         if grouper is not None:
             index = safe_cast_to_index(group)
-            if not index.is_monotonic_increasing:
+            if not (index.is_monotonic_increasing or index.is_monotonic_decreasing):
                 # TODO: sort instead of raising an error
                 raise ValueError("index must be monotonic for resampling")
             full_index, first_items = self._get_index_and_items(index, grouper)
