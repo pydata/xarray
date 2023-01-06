@@ -596,3 +596,28 @@ class TestPipe:
         actual = dt.pipe((f, "tree"), **attrs)
 
         assert actual is dt and actual.attrs == attrs
+
+
+class TestSubset:
+    def test_filter(self):
+        simpsons = DataTree.from_dict(
+            d={
+                "/": xr.Dataset({"age": 83}),
+                "/Herbert": xr.Dataset({"age": 40}),
+                "/Homer": xr.Dataset({"age": 39}),
+                "/Homer/Bart": xr.Dataset({"age": 10}),
+                "/Homer/Lisa": xr.Dataset({"age": 8}),
+                "/Homer/Maggie": xr.Dataset({"age": 1}),
+            },
+            name="Abe",
+        )
+        expected = DataTree.from_dict(
+            d={
+                "/": xr.Dataset({"age": 83}),
+                "/Herbert": xr.Dataset({"age": 40}),
+                "/Homer": xr.Dataset({"age": 39}),
+            },
+            name="Abe",
+        )
+        elders = simpsons.filter(lambda node: node["age"] > 18)
+        dtt.assert_identical(elders, expected)

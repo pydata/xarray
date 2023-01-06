@@ -99,6 +99,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.find_common_ancestor
    map_over_subtree
    DataTree.pipe
+   DataTree.filter
 
 DataTree Contents
 -----------------
