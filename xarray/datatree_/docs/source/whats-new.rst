@@ -31,6 +31,8 @@ New Features
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added a :py:meth:`DataTree.leaves` property (:pull:`177`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added a :py:meth:`DataTree.filter` method (:pull:`184`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
