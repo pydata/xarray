@@ -14,6 +14,8 @@ with warnings.catch_warnings():
     import numpy.array_api as xp  # isort:skip
     from numpy.array_api._array_object import Array  # isort:skip
 
+_STATISTICAL_FUNCTIONS = ("max", "min", "mean", "prod", "sum", "std", "var")
+
 
 @pytest.fixture
 def arrays() -> tuple[xr.DataArray, xr.DataArray]:
@@ -39,7 +41,7 @@ def test_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert_equal(actual, expected)
 
 
-@pytest.mark.parametrize("method", ["max", "min", "mean", "prod", "sum", "std", "var"])
+@pytest.mark.parametrize("method", _STATISTICAL_FUNCTIONS)
 def test_aggregation(method: str, arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = getattr(np_arr, method)()
@@ -48,7 +50,7 @@ def test_aggregation(method: str, arrays: tuple[xr.DataArray, xr.DataArray]) -> 
     assert_equal(actual, expected)
 
 
-@pytest.mark.parametrize("method", ["max", "min", "mean", "prod", "sum", "std", "var"])
+@pytest.mark.parametrize("method", _STATISTICAL_FUNCTIONS)
 def test_aggregation_skipna(method: str, arrays) -> None:
     np_arr, xp_arr = arrays
     expected = getattr(np_arr, method)(skipna=False)
