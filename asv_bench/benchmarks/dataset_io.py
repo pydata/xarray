@@ -452,7 +452,7 @@ class IOWriteNetCDFDask:
     repeat = 1
     number = 5
 
-    def setup(self, *args, **kwargs):
+    def setup(self):
         requires_dask()
         self.write = create_delayed_write()
 
@@ -481,8 +481,8 @@ class IOWriteNetCDFDaskDistributed:
         self.write.compute()
 
 
-class OpenDataset:
-    def setup(self):
+class IOOpenDataset:
+    def setup(self, *args, **kwargs):
         """
         The custom backend does the bare mininum to be considered a lazy backend. But
         the data in it is still in memory so slow file reading shouldn't affect the
