@@ -1,3 +1,5 @@
+.. currentmodule:: datatree
+
 .. _hierarchical-data:
 
 Working With Hierarchical Data
@@ -31,7 +33,7 @@ Examples of data which one might want organise in a grouped or hierarchical mann
 
 or even any combination of the above.
 
-Often datasets like this cannot easily fit into a single ``xarray.Dataset`` object,
+Often datasets like this cannot easily fit into a single :py:class:`xarray.Dataset` object,
 or are more usefully thought of as groups of related ``xarray.Dataset`` objects.
 For this purpose we provide the :py:class:`DataTree` class.
 

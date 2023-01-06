@@ -1,4 +1,5 @@
 .. currentmodule:: datatree
+
 .. _terminology:
 
 This page extends `xarray's page on terminology <https://docs.xarray.dev/en/stable/user-guide/terminology.html>`_.
