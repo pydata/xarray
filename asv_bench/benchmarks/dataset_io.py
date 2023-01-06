@@ -605,4 +605,4 @@ class OpenDataset:
         Time how fast xr.open_dataset is without the slow data reading part.
         Test with and without dask.
         """
-        ds = xr.open_dataset(None, engine=self.engine, chunks=chunks)
+        xr.open_dataset(None, engine=self.engine, chunks=chunks)
