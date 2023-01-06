@@ -7,10 +7,23 @@
 | **License** |                                                                         [![License][license-badge]][repo-link]                                                                         |
 
 
-WIP implementation of a tree-like hierarchical data structure for xarray.
+**Datatree is a prototype implementation of a tree-like hierarchical data structure for xarray.**
 
-This aims to create the data structure discussed in [xarray issue #4118](https://github.com/pydata/xarray/issues/4118), and therefore extend xarray's data model to be able to [handle arbitrarily nested netCDF4 groups](https://github.com/pydata/xarray/issues/1092#issuecomment-868324949).
+Datatree was born after the xarray team recognised a [need for a new hierarchical data structure](https://github.com/pydata/xarray/issues/4118),
+that was more flexible than a single `xarray.Dataset` object.
+The initial motivation was to represent netCDF files / Zarr stores with multiple nested groups in a single in-memory object,
+but `datatree.DataTree` objects have many other uses.
 
+### Why Datatree?
+
+You might want to use datatree for:
+
+- Organising many related datasets, e.g. results of the same experiment with different parameters, or simulations of the same system using different models,
+- Analysing similar data at multiple resolutions simultaneously, such as when doing a convergence study,
+- Comparing heterogenous but related data, such as experimental and theoretical data,
+- I/O with nested data formats such as netCDF / Zarr groups.
+
+### Features
 
 The approach used here is based on benbovy's [`DatasetNode` example](https://gist.github.com/benbovy/92e7c76220af1aaa4b3a0b65374e233a) - the basic idea is that each tree node wraps a up to a single `xarray.Dataset`. The differences are that this effort:
 - Uses a node structure inspired by [anytree](https://github.com/xarray-contrib/datatree/issues/7) for the tree,
@@ -21,6 +34,8 @@ The approach used here is based on benbovy's [`DatasetNode` example](https://gis
 - Has a printable representation that currently looks like this:
 <img src="https://user-images.githubusercontent.com/35968931/130657849-577faa00-1b8b-4e33-a45c-4f389ce325b2.png" alt="drawing" width="500"/>
 
+### Get Started
+
 You can create a `DataTree` object in 3 ways:
 1) Load from a netCDF file (or Zarr store) that has groups via `open_datatree()`.
 2) Using the init method of `DataTree`, which creates an individual node.
@@ -28,6 +43,21 @@ You can create a `DataTree` object in 3 ways:
   or through `__get/setitem__` access, e.g. `dt['path/to/node'] = DataTree()`.
 3) Create a tree from a dictionary of paths to datasets using `DataTree.from_dict()`.
 
+### Development Roadmap
+
+Datatree currently lives in a separate repository to the main xarray package.
+This allows the datatree developers to make changes to it, experiment, and improve it faster.
+
+Eventually we plan to fully integrate datatree upstream into xarray's main codebase, at which point the [github.com/xarray-contrib/datatree](https://github.com/xarray-contrib/datatree>) repository will be archived.
+This should not cause much disruption to code that depends on datatree - you will likely only have to change the import line (i.e. from ``from datatree import DataTree`` to ``from xarray import DataTree``).
+
+However, until this full integration occurs, datatree's API should not be considered to have the same [level of stability as xarray's](https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility).
+
+### User Feedback
+
+We really really really want to hear your opinions on datatree!
+At this point in development, user feedback is critical to help us create something that will suit everyone's needs.
+Please raise any thoughts, issues, suggestions or bugs, no matter how small or large, on the [github issue tracker](https://github.com/xarray-contrib/datatree/issues).
 
 
 [github-ci-badge]: https://img.shields.io/github/workflow/status/xarray-contrib/datatree/CI?label=CI&logo=github
