@@ -7,6 +7,7 @@ import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 
 from xarray.core.options import OPTIONS
+from xarray.core.utils import get_array_namespace
 
 try:
     import bottleneck as bn
@@ -16,13 +17,6 @@ except ImportError:
     # use numpy methods instead
     bn = np
     _USE_BOTTLENECK = False
-
-
-def get_array_namespace(x):
-    if hasattr(x, "__array_namespace__"):
-        return x.__array_namespace__()
-    else:
-        return np
 
 
 def _select_along_axis(values, idx, axis):

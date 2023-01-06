@@ -265,6 +265,13 @@ def is_duck_array(value: Any) -> bool:
     )
 
 
+def get_array_namespace(x):
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()
+    else:
+        return np
+
+
 def either_dict_or_kwargs(
     pos_kwargs: Mapping[Any, T] | None,
     kw_kwargs: Mapping[str, T],
