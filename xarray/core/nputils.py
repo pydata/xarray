@@ -18,6 +18,13 @@ except ImportError:
     _USE_BOTTLENECK = False
 
 
+def get_array_namespace(x):
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()
+    else:
+        return np
+
+
 def _select_along_axis(values, idx, axis):
     other_ind = np.ix_(*[np.arange(s) for s in idx.shape])
     sl = other_ind[:axis] + (idx,) + other_ind[axis:]
