@@ -481,7 +481,7 @@ class IOWriteNetCDFDaskDistributed:
         self.write.compute()
 
 
-class OpenDataset:
+class IOOpenDataset:
     def setup(self, *args, **kwargs):
         """
         The custom backend does the bare mininum to be considered a lazy backend. But
