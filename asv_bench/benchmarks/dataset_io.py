@@ -452,7 +452,7 @@ class IOWriteNetCDFDask:
     repeat = 1
     number = 5
 
-    def setup(self):
+    def setup(self, *args, **kwargs):
         requires_dask()
         self.write = create_delayed_write()
 
