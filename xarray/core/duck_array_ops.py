@@ -33,9 +33,9 @@ from numpy import (  # noqa
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
-from xarray.core.nputils import nanfirst, nanlast, get_array_namespace
+from xarray.core.nputils import nanfirst, nanlast
 from xarray.core.pycompat import array_type, is_duck_dask_array
-from xarray.core.utils import is_duck_array, module_available
+from xarray.core.utils import is_duck_array, module_available, get_array_namespace
 
 dask_available = module_available("dask")
 
