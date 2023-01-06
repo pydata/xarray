@@ -1,3 +1,5 @@
+.. currentmodule:: datatree
+
 ##############
 Quick overview
 ##############
@@ -5,8 +7,8 @@ Quick overview
 DataTrees
 ---------
 
-:py:class:`DataTree` is a tree-like container of ``DataArray`` objects, organised into multiple mutually alignable groups.
-You can think of it like a (recursive) ``dict`` of ``Dataset`` objects.
+:py:class:`DataTree` is a tree-like container of :py:class:`xarray.DataArray` objects, organised into multiple mutually alignable groups.
+You can think of it like a (recursive) ``dict`` of :py:class:`xarray.Dataset` objects.
 
 Let's first make some example xarray datasets (following on from xarray's
 `quick overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_ page):

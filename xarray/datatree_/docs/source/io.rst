@@ -1,3 +1,5 @@
+.. currentmodule:: datatree
+
 .. _io:
 
 Reading and Writing Files

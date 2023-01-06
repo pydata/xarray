@@ -11,6 +11,8 @@ dependencies:
   - sphinx-panels
   - sphinx-autosummary-accessors
   - sphinx-book-theme >= 0.0.38
+  - nbsphinx
+  - sphinxcontrib-srclinks
   - pydata-sphinx-theme>=0.4.3
   - numpydoc
   - ipython

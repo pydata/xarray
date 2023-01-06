@@ -52,6 +52,8 @@ Bug fixes
 
 - Fix bug with :py:meth:`DataTree.relative_to` method (:issue:`133`, :pull:`160`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fix links to API docs in all documentation (:pull:`183`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~

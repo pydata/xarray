@@ -1,3 +1,5 @@
+.. currentmodule:: datatree
+
 .. _data structures:
 
 Data Structures

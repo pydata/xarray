@@ -13,6 +13,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import inspect
 import os
 import sys
 
@@ -41,6 +42,7 @@ extensions = [
     "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
+    "sphinx.ext.linkcode",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
@@ -50,6 +52,8 @@ extensions = [
     "sphinx_autosummary_accessors",
     "IPython.sphinxext.ipython_console_highlighting",
     "IPython.sphinxext.ipython_directive",
+    "nbsphinx",
+    "sphinxcontrib.srclinks",
 ]
 
 extlinks = {
@@ -75,6 +79,11 @@ master_doc = "index"
 project = "Datatree"
 copyright = "2021 onwards, Tom Nicholas and its Contributors"
 author = "Tom Nicholas"
+
+html_show_sourcelink = True
+srclink_project = "https://github.com/xarray-contrib/datatree"
+srclink_branch = "main"
+srclink_src_path = "docs/source"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -127,6 +136,7 @@ pygments_style = "sphinx"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.8/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
 
@@ -142,7 +152,7 @@ html_theme = "sphinx_book_theme"
 html_theme_options = {
     "repository_url": "https://github.com/xarray-contrib/datatree",
     "repository_branch": "main",
-    "path_to_docs": "doc",
+    "path_to_docs": "docs/source",
     "use_repository_button": True,
     "use_issues_button": True,
     "use_edit_page_button": True,
@@ -334,12 +344,12 @@ def linkcode_resolve(domain, info):
     else:
         linespec = ""
 
-    fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
+    fn = os.path.relpath(fn, start=os.path.dirname(datatree.__file__))
 
-    if "+" in xarray.__version__:
+    if "+" in datatree.__version__:
         return f"https://github.com/xarray-contrib/datatree/blob/main/datatree/{fn}{linespec}"
     else:
         return (
             f"https://github.com/xarray-contrib/datatree/blob/"
-            f"v{datatree.__version__}/xarray/{fn}{linespec}"
+            f"v{datatree.__version__}/datatree/{fn}{linespec}"
         )
