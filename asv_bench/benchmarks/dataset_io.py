@@ -482,7 +482,7 @@ class IOWriteNetCDFDaskDistributed:
 
 
 class OpenDataset:
-    def setup(self):
+    def setup(self, *args, **kwargs):
         """
         The custom backend does the bare mininum to be considered a lazy backend. But
         the data in it is still in memory so slow file reading shouldn't affect the
