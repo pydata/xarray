@@ -39,17 +39,20 @@ def test_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert_equal(actual, expected)
 
 
-def test_aggregation(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+@pytest.mark.parametrize("method", ["max", "min", "mean", "prod", "sum", "std", "var"])
+def test_aggregation(method: str, arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
-    expected = np_arr.sum()
-    actual = xp_arr.sum()
+    expected = getattr(np_arr, method)()
+    actual = getattr(xp_arr, method)()
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 
 
-def test_aggregation_skipna(arrays) -> None:
+@pytest.mark.parametrize("method", ["max", "min", "mean", "prod", "sum", "std", "var"])
+def test_aggregation_skipna(method: str, arrays) -> None:
     np_arr, xp_arr = arrays
-    expected = np_arr.sum(skipna=False)
+    expected = getattr(np_arr, method)(skipna=False)
+    actual = getattr(xp_arr, method)(skipna=False)
     actual = xp_arr.sum(skipna=False)
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
