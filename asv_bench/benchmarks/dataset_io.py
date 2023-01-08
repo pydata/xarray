@@ -31,10 +31,6 @@ class IOSingleNetCDF:
     number = 5
 
     def make_ds(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         # single Dataset
         self.ds = xr.Dataset()
         self.nt = 1000
@@ -98,6 +94,10 @@ class IOSingleNetCDF:
 
 class IOWriteSingleNetCDF3(IOSingleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         self.format = "NETCDF3_64BIT"
         self.make_ds()
 
@@ -110,6 +110,9 @@ class IOWriteSingleNetCDF3(IOSingleNetCDF):
 
 class IOReadSingleNetCDF4(IOSingleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         self.make_ds()
 
@@ -131,6 +134,9 @@ class IOReadSingleNetCDF4(IOSingleNetCDF):
 
 class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         self.make_ds()
 
@@ -152,6 +158,9 @@ class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
 
 class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -192,6 +201,9 @@ class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
 
 class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -233,10 +245,6 @@ class IOMultipleNetCDF:
     number = 5
 
     def make_ds(self, nfiles=10):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         # multiple Dataset
         self.ds = xr.Dataset()
         self.nt = 1000
@@ -301,6 +309,10 @@ class IOMultipleNetCDF:
 
 class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         self.make_ds()
         self.format = "NETCDF3_64BIT"
 
@@ -317,6 +329,9 @@ class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
 
 class IOReadMultipleNetCDF4(IOMultipleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -333,6 +348,9 @@ class IOReadMultipleNetCDF4(IOMultipleNetCDF):
 
 class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -349,6 +367,9 @@ class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
 
 class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -403,6 +424,9 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
 
 class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -438,10 +462,6 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
 def create_delayed_write():
     import dask.array as da
 
-    # TODO: Lazily skipped in CI as it is very demanding and slow.
-    # Improve times and remove errors.
-    _skip_slow()
-
     vals = da.random.random(300, chunks=(1,))
     ds = xr.Dataset({"vals": (["a"], vals)})
     return ds.to_netcdf("file.nc", engine="netcdf4", compute=False)
@@ -453,7 +473,12 @@ class IOWriteNetCDFDask:
     number = 5
 
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         requires_dask()
+
         self.write = create_delayed_write()
 
     def time_write(self):
@@ -462,14 +487,16 @@ class IOWriteNetCDFDask:
 
 class IOWriteNetCDFDaskDistributed:
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
+        requires_dask()
+
         try:
             import distributed
         except ImportError:
             raise NotImplementedError()
-
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
 
         self.client = distributed.Client()
         self.write = create_delayed_write()
