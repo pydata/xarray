@@ -610,9 +610,10 @@ def _dataset_concat(
                     )
                     result_vars[k] = v
             else:
-                # if variable is only present in one dataset of multiple datasets,
-                # then do not concat
-                if len(variables) == 1 and len(datasets) > 1:
+                # do not concat if:
+                # 1. variable is only present in one dataset of multiple datasets and
+                # 2. dim is not a dimension of variable
+                if dim not in variables[0].dims and len(variables) == 1 and len(datasets) > 1:
                     combined_var = variables[0]
                 # only concat if variable is in multiple datasets
                 # or if single dataset (GH1988)
