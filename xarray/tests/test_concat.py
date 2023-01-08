@@ -575,7 +575,7 @@ class TestConcatDataset:
     @pytest.mark.parametrize("coord", [True, False])
     def test_concat_fill_missing_variables(self, dim: bool, coord: bool) -> None:
         # create var names list with one missing value
-        def get_var_names(var_cnt=10, list_cnt=10):
+        def get_var_names(var_cnt: int=10, list_cnt: int=10) -> list[str]:
             orig = [f"d{i:02d}" for i in range(var_cnt)]
             var_names = []
             for i in range(0, list_cnt):
