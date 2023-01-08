@@ -583,7 +583,7 @@ class TestConcatDataset:
                 var_names.append(l1)
             return var_names
 
-        def create_ds(var_names, dim=False, coord=False, drop_idx=False):
+        def create_ds(var_names: list[str], dim: bool =False, coord: bool =False, drop_idx: list[int] |None =None) -> list[Dataset]:
             out_ds = []
             ds = Dataset()
             ds = ds.assign_coords({"x": np.arange(2)})
