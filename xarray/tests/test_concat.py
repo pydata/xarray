@@ -25,7 +25,9 @@ if TYPE_CHECKING:
 
 
 # helper method to create multiple tests datasets to concat
-def create_concat_datasets(num_datasets=2, seed=None, include_day=True):
+def create_concat_datasets(
+    num_datasets: int = 2, seed: [int | None] = None, include_day: bool = True
+) -> list[Dataset]:
     random.seed(seed)
     result = []
     lat = np.random.randn(1, 4)
@@ -66,7 +68,9 @@ def create_concat_datasets(num_datasets=2, seed=None, include_day=True):
 
 
 # helper method to create multiple tests datasets to concat with specific types
-def create_typed_datasets(num_datasets=2, seed=None):
+def create_typed_datasets(
+    num_datasets: int = 2, seed: [int | None] = None
+) -> list[Dataset]:
     random.seed(seed)
     var_strings = ["a", "b", "c", "d", "e", "f", "g", "h"]
     result = []
@@ -133,7 +137,7 @@ def test_concat_compat() -> None:
         concat([ds1, ds2], dim="q")
 
 
-def test_concat_missing_var():
+def test_concat_missing_var() -> None:
     datasets = create_concat_datasets(2, 123)
     vars_to_drop = ["humidity", "precipitation", "cloud cover"]
     datasets[0] = datasets[0].drop_vars(vars_to_drop)
@@ -165,7 +169,7 @@ def test_concat_missing_var():
     assert_equal(result, ds_result)
 
 
-def test_concat_missing_multiple_consecutive_var():
+def test_concat_missing_multiple_consecutive_var() -> None:
     datasets = create_concat_datasets(3, 123)
     vars_to_drop = ["pressure", "humidity"]
     datasets[0] = datasets[0].drop_vars(vars_to_drop)
@@ -236,7 +240,7 @@ def test_concat_missing_multiple_consecutive_var():
     assert_equal(result, ds_result)
 
 
-def test_concat_all_empty():
+def test_concat_all_empty() -> None:
     ds1 = Dataset()
     ds2 = Dataset()
     result = concat([ds1, ds2], dim="new_dim")
@@ -244,7 +248,7 @@ def test_concat_all_empty():
     assert_equal(result, Dataset())
 
 
-def test_concat_second_empty():
+def test_concat_second_empty() -> None:
     ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
     ds2 = Dataset(coords={"x": 0.1})
 
@@ -254,7 +258,7 @@ def test_concat_second_empty():
     assert_equal(result, ds_result)
 
 
-def test_multiple_missing_variables():
+def test_multiple_missing_variables() -> None:
     datasets = create_concat_datasets(2, 123)
     vars_to_drop = ["pressure", "cloud cover"]
     datasets[1] = datasets[1].drop_vars(vars_to_drop)
@@ -298,7 +302,7 @@ def test_multiple_missing_variables():
 
 
 @pytest.mark.xfail(strict=True)
-def test_concat_multiple_datasets_missing_vars_and_new_dim():
+def test_concat_multiple_datasets_missing_vars_and_new_dim() -> None:
     vars_to_drop = [
         "temperature",
         "pressure",
@@ -370,7 +374,7 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim():
     assert_equal(result, ds_result)
 
 
-def test_multiple_datasets_with_missing_variables():
+def test_multiple_datasets_with_missing_variables() -> None:
     vars_to_drop = [
         "temperature",
         "pressure",
@@ -436,7 +440,7 @@ def test_multiple_datasets_with_missing_variables():
     assert_equal(result, ds_result)
 
 
-def test_multiple_datasets_with_multiple_missing_variables():
+def test_multiple_datasets_with_multiple_missing_variables() -> None:
     vars_to_drop_in_first = ["temperature", "pressure"]
     vars_to_drop_in_second = ["humidity", "precipitation", "cloud cover"]
     datasets = create_concat_datasets(2, 123)
@@ -484,7 +488,7 @@ def test_multiple_datasets_with_multiple_missing_variables():
     assert_equal(result, ds_result)
 
 
-def test_type_of_missing_fill():
+def test_type_of_missing_fill() -> None:
     datasets = create_typed_datasets(2, 123)
 
     vars = ["float", "float2", "string", "int", "datetime64", "timedelta64"]
@@ -576,7 +580,7 @@ def test_type_of_missing_fill():
     assert_equal(result_rev, ds_result_rev)
 
 
-def test_order_when_filling_missing():
+def test_order_when_filling_missing() -> None:
     vars_to_drop_in_first = []
     # drop middle
     vars_to_drop_in_second = ["humidity"]
