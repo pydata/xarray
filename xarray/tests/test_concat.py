@@ -591,7 +591,7 @@ class TestConcatDataset:
             ds = ds.assign_coords({"z": np.arange(4)})
             for i, dsl in enumerate(var_names):
                 vlist = dsl.copy()
-                if drop_idx:
+                if drop_idx is not None:
                     vlist.pop(drop_idx[i])
                 foo_data = np.arange(48, dtype=float).reshape(2, 2, 3, 4)
                 dsi = ds.copy()
