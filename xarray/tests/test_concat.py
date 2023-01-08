@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 # helper method to create multiple tests datasets to concat
 def create_concat_datasets(
-    num_datasets: int = 2, seed: [int | None] = None, include_day: bool = True
+    num_datasets: int = 2, seed: int | None = None, include_day: bool = True
 ) -> list[Dataset]:
     random.seed(seed)
     result = []
@@ -69,7 +69,7 @@ def create_concat_datasets(
 
 # helper method to create multiple tests datasets to concat with specific types
 def create_typed_datasets(
-    num_datasets: int = 2, seed: [int | None] = None
+    num_datasets: int = 2, seed: int | None = None
 ) -> list[Dataset]:
     random.seed(seed)
     var_strings = ["a", "b", "c", "d", "e", "f", "g", "h"]
@@ -1172,7 +1172,7 @@ class TestConcatDataset:
     @pytest.mark.parametrize("coord", [True, False])
     def test_concat_fill_missing_variables(self, dim: bool, coord: bool) -> None:
         # create var names list with one missing value
-        def get_var_names(var_cnt: int = 10, list_cnt: int = 10) -> list[str]:
+        def get_var_names(var_cnt: int = 10, list_cnt: int = 10) -> list[list[str]]:
             orig = [f"d{i:02d}" for i in range(var_cnt)]
             var_names = []
             for i in range(0, list_cnt):
@@ -1181,7 +1181,7 @@ class TestConcatDataset:
             return var_names
 
         def create_ds(
-            var_names: list[str],
+            var_names: list[list[str]],
             dim: bool = False,
             coord: bool = False,
             drop_idx: list[int] | None = None,
