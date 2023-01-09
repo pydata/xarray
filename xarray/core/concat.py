@@ -558,6 +558,9 @@ def _dataset_concat(
     # preserve variable order for variables in first dataset
     data_var_order = list(datasets[0].variables)
     # append additional variables to the end
+    # TODO: since data_names is a set the ordering for the appended variables
+    #  is not deterministic, see also discussion in
+    #  https://github.com/pydata/xarray/pull/3545#pullrequestreview-347543738
     data_var_order += [e for e in data_names if e not in data_var_order]
     # create concatenation index, needed for later reindexing
     concat_index = list(range(sum(concat_dim_lengths)))

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 def create_concat_datasets(
     num_datasets: int = 2, seed: int | None = None, include_day: bool = True
 ) -> list[Dataset]:
-    rng = default_rng(seed)
+    rng = np.random.default_rng(seed)
     lat = rng.standard_normal(size=(1, 4))
     lon = rng.standard_normal(size=(1, 4))
     result = []
