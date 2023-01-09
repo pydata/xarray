@@ -19,7 +19,7 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-_ENGINES = tuple(xr.backends.plugins.BACKEND_ENTRYPOINTS.keys())
+_ENGINES = tuple(xr.backends.list_engines().keys() - {"store"})
 
 
 class IOSingleNetCDF:
