@@ -516,7 +516,7 @@ class IOReadSingleFile(IOSingleNetCDF):
 
         engine = kwargs.get("engine", None)
         self.filepath = "test_single_file.nc"
-        self.ds.to_netcdf(self.filepath, format=engine)
+        self.ds.to_netcdf(self.filepath, engine=engine)
 
     @parameterized("engine", [_ENGINES])
     def time_read_dataset(self, engine):
