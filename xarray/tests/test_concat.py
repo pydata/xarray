@@ -28,10 +28,10 @@ if TYPE_CHECKING:
 def create_concat_datasets(
     num_datasets: int = 2, seed: int | None = None, include_day: bool = True
 ) -> list[Dataset]:
-    random.seed(seed)
+    rng = default_rng(seed)
+    lat = rng.standard_normal(size=(1, 4))
+    lon = rng.standard_normal(size=(1, 4))
     result = []
-    lat = np.random.randn(1, 4)
-    lon = np.random.randn(1, 4)
     for i in range(num_datasets):
         if include_day:
             result.append(
