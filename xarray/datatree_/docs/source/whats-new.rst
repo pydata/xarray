@@ -15,10 +15,41 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.v0.0.12:
+
+v0.0.12 (unreleased)
+--------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.v0.0.11:
 
-v0.0.11 (unreleased)
+v0.0.11 (01/09/2023)
 --------------------
+
+Big update with entirely new pages in the docs,
+new methods (``.drop_nodes``, ``.filter``, ``.leaves``, ``.descendants``), and bug fixes!
 
 New Features
 ~~~~~~~~~~~~
