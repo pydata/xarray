@@ -234,6 +234,7 @@ def test_concat_missing_multiple_consecutive_var() -> None:
     r1 = [var for var in result.data_vars]
     r2 = [var for var in ds_result.data_vars]
     # check the variables orders are the same for the first three variables
+    # TODO: Can all variables become deterministic?
     assert r1[:3] == r2[:3]
     assert set(r1[3:]) == set(r2[3:])  # just check availability for the remaining vars
     assert_equal(result, ds_result)
