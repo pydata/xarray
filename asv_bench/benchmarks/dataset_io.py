@@ -519,7 +519,7 @@ class IOReadSingleFile(IOSingleNetCDF):
             self.filepaths[engine] = f"test_single_file_with_{engine}.nc"
             self.ds.to_netcdf(self.filepaths[engine], engine=engine)
 
-    @parameterized("engine", [_ENGINES])
+    @parameterized(["engine", "chunks"], (_ENGINES, [None, {}]))
     def time_read_dataset(self, engine):
         xr.open_dataset(self.filepaths[engine], engine=engine)
 
