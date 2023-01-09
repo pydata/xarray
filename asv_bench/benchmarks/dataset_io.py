@@ -514,13 +514,14 @@ class IOReadSingleFile(IOSingleNetCDF):
     def setup(self, *args, **kwargs):
         self.make_ds()
 
-        engine = kwargs.get("engine", None)
-        self.filepath = "test_single_file.nc"
-        self.ds.to_netcdf(self.filepath, engine=engine)
+        self.filepaths = {}
+        for engine in _ENGINES:
+            self.filepaths[engine] = f"test_single_file_with_{engine}.nc"
+            self.ds.to_netcdf(self.filepaths[engine], engine=engine)
 
     @parameterized("engine", [_ENGINES])
     def time_read_dataset(self, engine):
-        xr.open_dataset(self.filepath, engine=engine)
+        xr.open_dataset(self.filepaths[engine], engine=engine)
 
 
 class IOReadCustomEngine:
