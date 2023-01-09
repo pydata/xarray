@@ -19,6 +19,8 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
+_ENGINES = tuple(xr.backends.plugins.BACKEND_ENTRYPOINTS.keys())
+
 
 class IOSingleNetCDF:
     """
@@ -508,7 +510,20 @@ class IOWriteNetCDFDaskDistributed:
         self.write.compute()
 
 
-class IOOpenDataset:
+class IOReadSingleFile(IOSingleNetCDF):
+    def setup(self, *args, **kwargs):
+        self.make_ds()
+
+        engine = kwargs.get("engine", None)
+        self.filepath = "test_single_file.nc"
+        self.ds.to_netcdf(self.filepath, format=engine)
+
+    @parameterized("engine", [_ENGINES])
+    def time_read_dataset(self, engine):
+        xr.open_dataset(self.filepath, engine=engine)
+
+
+class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
         """
         The custom backend does the bare mininum to be considered a lazy backend. But
@@ -574,6 +589,8 @@ class IOOpenDataset:
 
                 Normally this method would've opened a file and parsed it.
                 """
+                n_variables = 2000
+
                 # Important to have a shape and dtype for lazy loading.
                 shape = (1,)
                 dtype = np.dtype(int)
@@ -585,7 +602,7 @@ class IOOpenDataset:
                         dims=("time",),
                         fastpath=True,
                     )
-                    for v in range(0, 2000)
+                    for v in range(0, n_variables)
                 }
                 attributes = {}
 
