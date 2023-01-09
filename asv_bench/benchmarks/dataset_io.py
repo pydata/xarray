@@ -521,7 +521,7 @@ class IOReadSingleFile(IOSingleNetCDF):
 
     @parameterized(["engine", "chunks"], (_ENGINES, [None, {}]))
     def time_read_dataset(self, engine):
-        xr.open_dataset(self.filepaths[engine], engine=engine)
+        xr.open_dataset(self.filepaths[engine], engine=engine, chunks=chunks)
 
 
 class IOReadCustomEngine:
