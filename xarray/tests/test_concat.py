@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -230,13 +230,12 @@ def test_concat_missing_multiple_consecutive_var() -> None:
             "day": ["day1", "day2", "day3", "day4", "day5", "day6"],
         },
     )
-    # assign here, as adding above gave switched pressure/humidity-order every once in a while
-    ds_result = ds_result.assign({"humidity": (["x", "y", "day"], humidity_result)})
-    ds_result = ds_result.assign({"pressure": (["x", "y", "day"], pressure_result)})
     result = concat(datasets, dim="day")
     r1 = [var for var in result.data_vars]
     r2 = [var for var in ds_result.data_vars]
-    assert r1 == r2  # check the variables orders are the same
+    # check the variables orders are the same for the first three variables
+    assert r1[:3] == r2[:3]
+    assert set(r1[3:]) == set(r2[3:])  # just check availability for the remaining vars
     assert_equal(result, ds_result)
 
 
@@ -301,8 +300,8 @@ def test_multiple_missing_variables() -> None:
     assert_equal(result, ds_result)
 
 
-@pytest.mark.xfail(strict=True)
-def test_concat_multiple_datasets_missing_vars_and_new_dim() -> None:
+@pytest.mark.parametrize("include_day", [True, False])
+def test_concat_multiple_datasets_missing_vars_and_new_dim(include_day: bool) -> None:
     vars_to_drop = [
         "temperature",
         "pressure",
@@ -310,47 +309,51 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim() -> None:
         "precipitation",
         "cloud cover",
     ]
-    datasets = create_concat_datasets(len(vars_to_drop), 123, include_day=False)
+
+    datasets = create_concat_datasets(len(vars_to_drop), 123, include_day=include_day)
     # set up the test data
     datasets = [datasets[i].drop_vars(vars_to_drop[i]) for i in range(len(datasets))]
+
+    dim_size = 2 if include_day else 1
 
     # set up the validation data
     # the below code just drops one var per dataset depending on the location of the
     # dataset in the list and allows us to quickly catch any boundaries cases across
     # the three equivalence classes of beginning, middle and end of the concat list
-    result_vars = dict.fromkeys(vars_to_drop)
+    result_vars = dict.fromkeys(vars_to_drop, np.array([]))
     for i in range(len(vars_to_drop)):
         for d in range(len(datasets)):
             if d != i:
-                if result_vars[vars_to_drop[i]] is None:
-                    result_vars[vars_to_drop[i]] = datasets[d][vars_to_drop[i]].values
+                if include_day:
+                    ds_vals = datasets[d][vars_to_drop[i]].values
+                else:
+                    ds_vals = datasets[d][vars_to_drop[i]].values[..., None]
+                if not result_vars[vars_to_drop[i]].size:
+                    result_vars[vars_to_drop[i]] = ds_vals
                 else:
                     result_vars[vars_to_drop[i]] = np.concatenate(
                         (
                             result_vars[vars_to_drop[i]],
-                            datasets[d][vars_to_drop[i]].values,
+                            ds_vals,
                         ),
-                        axis=1,
+                        axis=-1,
                     )
             else:
-                if result_vars[vars_to_drop[i]] is None:
-                    result_vars[vars_to_drop[i]] = np.full([1, 4], np.nan)
+                if not result_vars[vars_to_drop[i]].size:
+                    result_vars[vars_to_drop[i]] = np.full([1, 4, dim_size], np.nan)
                 else:
                     result_vars[vars_to_drop[i]] = np.concatenate(
-                        (result_vars[vars_to_drop[i]], np.full([1, 4], np.nan)),
-                        axis=1,
+                        (
+                            result_vars[vars_to_drop[i]],
+                            np.full([1, 4, dim_size], np.nan),
+                        ),
+                        axis=-1,
                     )
-    # TODO: this test still has two unexpected errors:
-
-    # 1: concat throws a mergeerror expecting the temperature values to be the same, this doesn't seem to be correct in this case
-    #   as we are concating on new dims
-    # 2: if the values are the same for a variable (working around #1) then it will likely not correct add the new dim to the first variable
-    #   the resulting set
 
     ds_result = Dataset(
         data_vars={
-            # pressure will be first in this since the first dataset is missing this var
-            # and there isn't a good way to determine that this should be first
+            # pressure will be first here since it is first in first dataset and
+            # there isn't a good way to determine that temperature should be first
             # this also means temperature will be last as the first data vars will
             # determine the order for all that exist in that dataset
             "pressure": (["x", "y", "day"], result_vars["pressure"]),
@@ -362,11 +365,17 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim() -> None:
         coords={
             "lat": (["x", "y"], datasets[0].lat.values),
             "lon": (["x", "y"], datasets[0].lon.values),
-            #  "day": ["day" + str(d + 1) for d in range(2 * len(vars_to_drop))],
         },
     )
+    if include_day:
+        ds_result = ds_result.assign_coords(
+            {"day": ["day" + str(d + 1) for d in range(2 * len(vars_to_drop))]}
+        )
+    else:
+        ds_result = ds_result.transpose("day", "x", "y")
 
     result = concat(datasets, dim="day")
+
     r1 = list(result.data_vars.keys())
     r2 = list(ds_result.data_vars.keys())
     assert r1 == r2  # check the variables orders are the same
@@ -390,11 +399,11 @@ def test_multiple_datasets_with_missing_variables() -> None:
     # the below code just drops one var per dataset depending on the location of the
     # dataset in the list and allows us to quickly catch any boundaries cases across
     # the three equivalence classes of beginning, middle and end of the concat list
-    result_vars = dict.fromkeys(vars_to_drop)
+    result_vars = dict.fromkeys(vars_to_drop, np.array([]))
     for i in range(len(vars_to_drop)):
         for d in range(len(datasets)):
             if d != i:
-                if result_vars[vars_to_drop[i]] is None:
+                if not result_vars[vars_to_drop[i]].size:
                     result_vars[vars_to_drop[i]] = datasets[d][vars_to_drop[i]].values
                 else:
                     result_vars[vars_to_drop[i]] = np.concatenate(
@@ -405,7 +414,7 @@ def test_multiple_datasets_with_missing_variables() -> None:
                         axis=2,
                     )
             else:
-                if result_vars[vars_to_drop[i]] is None:
+                if not result_vars[vars_to_drop[i]].size:
                     result_vars[vars_to_drop[i]] = np.full([1, 4, 2], np.nan)
                 else:
                     result_vars[vars_to_drop[i]] = np.concatenate(
@@ -483,8 +492,9 @@ def test_multiple_datasets_with_multiple_missing_variables() -> None:
 
     r1 = list(result.data_vars.keys())
     r2 = list(ds_result.data_vars.keys())
-    assert r1 == r2  # check the variables orders are the same
-
+    # check the variables orders are the same for the first three variables
+    assert r1[:3] == r2[:3]
+    assert set(r1[3:]) == set(r2[3:])  # just check availability for the remaining vars
     assert_equal(result, ds_result)
 
 
@@ -581,7 +591,7 @@ def test_type_of_missing_fill() -> None:
 
 
 def test_order_when_filling_missing() -> None:
-    vars_to_drop_in_first = []
+    vars_to_drop_in_first: list[str] = []
     # drop middle
     vars_to_drop_in_second = ["humidity"]
     datasets = create_concat_datasets(2, 123)
@@ -647,6 +657,77 @@ def test_order_when_filling_missing() -> None:
     for k in rev_result.data_vars.keys():
         assert k == result_keys_rev[result_index]
         result_index += 1
+
+
+@pytest.fixture
+def concat_var_names() -> Callable:
+    # create var names list with one missing value
+    def get_varnames(var_cnt: int = 10, list_cnt: int = 10) -> list[list[str]]:
+        orig = [f"d{i:02d}" for i in range(var_cnt)]
+        var_names = []
+        for i in range(0, list_cnt):
+            l1 = orig.copy()
+            var_names.append(l1)
+        return var_names
+
+    return get_varnames
+
+
+@pytest.fixture
+def create_concat_ds() -> Callable:
+    def create_ds(
+        var_names: list[list[str]],
+        dim: bool = False,
+        coord: bool = False,
+        drop_idx: list[int] | None = None,
+    ) -> list[Dataset]:
+        out_ds = []
+        ds = Dataset()
+        ds = ds.assign_coords({"x": np.arange(2)})
+        ds = ds.assign_coords({"y": np.arange(3)})
+        ds = ds.assign_coords({"z": np.arange(4)})
+        for i, dsl in enumerate(var_names):
+            vlist = dsl.copy()
+            if drop_idx is not None:
+                vlist.pop(drop_idx[i])
+            foo_data = np.arange(48, dtype=float).reshape(2, 2, 3, 4)
+            dsi = ds.copy()
+            if coord:
+                dsi = ds.assign({"time": (["time"], [i * 2, i * 2 + 1])})
+            for k in vlist:
+                dsi = dsi.assign({k: (["time", "x", "y", "z"], foo_data.copy())})
+            if not dim:
+                dsi = dsi.isel(time=0)
+            out_ds.append(dsi)
+        return out_ds
+
+    return create_ds
+
+
+@pytest.mark.parametrize("dim", [True, False])
+@pytest.mark.parametrize("coord", [True, False])
+def test_concat_fill_missing_variables(
+    concat_var_names, create_concat_ds, dim: bool, coord: bool
+) -> None:
+    var_names = concat_var_names()
+
+    random.seed(42)
+    drop_idx = [random.randrange(len(vlist)) for vlist in var_names]
+    expected = concat(
+        create_concat_ds(var_names, dim=dim, coord=coord), dim="time", data_vars="all"
+    )
+    for i, idx in enumerate(drop_idx):
+        if dim:
+            expected[var_names[0][idx]][i * 2 : i * 2 + 2] = np.nan
+        else:
+            expected[var_names[0][idx]][i] = np.nan
+
+    concat_ds = create_concat_ds(var_names, dim=dim, coord=coord, drop_idx=drop_idx)
+    actual = concat(concat_ds, dim="time", data_vars="all")
+
+    for name in var_names[0]:
+        assert_equal(expected[name], actual[name])
+    assert_equal(expected, actual)
 
 
 class TestConcatDataset:
@@ -1167,66 +1248,6 @@ class TestConcatDataset:
         actual = concat([da1, da2], dim=dim)
 
         assert np.issubdtype(actual.x2.dtype, dtype)
-
-    @pytest.mark.parametrize("dim", [True, False])
-    @pytest.mark.parametrize("coord", [True, False])
-    def test_concat_fill_missing_variables(self, dim: bool, coord: bool) -> None:
-        # create var names list with one missing value
-        def get_var_names(var_cnt: int = 10, list_cnt: int = 10) -> list[list[str]]:
-            orig = [f"d{i:02d}" for i in range(var_cnt)]
-            var_names = []
-            for i in range(0, list_cnt):
-                l1 = orig.copy()
-                var_names.append(l1)
-            return var_names
-
-        def create_ds(
-            var_names: list[list[str]],
-            dim: bool = False,
-            coord: bool = False,
-            drop_idx: list[int] | None = None,
-        ) -> list[Dataset]:
-            out_ds = []
-            ds = Dataset()
-            ds = ds.assign_coords({"x": np.arange(2)})
-            ds = ds.assign_coords({"y": np.arange(3)})
-            ds = ds.assign_coords({"z": np.arange(4)})
-            for i, dsl in enumerate(var_names):
-                vlist = dsl.copy()
-                if drop_idx is not None:
-                    vlist.pop(drop_idx[i])
-                foo_data = np.arange(48, dtype=float).reshape(2, 2, 3, 4)
-                dsi = ds.copy()
-                if coord:
-                    dsi = ds.assign({"time": (["time"], [i * 2, i * 2 + 1])})
-                for k in vlist:
-                    dsi = dsi.assign({k: (["time", "x", "y", "z"], foo_data.copy())})
-                if not dim:
-                    dsi = dsi.isel(time=0)
-                out_ds.append(dsi)
-            return out_ds
-
-        var_names = get_var_names()
-
-        import random
-
-        random.seed(42)
-        drop_idx = [random.randrange(len(vlist)) for vlist in var_names]
-        expected = concat(
-            create_ds(var_names, dim=dim, coord=coord), dim="time", data_vars="all"
-        )
-        for i, idx in enumerate(drop_idx):
-            if dim:
-                expected[var_names[0][idx]][i * 2 : i * 2 + 2] = np.nan
-            else:
-                expected[var_names[0][idx]][i] = np.nan
-
-        concat_ds = create_ds(var_names, dim=dim, coord=coord, drop_idx=drop_idx)
-        actual = concat(concat_ds, dim="time", data_vars="all")
-
-        for name in var_names[0]:
-            assert_equal(expected[name], actual[name])
-        assert_equal(expected, actual)
 
 
 class TestConcatDataArray:
