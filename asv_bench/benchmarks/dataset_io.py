@@ -520,7 +520,7 @@ class IOReadSingleFile(IOSingleNetCDF):
             self.ds.to_netcdf(self.filepaths[engine], engine=engine)
 
     @parameterized(["engine", "chunks"], (_ENGINES, [None, {}]))
-    def time_read_dataset(self, engine):
+    def time_read_dataset(self, engine, chunks):
         xr.open_dataset(self.filepaths[engine], engine=engine, chunks=chunks)
 
 
