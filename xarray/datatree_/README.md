@@ -23,6 +23,8 @@ You might want to use datatree for:
 - Comparing heterogenous but related data, such as experimental and theoretical data,
 - I/O with nested data formats such as netCDF / Zarr groups.
 
+[**Talk slides on Datatree from AMS-python 2023**](https://speakerdeck.com/tomnicholas/xarray-datatree-hierarchical-data-structures-for-multi-model-science)
+
 ### Features
 
 The approach used here is based on benbovy's [`DatasetNode` example](https://gist.github.com/benbovy/92e7c76220af1aaa4b3a0b65374e233a) - the basic idea is that each tree node wraps a up to a single `xarray.Dataset`. The differences are that this effort:
