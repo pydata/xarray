@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import xarray as xr
 
@@ -250,6 +251,49 @@ class TestMapOverSubTree:
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)["set1"]
         result_tree = times_ten(subtree)
         assert_equal(result_tree, expected, from_root=False)
+
+
+class TestMutableOperations:
+    def test_construct_using_type(self):
+        # from datatree GH issue https://github.com/xarray-contrib/datatree/issues/188
+        # xarray's .weighted is unusual because it uses type() to create a Dataset/DataArray
+
+        a = xr.DataArray(
+            np.random.rand(3, 4, 10),
+            dims=["x", "y", "time"],
+            coords={"area": (["x", "y"], np.random.rand(3, 4))},
+        ).to_dataset(name="data")
+        b = xr.DataArray(
+            np.random.rand(2, 6, 14),
+            dims=["x", "y", "time"],
+            coords={"area": (["x", "y"], np.random.rand(2, 6))},
+        ).to_dataset(name="data")
+        dt = DataTree.from_dict({"a": a, "b": b})
+
+        def weighted_mean(ds):
+            return ds.weighted(ds.area).mean(["x", "y"])
+
+        dt.map_over_subtree(weighted_mean)
+
+    def test_alter_inplace(self):
+        simpsons = DataTree.from_dict(
+            d={
+                "/": xr.Dataset({"age": 83}),
+                "/Herbert": xr.Dataset({"age": 40}),
+                "/Homer": xr.Dataset({"age": 39}),
+                "/Homer/Bart": xr.Dataset({"age": 10}),
+                "/Homer/Lisa": xr.Dataset({"age": 8}),
+                "/Homer/Maggie": xr.Dataset({"age": 1}),
+            },
+            name="Abe",
+        )
+
+        def fast_forward(ds: xr.Dataset, years: float) -> xr.Dataset:
+            """Add some years to the age, but by altering the given dataset"""
+            ds["age"] = ds["age"] + years
+            return ds
+
+        simpsons.map_over_subtree(fast_forward, years=10)
 
 
 @pytest.mark.xfail

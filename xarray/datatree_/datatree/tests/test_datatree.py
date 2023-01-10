@@ -531,6 +531,22 @@ class TestDatasetView:
         result = 10.0 * dt["set1"].ds
         assert result.identical(expected)
 
+    def test_init_via_type(self):
+        # from datatree GH issue https://github.com/xarray-contrib/datatree/issues/188
+        # xarray's .weighted is unusual because it uses type() to create a Dataset/DataArray
+
+        a = xr.DataArray(
+            np.random.rand(3, 4, 10),
+            dims=["x", "y", "time"],
+            coords={"area": (["x", "y"], np.random.rand(3, 4))},
+        ).to_dataset(name="data")
+        dt = DataTree(data=a)
+
+        def weighted_mean(ds):
+            return ds.weighted(ds.area).mean(["x", "y"])
+
+        weighted_mean(dt.ds)
+
 
 class TestRestructuring:
     def test_drop_nodes(self):

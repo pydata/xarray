@@ -98,6 +98,8 @@ class DatasetView(Dataset):
     This includes all API on Dataset, which will be inherited.
 
     This requires overriding all inherited private constructors.
+
+    We leave the public init constructor because it is used by type() in some xarray code (see datatree GH issue #188)
     """
 
     # TODO what happens if user alters (in-place) a DataArray they extracted from this object?
@@ -112,14 +114,6 @@ class DatasetView(Dataset):
         "_indexes",
         "_variables",
     )
-
-    def __init__(
-        self,
-        data_vars: Optional[Mapping[Any, Any]] = None,
-        coords: Optional[Mapping[Any, Any]] = None,
-        attrs: Optional[Mapping[Any, Any]] = None,
-    ):
-        raise AttributeError("DatasetView objects are not to be initialized directly")
 
     @classmethod
     def _from_node(

@@ -34,6 +34,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Allow for altering of given dataset inside function called by :py:func:`map_over_subtree` (:issue:`188`, :pull:`194`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
