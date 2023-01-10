@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -37,11 +36,26 @@ def create_concat_datasets(
             result.append(
                 Dataset(
                     data_vars={
-                        "temperature": (["x", "y", "day"], np.random.randn(1, 4, 2)),
-                        "pressure": (["x", "y", "day"], np.random.randn(1, 4, 2)),
-                        "humidity": (["x", "y", "day"], np.random.randn(1, 4, 2)),
-                        "precipitation": (["x", "y", "day"], np.random.randn(1, 4, 2)),
-                        "cloud cover": (["x", "y", "day"], np.random.randn(1, 4, 2)),
+                        "temperature": (
+                            ["x", "y", "day"],
+                            rng.standard_normal(size=(1, 4, 2)),
+                        ),
+                        "pressure": (
+                            ["x", "y", "day"],
+                            rng.standard_normal(size=(1, 4, 2)),
+                        ),
+                        "humidity": (
+                            ["x", "y", "day"],
+                            rng.standard_normal(size=(1, 4, 2)),
+                        ),
+                        "precipitation": (
+                            ["x", "y", "day"],
+                            rng.standard_normal(size=(1, 4, 2)),
+                        ),
+                        "cloud cover": (
+                            ["x", "y", "day"],
+                            rng.standard_normal(size=(1, 4, 2)),
+                        ),
                     },
                     coords={
                         "lat": (["x", "y"], lat),
@@ -54,11 +68,11 @@ def create_concat_datasets(
             result.append(
                 Dataset(
                     data_vars={
-                        "temperature": (["x", "y"], np.random.randn(1, 4)),
-                        "pressure": (["x", "y"], np.random.randn(1, 4)),
-                        "humidity": (["x", "y"], np.random.randn(1, 4)),
-                        "precipitation": (["x", "y"], np.random.randn(1, 4)),
-                        "cloud cover": (["x", "y"], np.random.randn(1, 4)),
+                        "temperature": (["x", "y"], rng.standard_normal(size=(1, 4))),
+                        "pressure": (["x", "y"], rng.standard_normal(size=(1, 4))),
+                        "humidity": (["x", "y"], rng.standard_normal(size=(1, 4))),
+                        "precipitation": (["x", "y"], rng.standard_normal(size=(1, 4))),
+                        "cloud cover": (["x", "y"], rng.standard_normal(size=(1, 4))),
                     },
                     coords={"lat": (["x", "y"], lat), "lon": (["x", "y"], lon)},
                 )
@@ -71,22 +85,22 @@ def create_concat_datasets(
 def create_typed_datasets(
     num_datasets: int = 2, seed: int | None = None
 ) -> list[Dataset]:
-    random.seed(seed)
     var_strings = ["a", "b", "c", "d", "e", "f", "g", "h"]
     result = []
-    lat = np.random.randn(1, 4)
-    lon = np.random.randn(1, 4)
+    rng = np.random.default_rng(seed)
+    lat = rng.standard_normal(size=(1, 4))
+    lon = rng.standard_normal(size=(1, 4))
     for i in range(num_datasets):
         result.append(
             Dataset(
                 data_vars={
-                    "float": (["x", "y", "day"], np.random.randn(1, 4, 2)),
-                    "float2": (["x", "y", "day"], np.random.randn(1, 4, 2)),
+                    "float": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
+                    "float2": (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2))),
                     "string": (
                         ["x", "y", "day"],
-                        np.random.choice(var_strings, (1, 4, 2)),
+                        rng.choice(var_strings, size=(1, 4, 2)),
                     ),
-                    "int": (["x", "y", "day"], np.random.randint(0, 10, (1, 4, 2))),
+                    "int": (["x", "y", "day"], rng.integers(0, 10, size=(1, 4, 2))),
                     "datetime64": (
                         ["x", "y", "day"],
                         np.arange(
@@ -710,10 +724,11 @@ def create_concat_ds() -> Callable:
 def test_concat_fill_missing_variables(
     concat_var_names, create_concat_ds, dim: bool, coord: bool
 ) -> None:
+    # random single variables missing in each dataset
     var_names = concat_var_names()
 
-    random.seed(42)
-    drop_idx = [random.randrange(len(vlist)) for vlist in var_names]
+    rng = np.random.default_rng(seed=42)
+    drop_idx = [rng.integers(len(vlist)) for vlist in var_names]
     expected = concat(
         create_concat_ds(var_names, dim=dim, coord=coord), dim="time", data_vars="all"
     )
@@ -725,6 +740,13 @@ def test_concat_fill_missing_variables(
 
     concat_ds = create_concat_ds(var_names, dim=dim, coord=coord, drop_idx=drop_idx)
     actual = concat(concat_ds, dim="time", data_vars="all")
+
+    r1 = list(actual.data_vars.keys())
+    r2 = list(expected.data_vars.keys())
+    # move element missing in first dataset at the end
+    # TODO: Can all variables become deterministic?
+    r2 = r2 + [r2.pop(drop_idx[0])]
+    assert r1 == r2  # check the variables orders are the same
 
     for name in var_names[0]:
         assert_equal(expected[name], actual[name])
