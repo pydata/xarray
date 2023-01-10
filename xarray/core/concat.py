@@ -443,7 +443,7 @@ def _parse_datasets(
     data_vars: set[Hashable] = set()  # list of data_vars
     dim_coords: dict[Hashable, Variable] = {}  # maps dim name to variable
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
-    data_vars_order: list[Hashable]  # dataset index of maximum count of variables
+    data_vars_order: list[Hashable]  # ordered list of variables
 
     data_vars_count = []
 
