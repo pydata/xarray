@@ -406,20 +406,51 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     return concat_over, equals, concat_dim_lengths
 
 
+# search for dataset containing all wanted variables
+# if no matching dataset is found return order from first dataset
+# and append missing variables at the end
+def _get_var_order(
+    datasets: list[T_Dataset], data_names: set[Hashable], max_vars_index: int
+) -> list[Hashable]:
+    # check if first dataset contains all wanted variables
+    data_var_order = list(datasets[0].variables)
+    if not data_names.issubset(set(data_var_order)):
+        # find dataset with max count variables and check it
+        max_var_order = list(datasets[max_vars_index].variables)
+        if data_names.issubset(set(max_var_order)):
+            data_var_order = max_var_order
+        else:
+            # TODO: since data_names is a set, ordering for the appended variables
+            #  is not deterministic, see also discussion in
+            #  https://github.com/pydata/xarray/pull/3545#pullrequestreview-347543738
+            data_var_order += [e for e in data_names if e not in data_var_order]
+    return data_var_order
+
+
 # determine dimensional coordinate names and a dict mapping name to DataArray
 def _parse_datasets(
-    datasets: Iterable[T_Dataset],
-) -> tuple[dict[Hashable, Variable], dict[Hashable, int], set[Hashable], set[Hashable]]:
+    datasets: list[T_Dataset],
+) -> tuple[
+    dict[Hashable, Variable],
+    dict[Hashable, int],
+    set[Hashable],
+    set[Hashable],
+    list[Hashable],
+]:
 
     dims: set[Hashable] = set()
     all_coord_names: set[Hashable] = set()
     data_vars: set[Hashable] = set()  # list of data_vars
     dim_coords: dict[Hashable, Variable] = {}  # maps dim name to variable
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
+    data_vars_order: list[Hashable]  # dataset index of maximum count of variables
 
-    for ds in datasets:
+    data_vars_count = []
+
+    for i, ds in enumerate(datasets):
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
+        data_vars_count.append(len(ds.data_vars))
         data_vars.update(ds.data_vars)
 
         # preserves ordering of dimensions
@@ -431,7 +462,10 @@ def _parse_datasets(
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    return dim_coords, dims_sizes, all_coord_names, data_vars
+    max_vars_index = data_vars_count.index(max(data_vars_count))
+    data_vars_order = _get_var_order(datasets, data_vars, max_vars_index)
+
+    return dim_coords, dims_sizes, all_coord_names, data_vars, data_vars_order
 
 
 def _dataset_concat(
@@ -473,7 +507,9 @@ def _dataset_concat(
         align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
-    dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
+    dim_coords, dims_sizes, coord_names, data_names, data_vars_order = _parse_datasets(
+        datasets
+    )
     dim_names = set(dim_coords)
     unlabeled_dims = dim_names - coord_names
 
@@ -555,19 +591,12 @@ def _dataset_concat(
                     data = var.set_dims(dim).values
                     yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
-    # preserve variable order for variables in first dataset
-    data_var_order = list(datasets[0].variables)
-    # append additional variables to the end
-    # TODO: since data_names is a set the ordering for the appended variables
-    #  is not deterministic, see also discussion in
-    #  https://github.com/pydata/xarray/pull/3545#pullrequestreview-347543738
-    data_var_order += [e for e in data_names if e not in data_var_order]
     # create concatenation index, needed for later reindexing
     concat_index = list(range(sum(concat_dim_lengths)))
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
-    for name in data_var_order:
+    for name in data_vars_order:
         if name in concat_over and name not in result_indexes:
             variables = []
             variable_index = []

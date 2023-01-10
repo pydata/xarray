@@ -149,6 +149,8 @@ def test_concat_compat() -> None:
         ValueError, match=r"coordinates in some datasets but not others"
     ):
         concat([ds1, ds2], dim="q")
+    with pytest.raises(ValueError, match=r"'q' not present in all datasets"):
+        concat([ds2, ds1], dim="q")
 
 
 def test_concat_missing_var() -> None:
@@ -247,10 +249,7 @@ def test_concat_missing_multiple_consecutive_var() -> None:
     result = concat(datasets, dim="day")
     r1 = [var for var in result.data_vars]
     r2 = [var for var in ds_result.data_vars]
-    # check the variables orders are the same for the first three variables
-    # TODO: Can all variables become deterministic?
-    assert r1[:3] == r2[:3]
-    assert set(r1[3:]) == set(r2[3:])  # just check availability for the remaining vars
+    r1 == r2
     assert_equal(result, ds_result)
 
 
@@ -439,8 +438,8 @@ def test_multiple_datasets_with_missing_variables() -> None:
 
     ds_result = Dataset(
         data_vars={
-            # pressure will be first in this since the first dataset is missing this var
-            # and there isn't a good way to determine that this should be first
+            # pressure will be first here since it is first in first dataset and
+            # there isn't a good way to determine that temperature should be first
             # this also means temperature will be last as the first data vars will
             # determine the order for all that exist in that dataset
             "pressure": (["x", "y", "day"], result_vars["pressure"]),
@@ -508,6 +507,7 @@ def test_multiple_datasets_with_multiple_missing_variables() -> None:
     r1 = list(result.data_vars.keys())
     r2 = list(ds_result.data_vars.keys())
     # check the variables orders are the same for the first three variables
+    # TODO: Can all variables become deterministic?
     assert r1[:3] == r2[:3]
     assert set(r1[3:]) == set(r2[3:])  # just check availability for the remaining vars
     assert_equal(result, ds_result)
@@ -662,9 +662,9 @@ def test_order_when_filling_missing() -> None:
     result_keys_rev = [
         "temperature",
         "pressure",
+        "humidity",
         "precipitation",
         "cloud cover",
-        "humidity",
     ]
     # test order when concat in reversed order
     rev_result = concat(datasets[::-1], dim="day")
