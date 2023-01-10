@@ -10,5 +10,6 @@ jobs:
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         # Workaround for sync-labels bug:
+
         # https://github.com/actions/labeler/issues/112
         sync-labels: ""
