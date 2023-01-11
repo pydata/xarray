@@ -556,22 +556,16 @@ def _should_cftime_be_used(
         if _is_standard_calendar(target_calendar):
             if _is_numpy_compatible_time_range(source):
                 # Conversion is possible with pandas, force False if it was None
-                use_cftime_out = False
+                return False
             elif use_cftime is False:
                 raise ValueError(
                     "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
                 )
-            else:
-                use_cftime_out = True
         elif use_cftime is False:
             raise ValueError(
                 f"Calendar '{target_calendar}' is only valid with cftime. Try using `use_cftime=True`."
             )
-        else:
-            use_cftime_out = True
-    else:
-        use_cftime_out = use_cftime
-    return use_cftime_out
+    return True
 
 
 def _cleanup_netcdf_time_units(units: str) -> str:
