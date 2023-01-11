@@ -602,11 +602,7 @@ def decode_cf_variables(
                         )
                     del var_attrs[attr_name]
 
-    if (
-        decode_coords
-        and "coordinates" in attributes
-        and isinstance(attributes["coordinates"], str)
-    ):
+    if decode_coords and isinstance(attributes.get("coordinates", None), str):
         attributes = dict(attributes)
         crds = attributes.pop("coordinates")
         coord_names.update(crds.split())
