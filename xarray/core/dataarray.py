@@ -5270,6 +5270,7 @@ class DataArray(
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
+        keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ) -> T_DataArray:
         """Pad this array along one or more dimensions.
@@ -5347,6 +5348,10 @@ class DataArray(
             default with an unaltered reflection around the edge value. For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
+        keep_attrs : bool or None, optional
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one. If False, the new object
+            will be returned without attributes.
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
@@ -5414,6 +5419,7 @@ class DataArray(
             constant_values=constant_values,
             end_values=end_values,
             reflect_type=reflect_type,
+            keep_attrs=keep_attrs,
             **pad_width_kwargs,
         )
         return self._from_temp_dataset(ds)

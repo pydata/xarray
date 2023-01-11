@@ -19,6 +19,8 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
+_ENGINES = tuple(xr.backends.list_engines().keys() - {"store"})
+
 
 class IOSingleNetCDF:
     """
@@ -31,10 +33,6 @@ class IOSingleNetCDF:
     number = 5
 
     def make_ds(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         # single Dataset
         self.ds = xr.Dataset()
         self.nt = 1000
@@ -98,6 +96,10 @@ class IOSingleNetCDF:
 
 class IOWriteSingleNetCDF3(IOSingleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         self.format = "NETCDF3_64BIT"
         self.make_ds()
 
@@ -110,6 +112,9 @@ class IOWriteSingleNetCDF3(IOSingleNetCDF):
 
 class IOReadSingleNetCDF4(IOSingleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         self.make_ds()
 
@@ -131,6 +136,9 @@ class IOReadSingleNetCDF4(IOSingleNetCDF):
 
 class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         self.make_ds()
 
@@ -152,6 +160,9 @@ class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
 
 class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -192,6 +203,9 @@ class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
 
 class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -233,10 +247,6 @@ class IOMultipleNetCDF:
     number = 5
 
     def make_ds(self, nfiles=10):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         # multiple Dataset
         self.ds = xr.Dataset()
         self.nt = 1000
@@ -301,6 +311,10 @@ class IOMultipleNetCDF:
 
 class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         self.make_ds()
         self.format = "NETCDF3_64BIT"
 
@@ -317,6 +331,9 @@ class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
 
 class IOReadMultipleNetCDF4(IOMultipleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -333,6 +350,9 @@ class IOReadMultipleNetCDF4(IOMultipleNetCDF):
 
 class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -349,6 +369,9 @@ class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
 
 class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -403,6 +426,9 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
 
 class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         requires_dask()
 
@@ -438,10 +464,6 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
 def create_delayed_write():
     import dask.array as da
 
-    # TODO: Lazily skipped in CI as it is very demanding and slow.
-    # Improve times and remove errors.
-    _skip_slow()
-
     vals = da.random.random(300, chunks=(1,))
     ds = xr.Dataset({"vals": (["a"], vals)})
     return ds.to_netcdf("file.nc", engine="netcdf4", compute=False)
@@ -453,7 +475,12 @@ class IOWriteNetCDFDask:
     number = 5
 
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         requires_dask()
+
         self.write = create_delayed_write()
 
     def time_write(self):
@@ -462,14 +489,16 @@ class IOWriteNetCDFDask:
 
 class IOWriteNetCDFDaskDistributed:
     def setup(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
+        requires_dask()
+
         try:
             import distributed
         except ImportError:
             raise NotImplementedError()
-
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
 
         self.client = distributed.Client()
         self.write = create_delayed_write()
@@ -481,7 +510,21 @@ class IOWriteNetCDFDaskDistributed:
         self.write.compute()
 
 
-class IOOpenDataset:
+class IOReadSingleFile(IOSingleNetCDF):
+    def setup(self, *args, **kwargs):
+        self.make_ds()
+
+        self.filepaths = {}
+        for engine in _ENGINES:
+            self.filepaths[engine] = f"test_single_file_with_{engine}.nc"
+            self.ds.to_netcdf(self.filepaths[engine], engine=engine)
+
+    @parameterized(["engine", "chunks"], (_ENGINES, [None, {}]))
+    def time_read_dataset(self, engine, chunks):
+        xr.open_dataset(self.filepaths[engine], engine=engine, chunks=chunks)
+
+
+class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
         """
         The custom backend does the bare mininum to be considered a lazy backend. But
@@ -547,6 +590,8 @@ class IOOpenDataset:
 
                 Normally this method would've opened a file and parsed it.
                 """
+                n_variables = 2000
+
                 # Important to have a shape and dtype for lazy loading.
                 shape = (1,)
                 dtype = np.dtype(int)
@@ -558,7 +603,7 @@ class IOOpenDataset:
                         dims=("time",),
                         fastpath=True,
                     )
-                    for v in range(0, 2000)
+                    for v in range(0, n_variables)
                 }
                 attributes = {}
 
