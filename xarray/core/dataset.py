@@ -6117,6 +6117,45 @@ class Dataset(
 
         return DataArray._construct_direct(variable, coords, name, indexes)
 
+    def to_datatree(self, name: str | None = None):
+        """
+        Convert this dataset into a datatree.DataTree.
+
+        WARNING: The DataTree structure is considered experimental,
+        and the API is less solidified than for other xarray features.
+
+        The returned tree will only consist of a single node.
+        That node will contain a copy of the dataset's data,
+        meaning all variables, coordinates, dimensions and attributes.
+
+        Requires the xarray-datatree package to be installed.
+        Find it at https://github.com/xarray-contrib/datatree.
+
+        Parameters
+        ----------
+        name: str, optional
+            The name of the datatree node created.
+
+        Returns
+        -------
+        dt : DataTree
+            A single-node datatree object, containing the information from this dataset.
+
+        See Also
+        --------
+        datatree.DataTree
+        """
+
+        try:
+            from datatree import DataTree
+        except ImportError:
+            raise ImportError(
+                "Could not import the datatree package. "
+                "Find it at https://github.com/xarray-contrib/datatree"
+            )
+
+        return DataTree(data=self, name=name)
+
     def _normalize_dim_order(
         self, dim_order: Sequence[Hashable] | None = None
     ) -> dict[Hashable, int]:
