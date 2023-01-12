@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     T_Name = Union[Hashable, None]
     T_Variables = Mapping[Any, Variable]
     T_Attrs = MutableMapping[Any, Any]
-    T_DropVariables = Union[str, Iterable[str], None]
+    T_DropVariables = Union[str, Iterable[Hashable], None]
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
