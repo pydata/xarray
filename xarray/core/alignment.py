@@ -343,8 +343,33 @@ class Aligner(Generic[DataAlignable]):
           pandas). This is useful, e.g., for overwriting such duplicate indexes.
 
         """
-        has_unindexed_dims = any(dim in self.unindexed_dim_sizes for dim in dims)
-        return not (indexes_all_equal(cmp_indexes)) or has_unindexed_dims
+        if not indexes_all_equal(cmp_indexes):
+            # always reindex when matching indexes are not equal
+            return True
+
+        unindexed_dims_sizes = {}
+        for dim in dims:
+            if dim in self.unindexed_dim_sizes:
+                sizes = self.unindexed_dim_sizes[dim]
+                if len(sizes) > 1:
+                    # reindex if different sizes are found for unindexed dims
+                    return True
+                else:
+                    unindexed_dims_sizes[dim] = next(iter(sizes))
+
+        if unindexed_dims_sizes:
+            indexed_dims_sizes = {}
+            for cmp in cmp_indexes:
+                index_vars = cmp[1]
+                for var in index_vars.values():
+                    indexed_dims_sizes.update(var.sizes)
+
+            for dim, size in unindexed_dims_sizes.items():
+                if indexed_dims_sizes.get(dim, -1) != size:
+                    # reindex if unindexed dimension size doesn't match
+                    return True
+
+        return False
 
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:

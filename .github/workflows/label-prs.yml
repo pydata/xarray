@@ -9,4 +9,6 @@ jobs:
     - uses: actions/labeler@main
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        sync-labels: false
+        # Workaround for sync-labels bug:
+        # https://github.com/actions/labeler/issues/112
+        sync-labels: ""

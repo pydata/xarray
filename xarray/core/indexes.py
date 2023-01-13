@@ -1445,6 +1445,11 @@ def indexes_all_equal(
         )
 
     indexes = [e[0] for e in elements]
+
+    same_objects = all(indexes[0] is other_idx for other_idx in indexes[1:])
+    if same_objects:
+        return True
+
     same_type = all(type(indexes[0]) is type(other_idx) for other_idx in indexes[1:])
     if same_type:
         try:
