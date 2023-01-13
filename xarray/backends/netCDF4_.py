@@ -438,14 +438,20 @@ class NetCDF4DataStore(WritableCFDataStore):
         }
 
     def get_group_stores(self):
-        return FrozenDict((group_name, self.select_group(group_name)) for group_name in self.ds.groups)
+        return FrozenDict(
+            (group_name, self.select_group(group_name)) for group_name in self.ds.groups
+        )
 
     def select_group(self, group):
         """Return new NetCDF4DataStore for specified group of this NetCDF4DataStore."""
         if group in self.ds.groups:
-            parent_group = self._group if self._group is not None else ''
+            parent_group = self._group if self._group is not None else ""
             return self.__class__(
-                manager=self._manager, group=f"{parent_group}{group}/", mode=self._mode, lock=self.lock, autoclose=self.autoclose
+                manager=self._manager,
+                group=f"{parent_group}{group}/",
+                mode=self._mode,
+                lock=self.lock,
+                autoclose=self.autoclose,
             )
         else:
             raise KeyError(group)

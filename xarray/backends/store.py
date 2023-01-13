@@ -102,7 +102,9 @@ class StoreBackendEntrypoint(BackendEntrypoint):
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
             )
-            ds.set_close(store.close)  # TODO should this be on datatree? if so, need to add to datatree API
+            ds.set_close(
+                store.close
+            )  # TODO should this be on datatree? if so, need to add to datatree API
             datasets[path] = ds
 
             # Recursively add children to collector
