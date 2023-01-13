@@ -26,6 +26,7 @@ dependencies:
   - pydata-sphinx-theme>=0.4.3
   - pyproj
   - rasterio>=1.1
+  - scipy!=1.10.0
   - seaborn
   - setuptools
   - sparse
