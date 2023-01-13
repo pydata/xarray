@@ -790,9 +790,26 @@ def create_coords_with_default_indexes(
     indexes: dict[Hashable, Index] = {}
     variables: dict[Hashable, Variable] = {}
 
-    # this is needed for backward compatibility: when a pandas multi-index
-    # is given as data variable, it is promoted as index / level coordinates
-    index_vars = {
+    maybe_index_vars: dict[Hashable, Variable] = {}
+    mindex_data_vars: list[Hashable] = []
+
+    for k, v in all_variables.items():
+        if k in coords:
+            maybe_index_vars[k] = v
+        elif isinstance(v, pd.MultiIndex):
+            # TODO: eventually stop promoting multi-index passed via data variables
+            mindex_data_vars.append(k)
+            maybe_index_vars[k] = v
+
+    if mindex_data_vars:
+        warnings.warn(
+            f"passing one or more `pandas.MultiIndex` via data variable(s) {mindex_data_vars} "
+            "will no longer create indexed coordinates in the future. "
+            "If you want to keep this behavior, pass it as coordinates instead.",
+            FutureWarning,
+        )
+
+    maybe_index_vars = {
         k: v
         for k, v in all_variables.items()
         if k in coords or isinstance(v, pd.MultiIndex)
@@ -800,7 +817,7 @@ def create_coords_with_default_indexes(
 
     dataarray_coords = []
 
-    for name, obj in index_vars.items():
+    for name, obj in maybe_index_vars.items():
         if isinstance(obj, DataArray):
             dataarray_coords.append(obj.coords)
 

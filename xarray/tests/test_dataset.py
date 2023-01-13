@@ -590,6 +590,11 @@ class TestDataset:
         ds = Dataset(coords=coords)
         assert_identical(ds, coords.to_dataset())
 
+        with pytest.warns(
+            FutureWarning, match=".*`pandas.MultiIndex` via data variable.*"
+        ):
+            Dataset(data_vars={"x": midx})
+
     def test_constructor_custom_index(self) -> None:
         class CustomIndex(Index):
             ...
