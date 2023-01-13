@@ -373,6 +373,14 @@ class BackendEntrypoint:
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
 
+    Optionally, it shall implement:
+
+    - ``open_datatree`` method: it shall implement reading from file, variables
+      decoding and it returns an instance of :py:class:`~datatree.DataTree`.
+      It shall take in input at least ``filename_or_obj`` argument and
+      ``drop_variables`` keyword argument.
+      For more details see TODO.
+
     Attributes
     ----------
 
@@ -382,6 +390,7 @@ class BackendEntrypoint:
     open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
+        TODO should datatree have a separate method, or share these parameters?
     description : str, default: ""
         A short string describing the engine.
         The setting of this attribute is not mandatory.
@@ -405,6 +414,18 @@ class BackendEntrypoint:
         return txt
 
     def open_dataset(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        drop_variables: str | Iterable[str] | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        raise NotImplementedError
+
+    def open_datatree(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         drop_variables: str | Iterable[str] | None = None,
