@@ -111,8 +111,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
             return datasets
 
-        datasets = _add_node(store, "/", {})
-        dt = DataTree.from_dict(datasets)
+        dt = DataTree.from_dict(_add_node(store, "/", {}))
 
         return dt
 
