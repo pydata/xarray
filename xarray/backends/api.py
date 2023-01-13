@@ -414,7 +414,7 @@ def open_dataset(
         arrays. ``chunks=-1`` loads the dataset with dask using a single
         chunk for all arrays. ``chunks={}`` loads the dataset with dask using
         engine preferred chunks if exposed by the backend, otherwise with
-        a single chunk for all arrays.
+        a single chunk for all arrays. In order to reproduce the default behavior of ``xr.open_zarr(...)`` use ``xr.open_dataset(..., engine='zarr', chunks={})``.
         ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
         engine preferred chunks. See dask chunking for more details.
     cache : bool, optional
