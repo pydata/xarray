@@ -100,6 +100,9 @@ class AbstractDataStore:
     def get_variables(self):  # pragma: no cover
         raise NotImplementedError()
 
+    def get_group_stores(self):  # pragma: no cover
+        raise NotImplementedError()
+
     def get_encoding(self):
         return {}
 

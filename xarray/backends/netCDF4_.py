@@ -437,6 +437,18 @@ class NetCDF4DataStore(WritableCFDataStore):
             }
         }
 
+    def get_group_stores(self):
+        return FrozenDict((group_name, self.select_group(group_name)) for group_name in self.ds.groups)
+
+    def select_group(self, group):
+        """Return new NetCDF4DataStore for specified group of this NetCDF4DataStore."""
+        if group in self.ds.groups:
+            return self.__init__(
+                manager=self._manager, group=group, mode=self._mode, lock=self.lock, autoclose=self.autoclose
+            )
+        else:
+            raise KeyError(group)
+
     def set_dimension(self, name, length, is_unlimited=False):
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, size=dim_length)
@@ -554,8 +566,9 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             return False
         return ext in {".nc", ".nc4", ".cdf"}
 
-    def open_dataset(
+    def _open_dataset_or_datatree(
         self,
+        open_method,
         filename_or_obj,
         mask_and_scale=True,
         decode_times=True,
@@ -587,9 +600,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             autoclose=autoclose,
         )
 
-        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = store_entrypoint.open_dataset(
+            data_collection = open_method(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,
@@ -599,7 +611,89 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
             )
-        return ds
+        return data_collection
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
+    ):
+
+        store_entrypoint = StoreBackendEntrypoint()
+        return self._open_dataset_or_datatree(
+            store_entrypoint.open_dataset,
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            mode=mode,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+        )
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
+    ):
+
+        store_entrypoint = StoreBackendEntrypoint()
+        return self._open_dataset_or_datatree(
+            store_entrypoint.open_datatree,
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            mode=mode,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+        )
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint
