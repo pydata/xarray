@@ -102,16 +102,17 @@ class StoreBackendEntrypoint(BackendEntrypoint):
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
             )
+            ds.set_close(store.close)  # TODO should this be on datatree? if so, need to add to datatree API
             datasets[path] = ds
 
             # Recursively add children to collector
-            for child_name, child_store in store.get_group_stores():
+            for child_name, child_store in store.get_group_stores().items():
                 datasets = _add_node(child_store, f"{path}{child_name}/", datasets)
 
             return datasets
 
-        dt = DataTree.from_dict(_add_node(store, "/", {}))
-        dt.set_close(store.close)
+        datasets = _add_node(store, "/", {})
+        dt = DataTree.from_dict(datasets)
 
         return dt
 

@@ -443,8 +443,9 @@ class NetCDF4DataStore(WritableCFDataStore):
     def select_group(self, group):
         """Return new NetCDF4DataStore for specified group of this NetCDF4DataStore."""
         if group in self.ds.groups:
-            return self.__init__(
-                manager=self._manager, group=group, mode=self._mode, lock=self.lock, autoclose=self.autoclose
+            parent_group = self._group if self._group is not None else ''
+            return self.__class__(
+                manager=self._manager, group=f"{parent_group}{group}/", mode=self._mode, lock=self.lock, autoclose=self.autoclose
             )
         else:
             raise KeyError(group)
@@ -654,7 +655,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             autoclose=autoclose,
         )
 
-    def open_dataset(
+    def open_datatree(
         self,
         filename_or_obj,
         mask_and_scale=True,
