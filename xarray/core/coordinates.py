@@ -254,7 +254,7 @@ class Coordinates(AbstractCoordinates):
 
         for k, idx in indexes.items():
             if not isinstance(idx, Index):
-                raise TypeError(f"'{k}' is not an Xarray Index")
+                raise TypeError(f"'{k}' is not an `xarray.indexes.Index` object")
 
         # maybe convert to base variable
         for k, v in variables.items():
@@ -815,7 +815,7 @@ def create_coords_with_default_indexes(
         if k in coords or isinstance(v, pd.MultiIndex)
     }
 
-    dataarray_coords = []
+    dataarray_coords: list[DataArrayCoordinates] = []
 
     for name, obj in maybe_index_vars.items():
         if isinstance(obj, DataArray):

@@ -12,11 +12,6 @@ from xarray.tests import assert_identical, source_ndarray
 
 
 class TestCoordinates:
-    @pytest.fixture
-    def coords(self) -> Coordinates:
-        ds = Dataset(coords={"x": [0, 1, 2]})
-        return Coordinates(coords=ds.coords, indexes=ds.xindexes)
-
     def test_init_noindex(self) -> None:
         coords = Coordinates(coords={"foo": ("x", [0, 1, 2])})
         expected = Dataset(coords={"foo": ("x", [0, 1, 2])})
@@ -44,7 +39,7 @@ class TestCoordinates:
         with pytest.raises(ValueError, match="no coordinate variables found"):
             Coordinates(indexes={"x": idx})
 
-        with pytest.raises(TypeError, match=".* is not an Xarray Index"):
+        with pytest.raises(TypeError, match=".* is not an `xarray.indexes.Index`"):
             Coordinates(coords={"x": ("x", [1, 2, 3])}, indexes={"x": "not_an_xarray_index"})  # type: ignore
 
     def test_init_dim_sizes_conflict(self) -> None:
@@ -64,37 +59,56 @@ class TestCoordinates:
         for name in ("x", "one", "two"):
             assert_identical(expected[name], coords.variables[name])
 
-    def test_dims(self, coords) -> None:
+    def test_dims(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
         assert coords.dims == {"x": 3}
 
-    def test_sizes(self, coords) -> None:
+    def test_sizes(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
         assert coords.sizes == {"x": 3}
 
-    def test_dtypes(self, coords) -> None:
+    def test_dtypes(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
         assert coords.dtypes == {"x": int}
 
-    def test_getitem(self, coords) -> None:
+    def test_getitem(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
         assert_identical(
             coords["x"],
             DataArray([0, 1, 2], coords={"x": [0, 1, 2]}, name="x"),
         )
 
-    def test_delitem(self, coords) -> None:
+    def test_delitem(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
         del coords["x"]
         assert "x" not in coords
 
-    def test_update(self, coords) -> None:
+    def test_update(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+
         coords.update({"y": ("y", [4, 5, 6])})
         assert "y" in coords
         assert "y" in coords.xindexes
         expected = DataArray([4, 5, 6], coords={"y": [4, 5, 6]}, name="y")
         assert_identical(coords["y"], expected)
 
-    def test_equals(self, coords):
+    def test_equals(self):
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+
         assert coords.equals(coords)
         assert not coords.equals("no_a_coords")
 
-    def test_identical(self, coords):
+    def test_identical(self):
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+
         assert coords.identical(coords)
         assert not coords.identical("no_a_coords")
 
@@ -114,7 +128,10 @@ class TestCoordinates:
         assert v0 is not v1
         assert source_ndarray(v0.data) is not source_ndarray(v1.data)
 
-    def test_align(self, coords) -> None:
+    def test_align(self) -> None:
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+
         left = coords
 
         # test Coordinates._reindex_callback
