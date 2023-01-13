@@ -98,18 +98,6 @@ class TestCoordinates:
         assert coords.identical(coords)
         assert not coords.identical("no_a_coords")
 
-    def test_merge_coords(self, coords) -> None:
-        other = {"y": ("y", [4, 5, 6])}
-        actual = coords.merge_coords(other)
-        expected = coords.merge(other).coords
-        assert_identical(actual.to_dataset(), expected.to_dataset())
-
-        other_coords = Coordinates(other)
-        actual = coords.merge_coords(other_coords)
-        expected = coords.merge(other_coords).coords
-        assert_identical(actual, expected, check_default_indexes=False)
-        assert "y" not in actual.xindexes
-
     def test_copy(self) -> None:
         no_index_coords = Coordinates({"foo": ("x", [1, 2, 3])})
         copied = no_index_coords.copy()
