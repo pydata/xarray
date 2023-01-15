@@ -1408,7 +1408,7 @@ def _cov_corr(
     # 4. Compute covariance along the given dim
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a.conjugate() * demeaned_da_b).sum(
+    cov = (demeaned_da_a.conj() * demeaned_da_b).sum(
         dim=dim, skipna=True, min_count=1
     ) / (valid_count)
 
