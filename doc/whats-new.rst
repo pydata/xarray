@@ -15,10 +15,14 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2022.12.1:
+.. _whats-new.2023.01.0:
 
-v2022.12.1 (unreleased)
------------------------
+v2023.01.0 (Jan 17, 2023)
+-------------------------
+
+This release includes a number of bug fixes. Thanks to the 13 contributors to this release:
+Benoit Bovy, Deepak Cherian, Ian Carroll, Illviljan, Joe Hamman, Justus Magin, Mark Harfouche, Matthew Roeschke,
+Paige Martin, Pierre, Sam Levang, Tom Nicholas, stefank0.
 
 New Features
 ~~~~~~~~~~~~
