@@ -33,20 +33,27 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..coding.calendar_ops import convert_calendar, interp_calendar
-from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from ..plot.accessor import DatasetPlotAccessor
-from . import alignment
-from . import dtypes as xrdtypes
-from . import duck_array_ops, formatting, formatting_html, ops, utils
-from ._aggregations import DatasetAggregations
-from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
-from .arithmetic import DatasetArithmetic
-from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
-from .computation import unify_chunks
-from .coordinates import DatasetCoordinates, assert_coordinate_consistent
-from .duck_array_ops import datetime_to_numeric
-from .indexes import (
+from xarray.coding.calendar_ops import convert_calendar, interp_calendar
+from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
+from xarray.core import alignment
+from xarray.core import dtypes as xrdtypes
+from xarray.core import duck_array_ops, formatting, formatting_html, ops, utils
+from xarray.core._aggregations import DatasetAggregations
+from xarray.core.alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords,
+    align,
+)
+from xarray.core.arithmetic import DatasetArithmetic
+from xarray.core.common import (
+    DataWithCoords,
+    _contains_datetime_like_objects,
+    get_chunksizes,
+)
+from xarray.core.computation import unify_chunks
+from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.duck_array_ops import datetime_to_numeric
+from xarray.core.indexes import (
     Index,
     Indexes,
     PandasIndex,
@@ -58,18 +65,18 @@ from .indexes import (
     remove_unused_levels_categories,
     roll_indexes,
 )
-from .indexing import is_fancy_indexer, map_index_queries
-from .merge import (
+from xarray.core.indexing import is_fancy_indexer, map_index_queries
+from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
-from .missing import get_clean_interp_index
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import array_type, is_duck_dask_array
-from .types import QuantileMethods, T_Dataset
-from .utils import (
+from xarray.core.missing import get_clean_interp_index
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.types import QuantileMethods, T_Dataset
+from xarray.core.utils import (
     Default,
     Frozen,
     HybridMappingProxy,
@@ -83,30 +90,32 @@ from .utils import (
     is_scalar,
     maybe_wrap_array,
 )
-from .variable import (
+from xarray.core.variable import (
     IndexVariable,
     Variable,
     as_variable,
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.plot.accessor import DatasetPlotAccessor
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    from ..backends import AbstractDataStore, ZarrStore
-    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from .coordinates import Coordinates
-    from .dataarray import DataArray
-    from .groupby import DatasetGroupBy
-    from .merge import CoercibleMapping
-    from .resample import DatasetResample
-    from .rolling import DatasetCoarsen, DatasetRolling
-    from .types import (
+    from xarray.backends import AbstractDataStore, ZarrStore
+    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.core.coordinates import Coordinates
+    from xarray.core.dataarray import DataArray
+    from xarray.core.groupby import DatasetGroupBy
+    from xarray.core.merge import CoercibleMapping
+    from xarray.core.resample import DatasetResample
+    from xarray.core.rolling import DatasetCoarsen, DatasetRolling
+    from xarray.core.types import (
         CFCalendar,
         CoarsenBoundaryOptions,
         CombineAttrsOptions,
         CompatOptions,
+        DatetimeLike,
         DatetimeUnitOptions,
         Dims,
         ErrorOptions,
@@ -121,7 +130,7 @@ if TYPE_CHECKING:
         SideOptions,
         T_Xarray,
     )
-    from .weighted import DatasetWeighted
+    from xarray.core.weighted import DatasetWeighted
 
     try:
         from dask.delayed import Delayed
@@ -153,13 +162,13 @@ _DATETIMEINDEX_COMPONENTS = [
 
 
 def _get_virtual_variable(
-    variables, key: Hashable, dim_sizes: Mapping = None
+    variables, key: Hashable, dim_sizes: Mapping | None = None
 ) -> tuple[Hashable, Hashable, Variable]:
     """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
     objects (if possible)
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if dim_sizes is None:
         dim_sizes = {}
@@ -831,7 +840,7 @@ class Dataset(
         )
 
     def _dask_postpersist(
-        self: T_Dataset, dsk: Mapping, *, rename: Mapping[str, str] = None
+        self: T_Dataset, dsk: Mapping, *, rename: Mapping[str, str] | None = None
     ) -> T_Dataset:
         from dask import is_dask_collection
         from dask.highlevelgraph import HighLevelGraph
@@ -971,7 +980,7 @@ class Dataset(
 
     def _replace(
         self: T_Dataset,
-        variables: dict[Hashable, Variable] = None,
+        variables: dict[Hashable, Variable] | None = None,
         coord_names: set[Hashable] | None = None,
         dims: dict[Any, int] | None = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
@@ -1333,7 +1342,7 @@ class Dataset(
 
     def _construct_dataarray(self, name: Hashable) -> DataArray:
         """Construct a DataArray by indexing this dataset"""
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         try:
             variable = self._variables[name]
@@ -1453,7 +1462,7 @@ class Dataset(
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
@@ -1511,8 +1520,8 @@ class Dataset(
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from .alignment import align
-        from .dataarray import DataArray
+        from xarray.core.alignment import align
+        from xarray.core.dataarray import DataArray
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -1752,7 +1761,7 @@ class Dataset(
 
     def dump_to_store(self, store: AbstractDataStore, **kwargs) -> None:
         """Store dataset contents to a backends.*DataStore object."""
-        from ..backends.api import dump_to_store
+        from xarray.backends.api import dump_to_store
 
         # TODO: rename and/or cleanup this method to make it more consistent
         # with to_netcdf()
@@ -1767,7 +1776,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
@@ -1783,7 +1792,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: Literal[True] = True,
         invalid_netcdf: bool = False,
@@ -1799,7 +1808,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         *,
         compute: Literal[False],
@@ -1814,7 +1823,7 @@ class Dataset(
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
@@ -1898,7 +1907,7 @@ class Dataset(
         """
         if encoding is None:
             encoding = {}
-        from ..backends.api import to_netcdf
+        from xarray.backends.api import to_netcdf
 
         return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
             self,
@@ -1930,6 +1939,7 @@ class Dataset(
         region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
     ) -> ZarrStore:
         ...
 
@@ -1967,6 +1977,7 @@ class Dataset(
         region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
     ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
@@ -2017,6 +2028,9 @@ class Dataset(
             metadata; if False, do not. The default (`consolidated=None`) means
             write consolidated metadata and attempt to read consolidated
             metadata for existing stores (falling back to non-consolidated).
+
+            When the experimental ``zarr_version=3``, ``consolidated`` must be
+            either be ``None`` or ``False``.
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
@@ -2048,6 +2062,10 @@ class Dataset(
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
+        zarr_version : int or None, optional
+            The desired zarr spec version to target (currently 2 or 3). The
+            default of None will attempt to determine the zarr version from
+            ``store`` when possible, otherwise defaulting to 2.
 
         Returns
         -------
@@ -2076,7 +2094,7 @@ class Dataset(
         :ref:`io.zarr`
             The I/O user guide, with more details and examples.
         """
-        from ..backends.api import to_zarr
+        from xarray.backends.api import to_zarr
 
         return to_zarr(  # type: ignore
             self,
@@ -2092,6 +2110,7 @@ class Dataset(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            zarr_version=zarr_version,
         )
 
     def __repr__(self) -> str:
@@ -2256,8 +2275,8 @@ class Dataset(
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from ..coding.cftimeindex import CFTimeIndex
-        from .dataarray import DataArray
+        from xarray.coding.cftimeindex import CFTimeIndex
+        from xarray.core.dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
@@ -2318,7 +2337,7 @@ class Dataset(
         Only coordinate with a name different from any of self.variables will
         be attached.
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         coords_list = []
         for k, v in indexers.items():
@@ -2484,8 +2503,8 @@ class Dataset(
 
     def sel(
         self: T_Dataset,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         drop: bool = False,
         **indexers_kwargs: Any,
@@ -2749,7 +2768,9 @@ class Dataset(
         return self.isel(indexers_slices)
 
     def broadcast_like(
-        self: T_Dataset, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
+        self: T_Dataset,
+        other: Dataset | DataArray,
+        exclude: Iterable[Hashable] | None = None,
     ) -> T_Dataset:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
@@ -3117,8 +3138,8 @@ class Dataset(
 
     def _reindex(
         self: T_Dataset,
-        indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        indexers: Mapping[Any, Any] | None = None,
+        method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
@@ -3144,7 +3165,7 @@ class Dataset(
         coords: Mapping[Any, Any] | None = None,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        kwargs: Mapping[str, Any] = None,
+        kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> T_Dataset:
@@ -3283,7 +3304,7 @@ class Dataset(
             a        (x) float64 5.0 6.5 6.25 4.75
             b        (x, y) float64 2.5 3.0 nan 4.0 5.625 nan nan nan nan nan nan nan
         """
-        from . import missing
+        from xarray.core import missing
 
         if kwargs is None:
             kwargs = {}
@@ -3694,7 +3715,9 @@ class Dataset(
         return self._replace(variables, coord_names, dims=sizes, indexes=indexes)
 
     def rename_vars(
-        self: T_Dataset, name_dict: Mapping[Any, Hashable] = None, **names: Hashable
+        self: T_Dataset,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
     ) -> T_Dataset:
         """Returns a new object with renamed variables including coordinates
 
@@ -3732,7 +3755,7 @@ class Dataset(
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def swap_dims(
-        self: T_Dataset, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
+        self: T_Dataset, dims_dict: Mapping[Any, Hashable] | None = None, **dims_kwargs
     ) -> T_Dataset:
         """Returns a new object with swapped dimensions.
 
@@ -4652,7 +4675,7 @@ class Dataset(
         Dimensions without coordinates: x
 
         """
-        from .concat import concat
+        from xarray.core.concat import concat
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
@@ -5008,7 +5031,7 @@ class Dataset(
         --------
         Dataset.update
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         other = other.to_dataset() if isinstance(other, DataArray) else other
         merge_result = dataset_merge_method(
@@ -5578,7 +5601,7 @@ class Dataset(
         self: T_Dataset,
         dim: Hashable | None = None,
         method: InterpOptions = "linear",
-        limit: int = None,
+        limit: int | None = None,
         use_coordinate: bool | Hashable = True,
         max_gap: (
             int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
@@ -5695,7 +5718,7 @@ class Dataset(
             C        (x) float64 20.0 15.0 10.0 5.0 0.0
             D        (x) float64 5.0 3.0 1.0 -1.0 4.0
         """
-        from .missing import _apply_over_vars_with_dim, interp_na
+        from xarray.core.missing import _apply_over_vars_with_dim, interp_na
 
         new = _apply_over_vars_with_dim(
             interp_na,
@@ -5730,7 +5753,7 @@ class Dataset(
         -------
         Dataset
         """
-        from .missing import _apply_over_vars_with_dim, ffill
+        from xarray.core.missing import _apply_over_vars_with_dim, ffill
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
@@ -5756,7 +5779,7 @@ class Dataset(
         -------
         Dataset
         """
-        from .missing import _apply_over_vars_with_dim, bfill
+        from xarray.core.missing import _apply_over_vars_with_dim, bfill
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
@@ -5783,7 +5806,7 @@ class Dataset(
     def reduce(
         self: T_Dataset,
         func: Callable,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -6077,7 +6100,7 @@ class Dataset(
         -------
         array : xarray.DataArray
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         data_vars = [self.variables[k] for k in self.data_vars]
         broadcast_vars = broadcast_variables(*data_vars)
@@ -6559,8 +6582,8 @@ class Dataset(
         return self._replace_with_new_dims(variables, attrs=attrs)
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
-        from .dataarray import DataArray
-        from .groupby import GroupBy
+        from xarray.core.dataarray import DataArray
+        from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
             return NotImplemented
@@ -6572,8 +6595,8 @@ class Dataset(
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:
-        from .dataarray import DataArray
-        from .groupby import GroupBy
+        from xarray.core.dataarray import DataArray
+        from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
             raise TypeError(
@@ -6949,7 +6972,7 @@ class Dataset(
             A        (x, y) int64 3 4 1 2
             B        (x, y) int64 7 8 5 6
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         if not isinstance(variables, list):
             variables = [variables]
@@ -6978,9 +7001,9 @@ class Dataset(
         dim: Dims = None,
         method: QuantileMethods = "linear",
         numeric_only: bool = False,
-        keep_attrs: bool = None,
-        skipna: bool = None,
-        interpolation: QuantileMethods = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_Dataset:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -7238,7 +7261,7 @@ class Dataset(
         --------
         numpy.gradient: corresponding numpy function
         """
-        from .variable import Variable
+        from xarray.core.variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
             raise ValueError(f"Coordinate {coord} does not exist.")
@@ -7340,7 +7363,7 @@ class Dataset(
         return result
 
     def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
-        from .variable import Variable
+        from xarray.core.variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
             raise ValueError(f"Coordinate {coord} does not exist.")
@@ -7703,7 +7726,7 @@ class Dataset(
         Data variables:
             a        (time) float64 dask.array<chunksize=(24,), meta=np.ndarray>
         """
-        from .parallel import map_blocks
+        from xarray.core.parallel import map_blocks
 
         return map_blocks(func, self, args, kwargs, template)
 
@@ -7775,7 +7798,7 @@ class Dataset(
         numpy.polyval
         xarray.polyval
         """
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         variables = {}
         skipna_da = skipna
@@ -7905,7 +7928,7 @@ class Dataset(
 
     def pad(
         self: T_Dataset,
-        pad_width: Mapping[Any, int | tuple[int, int]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
@@ -7916,6 +7939,7 @@ class Dataset(
         ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
+        keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ) -> T_Dataset:
         """Pad this dataset along one or more dimensions.
@@ -7993,6 +8017,10 @@ class Dataset(
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
+        keep_attrs : bool or None, optional
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one. If False, the new object
+            will be returned without attributes.
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
@@ -8039,6 +8067,9 @@ class Dataset(
             coord_pad_mode = "constant"
             coord_pad_options = {}
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
         variables = {}
 
         # keep indexes that won't be affected by pad and drop all other indexes
@@ -8061,11 +8092,13 @@ class Dataset(
                     constant_values=constant_values,
                     end_values=end_values,
                     reflect_type=reflect_type,
+                    keep_attrs=keep_attrs,
                 )
             else:
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=coord_pad_mode,
+                    keep_attrs=keep_attrs,
                     **coord_pad_options,  # type: ignore[arg-type]
                 )
                 # reset default index of dimension coordinates
@@ -8076,7 +8109,8 @@ class Dataset(
                     indexes[name] = index
                     variables[name] = index_vars[name]
 
-        return self._replace_with_new_dims(variables, indexes=indexes)
+        attrs = self._attrs if keep_attrs else None
+        return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
     def idxmin(
         self: T_Dataset,
@@ -8556,9 +8590,9 @@ class Dataset(
         """
         from scipy.optimize import curve_fit
 
-        from .alignment import broadcast
-        from .computation import apply_ufunc
-        from .dataarray import _THIS_ARRAY, DataArray
+        from xarray.core.alignment import broadcast
+        from xarray.core.computation import apply_ufunc
+        from xarray.core.dataarray import _THIS_ARRAY, DataArray
 
         if p0 is None:
             p0 = {}
@@ -8897,8 +8931,10 @@ class Dataset(
         DataArray.groupby
         core.groupby.DatasetGroupBy
         pandas.DataFrame.groupby
+        Dataset.resample
+        DataArray.resample
         """
-        from .groupby import DatasetGroupBy
+        from xarray.core.groupby import DatasetGroupBy
 
         # While we don't generally check the type of every arg, passing
         # multiple dimensions as multiple arguments is common enough, and the
@@ -8981,7 +9017,7 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from .groupby import DatasetGroupBy
+        from xarray.core.groupby import DatasetGroupBy
 
         return DatasetGroupBy(
             self,
@@ -9021,7 +9057,7 @@ class Dataset(
         --------
         DataArray.weighted
         """
-        from .weighted import DatasetWeighted
+        from xarray.core.weighted import DatasetWeighted
 
         return DatasetWeighted(self, weights)
 
@@ -9059,7 +9095,7 @@ class Dataset(
         core.rolling.DatasetRolling
         DataArray.rolling
         """
-        from .rolling import DatasetRolling
+        from xarray.core.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
@@ -9097,7 +9133,7 @@ class Dataset(
         core.rolling.DatasetCoarsen
         DataArray.coarsen
         """
-        from .rolling import DatasetCoarsen
+        from xarray.core.rolling import DatasetCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DatasetCoarsen(
@@ -9114,7 +9150,9 @@ class Dataset(
         skipna: bool | None = None,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int = 0,
+        base: int | None = None,
+        offset: pd.Timedelta | datetime.timedelta | str | None = None,
+        origin: str | DatetimeLike = "start_day",
         keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
@@ -9138,10 +9176,22 @@ class Dataset(
             Side of each interval to treat as closed.
         label : {"left", "right"}, optional
             Side of each interval to use for labeling.
-        base : int, default = 0
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+        origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
+            The datetime on which to adjust the grouping. The timezone of origin
+            must match the timezone of the index.
+
+            If a datetime is not used, these values are also supported:
+            - 'epoch': `origin` is 1970-01-01
+            - 'start': `origin` is the first value of the timeseries
+            - 'start_day': `origin` is the first day at midnight of the timeseries
+            - 'end': `origin` is the last value of the timeseries
+            - 'end_day': `origin` is the ceiling midnight of the last day
+        offset : pd.Timedelta, datetime.timedelta, or str, default is None
+            An offset timedelta added to the origin.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
@@ -9162,12 +9212,14 @@ class Dataset(
         DataArray.resample
         pandas.Series.resample
         pandas.DataFrame.resample
+        Dataset.groupby
+        DataArray.groupby
 
         References
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
-        from .resample import DatasetResample
+        from xarray.core.resample import DatasetResample
 
         return self._resample(
             resample_cls=DatasetResample,
@@ -9176,6 +9228,8 @@ class Dataset(
             closed=closed,
             label=label,
             base=base,
+            offset=offset,
+            origin=origin,
             keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,

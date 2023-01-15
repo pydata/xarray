@@ -17,12 +17,12 @@ from typing import (
 
 import numpy as np
 
-from . import dtypes, duck_array_ops, utils
-from .arithmetic import CoarsenArithmetic
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array
-from .types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from .utils import either_dict_or_kwargs
+from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core.arithmetic import CoarsenArithmetic
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
+from xarray.core.utils import either_dict_or_kwargs
 
 try:
     import bottleneck
@@ -31,8 +31,8 @@ except ImportError:
     bottleneck = None
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     RollingKey = Any
     _T = TypeVar("_T")
@@ -372,7 +372,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         keep_attrs: bool | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -506,7 +506,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         return counts
 
     def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
@@ -649,7 +649,7 @@ class DatasetRolling(Rolling["Dataset"]):
                 self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
 
     def _dataset_implementation(self, func, keep_attrs, **kwargs):
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -749,7 +749,7 @@ class DatasetRolling(Rolling["Dataset"]):
         Dataset with variables converted from rolling object.
         """
 
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -918,8 +918,8 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         DatasetRolling.construct
         """
 
-        from .dataarray import DataArray
-        from .dataset import Dataset
+        from xarray.core.dataarray import DataArray
+        from xarray.core.dataset import Dataset
 
         window_dim = either_dict_or_kwargs(
             window_dim, window_dim_kwargs, "Coarsen.construct"
@@ -1002,9 +1002,9 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             kwargs["skipna"] = None
 
         def wrapped_func(
-            self: DataArrayCoarsen, keep_attrs: bool = None, **kwargs
+            self: DataArrayCoarsen, keep_attrs: bool | None = None, **kwargs
         ) -> DataArray:
-            from .dataarray import DataArray
+            from xarray.core.dataarray import DataArray
 
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -1033,7 +1033,9 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
 
         return wrapped_func
 
-    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs) -> DataArray:
+    def reduce(
+        self, func: Callable, keep_attrs: bool | None = None, **kwargs
+    ) -> DataArray:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1088,9 +1090,9 @@ class DatasetCoarsen(Coarsen["Dataset"]):
             kwargs["skipna"] = None
 
         def wrapped_func(
-            self: DatasetCoarsen, keep_attrs: bool = None, **kwargs
+            self: DatasetCoarsen, keep_attrs: bool | None = None, **kwargs
         ) -> Dataset:
-            from .dataset import Dataset
+            from xarray.core.dataset import Dataset
 
             keep_attrs = self._get_keep_attrs(keep_attrs)
 

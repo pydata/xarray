@@ -44,9 +44,9 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ..core.common import _contains_datetime_like_objects
-from .cftime_offsets import _MONTH_ABBREVIATIONS
-from .cftimeindex import CFTimeIndex
+from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS
+from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.core.common import _contains_datetime_like_objects
 
 _ONE_MICRO = 1
 _ONE_MILLI = _ONE_MICRO * 1000

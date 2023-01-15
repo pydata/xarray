@@ -15,11 +15,11 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from .duck_array_ops import array_equiv
-from .indexing import MemoryCachedArray
-from .options import OPTIONS, _get_boolean_with_default
-from .pycompat import array_type
-from .utils import is_duck_array
+from xarray.core.duck_array_ops import array_equiv
+from xarray.core.indexing import MemoryCachedArray
+from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.pycompat import array_type
+from xarray.core.utils import is_duck_array
 
 
 def pretty_print(x, numchars: int):
@@ -285,7 +285,11 @@ def inline_variable_array_repr(var, max_width):
 
 
 def summarize_variable(
-    name: Hashable, var, col_width: int, max_width: int = None, is_index: bool = False
+    name: Hashable,
+    var,
+    col_width: int,
+    max_width: int | None = None,
+    is_index: bool = False,
 ):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     variable = getattr(var, "variable", var)
@@ -419,7 +423,9 @@ def inline_index_repr(index, max_width=None):
     return repr_
 
 
-def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+def summarize_index(
+    name: Hashable, index, col_width: int, max_width: int | None = None
+):
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
@@ -431,7 +437,7 @@ def summarize_index(name: Hashable, index, col_width: int, max_width: int = None
 
 
 def nondefault_indexes(indexes):
-    from .indexes import PandasIndex, PandasMultiIndex
+    from xarray.core.indexes import PandasIndex, PandasMultiIndex
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -588,7 +594,7 @@ def short_data_repr(array):
 
 @recursive_repr("<recursive array>")
 def array_repr(arr):
-    from .variable import Variable
+    from xarray.core.variable import Variable
 
     max_rows = OPTIONS["display_max_rows"]
 

@@ -35,6 +35,8 @@ try:
 except ImportError:
     pass
 
+# https://github.com/pydata/xarray/issues/7322
+warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -68,7 +70,6 @@ has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
-has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")

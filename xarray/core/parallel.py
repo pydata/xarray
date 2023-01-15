@@ -16,13 +16,13 @@ from typing import (
 
 import numpy as np
 
-from .alignment import align
-from .dataarray import DataArray
-from .dataset import Dataset
-from .pycompat import is_dask_collection
+from xarray.core.alignment import align
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.pycompat import is_dask_collection
 
 if TYPE_CHECKING:
-    from .types import T_Xarray
+    from xarray.core.types import T_Xarray
 
 
 def unzip(iterable):
@@ -157,7 +157,7 @@ def map_blocks(
     func: Callable[..., T_Xarray],
     obj: DataArray | Dataset,
     args: Sequence[Any] = (),
-    kwargs: Mapping[str, Any] = None,
+    kwargs: Mapping[str, Any] | None = None,
     template: DataArray | Dataset | None = None,
 ) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.

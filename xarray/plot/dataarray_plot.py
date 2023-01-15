@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from ..core.alignment import broadcast
-from ..core.concat import concat
-from .facetgrid import _easy_facetgrid
-from .utils import (
+from xarray.core.alignment import broadcast
+from xarray.core.concat import concat
+from xarray.plot.facetgrid import _easy_facetgrid
+from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
@@ -52,15 +52,15 @@ if TYPE_CHECKING:
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
     from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
-    from ..core.types import (
+    from xarray.core.dataarray import DataArray
+    from xarray.core.types import (
         AspectOptions,
         ExtendOptions,
         HueStyleOptions,
         ScaleOptions,
         T_DataArray,
     )
-    from .facetgrid import FacetGrid
+    from xarray.plot.facetgrid import FacetGrid
 
 
 def _infer_line_data(
@@ -1488,7 +1488,7 @@ def _plot2d(plotfunc):
             if ax is None:
                 # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
-                from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
+                from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
                 # delete so it does not end up in locals()
                 del Axes3D
@@ -1521,7 +1521,7 @@ def _plot2d(plotfunc):
             and not kwargs.get("_is_facetgrid", False)
             and ax is not None
         ):
-            import mpl_toolkits  # type: ignore
+            import mpl_toolkits
 
             if not isinstance(ax, mpl_toolkits.mplot3d.Axes3D):
                 raise ValueError(

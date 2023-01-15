@@ -14,12 +14,17 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from . import duck_array_ops
-from .nputils import NumpyVIndexAdapter
-from .options import OPTIONS
-from .pycompat import array_type, integer_types, is_duck_dask_array, mod_version
-from .types import T_Xarray
-from .utils import (
+from xarray.core import duck_array_ops
+from xarray.core.nputils import NumpyVIndexAdapter
+from xarray.core.options import OPTIONS
+from xarray.core.pycompat import (
+    array_type,
+    integer_types,
+    is_duck_dask_array,
+    mod_version,
+)
+from xarray.core.types import T_Xarray
+from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
@@ -29,8 +34,8 @@ from .utils import (
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
-    from .indexes import Index
-    from .variable import Variable
+    from xarray.core.indexes import Index
+    from xarray.core.variable import Variable
 
 
 @dataclass
@@ -163,7 +168,7 @@ def map_index_queries(
     and return the (merged) query results.
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # TODO benbovy - flexible indexes: remove when custom index options are available
     if method is None and tolerance is None:
@@ -180,7 +185,7 @@ def map_index_queries(
             # forward dimension indexers with no index/coordinate
             results.append(IndexSelResult(labels))
         else:
-            results.append(index.sel(labels, **options))  # type: ignore[call-arg]
+            results.append(index.sel(labels, **options))
 
     merged = merge_sel_results(results)
 
@@ -1415,14 +1420,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
-        from .indexes import safe_cast_to_index
+        from xarray.core.indexes import safe_cast_to_index
 
         self.array = safe_cast_to_index(array)
 
         if dtype is None:
             self._dtype = get_valid_numpy_dtype(array)
         else:
-            self._dtype = np.dtype(dtype)  # type: ignore[assignment]
+            self._dtype = np.dtype(dtype)
 
     @property
     def dtype(self) -> np.dtype:
@@ -1526,8 +1531,12 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         self.level = level
 
     def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+        if dtype is None:
+            dtype = self.dtype
         if self.level is not None:
-            return self.array.get_level_values(self.level).values
+            return np.asarray(
+                self.array.get_level_values(self.level).values, dtype=dtype
+            )
         else:
             return super().__array__(dtype)
 
@@ -1566,7 +1575,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         return np.asarray(subset)
 
     def _repr_inline_(self, max_width: int) -> str:
-        from .formatting import format_array_flat
+        from xarray.core.formatting import format_array_flat
 
         if self.level is None:
             return "MultiIndex"
@@ -1574,7 +1583,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             return format_array_flat(self._get_array_subset(), max_width)
 
     def _repr_html_(self) -> str:
-        from .formatting import short_numpy_repr
+        from xarray.core.formatting import short_numpy_repr
 
         array_repr = short_numpy_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"

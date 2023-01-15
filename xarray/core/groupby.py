@@ -20,30 +20,39 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes, duck_array_ops, nputils, ops
-from ._aggregations import DataArrayGroupByAggregations, DatasetGroupByAggregations
-from .alignment import align
-from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
-from .concat import concat
-from .formatting import format_array_flat
-from .indexes import (
+from xarray.core import dtypes, duck_array_ops, nputils, ops
+from xarray.core._aggregations import (
+    DataArrayGroupByAggregations,
+    DatasetGroupByAggregations,
+)
+from xarray.core.alignment import align
+from xarray.core.arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
+from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
+from xarray.core.concat import concat
+from xarray.core.formatting import format_array_flat
+from xarray.core.indexes import (
     create_default_index_implicit,
     filter_indexes_from_coords,
     safe_cast_to_index,
 )
-from .options import _get_keep_attrs
-from .pycompat import integer_types
-from .types import Dims, QuantileMethods, T_Xarray
-from .utils import either_dict_or_kwargs, hashable, is_scalar, maybe_wrap_array, peek_at
-from .variable import IndexVariable, Variable
+from xarray.core.options import _get_keep_attrs
+from xarray.core.pycompat import integer_types
+from xarray.core.types import Dims, QuantileMethods, T_Xarray
+from xarray.core.utils import (
+    either_dict_or_kwargs,
+    hashable,
+    is_scalar,
+    maybe_wrap_array,
+    peek_at,
+)
+from xarray.core.variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .utils import Frozen
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.utils import Frozen
 
     GroupKey = Any
 
@@ -92,8 +101,8 @@ def unique_value_groups(
 
 
 def _dummy_copy(xarray_obj):
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     if isinstance(xarray_obj, Dataset):
         res = Dataset(
@@ -220,7 +229,7 @@ def _ensure_1d(
     group: T_Group, obj: T_Xarray
 ) -> tuple[T_Group, T_Xarray, Hashable | None, list[Hashable]]:
     # 1D cases: do nothing
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
         return group, obj, None, []
@@ -349,7 +358,7 @@ class GroupBy(Generic[T_Xarray]):
         """
         if cut_kwargs is None:
             cut_kwargs = {}
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         if grouper is not None and bins is not None:
             raise TypeError("can't specify both `grouper` and `bins`")
@@ -493,7 +502,7 @@ class GroupBy(Generic[T_Xarray]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -534,7 +543,7 @@ class GroupBy(Generic[T_Xarray]):
         )
 
     def _get_index_and_items(self, index, grouper):
-        from .resample_cftime import CFTimeGrouper
+        from xarray.core.resample_cftime import CFTimeGrouper
 
         s = pd.Series(np.arange(index.size), index)
         if isinstance(grouper, CFTimeGrouper):
@@ -566,8 +575,8 @@ class GroupBy(Generic[T_Xarray]):
         return coord, dim, positions
 
     def _binary_op(self, other, f, reflexive=False):
-        from .dataarray import DataArray
-        from .dataset import Dataset
+        from xarray.core.dataarray import DataArray
+        from xarray.core.dataset import Dataset
 
         g = f if not reflexive else lambda x, y: f(y, x)
 
@@ -652,14 +661,14 @@ class GroupBy(Generic[T_Xarray]):
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ):
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         obj = self._original_obj
 
@@ -713,7 +722,7 @@ class GroupBy(Generic[T_Xarray]):
         elif dim is ...:
             parsed_dim = tuple(self._original_obj.dims)
         else:
-            parsed_dim = tuple(dim)  # type:ignore[arg-type]
+            parsed_dim = tuple(dim)
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
@@ -747,7 +756,7 @@ class GroupBy(Generic[T_Xarray]):
         result = xarray_reduce(
             self._original_obj.drop_vars(non_numeric),
             group,
-            dim=parsed_dim,  # type:ignore[arg-type]  # https://github.com/xarray-contrib/flox/issues/96
+            dim=parsed_dim,
             expected_groups=expected_groups,
             isbin=isbin,
             keep_attrs=keep_attrs,
@@ -1143,7 +1152,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1296,7 +1305,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,

@@ -14,6 +14,7 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
+from xarray.core.utils import module_available
 from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.utils import (
@@ -25,23 +26,23 @@ from xarray.plot.utils import (
     get_axis,
     label_from_attrs,
 )
-
-from . import (
+from xarray.tests import (
     assert_array_equal,
     assert_equal,
-    has_nc_time_axis,
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
-    requires_nc_time_axis,
     requires_seaborn,
 )
+
+# this should not be imported to test if the automatic lazy import works
+has_nc_time_axis = module_available("nc_time_axis")
 
 # import mpl and change the backend before other mpl imports
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    import mpl_toolkits  # type: ignore
+    import mpl_toolkits
 except ImportError:
     pass
 
@@ -2603,7 +2604,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         self.ds = ds
 
     def test_accessor(self) -> None:
-        from ..plot.accessor import DatasetPlotAccessor
+        from xarray.plot.accessor import DatasetPlotAccessor
 
         assert Dataset.plot is DatasetPlotAccessor
         assert isinstance(self.ds.plot, DatasetPlotAccessor)
@@ -2823,8 +2824,8 @@ class TestDatetimePlot(PlotTestCase):
 
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
-@requires_nc_time_axis
 @requires_cftime
+@pytest.mark.skipif(not has_nc_time_axis, reason="nc_time_axis is not installed")
 class TestCFDatetimePlot(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
@@ -3206,7 +3207,7 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 
 @requires_matplotlib
-def test_facetgrid_axes_raises_deprecation_warning():
+def test_facetgrid_axes_raises_deprecation_warning() -> None:
     with pytest.warns(
         DeprecationWarning,
         match=(
