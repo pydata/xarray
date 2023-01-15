@@ -47,6 +47,11 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` for complex valued arrays  (:issue:`7340`, :pull:`7392`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fixed performance regression in alignment between indexed and non-indexed objects
+  of the same shape (:pull:`7382`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
+  :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
 
 Documentation
 ~~~~~~~~~~~~~

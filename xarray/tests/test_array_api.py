@@ -64,6 +64,27 @@ def test_astype(arrays) -> None:
     assert_equal(actual, expected)
 
 
+def test_broadcast(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    np_arr2 = xr.DataArray(np.array([1.0, 2.0]), dims="x")
+    xp_arr2 = xr.DataArray(xp.asarray([1.0, 2.0]), dims="x")
+
+    expected = xr.broadcast(np_arr, np_arr2)
+    actual = xr.broadcast(xp_arr, xp_arr2)
+    assert len(actual) == len(expected)
+    for a, e in zip(actual, expected):
+        assert isinstance(a.data, Array)
+        assert_equal(a, e)
+
+
+def test_concat(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+    np_arr, xp_arr = arrays
+    expected = xr.concat((np_arr, np_arr), dim="x")
+    actual = xr.concat((xp_arr, xp_arr), dim="x")
+    assert isinstance(actual.data, Array)
+    assert_equal(actual, expected)
+
+
 def test_indexing(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr[:, 0]
