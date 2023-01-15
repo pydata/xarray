@@ -5849,26 +5849,36 @@ class TestDataset:
             actual = ds1 + ds2
             assert_equal(actual, expected)
 
-@pytest.mark.parametrize(
-    ["keep_attrs", "expected"],
-    (
-        (False, {}),
-        (True, {"foo": "value1", "bar": "value3"}),
-        ("drop_conflicts", {"bar": "value3"}),
-    ),
-    ids=lambda params: params[0],
-)
-def test_binary_ops_keep_attrs(self, keep_attrs, expected) -> None:
-        attrs = {"foo": "att_1", "bar": "att_2"}
-        ds1 = xr.Dataset({"a": 1, "b": 1}, attrs=attrs)
-        ds2 = xr.Dataset({"a": 1, "b": 1}, attrs=attrs)
-        # test unkept attrs
-        ds_result = ds1 - ds2
-        assert ds_result.attrs == {}
-        # test kept attrs
-        with xr.set_options(keep_attrs=True):
+    @pytest.mark.parametrize(
+        ["keep_attrs", "expected"],
+        (
+            (False, {}),
+            (True, {"foo": "a", "bar": "b"}),
+            ("drop", {}),
+            ("identical", {"foo": "a", "bar": "b"}),
+            ("no_conflicts", {"foo": "a", "bar": "b", "baz": "c"}),
+            ("drop_conflicts", {"foo": "a", "baz": "c"}),
+            ("override", {"foo": "a", "bar": "b"}),
+        ),
+    )
+    def test_binary_ops_keep_attrs(self, keep_attrs, expected) -> None:
+        attrs_1 = {"foo": "a", "bar": "b"}
+        attrs_3 = {"foo": "a", "bar": "z", "baz": "c"}
+        attrs_2 = {"foo": "a", "baz": "c"}
+
+        ds1 = xr.Dataset({"a": 1, "b": 1}, attrs=attrs_1)
+        ds2 = xr.Dataset({"a": 1, "b": 1})
+        if keep_attrs == "identical":
+            ds2.attrs = attrs_1
+        elif keep_attrs == "no_conflicts":
+            ds2.attrs = attrs_2
+        else:
+            ds2.attrs = attrs_3
+
+        with xr.set_options(keep_attrs=keep_attrs):
             ds_result = ds1 + ds2
-        assert ds_result.attrs == attrs
+
+        assert ds_result.attrs == expected
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
