@@ -144,6 +144,10 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
   :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
+- Ensure the formatting of time encoding reference dates outside the range of
+  nanosecond-precision datetimes remains the same under pandas version 2.0.0
+  (:issue:`7420`, :pull:`7441`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
