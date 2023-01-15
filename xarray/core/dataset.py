@@ -6593,8 +6593,10 @@ class Dataset(
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=False)
-        if keep_attrs:
-            ds.attrs = self.attrs
+        all_attrs = [self.attrs, getattr(other, "attrs", [])]
+        if isinstance(keep_attrs, bool):
+            keep_attrs = "override" if keep_attrs else "drop"
+        ds.attrs = merge_attrs(all_attrs, combine_attrs=keep_attrs)
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:
