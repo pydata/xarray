@@ -1,7 +1,0 @@
-[run]
-omit =
-    */xarray/tests/*
-    */xarray/core/dask_array_compat.py
-    */xarray/core/npcompat.py
-    */xarray/core/pdcompat.py
-    */xarray/core/pycompat.py

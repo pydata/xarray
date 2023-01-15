@@ -49,15 +49,15 @@ from typing import ClassVar
 import numpy as np
 import pandas as pd
 
-from ..core.common import _contains_datetime_like_objects, is_np_datetime_like
-from ..core.pdcompat import count_not_none
-from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
-from .times import (
+from xarray.coding.cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
+from xarray.coding.times import (
     _is_standard_calendar,
     _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,
 )
+from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
+from xarray.core.pdcompat import count_not_none
 
 try:
     import cftime
@@ -206,6 +206,10 @@ class Tick(BaseCFTimeOffset):
             new_self = self._next_higher_resolution()
             return new_self * other
         return type(self)(n=other * self.n)
+
+    def as_timedelta(self):
+        """All Tick subclasses must implement an as_timedelta method."""
+        raise NotImplementedError
 
 
 def _get_day_of_month(other, day_option):
@@ -1120,7 +1124,7 @@ def date_range(
     cftime_range
     date_range_like
     """
-    from .times import _is_standard_calendar
+    from xarray.coding.times import _is_standard_calendar
 
     if tz is not None:
         use_cftime = False
@@ -1185,8 +1189,8 @@ def date_range_like(source, calendar, use_cftime=None):
         last day of the month. Then the output range will also end on the last
         day of the month in the new calendar.
     """
-    from ..core.dataarray import DataArray
-    from .frequencies import infer_freq
+    from xarray.coding.frequencies import infer_freq
+    from xarray.core.dataarray import DataArray
 
     if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
         isinstance(source, DataArray)

@@ -8,8 +8,12 @@ import pytest
 from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
-
-from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
+from xarray.tests import (
+    IndexerMaker,
+    assert_array_equal,
+    assert_identical,
+    requires_dask,
+)
 
 with suppress(ImportError):
     import dask.array as da

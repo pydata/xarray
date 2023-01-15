@@ -162,11 +162,77 @@ To do so, pass a ``group`` keyword argument to the
 :py:func:`open_dataset` function. The group can be specified as a path-like
 string, e.g., to access subgroup ``'bar'`` within group ``'foo'`` pass
 ``'/foo/bar'`` as the ``group`` argument.
+
 In a similar way, the ``group`` keyword argument can be given to the
 :py:meth:`Dataset.to_netcdf` method to write to a group
 in a netCDF file.
 When writing multiple groups in one file, pass ``mode='a'`` to
 :py:meth:`Dataset.to_netcdf` to ensure that each call does not delete the file.
+For example:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: ds1 = xr.Dataset({"a": 0})
+
+    In [2]: ds2 = xr.Dataset({"b": 1})
+
+    In [3]: ds1.to_netcdf("file.nc", group="A")
+
+    In [4]: ds2.to_netcdf("file.nc", group="B", mode="a")
+
+We can verify that two groups have been saved using the ncdump command-line utility.
+
+.. code:: bash
+
+    $ ncdump file.nc
+    netcdf file {
+
+    group: A {
+      variables:
+        int64 a ;
+      data:
+
+       a = 0 ;
+      } // group A
+
+    group: B {
+      variables:
+        int64 b ;
+      data:
+
+       b = 1 ;
+      } // group B
+    }
+
+Either of these groups can be loaded from the file as an independent :py:class:`Dataset` object:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: group1 = xr.open_dataset("file.nc", group="A")
+
+    In [2]: group1
+    Out[2]:
+    <xarray.Dataset>
+    Dimensions:  ()
+    Data variables:
+        a        int64 ...
+
+    In [3]: group2 = xr.open_dataset("file.nc", group="B")
+
+    In [4]: group2
+    Out[4]:
+    <xarray.Dataset>
+    Dimensions:  ()
+    Data variables:
+        b        int64 ...
+
+.. note::
+
+    For native handling of multiple groups with xarray, including I/O, you might be interested in the experimental
+    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
 
 .. _io.encoding:
 
@@ -428,7 +494,7 @@ If character arrays are used:
 Chunk based compression
 .......................
 
-``zlib``, ``complevel``, ``fletcher32``, ``continguous`` and ``chunksizes``
+``zlib``, ``complevel``, ``fletcher32``, ``contiguous`` and ``chunksizes``
 can be used for enabling netCDF4/HDF5's chunk based compression, as described
 in the `documentation for createVariable`_ for netCDF4-Python. This only works
 for netCDF4 files and thus requires using ``format='netCDF4'`` and either
@@ -1209,6 +1275,10 @@ We recommend installing cfgrib via conda::
 Formats supported by PyNIO
 --------------------------
 
+.. warning::
+
+    The PyNIO backend is deprecated_. PyNIO is no longer maintained_. See
+
 Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
 ``engine='pynio'`` to :py:func:`open_dataset`.
@@ -1217,12 +1287,9 @@ We recommend installing PyNIO via conda::
 
     conda install -c conda-forge pynio
 
-.. warning::
-
-    PyNIO is no longer actively maintained and conflicts with netcdf4 > 1.5.3.
-    The PyNIO backend may be moved outside of xarray in the future.
-
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
+.. _deprecated: https://github.com/pydata/xarray/issues/4491
+.. _maintained: https://github.com/NCAR/pynio/issues/53
 
 .. _io.PseudoNetCDF:
 

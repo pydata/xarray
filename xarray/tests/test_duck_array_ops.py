@@ -27,10 +27,9 @@ from xarray.core.duck_array_ops import (
     timedelta_to_numeric,
     where,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_array_equal,
     has_dask,
@@ -40,6 +39,8 @@ from . import (
     requires_cftime,
     requires_dask,
 )
+
+dask_array_type = array_type("dask")
 
 
 class TestOps:
@@ -323,18 +324,51 @@ def test_datetime_mean(dask: bool) -> None:
 
 
 @requires_cftime
-def test_cftime_datetime_mean():
+@pytest.mark.parametrize("dask", [False, True])
+def test_cftime_datetime_mean(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
     times = cftime_range("2000", periods=4)
     da = DataArray(times, dims=["time"])
+    da_2d = DataArray(times.values.reshape(2, 2))
 
-    assert da.isel(time=0).mean() == da.isel(time=0)
+    if dask:
+        da = da.chunk({"time": 2})
+        da_2d = da_2d.chunk({"dim_0": 2})
 
-    expected = DataArray(times.date_type(2000, 1, 2, 12))
-    result = da.mean()
+    expected = da.isel(time=0)
+    # one compute needed to check the array contains cftime datetimes
+    with raise_if_dask_computes(max_computes=1):
+        result = da.isel(time=0).mean()
+    assert_dask_array(result, dask)
     assert_equal(result, expected)
 
-    da_2d = DataArray(times.values.reshape(2, 2))
-    result = da_2d.mean()
+    expected = DataArray(times.date_type(2000, 1, 2, 12))
+    with raise_if_dask_computes(max_computes=1):
+        result = da.mean()
+    assert_dask_array(result, dask)
+    assert_equal(result, expected)
+
+    with raise_if_dask_computes(max_computes=1):
+        result = da_2d.mean()
+    assert_dask_array(result, dask)
+    assert_equal(result, expected)
+
+
+@requires_cftime
+@requires_dask
+def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
+    # Regression test for part two of GH issue 5897: averaging over a non-time
+    # dimension still fails if the time variable is dask-backed.
+    ds = Dataset(
+        {
+            "var1": (("time",), cftime_range("2021-10-31", periods=10, freq="D")),
+            "var2": (("x",), list(range(10))),
+        }
+    )
+    expected = ds.mean("x")
+    result = ds.chunk({}).mean("x")
     assert_equal(result, expected)
 
 
@@ -370,15 +404,6 @@ def test_cftime_datetime_mean_long_time_period():
         dims=["time"],
     )
     assert_equal(result, expected)
-
-
-@requires_cftime
-@requires_dask
-def test_cftime_datetime_mean_dask_error():
-    times = cftime_range("2000", periods=4)
-    da = DataArray(times, dims=["time"]).chunk()
-    with pytest.raises(NotImplementedError):
-        da.mean()
 
 
 def test_empty_axis_dtype():
@@ -740,6 +765,17 @@ def test_datetime_to_numeric_cftime(dask):
             times, datetime_unit="h", dtype=dtype
         )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected)
+
+    with raise_if_dask_computes():
+        if dask:
+            time = dask.array.asarray(times[1])
+        else:
+            time = np.asarray(times[1])
+        result = duck_array_ops.datetime_to_numeric(
+            time, offset=times[0], datetime_unit="h", dtype=int
+        )
+    expected = np.array(24 * 7).astype(int)
     np.testing.assert_array_equal(result, expected)
 
 

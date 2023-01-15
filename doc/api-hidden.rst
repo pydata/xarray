@@ -330,11 +330,6 @@
    plot.scatter
    plot.surface
 
-   plot.FacetGrid.map_dataarray
-   plot.FacetGrid.set_titles
-   plot.FacetGrid.set_ticks
-   plot.FacetGrid.map
-
    CFTimeIndex.all
    CFTimeIndex.any
    CFTimeIndex.append
@@ -488,6 +483,12 @@
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
 
+   backends.NetCDF4BackendEntrypoint.available
+   backends.NetCDF4BackendEntrypoint.description
+   backends.NetCDF4BackendEntrypoint.url
+   backends.NetCDF4BackendEntrypoint.guess_can_open
+   backends.NetCDF4BackendEntrypoint.open_dataset
+
    backends.H5NetCDFStore.autoclose
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
@@ -515,6 +516,27 @@
    backends.H5NetCDFStore.sync
    backends.H5NetCDFStore.ds
 
+   backends.H5netcdfBackendEntrypoint.available
+   backends.H5netcdfBackendEntrypoint.description
+   backends.H5netcdfBackendEntrypoint.url
+   backends.H5netcdfBackendEntrypoint.guess_can_open
+   backends.H5netcdfBackendEntrypoint.open_dataset
+
+   backends.PseudoNetCDFDataStore.close
+   backends.PseudoNetCDFDataStore.get_attrs
+   backends.PseudoNetCDFDataStore.get_dimensions
+   backends.PseudoNetCDFDataStore.get_encoding
+   backends.PseudoNetCDFDataStore.get_variables
+   backends.PseudoNetCDFDataStore.open
+   backends.PseudoNetCDFDataStore.open_store_variable
+   backends.PseudoNetCDFDataStore.ds
+
+   backends.PseudoNetCDFBackendEntrypoint.available
+   backends.PseudoNetCDFBackendEntrypoint.description
+   backends.PseudoNetCDFBackendEntrypoint.url
+   backends.PseudoNetCDFBackendEntrypoint.guess_can_open
+   backends.PseudoNetCDFBackendEntrypoint.open_dataset
+
    backends.PydapDataStore.close
    backends.PydapDataStore.get_attrs
    backends.PydapDataStore.get_dimensions
@@ -523,6 +545,12 @@
    backends.PydapDataStore.load
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
+
+   backends.PydapBackendEntrypoint.available
+   backends.PydapBackendEntrypoint.description
+   backends.PydapBackendEntrypoint.url
+   backends.PydapBackendEntrypoint.guess_can_open
+   backends.PydapBackendEntrypoint.open_dataset
 
    backends.ScipyDataStore.close
    backends.ScipyDataStore.encode
@@ -545,6 +573,39 @@
    backends.ScipyDataStore.store_dataset
    backends.ScipyDataStore.sync
    backends.ScipyDataStore.ds
+
+   backends.ScipyBackendEntrypoint.available
+   backends.ScipyBackendEntrypoint.description
+   backends.ScipyBackendEntrypoint.url
+   backends.ScipyBackendEntrypoint.guess_can_open
+   backends.ScipyBackendEntrypoint.open_dataset
+
+   backends.ZarrStore.close
+   backends.ZarrStore.encode_attribute
+   backends.ZarrStore.encode_variable
+   backends.ZarrStore.get_attrs
+   backends.ZarrStore.get_dimensions
+   backends.ZarrStore.get_variables
+   backends.ZarrStore.open_group
+   backends.ZarrStore.open_store_variable
+   backends.ZarrStore.set_attributes
+   backends.ZarrStore.set_dimensions
+   backends.ZarrStore.set_variables
+   backends.ZarrStore.store
+   backends.ZarrStore.sync
+   backends.ZarrStore.ds
+
+   backends.ZarrBackendEntrypoint.available
+   backends.ZarrBackendEntrypoint.description
+   backends.ZarrBackendEntrypoint.url
+   backends.ZarrBackendEntrypoint.guess_can_open
+   backends.ZarrBackendEntrypoint.open_dataset
+
+   backends.StoreBackendEntrypoint.available
+   backends.StoreBackendEntrypoint.description
+   backends.StoreBackendEntrypoint.url
+   backends.StoreBackendEntrypoint.guess_can_open
+   backends.StoreBackendEntrypoint.open_dataset
 
    backends.FileManager.acquire
    backends.FileManager.acquire_context

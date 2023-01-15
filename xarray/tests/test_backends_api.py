@@ -7,8 +7,7 @@ import pytest
 
 import xarray as xr
 from xarray.backends.api import _get_default_engine
-
-from . import (
+from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     requires_dask,
@@ -46,6 +45,25 @@ def test_custom_engine() -> None:
 
     actual = xr.open_dataset("fake_filename", engine=CustomBackend)
     assert_identical(expected, actual)
+
+
+def test_multiindex() -> None:
+    # GH7139
+    # Check that we properly handle backends that change index variables
+    dataset = xr.Dataset(coords={"coord1": ["A", "B"], "coord2": [1, 2]})
+    dataset = dataset.stack(z=["coord1", "coord2"])
+
+    class MultiindexBackend(xr.backends.BackendEntrypoint):
+        def open_dataset(
+            self,
+            filename_or_obj,
+            drop_variables=None,
+            **kwargs,
+        ) -> xr.Dataset:
+            return dataset.copy(deep=True)
+
+    loaded = xr.open_dataset("fake_filename", engine=MultiindexBackend)
+    assert_identical(dataset, loaded)
 
 
 class PassThroughBackendEntrypoint(xr.backends.BackendEntrypoint):
