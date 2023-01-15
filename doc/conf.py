@@ -122,6 +122,8 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 autosummary_generate = True
 autodoc_typehints = "none"
 
+codeautolink_concat_default = True
+
 # Napoleon configurations
 
 napoleon_google_docstring = False
