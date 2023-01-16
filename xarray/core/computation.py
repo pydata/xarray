@@ -938,8 +938,12 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs : bool, optional
-        Whether to copy attributes from the first argument to the output.
+    keep_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or bool, optional
+        - 'drop' or False: empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
+        - 'override' or True: skip comparing and copy attrs from the first object to the result.
     kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
     dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"
