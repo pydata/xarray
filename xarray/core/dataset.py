@@ -8937,6 +8937,8 @@ class Dataset(
         DataArray.groupby
         core.groupby.DatasetGroupBy
         pandas.DataFrame.groupby
+        Dataset.resample
+        DataArray.resample
         """
         from xarray.core.groupby import DatasetGroupBy
 
@@ -9216,6 +9218,8 @@ class Dataset(
         DataArray.resample
         pandas.Series.resample
         pandas.DataFrame.resample
+        Dataset.groupby
+        DataArray.groupby
 
         References
         ----------
