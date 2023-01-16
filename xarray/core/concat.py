@@ -491,17 +491,17 @@ def _dataset_concat(
 
     dim, index = _calc_concat_dim_index(dim)
 
+    # ensure dictionary for fill_value
+    if isinstance(fill_value, dict):
+        fill_value_ = fill_value.copy()
+    else:
+        fill_value_ = defaultdict(lambda: fill_value)
+
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
     datasets = list(
-        align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
+        align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value_)
     )
-
-    # ensure dictionary for fill_value
-    if isinstance(fill_value, dict):
-        fill_value_ = defaultdict(lambda: dtypes.NA, **fill_value)
-    else:
-        fill_value_ = defaultdict(lambda: fill_value)
 
     dim_coords, dims_sizes, coord_names, data_names, data_vars_order = _parse_datasets(
         datasets
