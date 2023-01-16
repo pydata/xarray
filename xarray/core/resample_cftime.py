@@ -71,7 +71,6 @@ class CFTimeGrouper:
         freq: str | BaseCFTimeOffset,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int | None = None,
         loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
         origin: str | CFTimeDatetime = "start_day",
         offset: str | datetime.timedelta | None = None,
@@ -79,10 +78,6 @@ class CFTimeGrouper:
         self.offset: datetime.timedelta | None
         self.closed: SideOptions
         self.label: SideOptions
-
-        if base is not None and offset is not None:
-            raise ValueError("base and offset cannot be provided at the same time")
-
         self.freq = to_offset(freq)
         self.loffset = loffset
         self.origin = origin
@@ -121,9 +116,6 @@ class CFTimeGrouper:
                     self.label = "left"
                 else:
                     self.label = label
-
-        if base is not None and isinstance(self.freq, Tick):
-            offset = type(self.freq)(n=base % self.freq.n).as_timedelta()
 
         if offset is not None:
             try:

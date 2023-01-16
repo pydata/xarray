@@ -16,6 +16,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     create_test_data,
+    has_pandas_version_two,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -1809,6 +1810,7 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_base(self) -> None:
         times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
         array = DataArray(np.arange(10), [("time", times)])

@@ -20,10 +20,16 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.coding import cftime_offsets
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
+from xarray.core.utils import (
+    Frozen,
+    either_dict_or_kwargs,
+    emit_user_level_warning,
+    is_scalar,
+)
 
 try:
     import cftime
@@ -938,8 +944,8 @@ class DataWithCoords(AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
+        from xarray.core.groupby import TimeResampleGrouper
         from xarray.core.resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
@@ -969,36 +975,36 @@ class DataWithCoords(AttrAccessMixin):
         dim_name: Hashable = dim
         dim_coord = self[dim]
 
-        # TODO: remove once pandas=1.1 is the minimum required version
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                r"'(base|loffset)' in .resample\(\) and in Grouper\(\) is deprecated.",
-                category=FutureWarning,
+        if loffset is not None:
+            emit_user_level_warning(
+                "Following pandas, the `loffset` argument to resample will be deprecated in a "
+                "future version of xarray.  Switch to using time offset arithmetic.",
+                FutureWarning,
             )
 
-            if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
-                from xarray.core.resample_cftime import CFTimeGrouper
+        if base is None:
+            emit_user_level_warning(
+                "Following pandas, the `base` argument to resample will be deprecated in a "
+                "future version of xarray.  Switch to using `origin` or `offset` instead.",
+                FutureWarning,
+            )
 
-                grouper = CFTimeGrouper(
-                    freq=freq,
-                    closed=closed,
-                    label=label,
-                    base=base,
-                    loffset=loffset,
-                    origin=origin,
-                    offset=offset,
-                )
-            else:
-                grouper = pd.Grouper(
-                    freq=freq,
-                    closed=closed,
-                    label=label,
-                    base=base,
-                    offset=offset,
-                    origin=origin,
-                    loffset=loffset,
-                )
+        if base is not None and offset is not None:
+            raise ValueError("base and offset cannot be present at the same time")
+
+        if base is not None:
+            index = self._indexes[dim_name].to_pandas_index()
+            offset = _convert_base_to_offset(base, freq, index)
+
+        grouper = TimeResampleGrouper(
+            freq=freq,
+            closed=closed,
+            label=label,
+            origin=origin,
+            offset=offset,
+            loffset=loffset,
+        )
+
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
@@ -1818,3 +1824,22 @@ def _contains_datetime_like_objects(var) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
+
+
+def _convert_base_to_offset(base, freq, index):
+    """Required until we officially deprecate the base argument to resample.  This
+    translates a provided `base` argument to an `offset` argument, following logic
+    from pandas.
+    """
+    from xarray.coding.cftimeindex import CFTimeIndex
+
+    if isinstance(index, pd.DatetimeIndex):
+        freq = pd.tseries.frequencies.to_offset(freq)
+        if isinstance(freq, pd.offsets.Tick):
+            return pd.Timedelta(base * freq.nanos // freq.n)
+    elif isinstance(index, CFTimeIndex):
+        freq = cftime_offsets.to_offset(freq)
+        if isinstance(freq, cftime_offsets.Tick):
+            return base * freq.as_timedelta() // freq.n
+    else:
+        raise ValueError("Can only resample using a DatetimeIndex or CFTimeIndex.")

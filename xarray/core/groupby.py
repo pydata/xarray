@@ -258,7 +258,7 @@ def _unique_and_monotonic(group: T_Group) -> bool:
     return index.is_unique and index.is_monotonic_increasing
 
 
-def _apply_loffset(grouper, result):
+def _apply_loffset(loffset, result):
     """
     (copied from pandas)
     if loffset is set, offset the result index
@@ -271,17 +271,19 @@ def _apply_loffset(grouper, result):
     result : Series or DataFrame
         the result of resample
     """
+    # TODO: include some validation of the type of the loffset
+    # argument.
+    if isinstance(loffset, str):
+        loffset = pd.tseries.frequencies.to_offset(loffset)
 
     needs_offset = (
-        isinstance(grouper.loffset, (pd.DateOffset, datetime.timedelta))
+        isinstance(loffset, (pd.DateOffset, datetime.timedelta))
         and isinstance(result.index, pd.DatetimeIndex)
         and len(result.index) > 0
     )
 
     if needs_offset:
-        result.index = result.index + grouper.loffset
-
-    grouper.loffset = None
+        result.index = result.index + loffset
 
 
 class GroupBy(Generic[T_Xarray]):
@@ -543,14 +545,7 @@ class GroupBy(Generic[T_Xarray]):
         )
 
     def _get_index_and_items(self, index, grouper):
-        from xarray.core.resample_cftime import CFTimeGrouper
-
-        s = pd.Series(np.arange(index.size), index)
-        if isinstance(grouper, CFTimeGrouper):
-            first_items = grouper.first_items(index)
-        else:
-            first_items = s.groupby(grouper).first()
-            _apply_loffset(grouper, first_items)
+        first_items = grouper.first_items(index)
         full_index = first_items.index
         if first_items.isnull().any():
             first_items = first_items.dropna()
@@ -1379,3 +1374,41 @@ class DatasetGroupBy(  # type: ignore[misc]
     ImplementsDatasetReduce,
 ):
     __slots__ = ()
+
+
+class TimeResampleGrouper:
+    def __init__(self, freq, closed, label, origin, offset, loffset):
+        self.freq = freq
+        self.closed = closed
+        self.label = label
+        self.origin = origin
+        self.offset = offset
+        self.loffset = loffset
+
+    def first_items(self, index):
+        from xarray import CFTimeIndex
+        from xarray.core.resample_cftime import CFTimeGrouper
+
+        if isinstance(index, CFTimeIndex):
+            grouper = CFTimeGrouper(
+                freq=self.freq,
+                closed=self.closed,
+                label=self.label,
+                origin=self.origin,
+                offset=self.offset,
+                loffset=self.loffset,
+            )
+            return grouper.first_items(index)
+        else:
+            s = pd.Series(np.arange(index.size), index)
+            grouper = pd.Grouper(
+                freq=self.freq,
+                closed=self.closed,
+                label=self.label,
+                origin=self.origin,
+                offset=self.offset,
+            )
+
+            first_items = s.groupby(grouper).first()
+            _apply_loffset(self.loffset, first_items)
+        return first_items
