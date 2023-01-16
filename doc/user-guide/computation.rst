@@ -236,8 +236,7 @@ windowed rolling, convolution, short-time FFT etc.
 
 .. ipython:: python
 
-    # rolling with 2-point stride
-    rolling_da = r.construct(x="x_win", y="y_win", stride=2)
+    rolling_da = r.construct(x="x_win", y="y_win", stride=2)  # 2-point stride
     rolling_da
     rolling_da.mean(["x_win", "y_win"], skipna=False)
 
@@ -672,10 +671,8 @@ are no conflicting values:
 
 .. ipython:: python
 
-    # only one argument has the 'x' coordinate
-    arr[0] + 1
-    # both arguments have the same 'x' coordinate
-    arr[0] - arr[0]
+    arr[0] + 1  # only one argument has the 'x' coordinate
+    arr[0] - arr[0]  # both arguments have the same 'x' coordinate
 
 Math with datasets
 ==================

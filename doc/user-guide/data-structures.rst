@@ -444,12 +444,11 @@ There is also the :py:meth:`~xarray.Dataset.pipe` method that allows you to use
 a method call with an external function (e.g., ``ds.pipe(func)``) instead of
 simply calling it (e.g., ``func(ds)``). This allows you to write pipelines for
 transforming your data (using "method chaining") instead of writing hard to
-follow nested function calls:
+follow nested function calls. These next two lines are equivalent, but with ``pipe``
+we can make the logic flow entirely from left to right:
 
 .. ipython:: python
 
-    # these lines are equivalent, but with pipe we can make the logic flow
-    # entirely from left to right
     plt.plot((2 * ds.temperature.sel(x=0)).mean("y"))
     (ds.temperature.sel(x=0).pipe(lambda x: 2 * x).mean("y").pipe(plt.plot))
 
