@@ -406,24 +406,17 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     return concat_over, equals, concat_dim_lengths
 
 
-# search for dataset containing all wanted variables
-# if no matching dataset is found return order from first dataset
-# and append missing variables at the end
 def _get_var_order(
-    datasets: list[T_Dataset], data_names: set[Hashable], max_vars_index: int
+    datasets: list[T_Dataset], data_names: set[Hashable]
 ) -> list[Hashable]:
-    # check if first dataset contains all wanted variables
+    # get ordering from first dataset
+    # if first_dataset contains all wanted variables, we are safe
+    # otherwise we append missing variables to the end
     data_var_order = list(datasets[0].variables)
-    if not data_names.issubset(set(data_var_order)):
-        # find dataset with max count variables and check it
-        max_var_order = list(datasets[max_vars_index].variables)
-        if data_names.issubset(set(max_var_order)):
-            data_var_order = max_var_order
-        else:
-            # TODO: since data_names is a set, ordering for the appended variables
-            #  is not deterministic, see also discussion in
-            #  https://github.com/pydata/xarray/pull/3545#pullrequestreview-347543738
-            data_var_order += [e for e in data_names if e not in data_var_order]
+    # TODO: since data_names is a set, ordering for the appended variables
+    #  is not deterministic, see also discussion in
+    #  https://github.com/pydata/xarray/pull/3545#pullrequestreview-347543738
+    data_var_order += [e for e in data_names if e not in data_var_order]
     return data_var_order
 
 
@@ -445,12 +438,9 @@ def _parse_datasets(
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
     data_vars_order: list[Hashable]  # ordered list of variables
 
-    data_vars_count = []
-
     for i, ds in enumerate(datasets):
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
-        data_vars_count.append(len(ds.data_vars))
         data_vars.update(ds.data_vars)
 
         # preserves ordering of dimensions
@@ -462,8 +452,7 @@ def _parse_datasets(
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    max_vars_index = data_vars_count.index(max(data_vars_count))
-    data_vars_order = _get_var_order(datasets, data_vars, max_vars_index)
+    data_vars_order = _get_var_order(datasets, data_vars)
 
     return dim_coords, dims_sizes, all_coord_names, data_vars, data_vars_order
 

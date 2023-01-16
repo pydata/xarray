@@ -662,9 +662,9 @@ def test_order_when_filling_missing() -> None:
     result_keys_rev = [
         "temperature",
         "pressure",
-        "humidity",
         "precipitation",
         "cloud cover",
+        "humidity",
     ]
     # test order when concat in reversed order
     rev_result = concat(datasets[::-1], dim="day")
