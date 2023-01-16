@@ -71,7 +71,7 @@ def reindex_variables(
 
     for name, var in variables.items():
         if isinstance(fill_value, dict):
-            fill_value_ = fill_value[name]
+            fill_value_ = fill_value.get(name, dtypes.NA)
         else:
             fill_value_ = fill_value
 

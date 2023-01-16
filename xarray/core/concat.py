@@ -500,7 +500,7 @@ def _dataset_concat(
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
     datasets = list(
-        align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value_)
+        align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
     dim_coords, dims_sizes, coord_names, data_names, data_vars_order = _parse_datasets(
