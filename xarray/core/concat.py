@@ -598,7 +598,7 @@ def _dataset_concat(
             variable_index = []
             for i, ds in enumerate(datasets):
                 if name in ds.variables:
-                    variables.append(ds.variables[name])
+                    variables.append(ds[name].variable)
                     # add to variable index, needed for reindexing
                     variable_index.extend(
                         [
@@ -638,29 +638,17 @@ def _dataset_concat(
                     )
                     result_vars[k] = v
             else:
-                # do not concat if:
-                # 1. variable is only present in one dataset of multiple datasets and
-                # 2. dim is not a dimension of variable
-                if (
-                    dim not in variables[0].dims
-                    and len(variables) == 1
-                    and len(datasets) > 1
-                ):
-                    combined_var = variables[0]
-                # only concat if variable is in multiple datasets
-                # or if single dataset (GH1988)
-                else:
-                    combined_var = concat_vars(
-                        vars, dim, positions, combine_attrs=combine_attrs
+                combined_var = concat_vars(
+                    vars, dim, positions, combine_attrs=combine_attrs
+                )
+                # reindex if variable is not present in all datasets
+                if len(variable_index) < len(concat_index):
+                    combined_var = (
+                        DataArray(data=combined_var, name=name)
+                        .assign_coords({dim: variable_index})
+                        .reindex({dim: concat_index}, fill_value=fill_value_[name])
+                        .variable
                     )
-                    # reindex if variable is not present in all datasets
-                    if len(variable_index) < len(concat_index):
-                        combined_var = (
-                            DataArray(data=combined_var, name=name)
-                            .assign_coords({dim: variable_index})
-                            .reindex({dim: concat_index}, fill_value=fill_value_[name])
-                            .variable
-                        )
                 result_vars[name] = combined_var
 
         elif name in result_vars:

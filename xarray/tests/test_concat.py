@@ -785,7 +785,7 @@ class TestConcatDataset:
         split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
         data0, data1 = deepcopy(split_data)
         data1["foo"] = ("bar", np.random.randn(10))
-        actual = concat([data0, data1], "dim1")
+        actual = concat([data0, data1], "dim1", data_vars="minimal")
         expected = data.copy().assign(foo=data1.foo)
         assert_identical(expected, actual)
 
