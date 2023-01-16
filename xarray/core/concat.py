@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Hashable, Iterable, cast, overload
 
 import pandas as pd
@@ -496,6 +497,12 @@ def _dataset_concat(
         align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
+    # ensure dictionary for fill_value
+    if isinstance(fill_value, dict):
+        fill_value_ = defaultdict(lambda: dtypes.NA, **fill_value)
+    else:
+        fill_value_ = defaultdict(lambda: fill_value)
+
     dim_coords, dims_sizes, coord_names, data_names, data_vars_order = _parse_datasets(
         datasets
     )
@@ -648,14 +655,10 @@ def _dataset_concat(
                     )
                     # reindex if variable is not present in all datasets
                     if len(variable_index) < len(concat_index):
-                        try:
-                            fill = fill_value[name]
-                        except (TypeError, KeyError):
-                            fill = fill_value
                         combined_var = (
                             DataArray(data=combined_var, name=name)
                             .assign_coords({dim: variable_index})
-                            .reindex({dim: concat_index}, fill_value=fill)
+                            .reindex({dim: concat_index}, fill_value=fill_value_[name])
                             .variable
                         )
                 result_vars[name] = combined_var
