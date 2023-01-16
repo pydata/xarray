@@ -69,6 +69,7 @@ from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
+    merge_attrs,
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
