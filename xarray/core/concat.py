@@ -407,20 +407,6 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
     return concat_over, equals, concat_dim_lengths
 
 
-def _get_var_order(
-    datasets: list[T_Dataset], data_names: set[Hashable]
-) -> list[Hashable]:
-    # get ordering from first dataset
-    # if first_dataset contains all wanted variables, we are safe
-    # otherwise we append missing variables to the end
-    data_var_order = list(datasets[0].variables)
-    # TODO: since data_names is a set, ordering for the appended variables
-    #  is not deterministic, see also discussion in
-    #  https://github.com/pydata/xarray/pull/3545#pullrequestreview-347543738
-    data_var_order += [e for e in data_names if e not in data_var_order]
-    return data_var_order
-
-
 # determine dimensional coordinate names and a dict mapping name to DataArray
 def _parse_datasets(
     datasets: list[T_Dataset],
@@ -431,18 +417,18 @@ def _parse_datasets(
     set[Hashable],
     list[Hashable],
 ]:
-
     dims: set[Hashable] = set()
     all_coord_names: set[Hashable] = set()
     data_vars: set[Hashable] = set()  # list of data_vars
     dim_coords: dict[Hashable, Variable] = {}  # maps dim name to variable
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
-    data_vars_order: list[Hashable]  # ordered list of variables
+    variables_order: dict[Hashable, Variable] = {}  # variables in order of appearance
 
     for i, ds in enumerate(datasets):
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
+        variables_order.update(ds.variables)
 
         # preserves ordering of dimensions
         for dim in ds.dims:
@@ -453,9 +439,7 @@ def _parse_datasets(
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    data_vars_order = _get_var_order(datasets, data_vars)
-
-    return dim_coords, dims_sizes, all_coord_names, data_vars, data_vars_order
+    return dim_coords, dims_sizes, all_coord_names, data_vars, list(variables_order)
 
 
 def _dataset_concat(

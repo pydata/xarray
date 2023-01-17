@@ -145,9 +145,7 @@ def test_concat_compat() -> None:
 
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var].dims and "y" not in result[var].coords
-    with pytest.raises(
-        ValueError, match=r"coordinates in some datasets but not others"
-    ):
+    with pytest.raises(ValueError, match=r"'q' not present in all datasets"):
         concat([ds1, ds2], dim="q")
     with pytest.raises(ValueError, match=r"'q' not present in all datasets"):
         concat([ds2, ds1], dim="q")
