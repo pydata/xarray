@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Hashable, Iterable, cast, overload
 
 import pandas as pd
 
 from xarray.core import dtypes, utils
-from xarray.core.alignment import align
+from xarray.core.alignment import align, reindex_variables
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.merge import (
@@ -475,12 +474,6 @@ def _dataset_concat(
 
     dim, index = _calc_concat_dim_index(dim)
 
-    # ensure dictionary for fill_value
-    if isinstance(fill_value, dict):
-        fill_value_ = fill_value.copy()
-    else:
-        fill_value_ = defaultdict(lambda: fill_value)
-
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
     datasets = list(
@@ -627,12 +620,13 @@ def _dataset_concat(
                 )
                 # reindex if variable is not present in all datasets
                 if len(variable_index) < len(concat_index):
-                    combined_var = (
-                        DataArray(data=combined_var, name=name)
-                        .assign_coords({dim: variable_index})
-                        .reindex({dim: concat_index}, fill_value=fill_value_[name])
-                        .variable
-                    )
+                    combined_var = reindex_variables(
+                        variables={name: combined_var},
+                        dim_pos_indexers={
+                            dim: pd.Index(variable_index).get_indexer(concat_index)
+                        },
+                        fill_value=fill_value,
+                    )[name]
                 result_vars[name] = combined_var
 
         elif name in result_vars:
