@@ -424,7 +424,7 @@ def _parse_datasets(
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
     variables_order: dict[Hashable, Variable] = {}  # variables in order of appearance
 
-    for i, ds in enumerate(datasets):
+    for ds in datasets:
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
