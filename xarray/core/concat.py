@@ -480,7 +480,7 @@ def _dataset_concat(
         align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
-    dim_coords, dims_sizes, coord_names, data_names, data_vars_order = _parse_datasets(
+    dim_coords, dims_sizes, coord_names, data_names, vars_order = _parse_datasets(
         datasets
     )
     dim_names = set(dim_coords)
@@ -569,7 +569,7 @@ def _dataset_concat(
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
-    for name in data_vars_order:
+    for name in vars_order:
         if name in concat_over and name not in result_indexes:
             variables = []
             variable_index = []
@@ -589,7 +589,7 @@ def _dataset_concat(
                         raise ValueError(
                             f"coordinate {name!r} not present in all datasets."
                         )
-            vars = list(ensure_common_dims(variables))
+            vars = ensure_common_dims(variables)
 
             # Try to concatenate the indexes, concatenate the variables when no index
             # is found on all datasets.
