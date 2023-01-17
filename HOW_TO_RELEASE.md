@@ -91,11 +91,11 @@ upstream        https://github.com/pydata/xarray (push)
       git push upstream main
       ```
     You're done pushing to main!
-    
+
 13. Update the version available on pyodide:
     - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
     - Clone the [pyodide repository](https://github.com/pyodide/pyodide).
-    - Edit `packages/xarray/meta.yaml` to update the 
+    - Edit `packages/xarray/meta.yaml` to update the
         - link to the wheel (under "Built Distribution" on the PyPI page)
         - SHA256 hash (Click "Show Hashes" next to the link to the wheel)
     - Open a pull request to pyodide
