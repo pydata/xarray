@@ -28,9 +28,7 @@ from xarray.core.indexing import (
 from xarray.core.pycompat import array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.tests import requires_bottleneck
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -38,6 +36,7 @@ from . import (
     assert_no_warnings,
     has_pandas_version_two,
     raise_if_dask_computes,
+    requires_bottleneck,
     requires_cupy,
     requires_dask,
     requires_pandas_version_two,
@@ -911,6 +910,33 @@ class VariableSubclassobjects:
         )
         assert_array_equal(actual, expected)
 
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected):
+        data = np.arange(10, dtype=float)
+        v = self.cls(["x"], data, attrs)
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = v.pad({"x": (1, 1)}, mode="constant", constant_values=np.nan)
+
+            assert actual.attrs == expected
+
+        actual = v.pad(
+            {"x": (1, 1)},
+            mode="constant",
+            constant_values=np.nan,
+            keep_attrs=keep_attrs,
+        )
+        assert actual.attrs == expected
+
     @pytest.mark.parametrize("d, w", (("x", 3), ("y", 5)))
     def test_rolling_window(self, d, w):
         # Just a working test. See test_nputils for the algorithm validation
@@ -1769,9 +1795,9 @@ class TestVariable(VariableSubclassobjects):
         actual = v.quantile(q, dim="y", method=method)
 
         if Version(np.__version__) >= Version("1.22"):
-            expected = np.nanquantile(self.d, q, axis=1, method=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.d, q, axis=1, method=method)
         else:
-            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)  # type: ignore[call-arg]
+            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)
 
         if use_dask:
             assert isinstance(actual.data, dask_array_type)

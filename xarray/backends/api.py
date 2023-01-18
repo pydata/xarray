@@ -25,20 +25,20 @@ from typing import (
 
 import numpy as np
 
-from .. import backends, conventions
-from ..core import indexing
-from ..core.combine import (
+from xarray import backends, conventions
+from xarray.backends import plugins
+from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
+from xarray.backends.locks import _get_scheduler
+from xarray.core import indexing
+from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
 )
-from ..core.dataarray import DataArray
-from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.indexes import Index
-from ..core.utils import is_remote_uri
-from . import plugins
-from .common import AbstractDataStore, ArrayWriter, _normalize_path
-from .locks import _get_scheduler
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.indexes import Index
+from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
     try:
@@ -47,13 +47,13 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from io import BufferedIOBase
 
-    from ..core.types import (
+    from xarray.backends.common import BackendEntrypoint
+    from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
         JoinOptions,
         NestedSequence,
     )
-    from .common import BackendEntrypoint
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -414,7 +414,8 @@ def open_dataset(
         arrays. ``chunks=-1`` loads the dataset with dask using a single
         chunk for all arrays. ``chunks={}`` loads the dataset with dask using
         engine preferred chunks if exposed by the backend, otherwise with
-        a single chunk for all arrays.
+        a single chunk for all arrays. In order to reproduce the default behavior
+        of ``xr.open_zarr(...)`` use ``xr.open_dataset(..., engine='zarr', chunks={})``.
         ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
         engine preferred chunks. See dask chunking for more details.
     cache : bool, optional

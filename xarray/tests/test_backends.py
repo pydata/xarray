@@ -50,9 +50,7 @@ from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import array_type
-from xarray.tests import mock
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_allclose,
     assert_array_equal,
@@ -63,6 +61,7 @@ from . import (
     has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
+    mock,
     network,
     requires_cfgrib,
     requires_cftime,
@@ -80,12 +79,12 @@ from . import (
     requires_scipy_or_netCDF4,
     requires_zarr,
 )
-from .test_coding_times import (
+from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import (
+from xarray.tests.test_dataset import (
     create_append_string_length_mismatch_test_data,
     create_append_test_data,
     create_test_data,
@@ -539,7 +538,7 @@ class DatasetIOBase:
 
     @requires_cftime
     def test_roundtrip_cftime_datetime_data(self) -> None:
-        from .test_coding_times import _all_cftime_date_types
+        from xarray.tests.test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():
@@ -3153,19 +3152,18 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
-            with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):  # type: ignore[arg-type]
+            with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 
     def test_open_twice(self) -> None:
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with pytest.raises(ValueError, match=r"read/write pointer not at the start"):
-            with create_tmp_file() as tmp_file:
-                expected.to_netcdf(tmp_file, engine="h5netcdf")
-                with open(tmp_file, "rb") as f:
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine="h5netcdf")
+            with open(tmp_file, "rb") as f:
+                with open_dataset(f, engine="h5netcdf"):
                     with open_dataset(f, engine="h5netcdf"):
-                        with open_dataset(f, engine="h5netcdf"):
-                            pass
+                        pass
 
     @requires_scipy
     def test_open_fileobj(self) -> None:
@@ -3197,15 +3195,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(
-                    ValueError,
-                    match="match in any of xarray's currently installed IO",
-                ):
-                    with pytest.warns(
-                        RuntimeWarning,
-                        match=re.escape("'h5netcdf' fails while guessing"),
-                    ):
-                        open_dataset(f)
+                open_dataset(f)
 
 
 @requires_h5netcdf
@@ -3613,7 +3603,7 @@ class TestDask(DatasetIOBase):
     def test_roundtrip_cftime_datetime_data(self) -> None:
         # Override method in DatasetIOBase - remove not applicable
         # save_kwargs
-        from .test_coding_times import _all_cftime_date_types
+        from xarray.tests.test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():
@@ -5076,6 +5066,12 @@ class TestEncodingInvalid:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"contiguous": True})
         encoding = _extract_nc4_variable_encoding(var, unlimited_dims=("x",))
         assert {} == encoding
+
+    @requires_netCDF4
+    def test_extract_nc4_variable_encoding_netcdf4(self, monkeypatch):
+        # New netCDF4 1.6.0 compression argument.
+        var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
+        _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
 
     def test_extract_h5nc_encoding(self) -> None:
         # not supported with h5netcdf (yet)

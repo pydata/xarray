@@ -24,20 +24,19 @@ from numpy.typing import ArrayLike
 from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
-
-from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
-from .arithmetic import VariableArithmetic
-from .common import AbstractArray
-from .indexing import (
+from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from xarray.core.arithmetic import VariableArithmetic
+from xarray.core.common import AbstractArray
+from xarray.core.indexing import (
     BasicIndexer,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
     as_indexable,
 )
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import array_type, integer_types, is_duck_dask_array
-from .utils import (
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import array_type, integer_types, is_duck_dask_array
+from xarray.core.utils import (
     Frozen,
     NdimSizeLenMixin,
     OrderedSet,
@@ -59,7 +58,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import (
+    from xarray.core.types import (
         Dims,
         ErrorOptionsWithWarn,
         PadModeOptions,
@@ -112,7 +111,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
         The newly created variable.
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # TODO: consider extending this method to automatically handle Iris and
     if isinstance(obj, DataArray):
@@ -248,11 +247,11 @@ def as_compatible_data(data, fastpath=False):
 
     Finally, wrap it up with an adapter if necessary.
     """
-    from .dataarray import DataArray
-
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
+
+    from xarray.core.dataarray import DataArray
 
     if isinstance(data, (Variable, DataArray)):
         return data.data
@@ -403,8 +402,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
-        if hasattr(self.data, "nbytes"):
-            return self.data.nbytes
+        if hasattr(self._data, "nbytes"):
+            return self._data.nbytes
         else:
             return self.size * self.dtype.itemsize
 
@@ -507,7 +506,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dask.array.Array.astype
         sparse.COO.astype
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -1437,6 +1436,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
+        keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ):
         """
@@ -1464,6 +1464,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **pad_width_kwargs
             One of pad_width or pad_width_kwargs must be provided.
 
@@ -1513,14 +1517,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if reflect_type is not None:
             pad_option_kwargs["reflect_type"] = reflect_type
 
-        array = np.pad(  # type: ignore[call-overload]
+        array = np.pad(
             self.data.astype(dtype, copy=False),
             pad_width_by_index,
             mode=mode,
             **pad_option_kwargs,
         )
 
-        return type(self)(self.dims, array)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        attrs = self._attrs if keep_attrs else None
+
+        return type(self)(self.dims, array, attrs=attrs)
 
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
@@ -1886,14 +1894,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         numpy.clip : equivalent function
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -2033,7 +2041,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        from .merge import merge_attrs
+        from xarray.core.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -2201,7 +2209,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
 
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if interpolation is not None:
             warnings.warn(
@@ -2548,7 +2556,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         <xarray.Variable (x: 3)>
         array([False,  True, False])
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2582,7 +2590,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         <xarray.Variable (x: 3)>
         array([ True, False,  True])
         """
-        from .computation import apply_ufunc
+        from xarray.core.computation import apply_ufunc
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2667,7 +2675,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Dims | ellipsis,
+        dim: Dims,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2736,7 +2744,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -2781,7 +2789,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -2908,7 +2916,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        from .merge import merge_attrs
+        from xarray.core.merge import merge_attrs
 
         if not isinstance(dim, str):
             (dim,) = dim.dims
@@ -3003,7 +3011,7 @@ class IndexVariable(Variable):
 
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
-        return self.copy()
+        return self.copy(deep=False)
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 

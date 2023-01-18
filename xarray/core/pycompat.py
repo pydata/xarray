@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, Tuple, Type
 import numpy as np
 from packaging.version import Version
 
-from .utils import is_duck_array, module_available
+from xarray.core.utils import is_duck_array, module_available
 
 integer_types = (int, np.integer)
 
