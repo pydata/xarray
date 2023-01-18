@@ -19,7 +19,6 @@ from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
-    ExplicitlyIndexedBackendArray,
     WritableCFDataStore,
     _normalize_path,
     find_root_and_group,
@@ -42,8 +41,8 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        return ExplicitlyIndexedBackendArray(
-            self, key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
         )
 
     def _getitem(self, key):

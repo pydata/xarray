@@ -236,6 +236,4 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
         if key.tuple[-1] != slice(None):
             raise IndexError("too many indices")
-
-        dtype = "S" + str(self.array.shape[-1])
-        return lazy_elemwise_func(self.array[key], _numpy_char_to_bytes, dtype)
+        return _numpy_char_to_bytes(self.array[key])

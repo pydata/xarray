@@ -13,7 +13,6 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
-    ExplicitlyIndexedBackendArray,
     _normalize_path,
 )
 from .locks import SerializableLock, ensure_lock
@@ -33,8 +32,8 @@ class CfGribArrayWrapper(BackendArray):
         self.array = array
 
     def __getitem__(self, key):
-        return ExplicitlyIndexedBackendArray(
-            self, key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
         )
 
     def _getitem(self, key):

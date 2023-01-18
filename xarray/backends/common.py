@@ -88,25 +88,6 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         return self[key]
 
 
-class ExplicitlyIndexedBackendArray(BackendArray):
-    def __init__(
-        self, backend_array, key, shape, indexing_support, raw_indexing_method
-    ):
-        self.backend_array = backend_array
-        self.key = key
-        self.shape = shape
-        self.indexing_support = indexing_support
-        self.raw_indexing_method = raw_indexing_method
-
-    def get_duck_array(self):
-        return indexing.explicit_indexing_adapter(
-            self.key, self.shape, self.indexing_support, self.raw_indexing_method
-        )
-
-    def repr(self):
-        return f"ExplicitlyIndexedBackendArray({type(self.backend_array)})"
-
-
 class AbstractDataStore:
     __slots__ = ()
 
