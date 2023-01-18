@@ -528,8 +528,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         array = as_indexable(self.array)
         array = array[self.key]
-        if not isinstance(self.array, IndexingAdapter):
-            array = array.get_duck_array()
+        array = array.get_duck_array()
         return array
 
     def transpose(self, order):
@@ -1239,11 +1238,7 @@ def is_fancy_indexer(indexer: Any) -> bool:
     return True
 
 
-class IndexingAdapter:
-    pass
-
-
-class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
+class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a NumPy array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1309,7 +1304,7 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
         self.array = array
 
 
-class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
+class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array API array to use explicit indexing."""
 
     __slots__ = ("array",)
@@ -1352,7 +1347,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
         return xp.permute_dims(self.array, order)
 
 
-class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
+class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
 
     __slots__ = ("array",)
@@ -1428,7 +1423,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
         return self.array.transpose(order)
 
 
-class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin, IndexingAdapter):
+class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
