@@ -536,7 +536,7 @@ def _dataset_concat(
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
-    def ensure_common_dims(vars):
+    def ensure_common_dims(vars, concat_dim_lengths):
         # ensure each variable with the given name shares the same
         # dimensions and the same shape for all of them except along the
         # concat dimension
@@ -573,23 +573,24 @@ def _dataset_concat(
         if name in concat_over and name not in result_indexes:
             variables = []
             variable_index = []
+            var_concat_dim_length = []
             for i, ds in enumerate(datasets):
                 if name in ds.variables:
                     variables.append(ds[name].variable)
                     # add to variable index, needed for reindexing
-                    variable_index.extend(
-                        [
-                            sum(concat_dim_lengths[:i]) + k
-                            for k in range(concat_dim_lengths[i])
-                        ]
-                    )
+                    var_idx = [
+                        sum(concat_dim_lengths[:i]) + k
+                        for k in range(concat_dim_lengths[i])
+                    ]
+                    variable_index.extend(var_idx)
+                    var_concat_dim_length.append(len(var_idx))
                 else:
                     # raise if coordinate not in all datasets
                     if name in coord_names:
                         raise ValueError(
                             f"coordinate {name!r} not present in all datasets."
                         )
-            vars = ensure_common_dims(variables)
+            vars = ensure_common_dims(variables, var_concat_dim_length)
 
             # Try to concatenate the indexes, concatenate the variables when no index
             # is found on all datasets.

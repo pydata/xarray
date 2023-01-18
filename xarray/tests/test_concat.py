@@ -31,32 +31,17 @@ def create_concat_datasets(
     lat = rng.standard_normal(size=(1, 4))
     lon = rng.standard_normal(size=(1, 4))
     result = []
+    variables = ["temperature", "pressure", "humidity", "precipitation", "cloud_cover"]
     for i in range(num_datasets):
         if include_day:
+            data_tuple = (
+                ["x", "y", "day"],
+                rng.standard_normal(size=(1, 4, 2)),
+            )
+            data_vars = {v: data_tuple for v in variables}
             result.append(
                 Dataset(
-                    data_vars={
-                        "temperature": (
-                            ["x", "y", "day"],
-                            rng.standard_normal(size=(1, 4, 2)),
-                        ),
-                        "pressure": (
-                            ["x", "y", "day"],
-                            rng.standard_normal(size=(1, 4, 2)),
-                        ),
-                        "humidity": (
-                            ["x", "y", "day"],
-                            rng.standard_normal(size=(1, 4, 2)),
-                        ),
-                        "precipitation": (
-                            ["x", "y", "day"],
-                            rng.standard_normal(size=(1, 4, 2)),
-                        ),
-                        "cloud cover": (
-                            ["x", "y", "day"],
-                            rng.standard_normal(size=(1, 4, 2)),
-                        ),
-                    },
+                    data_vars=data_vars,
                     coords={
                         "lat": (["x", "y"], lat),
                         "lon": (["x", "y"], lon),
@@ -65,15 +50,14 @@ def create_concat_datasets(
                 )
             )
         else:
+            data_tuple = (
+                ["x", "y"],
+                rng.standard_normal(size=(1, 4)),
+            )
+            data_vars = {v: data_tuple for v in variables}
             result.append(
                 Dataset(
-                    data_vars={
-                        "temperature": (["x", "y"], rng.standard_normal(size=(1, 4))),
-                        "pressure": (["x", "y"], rng.standard_normal(size=(1, 4))),
-                        "humidity": (["x", "y"], rng.standard_normal(size=(1, 4))),
-                        "precipitation": (["x", "y"], rng.standard_normal(size=(1, 4))),
-                        "cloud cover": (["x", "y"], rng.standard_normal(size=(1, 4))),
-                    },
+                    data_vars=data_vars,
                     coords={"lat": (["x", "y"], lat), "lon": (["x", "y"], lon)},
                 )
             )
@@ -153,163 +137,82 @@ def test_concat_compat() -> None:
 
 def test_concat_missing_var() -> None:
     datasets = create_concat_datasets(2, 123)
-    vars_to_drop = ["humidity", "precipitation", "cloud cover"]
+    expected = concat(datasets, dim="day")
+    vars_to_drop = ["humidity", "precipitation", "cloud_cover"]
+
+    expected = expected.drop_vars(vars_to_drop)
+    expected["pressure"][..., 2:] = np.nan
+
     datasets[0] = datasets[0].drop_vars(vars_to_drop)
     datasets[1] = datasets[1].drop_vars(vars_to_drop + ["pressure"])
+    actual = concat(datasets, dim="day")
 
-    temperature_result = np.concatenate(
-        (datasets[0].temperature.values, datasets[1].temperature.values), axis=2
-    )
-    pressure_result = np.concatenate(
-        (datasets[0].pressure.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    ds_result = Dataset(
-        data_vars={
-            "temperature": (["x", "y", "day"], temperature_result),
-            "pressure": (["x", "y", "day"], pressure_result),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day1", "day2", "day3", "day4"],
-        },
-    )
-    result = concat(datasets, dim="day")
-
-    r1 = list(result.data_vars.keys())
-    r2 = list(ds_result.data_vars.keys())
-    assert r1 == r2  # check the variables orders are the same
-
-    assert_equal(result, ds_result)
+    assert list(actual.data_vars.keys()) == ["temperature", "pressure"]
+    assert_identical(actual, expected)
 
 
 def test_concat_missing_multiple_consecutive_var() -> None:
     datasets = create_concat_datasets(3, 123)
-    vars_to_drop = ["pressure", "humidity"]
+    expected = concat(datasets, dim="day")
+    vars_to_drop = ["humidity", "pressure"]
+
+    expected["pressure"][..., :4] = np.nan
+    expected["humidity"][..., :4] = np.nan
+
     datasets[0] = datasets[0].drop_vars(vars_to_drop)
     datasets[1] = datasets[1].drop_vars(vars_to_drop)
+    actual = concat(datasets, dim="day")
 
-    temperature_result = np.concatenate(
-        (
-            datasets[0].temperature.values,
-            datasets[1].temperature.values,
-            datasets[2].temperature.values,
-        ),
-        axis=2,
-    )
-    pressure_result = np.concatenate(
-        (
-            np.full([1, 4, 2], np.nan),
-            np.full([1, 4, 2], np.nan),
-            datasets[2].pressure.values,
-        ),
-        axis=2,
-    )
-    humidity_result = np.concatenate(
-        (
-            np.full([1, 4, 2], np.nan),
-            np.full([1, 4, 2], np.nan),
-            datasets[2].humidity.values,
-        ),
-        axis=2,
-    )
-    precipitation_result = np.concatenate(
-        (
-            datasets[0].precipitation.values,
-            datasets[1].precipitation.values,
-            datasets[2].precipitation.values,
-        ),
-        axis=2,
-    )
-    cloudcover_result = np.concatenate(
-        (
-            datasets[0]["cloud cover"].values,
-            datasets[1]["cloud cover"].values,
-            datasets[2]["cloud cover"].values,
-        ),
-        axis=2,
-    )
-
-    ds_result = Dataset(
-        data_vars={
-            "temperature": (["x", "y", "day"], temperature_result),
-            "precipitation": (["x", "y", "day"], precipitation_result),
-            "cloud cover": (["x", "y", "day"], cloudcover_result),
-            "humidity": (["x", "y", "day"], humidity_result),
-            "pressure": (["x", "y", "day"], pressure_result),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day1", "day2", "day3", "day4", "day5", "day6"],
-        },
-    )
-    result = concat(datasets, dim="day")
-    r1 = [var for var in result.data_vars]
-    r2 = [var for var in ds_result.data_vars]
-    r1 == r2
-    assert_equal(result, ds_result)
+    assert list(actual.data_vars.keys()) == [
+        "temperature",
+        "precipitation",
+        "cloud_cover",
+        "pressure",
+        "humidity",
+    ]
+    assert_identical(actual, expected)
 
 
 def test_concat_all_empty() -> None:
     ds1 = Dataset()
     ds2 = Dataset()
-    result = concat([ds1, ds2], dim="new_dim")
+    expected = Dataset()
+    actual = concat([ds1, ds2], dim="new_dim")
 
-    assert_equal(result, Dataset())
+    assert_identical(actual, expected)
 
 
 def test_concat_second_empty() -> None:
     ds1 = Dataset(data_vars={"a": ("y", [0.1])}, coords={"x": 0.1})
     ds2 = Dataset(coords={"x": 0.1})
 
-    ds_result = Dataset(data_vars={"a": ("y", [0.1, np.nan])}, coords={"x": 0.1})
-    result = concat([ds1, ds2], dim="y")
+    expected = Dataset(data_vars={"a": ("y", [0.1, np.nan])}, coords={"x": 0.1})
+    actual = concat([ds1, ds2], dim="y")
 
-    assert_equal(result, ds_result)
+    assert_identical(actual, expected)
 
 
 def test_multiple_missing_variables() -> None:
     datasets = create_concat_datasets(2, 123)
-    vars_to_drop = ["pressure", "cloud cover"]
+    expected = concat(datasets, dim="day")
+    vars_to_drop = ["pressure", "cloud_cover"]
+
+    expected["pressure"][..., 2:] = np.nan
+    expected["cloud_cover"][..., 2:] = np.nan
+
     datasets[1] = datasets[1].drop_vars(vars_to_drop)
+    actual = concat(datasets, dim="day")
 
-    temperature_result = np.concatenate(
-        (datasets[0].temperature.values, datasets[1].temperature.values), axis=2
-    )
-    pressure_result = np.concatenate(
-        (datasets[0].pressure.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    humidity_result = np.concatenate(
-        (datasets[0].humidity.values, datasets[1].humidity.values), axis=2
-    )
-    precipitation_result = np.concatenate(
-        (datasets[0].precipitation.values, datasets[1].precipitation.values), axis=2
-    )
-    cloudcover_result = np.concatenate(
-        (datasets[0]["cloud cover"].values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    ds_result = Dataset(
-        data_vars={
-            "temperature": (["x", "y", "day"], temperature_result),
-            "pressure": (["x", "y", "day"], pressure_result),
-            "humidity": (["x", "y", "day"], humidity_result),
-            "precipitation": (["x", "y", "day"], precipitation_result),
-            "cloud cover": (["x", "y", "day"], cloudcover_result),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day1", "day2", "day3", "day4"],
-        },
-    )
-    result = concat(datasets, dim="day")
+    # check the variables orders are the same
+    assert list(actual.data_vars.keys()) == [
+        "temperature",
+        "pressure",
+        "humidity",
+        "precipitation",
+        "cloud_cover",
+    ]
 
-    r1 = list(result.data_vars.keys())
-    r2 = list(ds_result.data_vars.keys())
-    assert r1 == r2  # check the variables orders are the same
-
-    assert_equal(result, ds_result)
+    assert_identical(actual, expected)
 
 
 @pytest.mark.parametrize("include_day", [True, False])
@@ -319,80 +222,31 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim(include_day: bool) ->
         "pressure",
         "humidity",
         "precipitation",
-        "cloud cover",
+        "cloud_cover",
     ]
 
     datasets = create_concat_datasets(len(vars_to_drop), 123, include_day=include_day)
+    expected = concat(datasets, dim="day")
+
+    for i, name in enumerate(vars_to_drop):
+        if include_day:
+            expected[name][..., i * 2 : (i + 1) * 2] = np.nan
+        else:
+            expected[name][i : i + 1, ...] = np.nan
+
     # set up the test data
     datasets = [datasets[i].drop_vars(vars_to_drop[i]) for i in range(len(datasets))]
 
-    dim_size = 2 if include_day else 1
+    actual = concat(datasets, dim="day")
 
-    # set up the validation data
-    # the below code just drops one var per dataset depending on the location of the
-    # dataset in the list and allows us to quickly catch any boundaries cases across
-    # the three equivalence classes of beginning, middle and end of the concat list
-    result_vars = dict.fromkeys(vars_to_drop, np.array([]))
-    for i in range(len(vars_to_drop)):
-        for d in range(len(datasets)):
-            if d != i:
-                if include_day:
-                    ds_vals = datasets[d][vars_to_drop[i]].values
-                else:
-                    ds_vals = datasets[d][vars_to_drop[i]].values[..., None]
-                if not result_vars[vars_to_drop[i]].size:
-                    result_vars[vars_to_drop[i]] = ds_vals
-                else:
-                    result_vars[vars_to_drop[i]] = np.concatenate(
-                        (
-                            result_vars[vars_to_drop[i]],
-                            ds_vals,
-                        ),
-                        axis=-1,
-                    )
-            else:
-                if not result_vars[vars_to_drop[i]].size:
-                    result_vars[vars_to_drop[i]] = np.full([1, 4, dim_size], np.nan)
-                else:
-                    result_vars[vars_to_drop[i]] = np.concatenate(
-                        (
-                            result_vars[vars_to_drop[i]],
-                            np.full([1, 4, dim_size], np.nan),
-                        ),
-                        axis=-1,
-                    )
-
-    ds_result = Dataset(
-        data_vars={
-            # pressure will be first here since it is first in first dataset and
-            # there isn't a good way to determine that temperature should be first
-            # this also means temperature will be last as the first data vars will
-            # determine the order for all that exist in that dataset
-            "pressure": (["x", "y", "day"], result_vars["pressure"]),
-            "humidity": (["x", "y", "day"], result_vars["humidity"]),
-            "precipitation": (["x", "y", "day"], result_vars["precipitation"]),
-            "cloud cover": (["x", "y", "day"], result_vars["cloud cover"]),
-            "temperature": (["x", "y", "day"], result_vars["temperature"]),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-        },
-    )
-    if include_day:
-        ds_result = ds_result.assign_coords(
-            {"day": ["day" + str(d + 1) for d in range(2 * len(vars_to_drop))]}
-        )
-    else:
-        ds_result = ds_result.transpose("day", "x", "y")
-
-    result = concat(datasets, dim="day")
-
-    r1 = list(result.data_vars.keys())
-    r2 = list(ds_result.data_vars.keys())
-    assert r1 == r2  # check the variables orders are the same
-
-    assert_equal(result, ds_result)
+    assert list(actual.data_vars.keys()) == [
+        "pressure",
+        "humidity",
+        "precipitation",
+        "cloud_cover",
+        "temperature",
+    ]
+    assert_identical(actual, expected)
 
 
 def test_multiple_datasets_with_missing_variables() -> None:
@@ -401,206 +255,83 @@ def test_multiple_datasets_with_missing_variables() -> None:
         "pressure",
         "humidity",
         "precipitation",
-        "cloud cover",
+        "cloud_cover",
     ]
     datasets = create_concat_datasets(len(vars_to_drop), 123)
+
+    expected = concat(datasets, dim="day")
+    for i, name in enumerate(vars_to_drop):
+        expected[name][..., i * 2 : (i + 1) * 2] = np.nan
+
     # set up the test data
     datasets = [datasets[i].drop_vars(vars_to_drop[i]) for i in range(len(datasets))]
+    actual = concat(datasets, dim="day")
 
-    # set up the validation data
-    # the below code just drops one var per dataset depending on the location of the
-    # dataset in the list and allows us to quickly catch any boundaries cases across
-    # the three equivalence classes of beginning, middle and end of the concat list
-    result_vars = dict.fromkeys(vars_to_drop, np.array([]))
-    for i in range(len(vars_to_drop)):
-        for d in range(len(datasets)):
-            if d != i:
-                if not result_vars[vars_to_drop[i]].size:
-                    result_vars[vars_to_drop[i]] = datasets[d][vars_to_drop[i]].values
-                else:
-                    result_vars[vars_to_drop[i]] = np.concatenate(
-                        (
-                            result_vars[vars_to_drop[i]],
-                            datasets[d][vars_to_drop[i]].values,
-                        ),
-                        axis=2,
-                    )
-            else:
-                if not result_vars[vars_to_drop[i]].size:
-                    result_vars[vars_to_drop[i]] = np.full([1, 4, 2], np.nan)
-                else:
-                    result_vars[vars_to_drop[i]] = np.concatenate(
-                        (result_vars[vars_to_drop[i]], np.full([1, 4, 2], np.nan)),
-                        axis=2,
-                    )
-
-    ds_result = Dataset(
-        data_vars={
-            # pressure will be first here since it is first in first dataset and
-            # there isn't a good way to determine that temperature should be first
-            # this also means temperature will be last as the first data vars will
-            # determine the order for all that exist in that dataset
-            "pressure": (["x", "y", "day"], result_vars["pressure"]),
-            "humidity": (["x", "y", "day"], result_vars["humidity"]),
-            "precipitation": (["x", "y", "day"], result_vars["precipitation"]),
-            "cloud cover": (["x", "y", "day"], result_vars["cloud cover"]),
-            "temperature": (["x", "y", "day"], result_vars["temperature"]),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day" + str(d + 1) for d in range(2 * len(vars_to_drop))],
-        },
-    )
-    result = concat(datasets, dim="day")
-
-    r1 = list(result.data_vars.keys())
-    r2 = list(ds_result.data_vars.keys())
-    assert r1 == r2  # check the variables orders are the same
-
-    assert_equal(result, ds_result)
+    assert list(actual.data_vars.keys()) == [
+        "pressure",
+        "humidity",
+        "precipitation",
+        "cloud_cover",
+        "temperature",
+    ]
+    assert_identical(actual, expected)
 
 
 def test_multiple_datasets_with_multiple_missing_variables() -> None:
     vars_to_drop_in_first = ["temperature", "pressure"]
-    vars_to_drop_in_second = ["humidity", "precipitation", "cloud cover"]
+    vars_to_drop_in_second = ["humidity", "precipitation", "cloud_cover"]
     datasets = create_concat_datasets(2, 123)
+    expected = concat(datasets, dim="day")
+    for name in vars_to_drop_in_first:
+        expected[name][..., :2] = np.nan
+    for name in vars_to_drop_in_second:
+        expected[name][..., 2:] = np.nan
+
     # set up the test data
     datasets[0] = datasets[0].drop_vars(vars_to_drop_in_first)
     datasets[1] = datasets[1].drop_vars(vars_to_drop_in_second)
 
-    temperature_result = np.concatenate(
-        (np.full([1, 4, 2], np.nan), datasets[1].temperature.values), axis=2
-    )
-    pressure_result = np.concatenate(
-        (np.full([1, 4, 2], np.nan), datasets[1].pressure.values), axis=2
-    )
-    humidity_result = np.concatenate(
-        (datasets[0].humidity.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    precipitation_result = np.concatenate(
-        (datasets[0].precipitation.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    cloudcover_result = np.concatenate(
-        (datasets[0]["cloud cover"].values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    ds_result = Dataset(
-        data_vars={
-            "humidity": (["x", "y", "day"], humidity_result),
-            "precipitation": (["x", "y", "day"], precipitation_result),
-            "cloud cover": (["x", "y", "day"], cloudcover_result),
-            # these two are at the end of the expected as they are missing from the first
-            # dataset in the concat list
-            "temperature": (["x", "y", "day"], temperature_result),
-            "pressure": (["x", "y", "day"], pressure_result),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day1", "day2", "day3", "day4"],
-        },
-    )
-    result = concat(datasets, dim="day")
+    actual = concat(datasets, dim="day")
 
-    r1 = list(result.data_vars.keys())
-    r2 = list(ds_result.data_vars.keys())
-    # check the variables orders are the same for the first three variables
-    # TODO: Can all variables become deterministic?
-    assert r1[:3] == r2[:3]
-    assert set(r1[3:]) == set(r2[3:])  # just check availability for the remaining vars
-    assert_equal(result, ds_result)
+    assert list(actual.data_vars.keys()) == [
+        "humidity",
+        "precipitation",
+        "cloud_cover",
+        "temperature",
+        "pressure",
+    ]
+    assert_identical(actual, expected)
 
 
 def test_type_of_missing_fill() -> None:
     datasets = create_typed_datasets(2, 123)
-
+    expected1 = concat(datasets, dim="day", fill_value=dtypes.NA)
+    expected2 = concat(datasets[::-1], dim="day", fill_value=dtypes.NA)
     vars = ["float", "float2", "string", "int", "datetime64", "timedelta64"]
+    expected = [expected2, expected1]
+    for i, exp in enumerate(expected):
+        sl = slice(i * 2, (i + 1) * 2)
+        exp["float2"][..., sl] = np.nan
+        exp["datetime64"][..., sl] = np.nan
+        exp["timedelta64"][..., sl] = np.nan
+        var = exp["int"] * 1.0
+        var[..., sl] = np.nan
+        exp["int"] = var
+        var = exp["string"].astype(object)
+        var[..., sl] = np.nan
+        exp["string"] = var
 
     # set up the test data
     datasets[1] = datasets[1].drop_vars(vars[1:])
 
-    float_result = np.concatenate(
-        (datasets[0].float.values, datasets[1].float.values), axis=2
-    )
-    float2_result = np.concatenate(
-        (datasets[0].float2.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    # to correctly create the expected dataset we need to ensure we promote the string array to
-    # object type before filling as it will be promoted to that in the concat case.
-    # this matches the behavior of pandas
-    string_values = datasets[0].string.values
-    string_values = string_values.astype(object)
-    string_result = np.concatenate((string_values, np.full([1, 4, 2], np.nan)), axis=2)
-    datetime_result = np.concatenate(
-        (datasets[0].datetime64.values, np.full([1, 4, 2], np.datetime64("NaT"))),
-        axis=2,
-    )
-    timedelta_result = np.concatenate(
-        (datasets[0].timedelta64.values, np.full([1, 4, 2], np.timedelta64("NaT"))),
-        axis=2,
-    )
-    # string_result = string_result.astype(object)
-    int_result = np.concatenate(
-        (datasets[0].int.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    ds_result = Dataset(
-        data_vars={
-            "float": (["x", "y", "day"], float_result),
-            "float2": (["x", "y", "day"], float2_result),
-            "string": (["x", "y", "day"], string_result),
-            "int": (["x", "y", "day"], int_result),
-            "datetime64": (["x", "y", "day"], datetime_result),
-            "timedelta64": (["x", "y", "day"], timedelta_result),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day1", "day2", "day3", "day4"],
-        },
-    )
-    result = concat(datasets, dim="day", fill_value=dtypes.NA)
+    actual = concat(datasets, dim="day", fill_value=dtypes.NA)
 
-    assert_equal(result, ds_result)
+    assert_identical(actual, expected[1])
 
-    # test in the reverse order
-    float_result_rev = np.concatenate(
-        (datasets[1].float.values, datasets[0].float.values), axis=2
-    )
-    float2_result_rev = np.concatenate(
-        (np.full([1, 4, 2], np.nan), datasets[0].float2.values), axis=2
-    )
-    string_result_rev = np.concatenate(
-        (np.full([1, 4, 2], np.nan), string_values), axis=2
-    )
-    datetime_result_rev = np.concatenate(
-        (np.full([1, 4, 2], np.datetime64("NaT")), datasets[0].datetime64.values),
-        axis=2,
-    )
-    timedelta_result_rev = np.concatenate(
-        (np.full([1, 4, 2], np.timedelta64("NaT")), datasets[0].timedelta64.values),
-        axis=2,
-    )
-    int_result_rev = np.concatenate(
-        (np.full([1, 4, 2], np.nan), datasets[0].int.values), axis=2
-    )
-    ds_result_rev = Dataset(
-        data_vars={
-            "float": (["x", "y", "day"], float_result_rev),
-            "float2": (["x", "y", "day"], float2_result_rev),
-            "string": (["x", "y", "day"], string_result_rev),
-            "int": (["x", "y", "day"], int_result_rev),
-            "datetime64": (["x", "y", "day"], datetime_result_rev),
-            "timedelta64": (["x", "y", "day"], timedelta_result_rev),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day3", "day4", "day1", "day2"],
-        },
-    )
-    result_rev = concat(datasets[::-1], dim="day", fill_value=dtypes.NA)
+    # reversed
+    actual = concat(datasets[::-1], dim="day", fill_value=dtypes.NA)
 
-    assert_equal(result_rev, ds_result_rev)
+    assert_identical(actual, expected[0])
 
 
 def test_order_when_filling_missing() -> None:
@@ -608,68 +339,38 @@ def test_order_when_filling_missing() -> None:
     # drop middle
     vars_to_drop_in_second = ["humidity"]
     datasets = create_concat_datasets(2, 123)
+    expected1 = concat(datasets, dim="day")
+    for name in vars_to_drop_in_second:
+        expected1[name][..., 2:] = np.nan
+    expected2 = concat(datasets[::-1], dim="day")
+    for name in vars_to_drop_in_second:
+        expected2[name][..., :2] = np.nan
+
     # set up the test data
     datasets[0] = datasets[0].drop_vars(vars_to_drop_in_first)
     datasets[1] = datasets[1].drop_vars(vars_to_drop_in_second)
 
-    temperature_result = np.concatenate(
-        (datasets[0].temperature.values, datasets[1].temperature.values), axis=2
-    )
-    pressure_result = np.concatenate(
-        (datasets[0].pressure.values, datasets[1].pressure.values), axis=2
-    )
-    humidity_result = np.concatenate(
-        (datasets[0].humidity.values, np.full([1, 4, 2], np.nan)), axis=2
-    )
-    precipitation_result = np.concatenate(
-        (datasets[0].precipitation.values, datasets[1].precipitation.values), axis=2
-    )
-    cloudcover_result = np.concatenate(
-        (datasets[0]["cloud cover"].values, datasets[1]["cloud cover"].values), axis=2
-    )
-    ds_result = Dataset(
-        data_vars={
-            "temperature": (["x", "y", "day"], temperature_result),
-            "pressure": (["x", "y", "day"], pressure_result),
-            "precipitation": (["x", "y", "day"], precipitation_result),
-            "cloud cover": (["x", "y", "day"], cloudcover_result),
-            "humidity": (["x", "y", "day"], humidity_result),
-        },
-        coords={
-            "lat": (["x", "y"], datasets[0].lat.values),
-            "lon": (["x", "y"], datasets[0].lon.values),
-            "day": ["day1", "day2", "day3", "day4"],
-        },
-    )
-    result = concat(datasets, dim="day")
+    actual = concat(datasets, dim="day")
 
-    assert_equal(result, ds_result)
-
-    result_keys = [
+    assert list(actual.data_vars.keys()) == [
         "temperature",
         "pressure",
         "humidity",
         "precipitation",
-        "cloud cover",
+        "cloud_cover",
     ]
-    result_index = 0
-    for k in result.data_vars.keys():
-        assert k == result_keys[result_index]
-        result_index += 1
+    assert_identical(actual, expected1)
 
-    result_keys_rev = [
+    actual = concat(datasets[::-1], dim="day")
+
+    assert list(actual.data_vars.keys()) == [
         "temperature",
         "pressure",
         "precipitation",
-        "cloud cover",
+        "cloud_cover",
         "humidity",
     ]
-    # test order when concat in reversed order
-    rev_result = concat(datasets[::-1], dim="day")
-    result_index = 0
-    for k in rev_result.data_vars.keys():
-        assert k == result_keys_rev[result_index]
-        result_index += 1
+    assert_identical(actual, expected2)
 
 
 @pytest.fixture
@@ -739,16 +440,19 @@ def test_concat_fill_missing_variables(
     concat_ds = create_concat_ds(var_names, dim=dim, coord=coord, drop_idx=drop_idx)
     actual = concat(concat_ds, dim="time", data_vars="all")
 
-    r1 = list(actual.data_vars.keys())
-    r2 = list(expected.data_vars.keys())
-    # move element missing in first dataset at the end
-    # TODO: Can all variables become deterministic?
-    r2 = r2 + [r2.pop(drop_idx[0])]
-    assert r1 == r2  # check the variables orders are the same
-
-    for name in var_names[0]:
-        assert_equal(expected[name], actual[name])
-    assert_equal(expected, actual)
+    assert list(actual.data_vars.keys()) == [
+        "d01",
+        "d02",
+        "d03",
+        "d04",
+        "d05",
+        "d06",
+        "d07",
+        "d08",
+        "d09",
+        "d00",
+    ]
+    assert_identical(actual, expected)
 
 
 class TestConcatDataset:
@@ -785,6 +489,13 @@ class TestConcatDataset:
         data1["foo"] = ("bar", np.random.randn(10))
         actual = concat([data0, data1], "dim1", data_vars="minimal")
         expected = data.copy().assign(foo=data1.foo)
+        assert_identical(expected, actual)
+
+        # expand foo
+        actual = concat([data0, data1], "dim1")
+        foo = np.ones((8, 10), dtype=data1.foo.dtype) * np.nan
+        foo[3:] = data1.foo.values[None, ...]
+        expected = data.copy().assign(foo=(["dim1", "bar"], foo))
         assert_identical(expected, actual)
 
     def test_concat_2(self, data) -> None:
