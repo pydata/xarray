@@ -443,7 +443,8 @@ class ExplicitlyIndexed:
     __slots__ = ()
 
     def __array__(self, dtype=None):
-        return np.asarray(self.get_duck_array(), dtype=dtype)
+        # Leave casting to an array up to the underlying array type.
+        return np.asarray(self.array)
 
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
