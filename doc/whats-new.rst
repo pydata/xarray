@@ -43,6 +43,11 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Don't assume that arrays read from disk will be Numpy arrays. This is a step toward
+  enabling reads from a Zarr store using the `Kvikio <https://docs.rapids.ai/api/kvikio/stable/api.html#zarr>`_
+  or `TensorStore <https://google.github.io/tensorstore/>`_ libraries.
+  (:pull:`6874`). By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 .. _whats-new.2023.01.0:
 
@@ -146,13 +151,6 @@ Documentation
 
 - Add example of reading and writing individual groups to a single netCDF file to I/O docs page. (:pull:`7338`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
-- Don't assume that arrays read from disk will be Numpy arrays. For e.g. this allows
-  reading from a Zarr store directly to GPU memory as a CuPy array (see Kvikio)
-  (:pull:`6874`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 .. _whats-new.2022.11.0:
