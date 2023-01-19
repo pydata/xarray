@@ -4743,9 +4743,7 @@ class TestDataset:
             ds.var1.data
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
-            ds.rename({"dim1": "foobar"})
-            ds.set_coords("var1")
-            ds.drop_vars("var1")
+            repr(ds)
 
             # preserve the duck array type and don't cast to array
             assert isinstance(ds["var1"].load().data, DuckArrayWrapper)
