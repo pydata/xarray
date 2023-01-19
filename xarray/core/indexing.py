@@ -444,7 +444,7 @@ class ExplicitlyIndexed:
 
     def __array__(self, dtype=None):
         # Leave casting to an array up to the underlying array type.
-        return np.asarray(self.array)
+        return np.asarray(self.array, dtype=dtype)
 
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
@@ -453,6 +453,11 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
+
+    def __array__(self, dtype=None):
+        # This is necessary because we apply the indexing key in self.get_duck_array()
+        # Note this is the base class for all lazy indexing classes
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
@@ -668,14 +673,13 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
     def _ensure_cached(self):
-        if not isinstance(self.array, NumpyIndexingAdapter):
-            self.array = NumpyIndexingAdapter(np.asarray(self.array))
+        self.array = as_indexable(self.array.get_duck_array())
 
     def __array__(self, dtype=None):
-        self._ensure_cached()
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
+        self._ensure_cached()
         return self.array.get_duck_array()
 
     def __getitem__(self, key):

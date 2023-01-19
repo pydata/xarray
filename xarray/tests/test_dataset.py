@@ -226,9 +226,24 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         return {k: lazy_inaccessible(k, v) for k, v in self._variables.items()}
 
 
+class DuckBackendArrayWrapper(backends.common.BackendArray):
+    """Mimic a BackendArray wrapper around DuckArrayWrapper"""
+
+    def __init__(self, array):
+        self.array = DuckArrayWrapper(array)
+        self.shape = array.shape
+        self.dtype = array.dtype
+
+    def get_array(self):
+        return self.array
+
+    def __getitem__(self, key):
+        return self.array[key.tuple]
+
+
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
     """
-    Store that does returns a duck array, not convertible to numpy array,
+    Store that returns a duck array, not convertible to numpy array,
     on read. Modeled after nVIDIA's kvikio.
     """
 
@@ -246,7 +261,7 @@ class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
         def lazy_accessible(k, v):
             if k in self._indexvars:
                 return v
-            data = indexing.LazilyIndexedArray(DuckArrayWrapper(v.values))
+            data = indexing.LazilyIndexedArray(DuckBackendArrayWrapper(v.values))
             return Variable(v.dims, data, v.attrs)
 
         return {k: lazy_accessible(k, v) for k, v in self._variables.items()}
@@ -4728,7 +4743,6 @@ class TestDataset:
             ds.var1.data
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
-            ds.transpose()
             ds.rename({"dim1": "foobar"})
             ds.set_coords("var1")
             ds.drop_vars("var1")

@@ -68,9 +68,6 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __getitem__(self, key):
         return type(self)(self.array[key], self.func, self.dtype)
 
-    def __array__(self, dtype=None):
-        return self.get_duck_array()
-
     def get_duck_array(self):
         return self.func(self.array.get_duck_array())
 
