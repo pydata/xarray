@@ -4,8 +4,8 @@ import logging
 import os
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, ClassVar, Iterable
 
 import numpy as np
 
