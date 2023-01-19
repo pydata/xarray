@@ -5,6 +5,7 @@ import os
 import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Iterable
+from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -88,17 +89,20 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         return np.asarray(self[key], dtype=dtype)
 
 
-class AbstractDataStore:
+class AbstractDataStore(ABC):
     __slots__ = ()
 
-    def get_dimensions(self):  # pragma: no cover
-        raise NotImplementedError()
+    @abstractmethod
+    def get_dimensions(self):
+        ...
 
-    def get_attrs(self):  # pragma: no cover
-        raise NotImplementedError()
+    @abstractmethod
+    def get_attrs(self):
+        ...
 
-    def get_variables(self):  # pragma: no cover
-        raise NotImplementedError()
+    @abstractmethod
+    def get_variables(self):
+        ...
 
     def get_encoding(self):
         return {}
@@ -214,14 +218,17 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, dim, length):  # pragma: no cover
-        raise NotImplementedError()
+    @abstractmethod
+    def set_dimension(self, dim, length):
+        ...
 
-    def set_attribute(self, k, v):  # pragma: no cover
-        raise NotImplementedError()
+    @abstractmethod
+    def set_attribute(self, k, v):
+        ...
 
-    def set_variable(self, k, v):  # pragma: no cover
-        raise NotImplementedError()
+    @abstractmethod
+    def set_variable(self, k, v):
+        ...
 
     def store_dataset(self, dataset):
         """
@@ -358,7 +365,7 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-class BackendEntrypoint:
+class BackendEntrypoint(ABC):
     """
     ``BackendEntrypoint`` is a class container and it is the main interface
     for the backend plugins, see :ref:`RST backend_entrypoint`.
@@ -404,6 +411,7 @@ class BackendEntrypoint:
             txt += f"\n  Learn more at {self.url}"
         return txt
 
+    @abstractmethod
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
@@ -413,8 +421,7 @@ class BackendEntrypoint:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
-
-        raise NotImplementedError
+        ...
 
     def guess_can_open(
         self,
