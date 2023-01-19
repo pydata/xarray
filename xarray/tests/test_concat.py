@@ -136,7 +136,7 @@ def test_concat_compat() -> None:
 
 
 def test_concat_missing_var() -> None:
-    datasets = create_concat_datasets(2, 123)
+    datasets = create_concat_datasets(2, seed=123)
     expected = concat(datasets, dim="day")
     vars_to_drop = ["humidity", "precipitation", "cloud_cover"]
 
@@ -152,7 +152,7 @@ def test_concat_missing_var() -> None:
 
 
 def test_concat_missing_multiple_consecutive_var() -> None:
-    datasets = create_concat_datasets(3, 123)
+    datasets = create_concat_datasets(3, seed=123)
     expected = concat(datasets, dim="day")
     vars_to_drop = ["humidity", "pressure"]
 
@@ -191,9 +191,16 @@ def test_concat_second_empty() -> None:
 
     assert_identical(actual, expected)
 
+    expected = Dataset(
+        data_vars={"a": ("y", [0.1, np.nan])}, coords={"x": ("y", [0.1, 0.1])}
+    )
+    actual = concat([ds1, ds2], dim="y", coords="all")
 
-def test_multiple_missing_variables() -> None:
-    datasets = create_concat_datasets(2, 123)
+    assert_identical(actual, expected)
+
+
+def test_concat_multiple_missing_variables() -> None:
+    datasets = create_concat_datasets(2, seed=123)
     expected = concat(datasets, dim="day")
     vars_to_drop = ["pressure", "cloud_cover"]
 
@@ -216,7 +223,7 @@ def test_multiple_missing_variables() -> None:
 
 
 @pytest.mark.parametrize("include_day", [True, False])
-def test_concat_multiple_datasets_missing_vars_and_new_dim(include_day: bool) -> None:
+def test_concat_multiple_datasets_missing_vars(include_day: bool) -> None:
     vars_to_drop = [
         "temperature",
         "pressure",
@@ -225,7 +232,9 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim(include_day: bool) ->
         "cloud_cover",
     ]
 
-    datasets = create_concat_datasets(len(vars_to_drop), 123, include_day=include_day)
+    datasets = create_concat_datasets(
+        len(vars_to_drop), seed=123, include_day=include_day
+    )
     expected = concat(datasets, dim="day")
 
     for i, name in enumerate(vars_to_drop):
@@ -235,7 +244,7 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim(include_day: bool) ->
             expected[name][i : i + 1, ...] = np.nan
 
     # set up the test data
-    datasets = [datasets[i].drop_vars(vars_to_drop[i]) for i in range(len(datasets))]
+    datasets = [ds.drop_vars(varname) for ds, varname in zip(datasets, vars_to_drop)]
 
     actual = concat(datasets, dim="day")
 
@@ -249,38 +258,10 @@ def test_concat_multiple_datasets_missing_vars_and_new_dim(include_day: bool) ->
     assert_identical(actual, expected)
 
 
-def test_multiple_datasets_with_missing_variables() -> None:
-    vars_to_drop = [
-        "temperature",
-        "pressure",
-        "humidity",
-        "precipitation",
-        "cloud_cover",
-    ]
-    datasets = create_concat_datasets(len(vars_to_drop), 123)
-
-    expected = concat(datasets, dim="day")
-    for i, name in enumerate(vars_to_drop):
-        expected[name][..., i * 2 : (i + 1) * 2] = np.nan
-
-    # set up the test data
-    datasets = [datasets[i].drop_vars(vars_to_drop[i]) for i in range(len(datasets))]
-    actual = concat(datasets, dim="day")
-
-    assert list(actual.data_vars.keys()) == [
-        "pressure",
-        "humidity",
-        "precipitation",
-        "cloud_cover",
-        "temperature",
-    ]
-    assert_identical(actual, expected)
-
-
-def test_multiple_datasets_with_multiple_missing_variables() -> None:
+def test_concat_multiple_datasets_with_multiple_missing_variables() -> None:
     vars_to_drop_in_first = ["temperature", "pressure"]
     vars_to_drop_in_second = ["humidity", "precipitation", "cloud_cover"]
-    datasets = create_concat_datasets(2, 123)
+    datasets = create_concat_datasets(2, seed=123)
     expected = concat(datasets, dim="day")
     for name in vars_to_drop_in_first:
         expected[name][..., :2] = np.nan
@@ -303,8 +284,8 @@ def test_multiple_datasets_with_multiple_missing_variables() -> None:
     assert_identical(actual, expected)
 
 
-def test_type_of_missing_fill() -> None:
-    datasets = create_typed_datasets(2, 123)
+def test_concat_type_of_missing_fill() -> None:
+    datasets = create_typed_datasets(2, seed=123)
     expected1 = concat(datasets, dim="day", fill_value=dtypes.NA)
     expected2 = concat(datasets[::-1], dim="day", fill_value=dtypes.NA)
     vars = ["float", "float2", "string", "int", "datetime64", "timedelta64"]
@@ -334,11 +315,11 @@ def test_type_of_missing_fill() -> None:
     assert_identical(actual, expected[0])
 
 
-def test_order_when_filling_missing() -> None:
+def test_concat_order_when_filling_missing() -> None:
     vars_to_drop_in_first: list[str] = []
     # drop middle
     vars_to_drop_in_second = ["humidity"]
-    datasets = create_concat_datasets(2, 123)
+    datasets = create_concat_datasets(2, seed=123)
     expected1 = concat(datasets, dim="day")
     for name in vars_to_drop_in_second:
         expected1[name][..., 2:] = np.nan
@@ -423,11 +404,9 @@ def create_concat_ds() -> Callable:
 def test_concat_fill_missing_variables(
     concat_var_names, create_concat_ds, dim: bool, coord: bool
 ) -> None:
-    # random single variables missing in each dataset
     var_names = concat_var_names()
+    drop_idx = [0, 7, 6, 4, 4, 8, 0, 6, 2, 0]
 
-    rng = np.random.default_rng(seed=42)
-    drop_idx = [rng.integers(len(vlist)) for vlist in var_names]
     expected = concat(
         create_concat_ds(var_names, dim=dim, coord=coord), dim="time", data_vars="all"
     )
