@@ -188,14 +188,27 @@ def test_concat_second_empty() -> None:
 
     expected = Dataset(data_vars={"a": ("y", [0.1, np.nan])}, coords={"x": 0.1})
     actual = concat([ds1, ds2], dim="y")
-
     assert_identical(actual, expected)
 
     expected = Dataset(
         data_vars={"a": ("y", [0.1, np.nan])}, coords={"x": ("y", [0.1, 0.1])}
     )
     actual = concat([ds1, ds2], dim="y", coords="all")
+    assert_identical(actual, expected)
 
+    # Check concatenating scalar data_var only present in ds1
+    ds1["b"] = 0.1
+    expected = Dataset(
+        data_vars={"a": ("y", [0.1, np.nan]), "b": ("y", [0.1, np.nan])},
+        coords={"x": ("y", [0.1, 0.1])},
+    )
+    actual = concat([ds1, ds2], dim="y", coords="all", data_vars="all")
+    assert_identical(actual, expected)
+
+    expected = Dataset(
+        data_vars={"a": ("y", [0.1, np.nan]), "b": 0.1}, coords={"x": 0.1}
+    )
+    actual = concat([ds1, ds2], dim="y", coords="different", data_vars="different")
     assert_identical(actual, expected)
 
 
