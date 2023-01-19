@@ -444,7 +444,10 @@ class ExplicitlyIndexed:
 
     def __array__(self, dtype=None):
         # Leave casting to an array up to the underlying array type.
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
+
+    def get_duck_array(self):
+        return self.array
 
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
