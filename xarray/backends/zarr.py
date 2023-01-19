@@ -70,14 +70,17 @@ class ZarrArrayWrapper(BackendArray):
     def __getitem__(self, key):
         array = self.get_array()
         if isinstance(key, indexing.BasicIndexer):
-            return array[key.tuple]
+            result = array[key.tuple]
         elif isinstance(key, indexing.VectorizedIndexer):
-            return array.vindex[
+            result = array.vindex[
                 indexing._arrayize_vectorized_indexer(key, self.shape).tuple
             ]
         else:
             assert isinstance(key, indexing.OuterIndexer)
-            return array.oindex[key.tuple]
+            result = array.oindex[key.tuple]
+        # asarray casts scalars to array
+        result = np.asarray(result)
+        return result
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
