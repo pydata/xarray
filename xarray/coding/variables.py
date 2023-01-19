@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import warnings
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Hashable, MutableMapping, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, MutableMapping, Union
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    T_VarTuple = Tuple[Tuple[Hashable, ...], Any, dict, dict]
+    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
     T_Name = Union[Hashable, None]
 
 

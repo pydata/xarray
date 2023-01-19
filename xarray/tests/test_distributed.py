@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import pickle
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
-
-from typing import Any, TYPE_CHECKING
-
 import pytest
 from packaging.version import Version
 
@@ -19,15 +18,27 @@ else:
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
 from distributed.utils_test import (  # noqa: F401
+    cleanup,
     cluster,
     gen_cluster,
     loop,
-    cleanup,
     loop_in_thread,
 )
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
+from xarray.tests import (
+    assert_allclose,
+    assert_identical,
+    has_h5netcdf,
+    has_netCDF4,
+    has_scipy,
+    requires_cfgrib,
+    requires_cftime,
+    requires_netCDF4,
+    requires_rasterio,
+    requires_zarr,
+)
 from xarray.tests.test_backends import (
     ON_WINDOWS,
     create_tmp_file,
@@ -35,19 +46,6 @@ from xarray.tests.test_backends import (
     open_example_dataset,
 )
 from xarray.tests.test_dataset import create_test_data
-
-from xarray.tests import (
-    assert_allclose,
-    assert_identical,
-    has_h5netcdf,
-    has_netCDF4,
-    requires_rasterio,
-    has_scipy,
-    requires_zarr,
-    requires_cfgrib,
-    requires_cftime,
-    requires_netCDF4,
-)
 
 # this is to stop isort throwing errors. May have been easier to just use
 # `isort:skip` in retrospect

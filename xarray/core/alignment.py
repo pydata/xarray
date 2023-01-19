@@ -8,13 +8,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Generic,
     Hashable,
     Iterable,
     Mapping,
-    Tuple,
-    Type,
     TypeVar,
     cast,
 )
@@ -98,10 +95,10 @@ def reindex_variables(
     return new_variables
 
 
-CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
-MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
-NormalizedIndexes = Dict[MatchingIndexKey, Index]
-NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
+CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
+MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
+NormalizedIndexes = dict[MatchingIndexKey, Index]
+NormalizedIndexVars = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
 class Aligner(Generic[DataAlignable]):

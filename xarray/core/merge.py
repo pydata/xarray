@@ -11,7 +11,6 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
-    Tuple,
     Union,
 )
 
@@ -40,9 +39,9 @@ if TYPE_CHECKING:
     ArrayLike = Any
     VariableLike = Union[
         ArrayLike,
-        Tuple[DimsLike, ArrayLike],
-        Tuple[DimsLike, ArrayLike, Mapping],
-        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
+        tuple[DimsLike, ArrayLike],
+        tuple[DimsLike, ArrayLike, Mapping],
+        tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
@@ -170,7 +169,7 @@ def _assert_compat_valid(compat):
         raise ValueError(f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}")
 
 
-MergeElement = Tuple[Variable, Optional[Index]]
+MergeElement = tuple[Variable, Optional[Index]]
 
 
 def _assert_prioritized_valid(

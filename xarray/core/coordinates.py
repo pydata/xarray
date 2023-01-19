@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Hashable, Iterator, List, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 # TODO: Remove when min python version >= 3.9:
-GenericAlias = type(List[int])
+GenericAlias = type(list[int])
 
 
 class Coordinates(Mapping[Hashable, "T_DataArray"]):
