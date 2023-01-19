@@ -62,7 +62,7 @@ At this point in development, user feedback is critical to help us create someth
 Please raise any thoughts, issues, suggestions or bugs, no matter how small or large, on the [github issue tracker](https://github.com/xarray-contrib/datatree/issues).
 
 
-[github-ci-badge]: https://img.shields.io/github/workflow/status/xarray-contrib/datatree/CI?label=CI&logo=github
+[github-ci-badge]: https://img.shields.io/github/actions/workflow/status/xarray-contrib/datatree/main.yaml?branch=main&label=CI&logo=github
 [github-ci-link]: https://github.com/xarray-contrib/datatree/actions?query=workflow%3ACI
 [codecov-badge]: https://img.shields.io/codecov/c/github/xarray-contrib/datatree.svg?logo=codecov
 [codecov-link]: https://codecov.io/gh/xarray-contrib/datatree
