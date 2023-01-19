@@ -42,15 +42,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.8", "3.10"]
+        python-version: ["3.9", "3.10"]
         env: [""]
         include:
           # Minimum python version:
           - env: "bare-minimum"
-            python-version: "3.8"
+            python-version: "3.9"
             os: ubuntu-latest
           - env: "min-all-deps"
-            python-version: "3.8"
+            python-version: "3.9"
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-dask"
