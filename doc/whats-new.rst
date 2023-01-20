@@ -78,9 +78,6 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
   :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
-- Make :py:func:`xarray.concat` more robust when concatenating variables present in some datasets but
-  not others (:issue:`508`, :pull:`7400`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
