@@ -494,7 +494,7 @@ If character arrays are used:
 Chunk based compression
 .......................
 
-``zlib``, ``complevel``, ``fletcher32``, ``continguous`` and ``chunksizes``
+``zlib``, ``complevel``, ``fletcher32``, ``contiguous`` and ``chunksizes``
 can be used for enabling netCDF4/HDF5's chunk based compression, as described
 in the `documentation for createVariable`_ for netCDF4-Python. This only works
 for netCDF4 files and thus requires using ``format='netCDF4'`` and either
