@@ -104,7 +104,7 @@ def test_contains(dtype) -> None:
     values = xr.DataArray(["Foo", "xYz", "fOOomMm__fOo", "MMM_"]).astype(dtype)
 
     # case insensitive using regex
-    pat = str
+    pat = values.dtype.type("FOO|mmm")
     result = values.str.contains(pat, case=False)
     expected = xr.DataArray([True, False, True, True])
     assert result.dtype == expected.dtype
@@ -114,7 +114,7 @@ def test_contains(dtype) -> None:
     assert_equal(result, expected)
 
     # case sensitive using regex
-    pat = str
+    pat = values.dtype.type("Foo|mMm")
     result = values.str.contains(pat)
     expected = xr.DataArray([True, False, True, False])
     assert result.dtype == expected.dtype
@@ -1574,7 +1574,7 @@ def test_match(dtype) -> None:
     values = xr.DataArray(["fooBAD__barBAD", "foo"]).astype(dtype)
 
     # New match behavior introduced in 0.13
-    pat = str
+    pat = values.dtype.type(".*(BAD[_]+).*(BAD)")
     result = values.str.match(pat)
     expected = xr.DataArray([True, False])
     assert result.dtype == expected.dtype
@@ -1584,7 +1584,7 @@ def test_match(dtype) -> None:
     assert_equal(result, expected)
 
     # Case-sensitive
-    pat = str
+    pat = values.dtype.type(".*BAD[_]+.*BAD")
     result = values.str.match(pat)
     expected = xr.DataArray([True, False])
     assert result.dtype == expected.dtype
@@ -1594,7 +1594,7 @@ def test_match(dtype) -> None:
     assert_equal(result, expected)
 
     # Case-insensitive
-    pat = str
+    pat = values.dtype.type(".*bAd[_]+.*bad")
     result = values.str.match(pat, case=False)
     expected = xr.DataArray([True, False])
     assert result.dtype == expected.dtype
