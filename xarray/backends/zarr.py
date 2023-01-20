@@ -22,6 +22,7 @@ from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
     close_on_error,
+    is_duck_array,
     module_available,
 )
 from xarray.core.variable import Variable
@@ -78,8 +79,9 @@ class ZarrArrayWrapper(BackendArray):
         else:
             assert isinstance(key, indexing.OuterIndexer)
             result = array.oindex[key.tuple]
-        # asarray casts scalars to array
-        result = np.asarray(result)
+        if not is_duck_array(result):
+            # asarray casts scalars to array
+            result = np.asarray(result)
         return result
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
