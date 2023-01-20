@@ -351,19 +351,12 @@ def _infer_time_units_from_diff(unique_timedeltas) -> str:
         time_units = _NETCDF_TIME_UNITS_CFTIME
         unit_timedelta = _unit_timedelta_cftime
         zero_timedelta = timedelta(microseconds=0)
-        timedeltas = unique_timedeltas
     else:
         time_units = _NETCDF_TIME_UNITS_NUMPY
         unit_timedelta = _unit_timedelta_numpy
         zero_timedelta = np.timedelta64(0, "ns")
-        # Note that the modulus operator was only implemented for np.timedelta64
-        # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
-        # supported is greater than or equal to this we will no longer need to cast
-        # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
-        # modulus operator works for TimedeltaIndex objects.
-        timedeltas = pd.TimedeltaIndex(unique_timedeltas)
     for time_unit in time_units:
-        if np.all(timedeltas % unit_timedelta(time_unit) == zero_timedelta):
+        if np.all(unique_timedeltas % unit_timedelta(time_unit) == zero_timedelta):
             return time_unit
     return "seconds"
 

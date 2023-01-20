@@ -1308,7 +1308,6 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array) -> None:
 
 @requires_dask
 def test_vectorize_dask_dtype_meta() -> None:
-    # meta dtype takes precedence
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
 
@@ -1318,7 +1317,6 @@ def test_vectorize_dask_dtype_meta() -> None:
         input_core_dims=[["y"]],
         vectorize=True,
         dask="parallelized",
-        output_dtypes=[int],
         dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=float)),
     )
 
