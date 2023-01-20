@@ -12,15 +12,15 @@ dependencies:
   - distributed
   - flox
   - fsspec!=2021.7.0
-  # - h5netcdf  # TODO: Waiting on python 3.11 support.
-  # - h5py  # TODO: Waiting on python 3.11 support.
-  # - hdf5  # TODO: Waiting on python 3.11 support.
+  - h5netcdf
+  - h5py
+  - hdf5
   - hypothesis
   - iris
   - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  # - netcdf4  # TODO: Waiting on python 3.11 support.
+  - netcdf4
   # - numba  # TODO: Waiting on python 3.11 support.
   - numpy
   - packaging
@@ -28,8 +28,8 @@ dependencies:
   - pint
   - pip
   - pre-commit
-  # - pseudonetcdf  # TODO: Waiting on python 3.11 support.
-  # - pydap  # TODO: Waiting on python 3.11 support.
+  - pseudonetcdf
+  - pydap
   - pytest
   - pytest-cov
   - pytest-env
@@ -40,6 +40,6 @@ dependencies:
   - sparse
   - toolz
   - typing_extensions
-  # - zarr  # TODO: Waiting on python 3.11 support.
+  - zarr
   # - pip:
       # - numbagg  # TODO: Waiting on python 3.11 support.
