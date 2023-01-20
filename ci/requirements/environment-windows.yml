@@ -22,7 +22,8 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy
+  - numbagg
+  - numpy<1.24
   - packaging
   - pandas
   - pint
@@ -41,5 +42,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - numbagg
