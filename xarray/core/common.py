@@ -1,21 +1,11 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd

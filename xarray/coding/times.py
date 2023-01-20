@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Hashable, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import numpy as np
 import pandas as pd

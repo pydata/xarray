@@ -8,19 +8,8 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from typing import (
-    TYPE_CHECKING,
-    AbstractSet,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, AbstractSet, Any, Callable, TypeVar, Union, overload
 
 import numpy as np
 

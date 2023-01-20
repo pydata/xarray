@@ -4,11 +4,12 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import pandas as pd
