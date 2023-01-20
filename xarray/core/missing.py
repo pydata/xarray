@@ -9,14 +9,13 @@ from typing import TYPE_CHECKING, Any, Callable, get_args
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array, mod_version
+from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
@@ -741,12 +740,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         else:
             dtype = var.dtype
 
-        if mod_version("dask") < Version("2020.12"):
-            # Using meta and dtype at the same time doesn't work.
-            # Remove this whenever the minimum requirement for dask is 2020.12:
-            meta = None
-        else:
-            meta = var._meta
+        meta = var._meta
 
         return da.blockwise(
             _dask_aware_interpnd,

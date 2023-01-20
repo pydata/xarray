@@ -959,36 +959,28 @@ class DataWithCoords(AttrAccessMixin):
         dim_name: Hashable = dim
         dim_coord = self[dim]
 
-        # TODO: remove once pandas=1.1 is the minimum required version
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                r"'(base|loffset)' in .resample\(\) and in Grouper\(\) is deprecated.",
-                category=FutureWarning,
+        if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
+            from xarray.core.resample_cftime import CFTimeGrouper
+
+            grouper = CFTimeGrouper(
+                freq=freq,
+                closed=closed,
+                label=label,
+                base=base,
+                loffset=loffset,
+                origin=origin,
+                offset=offset,
             )
-
-            if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
-                from xarray.core.resample_cftime import CFTimeGrouper
-
-                grouper = CFTimeGrouper(
-                    freq=freq,
-                    closed=closed,
-                    label=label,
-                    base=base,
-                    loffset=loffset,
-                    origin=origin,
-                    offset=offset,
-                )
-            else:
-                grouper = pd.Grouper(
-                    freq=freq,
-                    closed=closed,
-                    label=label,
-                    base=base,
-                    offset=offset,
-                    origin=origin,
-                    loffset=loffset,
-                )
+        else:
+            grouper = pd.Grouper(
+                freq=freq,
+                closed=closed,
+                label=label,
+                base=base,
+                offset=offset,
+                origin=origin,
+                loffset=loffset,
+            )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )

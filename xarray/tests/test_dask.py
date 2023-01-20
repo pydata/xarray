@@ -118,9 +118,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(
-        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
-    )
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -139,9 +136,6 @@ class TestVariable(DaskTestCase):
         arr[index] = 99
         assert_identical(arr, expected)
 
-    @pytest.mark.skipif(
-        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
-    )
     def test_setitem_dask_array_error(self):
         with pytest.raises(TypeError, match=r"stored in a dask array"):
             v = self.lazy_var

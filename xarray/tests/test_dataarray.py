@@ -4080,15 +4080,8 @@ class TestDataArray:
         expected = xr.DataArray([1, 9, 1], dims="x")
         assert_identical(actual, expected)
 
-        if Version(np.__version__) >= Version("1.20"):
-            with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-                ar.pad(x=1, constant_values=np.NaN)
-        else:
-            actual = ar.pad(x=1, constant_values=np.NaN)
-            expected = xr.DataArray(
-                [-9223372036854775808, 9, -9223372036854775808], dims="x"
-            )
-            assert_identical(actual, expected)
+        with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
+            ar.pad(x=1, constant_values=np.NaN)
 
     def test_pad_coords(self) -> None:
         ar = DataArray(
