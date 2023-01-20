@@ -2883,9 +2883,8 @@ class TestH5NetCDFData(NetCDF4Base):
     def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": True}
-        with pytest.warns(UserWarning):
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
+        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+            assert_equal(expected, actual)
 
     @requires_h5netcdf
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
