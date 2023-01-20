@@ -23,6 +23,9 @@ v0.0.12 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added a :py:func:`DataTree.level`, :py:func:`DataTree.depth`, and :py:func:`DataTree.width` property (:pull:`208`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

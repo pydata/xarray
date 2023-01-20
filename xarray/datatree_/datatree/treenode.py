@@ -334,6 +334,61 @@ class TreeNode(Generic[Tree]):
         this_node, *descendants = all_nodes
         return tuple(descendants)
 
+    @property
+    def level(self: Tree) -> int:
+        """
+        Level of this node.
+
+        Level means number of parent nodes above this node before reaching the root.
+        The root node is at level 0.
+
+        Returns
+        -------
+        level : int
+
+        See Also
+        --------
+        depth
+        width
+        """
+        return len(self.ancestors) - 1
+
+    @property
+    def depth(self: Tree) -> int:
+        """
+        Maximum level of this tree.
+
+        Measured from the root, which has a depth of 0.
+
+        Returns
+        -------
+        depth : int
+
+        See Also
+        --------
+        level
+        width
+        """
+        return max(node.level for node in self.root.subtree)
+
+    @property
+    def width(self: Tree) -> int:
+        """
+        Number of nodes at this level in the tree.
+
+        Includes number of immediate siblings, but also "cousins" in other branches and so-on.
+
+        Returns
+        -------
+        depth : int
+
+        See Also
+        --------
+        level
+        depth
+        """
+        return len([node for node in self.root.subtree if node.level == self.level])
+
     def _pre_detach(self: Tree, parent: Tree) -> None:
         """Method call before detaching from `parent`."""
         pass

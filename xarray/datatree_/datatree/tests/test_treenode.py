@@ -338,6 +338,18 @@ class TestAncestry:
         for node, expected_name in zip(leaves, expected):
             assert node.name == expected_name
 
+    def test_levels(self):
+        a, f = create_test_tree()
+
+        assert a.level == 0
+        assert f.level == 3
+
+        assert a.depth == 3
+        assert f.depth == 3
+
+        assert a.width == 1
+        assert f.width == 3
+
 
 class TestRenderTree:
     def test_render_nodetree(self):
