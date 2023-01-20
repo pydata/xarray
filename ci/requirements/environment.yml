@@ -7,7 +7,7 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # TODO: Waiting on python 3.11 support.
+  - cdms2  # TODO: Waiting on python 3.11 support.
   - cfgrib
   - cftime
   - dask-core
@@ -23,7 +23,7 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  # - numba  # TODO: Waiting on python 3.11 support.
+  - numba  # TODO: Waiting on python 3.11 support.
   - numexpr
   - numpy
   - packaging
@@ -45,5 +45,5 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  # - pip:
-      # - numbagg  # TODO: Waiting on python 3.11 support.
+  - pip:
+      - numbagg  # TODO: Waiting on python 3.11 support.
