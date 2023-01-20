@@ -49,6 +49,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:func:`xarray.concat` can now concatenate variables present in some datasets but
+  not others (:issue:`508`, :pull:`7400`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
 
 Documentation
 ~~~~~~~~~~~~~
