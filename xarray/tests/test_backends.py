@@ -2886,7 +2886,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
             assert_equal(expected, actual)
 
-    @requires_h5netcdf
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
 
