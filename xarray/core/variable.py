@@ -35,7 +35,7 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from .parallelcompat import _get_chunk_manager
+from xarray.core.parallelcompat import _get_chunk_manager
 from xarray.core.pycompat import (
     DuckArrayModule,
     array_type,
