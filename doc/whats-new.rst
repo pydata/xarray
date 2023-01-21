@@ -15,10 +15,155 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2022.10.1:
+.. _whats-new.2023.01.1:
 
-v2022.10.1 (unreleased)
+v2023.01.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- :py:func:`xarray.concat` can now concatenate variables present in some datasets but
+  not others (:issue:`508`, :pull:`7400`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.01.0:
+
+v2023.01.0 (Jan 17, 2023)
+-------------------------
+
+This release includes a number of bug fixes. Thanks to the 14 contributors to this release:
+Aron Gergely, Benoit Bovy, Deepak Cherian, Ian Carroll, Illviljan, Joe Hamman, Justus Magin, Mark Harfouche,
+Matthew Roeschke, Paige Martin, Pierre, Sam Levang, Tom White,  stefank0.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
+  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Accessing the property ``.nbytes`` of a DataArray, or Variable no longer
+  accidentally triggers loading the variable into memory.
+- Allow numpy-only objects in :py:func:`where` when ``keep_attrs=True`` (:issue:`7362`, :pull:`7364`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- add a ``keep_attrs`` parameter to :py:meth:`Dataset.pad`, :py:meth:`DataArray.pad`,
+  and :py:meth:`Variable.pad` (:pull:`7267`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Fixed performance regression in alignment between indexed and non-indexed objects
+  of the same shape (:pull:`7382`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
+  :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Add the pre-commit hook `absolufy-imports` to convert relative xarray imports to
+  absolute imports (:pull:`7204`, :pull:`7370`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+.. _whats-new.2022.12.0:
+
+v2022.12.0 (2022 Dec 2)
+-----------------------
+
+This release includes a number of bug fixes and experimental support for Zarr V3.
+Thanks to the 16 contributors to this release:
+Deepak Cherian, Francesco Zanetta, Gregory Lee, Illviljan, Joe Hamman, Justus Magin, Luke Conibear, Mark Harfouche, Mathias Hauser,
+Mick, Mike Taves, Sam Levang, Spencer Clark, Tom Nicholas, Wei Ji, templiert
+
+New Features
+~~~~~~~~~~~~
+- Enable using `offset` and `origin` arguments in :py:meth:`DataArray.resample`
+  and :py:meth:`Dataset.resample` (:issue:`7266`, :pull:`7284`).  By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
+- Add experimental support for Zarr's in-progress V3 specification. (:pull:`6475`).
+  By `Gregory Lee  <https://github.com/grlee77>`_ and `Joe Hamman <https://github.com/jhamman>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The minimum versions of some dependencies were changed (:pull:`7300`):
+
+  ========================== =========  ========
+   Package                         Old      New
+  ========================== =========  ========
+   boto                           1.18     1.20
+   cartopy                        0.19     0.20
+   distributed                 2021.09  2021.11
+   dask                        2021.09  2021.11
+   h5py                            3.1      3.6
+   hdf5                           1.10     1.12
+   matplotlib-base                 3.4      3.5
+   nc-time-axis                    1.3      1.4
+   netcdf4                       1.5.3    1.5.7
+   packaging                      20.3     21.3
+   pint                           0.17     0.18
+   pseudonetcdf                    3.1      3.2
+   typing_extensions              3.10      4.0
+  ========================== =========  ========
+
+Deprecations
+~~~~~~~~~~~~
+- The PyNIO backend has been deprecated (:issue:`4491`, :pull:`7301`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Bug fixes
+~~~~~~~~~
+- Fix handling of coordinate attributes in :py:func:`where`. (:issue:`7220`, :pull:`7229`)
+  By `Sam Levang <https://github.com/slevang>`_.
+- Import ``nc_time_axis`` when needed (:issue:`7275`, :pull:`7276`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix static typing of :py:meth:`xr.polyval` (:issue:`7312`, :pull:`7315`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix multiple reads on fsspec S3 files by resetting file pointer to 0 when reading file streams (:issue:`6813`, :pull:`7304`).
+  By `David Hoese <https://github.com/djhoese>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
+- Fix :py:meth:`Dataset.assign_coords` resetting all dimension coordinates to default (pandas) index (:issue:`7346`, :pull:`7347`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Add example of reading and writing individual groups to a single netCDF file to I/O docs page. (:pull:`7338`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2022.11.0:
+
+v2022.11.0 (Nov 4, 2022)
+------------------------
+
+This release brings a number of bugfixes and documentation improvements. Both text and HTML
+reprs now have a new "Indexes" section, which we expect will help with development of new
+Index objects. This release also features more support for the Python Array API.
+
+Many thanks to the 16 contributors to this release: Daniel Goman, Deepak Cherian, Illviljan, Jessica Scheick, Justus Magin, Mark Harfouche, Maximilian Roos, Mick, Patrick Naylor, Pierre, Spencer Clark, Stephan Hoyer, Tom Nicholas, Tom White
 
 New Features
 ~~~~~~~~~~~~
@@ -35,6 +180,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``repr(ds)`` may not show the same result because it doesn't load small,
+  lazy data anymore. Use ``ds.head().load()`` when wanting to see just a sample
+  of the data. (:issue:`6722`, :pull:`7203`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
   shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
@@ -57,6 +206,10 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed bug where :py:meth:`Dataset.coarsen.construct` would demote non-dimension coordinates to variables. (:pull:`7233`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Raise a TypeError when trying to plot empty data (:issue:`7156`, :pull:`7228`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -73,6 +226,8 @@ Documentation
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add documentation of specific BackendEntrypoints (:pull:`7200`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add examples to docstring for :py:meth:`DataArray.drop_vars`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`. (:issue:`6793`, :pull:`7123`)
+  By `Daniel Goman <https://github.com/DanielGoman>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -83,6 +238,8 @@ Internal Changes
   encoding times to preserve existing behavior and prevent future errors when it
   is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Improved import time by lazily importing backend modules, matplotlib, dask.array and flox. (:issue:`6726`, :pull:`7179`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Emit a warning under the development version of pandas when we convert
   non-nanosecond precision datetime or timedelta values to nanosecond precision.
   This was required in the past, because pandas previously was not compatible
@@ -2522,7 +2679,7 @@ Breaking changes
   have removed the internal use of the ``OrderedDict`` in favor of Python's builtin
   ``dict`` object which is now ordered itself. This change will be most obvious when
   interacting with the ``attrs`` property on Dataset and DataArray objects.
-  (:issue:`3380`, :pull:`3389`). By `Joe Hamman <https://github.com/jhamman>`_.
+  (:issue:`3380`, :pull:`3389`).  By `Joe Hamman <https://github.com/jhamman>`_.
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~

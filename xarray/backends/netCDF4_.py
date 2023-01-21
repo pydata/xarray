@@ -7,17 +7,8 @@ from contextlib import suppress
 
 import numpy as np
 
-from .. import coding
-from ..coding.variables import pop_to
-from ..core import indexing
-from ..core.utils import (
-    FrozenDict,
-    close_on_error,
-    is_remote_uri,
-    try_read_magic_number_from_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray import coding
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
@@ -26,21 +17,26 @@ from .common import (
     find_root_and_group,
     robust_getitem,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
-from .store import StoreBackendEntrypoint
-
-try:
-    import netCDF4
-
-    has_netcdf4 = True
-except ImportError:
-    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
-    # where errors have mismatched versions of c-dependencies. This can happen
-    # when developers are making changes them.
-    has_netcdf4 = False
-
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    NETCDFC_LOCK,
+    combine_locks,
+    ensure_lock,
+    get_write_lock,
+)
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.variables import pop_to
+from xarray.core import indexing
+from xarray.core.utils import (
+    FrozenDict,
+    close_on_error,
+    is_remote_uri,
+    module_available,
+    try_read_magic_number_from_path,
+)
+from xarray.core.variable import Variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -242,11 +238,11 @@ def _extract_nc4_variable_encoding(
         "shuffle",
         "_FillValue",
         "dtype",
+        "compression",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
     if h5py_okay:
-        valid_encodings.add("compression")
         valid_encodings.add("compression_opts")
 
     if not raise_on_invalid and encoding.get("chunksizes") is not None:
@@ -313,6 +309,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
+        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -349,6 +346,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
+        import netCDF4
 
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
@@ -537,7 +535,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     backends.ScipyBackendEntrypoint
     """
 
-    available = has_netcdf4
+    available = module_available("netCDF4")
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )

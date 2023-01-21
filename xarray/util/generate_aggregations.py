@@ -27,16 +27,13 @@ from typing import TYPE_CHECKING, Any, Callable, Sequence
 from . import duck_array_ops
 from .options import OPTIONS
 from .types import Dims
-from .utils import contains_only_dask_or_numpy
+from .utils import contains_only_dask_or_numpy, module_available
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
-try:
-    import flox
-except ImportError:
-    flox = None  # type: ignore'''
+flox_available = module_available("flox")'''
 
 DEFAULT_PREAMBLE = """
 
@@ -63,7 +60,7 @@ class {obj}{cls}Aggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -74,7 +71,7 @@ class {obj}{cls}Aggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -87,7 +84,7 @@ class {obj}{cls}Aggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -98,7 +95,7 @@ class {obj}{cls}Aggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -120,7 +117,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -152,9 +149,9 @@ TEMPLATE_NOTES = """
         -----
         {notes}"""
 
-_DIM_DOCSTRING = """dim : str, Iterable of Hashable, or None, default: None
+_DIM_DOCSTRING = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
-    or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
+    or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions."""
 
 _DIM_DOCSTRING_GROUPBY = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
@@ -376,7 +373,11 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         else:
             return f"""\
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}

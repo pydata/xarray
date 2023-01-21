@@ -32,10 +32,9 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.pycompat import integer_types, sparse_array_type
+from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
-
-from . import (
+from xarray.tests import (
     InaccessibleArray,
     UnexpectedDataAccess,
     assert_allclose,
@@ -68,6 +67,8 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+sparse_array_type = array_type("sparse")
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
@@ -4168,6 +4169,20 @@ class TestDataset:
             is not actual.xindexes["level_2"]
         )
 
+    def test_assign_coords_custom_index_side_effect(self) -> None:
+        # test that assigning new coordinates do not reset other dimension coord indexes
+        # to default (pandas) index (https://github.com/pydata/xarray/issues/7346)
+        class CustomIndex(PandasIndex):
+            pass
+
+        ds = (
+            Dataset(coords={"x": [1, 2, 3]})
+            .drop_indexes("x")
+            .set_xindex("x", CustomIndex)
+        )
+        actual = ds.assign_coords(y=[4, 5, 6])
+        assert isinstance(actual.xindexes["x"], CustomIndex)
+
     def test_merge_multiindex_level(self) -> None:
         data = create_test_multiindex()
 
@@ -6100,6 +6115,40 @@ class TestDataset:
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
 
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
+        ds = xr.Dataset(
+            {"a": ("x", [1, 2], attrs), "b": ("y", [1, 2], attrs)},
+            coords={"c": ("x", [-1, 1], attrs), "d": ("y", [-1, 1], attrs)},
+            attrs=attrs,
+        )
+        expected = xr.Dataset(
+            {"a": ("x", [0, 1, 2, 0], expected), "b": ("y", [1, 2], attrs)},
+            coords={
+                "c": ("x", [np.nan, -1, 1, np.nan], expected),
+                "d": ("y", [-1, 1], attrs),
+            },
+            attrs=expected,
+        )
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = ds.pad({"x": (1, 1)}, mode="constant", constant_values=0)
+            xr.testing.assert_identical(actual, expected)
+
+        actual = ds.pad(
+            {"x": (1, 1)}, mode="constant", constant_values=0, keep_attrs=keep_attrs
+        )
+        xr.testing.assert_identical(actual, expected)
+
     def test_astype_attrs(self) -> None:
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
@@ -6228,7 +6277,7 @@ class TestDataset:
         with pytest.raises(ValueError):
             ds.query("a > 5")  # type: ignore # must be dict or kwargs
         with pytest.raises(ValueError):
-            ds.query(x=(a > 5))  # type: ignore # must be query string
+            ds.query(x=(a > 5))
         with pytest.raises(IndexError):
             ds.query(y="a > 5")  # wrong length dimension
         with pytest.raises(IndexError):

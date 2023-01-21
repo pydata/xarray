@@ -5,19 +5,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
-from . import duck_array_ops
-from .options import OPTIONS
-from .types import Dims
-from .utils import contains_only_dask_or_numpy
+from xarray.core import duck_array_ops
+from xarray.core.options import OPTIONS
+from xarray.core.types import Dims
+from xarray.core.utils import contains_only_dask_or_numpy, module_available
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
-try:
-    import flox
-except ImportError:
-    flox = None  # type: ignore
+flox_available = module_available("flox")
 
 
 class DatasetAggregations:
@@ -47,9 +44,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -119,9 +116,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -191,9 +188,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -264,9 +261,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -351,9 +348,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -438,9 +435,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -530,9 +527,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -637,9 +634,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -744,9 +741,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -848,9 +845,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -951,9 +948,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1042,9 +1039,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1135,9 +1132,9 @@ class DatasetAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1243,9 +1240,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -1309,9 +1306,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -1375,9 +1372,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -1442,9 +1439,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1521,9 +1518,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1600,9 +1597,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1684,9 +1681,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1781,9 +1778,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1878,9 +1875,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1972,9 +1969,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2065,9 +2062,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2148,9 +2145,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2237,9 +2234,9 @@ class DataArrayAggregations:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2320,7 +2317,7 @@ class DatasetGroupByAggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -2331,14 +2328,14 @@ class DatasetGroupByAggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2403,7 +2400,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) int64 1 2 2
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -2423,7 +2424,7 @@ class DatasetGroupByAggregations:
 
     def all(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2488,7 +2489,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) bool False True True
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -2508,7 +2513,7 @@ class DatasetGroupByAggregations:
 
     def any(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2573,7 +2578,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) bool True True True
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -2593,7 +2602,7 @@ class DatasetGroupByAggregations:
 
     def max(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2674,7 +2683,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 2.0 3.0
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -2696,7 +2709,7 @@ class DatasetGroupByAggregations:
 
     def min(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2777,7 +2790,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 2.0 1.0
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -2799,7 +2816,7 @@ class DatasetGroupByAggregations:
 
     def mean(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2884,7 +2901,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 2.0 2.0
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -2906,7 +2927,7 @@ class DatasetGroupByAggregations:
 
     def prod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -3008,7 +3029,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 4.0 3.0
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -3032,7 +3057,7 @@ class DatasetGroupByAggregations:
 
     def sum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -3134,7 +3159,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 4.0 4.0
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -3158,7 +3187,7 @@ class DatasetGroupByAggregations:
 
     def std(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -3257,7 +3286,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 0.0 1.414
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -3281,7 +3314,7 @@ class DatasetGroupByAggregations:
 
     def var(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -3380,7 +3413,11 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 0.0 2.0
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -3404,7 +3441,7 @@ class DatasetGroupByAggregations:
 
     def median(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3500,7 +3537,7 @@ class DatasetGroupByAggregations:
 
     def cumsum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3594,7 +3631,7 @@ class DatasetGroupByAggregations:
 
     def cumprod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3693,7 +3730,7 @@ class DatasetResampleAggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -3704,14 +3741,14 @@ class DatasetResampleAggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3776,7 +3813,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) int64 1 3 1
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -3796,7 +3837,7 @@ class DatasetResampleAggregations:
 
     def all(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3861,7 +3902,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) bool True True False
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -3881,7 +3926,7 @@ class DatasetResampleAggregations:
 
     def any(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3946,7 +3991,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) bool True True True
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -3966,7 +4015,7 @@ class DatasetResampleAggregations:
 
     def max(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4047,7 +4096,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 3.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -4069,7 +4122,7 @@ class DatasetResampleAggregations:
 
     def min(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4150,7 +4203,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 1.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -4172,7 +4229,7 @@ class DatasetResampleAggregations:
 
     def mean(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4257,7 +4314,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -4279,7 +4340,7 @@ class DatasetResampleAggregations:
 
     def prod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -4381,7 +4442,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 nan 6.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -4405,7 +4470,7 @@ class DatasetResampleAggregations:
 
     def sum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -4507,7 +4572,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 nan 6.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -4531,7 +4600,7 @@ class DatasetResampleAggregations:
 
     def std(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -4630,7 +4699,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 nan 1.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -4654,7 +4727,7 @@ class DatasetResampleAggregations:
 
     def var(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -4753,7 +4826,11 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 nan 1.0 nan
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -4777,7 +4854,7 @@ class DatasetResampleAggregations:
 
     def median(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4873,7 +4950,7 @@ class DatasetResampleAggregations:
 
     def cumsum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4967,7 +5044,7 @@ class DatasetResampleAggregations:
 
     def cumprod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5066,7 +5143,7 @@ class DataArrayGroupByAggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -5077,14 +5154,14 @@ class DataArrayGroupByAggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5144,7 +5221,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -5162,7 +5243,7 @@ class DataArrayGroupByAggregations:
 
     def all(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5222,7 +5303,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -5240,7 +5325,7 @@ class DataArrayGroupByAggregations:
 
     def any(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5300,7 +5385,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -5318,7 +5407,7 @@ class DataArrayGroupByAggregations:
 
     def max(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5392,7 +5481,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -5412,7 +5505,7 @@ class DataArrayGroupByAggregations:
 
     def min(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5486,7 +5579,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -5506,7 +5603,7 @@ class DataArrayGroupByAggregations:
 
     def mean(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5584,7 +5681,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -5604,7 +5705,7 @@ class DataArrayGroupByAggregations:
 
     def prod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -5697,7 +5798,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -5719,7 +5824,7 @@ class DataArrayGroupByAggregations:
 
     def sum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -5812,7 +5917,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -5834,7 +5943,7 @@ class DataArrayGroupByAggregations:
 
     def std(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -5924,7 +6033,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -5946,7 +6059,7 @@ class DataArrayGroupByAggregations:
 
     def var(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -6036,7 +6149,11 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -6058,7 +6175,7 @@ class DataArrayGroupByAggregations:
 
     def median(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6146,7 +6263,7 @@ class DataArrayGroupByAggregations:
 
     def cumsum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6236,7 +6353,7 @@ class DataArrayGroupByAggregations:
 
     def cumprod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6331,7 +6448,7 @@ class DataArrayResampleAggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -6342,14 +6459,14 @@ class DataArrayResampleAggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6409,7 +6526,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -6427,7 +6548,7 @@ class DataArrayResampleAggregations:
 
     def all(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6487,7 +6608,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -6505,7 +6630,7 @@ class DataArrayResampleAggregations:
 
     def any(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6565,7 +6690,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -6583,7 +6712,7 @@ class DataArrayResampleAggregations:
 
     def max(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6657,7 +6786,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -6677,7 +6810,7 @@ class DataArrayResampleAggregations:
 
     def min(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6751,7 +6884,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -6771,7 +6908,7 @@ class DataArrayResampleAggregations:
 
     def mean(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6849,7 +6986,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -6869,7 +7010,7 @@ class DataArrayResampleAggregations:
 
     def prod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -6962,7 +7103,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -6984,7 +7129,7 @@ class DataArrayResampleAggregations:
 
     def sum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -7077,7 +7222,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -7099,7 +7248,7 @@ class DataArrayResampleAggregations:
 
     def std(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -7189,7 +7338,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -7211,7 +7364,7 @@ class DataArrayResampleAggregations:
 
     def var(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -7301,7 +7454,11 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -7323,7 +7480,7 @@ class DataArrayResampleAggregations:
 
     def median(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -7411,7 +7568,7 @@ class DataArrayResampleAggregations:
 
     def cumsum(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -7501,7 +7658,7 @@ class DataArrayResampleAggregations:
 
     def cumprod(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,

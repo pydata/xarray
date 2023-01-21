@@ -4,8 +4,8 @@ import unicodedata
 
 import numpy as np
 
-from .. import coding
-from ..core.variable import Variable
+from xarray import coding
+from xarray.core.variable import Variable
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string

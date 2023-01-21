@@ -2,30 +2,44 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, List, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
 
-from . import formatting
-from .indexes import Index, Indexes, PandasMultiIndex, assert_no_index_corrupted
-from .merge import merge_coordinates_without_align, merge_coords
-from .utils import Frozen, ReprObject
-from .variable import Variable, calculate_dimensions
+from xarray.core import formatting
+from xarray.core.indexes import (
+    Index,
+    Indexes,
+    PandasMultiIndex,
+    assert_no_index_corrupted,
+)
+from xarray.core.merge import merge_coordinates_without_align, merge_coords
+from xarray.core.utils import Frozen, ReprObject
+from xarray.core.variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.common import DataWithCoords
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import T_DataArray
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
 _THIS_ARRAY = ReprObject("<this-array>")
 
+# TODO: Remove when min python version >= 3.9:
+GenericAlias = type(List[int])
 
-class Coordinates(Mapping[Hashable, "DataArray"]):
-    __slots__ = ()
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+class Coordinates(Mapping[Hashable, "T_DataArray"]):
+    _data: DataWithCoords
+    __slots__ = ("_data",)
+
+    # TODO: Remove when min python version >= 3.9:
+    __class_getitem__ = classmethod(GenericAlias)
+
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
@@ -45,11 +59,11 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
     @property
     def indexes(self) -> Indexes[pd.Index]:
-        return self._data.indexes  # type: ignore[attr-defined]
+        return self._data.indexes
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        return self._data.xindexes  # type: ignore[attr-defined]
+        return self._data.xindexes
 
     @property
     def variables(self):
@@ -79,7 +93,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     def to_dataset(self) -> Dataset:
         raise NotImplementedError()
 
-    def to_index(self, ordered_dims: Sequence[Hashable] = None) -> pd.Index:
+    def to_index(self, ordered_dims: Sequence[Hashable] | None = None) -> pd.Index:
         """Convert all index coordinates into a :py:class:`pandas.Index`.
 
         Parameters
@@ -107,11 +121,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
-            return self._data.get_index(dim)  # type: ignore[attr-defined]
+            return self._data.get_index(dim)
         else:
-            indexes = [
-                self._data.get_index(k) for k in ordered_dims  # type: ignore[attr-defined]
-            ]
+            indexes = [self._data.get_index(k) for k in ordered_dims]
 
             # compute the sizes of the repeat and tile for the cartesian product
             # (taken from pandas.core.reshape.util)
@@ -215,7 +227,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         merged : Dataset
             A new Dataset with merged coordinates.
         """
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         if other is None:
             return self.to_dataset()
@@ -237,6 +249,8 @@ class DatasetCoordinates(Coordinates):
     dimensions and the values given by the corresponding xarray.Coordinate
     objects.
     """
+
+    _data: Dataset
 
     __slots__ = ("_data",)
 
@@ -278,7 +292,7 @@ class DatasetCoordinates(Coordinates):
     def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
-        return cast("DataArray", self._data[key])
+        return self._data[key]
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
@@ -334,16 +348,18 @@ class DatasetCoordinates(Coordinates):
         ]
 
 
-class DataArrayCoordinates(Coordinates):
+class DataArrayCoordinates(Coordinates["T_DataArray"]):
     """Dictionary like container for DataArray coordinates.
 
     Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
 
+    _data: T_DataArray
+
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: DataArray):
+    def __init__(self, dataarray: T_DataArray) -> None:
         self._data = dataarray
 
     @property
@@ -366,7 +382,7 @@ class DataArrayCoordinates(Coordinates):
     def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         return self._data._getitem_coord(key)
 
     def _update_coords(
@@ -400,7 +416,7 @@ class DataArrayCoordinates(Coordinates):
         return Frozen(self._data._coords)
 
     def to_dataset(self) -> Dataset:
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
         indexes = dict(self._data.xindexes)
@@ -452,7 +468,7 @@ def drop_coords(
 
 
 def assert_coordinate_consistent(
-    obj: DataArray | Dataset, coords: Mapping[Any, Variable]
+    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 

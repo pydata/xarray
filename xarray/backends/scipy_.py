@@ -6,32 +6,30 @@ import os
 
 import numpy as np
 
-from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import (
-    Frozen,
-    FrozenDict,
-    close_on_error,
-    try_read_magic_number_from_file_or_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
     _normalize_path,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
-from .store import StoreBackendEntrypoint
-
-try:
-    import scipy.io
-
-    has_scipy = True
-except ModuleNotFoundError:
-    has_scipy = False
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import ensure_lock, get_write_lock
+from xarray.backends.netcdf3 import (
+    encode_nc3_attr_value,
+    encode_nc3_variable,
+    is_valid_nc3_name,
+)
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core.indexing import NumpyIndexingAdapter
+from xarray.core.utils import (
+    Frozen,
+    FrozenDict,
+    close_on_error,
+    module_available,
+    try_read_magic_number_from_file_or_path,
+)
+from xarray.core.variable import Variable
 
 
 def _decode_string(s):
@@ -80,6 +78,8 @@ class ScipyArrayWrapper(BackendArray):
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
+    import scipy.io
+
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
@@ -261,7 +261,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
-    available = has_scipy
+    available = module_available("scipy")
     description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
