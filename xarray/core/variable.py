@@ -64,12 +64,9 @@ def _get_non_numpy_supported_array_types():
     """Required instead of a global to avoid circular import errors with cubed"""
 
     return (
-        (
-            indexing.ExplicitlyIndexed,
-            pd.Index,
-        )
-        + DuckArrayModule("cubed").type
-    )
+        indexing.ExplicitlyIndexed,
+        pd.Index,
+    ) + DuckArrayModule("cubed").type
 
 
 # https://github.com/python/mypy/issues/224
@@ -82,7 +79,6 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
-        T_CubedSpec,
         T_Variable,
     )
 
@@ -1160,8 +1156,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        manager: Literal["dask", "cubed"] = "dask",
-        spec: T_CubedSpec = None,
+        from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> Variable:
         """Coerce this array's data into a dask array with the given chunks.
@@ -1203,9 +1198,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         xarray.unify_chunks
         dask.array.from_array
         """
-        chunk_manager = _get_chunk_manager(manager)
 
-        kwargs = dict(name=name, lock=lock, inline_array=inline_array, spec=spec)
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+        chunk_manager = _get_chunk_manager(from_array_kwargs.pop("manager", "dask"))
+
+        _from_array_kwargs = dict(
+            name=name, lock=lock, inline_array=inline_array, **from_array_kwargs
+        )
 
         if chunks is None:
             warnings.warn(
@@ -1223,7 +1223,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
 
-        data = chunk_manager.from_array(self._data, chunks, **kwargs)
+        data = chunk_manager.from_array(self._data, chunks, **_from_array_kwargs)
 
         return self._replace(data=data)
 
@@ -2879,8 +2879,7 @@ class IndexVariable(Variable):
         name=None,
         lock=False,
         inline_array=False,
-        manager="dask",
-        spec=None,
+        from_array_kwargs=None,
     ):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)

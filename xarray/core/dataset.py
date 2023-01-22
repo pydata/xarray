@@ -128,7 +128,6 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
-        T_CubedSpec,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -272,8 +271,7 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
-    manager: Literal["dask", "cubed"] = "dask",
-    spec: T_CubedSpec = None,
+    from_array_kwargs=None,
 ):
     from dask.base import tokenize
 
@@ -290,8 +288,7 @@ def _maybe_chunk(
             name=name2,
             lock=lock,
             inline_array=inline_array,
-            manager=manager,
-            spec=spec,
+            from_array_kwargs=from_array_kwargs,
         )
 
         if overwrite_encoded_chunks and var.chunks is not None:
@@ -2209,8 +2206,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        manager: Literal["dask", "cubed"] = "dask",
-        spec: T_CubedSpec = None,
+        from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
@@ -2274,7 +2270,14 @@ class Dataset(
 
         variables = {
             k: _maybe_chunk(
-                k, v, chunks, token, lock, name_prefix, manager=manager, spec=spec
+                k,
+                v,
+                chunks,
+                token,
+                lock,
+                name_prefix,
+                inline_array=inline_array,
+                from_array_kwargs=from_array_kwargs,
             )
             for k, v in self.variables.items()
         }

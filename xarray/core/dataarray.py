@@ -100,7 +100,6 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
-        T_CubedSpec,
         T_DataArray,
         T_Xarray,
     )
@@ -1266,8 +1265,7 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        manager: Literal["dask", "cubed"] = "dask",
-        spec: T_CubedSpec = None,
+        from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
@@ -1332,6 +1330,7 @@ class DataArray(
             token=token,
             lock=lock,
             inline_array=inline_array,
+            from_array_kwargs=from_array_kwargs,
         )
         return self._from_temp_dataset(ds)
 
