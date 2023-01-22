@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import functools
 import itertools
 import math
 import numbers
@@ -35,15 +36,13 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from .parallelcompat import _get_chunk_manager
+from xarray.core.parallelcompat import _get_chunk_manager
 from xarray.core.pycompat import (
     DuckArrayModule,
     array_type,
-    cupy_array_type,
     integer_types,
     is_chunked_array,
     is_duck_dask_array,
-    sparse_array_type,
 )
 from xarray.core.utils import (
     Frozen,
@@ -60,7 +59,8 @@ from xarray.core.utils import (
 )
 
 
-def _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES():
+@functools.cache
+def _get_non_numpy_supported_array_types():
     """Required instead of a global to avoid circular import errors with cubed"""
 
     return (
@@ -68,7 +68,6 @@ def _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES():
             indexing.ExplicitlyIndexed,
             pd.Index,
         )
-        + cupy_array_type
         + DuckArrayModule("cubed").type
     )
 
@@ -276,7 +275,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, (Variable, DataArray)):
         return data.data
 
-    if isinstance(data, _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES()):
+    if isinstance(data, _get_non_numpy_supported_array_types()):
         data = _possibly_convert_datetime_or_timedelta_index(data)
         return _maybe_wrap_data(data)
 

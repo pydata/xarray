@@ -9,8 +9,8 @@ from typing import Any, Dict, Generic, Tuple, Type, TypeVar
 import numpy as np
 from typing_extensions import TypeAlias
 
-from . import indexing, utils
-from .pycompat import DuckArrayModule, is_duck_dask_array
+from xarray.core import indexing, utils
+from xarray.core.pycompat import DuckArrayModule, is_duck_dask_array
 
 T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
