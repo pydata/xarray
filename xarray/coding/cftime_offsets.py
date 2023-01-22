@@ -45,7 +45,7 @@ import re
 from datetime import datetime, timedelta
 from enum import Enum
 from functools import partial
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 import pandas as pd
@@ -65,6 +65,10 @@ try:
     import cftime
 except ImportError:
     cftime = None
+
+
+if TYPE_CHECKING:
+    from xarray.core.types import InclusiveOptions, SideOptions
 
 
 def get_date_type(calendar, use_cftime=True):
@@ -852,7 +856,9 @@ def _generate_range(start, end, periods, offset):
 
 
 class _NoDefault(Enum):
-    """Used by pandas to specify a default value for a deprecated argument."""
+    """Used by pandas to specify a default value for a deprecated argument.
+    Copied from pandas._libs.lib._NoDefault.
+    """
 
     no_default = "NO_DEFAULT"
 
@@ -860,7 +866,14 @@ class _NoDefault(Enum):
         return "<no_default>"
 
 
+no_default = (
+    _NoDefault.no_default
+)  # Sentinel indicating the default value following pandas
+NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
+
+
 def _translate_closed_to_inclusive(closed):
+    """Follows code added in pandas #43504."""
     emit_user_level_warning(
         "Following pandas, the `closed` argument is deprecated in "
         "favor of the `inclusive` argument, and will be removed in "
@@ -880,12 +893,13 @@ def _translate_closed_to_inclusive(closed):
 
 
 def _infer_inclusive(closed, inclusive):
-    if closed is not _NoDefault and inclusive is not None:
+    """Follows code added in pandas #43504."""
+    if closed is not no_default and inclusive is not None:
         raise ValueError(
-            "Deprecated argument `closed` cannot be passed if "
-            "argument `inclusive` is not None."
+            "Following pandas, deprecated argument `closed` cannot be "
+            "passed if argument `inclusive` is not None."
         )
-    if closed is not _NoDefault:
+    if closed is not no_default:
         inclusive = _translate_closed_to_inclusive(closed)
     elif inclusive is None:
         inclusive = "both"
@@ -899,8 +913,8 @@ def cftime_range(
     freq="D",
     normalize=False,
     name=None,
-    closed=_NoDefault,
-    inclusive=None,
+    closed: NoDefault | SideOptions = no_default,
+    inclusive: None | InclusiveOptions = None,
     calendar="standard",
 ):
     """Return a fixed frequency CFTimeIndex.
@@ -922,8 +936,15 @@ def cftime_range(
     closed : {"left", "right"} or None, default: _NoDefault
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
+
+        .. deprecated:: 2023.01.1
+            Following pandas, the `closed` argument is deprecated in favor
+            of the `inclusive` argument, and will be removed in a future
+            version of xarray.
     inclusive : {None, "both", "neither", "left", "right"}, default None
-        Include boundaries; Whether to set each bound as closed or open.
+        Include boundaries; whether to set each bound as closed or open.
+
+        .. versionadded:: 2023.01.1
     calendar : str, default: "standard"
         Calendar type for the datetimes.
 
@@ -938,7 +959,6 @@ def cftime_range(
     features of ``pandas.date_range`` (e.g. specifying how the index is
     ``closed`` on either side, or whether or not to ``normalize`` the start and
     end bounds); however, there are some notable exceptions:
-
     - You cannot specify a ``tz`` (time zone) argument.
     - Start or end dates specified as partial-datetime strings must use the
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
@@ -1129,8 +1149,8 @@ def date_range(
     tz=None,
     normalize=False,
     name=None,
-    closed=_NoDefault,
-    inclusive=None,
+    closed: NoDefault | SideOptions = no_default,
+    inclusive: None | InclusiveOptions = None,
     calendar="standard",
     use_cftime=None,
 ):
@@ -1160,8 +1180,15 @@ def date_range(
     closed : {"left", "right"} or None, default: _NoDefault
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
+
+        .. deprecated:: 2023.01.1
+            Following pandas, the `closed` argument is deprecated in favor
+            of the `inclusive` argument, and will be removed in a future
+            version of xarray.
     inclusive : {None, "both", "neither", "left", "right"}, default None
-        Include boundaries; Whether to set each bound as closed or open.
+        Include boundaries; whether to set each bound as closed or open.
+
+        .. versionadded:: 2023.01.1
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional

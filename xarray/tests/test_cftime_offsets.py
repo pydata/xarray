@@ -1411,16 +1411,16 @@ def as_timedelta_not_implemented_error():
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
-def test_cftime_or_date_range_closed_and_inclusive_error(function):
+def test_cftime_or_date_range_closed_and_inclusive_error(function) -> None:
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
-    with pytest.raises(ValueError, match="Deprecated argument `closed`"):
+    with pytest.raises(ValueError, match="Following pandas, deprecated"):
         function("2000", periods=3, closed=None, inclusive="right")
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
-def test_cftime_or_date_range_invalid_closed_value(function):
+def test_cftime_or_date_range_invalid_closed_value(function) -> None:
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
@@ -1432,7 +1432,7 @@ def test_cftime_or_date_range_invalid_closed_value(function):
 @pytest.mark.parametrize(
     ("closed", "inclusive"), [(None, "both"), ("left", "left"), ("right", "right")]
 )
-def test_cftime_or_date_range_closed(function, closed, inclusive):
+def test_cftime_or_date_range_closed(function, closed, inclusive) -> None:
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
@@ -1445,7 +1445,7 @@ def test_cftime_or_date_range_closed(function, closed, inclusive):
 
 
 @pytest.mark.parametrize("function", [cftime_range, date_range])
-def test_cftime_or_date_range_inclusive_None(function):
+def test_cftime_or_date_range_inclusive_None(function) -> None:
     if function == cftime_range and not has_cftime:
         pytest.skip("requires cftime")
 
