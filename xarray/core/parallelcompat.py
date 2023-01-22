@@ -71,16 +71,42 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         ...
 
     @abstractmethod
-    def apply_gufunc(self):
+    def apply_gufunc(
+        self,
+        func,
+        signature,
+        *args,
+        axes=None,
+        keepdims=False,
+        output_dtypes=None,
+        vectorize=None,
+        **kwargs,
+    ):
         """
         Called inside xarray.apply_ufunc, so must be supplied for vast majority of xarray computations to be supported.
         """
         ...
 
-    def map_blocks(self):
+    def map_blocks(
+        self,
+        func,
+        *args,
+        dtype=None,
+        **kwargs,
+    ):
+        """Currently only called in a couple of really niche places in xarray. Not even called in xarray.map_blocks."""
         raise NotImplementedError()
 
-    def blockwise(self):
+    def blockwise(
+        self,
+        func,
+        out_ind,
+        *args,
+        adjust_chunks=None,
+        new_axes=None,
+        align_arrays=True,
+        **kwargs,
+    ):
         """Called by some niche functions in xarray."""
         raise NotImplementedError()
 
@@ -280,6 +306,57 @@ class CubedManager(ChunkManager[T_CubedArray]):
             )
 
         return data
+
+    def map_blocks(
+        self,
+        func,
+        *args,
+        dtype=None,
+        chunks=None,
+        drop_axis=[],
+        new_axis=None,
+        **kwargs,
+    ):
+        from cubed.core.ops import map_blocks
+
+        return map_blocks(
+            func,
+            *args,
+            dtype=dtype,
+            chunks=chunks,
+            drop_axis=drop_axis,
+            new_axis=new_axis,
+            **kwargs,
+        )
+
+    def blockwise(
+        self,
+        func,
+        out_ind,
+        *args: Any,
+        # can't type this as mypy assumes args are all same type, but blockwise args alternate types
+        dtype=None,
+        adjust_chunks=None,
+        new_axes=None,
+        align_arrays=True,
+        target_store=None,
+        **kwargs,
+    ):
+        from cubed.core.ops import blockwise
+
+        # TODO where to get the target_store kwarg from? Filter down from a blockwise call? Set as attribute on CubedManager?
+
+        return blockwise(
+            func,
+            out_ind,
+            *args,
+            dtype=dtype,
+            adjust_chunks=adjust_chunks,
+            new_axes=new_axes,
+            align_arrays=align_arrays,
+            target_store=target_store,
+            **kwargs,
+        )
 
 
 try:
