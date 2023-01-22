@@ -22,9 +22,28 @@ CHUNK_MANAGERS: Dict[str, T_ChunkManager] = {}
 def _get_chunk_manager(name: str) -> "ChunkManager":
     if name in CHUNK_MANAGERS:
         chunkmanager = CHUNK_MANAGERS[name]
-        return chunkmanager()
+        return chunkmanager
     else:
         raise ImportError(f"ChunkManager {name} has not been defined")
+
+
+def _detect_parallel_array_type(*args) -> "ChunkManager":
+    """Detects which parallel backend should be used for given arrays (e.g. a list of dask arrays)"""
+    # TODO assert all arrays are the same type (or numpy)
+    arr = args[0]
+
+    # iterate over defined chunk managers, seeing if each recognises this array type
+    for chunkmanager in CHUNK_MANAGERS.values():
+        if chunkmanager.is_array_type(arr):
+            return chunkmanager
+
+    raise ChunkManagerNotFoundError(
+        f"Could not find a Chunk Manager which recognises type {type(arr)}"
+    )
+
+
+class ChunkManagerNotFoundError(Exception):
+    ...
 
 
 class ChunkManager(ABC, Generic[T_ChunkedArray]):
@@ -275,7 +294,7 @@ class DaskManager(ChunkManager[T_DaskArray]):
 try:
     import dask
 
-    CHUNK_MANAGERS["dask"] = DaskManager
+    CHUNK_MANAGERS["dask"] = DaskManager()
 except ImportError:
     pass
 
@@ -362,6 +381,6 @@ class CubedManager(ChunkManager[T_CubedArray]):
 try:
     import cubed  # type: ignore
 
-    CHUNK_MANAGERS["cubed"] = CubedManager
+    CHUNK_MANAGERS["cubed"] = CubedManager()
 except ImportError:
     pass
