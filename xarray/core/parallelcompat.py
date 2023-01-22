@@ -151,20 +151,99 @@ class DaskManager(ChunkManager[T_DaskArray]):
     def compute(self, data: T_DaskArray, **kwargs) -> np.ndarray:
         return data.compute(**kwargs)
 
-    def apply_gufunc(self):
+    def apply_gufunc(
+        self,
+        func,
+        signature,
+        *args,
+        axes=None,
+        axis=None,
+        keepdims=False,
+        output_dtypes=None,
+        output_sizes=None,
+        vectorize=None,
+        allow_rechunk=False,
+        meta=None,
+        **kwargs,
+    ):
         from dask.array.gufunc import apply_gufunc
 
-        ...
+        return apply_gufunc(
+            func,
+            signature,
+            *args,
+            axes=axes,
+            axis=axis,
+            keepdims=keepdims,
+            output_dtypes=output_dtypes,
+            output_sizes=output_sizes,
+            vectorize=vectorize,
+            allow_rechunk=allow_rechunk,
+            meta=meta,
+            **kwargs,
+        )
 
-    def map_blocks(self):
+    def map_blocks(
+        self,
+        func,
+        *args,
+        name=None,
+        token=None,
+        dtype=None,
+        chunks=None,
+        drop_axis=None,
+        new_axis=None,
+        enforce_ndim=False,
+        meta=None,
+        **kwargs,
+    ):
         from dask.array import map_blocks
 
-        ...
+        return map_blocks(
+            func,
+            *args,
+            name=name,
+            token=token,
+            dtype=dtype,
+            chunks=chunks,
+            drop_axis=drop_axis,
+            new_axis=new_axis,
+            enforce_ndim=enforce_ndim,
+            meta=meta,
+            **kwargs,
+        )
 
-    def blockwise(self):
+    def blockwise(
+        self,
+        func,
+        out_ind,
+        *args,
+        name=None,
+        token=None,
+        dtype=None,
+        adjust_chunks=None,
+        new_axes=None,
+        align_arrays=True,
+        concatenate=None,
+        meta=None,
+        **kwargs,
+    ):
         from dask.array import blockwise
 
-        ...
+        return blockwise(
+            func,
+            out_ind,
+            *args,
+            name=name,
+            token=token,
+            dtype=dtype,
+            adjust_chunks=adjust_chunks,
+            new_axes=new_axes,
+            align_arrays=align_arrays,
+            concatenate=concatenate,
+            meta=meta,
+            **kwargs,
+        )
 
 
 try:
