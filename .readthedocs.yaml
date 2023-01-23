@@ -4,6 +4,11 @@ build:
   os: ubuntu-22.04
   tools:
     python: mambaforge-4.10
+  jobs:
+    post_checkout:
+      - git fetch --unshallow --tags  # to allow setuptools_scm to work properly
+    pre_install:
+      - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
 
 conda:
   environment: ci/requirements/doc.yml
