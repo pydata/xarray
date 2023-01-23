@@ -3,13 +3,13 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.11
+  - python=3.10
   - black
   - aiobotocore
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # TODO: Waiting on python 3.11 support.
+  - cdms2
   - cfgrib
   - cftime
   - coveralls
@@ -22,8 +22,9 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  # - numba  # TODO: Waiting on python 3.11 support.
-  - numpy
+  - numba
+  - numbagg
+  - numpy<1.24
   - packaging
   - pandas
   - pint
@@ -41,5 +42,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  # - pip:
-      # - numbagg  # TODO: Waiting on python 3.11 support.

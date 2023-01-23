@@ -1,12 +1,14 @@
 name: xarray-tests
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # Not available on Windows
-  # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
+  # - cdms2
+  - cfgrib
   - cftime
   - dask-core
   - distributed
@@ -21,13 +23,15 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  - numba
-  - numbagg
-  - numpy<1.24
+  # - numba
+  # - numbagg
+  - numexpr
+  - numpy
   - packaging
   - pandas
   - pint
   - pip
+  - pooch
   - pre-commit
   - pseudonetcdf
   - pydap
@@ -38,7 +42,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - sparse
+  # - sparse
   - toolz
   - typing_extensions
   - zarr
