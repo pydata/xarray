@@ -6,7 +6,7 @@ build:
     python: mambaforge-4.10
   jobs:
     post_checkout:
-      - git --no-pager log --pretty="tformat:%s" -1 | grep -vqF "[skip-rtd]"
+      - (git --no-pager log --pretty="tformat:%s" -1 | grep -viq "[skip-rtd]") || exit 183
 
 conda:
   environment: ci/requirements/doc.yml
