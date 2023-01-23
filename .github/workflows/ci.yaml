@@ -42,7 +42,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11"]
         env: [""]
         include:
           # Minimum python version:
@@ -67,7 +67,13 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-          if [[ ${{ matrix.os }} == windows* ]] ;
+          if [[ "${{matrix.python-version}}" == "3.11" ]]; then
+            if [[ ${{matrix.os}} == windows* ]]; then
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-py311.yml" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/environment-py311.yml" >> $GITHUB_ENV
+            fi
+          elif [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
           elif [[ "${{ matrix.env }}" != "" ]] ;
@@ -86,7 +92,7 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v14
+        uses: mamba-org/provision-with-micromamba@v15
         with:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
