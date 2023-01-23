@@ -20,7 +20,7 @@ dependencies:
   - numba
   - numpy>=1.21,<1.24
   - packaging>=21.3
-  - pandas>=1.3
+  - pandas>=1.4
   - pooch
   - pip
   - pydata-sphinx-theme>=0.4.3

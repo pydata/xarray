@@ -35,6 +35,7 @@ Breaking changes
   ===================== =========  ========
    python                     3.8      3.9
    numpy                     1.20     1.21
+   pandas                     1.3      1.4
    dask                   2021.11   2022.1
    distributed            2021.11   2022.1
    h5netcdf                  0.11     0.13
