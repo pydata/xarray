@@ -66,6 +66,9 @@ Breaking changes
 Bug fixes
 ~~~~~~~~~
 
+- Avoid in-memory broadcasting when converting to a dask dataframe
+  using ``.to_dask_dataframe.`` (:issue:`6811`, :pull:`7472`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Accessing the property ``.nbytes`` of a DataArray, or Variable no longer
   accidentally triggers loading the variable into memory.
 - Allow numpy-only objects in :py:func:`where` when ``keep_attrs=True`` (:issue:`7362`, :pull:`7364`).
