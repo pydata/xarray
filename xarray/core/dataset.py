@@ -6439,11 +6439,12 @@ class Dataset(
 
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
             dask_array_raveled = ravel_chunks(dask_array)
-
             series = dd.from_array(dask_array_raveled, columns=[name])
+
             series_list.append(series)
 
         df = dd.concat(series_list, axis=1)
+
         if set_index:
             dim_order = [*ordered_dims]
 
