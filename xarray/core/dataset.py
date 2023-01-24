@@ -6389,28 +6389,6 @@ class Dataset(
 
         import dask.array as da
         import dask.dataframe as dd
-        from dask.base import tokenize
-        from dask.core import flatten
-        from dask.highlevelgraph import HighLevelGraph
-
-        def ravel_chunks(arr: da.Array) -> da.Array:
-            """
-            Return a flattened array.
-
-            https://github.com/dask/dask/issues/4855
-
-            """
-
-            name = "ravel_chunks-" + tokenize(arr)
-            chunks = (tuple(map(math.prod, itertools.product(*arr.chunks))),)
-            dsk = {
-                (name, i): (methodcaller("ravel"), k)
-                for i, k in enumerate(flatten(arr.__dask_keys__()))
-            }
-            graph = HighLevelGraph.from_collections(name, dsk, dependencies=[arr])
-            res = da.Array(graph, name, chunks, arr.dtype)
-
-            return res
 
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
@@ -6438,8 +6416,7 @@ class Dataset(
                 var = var.chunk()
 
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
-            dask_array_raveled = ravel_chunks(dask_array)
-            series = dd.from_array(dask_array_raveled, columns=[name])
+            series = dd.from_array(dask_array.reshape(-1), columns=[name])
 
             series_list.append(series)
 
