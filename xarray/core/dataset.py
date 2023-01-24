@@ -6417,7 +6417,6 @@ class Dataset(
 
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
             series = dd.from_array(dask_array.reshape(-1), columns=[name])
-
             series_list.append(series)
 
         df = dd.concat(series_list, axis=1)
