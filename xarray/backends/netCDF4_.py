@@ -102,8 +102,6 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             with self.datastore.lock:
                 original_array = self.get_array(needs_lock=False)
                 array = getitem(original_array, key)
-                # asarray casts scalars to array
-                array = np.asarray(array)
         except IndexError:
             # Catch IndexError in netCDF4 and return a more informative
             # error message.  This is most often called when an unsorted

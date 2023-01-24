@@ -4,7 +4,6 @@ import functools
 import io
 import os
 
-import numpy as np
 from packaging.version import Version
 
 from xarray.backends.common import (
@@ -48,8 +47,7 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def _getitem(self, key):
         with self.datastore.lock:
             array = self.get_array(needs_lock=False)
-            # asarray casts scalars to array
-            return np.asarray(array[key])
+            return array[key]
 
 
 def maybe_decode_bytes(txt):
