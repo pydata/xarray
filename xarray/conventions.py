@@ -207,7 +207,9 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
             "variable {!r} is a MultiIndex, which cannot yet be "
             "serialized to netCDF files. Instead, either use reset_index() "
             "to convert MultiIndex levels into coordinate variables instead "
-            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html.".format(name)
+            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html.".format(
+                name
+            )
         )
 
 
