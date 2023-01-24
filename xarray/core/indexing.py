@@ -3,12 +3,24 @@ from __future__ import annotations
 import enum
 import functools
 import operator
+from abc import ABCMeta, abstractmethod
 from collections import Counter, defaultdict
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Hashable,
+    Iterable,
+    Mapping,
+    SupportsIndex,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -286,7 +298,10 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-class ExplicitIndexer:
+KeyType = TypeVar("KeyType", bound=Union[int, slice, np.ndarray])
+
+
+class ExplicitIndexer(Generic[KeyType]):
     """Base class for explicit indexer objects.
 
     ExplicitIndexer objects wrap a tuple of values given by their ``tuple``
@@ -299,31 +314,31 @@ class ExplicitIndexer:
 
     __slots__ = ("_key",)
 
-    def __init__(self, key):
+    def __init__(self, key: Iterable[KeyType]) -> None:
         if type(self) is ExplicitIndexer:
             raise TypeError("cannot instantiate base ExplicitIndexer objects")
         self._key = tuple(key)
 
     @property
-    def tuple(self):
+    def tuple(self) -> tuple[KeyType, ...]:
         return self._key
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({self.tuple})"
 
 
-def as_integer_or_none(value):
+def as_integer_or_none(value: SupportsIndex | None) -> int | None:
     return None if value is None else operator.index(value)
 
 
-def as_integer_slice(value):
+def as_integer_slice(value: slice) -> slice:
     start = as_integer_or_none(value.start)
     stop = as_integer_or_none(value.stop)
     step = as_integer_or_none(value.step)
     return slice(start, stop, step)
 
 
-class BasicIndexer(ExplicitIndexer):
+class BasicIndexer(ExplicitIndexer[Union[int, slice]]):
     """Tuple for basic indexing.
 
     All elements should be int or slice objects. Indexing follows NumPy's
@@ -333,7 +348,7 @@ class BasicIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[int | slice, ...]) -> None:
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -352,7 +367,7 @@ class BasicIndexer(ExplicitIndexer):
         super().__init__(new_key)
 
 
-class OuterIndexer(ExplicitIndexer):
+class OuterIndexer(ExplicitIndexer[Union[int, slice, np.ndarray]]):
     """Tuple for outer/orthogonal indexing.
 
     All elements should be int, slice or 1-dimensional np.ndarray objects with
@@ -363,7 +378,7 @@ class OuterIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[int | slice | np.ndarray, ...]) -> None:
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -393,7 +408,7 @@ class OuterIndexer(ExplicitIndexer):
         super().__init__(new_key)
 
 
-class VectorizedIndexer(ExplicitIndexer):
+class VectorizedIndexer(ExplicitIndexer[Union[slice, np.ndarray]]):
     """Tuple for vectorized indexing.
 
     All elements should be slice or N-dimensional np.ndarray objects with an
@@ -405,7 +420,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
     __slots__ = ()
 
-    def __init__(self, key):
+    def __init__(self, key: tuple[slice | np.ndarray, ...]) -> None:
         if not isinstance(key, tuple):
             raise TypeError(f"key must be a tuple: {key!r}")
 
@@ -437,16 +452,35 @@ class VectorizedIndexer(ExplicitIndexer):
         super().__init__(new_key)
 
 
-class ExplicitlyIndexed:
+T_ExplicitlyIndexed = TypeVar("T_ExplicitlyIndexed", bound="ExplicitlyIndexed")
+
+
+class ExplicitlyIndexed(metaclass=ABCMeta):
     """Mixin to mark support for Indexer subclasses in indexing."""
 
     __slots__ = ()
 
+    @abstractmethod
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+        ...
 
-class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
+    @abstractmethod
+    def __getitem__(
+        self: T_ExplicitlyIndexed, key: Any
+    ) -> T_ExplicitlyIndexed | NumpyIndexingAdapter | np.ndarray | np.datetime64 | np.timedelta64:
+        ...
+        # TODO: fix the return type? Something more generic?
+
+    @property
+    @abstractmethod
+    def shape(self) -> tuple[int, ...]:
+        ...
+
+
+class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed, metaclass=ABCMeta):
     __slots__ = ()
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         key = BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
 
@@ -460,7 +494,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self.array = as_indexable(array)
         self.indexer_cls = indexer_cls
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
@@ -524,7 +558,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 shape.append(k.size)
         return tuple(shape)
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         array = as_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
 
@@ -577,7 +611,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> tuple[int, ...]:
         return np.broadcast(*self.key.tuple).shape
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.array[self.key], dtype=None)
 
     def _updated_key(self, new_key):
@@ -624,7 +658,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
             self.array = as_indexable(np.array(self.array))
             self._copied = True
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
@@ -654,7 +688,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         if not isinstance(self.array, NumpyIndexingAdapter):
             self.array = NumpyIndexingAdapter(np.asarray(self.array))
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         self._ensure_cached()
         return np.asarray(self.array, dtype=dtype)
 
@@ -668,7 +702,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self.array[key] = value
 
 
-def as_indexable(array):
+def as_indexable(array: Any) -> ExplicitlyIndexed:
     """
     This function always returns a ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
@@ -913,6 +947,7 @@ def _decompose_vectorized_indexer(
         else:
             # If it is a (multidimensional) np.ndarray, just pickup the used
             # keys without duplication and store them as a 1d-np.ndarray.
+            assert isinstance(k, np.ndarray)
             oind, vind = np.unique(k, return_inverse=True)
             backend_indexer_elems.append(oind)
             np_indexer_elems.append(vind.reshape(*k.shape))
@@ -980,7 +1015,7 @@ def _decompose_outer_indexer(
     backend_indexer: list[Any] = []
     np_indexer = []
     # make indexer positive
-    pos_indexer: list[np.ndarray | int | np.number] = []
+    pos_indexer: list[np.ndarray | int | slice] = []
     for k, s in zip(indexer.tuple, shape):
         if isinstance(k, np.ndarray):
             pos_indexer.append(np.where(k < 0, k + s, k))

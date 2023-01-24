@@ -46,6 +46,7 @@ import os
 import re
 import sys
 import warnings
+from abc import ABCMeta, abstractmethod
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -541,7 +542,7 @@ class OrderedSet(MutableSet[T]):
         return f"{type(self).__name__}({list(self)!r})"
 
 
-class NdimSizeLenMixin:
+class NdimSizeLenMixin(metaclass=ABCMeta):
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
@@ -549,7 +550,12 @@ class NdimSizeLenMixin:
     __slots__ = ()
 
     @property
-    def ndim(self: Any) -> int:
+    @abstractmethod
+    def shape(self) -> tuple[int, ...]:
+        ...
+
+    @property
+    def ndim(self) -> int:
         """
         Number of array dimensions.
 
@@ -560,7 +566,7 @@ class NdimSizeLenMixin:
         return len(self.shape)
 
     @property
-    def size(self: Any) -> int:
+    def size(self) -> int:
         """
         Number of elements in the array.
 
@@ -572,14 +578,14 @@ class NdimSizeLenMixin:
         """
         return math.prod(self.shape)
 
-    def __len__(self: Any) -> int:
+    def __len__(self) -> int:
         try:
             return self.shape[0]
         except IndexError:
             raise TypeError("len() of unsized object")
 
 
-class NDArrayMixin(NdimSizeLenMixin):
+class NDArrayMixin(NdimSizeLenMixin, metaclass=ABCMeta):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 
@@ -588,19 +594,20 @@ class NDArrayMixin(NdimSizeLenMixin):
     """
 
     __slots__ = ()
+    array: Any  # TODO: what is this type, maybe ExplicitlyIndexed?
 
     @property
-    def dtype(self: Any) -> np.dtype:
+    def dtype(self) -> np.dtype:
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> tuple[int, ...]:
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape
 
-    def __getitem__(self: Any, key):
+    def __getitem__(self, key: Any):
         return self.array[key]
 
-    def __repr__(self: Any) -> str:
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r})"
 
 

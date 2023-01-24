@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal  # noqa: F401
+from numpy.typing import DTypeLike
 from packaging.version import Version
 from pandas.testing import assert_frame_equal  # noqa: F401
 
@@ -34,6 +35,7 @@ try:
     mpl.use("Agg")
 except ImportError:
     pass
+
 
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
@@ -141,10 +143,13 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
-    def __init__(self, array):
+    def __init__(self, array) -> None:
         self.array = array
 
     def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
 

@@ -2577,11 +2577,11 @@ class TestAsCompatibleData:
         )
 
         expect = orig.copy(deep=True)
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        expect.values = np.array([[2.0, 2.0], [2.0, 2.0]])
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]
+        expect.values = np.array([[True, True], [True, True]])
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
@@ -2645,7 +2645,8 @@ class TestAsCompatibleData:
                 self.array = array
 
         class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
-            pass
+            def __array__(self, dtype=None) -> np.ndarray:
+                raise NotImplementedError
 
         # Type with data stored in values attribute
         class CustomWithValuesAttr:

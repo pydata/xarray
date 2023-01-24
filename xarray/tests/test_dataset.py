@@ -5863,8 +5863,8 @@ class TestDataset:
 
         expected = ds.copy(deep=True)
         # https://github.com/python/mypy/issues/3004
-        expected["d1"].values = [2, 2, 2]  # type: ignore
-        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore
+        expected["d1"].values = np.array([2, 2, 2])
+        expected["d2"].values = np.array([2.0, 2.0, 2.0])
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -5872,8 +5872,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]  # type: ignore
-        expected["d2"].values = [True, True, True]  # type: ignore
+        expected["d1"].values = np.array([True, True, True])
+        expected["d2"].values = np.array([True, True, True])
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
