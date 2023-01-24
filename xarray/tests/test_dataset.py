@@ -4747,6 +4747,9 @@ class TestDataset:
 
             # preserve the duck array type and don't cast to array
             assert isinstance(ds["var1"].load().data, DuckArrayWrapper)
+            assert isinstance(
+                ds["var1"].isel(dim2=0, dim1=0).load().data, DuckArrayWrapper
+            )
 
             ds.close()
 

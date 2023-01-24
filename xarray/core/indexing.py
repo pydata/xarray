@@ -548,7 +548,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         # so we need the explicit check for ExplicitlyIndexed
         if isinstance(array, ExplicitlyIndexed):
             array = array.get_duck_array()
-        return array
+        return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
@@ -603,7 +603,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         array = self.array[self.key]
         if isinstance(array, ExplicitlyIndexed):
             array = array.get_duck_array()
-        return array
+        return _wrap_numpy_scalars(array)
 
     def _updated_key(self, new_key):
         return _combine_indexers(self.key, self.shape, new_key)
