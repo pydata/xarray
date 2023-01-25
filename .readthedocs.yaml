@@ -7,7 +7,6 @@ build:
   jobs:
     post_checkout:
       - git log --pretty=oneline HEAD~5..
-      - git fetch --unshallow --tags  # to allow setuptools_scm to work properly
       - (git --no-pager log --pretty="tformat:%s" -1 | grep -viq "[skip-rtd]") || exit 183
     pre_install:
       - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
