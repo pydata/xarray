@@ -69,7 +69,6 @@ from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
-    merge_attrs,
     merge_coordinates_without_align,
     merge_data_and_coords,
 )
@@ -6594,10 +6593,8 @@ class Dataset(
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=False)
-        all_attrs = [self.attrs, getattr(other, "attrs", [])]
-        if isinstance(keep_attrs, bool):
-            keep_attrs = "override" if keep_attrs else "drop"
-        ds.attrs = merge_attrs(all_attrs, combine_attrs=keep_attrs)
+        if keep_attrs:
+            ds.attrs = self.attrs
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:

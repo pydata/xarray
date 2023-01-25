@@ -5852,29 +5852,13 @@ class TestDataset:
     @pytest.mark.parametrize(
         ["keep_attrs", "expected"],
         (
-            (False, {}),
-            (True, {"foo": "a", "bar": "b"}),
-            ("drop", {}),
-            ("identical", {"foo": "a", "bar": "b"}),
-            ("no_conflicts", {"foo": "a", "bar": "b", "baz": "c"}),
-            ("drop_conflicts", {"foo": "a", "baz": "c"}),
-            ("override", {"foo": "a", "bar": "b"}),
+            pytest.param(False, {}, id="False"),
+            pytest.param(True, {"foo": "a", "bar": "b"}, id="True"),
         ),
     )
     def test_binary_ops_keep_attrs(self, keep_attrs, expected) -> None:
-        attrs_1 = {"foo": "a", "bar": "b"}
-        attrs_3 = {"foo": "a", "bar": "z", "baz": "c"}
-        attrs_2 = {"foo": "a", "baz": "c"}
-
-        ds1 = xr.Dataset({"a": 1, "b": 1}, attrs=attrs_1)
-        ds2 = xr.Dataset({"a": 1, "b": 1})
-        if keep_attrs == "identical":
-            ds2.attrs = attrs_1
-        elif keep_attrs == "no_conflicts":
-            ds2.attrs = attrs_2
-        else:
-            ds2.attrs = attrs_3
-
+        ds1 = xr.Dataset({"a": 1}, attrs={"foo": "a", "bar": "b"})
+        ds2 = xr.Dataset({"a": 1}, attrs={"foo": "a", "baz": "c"})
         with xr.set_options(keep_attrs=keep_attrs):
             ds_result = ds1 + ds2
 
