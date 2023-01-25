@@ -42,6 +42,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Mention `flox <https://flox.readthedocs.io>`_ in GroupBy documentation and docstrings.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
