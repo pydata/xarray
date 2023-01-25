@@ -15,9 +15,9 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2022.12.1:
+.. _whats-new.2023.01.1:
 
-v2022.12.1 (unreleased)
+v2023.01.1 (unreleased)
 -----------------------
 
 New Features
@@ -27,13 +27,41 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
-  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
-  By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
 Deprecations
 ~~~~~~~~~~~~
 
+
+Bug fixes
+~~~~~~~~~
+
+- :py:func:`xarray.concat` can now concatenate variables present in some datasets but
+  not others (:issue:`508`, :pull:`7400`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.01.0:
+
+v2023.01.0 (Jan 17, 2023)
+-------------------------
+
+This release includes a number of bug fixes. Thanks to the 14 contributors to this release:
+Aron Gergely, Benoit Bovy, Deepak Cherian, Ian Carroll, Illviljan, Joe Hamman, Justus Magin, Mark Harfouche,
+Matthew Roeschke, Paige Martin, Pierre, Sam Levang, Tom White,  stefank0.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
+  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -50,10 +78,6 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
   :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
