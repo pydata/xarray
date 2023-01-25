@@ -938,8 +938,9 @@ def cftime_range(
         "left", "right", or both sides (None).
 
         .. deprecated:: 2023.01.1
-            Following pandas, the `closed` argument is deprecated in favor
-            of the `inclusive` argument, and will be removed in a future
+
+            Following pandas, the ``closed`` argument is deprecated in favor
+            of the ``inclusive`` argument, and will be removed in a future
             version of xarray.
     inclusive : {None, "both", "neither", "left", "right"}, default None
         Include boundaries; whether to set each bound as closed or open.
