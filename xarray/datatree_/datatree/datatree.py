@@ -13,6 +13,7 @@ from typing import (
     Hashable,
     Iterable,
     Iterator,
+    List,
     Mapping,
     MutableMapping,
     Optional,
@@ -22,7 +23,6 @@ from typing import (
     overload,
 )
 
-import pandas as pd
 from xarray.core import utils
 from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.dataarray import DataArray
@@ -30,10 +30,17 @@ from xarray.core.dataset import Dataset, DataVariables
 from xarray.core.indexes import Index, Indexes
 from xarray.core.merge import dataset_update_method
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.utils import Default, Frozen, _default, either_dict_or_kwargs
-from xarray.core.variable import Variable, calculate_dimensions
+from xarray.core.utils import (
+    Default,
+    Frozen,
+    HybridMappingProxy,
+    _default,
+    either_dict_or_kwargs,
+)
+from xarray.core.variable import Variable
 
 from . import formatting, formatting_html
+from .common import TreeAttrAccessMixin
 from .mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
 from .ops import (
     DataTreeArithmeticMixin,
@@ -43,7 +50,14 @@ from .ops import (
 from .render import RenderTree
 from .treenode import NamedNode, NodePath, Tree
 
+try:
+    from xarray.core.variable import calculate_dimensions
+except ImportError:
+    # for xarray versions 2022.03.0 and earlier
+    from xarray.core.dataset import calculate_dimensions
+
 if TYPE_CHECKING:
+    import pandas as pd
     from xarray.core.merge import CoercibleValue
     from xarray.core.types import ErrorOptions
 
@@ -227,6 +241,7 @@ class DataTree(
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
+    TreeAttrAccessMixin,
     Generic[Tree],
     Mapping,
 ):
@@ -236,21 +251,17 @@ class DataTree(
     Attempts to present an API like that of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
     """
 
-    # TODO attribute-like access for both vars and child nodes (by inheriting from xarray.core.common.AttrsAccessMixin?)
-
-    # TODO ipython autocomplete for child nodes
-
     # TODO Some way of sorting children by depth
-
-    # TODO Consistency in copying vs updating objects
 
     # TODO do we need a watch out for if methods intended only for root nodes are called on non-root nodes?
 
     # TODO dataset methods which should not or cannot act over the whole tree, such as .to_array
 
-    # TODO del and delitem methods
+    # TODO .loc method
 
-    # TODO .loc, __contains__, __iter__, __array__, __len__
+    # TODO a lot of properties like .variables could be defined in a DataMapping class which both Dataset and DataTree inherit from
+
+    # TODO all groupby classes
 
     # TODO a lot of properties like .variables could be defined in a DataMapping class which both Dataset and DataTree inherit from
 
@@ -271,6 +282,9 @@ class DataTree(
     _variables: Dict[Hashable, Variable]
 
     __slots__ = (
+        "_name",
+        "_parent",
+        "_children",
         "_attrs",
         "_cache",
         "_coord_names",
@@ -485,6 +499,51 @@ class DataTree(
         """
         return self.dims
 
+    @property
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from self._item_sources
+        yield self.attrs
+
+    @property
+    def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
+        """Places to look-up items for key-completion"""
+        yield self.data_vars
+        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
+
+        # virtual coordinates
+        yield HybridMappingProxy(keys=self.dims, mapping=self)
+
+        # immediate child nodes
+        yield self.children
+
+    def _ipython_key_completions_(self) -> List[str]:
+        """Provide method for the key-autocompletions in IPython.
+        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        For the details.
+        """
+
+        # TODO allow auto-completing relative string paths, e.g. `dt['path/to/../ <tab> node'`
+        # Would require changes to ipython's autocompleter, see https://github.com/ipython/ipython/issues/12420
+        # Instead for now we only list direct paths to all node in subtree explicitly
+
+        items_on_this_node = self._item_sources
+        full_file_like_paths_to_all_nodes_in_subtree = {
+            node.path[1:]: node for node in self.subtree
+        }
+
+        all_item_sources = itertools.chain(
+            items_on_this_node, [full_file_like_paths_to_all_nodes_in_subtree]
+        )
+
+        items = {
+            item
+            for source in all_item_sources
+            for item in source
+            if isinstance(item, str)
+        }
+        return list(items)
+
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
         'key' is either an array stored in the datatree or a child node, or neither.
@@ -496,6 +555,14 @@ class DataTree(
 
     def __iter__(self) -> Iterator[Hashable]:
         return itertools.chain(self.ds.data_vars, self.children)
+
+    def __array__(self, dtype=None):
+        raise TypeError(
+            "cannot directly convert a DataTree into a "
+            "numpy array. Instead, create an xarray.DataArray "
+            "first, either with indexing on the DataTree or by "
+            "invoking the `to_array()` method."
+        )
 
     def __repr__(self) -> str:
         return formatting.datatree_repr(self)
@@ -966,6 +1033,7 @@ class DataTree(
     @property
     def indexes(self) -> Indexes[pd.Index]:
         """Mapping of pandas.Index objects used for label based indexing.
+
         Raises an error if this DataTree node has indexes that cannot be coerced
         to pandas.Index objects.
 

@@ -113,7 +113,6 @@ Manipulate the contents of all nodes in a tree simultaneously.
    :toctree: generated/
 
    DataTree.copy
-
    DataTree.assign_coords
    DataTree.merge
    DataTree.rename

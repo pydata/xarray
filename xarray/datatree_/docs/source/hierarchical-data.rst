@@ -263,7 +263,12 @@ This also means that the names of variables and of child nodes must be different
 Attribute-like access
 ~~~~~~~~~~~~~~~~~~~~~
 
-# TODO attribute-like access is not yet implemented, see issue https://github.com/xarray-contrib/datatree/issues/98
+You can also select both variables and child nodes through dot indexing
+
+.. ipython:: python
+
+    dt.foo
+    dt.a
 
 .. _filesystem paths:
 

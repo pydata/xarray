@@ -25,11 +25,11 @@ New Features
 
 - Added a :py:func:`DataTree.level`, :py:func:`DataTree.depth`, and :py:func:`DataTree.width` property (:pull:`208`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- Allow dot-style (or "attribute-like") access to child nodes and variables, with ipython autocomplete. (:issue:`189`, :pull:`98`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
 
 Deprecations
 ~~~~~~~~~~~~
@@ -43,10 +43,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
 
 .. _whats-new.v0.0.11:
 
