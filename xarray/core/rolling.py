@@ -4,16 +4,8 @@ import functools
 import itertools
 import math
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterator,
-    Mapping,
-    TypeVar,
-)
+from collections.abc import Hashable, Iterator, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
 

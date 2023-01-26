@@ -2,20 +2,9 @@ from __future__ import annotations
 
 import datetime
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from os import PathLike
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Literal,
-    Mapping,
-    NoReturn,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overload
 
 import numpy as np
 import pandas as pd

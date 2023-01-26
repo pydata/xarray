@@ -3,7 +3,8 @@ from __future__ import annotations
 import functools
 import inspect
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, TypeVar, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from xarray.core.alignment import broadcast
 from xarray.plot import dataarray_plot
