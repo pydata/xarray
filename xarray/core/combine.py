@@ -3,7 +3,8 @@ from __future__ import annotations
 import itertools
 import warnings
 from collections import Counter
-from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Union
+from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING, Literal, Union
 
 import pandas as pd
 

@@ -8,19 +8,8 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from typing import (
-    TYPE_CHECKING,
-    AbstractSet,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, AbstractSet, Any, Callable, TypeVar, Union, overload
 
 import numpy as np
 
@@ -913,7 +902,6 @@ def apply_ufunc(
         dimensions as input and vectorize it automatically with
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
-        Using this option requires NumPy version 1.12 or newer.
     join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched

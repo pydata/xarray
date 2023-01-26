@@ -13,10 +13,11 @@ import sys
 import tempfile
 import uuid
 import warnings
+from collections.abc import Iterator
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Iterator, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -58,7 +59,6 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
     mock,
@@ -68,7 +68,6 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_0_12,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -2881,42 +2880,12 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
-    @pytest.mark.parametrize(
-        "invalid_netcdf, warntype, num_warns",
-        [
-            pytest.param(
-                None,
-                FutureWarning,
-                1,
-                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
-            ),
-            pytest.param(
-                False,
-                FutureWarning,
-                1,
-                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
-            ),
-            (True, None, 0),
-        ],
-    )
-    def test_complex(self, invalid_netcdf, warntype, num_warns) -> None:
+    def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with warnings.catch_warnings(record=True) as record:
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
+        save_kwargs = {"invalid_netcdf": True}
+        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+            assert_equal(expected, actual)
 
-        recorded_num_warns = 0
-        if warntype:
-            for warning in record:
-                if issubclass(warning.category, warntype) and (
-                    "complex dtypes" in str(warning.message)
-                ):
-                    recorded_num_warns += 1
-
-        assert recorded_num_warns == num_warns
-
-    @requires_h5netcdf_0_12
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
 
@@ -3092,11 +3061,7 @@ class TestH5NetCDFAlreadyOpen:
                 v = group.createVariable("x", "int")
                 v[...] = 42
 
-            kwargs = {}
-            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-                h5netcdf.core.h5py.__version__
-            ) >= Version("3.0.0"):
-                kwargs = dict(decode_vlen_strings=True)
+            kwargs = {"decode_vlen_strings": True}
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5["g"])
@@ -3119,11 +3084,7 @@ class TestH5NetCDFAlreadyOpen:
                 v = nc.createVariable("y", np.int32, ("x",))
                 v[:] = np.arange(10)
 
-            kwargs = {}
-            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-                h5netcdf.core.h5py.__version__
-            ) >= Version("3.0.0"):
-                kwargs = dict(decode_vlen_strings=True)
+            kwargs = {"decode_vlen_strings": True}
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5)
@@ -4861,7 +4822,7 @@ class TestRasterio:
                     assert_equal(actual, rioda)
 
     def test_ENVI_tags(self) -> None:
-        rasterio = pytest.importorskip("rasterio", minversion="1.0a")
+        rasterio = pytest.importorskip("rasterio")
         from rasterio.transform import from_origin
 
         # Create an ENVI file with some tags in the ENVI namespace
@@ -5004,8 +4965,7 @@ class TestRasterio:
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
 
-        # https://github.com/rasterio/rasterio/1768
-        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
+        rasterio = pytest.importorskip("rasterio")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
 
@@ -5034,8 +4994,7 @@ class TestRasterio:
     def test_rasterio_vrt_with_src_crs(self) -> None:
         # Test open_rasterio() support of WarpedVRT with specified src_crs
 
-        # https://github.com/rasterio/rasterio/1768
-        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
+        rasterio = pytest.importorskip("rasterio")
 
         # create geotiff with no CRS and specify it manually
         with create_tmp_geotiff(crs=None) as (tmp_file, expected):

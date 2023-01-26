@@ -2,16 +2,8 @@ from __future__ import annotations
 
 import warnings
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Tuple,
-    Union,
-)
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -48,7 +40,7 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
 
-    T_VarTuple = Tuple[Tuple[Hashable, ...], Any, dict, dict]
+    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
     T_Name = Union[Hashable, None]
     T_Variables = Mapping[Any, Variable]
     T_Attrs = MutableMapping[Any, Any]

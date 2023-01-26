@@ -4,10 +4,11 @@ import pickle
 import re
 import sys
 import warnings
+from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any, Hashable
+from typing import Any
 
 import numpy as np
 import pandas as pd

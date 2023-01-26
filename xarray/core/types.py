@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Hashable, Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Hashable,
-    Iterable,
-    List,
     Literal,
     Protocol,
-    Sequence,
     SupportsIndex,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -74,13 +70,13 @@ if TYPE_CHECKING:
         # character codes, type strings or comma-separated fields, e.g., 'float64'
         str,
         # (flexible_dtype, itemsize)
-        Tuple[_DTypeLikeNested, int],
+        tuple[_DTypeLikeNested, int],
         # (fixed_dtype, shape)
-        Tuple[_DTypeLikeNested, _ShapeLike],
+        tuple[_DTypeLikeNested, _ShapeLike],
         # (base_dtype, new_dtype)
-        Tuple[_DTypeLikeNested, _DTypeLikeNested],
+        tuple[_DTypeLikeNested, _DTypeLikeNested],
         # because numpy does the same?
-        List[Any],
+        list[Any],
         # anything with a dtype attribute
         _SupportsDType,
     ]

@@ -27,6 +27,21 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Support for ``python 3.8`` has been dropped and the minimum versions of some
+  dependencies were changed (:pull:`7461`):
+
+  ===================== =========  ========
+   Package                    Old      New
+  ===================== =========  ========
+   python                     3.8      3.9
+   numpy                     1.20     1.21
+   pandas                     1.3      1.4
+   dask                   2021.11   2022.1
+   distributed            2021.11   2022.1
+   h5netcdf                  0.11     0.13
+   lxml                       4.6      4.7
+   numba                      5.4      5.5
+  ===================== =========  ========
 
 Deprecations
 ~~~~~~~~~~~~

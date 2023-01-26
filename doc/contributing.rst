@@ -154,7 +154,7 @@ We'll now kick off a two-step process:
 .. code-block:: sh
 
    # Create and activate the build environment
-   conda create -c conda-forge -n xarray-tests python=3.8
+   conda create -c conda-forge -n xarray-tests python=3.10
 
    # This is for Linux and MacOS
    conda env update -f ci/requirements/environment.yml
@@ -571,9 +571,9 @@ A test run of this yields
 
    ((xarray) $ pytest test_cool_feature.py -v
     =============================== test session starts ================================
-    platform darwin -- Python 3.6.4, pytest-3.2.1, py-1.4.34, pluggy-0.4.0 --
-    cachedir: ../../.cache
-    plugins: cov-2.5.1, hypothesis-3.23.0
+    platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
+    cachedir: .pytest_cache
+    plugins: hypothesis-6.56.3, cov-4.0.0
     collected 11 items
 
     test_cool_feature.py::test_dtypes[int8] PASSED
@@ -599,7 +599,9 @@ which match ``int8``.
 
    ((xarray) bash-3.2$ pytest  test_cool_feature.py  -v -k int8
    =========================== test session starts ===========================
-   platform darwin -- Python 3.6.2, pytest-3.2.1, py-1.4.31, pluggy-0.4.0
+    platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
+    cachedir: .pytest_cache
+    plugins: hypothesis-6.56.3, cov-4.0.0
    collected 11 items
 
    test_cool_feature.py::test_dtypes[int8] PASSED
@@ -645,8 +647,7 @@ Performance matters and it is worth considering whether your code has introduced
 performance regressions.  *xarray* is starting to write a suite of benchmarking tests
 using `asv <https://github.com/spacetelescope/asv>`__
 to enable easy monitoring of the performance of critical *xarray* operations.
-These benchmarks are all found in the ``xarray/asv_bench`` directory.  asv
-supports both python2 and python3.
+These benchmarks are all found in the ``xarray/asv_bench`` directory.
 
 To use all features of asv, you will need either ``conda`` or
 ``virtualenv``. For more details please check the `asv installation
@@ -699,7 +700,7 @@ environment by::
 
 or, to use a specific Python interpreter,::
 
-    asv run -e -E existing:python3.6
+    asv run -e -E existing:python3.10
 
 This will display stderr from the benchmarks, and use your local
 ``python`` that comes from your ``$PATH``.

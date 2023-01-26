@@ -5,7 +5,8 @@ import io
 import threading
 import uuid
 import warnings
-from typing import Any, Hashable
+from collections.abc import Hashable
+from typing import Any
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache

@@ -3,16 +3,8 @@ from __future__ import annotations
 import collections
 import itertools
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    DefaultDict,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, DefaultDict
 
 import numpy as np
 

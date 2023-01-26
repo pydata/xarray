@@ -46,22 +46,24 @@ import os
 import re
 import sys
 import warnings
+from collections.abc import (
+    Collection,
+    Container,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    Sequence,
+)
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Collection,
-    Container,
     Generic,
-    Hashable,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
-    MutableMapping,
-    MutableSet,
-    Sequence,
     TypeVar,
     cast,
     overload,

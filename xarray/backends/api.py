@@ -1,27 +1,12 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Final,
-    Hashable,
-    Iterable,
-    Literal,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Type,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, Union, cast, overload
 
 import numpy as np
 
@@ -59,11 +44,11 @@ if TYPE_CHECKING:
     T_Engine = Union[
         T_NetcdfEngine,
         Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
-        Type[BackendEntrypoint],
+        type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_Chunks = Union[int, Dict[Any, Any], Literal["auto"], None]
+    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]

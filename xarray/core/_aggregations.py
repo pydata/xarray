@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS

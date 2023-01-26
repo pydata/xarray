@@ -3,18 +3,10 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 import numpy as np
 import pandas as pd
