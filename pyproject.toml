@@ -71,7 +71,7 @@ ignore_errors = true
 module = []
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 builtins = ["ellipsis"]
 exclude = [
     ".eggs",
