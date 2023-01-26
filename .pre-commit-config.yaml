@@ -19,6 +19,7 @@ repos:
     rev: 'v0.0.235'
     hooks:
       - id: ruff
+        args: ["--fix"]
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
     rev: 22.12.0

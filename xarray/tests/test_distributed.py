@@ -10,9 +10,11 @@ from packaging.version import Version
 
 if TYPE_CHECKING:
     import dask
+    import dask.array as da
     import distributed
 else:
     dask = pytest.importorskip("dask")
+    da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
 from dask.distributed import Client, Lock
@@ -47,11 +49,6 @@ from xarray.tests.test_backends import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-# this is to stop isort throwing errors. May have been easier to just use
-# `isort:skip` in retrospect
-
-
-da = pytest.importorskip("dask.array")
 loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
 
 
