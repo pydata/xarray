@@ -7,7 +7,6 @@ from unittest import mock
 
 import pytest
 
-# from xarray.backends import file_manager
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options

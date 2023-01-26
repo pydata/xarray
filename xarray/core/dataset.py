@@ -8,27 +8,20 @@ import math
 import sys
 import warnings
 from collections import defaultdict
+from collections.abc import (
+    Collection,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Collection,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -6410,6 +6403,11 @@ class Dataset(
             if isinstance(var, IndexVariable):
                 var = var.to_base_variable()
 
+            # Make sure var is a dask array, otherwise the array can become too large
+            # when it is broadcasted to several dimensions:
+            if not is_duck_dask_array(var._data):
+                var = var.chunk()
+
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
             series = dd.from_array(dask_array.reshape(-1), columns=[name])
             series_list.append(series)
@@ -6592,6 +6590,9 @@ class Dataset(
             self, other = align(self, other, join=align_type, copy=False)  # type: ignore[assignment]
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
+        keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            ds.attrs = self.attrs
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:

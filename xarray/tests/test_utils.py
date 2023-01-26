@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
