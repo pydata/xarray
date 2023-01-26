@@ -9,13 +9,11 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import lazy_array_equiv
-from xarray.core.pycompat import mod_version
 from xarray.testing import assert_chunks_equal
 from xarray.tests import (
     assert_allclose,
@@ -33,7 +31,6 @@ from xarray.tests.test_backends import create_tmp_file
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
-dask_version = mod_version("dask")
 
 ON_WINDOWS = sys.platform == "win32"
 
@@ -118,9 +115,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(
-        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
-    )
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -138,14 +132,6 @@ class TestVariable(DaskTestCase):
         expected = Variable(("x"), expected_data)
         arr[index] = 99
         assert_identical(arr, expected)
-
-    @pytest.mark.skipif(
-        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
-    )
-    def test_setitem_dask_array_error(self):
-        with pytest.raises(TypeError, match=r"stored in a dask array"):
-            v = self.lazy_var
-            v[:1] = 0
 
     def test_squeeze(self):
         u = self.eager_var
@@ -1679,9 +1665,6 @@ def test_optimize():
     arr2.compute()
 
 
-# The graph_manipulation module is in dask since 2021.2 but it became usable with
-# xarray only since 2021.3
-@pytest.mark.skipif(dask_version <= Version("2021.02.0"), reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is

@@ -3,13 +3,12 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
+from collections.abc import Hashable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Generic,
-    Hashable,
-    Iterable,
     Literal,
     MutableMapping,
     TypeVar,

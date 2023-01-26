@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
 from typing import (
