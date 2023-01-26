@@ -2,15 +2,8 @@ from __future__ import annotations
 
 import warnings
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Union,
-)
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd

@@ -1,7 +1,8 @@
 """Testing functions exposed to the user API"""
 import functools
 import warnings
-from typing import Hashable
+from collections.abc import Hashable
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -382,7 +383,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
 
 
 def _assert_internal_invariants(
-    xarray_obj: DataArray | Dataset | Variable, check_default_indexes: bool
+    xarray_obj: Union[DataArray, Dataset, Variable], check_default_indexes: bool
 ):
     """Validate that an xarray object satisfies its own internal invariants.
 

@@ -1,11 +1,12 @@
+#!/usr/bin/env python
 """Fetch from conda database all available versions of the xarray dependencies and their
 publication date. Compare it against requirements/py37-min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
 import itertools
 import sys
+from collections.abc import Iterator
 from datetime import datetime
-from typing import Iterator
 
 import conda.api  # type: ignore[import]
 import yaml

@@ -1,25 +1,12 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Final,
-    Hashable,
-    Iterable,
-    Literal,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Final, Literal, Union, cast, overload
 
 import numpy as np
 

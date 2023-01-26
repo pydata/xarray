@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Hashable, Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Hashable,
-    Iterable,
     Literal,
     Protocol,
-    Sequence,
     SupportsIndex,
     TypeVar,
     Union,

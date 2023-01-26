@@ -3,18 +3,9 @@ from __future__ import annotations
 import functools
 import operator
 from collections import defaultdict
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterable,
-    Mapping,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd

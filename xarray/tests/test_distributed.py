@@ -183,7 +183,6 @@ def test_dask_distributed_zarr_integration_test(
     loop, consolidated: bool, compute: bool
 ) -> None:
     if consolidated:
-        pytest.importorskip("zarr", minversion="2.2.1.dev2")
         write_kwargs: dict[str, Any] = {"consolidated": True}
         read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
