@@ -6403,6 +6403,11 @@ class Dataset(
             if isinstance(var, IndexVariable):
                 var = var.to_base_variable()
 
+            # Make sure var is a dask array, otherwise the array can become too large
+            # when it is broadcasted to several dimensions:
+            if not is_duck_dask_array(var._data):
+                var = var.chunk()
+
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
             series = dd.from_array(dask_array.reshape(-1), columns=[name])
             series_list.append(series)
