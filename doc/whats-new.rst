@@ -15,9 +15,9 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2022.12.1:
+.. _whats-new.2023.01.1:
 
-v2022.12.1 (unreleased)
+v2023.01.1 (unreleased)
 -----------------------
 
 New Features
@@ -27,9 +27,21 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
-  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
-  By `Matthew Roeschke <https://github.com/mroeschke>`_.
+- Support for ``python 3.8`` has been dropped and the minimum versions of some
+  dependencies were changed (:pull:`7461`):
+
+  ===================== =========  ========
+   Package                    Old      New
+  ===================== =========  ========
+   python                     3.8      3.9
+   numpy                     1.20     1.21
+   pandas                     1.3      1.4
+   dask                   2021.11   2022.1
+   distributed            2021.11   2022.1
+   h5netcdf                  0.11     0.13
+   lxml                       4.6      4.7
+   numba                      5.4      5.5
+  ===================== =========  ========
 
 Deprecations
 ~~~~~~~~~~~~
@@ -38,6 +50,44 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:func:`xarray.concat` can now concatenate variables present in some datasets but
+  not others (:issue:`508`, :pull:`7400`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
+- Handle ``keep_attrs`` option in binary operators of :py:meth:`Dataset` (:issue:`7390`, :pull:`7391`).
+  By `Aron Gergely <https://github.com/arongergely>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Mention the `flox package <https://flox.readthedocs.io>`_ in GroupBy documentation and docstrings.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.01.0:
+
+v2023.01.0 (Jan 17, 2023)
+-------------------------
+
+This release includes a number of bug fixes. Thanks to the 14 contributors to this release:
+Aron Gergely, Benoit Bovy, Deepak Cherian, Ian Carroll, Illviljan, Joe Hamman, Justus Magin, Mark Harfouche,
+Matthew Roeschke, Paige Martin, Pierre, Sam Levang, Tom White,  stefank0.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- :py:meth:`CFTimeIndex.get_loc` has removed the ``method`` and ``tolerance`` keyword arguments.
+  Use ``.get_indexer([key], method=..., tolerance=...)`` instead (:pull:`7361`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Avoid in-memory broadcasting when converting to a dask dataframe
+  using ``.to_dask_dataframe.`` (:issue:`6811`, :pull:`7472`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Accessing the property ``.nbytes`` of a DataArray, or Variable no longer
   accidentally triggers loading the variable into memory.
 - Allow numpy-only objects in :py:func:`where` when ``keep_attrs=True`` (:issue:`7362`, :pull:`7364`).
@@ -50,10 +100,6 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Preserve original dtype on accessing MultiIndex levels (:issue:`7250`,
   :pull:`7393`). By `Ian Carroll <https://github.com/itcarroll>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
