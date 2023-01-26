@@ -6585,6 +6585,9 @@ class Dataset(
             self, other = align(self, other, join=align_type, copy=False)  # type: ignore[assignment]
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
+        keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            ds.attrs = self.attrs
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:

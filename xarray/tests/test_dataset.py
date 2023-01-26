@@ -5850,6 +5850,21 @@ class TestDataset:
             actual = ds1 + ds2
             assert_equal(actual, expected)
 
+    @pytest.mark.parametrize(
+        ["keep_attrs", "expected"],
+        (
+            pytest.param(False, {}, id="False"),
+            pytest.param(True, {"foo": "a", "bar": "b"}, id="True"),
+        ),
+    )
+    def test_binary_ops_keep_attrs(self, keep_attrs, expected) -> None:
+        ds1 = xr.Dataset({"a": 1}, attrs={"foo": "a", "bar": "b"})
+        ds2 = xr.Dataset({"a": 1}, attrs={"foo": "a", "baz": "c"})
+        with xr.set_options(keep_attrs=keep_attrs):
+            ds_result = ds1 + ds2
+
+        assert ds_result.attrs == expected
+
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
