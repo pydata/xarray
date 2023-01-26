@@ -149,14 +149,14 @@ def _infer_line_data(
     return xplt, yplt, hueplt, huelabel
 
 
-def _infer_line_data2(
+def _prepare_plot1d_data(
     darray: T_DataArray,
     coords_to_plot: MutableMapping[str, Hashable],
     plotfunc_name: str | None = None,
     _is_facetgrid: bool = False,
 ) -> dict[str, T_DataArray]:
     """
-    Infer data to plot.
+    Prepare data for usage with plt.scatter.
 
     Parameters
     ----------
@@ -181,7 +181,7 @@ def _infer_line_data2(
     ...     dims=("x",),
     ...     name="a",
     ... )
-    >>> plts = xr.plot.dataarray_plot._infer_line_data2(
+    >>> plts = xr.plot.dataarray_plot._prepare_plot1d_data(
     ...     a, coords_to_plot={"x": 1, "z": None, "hue": None, "size": None}
     ... )
     >>> # Check which coords to plot:
@@ -954,7 +954,7 @@ def _plot1d(plotfunc):
         if not _is_facetgrid:
             # Guess what coords to use if some of the values in coords_to_plot are None:
             coords_to_plot = _guess_coords_to_plot(darray, coords_to_plot, kwargs)
-        plts = _infer_line_data2(darray, coords_to_plot, plotfunc.__name__)
+        plts = _prepare_plot1d_data(darray, coords_to_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
