@@ -8,27 +8,20 @@ import math
 import sys
 import warnings
 from collections import defaultdict
+from collections.abc import (
+    Collection,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Collection,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
