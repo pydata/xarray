@@ -10,13 +10,9 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Sequence,
     overload,
 )
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd

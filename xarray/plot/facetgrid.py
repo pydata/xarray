@@ -10,10 +10,10 @@ from typing import (
     Callable,
     Generic,
     Literal,
-    MutableMapping,
     TypeVar,
     cast,
 )
+from collections.abc import MutableMapping
 
 import numpy as np
 
