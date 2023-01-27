@@ -34,6 +34,9 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Dropped support for python 3.8 (:issue:`212`, :pull:`214`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Bug fixes
 ~~~~~~~~~
 

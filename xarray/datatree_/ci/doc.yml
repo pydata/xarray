@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - pip
-  - python>=3.8
+  - python>=3.9
   - netcdf4
   - scipy
   - sphinx>=4.2.0
