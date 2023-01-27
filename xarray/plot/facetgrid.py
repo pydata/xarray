@@ -3,17 +3,8 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterable,
-    Literal,
-    TypeVar,
-    cast,
-)
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, cast
 
 import numpy as np
 

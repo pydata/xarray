@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, NoReturn, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
 import numpy as np
 
