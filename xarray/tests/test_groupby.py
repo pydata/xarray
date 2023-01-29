@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing_extensions import assert_type
 
 import warnings
 
@@ -10,7 +9,7 @@ from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.groupby import _consolidate_slices, DataArrayGroupBy
+from xarray.core.groupby import _consolidate_slices
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
