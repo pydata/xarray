@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing_extensions import assert_type
 
 import warnings
 
@@ -1471,14 +1472,17 @@ class TestDataArrayGroupBy:
 
     def test_groupby_fastpath_for_monotonic(self):
         # Fixes https://github.com/pydata/xarray/issues/6220
-        times = pd.date_range("2000-01-01 00:00:00", freq="6H", periods=12)
-        array = DataArray(np.arange(12), [("time", times)])
+        index = [1, 2, 3, 4, 7, 9, 10]
+        fwd = DataArray(np.ones(len(index)), [("idx", index)]).groupby(
+            "idx", squeeze=False
+        )
+        rev = DataArray(np.ones(len(index)), [("idx", index[::-1])]).groupby(
+            "idx", squeeze=False
+        )
 
-        try:
-            DataArrayGroupBy(array, "time", grouper=pd.Grouper(level="time", freq="1D"))
-            DataArrayGroupBy(array[::-1], "time", grouper=pd.Grouper(level="time", freq="1D"))
-        except ValueError:
-            pytest.fail("Cannot use fastpath for monotonically increasing and decreasing values")
+        assert_array_equal(fwd._group_indices, rev._group_indices)
+        for da in [fwd, rev]:
+            assert all([isinstance(elem, slice) for elem in da._group_indices])
 
 
 class TestDataArrayResample:
