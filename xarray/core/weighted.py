@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence, cast
+from collections.abc import Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Generic, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike

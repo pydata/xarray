@@ -2,20 +2,8 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    TypeVar,
-    Union,
-    cast,
-)
+from collections.abc import Hashable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union, cast
 
 import numpy as np
 import pandas as pd
