@@ -875,8 +875,8 @@ NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
 def _translate_closed_to_inclusive(closed):
     """Follows code added in pandas #43504."""
     emit_user_level_warning(
-        "Following pandas, the `closed` argument is deprecated in "
-        "favor of the `inclusive` argument, and will be removed in "
+        "Following pandas, the `closed` parameter is deprecated in "
+        "favor of the `inclusive` parameter, and will be removed in "
         "a future version of xarray.",
         FutureWarning,
     )
@@ -933,14 +933,14 @@ def cftime_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {"left", "right"} or None, default: _NoDefault
+    closed : {"left", "right"} or None, default: "NO_DEFAULT"
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
 
         .. deprecated:: 2023.01.1
 
-            Following pandas, the ``closed`` argument is deprecated in favor
-            of the ``inclusive`` argument, and will be removed in a future
+            Following pandas, the ``closed`` parameter is deprecated in favor
+            of the ``inclusive`` parameter, and will be removed in a future
             version of xarray.
 
     inclusive : {None, "both", "neither", "left", "right"}, default None
@@ -1180,13 +1180,13 @@ def date_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {"left", "right"} or None, default: _NoDefault
+    closed : {"left", "right"} or None, default: "NO_DEFAULT"
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
 
         .. deprecated:: 2023.01.1
-            Following pandas, the `closed` argument is deprecated in favor
-            of the `inclusive` argument, and will be removed in a future
+            Following pandas, the `closed` parameter is deprecated in favor
+            of the `inclusive` parameter, and will be removed in a future
             version of xarray.
     inclusive : {None, "both", "neither", "left", "right"}, default None
         Include boundaries; whether to set each bound as closed or open.

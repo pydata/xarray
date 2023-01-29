@@ -45,8 +45,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- Following pandas, the `closed` arguments of :py:func:`cftime_range` and
-  :py:func:`date_range` are deprecated in favor of the `inclusive` arguments,
+- Following pandas, the `closed` parameters of :py:func:`cftime_range` and
+  :py:func:`date_range` are deprecated in favor of the `inclusive` parameters,
   and will be removed in a future version of xarray (:issue:`6985`:,
   :pull:`7373`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
