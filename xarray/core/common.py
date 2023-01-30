@@ -1790,7 +1790,10 @@ def _contains_cftime_datetimes(array) -> bool:
 def contains_cftime_datetimes(var) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
     if var.dtype == np.dtype("O") and var.size > 0:
-        return _contains_cftime_datetimes(var.data)
+        ndims = len(var.shape)
+        first_idx = tuple(np.zeros(ndims, dtype="int32"))
+        array = var[first_idx].data
+        return _contains_cftime_datetimes(array)
     else:
         return False
 
