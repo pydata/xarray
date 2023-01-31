@@ -20,6 +20,7 @@ conda uninstall -y --force \
     bottleneck \
     sparse \
     flox \
+    datatree \
     h5netcdf \
     xarray
 # to limit the runtime of Upstream CI
@@ -47,5 +48,6 @@ python -m pip install \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
+    git+https://github.com/xarray-contrib/xarray-datatree \
     git+https://github.com/h5netcdf/h5netcdf
 python -m pip install pytest-timeout
