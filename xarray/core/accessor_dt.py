@@ -575,7 +575,7 @@ class CombinedDatetimelikeAccessor(
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
-        if not _contains_datetime_like_objects(obj):
+        if not _contains_datetime_like_objects(obj.variable):
             raise TypeError(
                 "'.dt' accessor only available for "
                 "DataArray with datetime64 timedelta64 dtype or "
