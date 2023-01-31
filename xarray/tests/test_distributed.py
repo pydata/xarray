@@ -161,12 +161,14 @@ def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
     fnames = []
     for i in range(0, 100, 10):
         fname = tmp_path / f"test_{i}.nc"
-        da.isel(time=slice(i, i+10)).to_netcdf(fname)
+        da.isel(time=slice(i, i + 10)).to_netcdf(fname)
         fnames.append(fname)
 
     with cluster() as (s, [a, b]):
         with Client(s["address"]):
-            with xr.open_mfdataset(fnames, parallel=parallel, concat_dim='time', combine='nested') as tf:
+            with xr.open_mfdataset(
+                fnames, parallel=parallel, concat_dim="time", combine="nested"
+            ) as tf:
                 assert_identical(tf["test"], da)
 
 
