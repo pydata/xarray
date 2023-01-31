@@ -789,7 +789,7 @@ def open_zarr(
 
     .. deprecated:: v2023.02.0
         `open_zarr` will be removed in Xarray v2023.06.0, please use
-        `open_dataset(..., engine='zarr')` from now on.
+        `open_dataset(..., engine='zarr', chunks={})` from now on.
 
     See Also
     --------
