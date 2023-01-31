@@ -14,22 +14,12 @@ repos:
       - id: absolufy-imports
         name: absolufy-imports
         files: ^xarray/
-    # This wants to go before isort & flake8
-  - repo: https://github.com/PyCQA/autoflake
-    rev: "v2.0.0"
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: 'v0.0.237'
     hooks:
-      - id: autoflake # isort should run before black as black sometimes tweaks the isort output
-        args: ["--in-place", "--ignore-init-module-imports"]
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.11.4
-    hooks:
-      - id: isort
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-      - id: pyupgrade
-        args:
-          - "--py38-plus"
+      - id: ruff
+        args: ["--fix"]
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
     rev: 22.12.0
@@ -43,15 +33,6 @@ repos:
         exclude: "generate_aggregations.py"
         additional_dependencies: ["black==22.12.0"]
       - id: blackdoc-autoupdate-black
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-  # - repo: https://github.com/Carreau/velin
-  #   rev: 0.0.8
-  #   hooks:
-  #     - id: velin
-  #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.991
     hooks:

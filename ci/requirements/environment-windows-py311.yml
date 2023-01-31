@@ -21,9 +21,9 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  - numba
-  - numbagg
-  - numpy<1.24
+  # - numba
+  # - numbagg
+  - numpy
   - packaging
   - pandas
   - pint
@@ -38,7 +38,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - sparse
+  # - sparse
   - toolz
   - typing_extensions
   - zarr
