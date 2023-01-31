@@ -787,9 +787,9 @@ def open_zarr(
     dataset : Dataset
         The newly created dataset.
 
-    .. deprecated:: 1.6.0
-        `ndobj_old` will be removed in NumPy 2.0.0, it is replaced by
-        `ndobj_new` because the latter works also with array subclasses.
+    .. deprecated:: v2023.02.0
+        `open_zarr` will be removed in Xarray v2023.06.0, please use
+        `open_dataset(..., engine='zarr')` from now on.
 
     See Also
     --------
