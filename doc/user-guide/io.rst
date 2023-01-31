@@ -626,11 +626,11 @@ To store variable length strings, convert them to object arrays first with
 ``dtype=object``.
 
 To read back a zarr dataset that has been created this way, we use the
-:py:func:`open_zarr` method:
+:py:func:`open_dataset` function:
 
 .. ipython:: python
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr")
+    ds_zarr = xr.open_dataset("path/to/directory.zarr", engine="zarr")
     ds_zarr
 
 Cloud Storage Buckets
@@ -671,7 +671,7 @@ instance and pass this, as follows:
     # write to the bucket
     ds.to_zarr(store=gcsmap)
     # read it back
-    ds_gcs = xr.open_zarr(gcsmap)
+    ds_gcs = xr.open_dataset(gcsmap, engine="zarr")
 
 (or use the utility function ``fsspec.get_mapper()``).
 

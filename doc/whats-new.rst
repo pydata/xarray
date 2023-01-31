@@ -45,7 +45,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The `open_zarr` function has been deprecated in favor of `open_dataset(..., engine='zarr')`.
+  (:issue:`7495`, :pull:`7496`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~

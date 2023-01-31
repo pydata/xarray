@@ -596,7 +596,6 @@ Dataset methods
    open_dataset
    open_mfdataset
    open_rasterio
-   open_zarr
    save_mfdataset
    Dataset.as_numpy
    Dataset.from_dataframe
@@ -1139,6 +1138,7 @@ Deprecated / Pending Deprecation
 .. autosummary::
    :toctree: generated/
 
+   open_zarr
    Dataset.drop
    DataArray.drop
    Dataset.apply

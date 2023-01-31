@@ -1812,12 +1812,12 @@ class ZarrBase(CFEncodedBase):
                 RuntimeWarning,
                 match="Failed to open Zarr store with consolidated",
             ):
-                with xr.open_zarr(store, **self.version_kwargs) as ds:
+                with xr.open_dataset(store, engine="zarr", **self.version_kwargs) as ds:
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
         with pytest.raises(FileNotFoundError, match=r"No such file or directory:"):
-            xr.open_zarr(f"{uuid.uuid4()}")
+            xr.open_dataset(f"{uuid.uuid4()}", engine="zarr")
 
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
@@ -2365,8 +2365,11 @@ class ZarrBase(CFEncodedBase):
                 **self.version_kwargs,
             )
             if compute:
-                with xr.open_zarr(
-                    store, consolidated=consolidated, **self.version_kwargs
+                with xr.open_dataset(
+                    store,
+                    consolidated=consolidated,
+                    engine="zarr",
+                    **self.version_kwargs,
                 ) as actual:
                     assert_identical(actual, zeros)
             for i in range(0, 10, 2):
@@ -2377,8 +2380,8 @@ class ZarrBase(CFEncodedBase):
                     consolidated=consolidated,
                     **self.version_kwargs,
                 )
-            with xr.open_zarr(
-                store, consolidated=consolidated, **self.version_kwargs
+            with xr.open_dataset(
+                store, consolidated=consolidated, engine="zarr", **self.version_kwargs
             ) as actual:
                 assert_identical(actual, nonzeros)
 
@@ -2392,7 +2395,7 @@ class ZarrBase(CFEncodedBase):
                 nonzeros.isel(region).to_zarr(
                     store, region=region, mode=mode, **self.version_kwargs
                 )
-            with xr.open_zarr(store, **self.version_kwargs) as actual:
+            with xr.open_dataset(store, engine="zarr", **self.version_kwargs) as actual:
                 assert_identical(actual, nonzeros)
 
     @requires_dask
@@ -2556,9 +2559,11 @@ class ZarrBase(CFEncodedBase):
         ds = create_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, **self.version_kwargs)
-            ds_a = xr.open_zarr(store_target, **self.version_kwargs)
+            ds_a = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, use_cftime=True, **self.version_kwargs)
+            ds_b = xr.open_dataset(
+                store_target, use_cftime=True, engine="zarr", **self.version_kwargs
+            )
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
 
     def test_write_read_select_write(self) -> None:
@@ -2568,7 +2573,7 @@ class ZarrBase(CFEncodedBase):
         # NOTE: using self.roundtrip, which uses open_dataset, will not trigger the bug.
         with self.create_zarr_target() as initial_store:
             ds.to_zarr(initial_store, mode="w", **self.version_kwargs)
-            ds1 = xr.open_zarr(initial_store, **self.version_kwargs)
+            ds1 = xr.open_dataset(initial_store, engine="zarr", **self.version_kwargs)
 
         # Combination of where+squeeze triggers error on write.
         ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
@@ -2583,7 +2588,9 @@ class ZarrBase(CFEncodedBase):
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, **self.version_kwargs)
-            assert_identical(ds, xr.open_zarr(store_target, **self.version_kwargs))
+            assert_identical(
+                ds, xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            )
 
         obj.attrs["bad"] = DataArray()
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
@@ -2666,7 +2673,9 @@ def test_zarr_storage_options() -> None:
     ds = create_test_data()
     store_target = "memory://test.zarr"
     ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
-    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
+    ds_a = xr.open_dataset(
+        store_target, engine="zarr", storage_options={"test": "zarr_read"}
+    )
     assert_identical(ds, ds_a)
 
 
@@ -5696,7 +5705,7 @@ class TestNCZarr:
     def test_open_nczarr(self) -> None:
         with create_tmp_file(suffix=".zarr") as tmp:
             expected = self._create_nczarr(tmp)
-            actual = xr.open_zarr(tmp, consolidated=False)
+            actual = xr.open_dataset(tmp, engine="zarr", consolidated=False)
             assert_identical(expected, actual)
 
     def test_overwriting_nczarr(self) -> None:
@@ -5704,7 +5713,7 @@ class TestNCZarr:
             ds = self._create_nczarr(tmp)
             expected = ds[["var1"]]
             expected.to_zarr(tmp, mode="w")
-            actual = xr.open_zarr(tmp, consolidated=False)
+            actual = xr.open_dataset(tmp, engine="zarr", consolidated=False)
             assert_identical(expected, actual)
 
     @pytest.mark.parametrize("mode", ["a", "r+"])
@@ -5723,3 +5732,12 @@ class TestNCZarr:
 def test_pickle_open_mfdataset_dataset():
     ds = open_example_mfdataset(["bears.nc"])
     assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+
+
+@requires_zarr
+def test_open_zarr_deprecation_warns():
+    ds = create_test_data()
+    with create_tmp_file(suffix=".zarr") as tmp:
+        ds.to_zarr(tmp, mode="w")
+        with pytest.warns(DeprecationWarning):
+            xr.open_zarr(tmp)

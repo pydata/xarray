@@ -787,16 +787,28 @@ def open_zarr(
     dataset : Dataset
         The newly created dataset.
 
+    .. deprecated:: 1.6.0
+        `ndobj_old` will be removed in NumPy 2.0.0, it is replaced by
+        `ndobj_new` because the latter works also with array subclasses.
+
     See Also
     --------
     open_dataset
     open_mfdataset
+
+
 
     References
     ----------
     http://zarr.readthedocs.io/
     """
     from xarray.backends.api import open_dataset
+
+    warnings.warn(
+        "open_zarr is Deprecated in favor of open_dataset(store, ..., engine='zarr')"
+        "See https://github.com/pydata/xarray/issues/7495 for more information",
+        DeprecationWarning,
+    )
 
     if chunks == "auto":
         try:
