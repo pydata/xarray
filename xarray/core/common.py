@@ -1776,7 +1776,6 @@ def _contains_cftime_datetimes(array: Any) -> bool:
     """Check if an array contains cftime.datetime objects"""
     from xarray.core.variable import Variable
 
-    var: T_Variable
     if isinstance(array, Variable):
         var = array
     elif is_duck_array(array):
