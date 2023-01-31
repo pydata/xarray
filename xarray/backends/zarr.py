@@ -805,7 +805,7 @@ def open_zarr(
     from xarray.backends.api import open_dataset
 
     warnings.warn(
-        "open_zarr is Deprecated in favor of open_dataset(store, ..., engine='zarr')"
+        "open_zarr is Deprecated in favor of open_dataset(..., engine='zarr', chunks={})"
         "See https://github.com/pydata/xarray/issues/7495 for more information",
         DeprecationWarning,
     )
