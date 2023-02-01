@@ -7,7 +7,6 @@ import itertools
 import sys
 from collections.abc import Iterator
 from datetime import datetime
-from typing import Optional
 
 import conda.api  # type: ignore[import]
 import yaml
@@ -45,7 +44,7 @@ def warning(msg: str) -> None:
     print("WARNING:", msg)
 
 
-def parse_requirements(fname) -> Iterator[tuple[str, int, int, Optional[int]]]:
+def parse_requirements(fname) -> Iterator[tuple[str, int, int, int | None]]:
     """Load requirements/py37-min-all-deps.yml
 
     Yield (package name, major version, minor version, [patch version])
@@ -116,7 +115,7 @@ def query_conda(pkg: str) -> dict[tuple[int, int], datetime]:
 
 
 def process_pkg(
-    pkg: str, req_major: int, req_minor: int, req_patch: Optional[int]
+    pkg: str, req_major: int, req_minor: int, req_patch: int | None
 ) -> tuple[str, str, str, str, str, str]:
     """Compare package version from requirements file to available versions in conda.
     Return row to build pandas dataframe:
