@@ -6628,6 +6628,14 @@ class Dataset(
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import GroupBy
 
+        try:
+            from datatree import DataTree
+
+            if isinstance(other, DataTree):
+                return NotImplemented
+        except ImportError:
+            pass
+
         if isinstance(other, GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
