@@ -45,5 +45,6 @@ dependencies:
   - sparse
   - toolz
   - typing_extensions
-  - xarray-datatree
   - zarr
+  - pip:
+    - git+https://github.com/xarray-contrib/datatree
