@@ -55,7 +55,7 @@ except Exception:
 try:
     from datatree import DataTree  # noqa
 except ImportError:
-    ...
+    pass
 
 
 # A hardcoded __all__ variable is necessary to appease
