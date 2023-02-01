@@ -23,6 +23,15 @@ v2023.01.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow importing the prototype :py:class:`DataTree` class (as well as the accompanying :py:func:`open_datatree()` and :py:func:`register_datatree_accessor` functions).
+  Currently ``from xarray import DataTree`` disguises an import from a separate package ``xarray-contrib/xarray-datatree``.
+  Importing these features will raise an ``ImportError`` unless the datatree package is installed.
+  Full integration of the :py:class:`DataTree` class in xarray is planned in the future (see our development roadmap),
+  but for now is proceeding on a provisional basis, and as such the API is still experimental and subject to change without notice.
+  In the meantime, you are encouraged to try using these features, and please let us know about your experiences!
+  (:issue:`4118`, :pull:`7418`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
