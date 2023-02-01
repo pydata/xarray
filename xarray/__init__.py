@@ -53,7 +53,7 @@ except Exception:
     __version__ = "999"
 
 try:
-    pass
+    from datatree import DataTree, open_datatree, register_datatree_accessor
 except ImportError:
     ...
 
