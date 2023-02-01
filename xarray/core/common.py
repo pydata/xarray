@@ -1790,7 +1790,7 @@ def _variable_contains_cftime_datetimes(var: T_Variable) -> bool:
         return False
 
     if var.dtype == np.dtype("O") and var.size > 0:
-        first_idx = tuple(0 for _ in range(var.ndim))
+        first_idx = (0,) * var.ndim
         sample = var[first_idx]
         return isinstance(sample.to_numpy().item(), cftime.datetime)
 
