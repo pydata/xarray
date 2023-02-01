@@ -13,7 +13,7 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.utils import Frozen, either_dict_or_kwargs, is_duck_array, is_scalar
+from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
 
 try:
     import cftime
@@ -1778,7 +1778,7 @@ def _contains_cftime_datetimes(array: Any) -> bool:
 
     if isinstance(array, Variable):
         var = array
-    elif is_duck_array(array):
+    else:
         var = Variable(dims=tuple(f"dim_{v}" for v in range(array.ndim)), data=array)
 
     return _variable_contains_cftime_datetimes(var)
