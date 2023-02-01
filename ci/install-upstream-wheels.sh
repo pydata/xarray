@@ -20,7 +20,7 @@ conda uninstall -y --force \
     bottleneck \
     sparse \
     flox \
-    datatree \
+    xarray-datatree \
     h5netcdf \
     xarray
 # to limit the runtime of Upstream CI
