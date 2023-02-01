@@ -6114,15 +6114,15 @@ class Dataset(
         """
         Convert this dataset into a datatree.DataTree.
 
-        WARNING: The DataTree structure is considered experimental,
-        and the API is less solidified than for other xarray features.
-
-        The returned tree will only consist of a single node.
-        That node will contain a copy of the dataset's data,
-        meaning all variables, coordinates, dimensions and attributes.
-
-        Requires the xarray-datatree package to be installed.
-        Find it at https://github.com/xarray-contrib/datatree.
+        .. warning:: The DataTree structure is considered experimental,
+            and the API is less solidified than for other xarray features.
+    
+            The returned tree will only consist of a single node.
+            That node will contain a copy of the dataset's data,
+            meaning all variables, coordinates, dimensions and attributes.
+    
+            Requires the xarray-datatree package to be installed.
+            Find it at https://github.com/xarray-contrib/datatree.
 
         Parameters
         ----------
