@@ -29,6 +29,11 @@ if TYPE_CHECKING:
     from xarray.core.variable import Variable
 
     try:
+        from datatree import DataTree as T_DataTree
+    except ImportError:
+        T_DataTree = Any
+
+    try:
         from dask.array import Array as DaskArray
     except ImportError:
         DaskArray = np.ndarray  # type: ignore

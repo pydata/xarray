@@ -3656,6 +3656,48 @@ class DataArray(
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
+    def to_datatree(self, node_name: str | None = None, name: str | None = None):
+        """
+        Convert this dataarray into a datatree.DataTree.
+
+        WARNING: The DataTree structure is considered experimental,
+        and the API is less solidified than for other xarray features.
+
+        The returned tree will only consist of a single node.
+        That node will contain a copy of the dataarray's data,
+        meaning including its coordinates, dimensions and attributes.
+
+        Requires the xarray-datatree package to be installed.
+        Find it at https://github.com/xarray-contrib/datatree.
+
+        Parameters
+        ----------
+        node_name: str, optional
+            The name of the datatree node created.
+        name: str, optional
+            Name to substitute for this array's name.
+
+        Returns
+        -------
+        dt : DataTree
+            A single-node datatree object, containing the information from this dataarray.
+
+        See Also
+        --------
+        datatree.DataTree
+        """
+
+        try:
+            from datatree import DataTree
+        except ImportError:
+            raise ImportError(
+                "Could not import the datatree package. "
+                "Find it at https://github.com/xarray-contrib/datatree"
+            )
+
+        ds = self.to_dataset(name=name)
+        return DataTree(data=ds, name=node_name)
+
     def to_pandas(self) -> DataArray | pd.Series | pd.DataFrame:
         """Convert this array into a pandas object with the same shape.
 

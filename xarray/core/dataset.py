@@ -6110,7 +6110,7 @@ class Dataset(
 
         return DataArray._construct_direct(variable, coords, name, indexes)
 
-    def to_datatree(self, name: str | None = None):
+    def to_datatree(self, node_name: str | None = None):
         """
         Convert this dataset into a datatree.DataTree.
 
@@ -6126,7 +6126,7 @@ class Dataset(
 
         Parameters
         ----------
-        name: str, optional
+        node_name: str, optional
             The name of the datatree node created.
 
         Returns
@@ -6147,7 +6147,7 @@ class Dataset(
                 "Find it at https://github.com/xarray-contrib/datatree"
             )
 
-        return DataTree(data=self, name=name)
+        return DataTree(data=self, name=node_name)
 
     def _normalize_dim_order(
         self, dim_order: Sequence[Hashable] | None = None
