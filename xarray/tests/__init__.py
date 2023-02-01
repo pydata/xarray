@@ -102,8 +102,6 @@ set_options(warn_for_unclosed_files=True)
 if has_dask:
     import dask
 
-    dask.config.set(scheduler="single-threaded")
-
 
 class CountingScheduler:
     """Simple dask scheduler counting the number of computes.

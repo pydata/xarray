@@ -28,9 +28,15 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from xarray.core import alignment
+from xarray.core import (
+    alignment,
+    duck_array_ops,
+    formatting,
+    formatting_html,
+    ops,
+    utils,
+)
 from xarray.core import dtypes as xrdtypes
-from xarray.core import duck_array_ops, formatting, formatting_html, ops, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.alignment import (
     _broadcast_helper,
@@ -6114,15 +6120,15 @@ class Dataset(
         """
         Convert this dataset into a datatree.DataTree.
 
-        WARNING: The DataTree structure is considered experimental,
-        and the API is less solidified than for other xarray features.
+        .. warning:: The DataTree structure is considered experimental,
+            and the API is less solidified than for other xarray features.
 
-        The returned tree will only consist of a single node.
-        That node will contain a copy of the dataset's data,
-        meaning all variables, coordinates, dimensions and attributes.
+            The returned tree will only consist of a single node.
+            That node will contain a copy of the dataset's data,
+            meaning all variables, coordinates, dimensions and attributes.
 
-        Requires the xarray-datatree package to be installed.
-        Find it at https://github.com/xarray-contrib/datatree.
+            Requires the xarray-datatree package to be installed.
+            Find it at https://github.com/xarray-contrib/datatree.
 
         Parameters
         ----------
