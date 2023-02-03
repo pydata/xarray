@@ -6485,7 +6485,7 @@ class DataArray(
 
         Examples
         --------
-        Coarsen the long time series by averaging over every four days.
+        Coarsen the long time series by averaging over every three days.
 
         >>> da = xr.DataArray(
         ...     np.linspace(0, 364, num=364),
