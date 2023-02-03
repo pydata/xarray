@@ -1504,7 +1504,7 @@ class TestDataArrayResample:
         expected = DataArray.from_series(expected_)
         assert_identical(actual, expected)
 
-        with pytest.raises(ValueError, match=r"index must be monotonic"):
+        with pytest.raises(ValueError, match=r"Index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
 
         reverse = array.isel(time=slice(-1, None, -1))
