@@ -1507,6 +1507,10 @@ class TestDataArrayResample:
         with pytest.raises(ValueError, match=r"index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
 
+        reverse = array.isel(time=slice(-1, None, -1))
+        with pytest.raises(ValueError):
+            reverse.resample(time="1D").mean()
+
     def test_da_resample_func_args(self):
         def func(arg1, arg2, arg3=0.0):
             return arg1.mean("time") + arg2 + arg3
