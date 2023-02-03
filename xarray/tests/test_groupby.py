@@ -1472,16 +1472,16 @@ class TestDataArrayGroupBy:
     def test_groupby_fastpath_for_monotonic(self):
         # Fixes https://github.com/pydata/xarray/issues/6220
         index = [1, 2, 3, 4, 7, 9, 10]
-        fwd = DataArray(np.ones(len(index)), [("idx", index)]).groupby(
-            "idx", squeeze=False
-        )
-        rev = DataArray(np.ones(len(index)), [("idx", index[::-1])]).groupby(
-            "idx", squeeze=False
-        )
+        array = DataArray(np.arange(len(index)), [("idx", index)])
+        array_rev = array.copy().assign_coords({"idx": index[::-1]})
+        fwd = array.groupby("idx", squeeze=False)
+        rev = array_rev.groupby("idx", squeeze=False)
 
-        assert_array_equal(fwd._group_indices, rev._group_indices)
-        for da in [fwd, rev]:
-            assert all([isinstance(elem, slice) for elem in da._group_indices])
+        for gb in [fwd, rev]:
+            assert all([isinstance(elem, slice) for elem in gb._group_indices])
+
+        assert_identical(fwd.sum(), array)
+        assert_identical(rev.sum(), array_rev.sortby("idx"))
 
 
 class TestDataArrayResample:
