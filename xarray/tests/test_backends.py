@@ -2039,6 +2039,12 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    def test_drop_encoding(self):
+        ds = open_example_dataset("example_1.nc")
+        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store, encoding=encodings)
+
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
         with self.create_store() as store:
