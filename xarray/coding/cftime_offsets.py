@@ -43,9 +43,8 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta
-from enum import Enum
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -58,7 +57,7 @@ from xarray.coding.times import (
     format_cftime_datetime,
 )
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
-from xarray.core.pdcompat import count_not_none
+from xarray.core.pdcompat import NoDefault, count_not_none, no_default
 from xarray.core.utils import emit_user_level_warning
 
 try:
@@ -855,29 +854,6 @@ def _generate_range(start, end, periods, offset):
             current = next_date
 
 
-class _NoDefault(Enum):
-    """Used by pandas to specify a default value for a deprecated argument.
-    Copied from pandas._libs.lib._NoDefault.
-
-    See also:
-    - pandas-dev/pandas#30788
-    - pandas-dev/pandas#40684
-    - pandas-dev/pandas#40715
-    - pandas-dev/pandas#47045
-    """
-
-    no_default = "NO_DEFAULT"
-
-    def __repr__(self) -> str:
-        return "<no_default>"
-
-
-no_default = (
-    _NoDefault.no_default
-)  # Sentinel indicating the default value following pandas
-NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
-
-
 def _translate_closed_to_inclusive(closed):
     """Follows code added in pandas #43504."""
     emit_user_level_warning(
@@ -939,12 +915,11 @@ def cftime_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {"left", "right"} or None, default: "NO_DEFAULT"
+    closed : {None, "left", "right"}, default: "NO_DEFAULT"
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
 
         .. deprecated:: 2023.01.1
-
             Following pandas, the ``closed`` parameter is deprecated in favor
             of the ``inclusive`` parameter, and will be removed in a future
             version of xarray.
@@ -968,6 +943,7 @@ def cftime_range(
     features of ``pandas.date_range`` (e.g. specifying how the index is
     ``closed`` on either side, or whether or not to ``normalize`` the start and
     end bounds); however, there are some notable exceptions:
+
     - You cannot specify a ``tz`` (time zone) argument.
     - Start or end dates specified as partial-datetime strings must use the
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
@@ -1186,7 +1162,7 @@ def date_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {"left", "right"} or None, default: "NO_DEFAULT"
+    closed : {None, "left", "right"}, default: "NO_DEFAULT"
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
 
@@ -1194,10 +1170,12 @@ def date_range(
             Following pandas, the `closed` parameter is deprecated in favor
             of the `inclusive` parameter, and will be removed in a future
             version of xarray.
-    inclusive : {None, "both", "neither", "left", "right"}, default None
+
+    inclusive : {None, "both", "neither", "left", "right"}, default: None
         Include boundaries; whether to set each bound as closed or open.
 
         .. versionadded:: 2023.01.1
+
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional
