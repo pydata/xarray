@@ -32,12 +32,12 @@ dependencies:
   - sparse
   - sphinx-autosummary-accessors
   - sphinx-book-theme >= 0.0.38
+  - sphinx-codeautolink
   - sphinx-copybutton
   - sphinx-design
   - sphinx!=4.4.0
   - zarr>=2.10
   - pip:
-      - sphinx-codeautolink
       - sphinxext-rediraffe
       - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
