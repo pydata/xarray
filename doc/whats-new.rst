@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.2023.02.0:
 
-v2023.02.0 (Feb 7. 2023)
+v2023.02.0 (Feb 7, 2023)
 ------------------------
 
 This release brings a major upgrade to :py:func:`xarray.concat`, bug fixes and
