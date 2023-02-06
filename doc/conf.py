@@ -130,6 +130,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 """
+codeautolink_inventory_map = {
+    "xarray.core.dataarray.DataArray": "xarray.DataArray",
+    "xarray.core.dataset.Dataset": "xarray.Dataset",
+}
 
 # Napoleon configurations
 
