@@ -15,14 +15,15 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.01.1:
+.. _whats-new.2023.02.0:
 
-v2023.01.1 (unreleased)
------------------------
+v2023.02.0 (Feb 7. 2023)
+------------------------
 
-New Features
-~~~~~~~~~~~~
-
+This release brings a major upgrade to :py:func:`xarray.concat`, bug fixes and 
+a bump in supported dependency versions. Thanks to our 9 contributors: 
+Aron Gergely, Deepak Cherian, Illviljan, James Bourbeau, Joe Hamman, 
+Justus Magin, Kai Mühlbauer, Ken Mankoff, Spencer Clark.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -52,7 +53,6 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
 - :py:func:`xarray.concat` can now concatenate variables present in some datasets but
   not others (:issue:`508`, :pull:`7400`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
@@ -61,12 +61,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
 - Mention the `flox package <https://flox.readthedocs.io>`_ in GroupBy documentation and docstrings.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 
 .. _whats-new.2023.01.0:
