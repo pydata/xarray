@@ -132,7 +132,8 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
+        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        """
         if rolling_agg_func:
             array_agg_func = None
         else:
@@ -141,7 +142,6 @@ class Rolling(Generic[T_Xarray]):
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, keep_attrs=None, **kwargs):
-
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
@@ -272,7 +272,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         starts = stops - window0
         starts[: window0 - offset] = 0
 
-        for (label, start, stop) in zip(self.window_labels, starts, stops):
+        for label, start, stop in zip(self.window_labels, starts, stops):
             window = self.obj.isel({dim0: slice(start, stop)})
 
             counts = window.count(dim=[dim0])

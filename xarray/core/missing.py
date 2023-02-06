@@ -80,7 +80,6 @@ class NumpyInterpolator(BaseInterpolator):
     """
 
     def __init__(self, xi, yi, method="linear", fill_value=None, period=None):
-
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
 

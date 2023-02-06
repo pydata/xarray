@@ -266,7 +266,6 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
-
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
             with gzip.open(filename_or_obj) as f:
@@ -296,7 +295,6 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         mmap=None,
         lock=None,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock

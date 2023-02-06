@@ -863,7 +863,6 @@ def drop_dims_from_indexers(
         return indexers
 
     elif missing_dims == "warn":
-
         # don't modify input
         indexers = dict(indexers)
 
@@ -912,7 +911,6 @@ def drop_missing_dims(
         return supplied_dims
 
     elif missing_dims == "warn":
-
         invalid = set(supplied_dims) - set(dims)
         if invalid:
             warnings.warn(

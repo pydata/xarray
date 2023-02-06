@@ -115,10 +115,8 @@ def to_cdms2(dataarray, copy=True):
 
     # Curvilinear and unstructured grids
     if dataarray.name not in dataarray.coords:
-
         cdms2_axes = {}
         for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
-
             coord_array = dataarray.coords[coord_name].to_cdms2()
 
             cdms2_axis_cls = (

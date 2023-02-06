@@ -1085,7 +1085,6 @@ class TestDetermineCmapParams:
             ["neither", "neither", "both", "max", "min"],
             [7, None, None, None, None],
         ):
-
             test_min = vmin if norm.vmin is None else norm.vmin
             test_max = vmax if norm.vmax is None else norm.vmax
 
@@ -1121,7 +1120,7 @@ class TestDiscreteColorMap:
 
     @pytest.mark.slow
     def test_build_discrete_cmap(self) -> None:
-        for (cmap, levels, extend, filled) in [
+        for cmap, levels, extend, filled in [
             ("jet", [0, 1], "both", False),
             ("hot", [-4, 4], "max", True),
         ]:
@@ -1282,7 +1281,6 @@ class Common2dMixin:
         self.pass_in_axis(self.plotmethod)
 
     def test_xyincrease_defaults(self) -> None:
-
         # With default settings the axis must be ordered regardless
         # of the coords order.
         self.plotfunc(DataArray(easy_array((3, 2)), coords=[[1, 2, 3], [1, 2]]))
@@ -1386,7 +1384,6 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == ax.get_ylabel()
 
     def test_bad_x_string_exception(self) -> None:
-
         with pytest.raises(ValueError, match=r"x and y cannot be equal."):
             self.plotmethod(x="y", y="y")
 
@@ -1651,7 +1648,6 @@ class Common2dMixin:
 
 @pytest.mark.slow
 class TestContourf(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.contourf)
 
     @pytest.mark.slow
@@ -1701,7 +1697,6 @@ class TestContourf(Common2dMixin, PlotTestCase):
 
 @pytest.mark.slow
 class TestContour(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.contour)
 
     # matplotlib cmap.colors gives an rgbA ndarray
@@ -1711,7 +1706,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         return tuple(c[:3])
 
     def test_colors(self) -> None:
-
         # with single color, we don't want rgb array
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
@@ -1728,7 +1722,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
-
         # https://github.com/pydata/xarray/issues/3284
         levels = np.array([-0.5, 0.0, 0.5, 1.0])
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
@@ -1761,7 +1754,6 @@ class TestContour(Common2dMixin, PlotTestCase):
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.pcolormesh)
 
     def test_primitive_artist_returned(self) -> None:
@@ -1839,7 +1831,6 @@ class TestPcolormeshLogscale(PlotTestCase):
 
 @pytest.mark.slow
 class TestImshow(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.imshow)
 
     @pytest.mark.slow
@@ -1859,7 +1850,6 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
     @pytest.mark.slow
     def test_cannot_change_mpl_aspect(self) -> None:
-
         with pytest.raises(ValueError, match=r"not available in xarray"):
             self.darray.plot.imshow(aspect="equal")
 
@@ -1980,7 +1970,6 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
 
 class TestSurface(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.surface)
     subplot_kws = {"projection": "3d"}
 
@@ -2204,7 +2193,6 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_figure_size(self) -> None:
-
         assert_array_equal(self.g.fig.get_size_inches(), (10, 3))
 
         g = xplt.FacetGrid(self.darray, col="z", size=6)
@@ -2513,7 +2501,6 @@ class TestDatasetQuiverPlots(PlotTestCase):
         ],
     )
     def test_add_guide(self, add_guide, hue_style, legend, colorbar):
-
         meta_data = _infer_meta_data(
             self.ds,
             x="x",
@@ -2628,7 +2615,6 @@ class TestDatasetScatterPlots(PlotTestCase):
         legend: bool,
         colorbar: bool,
     ) -> None:
-
         meta_data = _infer_meta_data(
             self.ds,
             x="A",
@@ -3100,7 +3086,6 @@ def test_get_axis_current() -> None:
 
 @requires_matplotlib
 def test_maybe_gca() -> None:
-
     with figure_context():
         ax = _maybe_gca(aspect=1)
 
@@ -3108,7 +3093,6 @@ def test_maybe_gca() -> None:
         assert ax.get_aspect() == 1
 
     with figure_context():
-
         # create figure without axes
         plt.figure()
         ax = _maybe_gca(aspect=1)

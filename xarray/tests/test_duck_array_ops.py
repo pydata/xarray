@@ -425,7 +425,6 @@ def test_empty_axis_dtype():
 @pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("aggdim", [None, "x"])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
-
     if aggdim == "y" and dim_num < 2:
         pytest.skip("dim not in this test")
 

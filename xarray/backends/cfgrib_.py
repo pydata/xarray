@@ -119,7 +119,6 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         squeeze=True,
         time_dims=("time", "step"),
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,

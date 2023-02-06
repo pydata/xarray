@@ -436,7 +436,6 @@ def update_videos(app: Sphinx):
 
     items = []
     for video in videos:
-
         authors = " | ".join(video["authors"])
         item = f"""
 .. grid-item-card:: {" ".join(video["title"].split())}

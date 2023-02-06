@@ -1747,7 +1747,6 @@ def ones_like(
 def get_chunksizes(
     variables: Iterable[Variable],
 ) -> Mapping[Any, tuple[int, ...]]:
-
     chunks: dict[Any, tuple[int, ...]] = {}
     for v in variables:
         if hasattr(v._data, "chunks"):

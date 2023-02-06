@@ -1152,7 +1152,6 @@ def test_combine_by_coords_raises_for_differing_calendars():
 
 
 def test_combine_by_coords_raises_for_differing_types():
-
     # str and byte cannot be compared
     da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()

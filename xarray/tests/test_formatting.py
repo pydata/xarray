@@ -565,7 +565,6 @@ def test_short_numpy_repr() -> None:
 
 
 def test_large_array_repr_length() -> None:
-
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
     result = repr(da).splitlines()
@@ -614,7 +613,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for (v, _c) in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
@@ -625,7 +624,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     ds.attrs = attrs
 
     with xr.set_options(display_max_rows=display_max_rows):
-
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]

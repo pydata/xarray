@@ -952,7 +952,6 @@ class TestConcatDataset:
     @pytest.mark.parametrize("dtype", [str, bytes])
     @pytest.mark.parametrize("dim", ["x1", "x2"])
     def test_concat_str_dtype(self, dtype, dim) -> None:
-
         data = np.arange(4).reshape([2, 2])
 
         da1 = Dataset(
@@ -1125,7 +1124,6 @@ class TestConcatDataArray:
     @pytest.mark.parametrize("dtype", [str, bytes])
     @pytest.mark.parametrize("dim", ["x1", "x2"])
     def test_concat_str_dtype(self, dtype, dim) -> None:
-
         data = np.arange(4).reshape([2, 2])
 
         da1 = DataArray(
@@ -1143,7 +1141,6 @@ class TestConcatDataArray:
         assert np.issubdtype(actual.x2.dtype, dtype)
 
     def test_concat_coord_name(self) -> None:
-
         da = DataArray([0], dims="a")
         da_concat = concat([da, da], dim=DataArray([0, 1], dims="b"))
         assert list(da_concat.coords) == ["b"]
@@ -1155,7 +1152,6 @@ class TestConcatDataArray:
 @pytest.mark.parametrize("attr1", ({"a": {"meta": [10, 20, 30]}}, {"a": [1, 2, 3]}, {}))
 @pytest.mark.parametrize("attr2", ({"a": [1, 2, 3]}, {}))
 def test_concat_attrs_first_variable(attr1, attr2) -> None:
-
     arrs = [
         DataArray([[1], [2]], dims=["x", "y"], attrs=attr1),
         DataArray([[3], [4]], dims=["x", "y"], attrs=attr2),

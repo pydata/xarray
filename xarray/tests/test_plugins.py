@@ -64,7 +64,6 @@ def test_broken_plugin() -> None:
 
 
 def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
-
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.remove_duplicates(dummy_duplicated_entrypoints)
 
@@ -112,7 +111,6 @@ def test_set_missing_parameters() -> None:
 
 
 def test_set_missing_parameters_raise_error() -> None:
-
     backend = DummyBackendEntrypointKwargs()
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})

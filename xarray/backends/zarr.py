@@ -882,7 +882,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         stacklevel=3,
         zarr_version=None,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,

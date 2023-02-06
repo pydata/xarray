@@ -401,7 +401,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         phony_dims=None,
         decode_vlen_strings=True,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,

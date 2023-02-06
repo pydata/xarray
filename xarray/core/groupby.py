@@ -46,7 +46,6 @@ if TYPE_CHECKING:
 
 
 def check_reduce_dims(reduce_dims, dimensions):
-
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
@@ -1208,7 +1207,6 @@ class DataArrayGroupBy(  # type: ignore[misc]
 
 
 class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
-
     __slots__ = ()
     _dims: Frozen[Hashable, int] | None
 

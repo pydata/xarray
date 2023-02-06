@@ -56,7 +56,6 @@ if TYPE_CHECKING:
 def _infer_line_data(
     darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
 ) -> tuple[DataArray, DataArray, DataArray | None, str]:
-
     ndims = len(darray.dims)
 
     if x is not None and y is not None:
