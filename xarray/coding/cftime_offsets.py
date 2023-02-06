@@ -1166,7 +1166,7 @@ def date_range(
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
 
-        .. deprecated:: 2023.01.1
+        .. deprecated:: 2023.02.0
             Following pandas, the `closed` parameter is deprecated in favor
             of the `inclusive` parameter, and will be removed in a future
             version of xarray.
