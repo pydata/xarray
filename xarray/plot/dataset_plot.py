@@ -192,7 +192,6 @@ def _dsplot(plotfunc):
         levels: ArrayLike | None = None,
         **kwargs: Any,
     ) -> Any:
-
         if args:
             # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
