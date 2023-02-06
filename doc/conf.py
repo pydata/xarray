@@ -122,7 +122,14 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 autosummary_generate = True
 autodoc_typehints = "none"
 
+# codeautolink
 codeautolink_concat_default = True
+codeautolink_global_preface = """
+import dask
+import numpy as np
+import pandas as pd
+import xarray as xr
+"""
 
 # Napoleon configurations
 
