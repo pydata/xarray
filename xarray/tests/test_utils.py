@@ -26,7 +26,6 @@ class TestAlias:
     "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
 )
 def test_maybe_coerce_to_str(a, b, expected):
-
     a = np.array([a])
     b = np.array([b])
     index = pd.Index(a).append(pd.Index(b))
@@ -38,7 +37,6 @@ def test_maybe_coerce_to_str(a, b, expected):
 
 
 def test_maybe_coerce_to_str_minimal_str_dtype():
-
     a = np.array(["a", "a_long_string"])
     index = pd.Index(["a"])
 
@@ -215,7 +213,6 @@ def test_hidden_key_dict():
 
 
 def test_either_dict_or_kwargs():
-
     result = either_dict_or_kwargs(dict(a=1), None, "foo")
     expected = dict(a=1)
     assert result == expected
