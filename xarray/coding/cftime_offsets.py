@@ -919,7 +919,7 @@ def cftime_range(
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
 
-        .. deprecated:: 2023.01.1
+        .. deprecated:: 2023.02.0
             Following pandas, the ``closed`` parameter is deprecated in favor
             of the ``inclusive`` parameter, and will be removed in a future
             version of xarray.
@@ -927,7 +927,7 @@ def cftime_range(
     inclusive : {None, "both", "neither", "left", "right"}, default None
         Include boundaries; whether to set each bound as closed or open.
 
-        .. versionadded:: 2023.01.1
+        .. versionadded:: 2023.02.0
 
     calendar : str, default: "standard"
         Calendar type for the datetimes.
@@ -1174,7 +1174,7 @@ def date_range(
     inclusive : {None, "both", "neither", "left", "right"}, default: None
         Include boundaries; whether to set each bound as closed or open.
 
-        .. versionadded:: 2023.01.1
+        .. versionadded:: 2023.02.0
 
     calendar : str, default: "standard"
         Calendar type for the datetimes.
