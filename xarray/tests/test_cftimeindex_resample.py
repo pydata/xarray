@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd
@@ -189,6 +190,12 @@ def test_calendars(calendar) -> None:
     xr.testing.assert_identical(da_cftime, da_datetime)
 
 
+class DateRangeKwargs(TypedDict):
+    start: str
+    periods: int
+    freq: str
+
+
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize(
     "origin",
@@ -198,7 +205,7 @@ def test_calendars(calendar) -> None:
 def test_origin(closed, origin) -> None:
     initial_freq, resample_freq = ("3H", "9H")
     start = "1969-12-31T12:07:01"
-    index_kwargs = dict(start=start, periods=12, freq=initial_freq)
+    index_kwargs: DateRangeKwargs = dict(start=start, periods=12, freq=initial_freq)
     datetime_index = pd.date_range(**index_kwargs)
     cftime_index = xr.cftime_range(**index_kwargs)
     da_datetimeindex = da(datetime_index)
