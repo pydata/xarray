@@ -58,6 +58,8 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
 - Handle ``keep_attrs`` option in binary operators of :py:meth:`Dataset` (:issue:`7390`, :pull:`7391`).
   By `Aron Gergely <https://github.com/arongergely>`_.
+- Improve error message when using dask in :py:func:`apply_ufunc` with ``output_sizes`` not supplied. (:pull:`7509`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:func:`xarray.Dataset.to_zarr` now drops variable encodings that have been added by xarray during reading
   a dataset. (:issue:`7129`, :pull:`7500`).
   By `Hauke Schulz <https://github.com/observingClouds>`_.

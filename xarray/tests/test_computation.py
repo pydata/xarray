@@ -1220,6 +1220,25 @@ def test_apply_dask_new_output_sizes() -> None:
     assert_identical(expected.chunk(), actual)
 
 
+@requires_dask
+def test_apply_dask_new_output_sizes_not_supplied_same_dim_names() -> None:
+    # test for missing output_sizes kwarg sneaking through
+    # see GH discussion 7503
+
+    data = np.random.randn(4, 4, 3, 2)
+    da = xr.DataArray(data=data, dims=("x", "y", "i", "j")).chunk(x=1, y=1)
+
+    with pytest.raises(ValueError, match="output_sizes"):
+        xr.apply_ufunc(
+            np.linalg.pinv,
+            da,
+            input_core_dims=[["i", "j"]],
+            output_core_dims=[["i", "j"]],
+            exclude_dims=set(("i", "j")),
+            dask="parallelized",
+        )
+
+
 def pandas_median(x):
     return pd.Series(x).median()
 
