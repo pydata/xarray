@@ -60,7 +60,9 @@ Bug fixes
   By `Aron Gergely <https://github.com/arongergely>`_.
 - Improve error message when using dask in :py:func:`apply_ufunc` with ``output_sizes`` not supplied. (:pull:`7509`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- :py:func:`xarray.Dataset.to_zarr` now drops variable encodings that have been added by xarray during reading
+  a dataset. (:issue:`7129`, :pull:`7500`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 
 Documentation
 ~~~~~~~~~~~~~
