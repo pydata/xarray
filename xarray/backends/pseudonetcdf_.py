@@ -156,7 +156,6 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         lock=None,
         **format_kwargs,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs

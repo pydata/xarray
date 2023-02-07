@@ -5,18 +5,9 @@ import itertools
 import math
 import numbers
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Literal,
-    Mapping,
-    NoReturn,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -247,11 +238,11 @@ def as_compatible_data(data, fastpath=False):
 
     Finally, wrap it up with an adapter if necessary.
     """
-    from xarray.core.dataarray import DataArray
-
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
+
+    from xarray.core.dataarray import DataArray
 
     if isinstance(data, (Variable, DataArray)):
         return data.data

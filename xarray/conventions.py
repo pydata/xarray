@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import warnings
 from collections import defaultdict
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -12,7 +16,7 @@ from xarray.core.common import (
     contains_cftime_datetimes,
 )
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.variable import IndexVariable, Variable, as_variable
+from xarray.core.variable import IndexVariable, Variable
 
 CF_RELATED_DATA = (
     "bounds",
@@ -30,6 +34,18 @@ CF_RELATED_DATA_NEEDS_PARSING = (
     "cell_measures",
     "formula_terms",
 )
+
+
+if TYPE_CHECKING:
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
+
+    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
+    T_Name = Union[Hashable, None]
+    T_Variables = Mapping[Any, Variable]
+    T_Attrs = MutableMapping[Any, Any]
+    T_DropVariables = Union[str, Iterable[Hashable], None]
+    T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -97,11 +113,11 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-def _var_as_tuple(var):
+def _var_as_tuple(var: Variable) -> T_VarTuple:
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
-def maybe_encode_nonstring_dtype(var, name=None):
+def maybe_encode_nonstring_dtype(var: Variable, name: T_Name = None) -> Variable:
     if "dtype" in var.encoding and var.encoding["dtype"] not in ("S1", str):
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop("dtype"))
@@ -119,13 +135,13 @@ def maybe_encode_nonstring_dtype(var, name=None):
                         SerializationWarning,
                         stacklevel=10,
                     )
-                data = duck_array_ops.around(data)[...]
+                data = np.around(data)
             data = data.astype(dtype=dtype)
-        var = Variable(dims, data, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding, fastpath=True)
     return var
 
 
-def maybe_default_fill_value(var):
+def maybe_default_fill_value(var: Variable) -> Variable:
     # make NaN the fill value for float types:
     if (
         "_FillValue" not in var.attrs
@@ -136,7 +152,7 @@ def maybe_default_fill_value(var):
     return var
 
 
-def maybe_encode_bools(var):
+def maybe_encode_bools(var: Variable) -> Variable:
     if (
         (var.dtype == bool)
         and ("dtype" not in var.encoding)
@@ -145,11 +161,11 @@ def maybe_encode_bools(var):
         dims, data, attrs, encoding = _var_as_tuple(var)
         attrs["dtype"] = "bool"
         data = duck_array_ops.astype(data, dtype="i1", copy=True)
-        var = Variable(dims, data, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding, fastpath=True)
     return var
 
 
-def _infer_dtype(array, name=None):
+def _infer_dtype(array, name: T_Name = None) -> np.dtype:
     """Given an object array with no missing values, infer its dtype from its
     first element
     """
@@ -177,7 +193,7 @@ def _infer_dtype(array, name=None):
     )
 
 
-def ensure_not_multiindex(var, name=None):
+def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
     if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
         raise NotImplementedError(
             "variable {!r} is a MultiIndex, which cannot yet be "
@@ -188,7 +204,7 @@ def ensure_not_multiindex(var, name=None):
         )
 
 
-def _copy_with_dtype(data, dtype):
+def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
     """Create a copy of an array with the given dtype.
 
     We use this instead of np.array() to ensure that custom object dtypes end
@@ -199,7 +215,7 @@ def _copy_with_dtype(data, dtype):
     return result
 
 
-def ensure_dtype_not_object(var, name=None):
+def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == "O":
         dims, data, attrs, encoding = _var_as_tuple(var)
@@ -224,6 +240,7 @@ def ensure_dtype_not_object(var, name=None):
             # There is no safe bit-pattern for NA in typical binary string
             # formats, we so can't set a fill_value. Unfortunately, this means
             # we can't distinguish between missing values and empty strings.
+            fill_value: bytes | str
             if strings.is_bytes_dtype(inferred_dtype):
                 fill_value = b""
             elif strings.is_unicode_dtype(inferred_dtype):
@@ -240,11 +257,13 @@ def ensure_dtype_not_object(var, name=None):
             data = _copy_with_dtype(data, dtype=_infer_dtype(data, name))
 
         assert data.dtype.kind != "O" or data.dtype.metadata
-        var = Variable(dims, data, attrs, encoding)
+        var = Variable(dims, data, attrs, encoding, fastpath=True)
     return var
 
 
-def encode_cf_variable(var, needs_copy=True, name=None):
+def encode_cf_variable(
+    var: Variable, needs_copy: bool = True, name: T_Name = None
+) -> Variable:
     """
     Converts an Variable into an Variable which follows some
     of the CF conventions:
@@ -287,16 +306,16 @@ def encode_cf_variable(var, needs_copy=True, name=None):
 
 
 def decode_cf_variable(
-    name,
-    var,
-    concat_characters=True,
-    mask_and_scale=True,
-    decode_times=True,
-    decode_endianness=True,
-    stack_char_dim=True,
-    use_cftime=None,
-    decode_timedelta=None,
-):
+    name: Hashable,
+    var: Variable,
+    concat_characters: bool = True,
+    mask_and_scale: bool = True,
+    decode_times: bool = True,
+    decode_endianness: bool = True,
+    stack_char_dim: bool = True,
+    use_cftime: bool | None = None,
+    decode_timedelta: bool | None = None,
+) -> Variable:
     """
     Decodes a variable which may hold CF encoded information.
 
@@ -342,8 +361,6 @@ def decode_cf_variable(
     out : Variable
         A variable holding the decoded equivalent of var.
     """
-    var = as_variable(var)
-
     # Ensure datetime-like Variables are passed through unmodified (GH 6453)
     if _contains_datetime_like_objects(var):
         return var
@@ -388,10 +405,10 @@ def decode_cf_variable(
     if not is_duck_dask_array(data):
         data = indexing.LazilyIndexedArray(data)
 
-    return Variable(dimensions, data, attributes, encoding=encoding)
+    return Variable(dimensions, data, attributes, encoding=encoding, fastpath=True)
 
 
-def _update_bounds_attributes(variables):
+def _update_bounds_attributes(variables: T_Variables) -> None:
     """Adds time attributes to time bounds variables.
 
     Variables handling time bounds ("Cell boundaries" in the CF
@@ -420,7 +437,7 @@ def _update_bounds_attributes(variables):
                     bounds_attrs.setdefault("calendar", attrs["calendar"])
 
 
-def _update_bounds_encoding(variables):
+def _update_bounds_encoding(variables: T_Variables) -> None:
     """Adds time encoding to time bounds variables.
 
     Variables handling time bounds ("Cell boundaries" in the CF
@@ -437,7 +454,7 @@ def _update_bounds_encoding(variables):
     """
 
     # For all time variables with bounds
-    for v in variables.values():
+    for name, v in variables.items():
         attrs = v.attrs
         encoding = v.encoding
         has_date_units = "units" in encoding and "since" in encoding["units"]
@@ -458,7 +475,7 @@ def _update_bounds_encoding(variables):
                 "and '{1}' will be determined independently "
                 "and may not be equal, counter to CF-conventions. "
                 "If this is a concern, specify a units encoding for "
-                "'{0}' before writing to a file.".format(v.name, attrs["bounds"]),
+                "'{0}' before writing to a file.".format(name, attrs["bounds"]),
                 UserWarning,
             )
 
@@ -471,16 +488,16 @@ def _update_bounds_encoding(variables):
 
 
 def decode_cf_variables(
-    variables,
-    attributes,
-    concat_characters=True,
-    mask_and_scale=True,
-    decode_times=True,
-    decode_coords=True,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-):
+    variables: T_Variables,
+    attributes: T_Attrs,
+    concat_characters: bool = True,
+    mask_and_scale: bool = True,
+    decode_times: bool = True,
+    decode_coords: bool = True,
+    drop_variables: T_DropVariables = None,
+    use_cftime: bool | None = None,
+    decode_timedelta: bool | None = None,
+) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.
 
@@ -491,7 +508,7 @@ def decode_cf_variables(
         for d in v.dims:
             dimensions_used_by[d].append(v)
 
-    def stackable(dim):
+    def stackable(dim: Hashable) -> bool:
         # figure out if a dimension can be concatenated over
         if dim in variables:
             return False
@@ -577,23 +594,24 @@ def decode_cf_variables(
                         )
                     del var_attrs[attr_name]
 
-    if decode_coords and "coordinates" in attributes:
+    if decode_coords and isinstance(attributes.get("coordinates", None), str):
         attributes = dict(attributes)
-        coord_names.update(attributes.pop("coordinates").split())
+        crds = attributes.pop("coordinates")
+        coord_names.update(crds.split())
 
     return new_vars, attributes, coord_names
 
 
 def decode_cf(
-    obj,
-    concat_characters=True,
-    mask_and_scale=True,
-    decode_times=True,
-    decode_coords=True,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-):
+    obj: T_DatasetOrAbstractstore,
+    concat_characters: bool = True,
+    mask_and_scale: bool = True,
+    decode_times: bool = True,
+    decode_coords: bool = True,
+    drop_variables: T_DropVariables = None,
+    use_cftime: bool | None = None,
+    decode_timedelta: bool | None = None,
+) -> Dataset:
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
 
@@ -645,6 +663,8 @@ def decode_cf(
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
 
+    vars: T_Variables
+    attrs: T_Attrs
     if isinstance(obj, Dataset):
         vars = obj._variables
         attrs = obj.attrs
@@ -679,12 +699,12 @@ def decode_cf(
 
 
 def cf_decoder(
-    variables,
-    attributes,
-    concat_characters=True,
-    mask_and_scale=True,
-    decode_times=True,
-):
+    variables: T_Variables,
+    attributes: T_Attrs,
+    concat_characters: bool = True,
+    mask_and_scale: bool = True,
+    decode_times: bool = True,
+) -> tuple[T_Variables, T_Attrs]:
     """
     Decode a set of CF encoded variables and attributes.
 

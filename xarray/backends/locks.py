@@ -3,7 +3,8 @@ from __future__ import annotations
 import multiprocessing
 import threading
 import weakref
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 try:
     from dask.utils import SerializableLock

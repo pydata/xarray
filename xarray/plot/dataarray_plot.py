@@ -2,21 +2,11 @@ from __future__ import annotations
 
 import functools
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Literal,
-    MutableMapping,
-    cast,
-    overload,
-)
+from collections.abc import Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.core.alignment import broadcast
 from xarray.core.concat import concat
@@ -66,7 +56,6 @@ if TYPE_CHECKING:
 def _infer_line_data(
     darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
 ) -> tuple[DataArray, DataArray, DataArray | None, str]:
-
     ndims = len(darray.dims)
 
     if x is not None and y is not None:
@@ -990,12 +979,7 @@ def _plot1d(plotfunc):
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
             # Using 30, 30 minimizes rotation of the plot. Making it easier to
             # build on your intuition from 2D plots:
-            plt = import_matplotlib_pyplot()
-            if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-                ax.view_init(azim=30, elev=30)
-            else:
-                # https://github.com/matplotlib/matplotlib/pull/19873
-                ax.view_init(azim=30, elev=30, vertical_axis="y")
+            ax.view_init(azim=30, elev=30, vertical_axis="y")
         else:
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
@@ -1242,8 +1226,6 @@ def scatter(
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
     """
-    plt = import_matplotlib_pyplot()
-
     if "u" in kwargs or "v" in kwargs:
         raise ValueError("u, v are not allowed in scatter plots.")
 
@@ -1260,16 +1242,7 @@ def scatter(
     if sizeplt is not None:
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
-    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-        # Plot the data. 3d plots has the z value in upward direction
-        # instead of y. To make jumping between 2d and 3d easy and intuitive
-        # switch the order so that z is shown in the depthwise direction:
-        axis_order = ["x", "z", "y"]
-    else:
-        # Switching axis order not needed in 3.5.0, can also simplify the code
-        # that uses axis_order:
-        # https://github.com/matplotlib/matplotlib/pull/19873
-        axis_order = ["x", "y", "z"]
+    axis_order = ["x", "y", "z"]
 
     plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
     plts_or_none = [plts_dict[v] for v in axis_order]
