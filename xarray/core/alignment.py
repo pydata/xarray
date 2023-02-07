@@ -938,7 +938,6 @@ def reindex_like(
 
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
-
     common_coords = {}
     dims_map = {}
     for arg in args:
@@ -954,7 +953,6 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 def _broadcast_helper(
     arg: T_DataWithCoords, exclude, dims_map, common_coords
 ) -> T_DataWithCoords:
-
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
