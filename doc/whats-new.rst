@@ -20,10 +20,10 @@ What's New
 v2023.02.0 (Feb 7, 2023)
 ------------------------
 
-This release brings a major upgrade to :py:func:`xarray.concat`, bug fixes and
-a bump in supported dependency versions. Thanks to our 9 contributors:
+This release brings a major upgrade to :py:func:`xarray.concat`, many bug fixes,
+and a bump in supported dependency versions. Thanks to our 11 contributors:
 Aron Gergely, Deepak Cherian, Illviljan, James Bourbeau, Joe Hamman,
-Justus Magin, Kai Mühlbauer, Ken Mankoff, Spencer Clark.
+Justus Magin, Hauke Schulz, Kai Mühlbauer, Ken Mankoff, Spencer Clark, Tom Nicholas.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
