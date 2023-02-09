@@ -30,6 +30,7 @@ from xarray.plot.utils import (
 from xarray.tests import (
     assert_array_equal,
     assert_equal,
+    assert_no_warnings,
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
@@ -3204,3 +3205,38 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
             g.axes
+
+
+@requires_matplotlib
+def test_plot1d_default_rcparams() -> None:
+    import matplotlib as mpl
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    with figure_context():
+        # scatter markers should by default have white edgecolor to better
+        # see overlapping markers:
+        fig, ax = plt.subplots(1, 1)
+        ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
+        )
+
+        # Facetgrids should have the default value as well:
+        fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
+        ax = fg.axs.ravel()[0]
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
+        )
+
+        # scatter should not emit any warnings when using unfilled markers:
+        with assert_no_warnings():
+            fig, ax = plt.subplots(1, 1)
+            ds.plot.scatter(x="A", y="B", ax=ax, marker="x")
+
+        # Prioritize edgecolor argument over default plot1d values:
+        fig, ax = plt.subplots(1, 1)
+        ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
+        )
