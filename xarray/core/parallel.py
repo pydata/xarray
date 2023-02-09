@@ -33,7 +33,6 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 def check_result_variables(
     result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
-
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":

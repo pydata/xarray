@@ -492,7 +492,6 @@ def get_axis(
 
 
 def _maybe_gca(**subplot_kws: Any) -> Axes:
-
     import matplotlib.pyplot as plt
 
     # can call gcf unconditionally: either it exists or would be created by plt.axes
@@ -597,7 +596,6 @@ def _resolve_intervals_1dplot(
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
-
         remove_drawstyle = False
 
         # Convert intervals to double points
@@ -618,7 +616,6 @@ def _resolve_intervals_1dplot(
 
     # Is it another kind of plot?
     else:
-
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, pd.Interval):
             xval = _interval_to_mid_points(xval)
@@ -720,7 +717,6 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
@@ -1319,7 +1315,6 @@ def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
 ) -> None | pd.Series:
-
     import matplotlib as mpl
 
     if data is None:
@@ -1708,7 +1703,6 @@ def _add_legend(
     legend_ax,
     plotfunc: str,
 ):
-
     primitive = primitive if isinstance(primitive, list) else [primitive]
 
     handles, labels = [], []
