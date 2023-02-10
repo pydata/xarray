@@ -23,6 +23,8 @@ v2023.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -128,8 +130,6 @@ Bug fixes
 - add a ``keep_attrs`` parameter to :py:meth:`Dataset.pad`, :py:meth:`DataArray.pad`,
   and :py:meth:`Variable.pad` (:pull:`7267`).
   By `Justus Magin <https://github.com/keewis>`_.
-- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` for complex valued arrays  (:issue:`7340`, :pull:`7392`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed performance regression in alignment between indexed and non-indexed objects
   of the same shape (:pull:`7382`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
