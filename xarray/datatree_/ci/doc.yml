@@ -18,8 +18,8 @@ dependencies:
   - ipython
   - h5netcdf
   - zarr
+  - xarray
   - pip:
-      - git+https://github.com/xarray-contrib/datatree
+      - -e ..
       - sphinxext-rediraffe
       - sphinxext-opengraph
-      - xarray>=2022.05.0.dev0
