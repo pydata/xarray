@@ -5052,8 +5052,7 @@ class Dataset(
             bad_names -= self.virtual_variables
         if bad_names:
             raise ValueError(
-                "One or more of the specified variables "
-                "cannot be found in this dataset"
+                f"These variables cannot be found in this dataset: {bad_names}"
             )
 
     def drop_vars(
