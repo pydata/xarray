@@ -235,6 +235,17 @@ class TestUpdate:
         child = dt["a"]
         assert child.name == "a"
 
+    def test_update_overwrite(self):
+        actual = DataTree.from_dict({"a": DataTree(xr.Dataset({"x": 1}))})
+        actual.update({"a": DataTree(xr.Dataset({"x": 2}))})
+
+        expected = DataTree.from_dict({"a": DataTree(xr.Dataset({"x": 2}))})
+
+        print(actual)
+        print(expected)
+
+        dtt.assert_equal(actual, expected)
+
 
 class TestCopy:
     def test_copy(self, create_test_datatree):

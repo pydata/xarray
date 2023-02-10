@@ -878,7 +878,7 @@ class DataTree(
 
         vars_merge_result = dataset_update_method(self.to_dataset(), new_variables)
         # TODO are there any subtleties with preserving order of children like this?
-        merged_children = OrderedDict(**self.children, **new_children)
+        merged_children = OrderedDict({**self.children, **new_children})
         self._replace(
             inplace=True, children=merged_children, **vars_merge_result._asdict()
         )
