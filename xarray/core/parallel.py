@@ -3,16 +3,8 @@ from __future__ import annotations
 import collections
 import itertools
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    DefaultDict,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, DefaultDict
 
 import numpy as np
 
@@ -41,7 +33,6 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 def check_result_variables(
     result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
-
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":

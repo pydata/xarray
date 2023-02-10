@@ -8,16 +8,13 @@ import itertools
 import operator
 import warnings
 from collections import Counter
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
     Any,
     Callable,
-    Hashable,
-    Iterable,
     Literal,
-    Mapping,
-    Sequence,
     TypeVar,
     Union,
     overload,
@@ -168,7 +165,6 @@ class _UFuncSignature:
 
         # enumerate input_core_dims contained in exclude_dims to make them unique
         if exclude_dims:
-
             exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
 
             counter = Counter()
@@ -567,7 +563,6 @@ def apply_groupby_func(func, *args):
 def unified_dim_sizes(
     variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
 ) -> dict[Hashable, int]:
-
     dim_sizes: dict[Hashable, int] = {}
 
     for var in variables:
@@ -737,7 +732,9 @@ def apply_variable_ufunc(
                 dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
 
             for key in signature.all_output_core_dims:
-                if key not in signature.all_input_core_dims and key not in output_sizes:
+                if (
+                    key not in signature.all_input_core_dims or key in exclude_dims
+                ) and key not in output_sizes:
                     raise ValueError(
                         f"dimension '{key}' in 'output_core_dims' needs corresponding (dim, size) in 'output_sizes'"
                     )
@@ -914,7 +911,6 @@ def apply_ufunc(
         dimensions as input and vectorize it automatically with
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
-        Using this option requires NumPy version 1.12 or newer.
     join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -939,8 +935,12 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs : bool, optional
-        Whether to copy attributes from the first argument to the output.
+    keep_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or bool, optional
+        - 'drop' or False: empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
+        - 'override' or True: skip comparing and copy attrs from the first object to the result.
     kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
     dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"

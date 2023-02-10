@@ -29,7 +29,6 @@ except ImportError:
 
 
 def get_example_data(case: int) -> xr.DataArray:
-
     if case == 0:
         # 2D
         x = np.linspace(0, 1, 100)
@@ -809,7 +808,6 @@ def test_interpolate_chunk_1d(
 
     # choose the data dimensions
     for data_dims in permutations(da.dims, data_ndim):
-
         # select only data_ndim dim
         da = da.isel(  # take the middle line
             {dim: len(da.coords[dim]) // 2 for dim in da.dims if dim not in data_dims}

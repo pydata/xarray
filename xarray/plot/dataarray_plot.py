@@ -2,21 +2,11 @@ from __future__ import annotations
 
 import functools
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Literal,
-    MutableMapping,
-    cast,
-    overload,
-)
+from collections.abc import Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.core.alignment import broadcast
 from xarray.core.concat import concat
@@ -62,11 +52,15 @@ if TYPE_CHECKING:
     )
     from xarray.plot.facetgrid import FacetGrid
 
+_styles: MutableMapping[str, Any] = {
+    # Add a white border to make it easier seeing overlapping markers:
+    "scatter.edgecolors": "w",
+}
+
 
 def _infer_line_data(
     darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
 ) -> tuple[DataArray, DataArray, DataArray | None, str]:
-
     ndims = len(darray.dims)
 
     if x is not None and y is not None:
@@ -894,6 +888,8 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
+        plt = import_matplotlib_pyplot()
+
         if subplot_kws is None:
             subplot_kws = dict()
 
@@ -905,6 +901,7 @@ def _plot1d(plotfunc):
             allargs = locals().copy()
             allargs.update(allargs.pop("kwargs"))
             allargs.pop("darray")
+            allargs.pop("plt")
             allargs["plotfunc"] = globals()[plotfunc.__name__]
 
             return _easy_facetgrid(darray, kind="plot1d", **allargs)
@@ -984,29 +981,25 @@ def _plot1d(plotfunc):
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        if z is not None:
-            if ax is None:
-                subplot_kws.update(projection="3d")
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
-            # Using 30, 30 minimizes rotation of the plot. Making it easier to
-            # build on your intuition from 2D plots:
-            plt = import_matplotlib_pyplot()
-            if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-                ax.view_init(azim=30, elev=30)
-            else:
-                # https://github.com/matplotlib/matplotlib/pull/19873
+        with plt.rc_context(_styles):
+            if z is not None:
+                if ax is None:
+                    subplot_kws.update(projection="3d")
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                # Using 30, 30 minimizes rotation of the plot. Making it easier to
+                # build on your intuition from 2D plots:
                 ax.view_init(azim=30, elev=30, vertical_axis="y")
-        else:
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+            else:
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-        primitive = plotfunc(
-            xplt,
-            yplt,
-            ax=ax,
-            add_labels=add_labels,
-            **cmap_params_subset,
-            **kwargs,
-        )
+            primitive = plotfunc(
+                xplt,
+                yplt,
+                ax=ax,
+                add_labels=add_labels,
+                **cmap_params_subset,
+                **kwargs,
+            )
 
         if np.any(np.asarray(add_labels)) and add_title:
             ax.set_title(darray._title_for_slice())
@@ -1242,8 +1235,6 @@ def scatter(
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
     """
-    plt = import_matplotlib_pyplot()
-
     if "u" in kwargs or "v" in kwargs:
         raise ValueError("u, v are not allowed in scatter plots.")
 
@@ -1251,25 +1242,13 @@ def scatter(
     hueplt: DataArray | None = kwargs.pop("hueplt", None)
     sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
 
-    # Add a white border to make it easier seeing overlapping markers:
-    kwargs.update(edgecolors=kwargs.pop("edgecolors", "w"))
-
     if hueplt is not None:
         kwargs.update(c=hueplt.to_numpy().ravel())
 
     if sizeplt is not None:
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
-    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-        # Plot the data. 3d plots has the z value in upward direction
-        # instead of y. To make jumping between 2d and 3d easy and intuitive
-        # switch the order so that z is shown in the depthwise direction:
-        axis_order = ["x", "z", "y"]
-    else:
-        # Switching axis order not needed in 3.5.0, can also simplify the code
-        # that uses axis_order:
-        # https://github.com/matplotlib/matplotlib/pull/19873
-        axis_order = ["x", "y", "z"]
+    axis_order = ["x", "y", "z"]
 
     plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
     plts_or_none = [plts_dict[v] for v in axis_order]

@@ -136,7 +136,7 @@ def show_versions(file=sys.stdout):
     ]
 
     deps_blob = []
-    for (modname, ver_f) in deps:
+    for modname, ver_f in deps:
         try:
             if modname in sys.modules:
                 mod = sys.modules[modname]

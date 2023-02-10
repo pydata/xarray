@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_allclose, assert_array_equal
-from packaging.version import Version
 
 import xarray as xr
 from xarray.core.alignment import broadcast
@@ -23,15 +22,12 @@ from xarray.core.computation import (
     result_name,
     unified_dim_sizes,
 )
-from xarray.core.pycompat import mod_version
 from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
 )
-
-dask_version = mod_version("dask")
 
 
 def assert_identical(a, b):
@@ -1224,6 +1220,25 @@ def test_apply_dask_new_output_sizes() -> None:
     assert_identical(expected.chunk(), actual)
 
 
+@requires_dask
+def test_apply_dask_new_output_sizes_not_supplied_same_dim_names() -> None:
+    # test for missing output_sizes kwarg sneaking through
+    # see GH discussion 7503
+
+    data = np.random.randn(4, 4, 3, 2)
+    da = xr.DataArray(data=data, dims=("x", "y", "i", "j")).chunk(x=1, y=1)
+
+    with pytest.raises(ValueError, match="output_sizes"):
+        xr.apply_ufunc(
+            np.linalg.pinv,
+            da,
+            input_core_dims=[["i", "j"]],
+            output_core_dims=[["i", "j"]],
+            exclude_dims=set(("i", "j")),
+            dask="parallelized",
+        )
+
+
 def pandas_median(x):
     return pd.Series(x).median()
 
@@ -1310,13 +1325,8 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array) -> None:
     assert expected.dtype == actual.dtype
 
 
-@pytest.mark.skipif(
-    dask_version > Version("2021.06"),
-    reason="dask/dask#7669: can no longer pass output_dtypes and meta",
-)
 @requires_dask
 def test_vectorize_dask_dtype_meta() -> None:
-    # meta dtype takes precedence
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
 
@@ -1326,7 +1336,6 @@ def test_vectorize_dask_dtype_meta() -> None:
         input_core_dims=[["y"]],
         vectorize=True,
         dask="parallelized",
-        output_dtypes=[int],
         dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=float)),
     )
 
