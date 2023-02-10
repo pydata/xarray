@@ -263,6 +263,14 @@ class TestCopy:
                 assert "foo" not in node.attrs
                 assert node.attrs["Test"] is copied_node.attrs["Test"]
 
+    def test_copy_subtree(self):
+        dt = DataTree.from_dict({"/level1/level2/level3": xr.Dataset()})
+
+        actual = dt["/level1/level2"].copy()
+        expected = DataTree.from_dict({"/level3": xr.Dataset()}, name="level2")
+
+        dtt.assert_identical(actual, expected)
+
     def test_deepcopy(self, create_test_datatree):
         dt = create_test_datatree()
 

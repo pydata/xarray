@@ -734,7 +734,8 @@ class DataTree(
         """Copy entire subtree"""
         new_tree = self._copy_node(deep=deep)
         for node in self.descendants:
-            new_tree[node.path] = node._copy_node(deep=deep)
+            path = node.relative_to(self)
+            new_tree[path] = node._copy_node(deep=deep)
         return new_tree
 
     def _copy_node(
