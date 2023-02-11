@@ -34,7 +34,12 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Require to explicitly defining optional dimensions such as hue
+  and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix matplotlib raising a UserWarning when plotting a scatter plot
+  with an unfilled marker (:issue:`7313`, :pull:`7318`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -194,9 +199,6 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix static typing of :py:meth:`xr.polyval` (:issue:`7312`, :pull:`7315`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
-- Fix matplotlib raising a UserWarning when plotting a scatter plot
-  with an unfilled marker (:issue:`7313`, :pull:`7318`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Fix multiple reads on fsspec S3 files by resetting file pointer to 0 when reading file streams (:issue:`6813`, :pull:`7304`).
   By `David Hoese <https://github.com/djhoese>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Fix :py:meth:`Dataset.assign_coords` resetting all dimension coordinates to default (pandas) index (:issue:`7346`, :pull:`7347`).
