@@ -9,8 +9,8 @@ import numpy as np
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
-    BackendEntrypoint,
     WritableCFDataStore,
+    _InternalBackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
@@ -240,7 +240,7 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager.close()
 
 
-class ScipyBackendEntrypoint(BackendEntrypoint):
+class ScipyBackendEntrypoint(_InternalBackendEntrypoint):
     """
     Backend for netCDF files based on the scipy package.
 
@@ -261,6 +261,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
+    _module_name = "scipy"
     available = module_available("scipy")
     description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"

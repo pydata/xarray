@@ -11,8 +11,8 @@ from xarray import coding
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
-    BackendEntrypoint,
     WritableCFDataStore,
+    _InternalBackendEntrypoint,
     _normalize_path,
     find_root_and_group,
     robust_getitem,
@@ -513,7 +513,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-class NetCDF4BackendEntrypoint(BackendEntrypoint):
+class NetCDF4BackendEntrypoint(_InternalBackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
 
@@ -535,6 +535,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     backends.ScipyBackendEntrypoint
     """
 
+    _module_name = "netCDF4"
     available = module_available("netCDF4")
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"

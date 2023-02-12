@@ -7,7 +7,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    BackendEntrypoint,
+    _InternalBackendEntrypoint,
     robust_getitem,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -138,7 +138,7 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
 
-class PydapBackendEntrypoint(BackendEntrypoint):
+class PydapBackendEntrypoint(_InternalBackendEntrypoint):
     """
     Backend for steaming datasets over the internet using
     the Data Access Protocol, also known as DODS or OPeNDAP
@@ -154,6 +154,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     backends.PydapDataStore
     """
 
+    _module_name = "pydap"
     available = module_available("pydap")
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
