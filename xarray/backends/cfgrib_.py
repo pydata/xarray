@@ -9,7 +9,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    _InternalBackendEntrypoint,
+    BackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.locks import SerializableLock, ensure_lock
@@ -90,8 +90,7 @@ class CfGribDataStore(AbstractDataStore):
         return {"unlimited_dims": {k for k, v in dims.items() if v is None}}
 
 
-class CfgribfBackendEntrypoint(_InternalBackendEntrypoint):
-    _module_name = "cfgrib"
+class CfgribfBackendEntrypoint(BackendEntrypoint):
     available = module_available("cfgrib")
 
     def guess_can_open(self, filename_or_obj):

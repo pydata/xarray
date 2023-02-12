@@ -6,13 +6,12 @@ import itertools
 import sys
 import warnings
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 if TYPE_CHECKING:
     import os
-    from importlib.metadata import EntryPoint, EntryPoints
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
-def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
+def remove_duplicates(entrypoints):
     # sort and group entrypoints by name
     entrypoints = sorted(entrypoints, key=lambda ep: ep.name)
     entrypoints_grouped = itertools.groupby(entrypoints, key=lambda ep: ep.name)
@@ -43,7 +42,7 @@ def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
     return unique_entrypoints
 
 
-def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
+def detect_parameters(open_dataset):
     signature = inspect.signature(open_dataset)
     parameters = signature.parameters
     parameters_list = []
@@ -61,9 +60,7 @@ def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
     return tuple(parameters_list)
 
 
-def backends_dict_from_pkg(
-    entrypoints: list[EntryPoint],
-) -> dict[str, BackendEntrypoint]:
+def backends_dict_from_pkg(entrypoints):
     backend_entrypoints = {}
     for entrypoint in entrypoints:
         name = entrypoint.name
@@ -75,16 +72,14 @@ def backends_dict_from_pkg(
     return backend_entrypoints
 
 
-def set_missing_parameters(backend_entrypoints: dict[str, BackendEntrypoint]):
-    for _, backend in backend_entrypoints.items():
+def set_missing_parameters(backend_entrypoints):
+    for name, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-def sort_backends(
-    backend_entrypoints: dict[str, BackendEntrypoint]
-) -> dict[str, BackendEntrypoint]:
+def sort_backends(backend_entrypoints):
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:
         if backend_entrypoints.get(be_name, None) is not None:
@@ -95,7 +90,7 @@ def sort_backends(
     return ordered_backends_entrypoints
 
 
-def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
+def build_engines(entrypoints) -> dict[str, BackendEntrypoint]:
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
         if backend.available:
@@ -129,13 +124,6 @@ def list_engines() -> dict[str, BackendEntrypoint]:
     else:
         entrypoints = entry_points().get("xarray.backends", ())
     return build_engines(entrypoints)
-
-
-def refresh_engines() -> None:
-    """Refreshes the backend engines based on installed packages."""
-    list_engines.cache_clear()
-    for backend_entrypoint in BACKEND_ENTRYPOINTS.values():
-        backend_entrypoint._set_availability()
 
 
 def guess_engine(

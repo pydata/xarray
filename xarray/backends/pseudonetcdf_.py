@@ -6,7 +6,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    _InternalBackendEntrypoint,
+    BackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.file_manager import CachingFileManager
@@ -96,7 +96,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         self._manager.close()
 
 
-class PseudoNetCDFBackendEntrypoint(_InternalBackendEntrypoint):
+class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF-like data formats in the air quality field
     based on the PseudoNetCDF package.
@@ -121,7 +121,6 @@ class PseudoNetCDFBackendEntrypoint(_InternalBackendEntrypoint):
     backends.PseudoNetCDFDataStore
     """
 
-    _module_name = "PseudoNetCDF"
     available = module_available("PseudoNetCDF")
     description = (
         "Open many atmospheric science data formats using PseudoNetCDF in Xarray"

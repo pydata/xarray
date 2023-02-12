@@ -8,8 +8,8 @@ from packaging.version import Version
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
+    BackendEntrypoint,
     WritableCFDataStore,
-    _InternalBackendEntrypoint,
     _normalize_path,
     find_root_and_group,
 )
@@ -343,7 +343,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
+class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
 
@@ -365,7 +365,6 @@ class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
     backends.ScipyBackendEntrypoint
     """
 
-    _module_name = "h5netcdf"
     available = module_available("h5netcdf")
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"

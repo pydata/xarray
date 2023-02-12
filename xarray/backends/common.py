@@ -12,12 +12,7 @@ import numpy as np
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.utils import (
-    FrozenDict,
-    NdimSizeLenMixin,
-    is_remote_uri,
-    module_available,
-)
+from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -433,24 +428,4 @@ class BackendEntrypoint:
         return False
 
 
-class _InternalBackendEntrypoint:
-    """
-    Wrapper class for BackendEntrypoints that ship with xarray.
-
-
-    Additional attributes
-    ----------
-
-    _module_name : str
-        Name of the module that is required to enable the backend.
-    """
-
-    _module_name: ClassVar[str]
-
-    @classmethod
-    def _set_availability(cls) -> None:
-        """Resets the backends availability."""
-        cls.available = module_available(cls._module_name)
-
-
-BACKEND_ENTRYPOINTS: dict[str, type[_InternalBackendEntrypoint]] = {}
+BACKEND_ENTRYPOINTS: dict[str, type[BackendEntrypoint]] = {}

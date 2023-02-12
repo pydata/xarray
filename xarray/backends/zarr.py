@@ -11,8 +11,8 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
+    BackendEntrypoint,
     _encode_variable_name,
-    _InternalBackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -845,7 +845,7 @@ def open_zarr(
     return ds
 
 
-class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
+class ZarrBackendEntrypoint(BackendEntrypoint):
     """
     Backend for ".zarr" files based on the zarr package.
 
@@ -857,7 +857,6 @@ class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
     backends.ZarrStore
     """
 
-    _module_name = "zarr"
     available = module_available("zarr")
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
