@@ -291,8 +291,6 @@ def test_refresh_engines() -> None:
     assert "test1" in engines
     assert isinstance(engines["test1"], DummyBackendEntrypoint1)
 
-    refresh_engines()
-
     EntryPointMock2 = mock.MagicMock()
     EntryPointMock2.name = "test2"
     EntryPointMock2.load.return_value = DummyBackendEntrypoint2
@@ -300,7 +298,11 @@ def test_refresh_engines() -> None:
     with mock.patch(
         "xarray.backends.plugins.entry_points", return_value=[EntryPointMock2]
     ):
+        refresh_engines()
         engines = list_engines()
     assert "test1" not in engines
     assert "test2" in engines
     assert isinstance(engines["test2"], DummyBackendEntrypoint2)
+
+    # reset to original
+    refresh_engines()
