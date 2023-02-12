@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from importlib.metadata import EntryPoint
+from importlib.metadata import EntryPoint, EntryPoints
 from unittest import mock
 
 import pytest
@@ -57,7 +57,7 @@ def test_broken_plugin() -> None:
         "xarray.backends",
     )
     with pytest.warns(RuntimeWarning) as record:
-        _ = plugins.build_engines([broken_backend])
+        _ = plugins.build_engines(EntryPoints([broken_backend]))
     assert len(record) == 1
     message = str(record[0].message)
     assert "Engine 'broken_backend'" in message
@@ -99,23 +99,23 @@ def test_set_missing_parameters() -> None:
     assert backend_1.open_dataset_parameters == ("filename_or_obj", "decoder")
     assert backend_2.open_dataset_parameters == ("filename_or_obj",)
 
-    backend = DummyBackendEntrypointKwargs()
-    backend.open_dataset_parameters = ("filename_or_obj", "decoder")  # type: ignore[misc]
+    backend = DummyBackendEntrypointKwargs
+    backend.open_dataset_parameters = ("filename_or_obj", "decoder")
     plugins.set_missing_parameters({"engine": backend})
     assert backend.open_dataset_parameters == ("filename_or_obj", "decoder")
 
-    backend_args = DummyBackendEntrypointArgs()
-    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")  # type: ignore[misc]
+    backend_args = DummyBackendEntrypointArgs
+    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")
     plugins.set_missing_parameters({"engine": backend_args})
     assert backend_args.open_dataset_parameters == ("filename_or_obj", "decoder")
 
 
 def test_set_missing_parameters_raise_error() -> None:
-    backend = DummyBackendEntrypointKwargs()
+    backend = DummyBackendEntrypointKwargs
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
 
-    backend_args = DummyBackendEntrypointArgs()
+    backend_args = DummyBackendEntrypointArgs
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend_args})
 
@@ -128,7 +128,7 @@ def test_build_engines() -> None:
     dummy_pkg_entrypoint = EntryPoint(
         "cfgrib", "xarray.tests.test_plugins:backend_1", "xarray_backends"
     )
-    backend_entrypoints = plugins.build_engines([dummy_pkg_entrypoint])
+    backend_entrypoints = plugins.build_engines(EntryPoints([dummy_pkg_entrypoint]))
 
     assert isinstance(backend_entrypoints["cfgrib"], DummyBackendEntrypoint1)
     assert backend_entrypoints["cfgrib"].open_dataset_parameters == (
@@ -142,10 +142,16 @@ def test_build_engines() -> None:
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
 def test_build_engines_sorted() -> None:
-    dummy_pkg_entrypoints = [
-        EntryPoint("dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
-        EntryPoint("dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
-    ]
+    dummy_pkg_entrypoints = EntryPoints(
+        [
+            EntryPoint(
+                "dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+            ),
+            EntryPoint(
+                "dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+            ),
+        ]
+    )
     backend_entrypoints = list(plugins.build_engines(dummy_pkg_entrypoints))
 
     indices = []
