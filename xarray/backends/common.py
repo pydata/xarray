@@ -433,7 +433,7 @@ class BackendEntrypoint:
         return False
 
 
-class _InternalBackendEntrypoint:
+class _InternalBackendEntrypoint(BackendEntrypoint):
     """
     Wrapper class for BackendEntrypoints that ship with xarray.
 
