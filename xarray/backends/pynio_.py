@@ -8,7 +8,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    BackendEntrypoint,
+    _InternalBackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.file_manager import CachingFileManager
@@ -107,7 +107,7 @@ class NioDataStore(AbstractDataStore):
         self._manager.close()
 
 
-class PynioBackendEntrypoint(BackendEntrypoint):
+class PynioBackendEntrypoint(_InternalBackendEntrypoint):
     """
     PyNIO backend
 
@@ -117,6 +117,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         https://github.com/pydata/xarray/issues/4491 for more information
     """
 
+    _module_name = "Nio"
     available = module_available("Nio")
 
     def open_dataset(
