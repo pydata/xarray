@@ -22,13 +22,13 @@ STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
     # sort and group entrypoints by name
-    entrypoints = sorted(entrypoints, key=lambda ep: ep.name)
-    entrypoints_grouped = itertools.groupby(entrypoints, key=lambda ep: ep.name)
+    entrypoints_sorted = sorted(entrypoints, key=lambda ep: ep.name)
+    entrypoints_grouped = itertools.groupby(entrypoints_sorted, key=lambda ep: ep.name)
     # check if there are multiple entrypoints for the same name
     unique_entrypoints = []
-    for name, matches in entrypoints_grouped:
+    for name, _matches in entrypoints_grouped:
         # remove equal entrypoints
-        matches = list(set(matches))
+        matches = list(set(_matches))
         unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
@@ -63,7 +63,7 @@ def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
 
 def backends_dict_from_pkg(
     entrypoints: list[EntryPoint],
-) -> dict[str, BackendEntrypoint]:
+) -> dict[str, type[BackendEntrypoint]]:
     backend_entrypoints = {}
     for entrypoint in entrypoints:
         name = entrypoint.name
@@ -75,7 +75,7 @@ def backends_dict_from_pkg(
     return backend_entrypoints
 
 
-def set_missing_parameters(backend_entrypoints: dict[str, BackendEntrypoint]):
+def set_missing_parameters(backend_entrypoints: dict[str, type[BackendEntrypoint]]):
     for _, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
@@ -83,8 +83,8 @@ def set_missing_parameters(backend_entrypoints: dict[str, BackendEntrypoint]):
 
 
 def sort_backends(
-    backend_entrypoints: dict[str, BackendEntrypoint]
-) -> dict[str, BackendEntrypoint]:
+    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:
         if backend_entrypoints.get(be_name, None) is not None:
@@ -96,12 +96,12 @@ def sort_backends(
 
 
 def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
-    backend_entrypoints = {}
+    backend_entrypoints: dict[str, type[BackendEntrypoint]] = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
         if backend.available:
             backend_entrypoints[backend_name] = backend
-    entrypoints = remove_duplicates(entrypoints)
-    external_backend_entrypoints = backends_dict_from_pkg(entrypoints)
+    entrypoints_unique = remove_duplicates(entrypoints)
+    external_backend_entrypoints = backends_dict_from_pkg(entrypoints_unique)
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)

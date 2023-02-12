@@ -4,15 +4,21 @@ from xarray import conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
-    BackendEntrypoint,
+    _InternalBackendEntrypoint,
 )
 from xarray.core.dataset import Dataset
 
 
-class StoreBackendEntrypoint(BackendEntrypoint):
+class StoreBackendEntrypoint(_InternalBackendEntrypoint):
+    _module_name = ""
     available = True
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
+
+    @classmethod
+    def _set_availability(cls) -> None:
+        """Resets the backends availability."""
+        cls.available = True
 
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, AbstractDataStore)
