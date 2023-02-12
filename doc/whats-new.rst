@@ -23,6 +23,8 @@ v2023.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow refreshing backend engines with :py:meth:`xarray.backends.refresh_engines` (:issue:`7478`, :pull:`7523`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
