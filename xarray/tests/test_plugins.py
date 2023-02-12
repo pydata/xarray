@@ -7,6 +7,18 @@ from unittest import mock
 import pytest
 
 from xarray.backends import common, plugins
+from xarray.tests import (
+    has_cfgrib,
+    has_h5netcdf,
+    has_netCDF4,
+    has_pseudonetcdf,
+    has_pydap,
+    has_pynio,
+    has_scipy,
+    has_zarr,
+)
+
+# Do not import list_engines here, this will break the lazy tests
 
 importlib_metadata_mock = "importlib.metadata"
 
@@ -246,3 +258,49 @@ def test_lazy_import() -> None:
     finally:
         # restore original
         sys.modules.update(modules_backup)
+
+
+def test_list_engines() -> None:
+    from xarray.backends import list_engines
+
+    engines = list_engines()
+    assert list_engines.cache_info().currsize == 1
+
+    assert ("cfgrib" in engines) == has_cfgrib
+    assert ("scipy" in engines) == has_scipy
+    assert ("h5netcdf" in engines) == has_h5netcdf
+    assert ("netcdf4" in engines) == has_netCDF4
+    assert ("pseudonetcdf" in engines) == has_pseudonetcdf
+    assert ("pydap" in engines) == has_pydap
+    assert ("zarr" in engines) == has_zarr
+    assert ("pynio" in engines) == has_pynio
+    assert "store" in engines
+
+
+def test_refresh_engines() -> None:
+    from xarray.backends import list_engines, refresh_engines
+
+    EntryPointMock1 = mock.MagicMock()
+    EntryPointMock1.name = "test1"
+    EntryPointMock1.load.return_value = DummyBackendEntrypoint1
+
+    with mock.patch(
+        "xarray.backends.plugins.entry_points", return_value=[EntryPointMock1]
+    ):
+        engines = list_engines()
+    assert "test1" in engines
+    assert isinstance(engines["test1"], DummyBackendEntrypoint1)
+
+    refresh_engines()
+
+    EntryPointMock2 = mock.MagicMock()
+    EntryPointMock2.name = "test2"
+    EntryPointMock2.load.return_value = DummyBackendEntrypoint2
+
+    with mock.patch(
+        "xarray.backends.plugins.entry_points", return_value=[EntryPointMock2]
+    ):
+        engines = list_engines()
+    assert "test1" not in engines
+    assert "test2" in engines
+    assert isinstance(engines["test2"], DummyBackendEntrypoint2)
