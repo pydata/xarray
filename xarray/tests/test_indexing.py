@@ -233,7 +233,6 @@ class TestIndexers:
         test_indexer(mdata, {"one": "a"}, expected)
 
     def test_read_only_view(self) -> None:
-
         arr = DataArray(
             np.random.rand(3, 3),
             coords={"x": np.arange(3), "y": np.arange(3)},
@@ -710,7 +709,6 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
         np.arange(10) < 5,
     ]
     for i, j, k in itertools.product(indexers, repeat=3):
-
         if isinstance(j, np.ndarray) and j.dtype.kind == "b":  # match size
             j = np.arange(20) < 4
         if isinstance(k, np.ndarray) and k.dtype.kind == "b":

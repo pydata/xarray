@@ -254,7 +254,6 @@ def _render_classbody(method_blocks, is_module):
 
 
 if __name__ == "__main__":
-
     option = sys.argv[1].lower() if len(sys.argv) == 2 else None
     if option not in {"--module", "--stubs"}:
         raise SystemExit(f"Usage: {sys.argv[0]} --module | --stubs")

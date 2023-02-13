@@ -230,6 +230,7 @@ def extract_zarr_variable_encoding(
     """
     encoding = variable.encoding.copy()
 
+    safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "chunks",
         "compressor",
@@ -237,6 +238,10 @@ def extract_zarr_variable_encoding(
         "cache_metadata",
         "write_empty_chunks",
     }
+
+    for k in safe_to_drop:
+        if k in encoding:
+            del encoding[k]
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -882,7 +887,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         stacklevel=3,
         zarr_version=None,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
