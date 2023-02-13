@@ -156,7 +156,6 @@ class _UFuncSignature:
 
         # enumerate input_core_dims contained in exclude_dims to make them unique
         if exclude_dims:
-
             exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
 
             counter = Counter()
@@ -555,7 +554,6 @@ def apply_groupby_func(func, *args):
 def unified_dim_sizes(
     variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
 ) -> dict[Hashable, int]:
-
     dim_sizes: dict[Hashable, int] = {}
 
     for var in variables:
@@ -725,7 +723,9 @@ def apply_variable_ufunc(
                 dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
 
             for key in signature.all_output_core_dims:
-                if key not in signature.all_input_core_dims and key not in output_sizes:
+                if (
+                    key not in signature.all_input_core_dims or key in exclude_dims
+                ) and key not in output_sizes:
                     raise ValueError(
                         f"dimension '{key}' in 'output_core_dims' needs corresponding (dim, size) in 'output_sizes'"
                     )

@@ -179,7 +179,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         verify=None,
         user_charset=None,
     ):
-
         store = PydapDataStore.open(
             url=filename_or_obj,
             application=application,

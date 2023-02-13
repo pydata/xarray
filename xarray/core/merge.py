@@ -174,7 +174,7 @@ def _assert_prioritized_valid(
     indexes: dict[int, Index] = {}
 
     for name, elements_list in grouped.items():
-        for (_, index) in elements_list:
+        for _, index in elements_list:
             if index is not None:
                 grouped_by_index[id(index)].append(name)
                 indexes[id(index)] = index

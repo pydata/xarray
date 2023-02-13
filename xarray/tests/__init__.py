@@ -101,8 +101,6 @@ set_options(warn_for_unclosed_files=True)
 if has_dask:
     import dask
 
-    dask.config.set(scheduler="single-threaded")
-
 
 class CountingScheduler:
     """Simple dask scheduler counting the number of computes.
@@ -202,7 +200,6 @@ def source_ndarray(array):
 
 @contextmanager
 def assert_no_warnings():
-
     with warnings.catch_warnings(record=True) as record:
         yield record
         assert len(record) == 0, "got unexpected warning(s)"

@@ -452,7 +452,6 @@ class VariableSubclassobjects:
             expected.copy(deep=True),
             expected.copy(deep=False),
         ]:
-
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
@@ -1761,7 +1760,6 @@ class TestVariable(VariableSubclassobjects):
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna):
-
         d = self.d.copy()
         d[0, 0] = np.NaN
 
@@ -1786,7 +1784,6 @@ class TestVariable(VariableSubclassobjects):
         "use_dask", [pytest.param(True, marks=requires_dask), False]
     )
     def test_quantile_method(self, method, use_dask) -> None:
-
         v = Variable(["x", "y"], self.d)
         if use_dask:
             v = v.chunk({"x": 2})
@@ -1806,7 +1803,6 @@ class TestVariable(VariableSubclassobjects):
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
-
         v = Variable(["x", "y"], self.d)
         q = np.array([0.25, 0.5, 0.75])
 
@@ -2400,7 +2396,6 @@ class TestIndexVariable(VariableSubclassobjects):
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype):
-
         a = IndexVariable("x", np.array(["a"], dtype=dtype))
         b = IndexVariable("x", np.array(["b"], dtype=dtype))
         expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))
