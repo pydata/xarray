@@ -120,7 +120,6 @@ def _datatree_to_netcdf(
     unlimited_dims=None,
     **kwargs,
 ):
-
     if kwargs.get("format", None) not in [None, "NETCDF4"]:
         raise ValueError("to_netcdf only supports the NETCDF4 format")
 
@@ -182,7 +181,6 @@ def _datatree_to_zarr(
     consolidated: bool = True,
     **kwargs,
 ):
-
     from zarr.convenience import consolidate_metadata  # type: ignore
 
     if kwargs.get("group", None) is not None:

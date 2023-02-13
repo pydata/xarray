@@ -379,7 +379,6 @@ class DataTree(
 
     @ds.setter
     def ds(self, data: Optional[Union[Dataset, DataArray]] = None) -> None:
-
         ds = _coerce_to_dataset(data)
 
         _check_for_name_collisions(self.children, ds.variables)
@@ -796,7 +795,6 @@ class DataTree(
 
         # Either:
         if utils.is_dict_like(key):
-
             # dict-like indexing
             raise NotImplementedError("Should this index over whole tree?")
         elif isinstance(key, str):
