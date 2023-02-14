@@ -670,7 +670,6 @@ def test_decode_cf(calendar) -> None:
 
 
 def test_decode_cf_time_bounds() -> None:
-
     da = DataArray(
         np.arange(6, dtype="int64").reshape((3, 2)),
         coords={"time": [1, 2, 3]},
@@ -713,7 +712,6 @@ def test_decode_cf_time_bounds() -> None:
 
 @requires_cftime
 def test_encode_time_bounds() -> None:
-
     time = pd.date_range("2000-01-16", periods=1)
     time_bounds = pd.date_range("2000-01-01", periods=2, freq="MS")
     ds = Dataset(dict(time=time, time_bounds=time_bounds))
@@ -834,7 +832,6 @@ def test_encode_cf_datetime_overflow(shape) -> None:
 
 
 def test_encode_expected_failures() -> None:
-
     dates = pd.date_range("2000", periods=3)
     with pytest.raises(ValueError, match="invalid time units"):
         encode_cf_datetime(dates, units="days after 2000-01-01")

@@ -252,7 +252,6 @@ class Method:
 
 
 class AggregationGenerator:
-
     _dim_docstring = _DIM_DOCSTRING
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE
 

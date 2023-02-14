@@ -201,7 +201,6 @@ def _strftime(values, date_format):
 
 
 class TimeAccessor(Generic[T_DataArray]):
-
     __slots__ = ("_obj",)
 
     def __init__(self, obj: T_DataArray) -> None:
