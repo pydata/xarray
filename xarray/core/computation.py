@@ -9,7 +9,16 @@ import operator
 import warnings
 from collections import Counter
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, AbstractSet, Any, Callable, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Callable,
+    Literal,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 
@@ -21,7 +30,7 @@ from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import T_DataArray
+from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar
 from xarray.core.variable import Variable
 
@@ -1209,7 +1218,9 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def cov(da_a, da_b, dim=None, ddof=1):
+def cov(
+    da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None, ddof: int = 1
+) -> T_DataArray:
     """
     Compute covariance between two DataArray objects along a shared dimension.
 
@@ -1219,9 +1230,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
         Array to compute.
     da_b : DataArray
         Array to compute.
-    dim : str, optional
+    dim : str, iterable of hashable, "..." or None, optional
         The dimension along which the covariance will be computed
-    ddof : int, optional
+    ddof : int, default: 1
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
@@ -1289,7 +1300,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
-def corr(da_a, da_b, dim=None):
+def corr(da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None) -> T_DataArray:
     """
     Compute the Pearson correlation coefficient between
     two DataArray objects along a shared dimension.
@@ -1300,7 +1311,7 @@ def corr(da_a, da_b, dim=None):
         Array to compute.
     da_b : DataArray
         Array to compute.
-    dim : str, optional
+    dim : str, iterable of hashable, "..." or None, optional
         The dimension along which the correlation will be computed
 
     Returns
@@ -1368,7 +1379,11 @@ def corr(da_a, da_b, dim=None):
 
 
 def _cov_corr(
-    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+    da_a: T_DataArray,
+    da_b: T_DataArray,
+    dim: Dims = None,
+    ddof: int = 0,
+    method: Literal["cov", "corr", None] = None,
 ) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
@@ -1388,22 +1403,21 @@ def _cov_corr(
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    #
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
-        valid_count
-    )
+    cov = (demeaned_da_a.conj() * demeaned_da_b).sum(
+        dim=dim, skipna=True, min_count=1
+    ) / (valid_count)
 
     if method == "cov":
-        return cov
+        return cov  # type: ignore[return-value]
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr
+        return corr  # type: ignore[return-value]
 
 
 def cross(
@@ -1616,7 +1630,7 @@ def cross(
 
 def dot(
     *arrays,
-    dims: str | Iterable[Hashable] | ellipsis | None = None,
+    dims: Dims = None,
     **kwargs: Any,
 ):
     """Generalized dot product for xarray objects. Like np.einsum, but
@@ -1626,7 +1640,7 @@ def dot(
     ----------
     *arrays : DataArray or Variable
         Arrays to compute.
-    dims : ..., str or tuple of str, optional
+    dims : str, iterable of hashable, "..." or None, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict
