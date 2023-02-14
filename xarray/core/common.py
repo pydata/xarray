@@ -1780,10 +1780,10 @@ def _contains_cftime_datetimes(array: Any) -> bool:
     else:
         var = Variable(dims=tuple(f"dim_{v}" for v in range(array.ndim)), data=array)
 
-    return _variable_contains_cftime_datetimes(var)
+    return contains_cftime_datetimes(var)
 
 
-def _variable_contains_cftime_datetimes(var: T_Variable) -> bool:
+def contains_cftime_datetimes(var: T_Variable) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
@@ -1794,11 +1794,6 @@ def _variable_contains_cftime_datetimes(var: T_Variable) -> bool:
         return isinstance(sample.to_numpy().item(), cftime.datetime)
 
     return False
-
-
-def contains_cftime_datetimes(var: T_Variable) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects"""
-    return _variable_contains_cftime_datetimes(var)
 
 
 def _contains_datetime_like_objects(var: T_Variable) -> bool:
