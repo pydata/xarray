@@ -168,6 +168,7 @@ CFCalendar = Literal[
 
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
+InclusiveOptions = Literal["both", "neither", "left", "right"]
 
 ScaleOptions = Literal["linear", "symlog", "log", "logit", None]
 HueStyleOptions = Literal["continuous", "discrete", None]

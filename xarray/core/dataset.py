@@ -28,9 +28,15 @@ import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from xarray.core import alignment
+from xarray.core import (
+    alignment,
+    duck_array_ops,
+    formatting,
+    formatting_html,
+    ops,
+    utils,
+)
 from xarray.core import dtypes as xrdtypes
-from xarray.core import duck_array_ops, formatting, formatting_html, ops, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.alignment import (
     _broadcast_helper,
@@ -6762,7 +6768,6 @@ class Dataset(
         fill_value: Any = xrdtypes.NA,
         **shifts_kwargs: int,
     ) -> T_Dataset:
-
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
