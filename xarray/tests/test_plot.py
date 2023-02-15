@@ -2717,7 +2717,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_non_numeric_legend(self) -> None:
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "b", "c", "d"]
-        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
+        pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         # should make a discrete legend
         assert pc.axes.legend_ is not None
 
@@ -2725,15 +2725,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         # regression test for #4126: incorrect legend labels
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "a", "b", "b"]
-        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
+        pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         actual = [t.get_text() for t in pc.axes.get_legend().texts]
-        expected = [
-            "col [colunits]",
-            "$\\mathdefault{0}$",
-            "$\\mathdefault{1}$",
-            "$\\mathdefault{2}$",
-            "$\\mathdefault{3}$",
-        ]
+        expected = ["hue", "a", "b"]
         assert actual == expected
 
     def test_legend_labels_facetgrid(self) -> None:
