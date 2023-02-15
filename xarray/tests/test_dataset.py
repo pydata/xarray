@@ -2505,7 +2505,9 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"variables cannot be found in this dataset: {'not_found_here'}",
+            match=re.escape(
+                "These variables cannot be found in this dataset: ['not_found_here']"
+            ),
         ):
             data.drop_vars("not_found_here")
 
