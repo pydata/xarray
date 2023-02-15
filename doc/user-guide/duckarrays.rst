@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _duckarrays:
+
 Working with numpy-like arrays
 ==============================
 

@@ -20,6 +20,7 @@ examples that describe many common tasks that you can accomplish with xarray.
    combining
    time-series
    weather-climate
+   numpy-to-xarray
    pandas
    io
    dask
