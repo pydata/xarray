@@ -163,7 +163,7 @@ class DuckArrayWrapper(utils.NDArrayMixin):
     def __getitem__(self, key):
         return type(self)(self.array[key])
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.typing.DTypeLike = None):
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __array_namespace__(self):
