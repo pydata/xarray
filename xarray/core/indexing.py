@@ -437,7 +437,7 @@ class ExplicitlyIndexed:
 
     __slots__ = ()
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
@@ -467,7 +467,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self.array = as_indexable(array)
         self.indexer_cls = indexer_cls
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
@@ -541,8 +541,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
-        if isinstance(array, ExplicitlyIndexed):
-            array = array.get_duck_array()
+       array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
@@ -673,7 +672,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def _ensure_cached(self):
         self.array = as_indexable(self.array.get_duck_array())
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):

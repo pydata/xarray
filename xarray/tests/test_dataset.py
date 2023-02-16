@@ -258,8 +258,8 @@ class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
             if isinstance(v, IndexVariable):
                 self._indexvars.add(k)
 
-    def get_variables(self):
-        def lazy_accessible(k, v):
+    def get_variables(self) -> dict[Any, xr.Variable]:
+        def lazy_accessible(k, v) -> xr.Variable:
             if k in self._indexvars:
                 return v
             data = indexing.LazilyIndexedArray(DuckBackendArrayWrapper(v.values))

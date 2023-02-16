@@ -146,7 +146,7 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
     def get_duck_array(self):
         raise UnexpectedDataAccess("Tried accessing data")
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.typing.DTypeLike = None):
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __getitem__(self, key):
