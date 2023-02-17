@@ -485,20 +485,24 @@ class NetCDF4DataStore(WritableCFDataStore):
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
-            nc4_var = self.ds.createVariable(
+            default_args = dict(
                 varname=name,
                 datatype=datatype,
                 dimensions=variable.dims,
-                zlib=encoding.get("zlib", False),
-                complevel=encoding.get("complevel", 4),
-                shuffle=encoding.get("shuffle", True),
-                fletcher32=encoding.get("fletcher32", False),
-                contiguous=encoding.get("contiguous", False),
-                chunksizes=encoding.get("chunksizes"),
+                zlib=False,
+                complevel=4,
+                shuffle=True,
+                fletcher32=False,
+                contiguous=False,
+                chunksizes=None,
                 endian="native",
-                least_significant_digit=encoding.get("least_significant_digit"),
+                least_significant_digit=None,
                 fill_value=fill_value,
             )
+            default_args.update(encoding)
+            if "_FillValue" in default_args:
+                default_args.pop("_FillValue")
+            nc4_var = self.ds.createVariable(**default_args)
 
         nc4_var.setncatts(attrs)
 
