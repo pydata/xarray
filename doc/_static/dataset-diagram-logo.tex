@@ -1,6 +1,12 @@
-\documentclass[class=minimal,border=0pt,convert={size=600,outext=.png}]{standalone}
+% For svg output:
+% 1. Use second \documentclass line.
+% 2. Install potrace : mamba install -c bioconda potrace
+% As of Feb 14, 2023: svg does not work. PDF does work
+% \documentclass[class=minimal,border=0pt,convert={size=600,outext=.png}]{standalone}
+\documentclass[class=minimal,border=0pt,convert={size=600,outext=.svg}]{standalone}
 % \documentclass[class=minimal,border=0pt]{standalone}
 \usepackage[scaled]{helvet}
+\usepackage[T1]{fontenc}
 \renewcommand*\familydefault{\sfdefault}
 
 % ===========================================================================
