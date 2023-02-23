@@ -37,6 +37,7 @@ except ImportError:
 
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
+warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
