@@ -304,9 +304,11 @@ def _determine_cmap_params(
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+    if levels is not None:
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
+    if isinstance(norm, mpl.colors.BoundaryNorm):
+        cmap, norm = _build_discrete_cmap(cmap, levels, extend, filled)
 
     # vmin & vmax needs to be None if norm is passed
     # TODO: always return a norm with vmin and vmax
