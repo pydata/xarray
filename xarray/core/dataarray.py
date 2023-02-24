@@ -6249,7 +6249,7 @@ class DataArray(
 
         See Also
         --------
-        :ref:`groupby`
+        :ref:`Users guide: group and bin data <groupby>`
         DataArray.groupby_bins
         Dataset.groupby
         core.groupby.DataArrayGroupBy
@@ -6329,7 +6329,7 @@ class DataArray(
 
         See Also
         --------
-        :ref:`groupby`
+        :ref:`Users guide: group and bin data <groupby>`
         DataArray.groupby
         Dataset.groupby_bins
         core.groupby.DataArrayGroupBy

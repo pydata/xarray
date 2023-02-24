@@ -8933,7 +8933,7 @@ class Dataset(
 
         See Also
         --------
-        :ref:`groupby`
+        :ref:`Users guide: group and bin data <groupby>`
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
@@ -9015,7 +9015,7 @@ class Dataset(
 
         See Also
         --------
-        :ref:`groupby`
+        :ref:`Users guide: group and bin data <groupby>`
         Dataset.groupby
         DataArray.groupby_bins
         core.groupby.DatasetGroupBy
