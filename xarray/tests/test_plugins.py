@@ -292,6 +292,7 @@ def test_refresh_engines() -> None:
     with mock.patch(
         "xarray.backends.plugins.entry_points", return_value=[EntryPointMock1]
     ):
+        list_engines.cache_clear()
         engines = list_engines()
     assert "test1" in engines
     assert isinstance(engines["test1"], DummyBackendEntrypoint1)
