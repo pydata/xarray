@@ -242,7 +242,9 @@ def _unique_and_monotonic(group: T_Group) -> bool:
     if isinstance(group, _DummyGroup):
         return True
     index = safe_cast_to_index(group)
-    return index.is_unique and index.is_monotonic_increasing
+    return index.is_unique and (
+        index.is_monotonic_increasing or index.is_monotonic_decreasing
+    )
 
 
 def _apply_loffset(grouper, result):
@@ -399,7 +401,9 @@ class GroupBy(Generic[T_Xarray]):
             index = safe_cast_to_index(group)
             if not index.is_monotonic_increasing:
                 # TODO: sort instead of raising an error
-                raise ValueError("index must be monotonic for resampling")
+                raise ValueError(
+                    "Index must be monotonic and increasing for resampling."
+                )
             full_index, first_items = self._get_index_and_items(index, grouper)
             sbins = first_items.values.astype(np.int64)
             group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [

@@ -1462,6 +1462,20 @@ class TestDataArrayGroupBy:
         actual = a.groupby("b").fillna(DataArray([0, 2], dims="b"))
         assert_identical(expected, actual)
 
+    def test_groupby_fastpath_for_monotonic(self):
+        # Fixes https://github.com/pydata/xarray/issues/6220
+        index = [1, 2, 3, 4, 7, 9, 10]
+        array = DataArray(np.arange(len(index)), [("idx", index)])
+        array_rev = array.copy().assign_coords({"idx": index[::-1]})
+        fwd = array.groupby("idx", squeeze=False)
+        rev = array_rev.groupby("idx", squeeze=False)
+
+        for gb in [fwd, rev]:
+            assert all([isinstance(elem, slice) for elem in gb._group_indices])
+
+        assert_identical(fwd.sum(), array)
+        assert_identical(rev.sum(), array_rev.sortby("idx"))
+
 
 class TestDataArrayResample:
     def test_resample(self):
@@ -1483,8 +1497,12 @@ class TestDataArrayResample:
         expected = DataArray.from_series(expected_)
         assert_identical(actual, expected)
 
-        with pytest.raises(ValueError, match=r"index must be monotonic"):
+        with pytest.raises(ValueError, match=r"Index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
+
+        reverse = array.isel(time=slice(-1, None, -1))
+        with pytest.raises(ValueError):
+            reverse.resample(time="1D").mean()
 
     def test_da_resample_func_args(self):
         def func(arg1, arg2, arg3=0.0):
