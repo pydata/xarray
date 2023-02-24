@@ -289,9 +289,12 @@ def test_refresh_engines() -> None:
     EntryPointMock1.name = "test1"
     EntryPointMock1.load.return_value = DummyBackendEntrypoint1
 
-    with mock.patch(
-        "xarray.backends.plugins.entry_points", return_value=[EntryPointMock1]
-    ):
+    if sys.version_info >= (3, 10):
+        return_value = EntryPoints([EntryPointMock1])
+    else:
+        return_value = {"xarray.backends": [EntryPointMock1]}
+
+    with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value):
         list_engines.cache_clear()
         engines = list_engines()
     assert "test1" in engines
@@ -301,9 +304,12 @@ def test_refresh_engines() -> None:
     EntryPointMock2.name = "test2"
     EntryPointMock2.load.return_value = DummyBackendEntrypoint2
 
-    with mock.patch(
-        "xarray.backends.plugins.entry_points", return_value=[EntryPointMock2]
-    ):
+    if sys.version_info >= (3, 10):
+        return_value2 = EntryPoints([EntryPointMock2])
+    else:
+        return_value2 = {"xarray.backends": [EntryPointMock2]}
+
+    with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value2):
         refresh_engines()
         engines = list_engines()
     assert "test1" not in engines
