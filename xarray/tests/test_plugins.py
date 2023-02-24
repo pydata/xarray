@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import sys
-from importlib.metadata import EntryPoint, EntryPoints
+from importlib.metadata import EntryPoint
+
+try:
+    from importlib.metadata import EntryPoints
+except ImportError:
+    EntryPoints = list[EntryPoint]  # type: ignore[assignment, misc]
 from unittest import mock
 
 import pytest
