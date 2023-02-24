@@ -3,10 +3,10 @@ from __future__ import annotations
 import sys
 from importlib.metadata import EntryPoint
 
-try:
+if sys.version_info >= (3, 10):
     from importlib.metadata import EntryPoints
-except ImportError:
-    EntryPoints = list[EntryPoint]  # type: ignore[assignment, misc]
+else:
+    EntryPoints = list[EntryPoint]
 from unittest import mock
 
 import pytest
