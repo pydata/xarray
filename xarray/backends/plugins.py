@@ -132,7 +132,7 @@ def list_engines() -> dict[str, BackendEntrypoint]:
     if sys.version_info >= (3, 10):
         entrypoints = entry_points(group="xarray.backends")
     else:
-        entrypoints = entry_points().get("xarray.backends", ())
+        entrypoints = entry_points().get("xarray.backends", [])
     return build_engines(entrypoints)
 
 
