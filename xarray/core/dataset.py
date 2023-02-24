@@ -8911,6 +8911,7 @@ class Dataset(
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
+        See more details at :ref:`groupby`.
 
         Parameters
         ----------
@@ -8969,6 +8970,7 @@ class Dataset(
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
+        See more details at :ref:`groupby`.
 
         Rather than using all unique values of `group`, the values are discretized
         first by applying `pandas.cut` [1]_ to `group`.
