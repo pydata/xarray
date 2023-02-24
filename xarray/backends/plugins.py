@@ -12,7 +12,12 @@ from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 if TYPE_CHECKING:
     import os
-    from importlib.metadata import EntryPoint, EntryPoints
+    from importlib.metadata import EntryPoint
+
+    if sys.version_info >= (3, 10):
+        from importlib.metadata import EntryPoints
+    else:
+        EntryPoints = list[EntryPoint]
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
