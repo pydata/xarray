@@ -6205,7 +6205,6 @@ class DataArray(
         restore_coord_dims: bool = False,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
-        See more details at :ref:`groupby`.
 
         Parameters
         ----------
@@ -6250,6 +6249,7 @@ class DataArray(
 
         See Also
         --------
+        :ref:`groupby`
         DataArray.groupby_bins
         Dataset.groupby
         core.groupby.DataArrayGroupBy
@@ -6286,8 +6286,7 @@ class DataArray(
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
-        first by applying `pandas.cut` [1]_ to `group`.  See more details at
-        :ref:`groupby`.
+        first by applying `pandas.cut` [1]_ to `group`.
 
         Parameters
         ----------
@@ -6330,6 +6329,7 @@ class DataArray(
 
         See Also
         --------
+        :ref:`groupby`
         DataArray.groupby
         Dataset.groupby_bins
         core.groupby.DataArrayGroupBy
