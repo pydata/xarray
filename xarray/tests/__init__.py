@@ -37,6 +37,7 @@ except ImportError:
 
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
+warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -175,7 +176,6 @@ def source_ndarray(array):
 
 @contextmanager
 def assert_no_warnings():
-
     with warnings.catch_warnings(record=True) as record:
         yield record
         assert len(record) == 0, "got unexpected warning(s)"

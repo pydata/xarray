@@ -5474,7 +5474,7 @@ class Dataset(
             - all : if all values are NA, drop that label
 
         thresh : int or None, optional
-            If supplied, require this many non-NA values.
+            If supplied, require this many non-NA values (summed over all the subset variables).
         subset : iterable of hashable or None, optional
             Which variables to check for missing values. By default, all
             variables in the dataset are checked.
@@ -6768,7 +6768,6 @@ class Dataset(
         fill_value: Any = xrdtypes.NA,
         **shifts_kwargs: int,
     ) -> T_Dataset:
-
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -8934,6 +8933,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
@@ -9015,6 +9016,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby
         DataArray.groupby_bins
         core.groupby.DatasetGroupBy

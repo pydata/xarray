@@ -1092,7 +1092,6 @@ def _logical_any(args):
 
 
 def _masked_result_drop_slice(key, data=None):
-
     key = (k for k in key if not isinstance(k, slice))
     chunks_hint = getattr(data, "chunks", None)
 
@@ -1345,7 +1344,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-
         if not isinstance(key, VectorizedIndexer):
             # if possible, short-circuit when keys are effectively slice(None)
             # This preserves dask name and passes lazy array equivalence checks
