@@ -5,7 +5,6 @@ from itertools import product
 
 import numpy as np
 import pytest
-from packaging.version import Version
 
 from xarray import (
     DataArray,
@@ -1142,22 +1141,17 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    if Version(cftime.__version__) >= Version("1.5"):
-        error_msg = (
-            "Cannot combine along dimension 'time' with mixed types."
-            " Found:.*"
-            " If importing data directly from a file then setting"
-            " `use_cftime=True` may fix this issue."
-        )
-    else:
-        error_msg = r"cannot compare .* \(different calendars\)"
-
+    error_msg = (
+        "Cannot combine along dimension 'time' with mixed types."
+        " Found:.*"
+        " If importing data directly from a file then setting"
+        " `use_cftime=True` may fix this issue."
+    )
     with pytest.raises(TypeError, match=error_msg):
         combine_by_coords([da_1, da_2])
 
 
 def test_combine_by_coords_raises_for_differing_types():
-
     # str and byte cannot be compared
     da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()

@@ -3,18 +3,10 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 import numpy as np
 import pandas as pd
@@ -500,7 +492,6 @@ def get_axis(
 
 
 def _maybe_gca(**subplot_kws: Any) -> Axes:
-
     import matplotlib.pyplot as plt
 
     # can call gcf unconditionally: either it exists or would be created by plt.axes
@@ -605,7 +596,6 @@ def _resolve_intervals_1dplot(
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
-
         remove_drawstyle = False
 
         # Convert intervals to double points
@@ -626,7 +616,6 @@ def _resolve_intervals_1dplot(
 
     # Is it another kind of plot?
     else:
-
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, pd.Interval):
             xval = _interval_to_mid_points(xval)
@@ -728,7 +717,6 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
@@ -1327,7 +1315,6 @@ def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
 ) -> None | pd.Series:
-
     import matplotlib as mpl
 
     if data is None:
@@ -1716,7 +1703,6 @@ def _add_legend(
     legend_ax,
     plotfunc: str,
 ):
-
     primitive = primitive if isinstance(primitive, list) else [primitive]
 
     handles, labels = [], []
@@ -1749,3 +1735,92 @@ def _add_legend(
     _adjust_legend_subtitles(legend)
 
     return legend
+
+
+def _guess_coords_to_plot(
+    darray: DataArray,
+    coords_to_plot: MutableMapping[str, Hashable | None],
+    kwargs: dict,
+    default_guess: tuple[str, ...] = ("x",),
+    # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
+    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
+) -> MutableMapping[str, Hashable]:
+    """
+    Guess what coords to plot if some of the values in coords_to_plot are None which
+    happens when the user has not defined all available ways of visualizing
+    the data.
+
+    Parameters
+    ----------
+    darray : DataArray
+        The DataArray to check for available coords.
+    coords_to_plot : MutableMapping[str, Hashable]
+        Coords defined by the user to plot.
+    kwargs : dict
+        Extra kwargs that will be sent to matplotlib.
+    default_guess : Iterable[str], optional
+        Default values and order to retrieve dims if values in dims_plot is
+        missing, default: ("x", "hue", "size").
+    ignore_guess_kwargs : tuple[tuple[str, ...], ...]
+        Matplotlib arguments to ignore.
+
+    Examples
+    --------
+    >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
+    >>> # Only guess x by default:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ... )
+    {'x': 'x', 'z': None, 'hue': None, 'size': None}
+
+    >>> # Guess all plot dims with other default values:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'x', 'z': None, 'hue': 'y', 'size': 'z'}
+
+    >>> # Don't guess ´size´, since the matplotlib kwarg ´s´ has been defined:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'x', 'z': None, 'hue': 'y', 'size': None}
+
+    >>> # Prioritize ´size´ over ´s´:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": "x"},
+    ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'y', 'z': None, 'hue': 'z', 'size': 'x'}
+    """
+    coords_to_plot_exist = {k: v for k, v in coords_to_plot.items() if v is not None}
+    available_coords = tuple(
+        k for k in darray.coords.keys() if k not in coords_to_plot_exist.values()
+    )
+
+    # If dims_plot[k] isn't defined then fill with one of the available dims, unless
+    # one of related mpl kwargs has been used. This should have similiar behaviour as
+    # * plt.plot(x, y) -> Multple lines with different colors if y is 2d.
+    # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
+    for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
+        if coords_to_plot.get(k, None) is None and all(
+            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+        ):
+            coords_to_plot[k] = dim
+
+    for k, dim in coords_to_plot.items():
+        _assert_valid_xy(darray, dim, k)
+
+    return coords_to_plot

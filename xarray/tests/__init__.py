@@ -37,6 +37,7 @@ except ImportError:
 
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
+warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -64,7 +65,6 @@ has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
-has_h5netcdf_0_12, requires_h5netcdf_0_12 = _importorskip("h5netcdf", minversion="0.12")
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
@@ -101,8 +101,6 @@ set_options(warn_for_unclosed_files=True)
 
 if has_dask:
     import dask
-
-    dask.config.set(scheduler="single-threaded")
 
 
 class CountingScheduler:
@@ -178,7 +176,6 @@ def source_ndarray(array):
 
 @contextmanager
 def assert_no_warnings():
-
     with warnings.catch_warnings(record=True) as record:
         yield record
         assert len(record) == 0, "got unexpected warning(s)"

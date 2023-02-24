@@ -15,14 +15,16 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.01.1:
+.. _whats-new.2023.03.0:
 
-v2023.01.1 (unreleased)
+v2023.03.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,10 +36,12 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
-- :py:func:`xarray.concat` can now concatenate variables present in some datasets but
-  not others (:issue:`508`, :pull:`7400`).
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
+- Require to explicitly defining optional dimensions such as hue
+  and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix matplotlib raising a UserWarning when plotting a scatter plot
+  with an unfilled marker (:issue:`7313`, :pull:`7318`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -45,6 +49,61 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.02.0:
+
+v2023.02.0 (Feb 7, 2023)
+------------------------
+
+This release brings a major upgrade to :py:func:`xarray.concat`, many bug fixes,
+and a bump in supported dependency versions. Thanks to our 11 contributors:
+Aron Gergely, Deepak Cherian, Illviljan, James Bourbeau, Joe Hamman,
+Justus Magin, Hauke Schulz, Kai Mühlbauer, Ken Mankoff, Spencer Clark, Tom Nicholas.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Support for ``python 3.8`` has been dropped and the minimum versions of some
+  dependencies were changed (:pull:`7461`):
+
+  ===================== =========  ========
+   Package                    Old      New
+  ===================== =========  ========
+   python                     3.8      3.9
+   numpy                     1.20     1.21
+   pandas                     1.3      1.4
+   dask                   2021.11   2022.1
+   distributed            2021.11   2022.1
+   h5netcdf                  0.11     0.13
+   lxml                       4.6      4.7
+   numba                      5.4      5.5
+  ===================== =========  ========
+
+Deprecations
+~~~~~~~~~~~~
+- Following pandas, the `closed` parameters of :py:func:`cftime_range` and
+  :py:func:`date_range` are deprecated in favor of the `inclusive` parameters,
+  and will be removed in a future version of xarray (:issue:`6985`:,
+  :pull:`7373`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Bug fixes
+~~~~~~~~~
+- :py:func:`xarray.concat` can now concatenate variables present in some datasets but
+  not others (:issue:`508`, :pull:`7400`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Scott Chamberlin <https://github.com/scottcha>`_.
+- Handle ``keep_attrs`` option in binary operators of :py:meth:`Dataset` (:issue:`7390`, :pull:`7391`).
+  By `Aron Gergely <https://github.com/arongergely>`_.
+- Improve error message when using dask in :py:func:`apply_ufunc` with ``output_sizes`` not supplied. (:pull:`7509`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:func:`xarray.Dataset.to_zarr` now drops variable encodings that have been added by xarray during reading
+  a dataset. (:issue:`7129`, :pull:`7500`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
+
+Documentation
+~~~~~~~~~~~~~
+- Mention the `flox package <https://flox.readthedocs.io>`_ in GroupBy documentation and docstrings.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 .. _whats-new.2023.01.0:
@@ -66,6 +125,9 @@ Breaking changes
 Bug fixes
 ~~~~~~~~~
 
+- Avoid in-memory broadcasting when converting to a dask dataframe
+  using ``.to_dask_dataframe.`` (:issue:`6811`, :pull:`7472`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Accessing the property ``.nbytes`` of a DataArray, or Variable no longer
   accidentally triggers loading the variable into memory.
 - Allow numpy-only objects in :py:func:`where` when ``keep_attrs=True`` (:issue:`7362`, :pull:`7364`).
