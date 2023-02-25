@@ -116,15 +116,21 @@ def test_set_missing_parameters() -> None:
     assert backend_1.open_dataset_parameters == ("filename_or_obj", "decoder")
     assert backend_2.open_dataset_parameters == ("filename_or_obj",)
 
-    backend = DummyBackendEntrypointKwargs
-    backend.open_dataset_parameters = ("filename_or_obj", "decoder")
-    plugins.set_missing_parameters({"engine": backend})
-    assert backend.open_dataset_parameters == ("filename_or_obj", "decoder")
+    backend_kwargs = DummyBackendEntrypointKwargs
+    backend_kwargs.open_dataset_parameters = ("filename_or_obj", "decoder")
+    plugins.set_missing_parameters({"engine": backend_kwargs})
+    assert backend_kwargs.open_dataset_parameters == ("filename_or_obj", "decoder")
 
     backend_args = DummyBackendEntrypointArgs
     backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")
     plugins.set_missing_parameters({"engine": backend_args})
     assert backend_args.open_dataset_parameters == ("filename_or_obj", "decoder")
+
+    # reset
+    backend_1.open_dataset_parameters = None
+    backend_1.open_dataset_parameters = None
+    backend_kwargs.open_dataset_parameters = None
+    backend_args.open_dataset_parameters = None
 
 
 def test_set_missing_parameters_raise_error() -> None:

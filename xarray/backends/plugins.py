@@ -80,7 +80,9 @@ def backends_dict_from_pkg(
     return backend_entrypoints
 
 
-def set_missing_parameters(backend_entrypoints: dict[str, type[BackendEntrypoint]]):
+def set_missing_parameters(
+    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+) -> None:
     for _, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
