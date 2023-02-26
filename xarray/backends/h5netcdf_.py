@@ -3,13 +3,15 @@ from __future__ import annotations
 import functools
 import io
 import os
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 from packaging.version import Version
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
+    BackendEntrypoint,
     WritableCFDataStore,
-    _InternalBackendEntrypoint,
     _normalize_path,
     find_root_and_group,
 )
@@ -27,11 +29,16 @@ from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
     is_remote_uri,
-    module_available,
     read_magic_number_from_file,
     try_read_magic_number_from_file_or_path,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -343,7 +350,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
+class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
 
@@ -365,14 +372,15 @@ class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
     backends.ScipyBackendEntrypoint
     """
 
-    _module_name = "h5netcdf"
-    available = module_available("h5netcdf")
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using h5netcdf in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
@@ -386,13 +394,13 @@ class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         format=None,
@@ -401,7 +409,7 @@ class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
@@ -428,4 +436,4 @@ class H5netcdfBackendEntrypoint(_InternalBackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint
+BACKEND_ENTRYPOINTS["h5netcdf"] = ("h5netcdf", H5netcdfBackendEntrypoint)

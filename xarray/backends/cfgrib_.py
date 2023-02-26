@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -9,14 +11,19 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    _InternalBackendEntrypoint,
+    BackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.locks import SerializableLock, ensure_lock
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.utils import Frozen, FrozenDict, close_on_error
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from xarray.core.dataset import Dataset
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -90,11 +97,11 @@ class CfGribDataStore(AbstractDataStore):
         return {"unlimited_dims": {k for k, v in dims.items() if v is None}}
 
 
-class CfgribfBackendEntrypoint(_InternalBackendEntrypoint):
-    _module_name = "cfgrib"
-    available = module_available("cfgrib")
-
-    def guess_can_open(self, filename_or_obj):
+class CfgribfBackendEntrypoint(BackendEntrypoint):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         try:
             _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
@@ -103,13 +110,13 @@ class CfgribfBackendEntrypoint(_InternalBackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         lock=None,
@@ -119,7 +126,7 @@ class CfgribfBackendEntrypoint(_InternalBackendEntrypoint):
         encode_cf=("parameter", "time", "geography", "vertical"),
         squeeze=True,
         time_dims=("time", "step"),
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,
@@ -146,4 +153,4 @@ class CfgribfBackendEntrypoint(_InternalBackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint
+BACKEND_ENTRYPOINTS["cfgrib"] = ("cfgrib", CfgribfBackendEntrypoint)

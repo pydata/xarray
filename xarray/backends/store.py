@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
+
 from xarray import conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
-    _InternalBackendEntrypoint,
+    BackendEntrypoint,
 )
 from xarray.core.dataset import Dataset
 
+if TYPE_CHECKING:
+    import os
+    from io import BufferedIOBase
 
-class StoreBackendEntrypoint(_InternalBackendEntrypoint):
-    _module_name = ""
-    available = True
+
+class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
@@ -20,7 +25,10 @@ class StoreBackendEntrypoint(_InternalBackendEntrypoint):
         """Resets the backends availability."""
         cls.available = True
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
@@ -31,10 +39,10 @@ class StoreBackendEntrypoint(_InternalBackendEntrypoint):
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-    ):
+    ) -> Dataset:
         vars, attrs = store.load()
         encoding = store.get_encoding()
 
@@ -58,4 +66,4 @@ class StoreBackendEntrypoint(_InternalBackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["store"] = StoreBackendEntrypoint
+BACKEND_ENTRYPOINTS["store"] = (None, StoreBackendEntrypoint)

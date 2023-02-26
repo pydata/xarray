@@ -16,11 +16,12 @@ from xarray.core.utils import (
     FrozenDict,
     NdimSizeLenMixin,
     is_remote_uri,
-    module_available,
 )
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    from xarray.core.dataset import Dataset
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -382,9 +383,6 @@ class BackendEntrypoint:
     Attributes
     ----------
 
-    available : bool, default: True
-        Indicate wether this backend is available given the installed packages.
-        The setting of this attribute is not mandatory.
     open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
@@ -395,8 +393,6 @@ class BackendEntrypoint:
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
     """
-
-    available: ClassVar[bool] = True
 
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
@@ -415,7 +411,7 @@ class BackendEntrypoint:
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
-    ):
+    ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -425,7 +421,7 @@ class BackendEntrypoint:
     def guess_can_open(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ):
+    ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -433,24 +429,5 @@ class BackendEntrypoint:
         return False
 
 
-class _InternalBackendEntrypoint(BackendEntrypoint):
-    """
-    Wrapper class for BackendEntrypoints that ship with xarray.
-
-
-    Additional attributes
-    ----------
-
-    _module_name : str
-        Name of the module that is required to enable the backend.
-    """
-
-    _module_name: ClassVar[str]
-
-    @classmethod
-    def _set_availability(cls) -> None:
-        """Resets the backends availability."""
-        cls.available = module_available(cls._module_name)
-
-
-BACKEND_ENTRYPOINTS: dict[str, type[_InternalBackendEntrypoint]] = {}
+# mapping of engine name to (module name, BackendEntrypoint Class)
+BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}

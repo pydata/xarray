@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 from packaging.version import Version
 
@@ -7,7 +10,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    _InternalBackendEntrypoint,
+    BackendEntrypoint,
     robust_getitem,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -19,9 +22,14 @@ from xarray.core.utils import (
     close_on_error,
     is_dict_like,
     is_remote_uri,
-    module_available,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    import os
+    from io import BufferedIOBase
+
+    from xarray.core.dataset import Dataset
 
 
 class PydapArrayWrapper(BackendArray):
@@ -138,7 +146,7 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
 
-class PydapBackendEntrypoint(_InternalBackendEntrypoint):
+class PydapBackendEntrypoint(BackendEntrypoint):
     """
     Backend for steaming datasets over the internet using
     the Data Access Protocol, also known as DODS or OPeNDAP
@@ -154,22 +162,23 @@ class PydapBackendEntrypoint(_InternalBackendEntrypoint):
     backends.PydapDataStore
     """
 
-    _module_name = "pydap"
-    available = module_available("pydap")
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         application=None,
@@ -178,7 +187,7 @@ class PydapBackendEntrypoint(_InternalBackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-    ):
+    ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
             application=application,
@@ -204,4 +213,4 @@ class PydapBackendEntrypoint(_InternalBackendEntrypoint):
             return ds
 
 
-BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint
+BACKEND_ENTRYPOINTS["pydap"] = ("pydap", PydapBackendEntrypoint)

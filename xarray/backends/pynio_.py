@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -8,7 +10,7 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    _InternalBackendEntrypoint,
+    BackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.file_manager import CachingFileManager
@@ -21,8 +23,14 @@ from xarray.backends.locks import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.utils import Frozen, FrozenDict, close_on_error
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    import os
+    from io import BufferedIOBase
+
+    from xarray.core.dataset import Dataset
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -107,7 +115,7 @@ class NioDataStore(AbstractDataStore):
         self._manager.close()
 
 
-class PynioBackendEntrypoint(_InternalBackendEntrypoint):
+class PynioBackendEntrypoint(BackendEntrypoint):
     """
     PyNIO backend
 
@@ -117,22 +125,19 @@ class PynioBackendEntrypoint(_InternalBackendEntrypoint):
         https://github.com/pydata/xarray/issues/4491 for more information
     """
 
-    _module_name = "Nio"
-    available = module_available("Nio")
-
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         mode="r",
         lock=None,
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NioDataStore(
             filename_or_obj,
@@ -155,4 +160,4 @@ class PynioBackendEntrypoint(_InternalBackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["pynio"] = PynioBackendEntrypoint
+BACKEND_ENTRYPOINTS["pynio"] = ("Nio", PynioBackendEntrypoint)

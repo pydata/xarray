@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import warnings
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -11,8 +13,8 @@ from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
+    BackendEntrypoint,
     _encode_variable_name,
-    _InternalBackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -22,9 +24,15 @@ from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
     close_on_error,
-    module_available,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
+
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -845,7 +853,7 @@ def open_zarr(
     return ds
 
 
-class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
+class ZarrBackendEntrypoint(BackendEntrypoint):
     """
     Backend for ".zarr" files based on the zarr package.
 
@@ -857,12 +865,13 @@ class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
     backends.ZarrStore
     """
 
-    _module_name = "zarr"
-    available = module_available("zarr")
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         try:
             _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
@@ -871,12 +880,12 @@ class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
@@ -887,7 +896,7 @@ class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
@@ -917,4 +926,4 @@ class ZarrBackendEntrypoint(_InternalBackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint
+BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)

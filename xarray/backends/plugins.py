@@ -9,6 +9,7 @@ from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
     import os
@@ -104,8 +105,8 @@ def sort_backends(
 
 def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
     backend_entrypoints: dict[str, type[BackendEntrypoint]] = {}
-    for backend_name, backend in BACKEND_ENTRYPOINTS.items():
-        if backend.available:
+    for backend_name, (module_name, backend) in BACKEND_ENTRYPOINTS.items():
+        if module_name is None or module_available(module_name):
             backend_entrypoints[backend_name] = backend
     entrypoints_unique = remove_duplicates(entrypoints)
     external_backend_entrypoints = backends_dict_from_pkg(entrypoints_unique)
@@ -141,8 +142,6 @@ def list_engines() -> dict[str, BackendEntrypoint]:
 def refresh_engines() -> None:
     """Refreshes the backend engines based on installed packages."""
     list_engines.cache_clear()
-    for backend_entrypoint in BACKEND_ENTRYPOINTS.values():
-        backend_entrypoint._set_availability()
 
 
 def guess_engine(
@@ -158,7 +157,7 @@ def guess_engine(
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     compatible_engines = []
-    for engine, backend_cls in BACKEND_ENTRYPOINTS.items():
+    for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
         try:
             backend = backend_cls()
             if backend.guess_can_open(store_spec):

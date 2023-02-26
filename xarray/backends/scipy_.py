@@ -3,14 +3,16 @@ from __future__ import annotations
 import gzip
 import io
 import os
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
+    BackendEntrypoint,
     WritableCFDataStore,
-    _InternalBackendEntrypoint,
     _normalize_path,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
@@ -26,10 +28,15 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    module_available,
     try_read_magic_number_from_file_or_path,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
 
 
 def _decode_string(s):
@@ -240,7 +247,7 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager.close()
 
 
-class ScipyBackendEntrypoint(_InternalBackendEntrypoint):
+class ScipyBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the scipy package.
 
@@ -261,12 +268,13 @@ class ScipyBackendEntrypoint(_InternalBackendEntrypoint):
     backends.H5netcdfBackendEntrypoint
     """
 
-    _module_name = "scipy"
-    available = module_available("scipy")
     description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
             with gzip.open(filename_or_obj) as f:
@@ -282,12 +290,12 @@ class ScipyBackendEntrypoint(_InternalBackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         mode="r",
@@ -295,7 +303,7 @@ class ScipyBackendEntrypoint(_InternalBackendEntrypoint):
         group=None,
         mmap=None,
         lock=None,
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
@@ -316,4 +324,4 @@ class ScipyBackendEntrypoint(_InternalBackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
+BACKEND_ENTRYPOINTS["scipy"] = ("scipy", ScipyBackendEntrypoint)
