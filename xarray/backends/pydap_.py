@@ -174,6 +174,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -187,6 +188,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
+        **_,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,

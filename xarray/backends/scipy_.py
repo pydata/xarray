@@ -277,20 +277,21 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     ) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
-            with gzip.open(filename_or_obj) as f:
+            with gzip.open(filename_or_obj) as f:  # type: ignore[arg-type]
                 magic_number = try_read_magic_number_from_file_or_path(f)
         if magic_number is not None:
             return magic_number.startswith(b"CDF")
 
-        try:
+        if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".nc", ".nc4", ".cdf", ".gz"}
+            return ext in {".nc", ".nc4", ".cdf", ".gz"}
+
+        return False
 
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -303,6 +304,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         group=None,
         mmap=None,
         lock=None,
+        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(

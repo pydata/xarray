@@ -128,6 +128,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -137,6 +138,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         mode="r",
         lock=None,
+        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NioDataStore(

@@ -5616,7 +5616,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
-    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")  # type: ignore[arg-type]
 
 
 @requires_h5netcdf

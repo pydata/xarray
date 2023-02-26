@@ -409,6 +409,7 @@ class BackendEntrypoint:
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> Dataset:

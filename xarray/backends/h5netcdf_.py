@@ -385,12 +385,11 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
 
-        try:
+        if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
+            return ext in {".nc", ".nc4", ".cdf"}
 
-        return ext in {".nc", ".nc4", ".cdf"}
+        return False
 
     def open_dataset(
         self,
@@ -409,6 +408,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(

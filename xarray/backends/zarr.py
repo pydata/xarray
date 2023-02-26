@@ -872,15 +872,16 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     ) -> bool:
-        try:
+        if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".zarr"}
+            return ext in {".zarr"}
+
+        return False
 
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -896,6 +897,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
+        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(

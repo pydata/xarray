@@ -28,7 +28,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        store,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -37,9 +37,12 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
+        **_,
     ) -> Dataset:
-        vars, attrs = store.load()
-        encoding = store.get_encoding()
+        assert isinstance(filename_or_obj, AbstractDataStore)
+
+        vars, attrs = filename_or_obj.load()
+        encoding = filename_or_obj.get_encoding()
 
         vars, attrs, coord_names = conventions.decode_cf_variables(
             vars,
@@ -55,7 +58,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
         ds = Dataset(vars, attrs=attrs)
         ds = ds.set_coords(coord_names.intersection(vars))
-        ds.set_close(store.close)
+        ds.set_close(filename_or_obj.close)
         ds.encoding = encoding
 
         return ds

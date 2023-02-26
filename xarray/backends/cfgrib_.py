@@ -102,11 +102,10 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     ) -> bool:
-        try:
+        if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".grib", ".grib2", ".grb", ".grb2"}
+            return ext in {".grib", ".grib2", ".grb", ".grb2"}
+        return False
 
     def open_dataset(
         self,
@@ -126,6 +125,7 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         encode_cf=("parameter", "time", "geography", "vertical"),
         squeeze=True,
         time_dims=("time", "step"),
+        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(

@@ -557,15 +557,17 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         if magic_number is not None:
             # netcdf 3 or HDF5
             return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
-        try:
+
+        if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".nc", ".nc4", ".cdf"}
+            return ext in {".nc", ".nc4", ".cdf"}
+
+        return False
 
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -581,6 +583,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
+        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
