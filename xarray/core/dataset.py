@@ -8943,7 +8943,7 @@ class Dataset(
         Dataset.resample
         DataArray.resample
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import DatasetGroupBy, UniqueGrouper
 
         # While we don't generally check the type of every arg, passing
         # multiple dimensions as multiple arguments is common enough, and the
@@ -8956,8 +8956,10 @@ class Dataset(
                 f"`squeeze` must be True or False, but {squeeze} was supplied"
             )
 
+        grouper = UniqueGrouper(group)
+
         return DatasetGroupBy(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+            self, grouper, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
 
     def groupby_bins(
@@ -9028,20 +9030,21 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import BinGrouper, DatasetGroupBy
 
-        return DatasetGroupBy(
-            self,
-            group,
-            squeeze=squeeze,
+        grouper = BinGrouper(
+            group=group,
             bins=bins,
-            restore_coord_dims=restore_coord_dims,
             cut_kwargs={
                 "right": right,
                 "labels": labels,
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+
+        return DatasetGroupBy(
+            self, grouper, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
 
     def weighted(self, weights: DataArray) -> DatasetWeighted:

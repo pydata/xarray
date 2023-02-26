@@ -84,8 +84,9 @@ class Resample(GroupBy[T_Xarray]):
         padded : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="pad", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="pad", tolerance=tolerance
         )
 
     ffill = pad
@@ -108,8 +109,9 @@ class Resample(GroupBy[T_Xarray]):
         backfilled : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="backfill", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="backfill", tolerance=tolerance
         )
 
     bfill = backfill
@@ -133,8 +135,9 @@ class Resample(GroupBy[T_Xarray]):
         upsampled : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="nearest", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
     def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
@@ -170,8 +173,9 @@ class Resample(GroupBy[T_Xarray]):
     def _interpolate(self, kind="linear") -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.interp(
-            coords={self._dim: self._full_index},
+            coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
             kwargs={"bounds_error": False},

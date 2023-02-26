@@ -996,11 +996,16 @@ class DataWithCoords(AttrAccessMixin):
         if base is not None and offset is not None:
             raise ValueError("base and offset cannot be present at the same time")
 
+        index = self._indexes[dim_name].to_pandas_index()
         if base is not None:
-            index = self._indexes[dim_name].to_pandas_index()
             offset = _convert_base_to_offset(base, freq, index)
 
+        group = DataArray(
+            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
+        )
+
         grouper = TimeResampleGrouper(
+            group=group,
             freq=freq,
             closed=closed,
             label=label,
@@ -1009,14 +1014,10 @@ class DataWithCoords(AttrAccessMixin):
             loffset=loffset,
         )
 
-        group = DataArray(
-            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
-        )
         return resample_cls(
             self,
-            group=group,
-            dim=dim_name,
             grouper=grouper,
+            dim=dim_name,
             resample_dim=RESAMPLE_DIM,
             restore_coord_dims=restore_coord_dims,
         )

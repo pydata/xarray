@@ -537,7 +537,7 @@ def test_groupby_drops_nans() -> None:
         .reset_index("id", drop=True)
         .assign(id=stacked.id.values)
         .dropna("id")
-        .transpose(*actual2.dims)
+        .transpose(*actual2.variable.dims)
     )
     assert_identical(actual2, expected2)
 
@@ -1684,7 +1684,7 @@ class TestDataArrayResample:
         # Nearest
         rs = array.resample(time="3H")
         actual = rs.nearest()
-        new_times = rs._full_index
+        new_times = rs.groupers[0].full_index
         expected = DataArray(array.reindex(time=new_times, method="nearest"))
         assert_identical(expected, actual)
 
