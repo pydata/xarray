@@ -16,10 +16,8 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import around  # noqa
-from numpy import zeros_like  # noqa
-from numpy import concatenate as _concatenate
 from numpy import (  # noqa
+    around,  # noqa
     einsum,
     gradient,
     isclose,
@@ -29,7 +27,9 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
+    zeros_like,  # noqa
 )
+from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
@@ -492,7 +492,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Convert np.NaT to np.nan
     elif array.dtype.kind in "mM":
-
         # Convert to specified timedelta units.
         if datetime_unit:
             array = array / np.timedelta64(1, datetime_unit)

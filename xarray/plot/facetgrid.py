@@ -3,17 +3,8 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterable,
-    Literal,
-    TypeVar,
-    cast,
-)
+from collections.abc import Hashable, Iterable, MutableMapping
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, cast
 
 import numpy as np
 
@@ -25,6 +16,7 @@ from xarray.plot.utils import (
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
+    _guess_coords_to_plot,
     _infer_xy_labels,
     _Normalize,
     _parse_size,
@@ -392,6 +384,11 @@ class FacetGrid(Generic[T_Xarray]):
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
+        *,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        markersize: Hashable | None = None,
+        linewidth: Hashable | None = None,
         **kwargs: Any,
     ) -> T_FacetGrid:
         """
@@ -424,13 +421,25 @@ class FacetGrid(Generic[T_Xarray]):
         if kwargs.get("cbar_ax", None) is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
+        if func.__name__ == "scatter":
+            size_ = kwargs.pop("_size", markersize)
+            size_r = _MARKERSIZE_RANGE
+        else:
+            size_ = kwargs.pop("_size", linewidth)
+            size_r = _LINEWIDTH_RANGE
+
+        # Guess what coords to use if some of the values in coords_to_plot are None:
+        coords_to_plot: MutableMapping[str, Hashable | None] = dict(
+            x=x, z=z, hue=hue, size=size_
+        )
+        coords_to_plot = _guess_coords_to_plot(self.data, coords_to_plot, kwargs)
+
         # Handle hues:
-        hue = kwargs.get("hue", None)
-        hueplt = self.data[hue] if hue else self.data
+        hue = coords_to_plot["hue"]
+        hueplt = self.data.coords[hue] if hue else None  # TODO: _infer_line_data2 ?
         hueplt_norm = _Normalize(hueplt)
         self._hue_var = hueplt
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
-
         if hueplt_norm.data is not None:
             if not hueplt_norm.data_is_numeric:
                 # TODO: Ticks seems a little too hardcoded, since it will always
@@ -450,16 +459,11 @@ class FacetGrid(Generic[T_Xarray]):
             cmap_params = {}
 
         # Handle sizes:
-        _size_r = _MARKERSIZE_RANGE if func.__name__ == "scatter" else _LINEWIDTH_RANGE
-        for _size in ("markersize", "linewidth"):
-            size = kwargs.get(_size, None)
-
-            sizeplt = self.data[size] if size else None
-            sizeplt_norm = _Normalize(data=sizeplt, width=_size_r)
-            if size:
-                self.data[size] = sizeplt_norm.values
-                kwargs.update(**{_size: size})
-                break
+        size_ = coords_to_plot["size"]
+        sizeplt = self.data.coords[size_] if size_ else None
+        sizeplt_norm = _Normalize(data=sizeplt, width=size_r)
+        if sizeplt_norm.data is not None:
+            self.data[size_] = sizeplt_norm.values
 
         # Add kwargs that are sent to the plotting function, # order is important ???
         func_kwargs = {
@@ -513,6 +517,8 @@ class FacetGrid(Generic[T_Xarray]):
                     x=x,
                     y=y,
                     ax=ax,
+                    hue=hue,
+                    _size=size_,
                     **func_kwargs,
                     _is_facetgrid=True,
                 )

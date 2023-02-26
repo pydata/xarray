@@ -3,19 +3,8 @@ from __future__ import annotations
 import collections.abc
 import copy
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    TypeVar,
-    cast,
-)
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -32,7 +21,7 @@ if TYPE_CHECKING:
     from xarray.core.types import ErrorOptions, T_Index
     from xarray.core.variable import Variable
 
-IndexVars = Dict[Any, "Variable"]
+IndexVars = dict[Any, "Variable"]
 
 
 class Index:
@@ -979,7 +968,7 @@ class PandasMultiIndex(PandasIndex):
             # variable(s) attrs and encoding metadata are propagated
             # when replacing the indexes in the resulting xarray object
             new_vars = new_index.create_variables()
-            indexes = cast(Dict[Any, Index], {k: new_index for k in new_vars})
+            indexes = cast(dict[Any, Index], {k: new_index for k in new_vars})
 
             # add scalar variable for each dropped level
             variables = new_vars

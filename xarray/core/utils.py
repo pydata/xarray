@@ -46,22 +46,24 @@ import os
 import re
 import sys
 import warnings
+from collections.abc import (
+    Collection,
+    Container,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    Sequence,
+)
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Collection,
-    Container,
     Generic,
-    Hashable,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
-    MutableMapping,
-    MutableSet,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -861,7 +863,6 @@ def drop_dims_from_indexers(
         return indexers
 
     elif missing_dims == "warn":
-
         # don't modify input
         indexers = dict(indexers)
 
@@ -910,7 +911,6 @@ def drop_missing_dims(
         return supplied_dims
 
     elif missing_dims == "warn":
-
         invalid = set(supplied_dims) - set(dims)
         if invalid:
             warnings.warn(

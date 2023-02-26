@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
@@ -40,7 +41,6 @@ class Resample(GroupBy[T_Xarray]):
         resample_dim: Hashable | None = None,
         **kwargs,
     ) -> None:
-
         if dim == resample_dim:
             raise ValueError(
                 f"Proxy resampling dimension ('{resample_dim}') "
@@ -56,7 +56,6 @@ class Resample(GroupBy[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
-
         from xarray.core.dataarray import DataArray
 
         kwargs.setdefault("method", "cohorts")
