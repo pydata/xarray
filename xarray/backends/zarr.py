@@ -878,7 +878,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
@@ -897,7 +897,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
-        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(

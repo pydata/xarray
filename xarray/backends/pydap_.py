@@ -171,7 +171,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     ) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
-    def open_dataset(
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
@@ -188,7 +188,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-        **_,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,

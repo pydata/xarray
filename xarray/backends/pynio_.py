@@ -125,7 +125,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         https://github.com/pydata/xarray/issues/4491 for more information
     """
 
-    def open_dataset(
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
@@ -138,7 +138,6 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         mode="r",
         lock=None,
-        **_,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NioDataStore(
