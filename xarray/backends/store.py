@@ -20,11 +20,6 @@ class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
-    @classmethod
-    def _set_availability(cls) -> None:
-        """Resets the backends availability."""
-        cls.available = True
-
     def guess_can_open(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
