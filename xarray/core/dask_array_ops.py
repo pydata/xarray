@@ -115,7 +115,6 @@ def _first_or_last(darray, axis, op):
         aggregate=wrapped_op,
         axis=axis,
         dtype=darray.dtype,
-        meta=darray._meta,
         keepdims=False,  # match numpy version
     )
 
