@@ -16,10 +16,8 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import zeros_like  # noqa
-from numpy import around, broadcast_to  # noqa
-from numpy import concatenate as _concatenate
 from numpy import (  # noqa
+    around,  # noqa
     einsum,
     gradient,
     isclose,
@@ -29,7 +27,9 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
+    zeros_like,  # noqa
 )
+from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
@@ -207,6 +207,11 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     return [astype(x, out_type, copy=False) for x in arrays]
 
 
+def broadcast_to(array, shape):
+    xp = get_array_namespace(array)
+    return xp.broadcast_to(array, shape)
+
+
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
     Returns True when arr1, arr2 identical or their dask tokens are equal.
@@ -311,6 +316,9 @@ def fillna(data, other):
 
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
+    if hasattr(arrays[0], "__array_namespace__"):
+        xp = get_array_namespace(arrays[0])
+        return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
     return _concatenate(as_shared_dtype(arrays), axis=axis)
 
 
@@ -484,7 +492,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Convert np.NaT to np.nan
     elif array.dtype.kind in "mM":
-
         # Convert to specified timedelta units.
         if datetime_unit:
             array = array / np.timedelta64(1, datetime_unit)

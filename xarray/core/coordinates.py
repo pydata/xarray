@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Hashable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Hashable, Iterator, List, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -28,16 +29,10 @@ if TYPE_CHECKING:
 # arbitrary DataArray objects to datasets
 _THIS_ARRAY = ReprObject("<this-array>")
 
-# TODO: Remove when min python version >= 3.9:
-GenericAlias = type(List[int])
-
 
 class Coordinates(Mapping[Hashable, "T_DataArray"]):
     _data: DataWithCoords
     __slots__ = ("_data",)
-
-    # TODO: Remove when min python version >= 3.9:
-    __class_getitem__ = classmethod(GenericAlias)
 
     def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()

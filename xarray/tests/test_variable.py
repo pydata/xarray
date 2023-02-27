@@ -452,7 +452,6 @@ class VariableSubclassobjects:
             expected.copy(deep=True),
             expected.copy(deep=False),
         ]:
-
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
@@ -909,6 +908,33 @@ class VariableSubclassobjects:
             np.array(v.data), np_arg, mode="constant", constant_values=False
         )
         assert_array_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected):
+        data = np.arange(10, dtype=float)
+        v = self.cls(["x"], data, attrs)
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = v.pad({"x": (1, 1)}, mode="constant", constant_values=np.nan)
+
+            assert actual.attrs == expected
+
+        actual = v.pad(
+            {"x": (1, 1)},
+            mode="constant",
+            constant_values=np.nan,
+            keep_attrs=keep_attrs,
+        )
+        assert actual.attrs == expected
 
     @pytest.mark.parametrize("d, w", (("x", 3), ("y", 5)))
     def test_rolling_window(self, d, w):
@@ -1734,7 +1760,6 @@ class TestVariable(VariableSubclassobjects):
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna):
-
         d = self.d.copy()
         d[0, 0] = np.NaN
 
@@ -1759,7 +1784,6 @@ class TestVariable(VariableSubclassobjects):
         "use_dask", [pytest.param(True, marks=requires_dask), False]
     )
     def test_quantile_method(self, method, use_dask) -> None:
-
         v = Variable(["x", "y"], self.d)
         if use_dask:
             v = v.chunk({"x": 2})
@@ -1779,7 +1803,6 @@ class TestVariable(VariableSubclassobjects):
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
-
         v = Variable(["x", "y"], self.d)
         q = np.array([0.25, 0.5, 0.75])
 
@@ -2373,7 +2396,6 @@ class TestIndexVariable(VariableSubclassobjects):
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype):
-
         a = IndexVariable("x", np.array(["a"], dtype=dtype))
         b = IndexVariable("x", np.array(["b"], dtype=dtype))
         expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))

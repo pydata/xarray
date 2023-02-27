@@ -24,14 +24,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
-from . import duck_array_ops
-from .options import OPTIONS
-from .types import Dims
-from .utils import contains_only_dask_or_numpy, module_available
+from xarray.core import duck_array_ops
+from xarray.core.options import OPTIONS
+from xarray.core.types import Dims
+from xarray.core.utils import contains_only_dask_or_numpy, module_available
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 flox_available = module_available("flox")'''
 
@@ -147,7 +147,7 @@ TEMPLATE_SEE_ALSO = """
 TEMPLATE_NOTES = """
         Notes
         -----
-        {notes}"""
+{notes}"""
 
 _DIM_DOCSTRING = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
@@ -186,6 +186,17 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     These could include dask-specific kwargs like ``split_every``."""
 
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
+
+_FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
+especially with dask arrays. Xarray will use flox by default if installed.
+Pass flox-specific keyword arguments in ``**kwargs``.
+The default choice is ``method="cohorts"`` which generalizes the best,
+{recco} might work better for your problem.
+See the `flox documentation <https://flox.readthedocs.io>`_ for more."""
+_FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby", recco="other methods")
+_FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(
+    kind="resampling", recco='``method="blockwise"``'
+)
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = ExtraKwarg(
@@ -241,7 +252,6 @@ class Method:
 
 
 class AggregationGenerator:
-
     _dim_docstring = _DIM_DOCSTRING
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE
 
@@ -255,6 +265,7 @@ class AggregationGenerator:
         example_call_preamble,
         definition_preamble,
         see_also_obj=None,
+        notes=None,
     ):
         self.datastructure = datastructure
         self.cls = cls
@@ -263,6 +274,7 @@ class AggregationGenerator:
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
         self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
+        self.notes = "" if notes is None else notes
         if not see_also_obj:
             self.see_also_obj = self.datastructure.name
         else:
@@ -306,8 +318,14 @@ class AggregationGenerator:
             see_also_obj=self.see_also_obj,
         )
 
+        notes = self.notes
         if method.numeric_only:
-            yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
+            if notes != "":
+                notes += "\n\n"
+            notes += _NUMERIC_ONLY_NOTES
+
+        if notes != "":
+            yield TEMPLATE_NOTES.format(notes=textwrap.indent(notes, 8 * " "))
 
         yield textwrap.indent(self.generate_example(method=method), "")
         yield '        """'
@@ -484,6 +502,7 @@ DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
+    notes=_FLOX_GROUPBY_NOTES,
 )
 DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
@@ -493,6 +512,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
+    notes=_FLOX_RESAMPLE_NOTES,
 )
 DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
@@ -502,6 +522,7 @@ DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
+    notes=_FLOX_GROUPBY_NOTES,
 )
 DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
@@ -511,6 +532,7 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
+    notes=_FLOX_RESAMPLE_NOTES,
 )
 
 

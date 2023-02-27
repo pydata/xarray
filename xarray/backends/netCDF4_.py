@@ -573,7 +573,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         lock=None,
         autoclose=False,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,

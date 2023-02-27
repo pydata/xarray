@@ -3,21 +3,9 @@ from __future__ import annotations
 import functools
 import operator
 from collections import defaultdict
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    Hashable,
-    Iterable,
-    Mapping,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -98,10 +86,10 @@ def reindex_variables(
     return new_variables
 
 
-CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
-MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
-NormalizedIndexes = Dict[MatchingIndexKey, Index]
-NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
+CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
+MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
+NormalizedIndexes = dict[MatchingIndexKey, Index]
+NormalizedIndexVars = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
 class Aligner(Generic[DataAlignable]):
@@ -343,8 +331,33 @@ class Aligner(Generic[DataAlignable]):
           pandas). This is useful, e.g., for overwriting such duplicate indexes.
 
         """
-        has_unindexed_dims = any(dim in self.unindexed_dim_sizes for dim in dims)
-        return not (indexes_all_equal(cmp_indexes)) or has_unindexed_dims
+        if not indexes_all_equal(cmp_indexes):
+            # always reindex when matching indexes are not equal
+            return True
+
+        unindexed_dims_sizes = {}
+        for dim in dims:
+            if dim in self.unindexed_dim_sizes:
+                sizes = self.unindexed_dim_sizes[dim]
+                if len(sizes) > 1:
+                    # reindex if different sizes are found for unindexed dims
+                    return True
+                else:
+                    unindexed_dims_sizes[dim] = next(iter(sizes))
+
+        if unindexed_dims_sizes:
+            indexed_dims_sizes = {}
+            for cmp in cmp_indexes:
+                index_vars = cmp[1]
+                for var in index_vars.values():
+                    indexed_dims_sizes.update(var.sizes)
+
+            for dim, size in unindexed_dims_sizes.items():
+                if indexed_dims_sizes.get(dim, -1) != size:
+                    # reindex if unindexed dimension size doesn't match
+                    return True
+
+        return False
 
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:
@@ -925,7 +938,6 @@ def reindex_like(
 
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
-
     common_coords = {}
     dims_map = {}
     for arg in args:
@@ -941,7 +953,6 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 def _broadcast_helper(
     arg: T_DataWithCoords, exclude, dims_map, common_coords
 ) -> T_DataWithCoords:
-
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 

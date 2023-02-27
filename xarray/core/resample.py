@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -38,7 +39,6 @@ class Resample(GroupBy[T_Xarray]):
         resample_dim: Hashable | None = None,
         **kwargs,
     ) -> None:
-
         if dim == resample_dim:
             raise ValueError(
                 f"Proxy resampling dimension ('{resample_dim}') "

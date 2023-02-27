@@ -3,9 +3,10 @@ from __future__ import annotations
 import pickle
 import sys
 import warnings
+from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Final, Hashable, cast
+from typing import Any, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -30,6 +31,7 @@ from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.tests import (
+    InaccessibleArray,
     ReturnItem,
     assert_allclose,
     assert_array_equal,
@@ -1646,7 +1648,6 @@ class TestDataArray:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_reindex_str_dtype(self, dtype) -> None:
-
         data = DataArray(
             [1, 2], dims="x", coords={"x": np.array(["a", "b"], dtype=dtype)}
         )
@@ -1658,7 +1659,6 @@ class TestDataArray:
         assert actual.dtype == expected.dtype
 
     def test_rename(self) -> None:
-
         da = xr.DataArray(
             [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
         )
@@ -2164,13 +2164,11 @@ class TestDataArray:
         assert_identical(a - b, expected)
 
     def test_non_overlapping_dataarrays_return_empty_result(self) -> None:
-
         a = DataArray(range(5), [("x", range(5))])
         result = a.isel(x=slice(2)) + a.isel(x=slice(2, None))
         assert len(result["x"]) == 0
 
     def test_empty_dataarrays_return_empty_result(self) -> None:
-
         a = DataArray(data=[])
         result = a * a
         assert len(result["dim_0"]) == 0
@@ -2733,7 +2731,6 @@ class TestDataArray:
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna) -> None:
-
         va = self.va.copy(deep=True)
         va[0, 0] = np.NaN
 
@@ -2762,7 +2759,6 @@ class TestDataArray:
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
-
         da = DataArray(self.va)
         q = [0.25, 0.5, 0.75]
 
@@ -3013,7 +3009,6 @@ class TestDataArray:
             )
 
     def test_align_str_dtype(self) -> None:
-
         a = DataArray([0, 1], dims=["x"], coords={"x": ["a", "b"]})
         b = DataArray([1, 2], dims=["x"], coords={"x": ["b", "c"]})
 
@@ -3276,6 +3271,21 @@ class TestDataArray:
         actual_coords = actual_sparse.data.coords
 
         np.testing.assert_equal(actual_coords, expected_coords)
+
+    def test_nbytes_does_not_load_data(self) -> None:
+        array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
+        da = xr.DataArray(array, dims=["x", "y"])
+
+        # If xarray tries to instantiate the InaccessibleArray to compute
+        # nbytes, the following will raise an error.
+        # However, it should still be able to accurately give us information
+        # about the number of bytes from the metadata
+        assert da.nbytes == 9
+        # Here we confirm that this does not depend on array having the
+        # nbytes property, since it isn't really required by the array
+        # interface. nbytes is more a property of arrays that have been
+        # cast to numpy arrays.
+        assert not hasattr(array, "nbytes")
 
     def test_to_and_from_empty_series(self) -> None:
         # GH697
@@ -3572,7 +3582,6 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_to_dataset_retains_keys(self) -> None:
-
         # use dates as convenient non-str objects. Not a specific date test
         import datetime
 
@@ -3835,7 +3844,6 @@ class TestDataArray:
         assert_equal(expected2, actual2)
 
     def test_matmul(self) -> None:
-
         # copied from above (could make a fixture)
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
@@ -4063,15 +4071,8 @@ class TestDataArray:
         expected = xr.DataArray([1, 9, 1], dims="x")
         assert_identical(actual, expected)
 
-        if Version(np.__version__) >= Version("1.20"):
-            with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-                ar.pad(x=1, constant_values=np.NaN)
-        else:
-            actual = ar.pad(x=1, constant_values=np.NaN)
-            expected = xr.DataArray(
-                [-9223372036854775808, 9, -9223372036854775808], dims="x"
-            )
-            assert_identical(actual, expected)
+        with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
+            ar.pad(x=1, constant_values=np.NaN)
 
     def test_pad_coords(self) -> None:
         ar = DataArray(
@@ -4148,7 +4149,6 @@ class TestDataArray:
     @pytest.mark.parametrize("mode", ("reflect", "symmetric"))
     @pytest.mark.parametrize("reflect_type", (None, "even", "odd"))
     def test_pad_reflect(self, mode, reflect_type) -> None:
-
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(
             dim_0=(1, 3), dim_2=(2, 2), mode=mode, reflect_type=reflect_type
@@ -4165,6 +4165,36 @@ class TestDataArray:
 
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
+        arr = xr.DataArray(
+            [1, 2], dims="x", coords={"c": ("x", [-1, 1], attrs)}, attrs=attrs
+        )
+        expected = xr.DataArray(
+            [0, 1, 2, 0],
+            dims="x",
+            coords={"c": ("x", [np.nan, -1, 1, np.nan], expected)},
+            attrs=expected,
+        )
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = arr.pad({"x": (1, 1)}, mode="constant", constant_values=0)
+            xr.testing.assert_identical(actual, expected)
+
+        actual = arr.pad(
+            {"x": (1, 1)}, mode="constant", constant_values=0, keep_attrs=keep_attrs
+        )
+        xr.testing.assert_identical(actual, expected)
 
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
@@ -5653,7 +5683,6 @@ class TestReduce3D(TestReduce):
         nanindices_yz: dict[str, np.ndarray],
         nanindices_xyz: dict[str, np.ndarray],
     ) -> None:
-
         ar = xr.DataArray(
             x,
             dims=["x", "y", "z"],
@@ -5881,7 +5910,6 @@ class TestReduce3D(TestReduce):
         nanindices_yz: dict[str, np.ndarray],
         nanindices_xyz: dict[str, np.ndarray],
     ) -> None:
-
         ar = xr.DataArray(
             x,
             dims=["x", "y", "z"],

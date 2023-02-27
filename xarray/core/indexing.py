@@ -4,25 +4,20 @@ import enum
 import functools
 import operator
 from collections import Counter, defaultdict
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import (
-    array_type,
-    integer_types,
-    is_duck_dask_array,
-    mod_version,
-)
+from xarray.core.pycompat import array_type, integer_types, is_duck_dask_array
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
@@ -1097,7 +1092,6 @@ def _logical_any(args):
 
 
 def _masked_result_drop_slice(key, data=None):
-
     key = (k for k in key if not isinstance(k, slice))
     chunks_hint = getattr(data, "chunks", None)
 
@@ -1350,7 +1344,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-
         if not isinstance(key, VectorizedIndexer):
             # if possible, short-circuit when keys are effectively slice(None)
             # This preserves dask name and passes lazy array equivalence checks
@@ -1386,29 +1379,18 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if mod_version("dask") >= Version("2021.04.1"):
-            if isinstance(key, BasicIndexer):
-                self.array[key.tuple] = value
-            elif isinstance(key, VectorizedIndexer):
-                self.array.vindex[key.tuple] = value
-            elif isinstance(key, OuterIndexer):
-                num_non_slices = sum(
-                    0 if isinstance(k, slice) else 1 for k in key.tuple
+        if isinstance(key, BasicIndexer):
+            self.array[key.tuple] = value
+        elif isinstance(key, VectorizedIndexer):
+            self.array.vindex[key.tuple] = value
+        elif isinstance(key, OuterIndexer):
+            num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in key.tuple)
+            if num_non_slices > 1:
+                raise NotImplementedError(
+                    "xarray can't set arrays with multiple "
+                    "array indices to dask yet."
                 )
-                if num_non_slices > 1:
-                    raise NotImplementedError(
-                        "xarray can't set arrays with multiple "
-                        "array indices to dask yet."
-                    )
-                self.array[key.tuple] = value
-        else:
-            raise TypeError(
-                "This variable's data is stored in a dask array, "
-                "and the installed dask version does not support item "
-                "assignment. To assign to this variable, you must either upgrade dask or"
-                "first load the variable into memory explicitly using the .load() "
-                "method or accessing its .values attribute."
-            )
+            self.array[key.tuple] = value
 
     def transpose(self, order):
         return self.array.transpose(order)
@@ -1531,8 +1513,12 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         self.level = level
 
     def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+        if dtype is None:
+            dtype = self.dtype
         if self.level is not None:
-            return self.array.get_level_values(self.level).values
+            return np.asarray(
+                self.array.get_level_values(self.level).values, dtype=dtype
+            )
         else:
             return super().__array__(dtype)
 

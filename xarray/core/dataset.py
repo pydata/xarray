@@ -8,36 +8,35 @@ import math
 import sys
 import warnings
 from collections import defaultdict
+from collections.abc import (
+    Collection,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Collection,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    cast,
-    overload,
-)
+from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
 import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from xarray.core import alignment
+from xarray.core import (
+    alignment,
+    duck_array_ops,
+    formatting,
+    formatting_html,
+    ops,
+    utils,
+)
 from xarray.core import dtypes as xrdtypes
-from xarray.core import duck_array_ops, formatting, formatting_html, ops, utils
 from xarray.core._aggregations import DatasetAggregations
 from xarray.core.alignment import (
     _broadcast_helper,
@@ -5475,7 +5474,7 @@ class Dataset(
             - all : if all values are NA, drop that label
 
         thresh : int or None, optional
-            If supplied, require this many non-NA values.
+            If supplied, require this many non-NA values (summed over all the subset variables).
         subset : iterable of hashable or None, optional
             Which variables to check for missing values. By default, all
             variables in the dataset are checked.
@@ -6410,6 +6409,11 @@ class Dataset(
             if isinstance(var, IndexVariable):
                 var = var.to_base_variable()
 
+            # Make sure var is a dask array, otherwise the array can become too large
+            # when it is broadcasted to several dimensions:
+            if not is_duck_dask_array(var._data):
+                var = var.chunk()
+
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
             series = dd.from_array(dask_array.reshape(-1), columns=[name])
             series_list.append(series)
@@ -6592,6 +6596,9 @@ class Dataset(
             self, other = align(self, other, join=align_type, copy=False)  # type: ignore[assignment]
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
+        keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            ds.attrs = self.attrs
         return ds
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:
@@ -6761,7 +6768,6 @@ class Dataset(
         fill_value: Any = xrdtypes.NA,
         **shifts_kwargs: int,
     ) -> T_Dataset:
-
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -7939,6 +7945,7 @@ class Dataset(
         ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
+        keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ) -> T_Dataset:
         """Pad this dataset along one or more dimensions.
@@ -8016,6 +8023,10 @@ class Dataset(
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
+        keep_attrs : bool or None, optional
+            If True, the attributes (``attrs``) will be copied from the
+            original object to the new one. If False, the new object
+            will be returned without attributes.
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
@@ -8062,6 +8073,9 @@ class Dataset(
             coord_pad_mode = "constant"
             coord_pad_options = {}
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
         variables = {}
 
         # keep indexes that won't be affected by pad and drop all other indexes
@@ -8084,11 +8098,13 @@ class Dataset(
                     constant_values=constant_values,
                     end_values=end_values,
                     reflect_type=reflect_type,
+                    keep_attrs=keep_attrs,
                 )
             else:
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=coord_pad_mode,
+                    keep_attrs=keep_attrs,
                     **coord_pad_options,  # type: ignore[arg-type]
                 )
                 # reset default index of dimension coordinates
@@ -8099,7 +8115,8 @@ class Dataset(
                     indexes[name] = index
                     variables[name] = index_vars[name]
 
-        return self._replace_with_new_dims(variables, indexes=indexes)
+        attrs = self._attrs if keep_attrs else None
+        return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
     def idxmin(
         self: T_Dataset,
@@ -8916,10 +8933,14 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
         pandas.DataFrame.groupby
+        Dataset.resample
+        DataArray.resample
         """
         from xarray.core.groupby import DatasetGroupBy
 
@@ -8995,6 +9016,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby
         DataArray.groupby_bins
         core.groupby.DatasetGroupBy
@@ -9199,6 +9222,8 @@ class Dataset(
         DataArray.resample
         pandas.Series.resample
         pandas.DataFrame.resample
+        Dataset.groupby
+        DataArray.groupby
 
         References
         ----------

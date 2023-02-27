@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from asv_bench.benchmarks import parameterized, randint, randn, requires_dask
+
+from . import parameterized, randint, randn, requires_dask
 
 nx = 2000
 ny = 1000
@@ -146,3 +147,18 @@ class HugeAxisSmallSliceIndexing:
 
     def cleanup(self):
         self.ds.close()
+
+
+class AssignmentOptimized:
+    # https://github.com/pydata/xarray/pull/7382
+    def setup(self):
+        self.ds = xr.Dataset(coords={"x": np.arange(500_000)})
+        self.da = xr.DataArray(np.arange(500_000), dims="x")
+
+    def time_assign_no_reindex(self):
+        # assign with non-indexed DataArray of same dimension size
+        self.ds.assign(foo=self.da)
+
+    def time_assign_identical_indexes(self):
+        # fastpath index comparison (same index object)
+        self.ds.assign(foo=self.ds.x)

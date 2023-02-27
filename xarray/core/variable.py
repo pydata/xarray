@@ -5,18 +5,9 @@ import itertools
 import math
 import numbers
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Literal,
-    Mapping,
-    NoReturn,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -247,11 +238,11 @@ def as_compatible_data(data, fastpath=False):
 
     Finally, wrap it up with an adapter if necessary.
     """
-    from xarray.core.dataarray import DataArray
-
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
+
+    from xarray.core.dataarray import DataArray
 
     if isinstance(data, (Variable, DataArray)):
         return data.data
@@ -402,8 +393,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
-        if hasattr(self.data, "nbytes"):
-            return self.data.nbytes
+        if hasattr(self._data, "nbytes"):
+            return self._data.nbytes
         else:
             return self.size * self.dtype.itemsize
 
@@ -1432,6 +1423,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
+        keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ):
         """
@@ -1459,6 +1451,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **pad_width_kwargs
             One of pad_width or pad_width_kwargs must be provided.
 
@@ -1515,7 +1511,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             **pad_option_kwargs,
         )
 
-        return type(self)(self.dims, array)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        attrs = self._attrs if keep_attrs else None
+
+        return type(self)(self.dims, array, attrs=attrs)
 
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
