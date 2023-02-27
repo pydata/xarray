@@ -303,6 +303,7 @@ def _factorize_grouper(
     DataArray | IndexVariable | _DummyGroup,
     list[slice] | list[list[int]] | np.ndarray,
     np.ndarray,
+    pd.Index,
 ]:
     index = safe_cast_to_index(group)
     if not index.is_monotonic_increasing:
@@ -410,7 +411,7 @@ class GroupBy(Generic[T_Xarray]):
     def __init__(
         self,
         obj: T_Xarray,
-        group: Hashable | DataArray | IndexVariable,
+        group,  #: Hashable | DataArray | IndexVariable,
         squeeze: bool = False,
         grouper: pd.Grouper | None = None,
         bins: ArrayLike | None = None,
@@ -479,6 +480,7 @@ class GroupBy(Generic[T_Xarray]):
                 "dimension"
             )
 
+        self._codes: DataArray = None
         if grouper is not None:
             unique_coord, group_indices, codes, full_index = _factorize_grouper(
                 group, grouper
