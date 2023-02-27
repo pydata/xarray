@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from functools import partial
+
+from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+
 from xarray.core import dtypes, nputils
 
 
@@ -92,3 +96,37 @@ def push(array, n, axis):
         axis=axis,
         dtype=array.dtype,
     )
+
+
+def _first_last_wrapper(array, *, axis, op, keepdims):
+    return op(array, axis, keepdims=keepdims)
+
+
+def _first_or_last(darray, axis, op):
+    import dask.array
+
+    # This will raise the same error message seen for numpy
+    axis = normalize_axis_index(axis, darray.ndim)
+
+    wrapped_op = partial(_first_last_wrapper, op=op)
+    return dask.array.reduction(
+        darray,
+        chunk=wrapped_op,
+        aggregate=wrapped_op,
+        axis=axis,
+        dtype=darray.dtype,
+        meta=darray._meta,
+        keepdims=False,  # match numpy version
+    )
+
+
+def nanfirst(darray, axis):
+    from xarray.core.duck_array_ops import nanfirst
+
+    return _first_or_last(darray, axis, op=nanfirst)
+
+
+def nanlast(darray, axis):
+    from xarray.core.duck_array_ops import nanlast
+
+    return _first_or_last(darray, axis, op=nanlast)
