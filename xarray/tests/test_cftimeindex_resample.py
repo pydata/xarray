@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core.resample_cftime import CFTimeGrouper
 
-pytest.importorskip("cftime")
+cftime = pytest.importorskip("cftime")
 
 
 # Create a list of pairs of similar-length initial and resample frequencies
@@ -50,7 +51,63 @@ FREQS = [
 ]
 
 
-def da(index):
+def compare_against_pandas(
+    da_datetimeindex,
+    da_cftimeindex,
+    freq,
+    closed=None,
+    label=None,
+    base=None,
+    offset=None,
+    origin=None,
+    loffset=None,
+) -> None:
+    if isinstance(origin, tuple):
+        origin_pandas = pd.Timestamp(datetime.datetime(*origin))
+        origin_cftime = cftime.DatetimeGregorian(*origin)
+    else:
+        origin_pandas = origin
+        origin_cftime = origin
+
+    try:
+        result_datetimeindex = da_datetimeindex.resample(
+            time=freq,
+            closed=closed,
+            label=label,
+            base=base,
+            loffset=loffset,
+            offset=offset,
+            origin=origin_pandas,
+        ).mean()
+    except ValueError:
+        with pytest.raises(ValueError):
+            da_cftimeindex.resample(
+                time=freq,
+                closed=closed,
+                label=label,
+                base=base,
+                loffset=loffset,
+                origin=origin_cftime,
+                offset=offset,
+            ).mean()
+    else:
+        result_cftimeindex = da_cftimeindex.resample(
+            time=freq,
+            closed=closed,
+            label=label,
+            base=base,
+            loffset=loffset,
+            origin=origin_cftime,
+            offset=offset,
+        ).mean()
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    result_cftimeindex["time"] = (
+        result_cftimeindex.xindexes["time"].to_pandas_index().to_datetimeindex()
+    )
+    xr.testing.assert_identical(result_cftimeindex, result_datetimeindex)
+
+
+def da(index) -> xr.DataArray:
     return xr.DataArray(
         np.arange(100.0, 100.0 + index.size), coords=[index], dims=["time"]
     )
@@ -59,53 +116,31 @@ def da(index):
 @pytest.mark.parametrize("freqs", FREQS, ids=lambda x: "{}->{}".format(*x))
 @pytest.mark.parametrize("closed", [None, "left", "right"])
 @pytest.mark.parametrize("label", [None, "left", "right"])
-@pytest.mark.parametrize("base", [24, 31])
-def test_resample(freqs, closed, label, base) -> None:
+@pytest.mark.parametrize(
+    ("base", "offset"), [(24, None), (31, None), (None, "5S")], ids=lambda x: f"{x}"
+)
+def test_resample(freqs, closed, label, base, offset) -> None:
     initial_freq, resample_freq = freqs
     start = "2000-01-01T12:07:01"
+    loffset = "12H"
+    origin = "start"
     index_kwargs = dict(start=start, periods=5, freq=initial_freq)
     datetime_index = pd.date_range(**index_kwargs)
     cftime_index = xr.cftime_range(**index_kwargs)
+    da_datetimeindex = da(datetime_index)
+    da_cftimeindex = da(cftime_index)
 
-    loffset = "12H"
-    try:
-        da_datetime = (
-            da(datetime_index)
-            .resample(
-                time=resample_freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-            )
-            .mean()
-        )
-    except ValueError:
-        with pytest.raises(ValueError):
-            da(cftime_index).resample(
-                time=resample_freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-            ).mean()
-    else:
-        da_cftime = (
-            da(cftime_index)
-            .resample(
-                time=resample_freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-            )
-            .mean()
-        )
-        # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
-        da_cftime["time"] = (
-            da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
-        )
-        xr.testing.assert_identical(da_cftime, da_datetime)
+    compare_against_pandas(
+        da_datetimeindex,
+        da_cftimeindex,
+        resample_freq,
+        closed=closed,
+        label=label,
+        base=base,
+        offset=offset,
+        origin=origin,
+        loffset=loffset,
+    )
 
 
 @pytest.mark.parametrize(
@@ -153,3 +188,60 @@ def test_calendars(calendar) -> None:
     # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
     da_cftime["time"] = da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)
+
+
+class DateRangeKwargs(TypedDict):
+    start: str
+    periods: int
+    freq: str
+
+
+@pytest.mark.parametrize("closed", ["left", "right"])
+@pytest.mark.parametrize(
+    "origin",
+    ["start_day", "start", "end", "end_day", "epoch", (1970, 1, 1, 3, 2)],
+    ids=lambda x: f"{x}",
+)
+def test_origin(closed, origin) -> None:
+    initial_freq, resample_freq = ("3H", "9H")
+    start = "1969-12-31T12:07:01"
+    index_kwargs: DateRangeKwargs = dict(start=start, periods=12, freq=initial_freq)
+    datetime_index = pd.date_range(**index_kwargs)
+    cftime_index = xr.cftime_range(**index_kwargs)
+    da_datetimeindex = da(datetime_index)
+    da_cftimeindex = da(cftime_index)
+
+    compare_against_pandas(
+        da_datetimeindex,
+        da_cftimeindex,
+        resample_freq,
+        closed=closed,
+        origin=origin,
+    )
+
+
+def test_base_and_offset_error():
+    cftime_index = xr.cftime_range("2000", periods=5)
+    da_cftime = da(cftime_index)
+    with pytest.raises(ValueError, match="base and offset cannot"):
+        da_cftime.resample(time="2D", base=3, offset="5S")
+
+
+@pytest.mark.parametrize("offset", ["foo", "5MS", 10])
+def test_invalid_offset_error(offset) -> None:
+    cftime_index = xr.cftime_range("2000", periods=5)
+    da_cftime = da(cftime_index)
+    with pytest.raises(ValueError, match="offset must be"):
+        da_cftime.resample(time="2D", offset=offset)
+
+
+def test_timedelta_offset() -> None:
+    timedelta = datetime.timedelta(seconds=5)
+    string = "5S"
+
+    cftime_index = xr.cftime_range("2000", periods=5)
+    da_cftime = da(cftime_index)
+
+    timedelta_result = da_cftime.resample(time="2D", offset=timedelta).mean()
+    string_result = da_cftime.resample(time="2D", offset=string).mean()
+    xr.testing.assert_identical(timedelta_result, string_result)

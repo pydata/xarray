@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1.1
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
@@ -42,15 +42,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.8", "3.10"]
+        python-version: ["3.9", "3.10", "3.11"]
         env: [""]
         include:
           # Minimum python version:
           - env: "bare-minimum"
-            python-version: "3.8"
+            python-version: "3.9"
             os: ubuntu-latest
           - env: "min-all-deps"
-            python-version: "3.8"
+            python-version: "3.9"
             os: ubuntu-latest
           # Latest python version:
           - env: "all-but-dask"
@@ -67,7 +67,13 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-          if [[ ${{ matrix.os }} == windows* ]] ;
+          if [[ "${{matrix.python-version}}" == "3.11" ]]; then
+            if [[ ${{matrix.os}} == windows* ]]; then
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-py311.yml" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/environment-py311.yml" >> $GITHUB_ENV
+            fi
+          elif [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
           elif [[ "${{ matrix.env }}" != "" ]] ;
@@ -86,12 +92,15 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
+        uses: mamba-org/provision-with-micromamba@v15
         with:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
           cache-env: true
           cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+          extra-specs: |
+            python=${{matrix.python-version}}
+            conda
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
@@ -129,7 +138,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v3.1.0
+        uses: codecov/codecov-action@v3.1.1
         with:
           file: ./coverage.xml
           flags: unittests

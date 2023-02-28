@@ -3,10 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ..core.common import _contains_datetime_like_objects, is_np_datetime_like
-from .cftime_offsets import date_range_like, get_date_type
-from .cftimeindex import CFTimeIndex
-from .times import _should_cftime_be_used, convert_times
+from xarray.coding.cftime_offsets import date_range_like, get_date_type
+from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.coding.times import _should_cftime_be_used, convert_times
+from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
 
 try:
     import cftime
@@ -98,7 +98,7 @@ def convert_calendar(
     Notes
     -----
     Passing a value to `missing` is only usable if the source's time coordinate as an
-    inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+    inferable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
     if the target coordinate, generated from this frequency, has dates equivalent to the
     source. It is usually **not** appropriate to use this mode with:
 
@@ -144,7 +144,7 @@ def convert_calendar(
 
       This option is best used with data on a frequency coarser than daily.
     """
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     time = obj[dim]
     if not _contains_datetime_like_objects(time):
@@ -265,7 +265,7 @@ def _datetime_to_decimal_year(times, dim="time", calendar=None):
     Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar,
       2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     calendar = calendar or times.dt.calendar
 
@@ -313,7 +313,7 @@ def interp_calendar(source, target, dim="time"):
     DataArray or Dataset
       The source interpolated on the decimal years of target,
     """
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
         target = DataArray(target, dims=(dim,), name=dim)

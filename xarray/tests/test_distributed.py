@@ -2,22 +2,45 @@
 from __future__ import annotations
 
 import pickle
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
-
-from typing import Any
-
 import pytest
 from packaging.version import Version
 
-dask = pytest.importorskip("dask")  # isort:skip
-distributed = pytest.importorskip("distributed")  # isort:skip
+if TYPE_CHECKING:
+    import dask
+    import dask.array as da
+    import distributed
+else:
+    dask = pytest.importorskip("dask")
+    da = pytest.importorskip("dask.array")
+    distributed = pytest.importorskip("distributed")
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import cluster, gen_cluster, loop, cleanup  # noqa: F401
+from distributed.utils_test import (  # noqa: F401
+    cleanup,
+    cluster,
+    gen_cluster,
+    loop,
+    loop_in_thread,
+)
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
+from xarray.tests import (
+    assert_allclose,
+    assert_identical,
+    has_h5netcdf,
+    has_netCDF4,
+    has_scipy,
+    requires_cfgrib,
+    requires_cftime,
+    requires_netCDF4,
+    requires_rasterio,
+    requires_zarr,
+)
 from xarray.tests.test_backends import (
     ON_WINDOWS,
     create_tmp_file,
@@ -26,24 +49,6 @@ from xarray.tests.test_backends import (
 )
 from xarray.tests.test_dataset import create_test_data
 
-from . import (
-    assert_allclose,
-    assert_identical,
-    has_h5netcdf,
-    has_netCDF4,
-    requires_rasterio,
-    has_scipy,
-    requires_zarr,
-    requires_cfgrib,
-    requires_cftime,
-    requires_netCDF4,
-)
-
-# this is to stop isort throwing errors. May have been easier to just use
-# `isort:skip` in retrospect
-
-
-da = pytest.importorskip("dask.array")
 loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
 
 
@@ -85,7 +90,6 @@ ENGINES_AND_FORMATS = [
 def test_dask_distributed_netcdf_roundtrip(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -93,7 +97,6 @@ def test_dask_distributed_netcdf_roundtrip(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data().chunk(chunks)
 
             if engine == "scipy":
@@ -111,6 +114,19 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert isinstance(restored.var1.data, da.Array)
                 computed = restored.compute()
                 assert_allclose(original, computed)
+
+
+@requires_netCDF4
+def test_dask_distributed_write_netcdf_with_dimensionless_variables(
+    loop, tmp_netcdf_filename
+):
+    with cluster() as (s, [a, b]):
+        with Client(s["address"], loop=loop):
+            original = xr.Dataset({"x": da.zeros(())})
+            original.to_netcdf(tmp_netcdf_filename)
+
+            with xr.open_dataset(tmp_netcdf_filename) as actual:
+                assert actual.x.shape == ()
 
 
 @requires_cftime
@@ -133,7 +149,6 @@ def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
 def test_dask_distributed_read_netcdf_integration_test(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -141,7 +156,6 @@ def test_dask_distributed_read_netcdf_integration_test(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
 
@@ -156,13 +170,14 @@ def test_dask_distributed_read_netcdf_integration_test(
 @requires_zarr
 @pytest.mark.parametrize("consolidated", [True, False])
 @pytest.mark.parametrize("compute", [True, False])
-def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> None:
+def test_dask_distributed_zarr_integration_test(
+    loop, consolidated: bool, compute: bool
+) -> None:
     if consolidated:
-        pytest.importorskip("zarr", minversion="2.2.1.dev2")
-        write_kwargs = {"consolidated": True}
+        write_kwargs: dict[str, Any] = {"consolidated": True}
         read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
-        write_kwargs = read_kwargs = {}  # type: ignore
+        write_kwargs = read_kwargs = {}
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
@@ -170,7 +185,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
             with create_tmp_file(
                 allow_cleanup_failure=ON_WINDOWS, suffix=".zarrc"
             ) as filename:
-                maybe_futures = original.to_zarr(
+                maybe_futures = original.to_zarr(  # type: ignore[call-overload]  #mypy bug?
                     filename, compute=compute, **write_kwargs
                 )
                 if not compute:
@@ -263,7 +278,6 @@ async def test_serializable_locks(c, s, a, b) -> None:
         CombinedLock([HDF5_LOCK]),
         CombinedLock([HDF5_LOCK, Lock("filename.nc")]),
     ]:
-
         futures = c.map(f, list(range(10)), lock=lock)
         await c.gather(futures)
 

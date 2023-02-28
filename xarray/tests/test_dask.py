@@ -9,27 +9,24 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
-from xarray.core.pycompat import dask_version
+from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.testing import assert_chunks_equal
-from xarray.tests import mock
-
-from ..core.duck_array_ops import lazy_array_equiv
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_frame_equal,
     assert_identical,
+    mock,
     raise_if_dask_computes,
     requires_pint,
     requires_scipy_or_netCDF4,
 )
-from .test_backends import create_tmp_file
+from xarray.tests.test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
@@ -118,9 +115,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(
-        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
-    )
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -139,14 +133,6 @@ class TestVariable(DaskTestCase):
         with raise_if_dask_computes():
             arr[index] = 99
         assert_identical(arr, expected)
-
-    @pytest.mark.skipif(
-        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
-    )
-    def test_setitem_dask_array_error(self):
-        with pytest.raises(TypeError, match=r"stored in a dask array"):
-            v = self.lazy_var
-            v[:1] = 0
 
     def test_squeeze(self):
         u = self.eager_var
@@ -1244,6 +1230,15 @@ def test_map_blocks_dask_args():
         )
     xr.testing.assert_equal((da1 + da2).sum("x"), mapped)
 
+    # bad template: not chunked
+    with pytest.raises(ValueError, match="Provided template has no dask arrays"):
+        xr.map_blocks(
+            lambda a, b: (a + b).sum("x"),
+            da1,
+            args=[da2],
+            template=da1.sum("x").compute(),
+        )
+
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_add_attrs(obj):
@@ -1420,7 +1415,7 @@ def test_map_blocks_hlg_layers():
 
 
 def test_make_meta(map_ds):
-    from ..core.parallel import make_meta
+    from xarray.core.parallel import make_meta
 
     meta = make_meta(map_ds)
 
@@ -1671,9 +1666,6 @@ def test_optimize():
     arr2.compute()
 
 
-# The graph_manipulation module is in dask since 2021.2 but it became usable with
-# xarray only since 2021.3
-@pytest.mark.skipif(dask_version <= Version("2021.02.0"), reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is

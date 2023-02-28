@@ -4,14 +4,18 @@ import logging
 import os
 import time
 import traceback
-from typing import Any
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 
-from ..conventions import cf_encoder
-from ..core import indexing
-from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.conventions import cf_encoder
+from xarray.core import indexing
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -369,15 +373,42 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
+
+    Attributes
+    ----------
+
+    available : bool, default: True
+        Indicate wether this backend is available given the installed packages.
+        The setting of this attribute is not mandatory.
+    open_dataset_parameters : tuple, default: None
+        A list of ``open_dataset`` method parameters.
+        The setting of this attribute is not mandatory.
+    description : str, default: ""
+        A short string describing the engine.
+        The setting of this attribute is not mandatory.
+    url : str, default: ""
+        A string with the URL to the backend's documentation.
+        The setting of this attribute is not mandatory.
     """
 
-    open_dataset_parameters: tuple | None = None
-    """list of ``open_dataset`` method parameters"""
+    available: ClassVar[bool] = True
+
+    open_dataset_parameters: ClassVar[tuple | None] = None
+    description: ClassVar[str] = ""
+    url: ClassVar[str] = ""
+
+    def __repr__(self) -> str:
+        txt = f"<{type(self).__name__}>"
+        if self.description:
+            txt += f"\n  {self.description}"
+        if self.url:
+            txt += f"\n  Learn more at {self.url}"
+        return txt
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike,
-        drop_variables: tuple[str] | None = None,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
     ):
         """
@@ -386,7 +417,10 @@ class BackendEntrypoint:
 
         raise NotImplementedError
 
-    def guess_can_open(self, filename_or_obj: str | os.PathLike):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ):
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """

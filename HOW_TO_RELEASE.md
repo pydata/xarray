@@ -59,7 +59,7 @@ upstream        https://github.com/pydata/xarray (push)
      .. _whats-new.YYYY.MM.X+1:
 
      vYYYY.MM.X+1 (unreleased)
-     ---------------------
+     -----------------------
 
      New Features
      ~~~~~~~~~~~~
@@ -92,7 +92,15 @@ upstream        https://github.com/pydata/xarray (push)
       ```
     You're done pushing to main!
 
-13. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
+13. Update the version available on pyodide:
+    - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
+    - Edit [`pyodide/packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide/blob/main/packages/xarray/meta.yaml) to update the
+        - version number
+        - link to the wheel (under "Built Distribution" on the PyPI page)
+        - SHA256 hash (Click "Show Hashes" next to the link to the wheel)
+    - Open a pull request to pyodide
+
+14. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
       - pydata@googlegroups.com

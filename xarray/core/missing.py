@@ -2,27 +2,27 @@ from __future__ import annotations
 
 import datetime as dt
 import warnings
+from collections.abc import Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, get_args
+from typing import TYPE_CHECKING, Any, Callable, get_args
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
-from . import utils
-from .common import _contains_datetime_like_objects, ones_like
-from .computation import apply_ufunc
-from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array
-from .types import Interp1dOptions, InterpOptions
-from .utils import OrderedSet, is_scalar
-from .variable import Variable, broadcast_variables
+from xarray.core import utils
+from xarray.core.common import _contains_datetime_like_objects, ones_like
+from xarray.core.computation import apply_ufunc
+from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.types import Interp1dOptions, InterpOptions
+from xarray.core.utils import OrderedSet, is_scalar
+from xarray.core.variable import Variable, broadcast_variables
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 
 def _get_nan_block_lengths(
@@ -80,7 +80,6 @@ class NumpyInterpolator(BaseInterpolator):
     """
 
     def __init__(self, xi, yi, method="linear", fill_value=None, period=None):
-
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
 
@@ -308,12 +307,12 @@ def get_clean_interp_index(
 
 def interp_na(
     self,
-    dim: Hashable = None,
+    dim: Hashable | None = None,
     use_coordinate: bool | str = True,
     method: InterpOptions = "linear",
-    limit: int = None,
+    limit: int | None = None,
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
-    keep_attrs: bool = None,
+    keep_attrs: bool | None = None,
     **kwargs,
 ):
     """Interpolate values according to different methods."""
@@ -740,12 +739,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         else:
             dtype = var.dtype
 
-        if dask_version < Version("2020.12"):
-            # Using meta and dtype at the same time doesn't work.
-            # Remove this whenever the minimum requirement for dask is 2020.12:
-            meta = None
-        else:
-            meta = var._meta
+        meta = var._meta
 
         return da.blockwise(
             _dask_aware_interpnd,

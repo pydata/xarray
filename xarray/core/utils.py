@@ -1,28 +1,69 @@
 """Internal utilities; not for external use"""
+# Some functions in this module are derived from functions in pandas. For
+# reference, here is a copy of the pandas copyright notice:
+
+# BSD 3-Clause License
+
+# Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
+# All rights reserved.
+
+# Copyright (c) 2011-2022, Open source contributors.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
+import inspect
 import io
 import itertools
+import math
 import os
 import re
 import sys
 import warnings
-from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
+from collections.abc import (
     Collection,
     Container,
-    Generic,
     Hashable,
     Iterable,
     Iterator,
     Mapping,
     MutableMapping,
     MutableSet,
+    Sequence,
+)
+from enum import Enum
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
     TypeVar,
     cast,
     overload,
@@ -32,7 +73,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .types import ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -61,18 +102,6 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
-
-    if len(index) > 0 and index.dtype == "O":
-        try:
-            return CFTimeIndex(index)
-        except (ImportError, TypeError):
-            return index
-    else:
-        return index
-
-
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
@@ -98,7 +127,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
-    from . import dtypes
+    from xarray.core import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)
@@ -109,34 +138,6 @@ def maybe_coerce_to_str(index, original_coords):
             index = np.asarray(index, dtype=result_type.type)
 
     return index
-
-
-def safe_cast_to_index(array: Any) -> pd.Index:
-    """Given an array, safely cast it to a pandas.Index.
-
-    If it is already a pandas.Index, return it unchanged.
-
-    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
-    this function will not attempt to do automatic type conversion but will
-    always return an index with dtype=object.
-    """
-    if isinstance(array, pd.Index):
-        index = array
-    elif hasattr(array, "to_index"):
-        # xarray Variable
-        index = array.to_index()
-    elif hasattr(array, "to_pandas_index"):
-        # xarray Index
-        index = array.to_pandas_index()
-    elif hasattr(array, "array") and isinstance(array.array, pd.Index):
-        # xarray PandasIndexingAdapter
-        index = array.array
-    else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
-        index = pd.Index(np.asarray(array), **kwargs)
-    return _maybe_cast_to_cftimeindex(index)
 
 
 def maybe_wrap_array(original, new_array):
@@ -158,18 +159,15 @@ def equivalent(first: T, second: T) -> bool:
     equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
-    from . import duck_array_ops
+    from xarray.core import duck_array_ops
 
+    if first is second:
+        return True
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
-    elif isinstance(first, list) or isinstance(second, list):
+    if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)
-    else:
-        return (
-            (first is second)
-            or (first == second)
-            or (pd.isnull(first) and pd.isnull(second))
-        )
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))
 
 
 def list_equiv(first, second):
@@ -262,8 +260,10 @@ def is_duck_array(value: Any) -> bool:
         hasattr(value, "ndim")
         and hasattr(value, "shape")
         and hasattr(value, "dtype")
-        and hasattr(value, "__array_function__")
-        and hasattr(value, "__array_ufunc__")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
     )
 
 
@@ -287,7 +287,7 @@ def either_dict_or_kwargs(
 
 
 def _is_scalar(value, include_0d):
-    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+    from xarray.core.variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
         include_0d = getattr(value, "ndim", None) == 0
@@ -297,6 +297,7 @@ def _is_scalar(value, include_0d):
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
+            or hasattr(value, "__array_namespace__")
         )
     )
 
@@ -510,7 +511,7 @@ class OrderedSet(MutableSet[T]):
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: Iterable[T] = None):
+    def __init__(self, values: Iterable[T] | None = None):
         self._d = {}
         if values is not None:
             self.update(values)
@@ -551,12 +552,27 @@ class NdimSizeLenMixin:
 
     @property
     def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
         return len(self.shape)
 
     @property
     def size(self: Any) -> int:
-        # cast to int so that shape = () gives size = 1
-        return int(np.prod(self.shape))
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
 
     def __len__(self: Any) -> int:
         try:
@@ -580,7 +596,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> tuple[int]:
+    def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
     def __getitem__(self: Any, key):
@@ -642,15 +658,11 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         magic_number = filename_or_obj[:count]
     elif isinstance(filename_or_obj, io.IOBase):
         if filename_or_obj.tell() != 0:
-            raise ValueError(
-                "cannot guess the engine, "
-                "file-like object read/write pointer not at the start of the file, "
-                "please close and reopen, or use a context manager"
-            )
+            filename_or_obj.seek(0)
         magic_number = filename_or_obj.read(count)
         filename_or_obj.seek(0)
     else:
-        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+        raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     return magic_number
 
 
@@ -828,7 +840,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
-    dims: list | Mapping[Any, int],
+    dims: Iterable[Hashable] | Mapping[Any, int],
     missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
@@ -851,7 +863,6 @@ def drop_dims_from_indexers(
         return indexers
 
     elif missing_dims == "warn":
-
         # don't modify input
         indexers = dict(indexers)
 
@@ -875,15 +886,17 @@ def drop_dims_from_indexers(
 
 
 def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: ErrorOptionsWithWarn
-) -> Collection:
+    supplied_dims: Iterable[Hashable],
+    dims: Iterable[Hashable],
+    missing_dims: ErrorOptionsWithWarn,
+) -> Iterable[Hashable]:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
 
     Parameters
     ----------
-    supplied_dims : dict
-    dims : sequence
+    supplied_dims : Iterable of Hashable
+    dims : Iterable of Hashable
     missing_dims : {"raise", "warn", "ignore"}
     """
 
@@ -898,7 +911,6 @@ def drop_missing_dims(
         return supplied_dims
 
     elif missing_dims == "warn":
-
         invalid = set(supplied_dims) - set(dims)
         if invalid:
             warnings.warn(
@@ -913,6 +925,158 @@ def drop_missing_dims(
     else:
         raise ValueError(
             f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+T_None = TypeVar("T_None", None, "ellipsis")
+
+
+@overload
+def parse_dims(
+    dim: str | Iterable[Hashable] | T_None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> tuple[Hashable, ...]:
+    ...
+
+
+@overload
+def parse_dims(
+    dim: str | Iterable[Hashable] | T_None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> tuple[Hashable, ...] | T_None:
+    ...
+
+
+def parse_dims(
+    dim: Dims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> tuple[Hashable, ...] | None | ellipsis:
+    """Parse one or more dimensions.
+
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
+    If you supply e.g. a set of dimensions the order cannot be
+    conserved, but for sequences it will be.
+
+    Parameters
+    ----------
+    dim : str, Iterable of Hashable, "..." or None
+        Dimension(s) to parse.
+    all_dims : tuple of Hashable
+        All possible dimensions.
+    check_exists: bool, default: True
+        if True, check if dim is a subset of all_dims.
+    replace_none : bool, default: True
+        If True, return all_dims if dim is None or "...".
+
+    Returns
+    -------
+    parsed_dims : tuple of Hashable
+        Input dimensions as a tuple.
+    """
+    if dim is None or dim is ...:
+        if replace_none:
+            return all_dims
+        return dim
+    if isinstance(dim, str):
+        dim = (dim,)
+    if check_exists:
+        _check_dims(set(dim), set(all_dims))
+    return tuple(dim)
+
+
+@overload
+def parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> tuple[Hashable, ...]:
+    ...
+
+
+@overload
+def parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> tuple[Hashable, ...] | T_None:
+    ...
+
+
+def parse_ordered_dims(
+    dim: OrderedDims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> tuple[Hashable, ...] | None | ellipsis:
+    """Parse one or more dimensions.
+
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
+    An ellipsis ("...") in a sequence of dimensions will be
+    replaced with all remaining dimensions. This only makes sense when
+    the input is a sequence and not e.g. a set.
+
+    Parameters
+    ----------
+    dim : str, Sequence of Hashable or "...", "..." or None
+        Dimension(s) to parse. If "..." appears in a Sequence
+        it always gets replaced with all remaining dims
+    all_dims : tuple of Hashable
+        All possible dimensions.
+    check_exists: bool, default: True
+        if True, check if dim is a subset of all_dims.
+    replace_none : bool, default: True
+        If True, return all_dims if dim is None.
+
+    Returns
+    -------
+    parsed_dims : tuple of Hashable
+        Input dimensions as a tuple.
+    """
+    if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
+        dims_set: set[Hashable | ellipsis] = set(dim)
+        all_dims_set = set(all_dims)
+        if check_exists:
+            _check_dims(dims_set, all_dims_set)
+        if len(all_dims_set) != len(all_dims):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        dims = tuple(dim)
+        if dims.count(...) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = tuple(d for d in all_dims if d not in dims_set)
+        idx = dims.index(...)
+        return dims[:idx] + other_dims + dims[idx + 1 :]
+    else:
+        # mypy cannot resolve that the sequence cannot contain "..."
+        return parse_dims(  # type: ignore[call-overload]
+            dim=dim,
+            all_dims=all_dims,
+            check_exists=check_exists,
+            replace_none=replace_none,
+        )
+
+
+def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
+    wrong_dims = dim - all_dims
+    if wrong_dims and wrong_dims != {...}:
+        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        raise ValueError(
+            f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
         )
 
 
@@ -965,8 +1129,8 @@ def contains_only_dask_or_numpy(obj) -> bool:
     """Returns True if xarray object contains only numpy or dask arrays.
 
     Expects obj to be Dataset or DataArray"""
-    from .dataarray import DataArray
-    from .pycompat import is_duck_dask_array
+    from xarray.core.dataarray import DataArray
+    from xarray.core.pycompat import is_duck_dask_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
@@ -977,3 +1141,64 @@ def contains_only_dask_or_numpy(obj) -> bool:
             for var in obj.variables.values()
         ]
     )
+
+
+def module_available(module: str) -> bool:
+    """Checks whether a module is installed without importing it.
+
+    Use this for a lightweight check and lazy imports.
+
+    Parameters
+    ----------
+    module : str
+        Name of the module.
+
+    Returns
+    -------
+    available : bool
+        Whether the module is installed.
+    """
+    return importlib.util.find_spec(module) is not None
+
+
+def find_stack_level(test_mode=False) -> int:
+    """Find the first place in the stack that is not inside xarray.
+
+    This is unless the code emanates from a test, in which case we would prefer
+    to see the xarray source.
+
+    This function is taken from pandas.
+
+    Parameters
+    ----------
+    test_mode : bool
+        Flag used for testing purposes to switch off the detection of test
+        directories in the stack trace.
+
+    Returns
+    -------
+    stacklevel : int
+        First level in the stack that is not part of xarray.
+    """
+    import xarray as xr
+
+    pkg_dir = os.path.dirname(xr.__file__)
+    test_dir = os.path.join(pkg_dir, "tests")
+
+    # https://stackoverflow.com/questions/17407119/python-inspect-stack-is-slow
+    frame = inspect.currentframe()
+    n = 0
+    while frame:
+        fname = inspect.getfile(frame)
+        if fname.startswith(pkg_dir) and (not fname.startswith(test_dir) or test_mode):
+            frame = frame.f_back
+            n += 1
+        else:
+            break
+    return n
+
+
+def emit_user_level_warning(message, category=None):
+    """Emit a warning at the user level by inspecting the stack trace."""
+    stacklevel = find_stack_level()
+    warnings.warn(message, category=category, stacklevel=stacklevel)

@@ -2,15 +2,20 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Hashable, MutableMapping
 from functools import partial
-from typing import Any, Hashable
+from typing import TYPE_CHECKING, Any, Callable, Union
 
 import numpy as np
 import pandas as pd
 
-from ..core import dtypes, duck_array_ops, indexing
-from ..core.pycompat import is_duck_dask_array
-from ..core.variable import Variable
+from xarray.core import dtypes, duck_array_ops, indexing
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
+    T_Name = Union[Hashable, None]
 
 
 class SerializationWarning(RuntimeWarning):
@@ -34,15 +39,11 @@ class VariableCoder:
     variables in the underlying store.
     """
 
-    def encode(
-        self, variable: Variable, name: Hashable = None
-    ) -> Variable:  # pragma: no cover
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         """Convert an encoded variable to a decoded variable"""
         raise NotImplementedError()
 
-    def decode(
-        self, variable: Variable, name: Hashable = None
-    ) -> Variable:  # pragma: no cover
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         """Convert an decoded variable to a encoded variable"""
         raise NotImplementedError()
 
@@ -55,14 +56,14 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     Values are computed upon indexing or coercion to a NumPy array.
     """
 
-    def __init__(self, array, func, dtype):
+    def __init__(self, array, func: Callable, dtype: np.typing.DTypeLike):
         assert not is_duck_dask_array(array)
         self.array = indexing.as_indexable(array)
         self.func = func
         self._dtype = dtype
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
 
     def __getitem__(self, key):
@@ -71,13 +72,13 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __array__(self, dtype=None):
         return self.func(self.array)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({!r}, func={!r}, dtype={!r})".format(
             type(self).__name__, self.array, self.func, self.dtype
         )
 
 
-def lazy_elemwise_func(array, func, dtype):
+def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     """Lazily apply an element-wise function to an array.
     Parameters
     ----------
@@ -100,15 +101,15 @@ def lazy_elemwise_func(array, func, dtype):
         return _ElementwiseFunctionArray(array, func, dtype)
 
 
-def unpack_for_encoding(var):
+def unpack_for_encoding(var: Variable) -> T_VarTuple:
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
-def unpack_for_decoding(var):
+def unpack_for_decoding(var: Variable) -> T_VarTuple:
     return var.dims, var._data, var.attrs.copy(), var.encoding.copy()
 
 
-def safe_setitem(dest, key, value, name=None):
+def safe_setitem(dest, key: Hashable, value, name: T_Name = None):
     if key in dest:
         var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
@@ -120,7 +121,9 @@ def safe_setitem(dest, key, value, name=None):
     dest[key] = value
 
 
-def pop_to(source, dest, key, name=None):
+def pop_to(
+    source: MutableMapping, dest: MutableMapping, key: Hashable, name: T_Name = None
+) -> Any:
     """
     A convenience function which pops a key k from source to dest.
     None values are not passed on.  If k already exists in dest an
@@ -133,7 +136,10 @@ def pop_to(source, dest, key, name=None):
 
 
 def _apply_mask(
-    data: np.ndarray, encoded_fill_values: list, decoded_fill_value: Any, dtype: Any
+    data: np.ndarray,
+    encoded_fill_values: list,
+    decoded_fill_value: Any,
+    dtype: np.typing.DTypeLike,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
     data = np.asarray(data, dtype=dtype)
@@ -146,7 +152,7 @@ def _apply_mask(
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
-    def encode(self, variable, name=None):
+    def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         dtype = np.dtype(encoding.get("dtype", data.dtype))
@@ -176,9 +182,9 @@ class CFMaskCoder(VariableCoder):
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
-    def decode(self, variable, name=None):
+    def decode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         raw_fill_values = [
@@ -212,10 +218,12 @@ class CFMaskCoder(VariableCoder):
                 )
                 data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
 
-def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
+def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTypeLike):
     data = np.array(data, dtype=dtype, copy=True)
     if scale_factor is not None:
         data *= scale_factor
@@ -224,7 +232,7 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
     return data
 
 
-def _choose_float_dtype(dtype, has_offset):
+def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[Any]]:
     """Return a float dtype that can losslessly represent `dtype` values."""
     # Keep float32 as-is.  Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
@@ -250,7 +258,7 @@ class CFScaleOffsetCoder(VariableCoder):
         decode_values = encoded_values * scale_factor + add_offset
     """
 
-    def encode(self, variable, name=None):
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         if "scale_factor" in encoding or "add_offset" in encoding:
@@ -261,15 +269,16 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in encoding:
             data /= pop_to(encoding, attrs, "scale_factor", name=name)
 
-        return Variable(dims, data, attrs, encoding)
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
-    def decode(self, variable, name=None):
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        _attrs = variable.attrs
+        if "scale_factor" in _attrs or "add_offset" in _attrs:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "scale_factor" in attrs or "add_offset" in attrs:
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
+            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
@@ -282,18 +291,20 @@ class CFScaleOffsetCoder(VariableCoder):
             )
             data = lazy_elemwise_func(data, transform, dtype)
 
-        return Variable(dims, data, attrs, encoding)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
 
 class UnsignedIntegerCoder(VariableCoder):
-    def encode(self, variable, name=None):
-        dims, data, attrs, encoding = unpack_for_encoding(variable)
-
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         # from netCDF best practices
         # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
-        if encoding.get("_Unsigned", "false") == "true":
+        if variable.encoding.get("_Unsigned", "false") == "true":
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+
             pop_to(encoding, attrs, "_Unsigned")
             signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
             if "_FillValue" in attrs:
@@ -301,12 +312,14 @@ class UnsignedIntegerCoder(VariableCoder):
                 attrs["_FillValue"] = new_fill
             data = duck_array_ops.around(data).astype(signed_dtype)
 
-        return Variable(dims, data, attrs, encoding)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
-    def decode(self, variable, name=None):
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if "_Unsigned" in variable.attrs:
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")
 
             if data.dtype.kind == "i":
@@ -333,4 +346,6 @@ class UnsignedIntegerCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-        return Variable(dims, data, attrs, encoding)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable

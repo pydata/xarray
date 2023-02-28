@@ -1,30 +1,40 @@
 from __future__ import annotations
 
+import warnings
+from collections.abc import Hashable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 
-from . import formatting
-from .indexes import Index, Indexes, assert_no_index_corrupted
-from .merge import merge_coordinates_without_align, merge_coords
-from .utils import Frozen, ReprObject
-from .variable import Variable, calculate_dimensions
+from xarray.core import formatting
+from xarray.core.indexes import (
+    Index,
+    Indexes,
+    PandasMultiIndex,
+    assert_no_index_corrupted,
+)
+from xarray.core.merge import merge_coordinates_without_align, merge_coords
+from xarray.core.utils import Frozen, ReprObject
+from xarray.core.variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.common import DataWithCoords
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import T_DataArray
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class Coordinates(Mapping[Any, "DataArray"]):
-    __slots__ = ()
+class Coordinates(Mapping[Hashable, "T_DataArray"]):
+    _data: DataWithCoords
+    __slots__ = ("_data",)
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
@@ -44,17 +54,20 @@ class Coordinates(Mapping[Any, "DataArray"]):
 
     @property
     def indexes(self) -> Indexes[pd.Index]:
-        return self._data.indexes  # type: ignore[attr-defined]
+        return self._data.indexes
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        return self._data.xindexes  # type: ignore[attr-defined]
+        return self._data.xindexes
 
     @property
     def variables(self):
         raise NotImplementedError()
 
     def _update_coords(self, coords, indexes):
+        raise NotImplementedError()
+
+    def _maybe_drop_multiindex_coords(self, coords):
         raise NotImplementedError()
 
     def __iter__(self) -> Iterator[Hashable]:
@@ -75,7 +88,7 @@ class Coordinates(Mapping[Any, "DataArray"]):
     def to_dataset(self) -> Dataset:
         raise NotImplementedError()
 
-    def to_index(self, ordered_dims: Sequence[Hashable] = None) -> pd.Index:
+    def to_index(self, ordered_dims: Sequence[Hashable] | None = None) -> pd.Index:
         """Convert all index coordinates into a :py:class:`pandas.Index`.
 
         Parameters
@@ -103,11 +116,9 @@ class Coordinates(Mapping[Any, "DataArray"]):
             raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
-            return self._data.get_index(dim)  # type: ignore[attr-defined]
+            return self._data.get_index(dim)
         else:
-            indexes = [
-                self._data.get_index(k) for k in ordered_dims  # type: ignore[attr-defined]
-            ]
+            indexes = [self._data.get_index(k) for k in ordered_dims]
 
             # compute the sizes of the repeat and tile for the cartesian product
             # (taken from pandas.core.reshape.util)
@@ -154,6 +165,7 @@ class Coordinates(Mapping[Any, "DataArray"]):
 
     def update(self, other: Mapping[Any, Any]) -> None:
         other_vars = getattr(other, "variables", other)
+        self._maybe_drop_multiindex_coords(set(other_vars))
         coords, indexes = merge_coords(
             [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
         )
@@ -210,7 +222,7 @@ class Coordinates(Mapping[Any, "DataArray"]):
         merged : Dataset
             A new Dataset with merged coordinates.
         """
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         if other is None:
             return self.to_dataset()
@@ -232,6 +244,8 @@ class DatasetCoordinates(Coordinates):
     dimensions and the values given by the corresponding xarray.Coordinate
     objects.
     """
+
+    _data: Dataset
 
     __slots__ = ("_data",)
 
@@ -273,7 +287,7 @@ class DatasetCoordinates(Coordinates):
     def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
-        return cast("DataArray", self._data[key])
+        return self._data[key]
 
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
@@ -304,6 +318,16 @@ class DatasetCoordinates(Coordinates):
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
+    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
+        """Drops variables in coords, and any associated variables as well."""
+        assert self._data.xindexes is not None
+        variables, indexes = drop_coords(
+            coords, self._data._variables, self._data.xindexes
+        )
+        self._data._coord_names.intersection_update(variables)
+        self._data._variables = variables
+        self._data._indexes = indexes
+
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]
@@ -319,16 +343,18 @@ class DatasetCoordinates(Coordinates):
         ]
 
 
-class DataArrayCoordinates(Coordinates):
+class DataArrayCoordinates(Coordinates["T_DataArray"]):
     """Dictionary like container for DataArray coordinates.
 
     Essentially a dict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
 
+    _data: T_DataArray
+
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: DataArray):
+    def __init__(self, dataarray: T_DataArray) -> None:
         self._data = dataarray
 
     @property
@@ -351,7 +377,7 @@ class DataArrayCoordinates(Coordinates):
     def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> T_DataArray:
         return self._data._getitem_coord(key)
 
     def _update_coords(
@@ -372,12 +398,20 @@ class DataArrayCoordinates(Coordinates):
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
+    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
+        """Drops variables in coords, and any associated variables as well."""
+        variables, indexes = drop_coords(
+            coords, self._data._coords, self._data.xindexes
+        )
+        self._data._coords = variables
+        self._data._indexes = indexes
+
     @property
     def variables(self):
         return Frozen(self._data._coords)
 
     def to_dataset(self) -> Dataset:
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
         indexes = dict(self._data.xindexes)
@@ -397,8 +431,39 @@ class DataArrayCoordinates(Coordinates):
         return self._data._ipython_key_completions_()
 
 
+def drop_coords(
+    coords_to_drop: set[Hashable], variables, indexes: Indexes
+) -> tuple[dict, dict]:
+    """Drop index variables associated with variables in coords_to_drop."""
+    # Only warn when we're dropping the dimension with the multi-indexed coordinate
+    # If asked to drop a subset of the levels in a multi-index, we raise an error
+    # later but skip the warning here.
+    new_variables = dict(variables.copy())
+    new_indexes = dict(indexes.copy())
+    for key in coords_to_drop & set(indexes):
+        maybe_midx = indexes[key]
+        idx_coord_names = set(indexes.get_all_coords(key))
+        if (
+            isinstance(maybe_midx, PandasMultiIndex)
+            and key == maybe_midx.dim
+            and (idx_coord_names - coords_to_drop)
+        ):
+            warnings.warn(
+                f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
+                f"other variables: {list(maybe_midx.index.names)!r}. "
+                f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
+                "assigning new coordinate values.",
+                FutureWarning,
+                stacklevel=4,
+            )
+            for k in idx_coord_names:
+                del new_variables[k]
+                del new_indexes[k]
+    return new_variables, new_indexes
+
+
 def assert_coordinate_consistent(
-    obj: DataArray | Dataset, coords: Mapping[Any, Variable]
+    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 

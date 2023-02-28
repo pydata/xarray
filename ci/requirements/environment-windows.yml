@@ -17,20 +17,20 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml # Optional dep of pydap
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
-  - numpy
+  - numbagg
+  - numpy<1.24
   - packaging
   - pandas
   - pint
   - pip
   - pre-commit
   - pseudonetcdf
-  # - pydap  # https://github.com/pydap/pydap/pull/210
-  # - pynio  # Not available on Windows
+  - pydap
   - pytest
   - pytest-cov
   - pytest-env
@@ -42,5 +42,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - numbagg

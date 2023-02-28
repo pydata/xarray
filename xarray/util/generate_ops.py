@@ -110,7 +110,7 @@ stub_da = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...
     @overload
     def {method}(self: T_DataArray, other: DaCompatible) -> T_DataArray: ..."""
 stub_var = """\
@@ -124,7 +124,7 @@ stub_dsgb = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DataArray") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DataArray") -> "Dataset": ...
     @overload
     def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
 stub_dagb = """\
@@ -193,11 +193,11 @@ STUBFILE_PREAMBLE = '''\
 from typing import NoReturn, TypeVar, overload
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
-from .npcompat import ArrayLike
 from .types import (
     DaCompatible,
     DsCompatible,
@@ -254,7 +254,6 @@ def _render_classbody(method_blocks, is_module):
 
 
 if __name__ == "__main__":
-
     option = sys.argv[1].lower() if len(sys.argv) == 2 else None
     if option not in {"--module", "--stubs"}:
         raise SystemExit(f"Usage: {sys.argv[0]} --module | --stubs")

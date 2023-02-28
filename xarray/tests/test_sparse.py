@@ -1,24 +1,24 @@
 from __future__ import annotations
 
+import math
 import pickle
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type, sparse_version
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.core.pycompat import array_type
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
 
 sparse = pytest.importorskip("sparse")
+sparse_array_type = array_type("sparse")
 
 
 def assert_sparse_equal(a, b):
@@ -28,7 +28,7 @@ def assert_sparse_equal(a, b):
 
 
 def make_ndarray(shape):
-    return np.arange(np.prod(shape)).reshape(shape)
+    return np.arange(math.prod(shape)).reshape(shape)
 
 
 def make_sparray(shape):
@@ -59,7 +59,6 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-
         # cannot pass np.sum when using pytest-xdist
         kwargs = self.kwargs.copy()
         if "func" in self.kwargs:
@@ -272,6 +271,9 @@ class TestSparseVariable:
     def setUp(self):
         self.data = sparse.random((4, 6), random_state=0, density=0.5)
         self.var = xr.Variable(("x", "y"), self.data)
+
+    def test_nbytes(self):
+        assert self.var.nbytes == self.data.nbytes
 
     def test_unary_op(self):
         assert_sparse_equal(-self.var.data, -self.data)
@@ -851,10 +853,6 @@ class TestSparseCoords:
         )
 
 
-@pytest.mark.xfail(
-    sparse_version < Version("0.13.0"),
-    reason="https://github.com/pydata/xarray/issues/5654",
-)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))

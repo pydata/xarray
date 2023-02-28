@@ -8,15 +8,13 @@ import itertools
 import operator
 import warnings
 from collections import Counter
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
     Any,
     Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
+    Literal,
     TypeVar,
     Union,
     overload,
@@ -24,23 +22,23 @@ from typing import (
 
 import numpy as np
 
-from . import dtypes, duck_array_ops, utils
-from .alignment import align, deep_align
-from .common import zeros_like
-from .duck_array_ops import datetime_to_numeric
-from .indexes import Index, filter_indexes_from_coords
-from .merge import merge_attrs, merge_coordinates_without_align
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array
-from .types import T_DataArray
-from .utils import is_dict_like, is_scalar
-from .variable import Variable
+from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core.alignment import align, deep_align
+from xarray.core.common import zeros_like
+from xarray.core.duck_array_ops import datetime_to_numeric
+from xarray.core.indexes import Index, filter_indexes_from_coords
+from xarray.core.merge import merge_attrs, merge_coordinates_without_align
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.types import Dims, T_DataArray
+from xarray.core.utils import is_dict_like, is_scalar
+from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from .coordinates import Coordinates
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .types import CombineAttrsOptions, JoinOptions
+    from xarray.core.coordinates import Coordinates
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -167,7 +165,6 @@ class _UFuncSignature:
 
         # enumerate input_core_dims contained in exclude_dims to make them unique
         if exclude_dims:
-
             exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
 
             counter = Counter()
@@ -293,7 +290,7 @@ def apply_dataarray_vfunc(
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if len(args) > 1:
         args = deep_align(
@@ -436,7 +433,7 @@ def _fast_dataset(
 
     Beware: the `variables` dict is modified INPLACE.
     """
-    from .dataset import Dataset
+    from xarray.core.dataset import Dataset
 
     variables.update(coord_variables)
     coord_names = set(coord_variables)
@@ -456,7 +453,7 @@ def apply_dataset_vfunc(
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
     """
-    from .dataset import Dataset
+    from xarray.core.dataset import Dataset
 
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
@@ -504,7 +501,7 @@ def apply_dataset_vfunc(
 
 def _iter_over_selections(obj, dim, values):
     """Iterate over selections of an xarray object in the provided order."""
-    from .groupby import _dummy_copy
+    from xarray.core.groupby import _dummy_copy
 
     dummy = None
     for value in values:
@@ -521,8 +518,8 @@ def apply_groupby_func(func, *args):
     """Apply a dataset or datarray level function over GroupBy, Dataset,
     DataArray, Variable and/or ndarray objects.
     """
-    from .groupby import GroupBy, peek_at
-    from .variable import Variable
+    from xarray.core.groupby import GroupBy, peek_at
+    from xarray.core.variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"
@@ -566,7 +563,6 @@ def apply_groupby_func(func, *args):
 def unified_dim_sizes(
     variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
 ) -> dict[Hashable, int]:
-
     dim_sizes: dict[Hashable, int] = {}
 
     for var in variables:
@@ -670,7 +666,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
-    from .variable import Variable, as_compatible_data
+    from xarray.core.variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
@@ -736,7 +732,9 @@ def apply_variable_ufunc(
                 dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
 
             for key in signature.all_output_core_dims:
-                if key not in signature.all_input_core_dims and key not in output_sizes:
+                if (
+                    key not in signature.all_input_core_dims or key in exclude_dims
+                ) and key not in output_sizes:
                     raise ValueError(
                         f"dimension '{key}' in 'output_core_dims' needs corresponding (dim, size) in 'output_sizes'"
                     )
@@ -846,7 +844,7 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
 def apply_ufunc(
     func: Callable,
     *args: Any,
-    input_core_dims: Sequence[Sequence] = None,
+    input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
@@ -913,7 +911,6 @@ def apply_ufunc(
         dimensions as input and vectorize it automatically with
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
-        Using this option requires NumPy version 1.12 or newer.
     join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -938,8 +935,12 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs : bool, optional
-        Whether to copy attributes from the first argument to the output.
+    keep_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or bool, optional
+        - 'drop' or False: empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
+        - 'override' or True: skip comparing and copy attrs from the first object to the result.
     kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
     dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"
@@ -1092,9 +1093,9 @@ def apply_ufunc(
     .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
     .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
-    from .dataarray import DataArray
-    from .groupby import GroupBy
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.groupby import GroupBy
+    from xarray.core.variable import Variable
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
@@ -1217,7 +1218,9 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def cov(da_a, da_b, dim=None, ddof=1):
+def cov(
+    da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None, ddof: int = 1
+) -> T_DataArray:
     """
     Compute covariance between two DataArray objects along a shared dimension.
 
@@ -1227,9 +1230,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
         Array to compute.
     da_b : DataArray
         Array to compute.
-    dim : str, optional
+    dim : str, iterable of hashable, "..." or None, optional
         The dimension along which the covariance will be computed
-    ddof : int, optional
+    ddof : int, default: 1
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
@@ -1286,7 +1289,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
@@ -1297,7 +1300,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
-def corr(da_a, da_b, dim=None):
+def corr(da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None) -> T_DataArray:
     """
     Compute the Pearson correlation coefficient between
     two DataArray objects along a shared dimension.
@@ -1308,7 +1311,7 @@ def corr(da_a, da_b, dim=None):
         Array to compute.
     da_b : DataArray
         Array to compute.
-    dim : str, optional
+    dim : str, iterable of hashable, "..." or None, optional
         The dimension along which the correlation will be computed
 
     Returns
@@ -1364,7 +1367,7 @@ def corr(da_a, da_b, dim=None):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
@@ -1376,7 +1379,11 @@ def corr(da_a, da_b, dim=None):
 
 
 def _cov_corr(
-    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+    da_a: T_DataArray,
+    da_b: T_DataArray,
+    dim: Dims = None,
+    ddof: int = 0,
+    method: Literal["cov", "corr", None] = None,
 ) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
@@ -1396,22 +1403,21 @@ def _cov_corr(
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    #
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
-        valid_count
-    )
+    cov = (demeaned_da_a.conj() * demeaned_da_b).sum(
+        dim=dim, skipna=True, min_count=1
+    ) / (valid_count)
 
     if method == "cov":
-        return cov
+        return cov  # type: ignore[return-value]
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr
+        return corr  # type: ignore[return-value]
 
 
 def cross(
@@ -1622,7 +1628,11 @@ def cross(
     return c
 
 
-def dot(*arrays, dims=None, **kwargs):
+def dot(
+    *arrays,
+    dims: Dims = None,
+    **kwargs: Any,
+):
     """Generalized dot product for xarray objects. Like np.einsum, but
     provides a simpler interface based on array dimensions.
 
@@ -1630,7 +1640,7 @@ def dot(*arrays, dims=None, **kwargs):
     ----------
     *arrays : DataArray or Variable
         Arrays to compute.
-    dims : ..., str or tuple of str, optional
+    dims : str, iterable of hashable, "..." or None, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict
@@ -1699,8 +1709,8 @@ def dot(*arrays, dims=None, **kwargs):
     <xarray.DataArray ()>
     array(235)
     """
-    from .dataarray import DataArray
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError(
@@ -1711,10 +1721,7 @@ def dot(*arrays, dims=None, **kwargs):
     if len(arrays) == 0:
         raise TypeError("At least one array should be given.")
 
-    if isinstance(dims, str):
-        dims = (dims,)
-
-    common_dims = set.intersection(*[set(arr.dims) for arr in arrays])
+    common_dims: set[Hashable] = set.intersection(*(set(arr.dims) for arr in arrays))
     all_dims = []
     for arr in arrays:
         all_dims += [d for d in arr.dims if d not in all_dims]
@@ -1724,21 +1731,25 @@ def dot(*arrays, dims=None, **kwargs):
 
     if dims is ...:
         dims = all_dims
+    elif isinstance(dims, str):
+        dims = (dims,)
     elif dims is None:
         # find dimensions that occur more than one times
-        dim_counts = Counter()
+        dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
         dims = tuple(d for d, c in dim_counts.items() if c > 1)
 
-    dims = tuple(dims)  # make dims a tuple
+    dot_dims: set[Hashable] = set(dims)
 
     # dimensions to be parallelized
-    broadcast_dims = tuple(d for d in all_dims if d in common_dims and d not in dims)
+    broadcast_dims = common_dims - dot_dims
     input_core_dims = [
         [d for d in arr.dims if d not in broadcast_dims] for arr in arrays
     ]
-    output_core_dims = [tuple(d for d in all_dims if d not in dims + broadcast_dims)]
+    output_core_dims = [
+        [d for d in all_dims if d not in dot_dims and d not in broadcast_dims]
+    ]
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
@@ -1850,15 +1861,13 @@ def where(cond, x, y, keep_attrs=None):
     Dataset.where, DataArray.where :
         equivalent methods
     """
+    from xarray.core.dataset import Dataset
+
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
-    if keep_attrs is True:
-        # keep the attributes of x, the second parameter, by default to
-        # be consistent with the `where` method of `DataArray` and `Dataset`
-        keep_attrs = lambda attrs, context: getattr(x, "attrs", {})
 
     # alignment for three arguments is complicated, so don't support it yet
-    return apply_ufunc(
+    result = apply_ufunc(
         duck_array_ops.where,
         cond,
         x,
@@ -1869,24 +1878,53 @@ def where(cond, x, y, keep_attrs=None):
         keep_attrs=keep_attrs,
     )
 
+    # keep the attributes of x, the second parameter, by default to
+    # be consistent with the `where` method of `DataArray` and `Dataset`
+    # rebuild the attrs from x at each level of the output, which could be
+    # Dataset, DataArray, or Variable, and also handle coords
+    if keep_attrs is True and hasattr(result, "attrs"):
+        if isinstance(y, Dataset) and not isinstance(x, Dataset):
+            # handle special case where x gets promoted to Dataset
+            result.attrs = {}
+            if getattr(x, "name", None) in result.data_vars:
+                result[x.name].attrs = getattr(x, "attrs", {})
+        else:
+            # otherwise, fill in global attrs and variable attrs (if they exist)
+            result.attrs = getattr(x, "attrs", {})
+            for v in getattr(result, "data_vars", []):
+                result[v].attrs = getattr(getattr(x, v, None), "attrs", {})
+        for c in getattr(result, "coords", []):
+            # always fill coord attrs of x
+            result[c].attrs = getattr(getattr(x, c, None), "attrs", {})
+
+    return result
+
 
 @overload
-def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+def polyval(
+    coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> DataArray:
     ...
 
 
 @overload
-def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: DataArray, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
 @overload
-def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+def polyval(
+    coord: Dataset, coeffs: Dataset, degree_dim: Hashable = "degree"
+) -> Dataset:
     ...
 
 
@@ -1963,7 +2001,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     DataArray or Dataset
         Variables with datetime64 dtypes converted to float64.
     """
-    from .dataset import Dataset
+    from xarray.core.dataset import Dataset
 
     def _cfoffset(x: DataArray) -> Any:
         scalar = x.compute().data[0]
@@ -1996,10 +2034,10 @@ def _calc_idxminmax(
     *,
     array,
     func: Callable,
-    dim: Hashable = None,
-    skipna: bool = None,
+    dim: Hashable | None = None,
+    skipna: bool | None = None,
     fill_value: Any = dtypes.NA,
-    keep_attrs: bool = None,
+    keep_attrs: bool | None = None,
 ):
     """Apply common operations for idxmin and idxmax."""
     # This function doesn't make sense for scalars so don't try
@@ -2094,7 +2132,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     --------
     dask.array.core.unify_chunks
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # Convert all objects to datasets
     datasets = [

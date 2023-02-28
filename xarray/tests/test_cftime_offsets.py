@@ -33,8 +33,7 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.frequencies import infer_freq
 from xarray.core.dataarray import DataArray
-
-from . import _CFTIME_CALENDARS, requires_cftime
+from xarray.tests import _CFTIME_CALENDARS, has_cftime, requires_cftime
 
 cftime = pytest.importorskip("cftime")
 
@@ -1023,7 +1022,25 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         None,
         "D",
+        "neither",
+        False,
+        [(1, 1, 2), (1, 1, 3)],
+    ),
+    (
+        "0001-01-01",
+        "0001-01-04",
         None,
+        "D",
+        None,
+        False,
+        [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
+    ),
+    (
+        "0001-01-01",
+        "0001-01-04",
+        None,
+        "D",
+        "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1050,7 +1067,7 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         None,
         "D",
-        None,
+        "both",
         False,
         [(1, 1, 1, 1), (1, 1, 2, 1), (1, 1, 3, 1)],
     ),
@@ -1059,7 +1076,7 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         None,
         "D",
-        None,
+        "both",
         False,
         [(1, 1, 1, 1), (1, 1, 2, 1), (1, 1, 3, 1)],
     ),
@@ -1068,7 +1085,7 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         None,
         "D",
-        None,
+        "both",
         True,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1077,7 +1094,7 @@ _CFTIME_RANGE_TESTS = [
         None,
         4,
         "D",
-        None,
+        "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1086,7 +1103,7 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         4,
         "D",
-        None,
+        "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1095,7 +1112,7 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         None,
         "D",
-        None,
+        "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1104,7 +1121,7 @@ _CFTIME_RANGE_TESTS = [
         (1, 1, 4),
         None,
         "D",
-        None,
+        "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1113,17 +1130,17 @@ _CFTIME_RANGE_TESTS = [
         "0011-02-01",
         None,
         "3AS-JUN",
-        None,
+        "both",
         False,
         [(1, 6, 1), (4, 6, 1), (7, 6, 1), (10, 6, 1)],
     ),
-    ("0001-01-04", "0001-01-01", None, "D", None, False, []),
+    ("0001-01-04", "0001-01-01", None, "D", "both", False, []),
     (
         "0010",
         None,
         4,
         YearBegin(n=-2),
-        None,
+        "both",
         False,
         [(10, 1, 1), (8, 1, 1), (6, 1, 1), (4, 1, 1)],
     ),
@@ -1132,7 +1149,7 @@ _CFTIME_RANGE_TESTS = [
         "0001-01-04",
         4,
         None,
-        None,
+        "both",
         False,
         [(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
     ),
@@ -1141,7 +1158,7 @@ _CFTIME_RANGE_TESTS = [
         None,
         4,
         "3QS-JUN",
-        None,
+        "both",
         False,
         [(1, 6, 1), (2, 3, 1), (2, 12, 1), (3, 9, 1)],
     ),
@@ -1149,12 +1166,12 @@ _CFTIME_RANGE_TESTS = [
 
 
 @pytest.mark.parametrize(
-    ("start", "end", "periods", "freq", "closed", "normalize", "expected_date_args"),
+    ("start", "end", "periods", "freq", "inclusive", "normalize", "expected_date_args"),
     _CFTIME_RANGE_TESTS,
     ids=_id_func,
 )
 def test_cftime_range(
-    start, end, periods, freq, closed, normalize, calendar, expected_date_args
+    start, end, periods, freq, inclusive, normalize, calendar, expected_date_args
 ):
     date_type = get_date_type(calendar)
     expected_dates = [date_type(*args) for args in expected_date_args]
@@ -1169,7 +1186,7 @@ def test_cftime_range(
         end=end,
         periods=periods,
         freq=freq,
-        closed=closed,
+        inclusive=inclusive,
         normalize=normalize,
         calendar=calendar,
     )
@@ -1358,11 +1375,11 @@ def test_date_range_like_same_calendar():
 
 def test_date_range_like_errors():
     src = date_range("1899-02-03", periods=20, freq="D", use_cftime=False)
-    src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferrable.
+    src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferable.
 
     with pytest.raises(
         ValueError,
-        match="`date_range_like` was unable to generate a range as the source frequency was not inferrable.",
+        match="`date_range_like` was unable to generate a range as the source frequency was not inferable.",
     ):
         date_range_like(src, "gregorian")
 
@@ -1385,3 +1402,53 @@ def test_date_range_like_errors():
         match="'source' must be a 1D array of datetime objects for inferring its range.",
     ):
         date_range_like(da, "noleap")
+
+
+def as_timedelta_not_implemented_error():
+    tick = Tick()
+    with pytest.raises(NotImplementedError):
+        tick.as_timedelta()
+
+
+@pytest.mark.parametrize("function", [cftime_range, date_range])
+def test_cftime_or_date_range_closed_and_inclusive_error(function) -> None:
+    if function == cftime_range and not has_cftime:
+        pytest.skip("requires cftime")
+
+    with pytest.raises(ValueError, match="Following pandas, deprecated"):
+        function("2000", periods=3, closed=None, inclusive="right")
+
+
+@pytest.mark.parametrize("function", [cftime_range, date_range])
+def test_cftime_or_date_range_invalid_closed_value(function) -> None:
+    if function == cftime_range and not has_cftime:
+        pytest.skip("requires cftime")
+
+    with pytest.raises(ValueError, match="Argument `closed` must be"):
+        function("2000", periods=3, closed="foo")
+
+
+@pytest.mark.parametrize("function", [cftime_range, date_range])
+@pytest.mark.parametrize(
+    ("closed", "inclusive"), [(None, "both"), ("left", "left"), ("right", "right")]
+)
+def test_cftime_or_date_range_closed(function, closed, inclusive) -> None:
+    if function == cftime_range and not has_cftime:
+        pytest.skip("requires cftime")
+
+    with pytest.warns(FutureWarning, match="Following pandas"):
+        result_closed = function("2000-01-01", "2000-01-04", freq="D", closed=closed)
+        result_inclusive = function(
+            "2000-01-01", "2000-01-04", freq="D", inclusive=inclusive
+        )
+        np.testing.assert_equal(result_closed.values, result_inclusive.values)
+
+
+@pytest.mark.parametrize("function", [cftime_range, date_range])
+def test_cftime_or_date_range_inclusive_None(function) -> None:
+    if function == cftime_range and not has_cftime:
+        pytest.skip("requires cftime")
+
+    result_None = function("2000-01-01", "2000-01-04")
+    result_both = function("2000-01-01", "2000-01-04", inclusive="both")
+    np.testing.assert_equal(result_None.values, result_both.values)

@@ -20,9 +20,13 @@ from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
-
-from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
-from .test_backends import CFEncodedBase
+from xarray.tests import (
+    assert_array_equal,
+    requires_cftime,
+    requires_dask,
+    requires_netCDF4,
+)
+from xarray.tests.test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray:
@@ -467,3 +471,17 @@ def test_decode_cf_variable_cftime():
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
     assert_identical(decoded, variable)
+
+
+def test_scalar_units() -> None:
+    # test that scalar units does not raise an exception
+    var = Variable(["t"], [np.nan, np.nan, 2], {"units": np.nan})
+
+    actual = conventions.decode_cf_variable("t", var)
+    assert_identical(actual, var)
+
+
+def test_decode_cf_error_includes_variable_name():
+    ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
+    with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
+        decode_cf(ds)

@@ -30,15 +30,12 @@ from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal, assert_identical
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_array_equal,
     assert_no_warnings,
     has_cftime,
-    has_cftime_1_4_1,
     requires_cftime,
-    requires_cftime_1_4_1,
     requires_dask,
 )
 
@@ -616,7 +613,7 @@ def test_cf_timedelta_2d() -> None:
 
     actual = coding.times.decode_cf_timedelta(numbers, units)
     assert_array_equal(expected, actual)
-    assert expected.dtype == actual.dtype  # type: ignore
+    assert expected.dtype == actual.dtype
 
 
 @pytest.mark.parametrize(
@@ -653,7 +650,7 @@ def test_format_cftime_datetime(date_args, expected) -> None:
 def test_decode_cf(calendar) -> None:
     days = [1.0, 2.0, 3.0]
     # TODO: GH5690 — do we want to allow this type for `coords`?
-    da = DataArray(days, coords=[days], dims=["time"], name="test")  # type: ignore
+    da = DataArray(days, coords=[days], dims=["time"], name="test")
     ds = da.to_dataset()
 
     for v in ["test", "time"]:
@@ -673,7 +670,6 @@ def test_decode_cf(calendar) -> None:
 
 
 def test_decode_cf_time_bounds() -> None:
-
     da = DataArray(
         np.arange(6, dtype="int64").reshape((3, 2)),
         coords={"time": [1, 2, 3]},
@@ -716,7 +712,6 @@ def test_decode_cf_time_bounds() -> None:
 
 @requires_cftime
 def test_encode_time_bounds() -> None:
-
     time = pd.date_range("2000-01-16", periods=1)
     time_bounds = pd.date_range("2000-01-01", periods=2, freq="MS")
     ds = Dataset(dict(time=time, time_bounds=time_bounds))
@@ -837,7 +832,6 @@ def test_encode_cf_datetime_overflow(shape) -> None:
 
 
 def test_encode_expected_failures() -> None:
-
     dates = pd.date_range("2000", periods=3)
     with pytest.raises(ValueError, match="invalid time units"):
         encode_cf_datetime(dates, units="days after 2000-01-01")
@@ -1031,8 +1025,8 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 def test_encode_cf_datetime_defaults_to_correct_dtype(
     encoding_units, freq, date_range
 ) -> None:
-    if not has_cftime_1_4_1 and date_range == cftime_range:
-        pytest.skip("Test requires cftime 1.4.1.")
+    if not has_cftime and date_range == cftime_range:
+        pytest.skip("Test requires cftime")
     if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
@@ -1059,7 +1053,7 @@ def test_encode_decode_roundtrip_datetime64(freq) -> None:
     assert_equal(variable, decoded)
 
 
-@requires_cftime_1_4_1
+@requires_cftime
 @pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
 def test_encode_decode_roundtrip_cftime(freq) -> None:
     initial_time = cftime_range("0001", periods=1)
@@ -1082,7 +1076,14 @@ def test__encode_datetime_with_cftime() -> None:
     times = cftime.num2date([0, 1], "hours since 2000-01-01", calendar)
 
     encoding_units = "days since 2000-01-01"
-    expected = cftime.date2num(times, encoding_units, calendar)
+    # Since netCDF files do not support storing float128 values, we ensure that
+    # float64 values are used by setting longdouble=False in num2date.  This try
+    # except logic can be removed when xarray's minimum version of cftime is at
+    # least 1.6.2.
+    try:
+        expected = cftime.date2num(times, encoding_units, calendar, longdouble=False)
+    except TypeError:
+        expected = cftime.date2num(times, encoding_units, calendar)
     result = _encode_datetime_with_cftime(times, encoding_units, calendar)
     np.testing.assert_equal(result, expected)
 
@@ -1150,3 +1151,28 @@ def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
     num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
     with pytest.raises(OverflowError):
         decode_cf_datetime(num_dates, units, calendar)
+
+
+@pytest.mark.parametrize("use_cftime", [True, False])
+def test_decode_0size_datetime(use_cftime):
+    # GH1329
+    if use_cftime and not has_cftime:
+        pytest.skip()
+
+    dtype = object if use_cftime else "M8[ns]"
+    expected = np.array([], dtype=dtype)
+    actual = decode_cf_datetime(
+        np.zeros(shape=0, dtype=np.int64),
+        units="days since 1970-01-01 00:00:00",
+        calendar="proleptic_gregorian",
+        use_cftime=use_cftime,
+    )
+    np.testing.assert_equal(expected, actual)
+
+
+@requires_cftime
+def test_scalar_unit() -> None:
+    # test that a scalar units (often NaN when using to_netcdf) does not raise an error
+    variable = Variable(("x", "y"), np.array([[0, 1], [2, 3]]), {"units": np.nan})
+    result = coding.times.CFDatetimeCoder().decode(variable)
+    assert np.isnan(result.attrs["units"])

@@ -3,13 +3,13 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.8
+  - python=3.9
   - coveralls
   - pip
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
-  - numpy=1.19
-  - packaging=20.0
-  - pandas=1.2
+  - numpy=1.21
+  - packaging=21.3
+  - pandas=1.4

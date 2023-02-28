@@ -1,7 +1,8 @@
 """Testing functions exposed to the user API"""
 import functools
 import warnings
-from typing import Hashable, Set, Union
+from collections.abc import Hashable
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -30,7 +31,8 @@ def ensure_warnings(func):
         __tracebackhide__ = True
 
         with warnings.catch_warnings():
-            warnings.simplefilter("always")
+            # only remove filters that would "error"
+            warnings.filters = [f for f in warnings.filters if f[0] != "error"]
 
             return func(*args, **kwargs)
 
@@ -179,7 +181,7 @@ def _format_message(x, y, err_msg, verbose):
     abs_diff = max(abs(diff))
     rel_diff = "not implemented"
 
-    n_diff = int(np.count_nonzero(diff))
+    n_diff = np.count_nonzero(diff)
     n_total = diff.size
 
     fraction = f"{n_diff} / {n_total}"
@@ -355,7 +357,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
 
     assert type(ds._dims) is dict, ds._dims
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
-    var_dims: Set[Hashable] = set()
+    var_dims: set[Hashable] = set()
     for v in ds._variables.values():
         var_dims.update(v.dims)
     assert ds._dims.keys() == var_dims, (set(ds._dims), var_dims)

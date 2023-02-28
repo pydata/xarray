@@ -1,31 +1,36 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Any
+
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray import DataArray
-from xarray.tests import assert_allclose, assert_equal
-
-from . import raise_if_dask_computes, requires_cftime, requires_dask
+from xarray import DataArray, Dataset
+from xarray.tests import (
+    assert_allclose,
+    assert_equal,
+    raise_if_dask_computes,
+    requires_cftime,
+    requires_dask,
+)
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
-def test_weighted_non_DataArray_weights(as_dataset):
-
-    data = DataArray([1, 2])
+def test_weighted_non_DataArray_weights(as_dataset: bool) -> None:
+    data: DataArray | Dataset = DataArray([1, 2])
     if as_dataset:
         data = data.to_dataset(name="data")
 
     with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
-        data.weighted([1, 2])
+        data.weighted([1, 2])  # type: ignore
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
-def test_weighted_weights_nan_raises(as_dataset, weights):
-
-    data = DataArray([1, 2])
+def test_weighted_weights_nan_raises(as_dataset: bool, weights: list[float]) -> None:
+    data: DataArray | Dataset = DataArray([1, 2])
     if as_dataset:
         data = data.to_dataset(name="data")
 
@@ -37,7 +42,6 @@ def test_weighted_weights_nan_raises(as_dataset, weights):
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
 def test_weighted_weights_nan_raises_dask(as_dataset, weights):
-
     data = DataArray([1, 2]).chunk({"dim_0": -1})
     if as_dataset:
         data = data.to_dataset(name="data")
@@ -79,7 +83,6 @@ def test_weighted_lazy_resample(time_chunks, resample_spec):
     (([1, 2], 3), ([2, 0], 2), ([0, 0], np.nan), ([-1, 1], np.nan)),
 )
 def test_weighted_sum_of_weights_no_nan(weights, expected):
-
     da = DataArray([1, 2])
     weights = DataArray(weights)
     result = da.weighted(weights).sum_of_weights()
@@ -94,7 +97,6 @@ def test_weighted_sum_of_weights_no_nan(weights, expected):
     (([1, 2], 2), ([2, 0], np.nan), ([0, 0], np.nan), ([-1, 1], 1)),
 )
 def test_weighted_sum_of_weights_nan(weights, expected):
-
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
     result = da.weighted(weights).sum_of_weights()
@@ -135,7 +137,6 @@ def test_weighted_sum_equal_weights(da, factor, skipna):
     ("weights", "expected"), (([1, 2], 5), ([0, 2], 4), ([0, 0], 0))
 )
 def test_weighted_sum_no_nan(weights, expected):
-
     da = DataArray([1, 2])
 
     weights = DataArray(weights)
@@ -150,7 +151,6 @@ def test_weighted_sum_no_nan(weights, expected):
 )
 @pytest.mark.parametrize("skipna", (True, False))
 def test_weighted_sum_nan(weights, expected, skipna):
-
     da = DataArray([np.nan, 2])
 
     weights = DataArray(weights)
@@ -186,7 +186,6 @@ def test_weighted_mean_equal_weights(da, skipna, factor):
     ("weights", "expected"), (([4, 6], 1.6), ([1, 0], 1.0), ([0, 0], np.nan))
 )
 def test_weighted_mean_no_nan(weights, expected):
-
     da = DataArray([1, 2])
     weights = DataArray(weights)
     expected = DataArray(expected)
@@ -224,7 +223,6 @@ def test_weighted_quantile_no_nan(weights, expected):
 
 
 def test_weighted_quantile_zero_weights():
-
     da = DataArray([0, 1, 2, 3])
     weights = DataArray([1, 0, 1, 0])
     q = 0.75
@@ -269,22 +267,30 @@ def test_weighted_quantile_nan(skipna):
 @pytest.mark.parametrize(
     "da",
     (
-        [1, 1.9, 2.2, 3, 3.7, 4.1, 5],
-        [1, 1.9, 2.2, 3, 3.7, 4.1, np.nan],
-        [np.nan, np.nan, np.nan],
+        pytest.param([1, 1.9, 2.2, 3, 3.7, 4.1, 5], id="nonan"),
+        pytest.param([1, 1.9, 2.2, 3, 3.7, 4.1, np.nan], id="singlenan"),
+        pytest.param(
+            [np.nan, np.nan, np.nan],
+            id="allnan",
+            marks=pytest.mark.filterwarnings(
+                "ignore:All-NaN slice encountered:RuntimeWarning"
+            ),
+        ),
     ),
 )
 @pytest.mark.parametrize("q", (0.5, (0.2, 0.8)))
 @pytest.mark.parametrize("skipna", (True, False))
 @pytest.mark.parametrize("factor", [1, 3.14])
-def test_weighted_quantile_equal_weights(da, q, skipna, factor):
+def test_weighted_quantile_equal_weights(
+    da: list[float], q: float | tuple[float, ...], skipna: bool, factor: float
+) -> None:
     # if all weights are equal (!= 0), should yield the same result as quantile
 
-    da = DataArray(da)
-    weights = xr.full_like(da, factor)
+    data = DataArray(da)
+    weights = xr.full_like(data, factor)
 
-    expected = da.quantile(q, skipna=skipna)
-    result = da.weighted(weights).quantile(q, skipna=skipna)
+    expected = data.quantile(q, skipna=skipna)
+    result = data.weighted(weights).quantile(q, skipna=skipna)
 
     assert_allclose(expected, result)
 
@@ -337,7 +343,6 @@ def test_weighted_quantile_bool():
 
 @pytest.mark.parametrize("q", (-1, 1.1, (0.5, 1.1), ((0.2, 0.4), (0.6, 0.8))))
 def test_weighted_quantile_with_invalid_q(q):
-
     da = DataArray([1, 1.9, 2.2, 3, 3.7, 4.1, 5])
     q = np.asarray(q)
     weights = xr.ones_like(da)
@@ -355,7 +360,6 @@ def test_weighted_quantile_with_invalid_q(q):
 )
 @pytest.mark.parametrize("skipna", (True, False))
 def test_weighted_mean_nan(weights, expected, skipna):
-
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
 
@@ -385,7 +389,6 @@ def test_weighted_mean_bool():
     (([1, 2], 2 / 3), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
 )
 def test_weighted_sum_of_squares_no_nan(weights, expected):
-
     da = DataArray([1, 2])
     weights = DataArray(weights)
     result = da.weighted(weights).sum_of_squares()
@@ -400,7 +403,6 @@ def test_weighted_sum_of_squares_no_nan(weights, expected):
     (([1, 2], 0), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
 )
 def test_weighted_sum_of_squares_nan(weights, expected):
-
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
     result = da.weighted(weights).sum_of_squares()
@@ -432,7 +434,6 @@ def test_weighted_var_equal_weights(da, skipna, factor):
     ("weights", "expected"), (([4, 6], 0.24), ([1, 0], 0.0), ([0, 0], np.nan))
 )
 def test_weighted_var_no_nan(weights, expected):
-
     da = DataArray([1, 2])
     weights = DataArray(weights)
     expected = DataArray(expected)
@@ -446,7 +447,6 @@ def test_weighted_var_no_nan(weights, expected):
     ("weights", "expected"), (([4, 6], 0), ([1, 0], np.nan), ([0, 0], np.nan))
 )
 def test_weighted_var_nan(weights, expected):
-
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
     expected = DataArray(expected)
@@ -489,7 +489,6 @@ def test_weighted_std_equal_weights(da, skipna, factor):
     ("weights", "expected"), (([4, 6], np.sqrt(0.24)), ([1, 0], 0.0), ([0, 0], np.nan))
 )
 def test_weighted_std_no_nan(weights, expected):
-
     da = DataArray([1, 2])
     weights = DataArray(weights)
     expected = DataArray(expected)
@@ -503,7 +502,6 @@ def test_weighted_std_no_nan(weights, expected):
     ("weights", "expected"), (([4, 6], 0), ([1, 0], np.nan), ([0, 0], np.nan))
 )
 def test_weighted_std_nan(weights, expected):
-
     da = DataArray([np.nan, 2])
     weights = DataArray(weights)
     expected = DataArray(expected)
@@ -564,7 +562,6 @@ def expected_weighted(da, weights, dim, skipna, operation):
 
 
 def check_weighted_operations(data, weights, dim, skipna):
-
     # check sum of weights
     result = data.weighted(weights).sum_of_weights(dim)
     expected = expected_weighted(data, weights, dim, skipna, "sum_of_weights")
@@ -601,7 +598,6 @@ def check_weighted_operations(data, weights, dim, skipna):
 @pytest.mark.parametrize("skipna", (None, True, False))
 @pytest.mark.filterwarnings("ignore:invalid value encountered in sqrt")
 def test_weighted_operations_3D(dim, add_nans, skipna):
-
     dims = ("a", "b", "c")
     coords = dict(a=[0, 1, 2, 3], b=[0, 1, 2, 3], c=[0, 1, 2, 3])
 
@@ -627,7 +623,6 @@ def test_weighted_operations_3D(dim, add_nans, skipna):
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
 def test_weighted_quantile_3D(dim, q, add_nans, skipna):
-
     dims = ("a", "b", "c")
     coords = dict(a=[0, 1, 2], b=[0, 1, 2, 3], c=[0, 1, 2, 3, 4])
 
@@ -654,23 +649,49 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
     assert_allclose(expected, result2.data)
 
 
-def test_weighted_operations_nonequal_coords():
-    # There are no weights for a == 4, so that data point is ignored.
-    weights = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[0, 1, 2, 3]))
-    data = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[1, 2, 3, 4]))
-    check_weighted_operations(data, weights, dim="a", skipna=None)
+@pytest.mark.parametrize(
+    "coords_weights, coords_data, expected_value_at_weighted_quantile",
+    [
+        ([0, 1, 2, 3], [1, 2, 3, 4], 2.5),  # no weights for coord a == 4
+        ([0, 1, 2, 3], [2, 3, 4, 5], 1.8),  # no weights for coord a == 4 or 5
+        ([2, 3, 4, 5], [0, 1, 2, 3], 3.8),  # no weights for coord a == 0 or 1
+    ],
+)
+def test_weighted_operations_nonequal_coords(
+    coords_weights: Iterable[Any],
+    coords_data: Iterable[Any],
+    expected_value_at_weighted_quantile: float,
+) -> None:
+    """Check that weighted operations work with unequal coords.
 
-    q = 0.5
-    result = data.weighted(weights).quantile(q, dim="a")
-    # Expected value computed using code from https://aakinshin.net/posts/weighted-quantiles/ with values at a=1,2,3
-    expected = DataArray([0.9308707], coords={"quantile": [q]}).squeeze()
-    assert_allclose(result, expected)
 
-    data = data.to_dataset(name="data")
-    check_weighted_operations(data, weights, dim="a", skipna=None)
+    Parameters
+    ----------
+    coords_weights : Iterable[Any]
+        The coords for the weights.
+    coords_data : Iterable[Any]
+        The coords for the data.
+    expected_value_at_weighted_quantile : float
+        The expected value for the quantile of the weighted data.
+    """
+    da_weights = DataArray(
+        [0.5, 1.0, 1.0, 2.0], dims=("a",), coords=dict(a=coords_weights)
+    )
+    da_data = DataArray([1, 2, 3, 4], dims=("a",), coords=dict(a=coords_data))
+    check_weighted_operations(da_data, da_weights, dim="a", skipna=None)
 
-    result = data.weighted(weights).quantile(q, dim="a")
-    assert_allclose(result, expected.to_dataset(name="data"))
+    quantile = 0.5
+    da_actual = da_data.weighted(da_weights).quantile(quantile, dim="a")
+    da_expected = DataArray(
+        [expected_value_at_weighted_quantile], coords={"quantile": [quantile]}
+    ).squeeze()
+    assert_allclose(da_actual, da_expected)
+
+    ds_data = da_data.to_dataset(name="data")
+    check_weighted_operations(ds_data, da_weights, dim="a", skipna=None)
+
+    ds_actual = ds_data.weighted(da_weights).quantile(quantile, dim="a")
+    assert_allclose(ds_actual, da_expected.to_dataset(name="data"))
 
 
 @pytest.mark.parametrize("shape_data", ((4,), (4, 4), (4, 4, 4)))
@@ -681,7 +702,6 @@ def test_weighted_operations_nonequal_coords():
 def test_weighted_operations_different_shapes(
     shape_data, shape_weights, add_nans, skipna
 ):
-
     weights = DataArray(np.random.randn(*shape_weights))
 
     data = np.random.randn(*shape_data)
@@ -708,7 +728,6 @@ def test_weighted_operations_different_shapes(
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("keep_attrs", (True, False, None))
 def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
-
     weights = DataArray(np.random.randn(2, 2), attrs=dict(attr="weights"))
     data = DataArray(np.random.randn(2, 2))
 
@@ -754,7 +773,6 @@ def test_weighted_operations_keep_attr_da_in_ds(operation):
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
-
     data = DataArray(np.random.randn(2, 2))
     weights = xr.ones_like(data)
     if as_dataset:

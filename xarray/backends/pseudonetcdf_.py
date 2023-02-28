@@ -2,27 +2,19 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .file_manager import CachingFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
-from .store import StoreBackendEntrypoint
-
-try:
-    from PseudoNetCDF import pncopen
-
-    has_pseudonetcdf = True
-except ModuleNotFoundError:
-    has_pseudonetcdf = False
-
+from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.variable import Variable
 
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
@@ -56,6 +48,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):
+        from PseudoNetCDF import pncopen
 
         keywords = {"kwargs": format_kwargs}
         # only include mode if explicitly passed
@@ -104,7 +97,35 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
 
 class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
-    available = has_pseudonetcdf
+    """
+    Backend for netCDF-like data formats in the air quality field
+    based on the PseudoNetCDF package.
+
+    It can open:
+    - CAMx
+    - RACM2 box-model outputs
+    - Kinetic Pre-Processor outputs
+    - ICARTT Data files (ffi1001)
+    - CMAQ Files
+    - GEOS-Chem Binary Punch/NetCDF files
+    - and many more
+
+    This backend is not selected by default for any files, so make
+    sure to specify ``engine="pseudonetcdf"`` in ``open_dataset``.
+
+    For more information about the underlying library, visit:
+    https://pseudonetcdf.readthedocs.io
+
+    See Also
+    --------
+    backends.PseudoNetCDFDataStore
+    """
+
+    available = module_available("PseudoNetCDF")
+    description = (
+        "Open many atmospheric science data formats using PseudoNetCDF in Xarray"
+    )
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PseudoNetCDFBackendEntrypoint.html"
 
     # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
     # unless the open_dataset_parameters are explicitly defined like this:
@@ -135,7 +156,6 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         lock=None,
         **format_kwargs,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs

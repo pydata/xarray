@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build setuptools setuptools-scm wheel twine check-manifest
+          python -m pip install build twine
           python -m pip install tomli tomli_w
 
       - name: Disable local versions
@@ -35,12 +35,11 @@ jobs:
       - name: Build tarball and wheels
         run: |
           git clean -xdf
-          python -m build --sdist --wheel .
+          python -m build
 
       - name: Check built artifacts
         run: |
-          python -m twine check dist/*
-          pwd
+          python -m twine check --strict dist/*
           if [ -f dist/xarray-0.0.0.tar.gz ]; then
             echo "❌ INVALID VERSION NUMBER"
             exit 1
@@ -79,7 +78,7 @@ jobs:
 
       - name: Publish package to TestPyPI
         if: github.event_name == 'push'
-        uses: pypa/gh-action-pypi-publish@v1.5.0
+        uses: pypa/gh-action-pypi-publish@v1.6.4
         with:
           user: __token__
           password: ${{ secrets.TESTPYPI_TOKEN }}

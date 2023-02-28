@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from importlib.metadata import EntryPoint
 from unittest import mock
 
@@ -63,7 +64,6 @@ def test_broken_plugin() -> None:
 
 
 def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
-
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.remove_duplicates(dummy_duplicated_entrypoints)
 
@@ -100,18 +100,17 @@ def test_set_missing_parameters() -> None:
     assert backend_2.open_dataset_parameters == ("filename_or_obj",)
 
     backend = DummyBackendEntrypointKwargs()
-    backend.open_dataset_parameters = ("filename_or_obj", "decoder")
+    backend.open_dataset_parameters = ("filename_or_obj", "decoder")  # type: ignore[misc]
     plugins.set_missing_parameters({"engine": backend})
     assert backend.open_dataset_parameters == ("filename_or_obj", "decoder")
 
     backend_args = DummyBackendEntrypointArgs()
-    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")
+    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")  # type: ignore[misc]
     plugins.set_missing_parameters({"engine": backend_args})
     assert backend_args.open_dataset_parameters == ("filename_or_obj", "decoder")
 
 
 def test_set_missing_parameters_raise_error() -> None:
-
     backend = DummyBackendEntrypointKwargs()
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
@@ -147,8 +146,7 @@ def test_build_engines_sorted() -> None:
         EntryPoint("dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
         EntryPoint("dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
     ]
-    backend_entrypoints = plugins.build_engines(dummy_pkg_entrypoints)
-    backend_entrypoints = list(backend_entrypoints)
+    backend_entrypoints = list(plugins.build_engines(dummy_pkg_entrypoints))
 
     indices = []
     for be in plugins.STANDARD_BACKENDS_ORDER:
@@ -185,3 +183,60 @@ def test_engines_not_installed() -> None:
 
     with pytest.raises(ValueError, match=r"found the following matches with the input"):
         plugins.guess_engine("foo.nc")
+
+
+def test_lazy_import() -> None:
+    """Test that some modules are imported in a lazy manner.
+
+    When importing xarray these should not be imported as well.
+    Only when running code for the first time that requires them.
+    """
+    blacklisted = [
+        # "cfgrib",  # TODO: cfgrib has its own plugin now, deprecate?
+        "h5netcdf",
+        "netCDF4",
+        "PseudoNetCDF",
+        "pydap",
+        "Nio",
+        "scipy",
+        "zarr",
+        "matplotlib",
+        "nc_time_axis",
+        "flox",
+        # "dask",  # TODO: backends.locks is not lazy yet :(
+        "dask.array",
+        "dask.distributed",
+        "sparse",
+        "cupy",
+        "pint",
+    ]
+    # ensure that none of the above modules has been imported before
+    modules_backup = {}
+    for pkg in list(sys.modules.keys()):
+        for mod in blacklisted + ["xarray"]:
+            if pkg.startswith(mod):
+                modules_backup[pkg] = sys.modules[pkg]
+                del sys.modules[pkg]
+                break
+
+    try:
+        import xarray  # noqa: F401
+        from xarray.backends import list_engines
+
+        list_engines()
+
+        # ensure that none of the modules that are supposed to be
+        # lazy loaded are loaded when importing xarray
+        is_imported = set()
+        for pkg in sys.modules:
+            for mod in blacklisted:
+                if pkg.startswith(mod):
+                    is_imported.add(mod)
+                    break
+        assert (
+            len(is_imported) == 0
+        ), f"{is_imported} have been imported but should be lazy"
+
+    finally:
+        # restore original
+        sys.modules.update(modules_backup)

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# temporarily (?) remove numbagg and numba
+pip uninstall -y numbagg
+conda uninstall -y numba
+# forcibly remove packages to avoid artifacts
 conda uninstall -y --force \
     numpy \
     scipy \
@@ -18,8 +22,6 @@ conda uninstall -y --force \
     flox \
     h5netcdf \
     xarray
-# new matplotlib dependency
-python -m pip install --upgrade contourpy
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
@@ -44,6 +46,6 @@ python -m pip install \
     git+https://github.com/pydata/sparse \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
-    git+https://github.com/dcherian/flox \
+    git+https://github.com/xarray-contrib/flox \
     git+https://github.com/h5netcdf/h5netcdf
 python -m pip install pytest-timeout

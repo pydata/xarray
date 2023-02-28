@@ -6,20 +6,21 @@ from typing import TYPE_CHECKING, Generic
 import numpy as np
 import pandas as pd
 
-from ..coding.times import infer_calendar_name
-from .common import (
+from xarray.coding.times import infer_calendar_name
+from xarray.core.common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from .npcompat import DTypeLike
-from .pycompat import is_duck_dask_array
-from .types import T_DataArray
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.types import T_DataArray
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .types import CFCalendar
+    from numpy.typing import DTypeLike
+
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import CFCalendar
 
 
 def _season_from_months(months):
@@ -45,7 +46,7 @@ def _access_through_cftimeindex(values, name):
     """Coerce an array of datetime-like values to a CFTimeIndex
     and access requested datetime component
     """
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
     values_as_cftimeindex = CFTimeIndex(values.ravel())
     if name == "season":
@@ -121,7 +122,7 @@ def _round_through_series_or_index(values, name, freq):
     """Coerce an array of datetime-like values to a pandas Series or xarray
     CFTimeIndex and apply requested rounding
     """
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
     if is_np_datetime_like(values.dtype):
         values_as_series = pd.Series(values.ravel())
@@ -169,7 +170,7 @@ def _strftime_through_cftimeindex(values, date_format: str):
     """Coerce an array of cftime-like values to a CFTimeIndex
     and access requested datetime component
     """
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
     values_as_cftimeindex = CFTimeIndex(values.ravel())
 
@@ -200,7 +201,6 @@ def _strftime(values, date_format):
 
 
 class TimeAccessor(Generic[T_DataArray]):
-
     __slots__ = ("_obj",)
 
     def __init__(self, obj: T_DataArray) -> None:
@@ -344,7 +344,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         The iso year and weekday differ from the nominal year and weekday.
         """
 
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")

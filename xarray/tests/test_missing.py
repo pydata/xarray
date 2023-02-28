@@ -14,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -26,6 +26,8 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
+
+dask_array_type = array_type("dask")
 
 
 @pytest.fixture
@@ -96,8 +98,7 @@ def test_interpolate_pd_compat():
     frac_nans = [0, 0.5, 1]
     methods = ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 
-    for (shape, frac_nan, method) in itertools.product(shapes, frac_nans, methods):
-
+    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
@@ -130,8 +131,7 @@ def test_interpolate_pd_compat_non_uniform_index():
     frac_nans = [0, 0.5, 1]
     methods = ["time", "index", "values"]
 
-    for (shape, frac_nan, method) in itertools.product(shapes, frac_nans, methods):
-
+    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
         da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
         for dim in ["time", "x"]:
             if method == "time" and dim != "time":
@@ -158,8 +158,7 @@ def test_interpolate_pd_compat_polynomial():
     frac_nans = [0, 0.5, 1]
     orders = [1, 2, 3]
 
-    for (shape, frac_nan, order) in itertools.product(shapes, frac_nans, orders):
-
+    for shape, frac_nan, order in itertools.product(shapes, frac_nans, orders):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
@@ -245,7 +244,6 @@ def test_interpolate_keep_attrs():
 
 
 def test_interpolate():
-
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
     mvals = vals.copy()
@@ -479,7 +477,6 @@ def test_ffill_bfill_dask(method):
 
 @requires_bottleneck
 def test_ffill_bfill_nonans():
-
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
 
@@ -492,7 +489,6 @@ def test_ffill_bfill_nonans():
 
 @requires_bottleneck
 def test_ffill_bfill_allnans():
-
     vals = np.full(6, np.nan, dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
 
@@ -720,7 +716,6 @@ def test_interpolators_complex_out_of_bounds():
         ("linear", NumpyInterpolator),
         ("linear", ScipyInterpolator),
     ]:
-
         f = interpolator(xi, yi, method=method)
         actual = f(x)
         assert_array_equal(actual, expected)
