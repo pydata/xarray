@@ -32,6 +32,7 @@ dependencies:
   - sparse
   - sphinx-autosummary-accessors
   - sphinx-book-theme >= 0.0.38
+  - sphinx-codeautolink
   - sphinx-copybutton
   - sphinx-design
   - sphinx!=4.4.0

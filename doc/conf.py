@@ -88,6 +88,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
+    "sphinx_codeautolink",
     "sphinx.ext.linkcode",
     "sphinxext.opengraph",
     "sphinx_copybutton",
@@ -120,6 +121,19 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 
 autosummary_generate = True
 autodoc_typehints = "none"
+
+# codeautolink
+codeautolink_concat_default = True
+codeautolink_global_preface = """
+import dask
+import numpy as np
+import pandas as pd
+import xarray as xr
+"""
+codeautolink_inventory_map = {
+    "xarray.core.dataarray.DataArray": "xarray.DataArray",
+    "xarray.core.dataset.Dataset": "xarray.Dataset",
+}
 
 # Napoleon configurations
 
