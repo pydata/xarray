@@ -1772,13 +1772,6 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
     return np.issubdtype(dtype, np.timedelta64)
 
 
-def contains_cftime_datetimes(var: T_Variable) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects"""
-    if cftime is None:
-        return False
-    return _contains_cftime_datetimes(var._data)
-
-
 def _contains_cftime_datetimes(array: Any) -> bool:
     """Check if a array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
@@ -1792,6 +1785,13 @@ def _contains_cftime_datetimes(array: Any) -> bool:
         return isinstance(np.asarray(sample).item(), cftime.datetime)
 
     return False
+
+
+def contains_cftime_datetimes(var: T_Variable) -> bool:
+    """Check if an xarray.Variable contains cftime.datetime objects"""
+    if cftime is None:
+        return False
+    return _contains_cftime_datetimes(var._data)
 
 
 def _contains_datetime_like_objects(var: T_Variable) -> bool:
