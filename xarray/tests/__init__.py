@@ -145,6 +145,17 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
         raise UnexpectedDataAccess("Tried accessing data")
 
 
+class FirstElementAccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        tuple_idxr = key.tuple
+        if len(tuple_idxr) > 1:
+            raise UnexpectedDataAccess("Tried accessing more than one element.")
+        return self.array[tuple_idxr]
+
+
 class ReturnItem:
     def __getitem__(self, key):
         return key

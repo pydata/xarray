@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
+from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
@@ -1772,19 +1773,21 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 
 def contains_cftime_datetimes(var: T_Variable) -> bool:
-    """Check if an array contains cftime.datetime objects"""
+    """Check if an xarray.Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
     return _contains_cftime_datetimes(var._data)
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects"""
+    """Check if a array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
 
     if array.dtype == np.dtype("O") and array.size > 0:
         first_idx = (0,) * array.ndim
+        if isinstance(array, ExplicitlyIndexed):
+            first_idx = BasicIndexer(first_idx)
         sample = array[first_idx]
         return isinstance(np.asarray(sample).item(), cftime.datetime)
 
