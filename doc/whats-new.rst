@@ -42,6 +42,8 @@ Bug fixes
 - Fix matplotlib raising a UserWarning when plotting a scatter plot
   with an unfilled marker (:issue:`7313`, :pull:`7318`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
+  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -99,8 +101,6 @@ Bug fixes
 - :py:func:`xarray.Dataset.to_zarr` now drops variable encodings that have been added by xarray during reading
   a dataset. (:issue:`7129`, :pull:`7500`).
   By `Hauke Schulz <https://github.com/observingClouds>`_.
-- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
-  By `Alex Goodman <https://github.com/agoodm>`_.
 
 Documentation
 ~~~~~~~~~~~~~
