@@ -1789,8 +1789,6 @@ def _contains_cftime_datetimes(array: Any) -> bool:
 
 def contains_cftime_datetimes(var: T_Variable) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
-    if cftime is None:
-        return False
     return _contains_cftime_datetimes(var._data)
 
 
