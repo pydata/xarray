@@ -780,9 +780,7 @@ class DatasetRolling(Rolling["Dataset"]):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
-            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
-        )
+        return Dataset(dataset, coords=self.obj.coords, attrs=attrs)
 
 
 class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
