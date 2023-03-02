@@ -6,7 +6,6 @@ import pytest
 
 import xarray as xr
 from xarray.tests import (
-    FirstElementAccessibleArray,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -668,17 +667,3 @@ def test_cftime_round_accessor(
         result = cftime_rounding_dataarray.dt.round(freq)
 
     assert_identical(result, expected)
-
-
-@requires_cftime
-def test_contains_cftime_lazy() -> None:
-    import cftime
-
-    from xarray.core.common import _contains_cftime_datetimes
-
-    times = np.array(
-        [cftime.DatetimeGregorian(1, 1, 2, 0), cftime.DatetimeGregorian(1, 1, 2, 0)],
-        dtype=object,
-    )
-    array = FirstElementAccessibleArray(times)
-    assert _contains_cftime_datetimes(array)
