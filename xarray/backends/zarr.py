@@ -207,7 +207,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
                 "which are required for xarray to determine variable dimensions."
             ) from e
 
-    nc_attrs = [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
+    nc_attrs = [attr for attr in zarr_obj.attrs if attr.lower().startswith("_nc")]
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
     return dimensions, attributes
 
@@ -495,7 +495,7 @@ class ZarrStore(AbstractWritableDataStore):
         return {
             k: v
             for k, v in self.zarr_group.attrs.asdict().items()
-            if not k.startswith("_NC")
+            if not k.lower().startswith("_nc")
         }
 
     def get_dimensions(self):
