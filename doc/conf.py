@@ -250,6 +250,7 @@ html_theme_options = dict(
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_devs",
+    icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
 )
 
 
