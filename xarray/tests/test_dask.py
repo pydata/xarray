@@ -550,17 +550,22 @@ class TestDataArrayAndDataset(DaskTestCase):
             actual = v.rolling(x=2).mean()
         self.assertLazyAndAllClose(expected, actual)
 
-    def test_groupby_first(self):
+    @pytest.mark.parametrize("func", ["first", "last"])
+    def test_groupby_first_last(self, func):
+        method = operator.methodcaller(func)
         u = self.eager_array
         v = self.lazy_array
 
         for coords in [u.coords, v.coords]:
             coords["ab"] = ("x", ["a", "a", "b", "b"])
-        with pytest.raises(NotImplementedError, match=r"dask"):
-            v.groupby("ab").first()
-        expected = u.groupby("ab").first()
+        expected = method(u.groupby("ab"))
+
         with raise_if_dask_computes():
-            actual = v.groupby("ab").first(skipna=False)
+            actual = method(v.groupby("ab"))
+        self.assertLazyAndAllClose(expected, actual)
+
+        with raise_if_dask_computes():
+            actual = method(v.groupby("ab"))
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
