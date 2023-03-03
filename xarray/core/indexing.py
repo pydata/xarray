@@ -541,7 +541,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
-       array = array.get_duck_array()
+        array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
