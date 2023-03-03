@@ -1234,7 +1234,6 @@ class NetCDFBase(CFEncodedBase):
 
         with create_tmp_file() as example_1_path:
             with create_tmp_file() as example_1_modified_path:
-
                 with open_example_dataset("example_1.nc") as example_1:
                     self.save(example_1, example_1_path)
 
@@ -1749,7 +1748,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
-
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     zarr_version = 2
     version_kwargs: dict[str, Any] = {}
@@ -1801,7 +1799,6 @@ class ZarrBase(CFEncodedBase):
             assert_identical(expected, actual)
 
     def test_read_non_consolidated_warning(self) -> None:
-
         if self.zarr_version > 2:
             pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
 
@@ -2039,6 +2036,12 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    def test_drop_encoding(self):
+        ds = open_example_dataset("example_1.nc")
+        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store, encoding=encodings)
+
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
         with self.create_store() as store:
@@ -2226,7 +2229,6 @@ class ZarrBase(CFEncodedBase):
                 )
 
     def test_check_encoding_is_consistent_after_append(self) -> None:
-
         ds, ds_to_append, _ = create_append_test_data()
 
         # check encoding consistency
@@ -2250,7 +2252,6 @@ class ZarrBase(CFEncodedBase):
             )
 
     def test_append_with_new_variable(self) -> None:
-
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
 
         # check append mode for new variable
@@ -2888,7 +2889,6 @@ class TestH5NetCDFData(NetCDF4Base):
 
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
-
         import h5netcdf
 
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -3244,7 +3244,6 @@ def skip_if_not_engine(engine):
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
-
     # skip certain combinations
     skip_if_not_engine(readengine)
 
@@ -3273,7 +3272,6 @@ def test_open_mfdataset_manyfiles(
             parallel=parallel,
             chunks=chunks if (not chunks and readengine != "zarr") else "auto",
         ) as actual:
-
             # check that using open_mfdataset returns dask arrays for variables
             assert isinstance(actual["foo"].data, dask_array_type)
 
@@ -3329,7 +3327,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
-
                 # save data to the temporary files
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
@@ -3489,7 +3486,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
             ) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -3508,7 +3504,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
             ) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -3520,7 +3515,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 assert coord_shape2 == coord_shape
 
     def test_invalid_data_vars_value_should_fail(self) -> None:
-
         with self.setup_files_and_datasets() as (files, _):
             with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars="minimum", combine="by_coords"):  # type: ignore[arg-type]
@@ -4661,7 +4655,6 @@ class TestRasterio:
             with pytest.warns(DeprecationWarning), xr.open_rasterio(
                 tmp_file, cache=False
             ) as actual:
-
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
@@ -4777,7 +4770,6 @@ class TestRasterio:
         ) as (tmp_file, expected):
             # Cache is the default
             with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as actual:
-
                 # This should cache everything
                 assert_allclose(actual, expected)
 
@@ -4795,7 +4787,6 @@ class TestRasterio:
             with pytest.warns(DeprecationWarning), xr.open_rasterio(
                 tmp_file, chunks=(1, 2, 2)
             ) as actual:
-
                 import dask.array as da
 
                 assert isinstance(actual.data, da.Array)
@@ -5416,7 +5407,6 @@ def test_encode_zarr_attr_value() -> None:
 
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
-
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var)
     assert "chunks" in actual
@@ -5673,12 +5663,14 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 @requires_zarr
 @requires_netCDF4
 class TestNCZarr:
-    @staticmethod
-    def _create_nczarr(filename):
-        netcdfc_version = Version(nc4.getlibversion().split()[0])
-        if netcdfc_version < Version("4.8.1"):
+    @property
+    def netcdfc_version(self):
+        return Version(nc4.getlibversion().split()[0])
+
+    def _create_nczarr(self, filename):
+        if self.netcdfc_version < Version("4.8.1"):
             pytest.skip("requires netcdf-c>=4.8.1")
-        if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
+        if platform.system() == "Windows" and self.netcdfc_version == Version("4.8.1"):
             # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
             # https://github.com/Unidata/netcdf-c/issues/2265
             pytest.skip("netcdf-c==4.8.1 has issues on Windows")
@@ -5688,9 +5680,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
-        # netcdf-c>4.8.1 will add _ARRAY_DIMENSIONS by default
-        mode = "nczarr" if netcdfc_version == Version("4.8.1") else "nczarr,noxarray"
-        ds.to_netcdf(f"file://{filename}#mode={mode}")
+        ds.to_netcdf(f"file://{filename}#mode=nczarr")
         return ds
 
     def test_open_nczarr(self) -> None:
@@ -5710,6 +5700,9 @@ class TestNCZarr:
     @pytest.mark.parametrize("mode", ["a", "r+"])
     @pytest.mark.filterwarnings("ignore:.*non-consolidated metadata.*")
     def test_raise_writing_to_nczarr(self, mode) -> None:
+        if self.netcdfc_version > Version("4.8.1"):
+            pytest.skip("netcdf-c>4.8.1 adds the _ARRAY_DIMENSIONS attribute")
+
         with create_tmp_file(suffix=".zarr") as tmp:
             ds = self._create_nczarr(tmp)
             with pytest.raises(
