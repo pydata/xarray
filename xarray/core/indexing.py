@@ -452,7 +452,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         # This is necessary because we apply the indexing key in self.get_duck_array()
         # Note this is the base class for all lazy indexing classes
         return np.asarray(self.get_duck_array(), dtype=dtype)

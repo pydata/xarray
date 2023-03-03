@@ -84,7 +84,7 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
-    def get_duck_array(self, dtype=None):
+    def get_duck_array(self, dtype: np.typing.DTypeLike =None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]
 
