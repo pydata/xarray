@@ -109,12 +109,27 @@ except ImportError:
     KVStore = None
 
 have_zarr_v3 = False
+have_sharding_v3 = False
 try:
-    # as of Zarr v2.13 these imports require environment variable
+    # as of Zarr v2.14 these imports require environment variable
     # ZARR_V3_EXPERIMENTAL_API=1
     from zarr import DirectoryStoreV3, KVStoreV3
 
     have_zarr_v3 = True
+
+    from zarr._storage.v3_storage_transformers import v3_sharding_available
+
+    # TODO: change to try except ImportError when available at the top-level zarr namespace
+    if v3_sharding_available:
+        # as of Zarr v2.14 these imports require environment variable
+        # ZARR_V3_SHARDING=1
+        # TODO: change import to
+        # from zarr import ShardingStorageTransformer
+        # when ShardingStorageTransformer becomes available at the top-level zarr namespace
+        from zarr._storage.v3_storage_transformers import ShardingStorageTransformer
+
+        have_sharding_v3 = True
+
 except ImportError:
     KVStoreV3 = None
 
@@ -2658,6 +2673,39 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
+
+
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
+class TestZarrStorageTransformersV3(TestZarrDirectoryStoreV3):
+    @pytest.mark.skipif(not have_sharding_v3, reason="requires sharding")
+    def test_sharding_storage_transformer(self):
+        original = create_test_data().chunk({"dim1": 2, "dim2": 3, "dim3": 2})
+
+        encoding = {
+            "var1": {
+                "storage_transformers": [
+                    ShardingStorageTransformer("indexed", chunks_per_shard=(2, 1))
+                ],
+            },
+            "var2": {
+                "storage_transformers": [
+                    ShardingStorageTransformer("indexed", chunks_per_shard=(2, 2))
+                ],
+            },
+            "var3": {
+                "storage_transformers": [
+                    ShardingStorageTransformer("indexed", chunks_per_shard=(1, 1))
+                ],
+            },
+        }
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": encoding}, open_kwargs={"chunks": {}}
+        ) as ds1:
+            assert_identical(ds1, original)
+
+        with self.roundtrip_append(original, open_kwargs={"chunks": {}}) as ds2:
+            assert_identical(ds2, original)
 
 
 @requires_zarr

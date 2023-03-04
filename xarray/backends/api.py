@@ -13,7 +13,7 @@ import numpy as np
 from xarray import backends, conventions
 from xarray.backends import plugins
 from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
-from xarray.backends.locks import _get_scheduler
+from xarray.backends.locks import _get_scheduler, get_write_lock
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -1650,7 +1650,11 @@ def to_zarr(
                     "mode='r+'. To allow writing new variables, set mode='a'."
                 )
 
-    writer = ArrayWriter()
+    if any(["storage_transformers" in encoding[var] for var in encoding]):
+        writer = ArrayWriter(lock=get_write_lock("ZARR_SHARDING_LOCK"))
+    else:
+        writer = ArrayWriter()
+
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)
     writes = writer.sync(compute=compute)
