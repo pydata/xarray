@@ -535,13 +535,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def get_duck_array(self):
-        array = as_indexable(self.array)
-        array = array[self.key]
-        # array[self.key] is now a numpy array when
+        array = self.array[self.key]
+        # self.array[self.key] is now a numpy array when
         # self.array is a BackendArray subclass
         # and self.key is BasicIndexer((slice(None, None, None),))
         # so we need the explicit check for ExplicitlyIndexed
-        array = array.get_duck_array()
+        if isinstance(array, ExplicitlyIndexed):
+            array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
 
     def transpose(self, order):
@@ -595,6 +595,10 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     def get_duck_array(self):
         array = self.array[self.key]
+        # self.array[self.key] is now a numpy array when
+        # self.array is a BackendArray subclass
+        # and self.key is BasicIndexer((slice(None, None, None),))
+        # so we need the explicit check for ExplicitlyIndexed
         if isinstance(array, ExplicitlyIndexed):
             array = array.get_duck_array()
         return _wrap_numpy_scalars(array)
