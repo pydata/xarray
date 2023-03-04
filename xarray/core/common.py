@@ -972,7 +972,7 @@ class DataWithCoords(AttrAccessMixin):
                 FutureWarning,
             )
 
-        if base is None:
+        if base is not None:
             emit_user_level_warning(
                 "Following pandas, the `base` argument to resample will be deprecated in a "
                 "future version of xarray.  Switch to using `origin` or `offset` instead.",
