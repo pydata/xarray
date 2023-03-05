@@ -258,8 +258,12 @@ def _apply_loffset(loffset, result):
     result : Series or DataFrame
         the result of resample
     """
-    # TODO: include some validation of the type of the loffset
-    # argument.
+    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta)):
+        raise ValueError(
+            f"`loffset` must be a str, pd.DateOffset, or datetime.timedelta object. "
+            f"Got {loffset}."
+        )
+
     if isinstance(loffset, str):
         loffset = pd.tseries.frequencies.to_offset(loffset)
 

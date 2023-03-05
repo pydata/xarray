@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import warnings
 
 import numpy as np
@@ -1476,15 +1477,6 @@ class TestDataArrayResample:
         actual = array.resample(time="24H").reduce(np.mean)
         assert_identical(expected, actual)
 
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        with pytest.warns(FutureWarning, match="`loffset` parameter"):
-            actual = array.resample(time="24H", loffset="-12H").mean()
-        expected_ = array.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
-        assert_identical(actual, expected)
-
         with pytest.raises(ValueError, match=r"index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
 
@@ -1833,6 +1825,27 @@ class TestDataArrayResample:
         actual = array.resample(time="24H", origin=origin).mean()
         expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
         assert_identical(expected, actual)
+
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
+    @pytest.mark.parametrize(
+        "loffset", ["-12H", datetime.timedelta(hours=-12), pd.DateOffset(hours=-12)]
+    )
+    def test_resample_loffset(self, loffset) -> None:
+        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.warns(FutureWarning, match="`loffset` parameter"):
+            actual = array.resample(time="24H", loffset=loffset).mean()
+        expected = DataArray(array.to_series().resample("24H", loffset=loffset).mean())
+        assert_identical(actual, expected)
+
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
+    def test_resample_invalid_loffset(self):
+        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.raises(ValueError, match="`loffset` must be"):
+            array.resample(time="24H", loffset=1).mean()
 
 
 class TestDatasetResample:

@@ -142,6 +142,16 @@ class CFTimeGrouper:
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
         if self.loffset is not None:
+            if not isinstance(
+                self.loffset, (str, datetime.timedelta, BaseCFTimeOffset)
+            ):
+                # BaseCFTimeOffset is not public API so we do not include it in
+                # the error message for now.
+                raise ValueError(
+                    f"`loffset` must be a str or datetime.timedelta object. "
+                    f"Got {self.loffset}."
+                )
+
             if isinstance(self.loffset, datetime.timedelta):
                 labels = labels + self.loffset
             else:
