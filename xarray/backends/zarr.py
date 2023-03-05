@@ -77,7 +77,13 @@ class ZarrArrayWrapper(BackendArray):
             ]
         else:
             assert isinstance(key, indexing.OuterIndexer)
-            return array.oindex[key.tuple]
+            # decompose so that negative slices are now positive slices for the zarr library
+            # Then reverse the in-memory data.
+            backend_indexer, numpy_indexer = indexing._decompose_outer_indexer(
+                key, self.shape, indexing.IndexingSupport.OUTER
+            )
+            part = array.oindex[backend_indexer.tuple]
+            return part[numpy_indexer.tuple]
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
