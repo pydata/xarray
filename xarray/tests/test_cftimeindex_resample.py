@@ -269,4 +269,4 @@ def test_resample_invalid_loffset_cftimeindex() -> None:
     da = xr.DataArray(np.arange(10), [("time", times)])
 
     with pytest.raises(ValueError):
-        da.resample(time="24H", loffset=1)
+        da.resample(time="24H", loffset=1)  # type: ignore

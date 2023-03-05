@@ -1850,7 +1850,7 @@ class TestDataArrayResample:
         array = DataArray(np.arange(10), [("time", times)])
 
         with pytest.raises(ValueError, match="`loffset` must be"):
-            array.resample(time="24H", loffset=1).mean()
+            array.resample(time="24H", loffset=1).mean()  # type: ignore
 
 
 class TestDatasetResample:
