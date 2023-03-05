@@ -829,9 +829,21 @@ def decompose_indexer(
     raise TypeError(f"unexpected key type: {indexer}")
 
 
-def _decompose_slice(key, size):
+def _decompose_slice(key: slice, size: int) -> tuple[slice, ...]:
     """convert a slice to successive two slices. The first slice always has
     a positive step.
+
+    >>> _decompose_slice(slice(2, 98, 2), 99)
+    (slice(2, 98, 2), slice(None, None, None))
+
+    >>> _decompose_slice(slice(98, 2, -2), 99)
+    (slice(4, 99, 2), slice(None, None, -1))
+
+    >>> _decompose_slice(slice(98, 2, -2), 98)
+    (slice(3, 98, 2), slice(None, None, -1))
+
+    >>> _decompose_slice(slice(360, None, -10), 361)
+    (slice(0, 361, 10), slice(None, None, -1))
     """
     start, stop, step = key.indices(size)
     if step > 0:
@@ -839,10 +851,10 @@ def _decompose_slice(key, size):
         return key, slice(None)
     else:
         # determine stop precisely for step > 1 case
+        # Use the range object to do the calculation
         # e.g. [98:2:-2] -> [98:3:-2]
-        stop = start + int((stop - start - 1) / step) * step + 1
-        start, stop = stop + 1, start + 1
-        return slice(start, stop, -step), slice(None, None, -1)
+        exact_stop = range(start, stop, step)[-1]
+        return slice(exact_stop, start + 1, -step), slice(None, None, -1)
 
 
 def _decompose_vectorized_indexer(

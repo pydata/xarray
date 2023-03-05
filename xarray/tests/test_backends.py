@@ -711,9 +711,6 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
-    @pytest.mark.xfail(
-        reason="zarr without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing_negative_step(self) -> None:
         # use dask explicitly when present
         open_kwargs: dict[str, Any] | None
@@ -752,6 +749,24 @@ class DatasetIOBase:
             }
         ]
         multiple_indexing(indexers)
+
+    def test_outer_indexing_reversed(self) -> None:
+        # regression test for GH6560
+        ds = xr.Dataset(
+            {
+                "z": (
+                    ("time", "isoBaricInhPa", "latitude", "longitude"),
+                    np.ones((1, 5, 721, 1440)),
+                )
+            },
+            coords={"latitude": np.linspace(-90, 90, 721)},
+        )
+
+        with self.roundtrip(ds) as on_disk:
+            subset = on_disk.isel(time=[0], isoBaricInhPa=1).z[:, ::10, ::10][
+                :, ::-1, :
+            ]
+            assert subset.sizes == subset.load().sizes
 
     def test_isel_dataarray(self) -> None:
         # Make sure isel works lazily. GH:issue:1688
