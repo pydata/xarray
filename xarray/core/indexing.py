@@ -829,7 +829,7 @@ def decompose_indexer(
     raise TypeError(f"unexpected key type: {indexer}")
 
 
-def _decompose_slice(key: slice, size: int) -> tuple[slice, ...]:
+def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
     """convert a slice to successive two slices. The first slice always has
     a positive step.
 
