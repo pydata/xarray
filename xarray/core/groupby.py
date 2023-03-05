@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import DatetimeLike, SideOptions
     from xarray.core.utils import Frozen
 
     GroupKey = Any
@@ -245,7 +246,10 @@ def _unique_and_monotonic(group: T_Group) -> bool:
     return index.is_unique and index.is_monotonic_increasing
 
 
-def _apply_loffset(loffset, result):
+def _apply_loffset(
+    loffset: str | pd.DateOffset | datetime.timedelta | pd.Timedelta,
+    result: pd.Series | pd.DataFrame,
+):
     """
     (copied from pandas)
     if loffset is set, offset the result index
@@ -258,9 +262,9 @@ def _apply_loffset(loffset, result):
     result : Series or DataFrame
         the result of resample
     """
-    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta)):
+    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta, pd.Timedelta)):
         raise ValueError(
-            f"`loffset` must be a str, pd.DateOffset, or datetime.timedelta object. "
+            f"`loffset` must be a str, pd.DateOffset, datetime.timedelta, or pandas.Timedelta object. "
             f"Got {loffset}."
         )
 
@@ -1367,7 +1371,15 @@ class DatasetGroupBy(  # type: ignore[misc]
 
 
 class TimeResampleGrouper:
-    def __init__(self, freq, closed, label, origin, offset, loffset):
+    def __init__(
+        self,
+        freq: str,
+        closed: SideOptions | None,
+        label: SideOptions | None,
+        origin: str | DatetimeLike,
+        offset: pd.Timedelta | datetime.timedelta | str | None,
+        loffset: datetime.timedelta | str | None,
+    ):
         self.freq = freq
         self.closed = closed
         self.label = label

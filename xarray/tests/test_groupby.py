@@ -1828,7 +1828,13 @@ class TestDataArrayResample:
 
     @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     @pytest.mark.parametrize(
-        "loffset", ["-12H", datetime.timedelta(hours=-12), pd.DateOffset(hours=-12)]
+        "loffset",
+        [
+            "-12H",
+            datetime.timedelta(hours=-12),
+            pd.Timedelta(hours=-12),
+            pd.DateOffset(hours=-12),
+        ],
     )
     def test_resample_loffset(self, loffset) -> None:
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
