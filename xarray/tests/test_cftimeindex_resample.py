@@ -249,7 +249,7 @@ def test_timedelta_offset() -> None:
 
 
 @pytest.mark.parametrize("loffset", ["12H", datetime.timedelta(hours=-12)])
-def test_resample_loffset_cftimeindex(loffset):
+def test_resample_loffset_cftimeindex(loffset) -> None:
     datetimeindex = pd.date_range("2000-01-01", freq="6H", periods=10)
     da_datetimeindex = xr.DataArray(np.arange(10), [("time", datetimeindex)])
 
@@ -264,7 +264,7 @@ def test_resample_loffset_cftimeindex(loffset):
     xr.testing.assert_identical(result, expected)
 
 
-def test_resample_invalid_loffset_cftimeindex():
+def test_resample_invalid_loffset_cftimeindex() -> None:
     times = xr.cftime_range("2000-01-01", freq="6H", periods=10)
     da = xr.DataArray(np.arange(10), [("time", times)])
 

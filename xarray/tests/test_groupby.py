@@ -1845,7 +1845,7 @@ class TestDataArrayResample:
         expected = DataArray(array.to_series().resample("24H", loffset=loffset).mean())
         assert_identical(actual, expected)
 
-    def test_resample_invalid_loffset(self):
+    def test_resample_invalid_loffset(self) -> None:
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
