@@ -1414,5 +1414,6 @@ class TimeResampleGrouper:
             )
 
             first_items = s.groupby(grouper).first()
-            _apply_loffset(self.loffset, first_items)
+            if self.loffset is not None:
+                _apply_loffset(self.loffset, first_items)
         return first_items
