@@ -5678,12 +5678,14 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 @requires_zarr
 @requires_netCDF4
 class TestNCZarr:
-    @staticmethod
-    def _create_nczarr(filename):
-        netcdfc_version = Version(nc4.getlibversion().split()[0])
-        if netcdfc_version < Version("4.8.1"):
+    @property
+    def netcdfc_version(self):
+        return Version(nc4.getlibversion().split()[0])
+
+    def _create_nczarr(self, filename):
+        if self.netcdfc_version < Version("4.8.1"):
             pytest.skip("requires netcdf-c>=4.8.1")
-        if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
+        if platform.system() == "Windows" and self.netcdfc_version == Version("4.8.1"):
             # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
             # https://github.com/Unidata/netcdf-c/issues/2265
             pytest.skip("netcdf-c==4.8.1 has issues on Windows")
@@ -5693,9 +5695,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
-        # netcdf-c>4.8.1 will add _ARRAY_DIMENSIONS by default
-        mode = "nczarr" if netcdfc_version == Version("4.8.1") else "nczarr,noxarray"
-        ds.to_netcdf(f"file://{filename}#mode={mode}")
+        ds.to_netcdf(f"file://{filename}#mode=nczarr")
         return ds
 
     def test_open_nczarr(self) -> None:
@@ -5715,6 +5715,9 @@ class TestNCZarr:
     @pytest.mark.parametrize("mode", ["a", "r+"])
     @pytest.mark.filterwarnings("ignore:.*non-consolidated metadata.*")
     def test_raise_writing_to_nczarr(self, mode) -> None:
+        if self.netcdfc_version > Version("4.8.1"):
+            pytest.skip("netcdf-c>4.8.1 adds the _ARRAY_DIMENSIONS attribute")
+
         with create_tmp_file(suffix=".zarr") as tmp:
             ds = self._create_nczarr(tmp)
             with pytest.raises(
