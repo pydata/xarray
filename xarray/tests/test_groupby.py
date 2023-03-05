@@ -1845,7 +1845,6 @@ class TestDataArrayResample:
         expected = DataArray(array.to_series().resample("24H", loffset=loffset).mean())
         assert_identical(actual, expected)
 
-    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_invalid_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
