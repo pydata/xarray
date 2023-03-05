@@ -977,15 +977,15 @@ class DataWithCoords(AttrAccessMixin):
 
         if loffset is not None:
             emit_user_level_warning(
-                "Following pandas, the `loffset` argument to resample will be deprecated in a "
-                "future version of xarray.  Switch to using time offset arithmetic.",
+                "Following pandas, the `loffset` parameter to resample will be deprecated "
+                "in a future version of xarray.  Switch to using time offset arithmetic.",
                 FutureWarning,
             )
 
         if base is None:
             emit_user_level_warning(
-                "Following pandas, the `base` argument to resample will be deprecated in a "
-                "future version of xarray.  Switch to using `origin` or `offset` instead.",
+                "Following pandas, the `base` parameter to resample will be deprecated in "
+                "a future version of xarray.  Switch to using `origin` or `offset` instead.",
                 FutureWarning,
             )
 

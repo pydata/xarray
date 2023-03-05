@@ -1485,7 +1485,8 @@ class TestDataArrayResample:
 
         # Our use of `loffset` may change if we align our API with pandas' changes.
         # ref https://github.com/pydata/xarray/pull/4537
-        actual = array.resample(time="24H", loffset="-12H").mean()
+        with pytest.warns(FutureWarning, match="`loffset` parameter"):
+            actual = array.resample(time="24H", loffset="-12H").mean()
         expected_ = array.to_series().resample("24H").mean()
         expected_.index += to_offset("-12H")
         expected = DataArray.from_series(expected_)
@@ -1816,7 +1817,9 @@ class TestDataArrayResample:
         array = DataArray(np.arange(10), [("time", times)])
 
         base = 11
-        actual = array.resample(time="24H", base=base).mean()
+
+        with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
+            actual = array.resample(time="24H", base=base).mean()
         expected = DataArray(array.to_series().resample("24H", base=base).mean())
         assert_identical(expected, actual)
 
