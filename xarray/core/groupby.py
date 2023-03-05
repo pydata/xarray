@@ -262,7 +262,9 @@ def _apply_loffset(
     result : Series or DataFrame
         the result of resample
     """
-    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta, pd.Timedelta)):
+    # pd.Timedelta is a subclass of datetime.timedelta so we do not need to
+    # include it in instance checks.
+    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta)):
         raise ValueError(
             f"`loffset` must be a str, pd.DateOffset, datetime.timedelta, or pandas.Timedelta object. "
             f"Got {loffset}."
