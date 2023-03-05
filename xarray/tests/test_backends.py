@@ -13,10 +13,11 @@ import sys
 import tempfile
 import uuid
 import warnings
+from collections.abc import Iterator
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Iterator, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -58,7 +59,6 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
     mock,
@@ -68,7 +68,6 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_0_12,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -1235,7 +1234,6 @@ class NetCDFBase(CFEncodedBase):
 
         with create_tmp_file() as example_1_path:
             with create_tmp_file() as example_1_modified_path:
-
                 with open_example_dataset("example_1.nc") as example_1:
                     self.save(example_1, example_1_path)
 
@@ -1750,7 +1748,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
-
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     zarr_version = 2
     version_kwargs: dict[str, Any] = {}
@@ -1802,7 +1799,6 @@ class ZarrBase(CFEncodedBase):
             assert_identical(expected, actual)
 
     def test_read_non_consolidated_warning(self) -> None:
-
         if self.zarr_version > 2:
             pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
 
@@ -2040,6 +2036,12 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    def test_drop_encoding(self):
+        ds = open_example_dataset("example_1.nc")
+        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store, encoding=encodings)
+
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
         with self.create_store() as store:
@@ -2227,7 +2229,6 @@ class ZarrBase(CFEncodedBase):
                 )
 
     def test_check_encoding_is_consistent_after_append(self) -> None:
-
         ds, ds_to_append, _ = create_append_test_data()
 
         # check encoding consistency
@@ -2251,7 +2252,6 @@ class ZarrBase(CFEncodedBase):
             )
 
     def test_append_with_new_variable(self) -> None:
-
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
 
         # check append mode for new variable
@@ -2881,45 +2881,14 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
-    @pytest.mark.parametrize(
-        "invalid_netcdf, warntype, num_warns",
-        [
-            pytest.param(
-                None,
-                FutureWarning,
-                1,
-                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
-            ),
-            pytest.param(
-                False,
-                FutureWarning,
-                1,
-                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
-            ),
-            (True, None, 0),
-        ],
-    )
-    def test_complex(self, invalid_netcdf, warntype, num_warns) -> None:
+    def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with warnings.catch_warnings(record=True) as record:
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
+        save_kwargs = {"invalid_netcdf": True}
+        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+            assert_equal(expected, actual)
 
-        recorded_num_warns = 0
-        if warntype:
-            for warning in record:
-                if issubclass(warning.category, warntype) and (
-                    "complex dtypes" in str(warning.message)
-                ):
-                    recorded_num_warns += 1
-
-        assert recorded_num_warns == num_warns
-
-    @requires_h5netcdf_0_12
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
-
         import h5netcdf
 
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -3092,11 +3061,7 @@ class TestH5NetCDFAlreadyOpen:
                 v = group.createVariable("x", "int")
                 v[...] = 42
 
-            kwargs = {}
-            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-                h5netcdf.core.h5py.__version__
-            ) >= Version("3.0.0"):
-                kwargs = dict(decode_vlen_strings=True)
+            kwargs = {"decode_vlen_strings": True}
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5["g"])
@@ -3119,11 +3084,7 @@ class TestH5NetCDFAlreadyOpen:
                 v = nc.createVariable("y", np.int32, ("x",))
                 v[:] = np.arange(10)
 
-            kwargs = {}
-            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-                h5netcdf.core.h5py.__version__
-            ) >= Version("3.0.0"):
-                kwargs = dict(decode_vlen_strings=True)
+            kwargs = {"decode_vlen_strings": True}
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5)
@@ -3283,7 +3244,6 @@ def skip_if_not_engine(engine):
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
-
     # skip certain combinations
     skip_if_not_engine(readengine)
 
@@ -3312,7 +3272,6 @@ def test_open_mfdataset_manyfiles(
             parallel=parallel,
             chunks=chunks if (not chunks and readengine != "zarr") else "auto",
         ) as actual:
-
             # check that using open_mfdataset returns dask arrays for variables
             assert isinstance(actual["foo"].data, dask_array_type)
 
@@ -3368,7 +3327,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
-
                 # save data to the temporary files
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
@@ -3528,7 +3486,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
             ) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -3547,7 +3504,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
             ) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -3559,7 +3515,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 assert coord_shape2 == coord_shape
 
     def test_invalid_data_vars_value_should_fail(self) -> None:
-
         with self.setup_files_and_datasets() as (files, _):
             with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars="minimum", combine="by_coords"):  # type: ignore[arg-type]
@@ -4700,7 +4655,6 @@ class TestRasterio:
             with pytest.warns(DeprecationWarning), xr.open_rasterio(
                 tmp_file, cache=False
             ) as actual:
-
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
@@ -4816,7 +4770,6 @@ class TestRasterio:
         ) as (tmp_file, expected):
             # Cache is the default
             with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as actual:
-
                 # This should cache everything
                 assert_allclose(actual, expected)
 
@@ -4834,7 +4787,6 @@ class TestRasterio:
             with pytest.warns(DeprecationWarning), xr.open_rasterio(
                 tmp_file, chunks=(1, 2, 2)
             ) as actual:
-
                 import dask.array as da
 
                 assert isinstance(actual.data, da.Array)
@@ -4861,7 +4813,7 @@ class TestRasterio:
                     assert_equal(actual, rioda)
 
     def test_ENVI_tags(self) -> None:
-        rasterio = pytest.importorskip("rasterio", minversion="1.0a")
+        rasterio = pytest.importorskip("rasterio")
         from rasterio.transform import from_origin
 
         # Create an ENVI file with some tags in the ENVI namespace
@@ -5004,8 +4956,7 @@ class TestRasterio:
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
 
-        # https://github.com/rasterio/rasterio/1768
-        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
+        rasterio = pytest.importorskip("rasterio")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
 
@@ -5034,8 +4985,7 @@ class TestRasterio:
     def test_rasterio_vrt_with_src_crs(self) -> None:
         # Test open_rasterio() support of WarpedVRT with specified src_crs
 
-        # https://github.com/rasterio/rasterio/1768
-        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
+        rasterio = pytest.importorskip("rasterio")
 
         # create geotiff with no CRS and specify it manually
         with create_tmp_geotiff(crs=None) as (tmp_file, expected):
@@ -5457,7 +5407,6 @@ def test_encode_zarr_attr_value() -> None:
 
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
-
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var)
     assert "chunks" in actual

@@ -1,21 +1,11 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -982,7 +972,7 @@ class DataWithCoords(AttrAccessMixin):
                 FutureWarning,
             )
 
-        if base is None:
+        if base is not None:
             emit_user_level_warning(
                 "Following pandas, the `base` parameter to resample will be deprecated in "
                 "a future version of xarray.  Switch to using `origin` or `offset` instead.",
@@ -1771,7 +1761,6 @@ def ones_like(
 def get_chunksizes(
     variables: Iterable[Variable],
 ) -> Mapping[Any, tuple[int, ...]]:
-
     chunks: dict[Any, tuple[int, ...]] = {}
     for v in variables:
         if hasattr(v._data, "chunks"):

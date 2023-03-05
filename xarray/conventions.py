@@ -2,16 +2,8 @@ from __future__ import annotations
 
 import warnings
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Tuple,
-    Union,
-)
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -48,7 +40,7 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
 
-    T_VarTuple = Tuple[Tuple[Hashable, ...], Any, dict, dict]
+    T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]
     T_Name = Union[Hashable, None]
     T_Variables = Mapping[Any, Variable]
     T_Attrs = MutableMapping[Any, Any]
@@ -205,10 +197,11 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
     if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
         raise NotImplementedError(
             "variable {!r} is a MultiIndex, which cannot yet be "
-            "serialized to netCDF files "
-            "(https://github.com/pydata/xarray/issues/1077). Use "
-            "reset_index() to convert MultiIndex levels into coordinate "
-            "variables instead.".format(name)
+            "serialized to netCDF files. Instead, either use reset_index() "
+            "to convert MultiIndex levels into coordinate variables instead "
+            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html.".format(
+                name
+            )
         )
 
 

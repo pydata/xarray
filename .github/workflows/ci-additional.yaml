@@ -53,7 +53,7 @@ jobs:
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v14
+        uses: mamba-org/provision-with-micromamba@v15
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
@@ -100,7 +100,7 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v14
+        uses: mamba-org/provision-with-micromamba@v15
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
@@ -134,18 +134,16 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  mypy38:
-    name: Mypy 3.8
+  mypy39:
+    name: Mypy 3.9
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    # temporarily skipping due to https://github.com/pydata/xarray/issues/6551
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.8"
+      PYTHON_VERSION: "3.9"
 
     steps:
       - uses: actions/checkout@v3
@@ -156,7 +154,7 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v14
+        uses: mamba-org/provision-with-micromamba@v15
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
@@ -185,7 +183,7 @@ jobs:
         uses: codecov/codecov-action@v3.1.1
         with:
           file: mypy_report/cobertura.xml
-          flags: mypy38
+          flags: mypy39
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -212,7 +210,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v14
+        uses: mamba-org/provision-with-micromamba@v15
         with:
           environment-name: xarray-tests
           environment-file: false

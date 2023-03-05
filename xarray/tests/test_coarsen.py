@@ -252,7 +252,6 @@ def test_coarsen_da_reduce(da, window, name) -> None:
 class TestCoarsenConstruct:
     @pytest.mark.parametrize("dask", [True, False])
     def test_coarsen_construct(self, dask: bool) -> None:
-
         ds = Dataset(
             {
                 "vart": ("time", np.arange(48), {"a": "b"}),

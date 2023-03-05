@@ -43,7 +43,6 @@ def array(dataset):
 
 
 def test_consolidate_slices() -> None:
-
     assert _consolidate_slices([slice(3), slice(3, 5)]) == [slice(5)]
     assert _consolidate_slices([slice(2, 3), slice(3, 6)]) == [slice(2, 6)]
     assert _consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)]) == [slice(2, 6, 1)]
@@ -188,7 +187,6 @@ def test_ds_groupby_map_func_args() -> None:
 
 
 def test_da_groupby_empty() -> None:
-
     empty_array = xr.DataArray([], dims="dim")
 
     with pytest.raises(ValueError):
@@ -196,7 +194,6 @@ def test_da_groupby_empty() -> None:
 
 
 def test_da_groupby_quantile() -> None:
-
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
@@ -430,7 +427,6 @@ def test_ds_groupby_quantile() -> None:
 
 @pytest.mark.parametrize("as_dataset", [False, True])
 def test_groupby_quantile_interpolation_deprecated(as_dataset) -> None:
-
     array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
 
     arr: xr.DataArray | xr.Dataset
@@ -653,7 +649,6 @@ def test_groupby_none_group_name() -> None:
 
 
 def test_groupby_getitem(dataset) -> None:
-
     assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
     assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
 
@@ -906,7 +901,6 @@ def test_groupby_dataset_order() -> None:
 
 
 def test_groupby_dataset_fillna():
-
     ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
     expected = Dataset({"a": ("x", range(4))}, {"x": [0, 1, 2, 3]})
     for target in [ds, expected]:
@@ -1025,12 +1019,12 @@ class TestDataArrayGroupBy:
         assert_equal(actual2, expected2)
 
     def test_groupby_iter(self):
-        for ((act_x, act_dv), (exp_x, exp_ds)) in zip(
+        for (act_x, act_dv), (exp_x, exp_ds) in zip(
             self.dv.groupby("y"), self.ds.groupby("y")
         ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
-        for ((_, exp_dv), act_dv) in zip(self.dv.groupby("x"), self.dv):
+        for (_, exp_dv), act_dv in zip(self.dv.groupby("x"), self.dv):
             assert_identical(exp_dv, act_dv)
 
     def test_groupby_properties(self):
@@ -1447,7 +1441,6 @@ class TestDataArrayGroupBy:
         assert_identical(actual, expected)
 
     def test_groupby_assign_coords(self):
-
         array = DataArray([1, 2, 3, 4], {"c": ("x", [0, 0, 1, 1])}, dims="x")
         actual = array.groupby("c").assign_coords(d=lambda a: a.mean())
         expected = array.copy()
@@ -1995,7 +1988,6 @@ class TestDatasetResample:
         assert "tc" not in actual.coords
 
     def test_resample_old_api(self):
-
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         ds = Dataset(
             {
