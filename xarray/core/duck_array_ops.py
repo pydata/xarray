@@ -9,17 +9,14 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from functools import partial
 from importlib import import_module
 
 import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import around  # noqa
-from numpy import zeros_like  # noqa
-from numpy import concatenate as _concatenate
 from numpy import (  # noqa
+    around,  # noqa
     einsum,
     gradient,
     isclose,
@@ -29,7 +26,9 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
+    zeros_like,  # noqa
 )
+from numpy import concatenate as _concatenate
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
@@ -492,7 +491,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Convert np.NaT to np.nan
     elif array.dtype.kind in "mM":
-
         # Convert to specified timedelta units.
         if datetime_unit:
             array = array / np.timedelta64(1, datetime_unit)
@@ -638,18 +636,14 @@ def cumsum(array, axis=None, **kwargs):
     return _nd_cum_func(cumsum_1d, array, axis, **kwargs)
 
 
-_fail_on_dask_array_input_skipna = partial(
-    fail_on_dask_array_input,
-    msg="%r with skipna=True is not yet implemented on dask arrays",
-)
-
-
 def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        _fail_on_dask_array_input_skipna(values)
-        return nanfirst(values, axis)
+        if is_duck_dask_array(values):
+            return dask_array_ops.nanfirst(values, axis)
+        else:
+            return nanfirst(values, axis)
     return take(values, 0, axis=axis)
 
 
@@ -657,8 +651,10 @@ def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        _fail_on_dask_array_input_skipna(values)
-        return nanlast(values, axis)
+        if is_duck_dask_array(values):
+            return dask_array_ops.nanlast(values, axis)
+        else:
+            return nanlast(values, axis)
     return take(values, -1, axis=axis)
 
 

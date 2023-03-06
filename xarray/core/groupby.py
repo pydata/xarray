@@ -2,20 +2,8 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterator,
-    Literal,
-    Mapping,
-    Sequence,
-    TypeVar,
-    Union,
-    cast,
-)
+from collections.abc import Hashable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -58,7 +46,6 @@ if TYPE_CHECKING:
 
 
 def check_reduce_dims(reduce_dims, dimensions):
-
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
@@ -1220,7 +1207,6 @@ class DataArrayGroupBy(  # type: ignore[misc]
 
 
 class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
-
     __slots__ = ()
     _dims: Frozen[Hashable, int] | None
 

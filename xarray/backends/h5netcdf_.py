@@ -152,13 +152,12 @@ class H5NetCDFStore(WritableCFDataStore):
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
-        kwargs = {"invalid_netcdf": invalid_netcdf}
+        kwargs = {
+            "invalid_netcdf": invalid_netcdf,
+            "decode_vlen_strings": decode_vlen_strings,
+        }
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
-        if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-            h5netcdf.core.h5py.__version__
-        ) >= Version("3.0.0"):
-            kwargs["decode_vlen_strings"] = decode_vlen_strings
 
         if lock is None:
             if mode == "r":
@@ -402,7 +401,6 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         phony_dims=None,
         decode_vlen_strings=True,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,

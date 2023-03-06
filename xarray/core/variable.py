@@ -6,18 +6,9 @@ import itertools
 import math
 import numbers
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Hashable,
-    Iterable,
-    Literal,
-    Mapping,
-    NoReturn,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 
 import numpy as np
 import pandas as pd
