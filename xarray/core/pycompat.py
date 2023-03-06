@@ -84,6 +84,4 @@ def is_duck_dask_array(x):
 
 
 def is_chunked_array(x):
-    # TODO this should not special-case the two libraries like this
-    cubed_array_type = DuckArrayModule("cubed").type
-    return is_duck_dask_array(x) or isinstance(x, cubed_array_type)
+    return is_duck_dask_array(x) or hasattr(x, "chunks")
