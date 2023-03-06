@@ -19,7 +19,7 @@ T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 CHUNK_MANAGERS: dict[str, T_ChunkManager] = {}
 
 
-def _get_chunk_manager(name: str) -> "ChunkManager":
+def get_chunkmanager(name: str) -> "ChunkManager":
     if name in CHUNK_MANAGERS:
         chunkmanager_cls = CHUNK_MANAGERS[name]
         return chunkmanager_cls()
@@ -27,7 +27,7 @@ def _get_chunk_manager(name: str) -> "ChunkManager":
         raise ImportError(f"ChunkManager {name} has not been defined")
 
 
-def _detect_parallel_array_type(*args) -> "ChunkManager":
+def get_chunked_array_type(*args) -> "ChunkManager":
     """
     Detects which parallel backend should be used for given set of arrays.
 

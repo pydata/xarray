@@ -29,7 +29,7 @@ from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import _detect_parallel_array_type
+from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar
@@ -694,7 +694,7 @@ def apply_variable_ufunc(
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
-            chunk_manager = _detect_parallel_array_type(*input_data)
+            chunk_manager = get_chunked_array_type(*input_data)
 
             numpy_func = func
 
@@ -2072,7 +2072,7 @@ def _calc_idxminmax(
 
     # Handle chunked arrays (e.g. dask).
     if is_chunked_array(array.data):
-        chunkmanager = _detect_parallel_array_type(array.data)
+        chunkmanager = get_chunked_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
         res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
@@ -2161,7 +2161,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
-    chunkmanager = _detect_parallel_array_type(*[arg for arg in unify_chunks_args])
+    chunkmanager = get_chunked_array_type(*[arg for arg in unify_chunks_args])
     _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
     chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []

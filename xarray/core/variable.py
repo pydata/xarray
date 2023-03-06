@@ -27,7 +27,7 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import _get_chunk_manager
+from xarray.core.parallelcompat import get_chunkmanager
 from xarray.core.pycompat import (
     DuckArrayModule,
     array_type,
@@ -1192,7 +1192,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         if from_array_kwargs is None:
             from_array_kwargs = {}
-        chunk_manager = _get_chunk_manager(from_array_kwargs.pop("manager", "dask"))
+        chunk_manager = get_chunkmanager(from_array_kwargs.pop("manager", "dask"))
 
         _from_array_kwargs = dict(
             name=name, lock=lock, inline_array=inline_array, **from_array_kwargs
