@@ -414,6 +414,12 @@ class VectorizedIndexer(ExplicitIndexer):
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
+            elif is_duck_dask_array(k):
+                raise ValueError(
+                    "Vectorized indexing with Dask arrays is not supported. "
+                    "Please pass a numpy array by calling ``.compute``. "
+                    "See https://github.com/dask/dask/issues/8958."
+                )
             elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
