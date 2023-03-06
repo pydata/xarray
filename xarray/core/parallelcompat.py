@@ -460,6 +460,13 @@ class CubedManager(ChunkManager[T_CubedArray]):
             **kwargs,
         )
 
+    def unify_chunks(
+        self, *args, **kwargs
+    ) -> tuple[dict[str, T_Chunks], list[T_CubedArray]]:
+        from cubed.core import unify_chunks
+
+        return unify_chunks(*args, **kwargs)
+
 
 try:
     import cubed  # type: ignore
