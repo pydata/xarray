@@ -29,7 +29,8 @@ from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import _detect_parallel_array_type
+from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar
 from xarray.core.variable import Variable
@@ -683,16 +684,18 @@ def apply_variable_ufunc(
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
-    if any(is_duck_dask_array(array) for array in input_data):
+    if any(is_chunked_array(array) for array in input_data):
         if dask == "forbidden":
             raise ValueError(
-                "apply_ufunc encountered a dask array on an "
-                "argument, but handling for dask arrays has not "
+                "apply_ufunc encountered a chunked array on an "
+                "argument, but handling for chunked arrays has not "
                 "been enabled. Either set the ``dask`` argument "
                 "or load your data into memory first with "
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
+            chunk_manager = _detect_parallel_array_type(*input_data)
+
             numpy_func = func
 
             if dask_gufunc_kwargs is None:
@@ -705,7 +708,7 @@ def apply_variable_ufunc(
                 for n, (data, core_dims) in enumerate(
                     zip(input_data, signature.input_core_dims)
                 ):
-                    if is_duck_dask_array(data):
+                    if is_chunked_array(data):
                         # core dimensions cannot span multiple chunks
                         for axis, dim in enumerate(core_dims, start=-len(core_dims)):
                             if len(data.chunks[axis]) != 1:
@@ -713,7 +716,7 @@ def apply_variable_ufunc(
                                     f"dimension {dim} on {n}th function argument to "
                                     "apply_ufunc with dask='parallelized' consists of "
                                     "multiple chunks, but is also a core dimension. To "
-                                    "fix, either rechunk into a single dask array chunk along "
+                                    "fix, either rechunk into a single array chunk along "
                                     f"this dimension, i.e., ``.chunk(dict({dim}=-1))``, or "
                                     "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
                                     "but beware that this may significantly increase memory usage."
@@ -740,9 +743,7 @@ def apply_variable_ufunc(
                     )
 
             def func(*arrays):
-                import dask.array as da
-
-                res = da.apply_gufunc(
+                res = chunk_manager.apply_gufunc(
                     numpy_func,
                     signature.to_gufunc_string(exclude_dims),
                     *arrays,
@@ -754,11 +755,11 @@ def apply_variable_ufunc(
                 return res
 
         elif dask == "allowed":
+            # TODO Check chunked array types here too?
             pass
         else:
             raise ValueError(
-                "unknown setting for dask array handling in "
-                "apply_ufunc: {}".format(dask)
+                "unknown setting for chunked array handling in " f"apply_ufunc: {dask}"
             )
     else:
         if vectorize:
@@ -820,7 +821,7 @@ def apply_variable_ufunc(
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
-    if any(is_duck_dask_array(arg) for arg in args):
+    if any(is_chunked_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -2069,6 +2070,7 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
+    # TODO generalize this to other types of chunked array
     # Handle dask arrays.
     if is_duck_dask_array(array.data):
         import dask.array
@@ -2161,6 +2163,7 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
+    # TODO generalize this to go through ChunkManager
     # Run dask.array.core.unify_chunks
     from dask.array.core import unify_chunks
 

@@ -10,7 +10,7 @@ import numpy as np
 from typing_extensions import TypeAlias
 
 from xarray.core import indexing, utils
-from xarray.core.pycompat import DuckArrayModule, is_duck_dask_array
+from xarray.core.pycompat import DuckArrayModule, is_chunked_array, is_duck_dask_array
 
 T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
@@ -28,17 +28,36 @@ def _get_chunk_manager(name: str) -> "ChunkManager":
 
 
 def _detect_parallel_array_type(*args) -> "ChunkManager":
-    """Detects which parallel backend should be used for given arrays (e.g. a list of dask arrays)"""
-    # TODO assert all arrays are the same type (or numpy)
-    arr = args[0]
+    """
+    Detects which parallel backend should be used for given set of arrays.
+
+    Also checks that all arrays are of same chunking type (i.e. not a mix of cubed and dask).
+    """
+
+    # TODO this list is probably redundant with something inside xarray.apply_ufunc
+    ALLOWED_NON_CHUNKED_TYPES = {int, float, np.ndarray}
+
+    chunked_array_types_found = {
+        type(a)
+        for a in args
+        if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
+    }
+
+    # Asserts all arrays are the same type (or numpy etc.)
+    if len(chunked_array_types_found) > 1:
+        raise TypeError(
+            f"Mixing chunked array types is not supported, but received types {chunked_array_types_found}"
+        )
+
+    (chunked_arr_type,) = chunked_array_types_found
 
     # iterate over defined chunk managers, seeing if each recognises this array type
     for chunkmanager in CHUNK_MANAGERS.values():
-        if chunkmanager.is_array_type(arr):
+        if chunked_arr_type == chunkmanager.array_cls:
             return chunkmanager
 
     raise ChunkManagerNotFoundError(
-        f"Could not find a Chunk Manager which recognises type {type(arr)}"
+        f"Could not find a Chunk Manager which recognises type {chunked_arr_type}"
     )
 
 
