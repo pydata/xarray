@@ -324,6 +324,12 @@ class CubedManager(ChunkManager[T_CubedArray]):
 
         return data
 
+    def rechunk(self, data: T_CubedArray, chunks, **kwargs) -> T_CubedArray:
+        return data.rechunk(chunks, **kwargs)
+
+    def compute(self, data: T_CubedArray, **kwargs) -> np.ndarray:
+        return data.compute(**kwargs)
+
     def map_blocks(
         self,
         func,
