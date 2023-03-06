@@ -48,6 +48,8 @@ def _detect_parallel_array_type(*args) -> "ChunkManager":
         raise TypeError(
             f"Mixing chunked array types is not supported, but received types {chunked_array_types_found}"
         )
+    elif len(chunked_array_types_found) == 0:
+        raise TypeError("Expected a chunked array type but none were found")
 
     (chunked_arr_type,) = chunked_array_types_found
 
@@ -146,6 +148,12 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         **kwargs,
     ):
         """Called by some niche functions in xarray."""
+        raise NotImplementedError()
+
+    def unify_chunks(
+        self, *args, **kwargs
+    ) -> tuple[dict[str, T_Chunks], list[T_ChunkedArray]]:
+        """Called by xr.unify_chunks."""
         raise NotImplementedError()
 
 
@@ -307,6 +315,13 @@ class DaskManager(ChunkManager[T_DaskArray]):
             meta=meta,
             **kwargs,
         )
+
+    def unify_chunks(
+        self, *args, **kwargs
+    ) -> tuple[dict[str, T_Chunks], list[T_DaskArray]]:
+        from dask.array.core import unify_chunks
+
+        return unify_chunks(*args, **kwargs)
 
 
 try:

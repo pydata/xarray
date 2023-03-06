@@ -2161,17 +2161,14 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
-    # TODO generalize this to go through ChunkManager
-    # Run dask.array.core.unify_chunks
-    from dask.array.core import unify_chunks
-
-    _, dask_data = unify_chunks(*unify_chunks_args)
-    dask_data_iter = iter(dask_data)
+    chunkmanager = _detect_parallel_array_type(*[arg for arg in unify_chunks_args])
+    _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
+    chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []
     for obj, ds in zip(objects, datasets):
         for k, v in ds._variables.items():
             if v.chunks is not None:
-                ds._variables[k] = v.copy(data=next(dask_data_iter))
+                ds._variables[k] = v.copy(data=next(chunked_data_iter))
         out.append(obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds)
 
     return tuple(out)
