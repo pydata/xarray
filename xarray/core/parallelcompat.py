@@ -4,7 +4,7 @@ It could later be used as the basis for a public interface allowing any N framew
 but for now it is just a private experiment.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, Tuple, Type, TypeVar
+from typing import Any, Generic, TypeVar
 
 import numpy as np
 from typing_extensions import TypeAlias
@@ -14,9 +14,9 @@ from xarray.core.pycompat import DuckArrayModule, is_duck_dask_array
 
 T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
-T_Chunks: TypeAlias = Tuple[Tuple[int, ...], ...]
+T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 
-CHUNK_MANAGERS: Dict[str, T_ChunkManager] = {}
+CHUNK_MANAGERS: dict[str, T_ChunkManager] = {}
 
 
 def _get_chunk_manager(name: str) -> "ChunkManager":
@@ -59,7 +59,7 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         Used for type checking.
     """
 
-    array_cls: Type[T_ChunkedArray]
+    array_cls: type[T_ChunkedArray]
 
     @abstractmethod
     def __init__(self):
@@ -70,7 +70,6 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def chunks(self, data: T_ChunkedArray) -> T_Chunks:
-
         ...
 
     @abstractmethod
@@ -134,7 +133,6 @@ T_DaskArray = TypeVar("T_DaskArray", bound="dask.array.Array")
 
 
 class DaskManager(ChunkManager[T_DaskArray]):
-
     array_cls: T_DaskArray
 
     def __init__(self):
