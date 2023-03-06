@@ -325,6 +325,9 @@ class CubedManager(ChunkManager[T_CubedArray]):
 
         self.array_cls = Array
 
+    def chunks(self, data: T_CubedArray) -> T_Chunks:
+        return data.chunks
+
     def from_array(self, data: np.ndarray, chunks, **kwargs) -> T_CubedArray:
         import cubed  # type: ignore
 

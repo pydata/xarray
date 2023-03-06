@@ -30,7 +30,7 @@ class DuckArrayModule:
     available: bool
 
     def __init__(self, mod: ModType) -> None:
-        duck_array_module: ModuleType | None = None
+        duck_array_module: ModuleType | None
         duck_array_version: Version
         duck_array_type: DuckArrayTypes
         try:
