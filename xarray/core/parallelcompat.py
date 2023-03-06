@@ -21,8 +21,8 @@ CHUNK_MANAGERS: dict[str, T_ChunkManager] = {}
 
 def _get_chunk_manager(name: str) -> "ChunkManager":
     if name in CHUNK_MANAGERS:
-        chunkmanager = CHUNK_MANAGERS[name]
-        return chunkmanager
+        chunkmanager_cls = CHUNK_MANAGERS[name]
+        return chunkmanager_cls()
     else:
         raise ImportError(f"ChunkManager {name} has not been defined")
 
@@ -52,7 +52,8 @@ def _detect_parallel_array_type(*args) -> "ChunkManager":
     (chunked_arr_type,) = chunked_array_types_found
 
     # iterate over defined chunk managers, seeing if each recognises this array type
-    for chunkmanager in CHUNK_MANAGERS.values():
+    for chunkmanager_cls in CHUNK_MANAGERS.values():
+        chunkmanager = chunkmanager_cls()
         if chunked_arr_type == chunkmanager.array_cls:
             return chunkmanager
 
@@ -311,7 +312,7 @@ class DaskManager(ChunkManager[T_DaskArray]):
 try:
     import dask
 
-    CHUNK_MANAGERS["dask"] = DaskManager()
+    CHUNK_MANAGERS["dask"] = DaskManager
 except ImportError:
     pass
 
@@ -443,6 +444,6 @@ class CubedManager(ChunkManager[T_CubedArray]):
 try:
     import cubed  # type: ignore
 
-    CHUNK_MANAGERS["cubed"] = CubedManager()
+    CHUNK_MANAGERS["cubed"] = CubedManager
 except ImportError:
     pass
