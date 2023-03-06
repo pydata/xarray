@@ -2070,13 +2070,11 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
-    # TODO generalize this to other types of chunked array
-    # Handle dask arrays.
-    if is_duck_dask_array(array.data):
-        import dask.array
-
+    # Handle chunked arrays (e.g. dask).
+    if is_chunked_array(array.data):
+        chunkmanager = _detect_parallel_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
-        dask_coord = dask.array.from_array(array[dim].data, chunks=chunks[dim])
+        dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
         res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
         # we need to attach back the dim name
         res.name = dim
