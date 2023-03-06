@@ -37,30 +37,30 @@ def get_chunked_array_type(*args) -> "ChunkManager":
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
     ALLOWED_NON_CHUNKED_TYPES = {int, float, np.ndarray}
 
-    chunked_array_types_found = {
-        type(a)
+    chunked_arrays = [
+        a
         for a in args
         if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
-    }
+    ]
 
     # Asserts all arrays are the same type (or numpy etc.)
-    if len(chunked_array_types_found) > 1:
+    chunked_array_types = {type(a) for a in chunked_arrays}
+    if len(chunked_array_types) > 1:
         raise TypeError(
-            f"Mixing chunked array types is not supported, but received types {chunked_array_types_found}"
+            f"Mixing chunked array types is not supported, but received multiple types: {chunked_array_types}"
         )
-    elif len(chunked_array_types_found) == 0:
-        raise TypeError("Expected a chunked array type but none were found")
-
-    (chunked_arr_type,) = chunked_array_types_found
+    elif len(chunked_array_types) == 0:
+        raise TypeError("Expected a chunked array but none were found")
 
     # iterate over defined chunk managers, seeing if each recognises this array type
+    chunked_arr = chunked_arrays[0]
     for chunkmanager_cls in CHUNK_MANAGERS.values():
         chunkmanager = chunkmanager_cls()
-        if chunked_arr_type == chunkmanager.array_cls:
+        if chunkmanager.is_chunked_array(chunked_arr):
             return chunkmanager
 
     raise ChunkManagerNotFoundError(
-        f"Could not find a Chunk Manager which recognises type {chunked_arr_type}"
+        f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
     )
 
 
@@ -87,7 +87,7 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
     def __init__(self):
         ...
 
-    def is_array_type(self, data: Any) -> bool:
+    def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, self.array_cls)
 
     @abstractmethod
@@ -167,6 +167,9 @@ class DaskManager(ChunkManager[T_DaskArray]):
         from dask.array import Array
 
         self.array_cls = Array
+
+    def is_chunked_array(self, data: Any) -> bool:
+        return is_duck_dask_array(data)
 
     def chunks(self, data: T_DaskArray) -> T_Chunks:
         return data.chunks
