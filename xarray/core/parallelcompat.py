@@ -216,11 +216,14 @@ class DaskManager(ChunkManager[T_DaskArray]):
             )
         return data
 
+    # TODO is simple method propagation like this necessary?
     def rechunk(self, data: T_DaskArray, chunks, **kwargs) -> T_DaskArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, data: T_DaskArray, **kwargs) -> np.ndarray:
-        return data.compute(**kwargs)
+    def compute(self, *data: T_DaskArray, **kwargs) -> np.ndarray:
+        from dask.array import compute
+
+        return compute(*data, **kwargs)
 
     def apply_gufunc(
         self,
@@ -365,8 +368,10 @@ class CubedManager(ChunkManager[T_CubedArray]):
     def rechunk(self, data: T_CubedArray, chunks, **kwargs) -> T_CubedArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, data: T_CubedArray, **kwargs) -> np.ndarray:
-        return data.compute(**kwargs)
+    def compute(self, *data: T_CubedArray, **kwargs) -> np.ndarray:
+        from cubed import compute
+
+        return compute(*data, **kwargs)
 
     def map_blocks(
         self,
