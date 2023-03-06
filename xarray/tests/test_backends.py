@@ -711,6 +711,9 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
+    @pytest.mark.xfail(
+        reason="zarr without dask handles negative steps in slices incorrectly",
+    )
     def test_vectorized_indexing_negative_step(self) -> None:
         # use dask explicitly when present
         open_kwargs: dict[str, Any] | None
