@@ -67,6 +67,9 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self.datastore.zarr_group[self.variable_name]
 
+    def _oindex(self, key):
+        return self.get_array().oindex[key]
+
     def __getitem__(self, key):
         array = self.get_array()
         if isinstance(key, indexing.BasicIndexer):
@@ -77,13 +80,12 @@ class ZarrArrayWrapper(BackendArray):
             ]
         else:
             assert isinstance(key, indexing.OuterIndexer)
-            # decompose so that negative slices are now positive slices for the zarr library
-            # Then reverse the in-memory data.
-            backend_indexer, numpy_indexer = indexing._decompose_outer_indexer(
-                key, self.shape, indexing.IndexingSupport.OUTER
+            # Lie about IndexingSupport so that we do
+            # rewrite negative slices to positive slices
+            return indexing.explicit_indexing_adapter(
+                key, array.shape, indexing.IndexingSupport.OUTER, self._oindex
             )
-            part = array.oindex[backend_indexer.tuple]
-            return part[numpy_indexer.tuple]
+
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
