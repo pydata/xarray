@@ -15,6 +15,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 from packaging.version import Version
+from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from numpy._typing import _SupportsDType
@@ -107,7 +108,9 @@ DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
 
+T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 T_CubedSpec = TypeVar("T_CubedSpec", bound="Spec")
+
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 

@@ -7,14 +7,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
 import numpy as np
-from typing_extensions import TypeAlias
 
 from xarray.core import indexing, utils
 from xarray.core.pycompat import DuckArrayModule, is_chunked_array, is_duck_dask_array
+from xarray.core.types import T_Chunks
 
 T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
-T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 
 CHUNK_MANAGERS: dict[str, T_ChunkManager] = {}
 
@@ -42,6 +41,8 @@ def get_chunked_array_type(*args) -> "ChunkManager":
         for a in args
         if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
     ]
+
+    print(chunked_arrays)
 
     # Asserts all arrays are the same type (or numpy etc.)
     chunked_array_types = {type(a) for a in chunked_arrays}
@@ -164,6 +165,8 @@ class DaskManager(ChunkManager[T_DaskArray]):
     array_cls: T_DaskArray
 
     def __init__(self):
+        # TODO can we replace this with a class attribute instead?
+
         from dask.array import Array
 
         self.array_cls = Array
