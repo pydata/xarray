@@ -79,11 +79,12 @@ def infer_freq(index):
         If there are fewer than three values or the index is not 1D.
     """
     from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if isinstance(index, (DataArray, pd.Series)):
         if index.ndim != 1:
             raise ValueError("'index' must be 1D")
-        elif not _contains_datetime_like_objects(DataArray(index)):
+        elif not _contains_datetime_like_objects(Variable("dim", index)):
             raise ValueError("'index' must contain datetime-like objects")
         dtype = np.asarray(index).dtype
         if dtype == "datetime64[ns]":

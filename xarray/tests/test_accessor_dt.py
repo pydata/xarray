@@ -418,7 +418,6 @@ def test_calendar_cftime(data) -> None:
     assert data.time.dt.calendar == expected
 
 
-@requires_cftime
 def test_calendar_datetime64_2d() -> None:
     data = xr.DataArray(np.zeros((4, 5), dtype="datetime64[ns]"), dims=("x", "y"))
     assert data.dt.calendar == "proleptic_gregorian"
