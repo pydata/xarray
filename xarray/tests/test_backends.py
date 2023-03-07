@@ -2560,7 +2560,7 @@ class ZarrBase(CFEncodedBase):
             ds_a = xr.open_zarr(store_target, **self.version_kwargs)
             assert_identical(ds, ds_a)
             ds_b = xr.open_zarr(store_target, use_cftime=True, **self.version_kwargs)
-            assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+            assert xr.coding.times.contains_cftime_datetimes(ds_b.time.variable)
 
     def test_write_read_select_write(self) -> None:
         # Test for https://github.com/pydata/xarray/issues/4084
