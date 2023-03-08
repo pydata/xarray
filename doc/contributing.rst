@@ -324,7 +324,17 @@ To build the documentation run::
     cd doc/
     make html
 
-Then you can find the HTML output in the folder ``xarray/doc/_build/html/``.
+Then you can find the HTML output files in the folder ``xarray/doc/_build/html/``.
+
+To see what the documentation now looks like with your changes, you can view the HTML build locally by opening the files in your local browser.
+For example, if you normally use Google Chrome as your browser, you could enter::
+
+    google-chrome _build/html/quick-overview.html
+
+in the terminal, running from within the ``doc/`` folder.
+You should now see a new tab pop open in your local browser showing the ``quick-overview`` page of the documentation.
+The different pages of this local build of the documentation are linked together,
+so you can browse the whole documentation by following links the same way you would on the officially-hosted xarray docs site.
 
 The first time you build the docs, it will take quite a while because it has to run
 all the code examples and build all the generated docstring pages. In subsequent
