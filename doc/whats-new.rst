@@ -23,6 +23,10 @@ v2023.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Support dask arrays in ``first`` and ``last`` reductions.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,7 +38,14 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Require to explicitly defining optional dimensions such as hue
+  and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix matplotlib raising a UserWarning when plotting a scatter plot
+  with an unfilled marker (:issue:`7313`, :pull:`7318`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
+  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
