@@ -12,11 +12,7 @@ import numpy as np
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.utils import (
-    FrozenDict,
-    NdimSizeLenMixin,
-    is_remote_uri,
-)
+from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
