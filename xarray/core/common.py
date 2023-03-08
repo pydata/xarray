@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
+from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.pycompat import is_duck_dask_array
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
         ScalarOrArray,
         SideOptions,
         T_DataWithCoords,
+        T_Variable,
     )
     from xarray.core.variable import Variable
 
@@ -1796,31 +1798,27 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
     return np.issubdtype(dtype, np.timedelta64)
 
 
-def _contains_cftime_datetimes(array) -> bool:
-    """Check if an array contains cftime.datetime objects"""
+def _contains_cftime_datetimes(array: Any) -> bool:
+    """Check if a array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
-    else:
-        if array.dtype == np.dtype("O") and array.size > 0:
-            sample = np.asarray(array).flat[0]
-            if is_duck_dask_array(sample):
-                sample = sample.compute()
-                if isinstance(sample, np.ndarray):
-                    sample = sample.item()
-            return isinstance(sample, cftime.datetime)
-        else:
-            return False
+
+    if array.dtype == np.dtype("O") and array.size > 0:
+        first_idx = (0,) * array.ndim
+        if isinstance(array, ExplicitlyIndexed):
+            first_idx = BasicIndexer(first_idx)
+        sample = array[first_idx]
+        return isinstance(np.asarray(sample).item(), cftime.datetime)
+
+    return False
 
 
-def contains_cftime_datetimes(var) -> bool:
+def contains_cftime_datetimes(var: T_Variable) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
-    if var.dtype == np.dtype("O") and var.size > 0:
-        return _contains_cftime_datetimes(var.data)
-    else:
-        return False
+    return _contains_cftime_datetimes(var._data)
 
 
-def _contains_datetime_like_objects(var) -> bool:
+def _contains_datetime_like_objects(var: T_Variable) -> bool:
     """Check if a variable contains datetime like objects (either
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
