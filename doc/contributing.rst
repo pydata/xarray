@@ -122,17 +122,55 @@ want to clone your fork to your machine::
 This creates the directory `xarray` and connects your repository to
 the upstream (main project) *xarray* repository.
 
+Creating a branch
+-----------------
+
+You want your ``main`` branch to reflect only production-ready code, so create a
+feature branch before making your changes. For example::
+
+    git branch shiny-new-feature
+    git checkout shiny-new-feature
+
+The above can be simplified to::
+
+    git checkout -b shiny-new-feature
+
+This changes your working directory to the shiny-new-feature branch.  Keep any
+changes in this branch specific to one bug or feature so it is clear
+what the branch brings to *xarray*. You can have many "shiny-new-features"
+and switch in between them using the ``git checkout`` command.
+
+To update this branch, you need to retrieve the changes from the ``main`` branch::
+
+    git fetch upstream
+    git merge upstream/main
+
+This will combine your commits with the latest *xarray* git ``main``.  If this
+leads to merge conflicts, you must resolve these before submitting your pull
+request.  If you have uncommitted changes, you will need to ``git stash`` them
+prior to updating.  This will effectively store your changes, which can be
+reapplied after updating.
+
 .. _contributing.dev_env:
 
 Creating a development environment
 ----------------------------------
 
-To test out code changes, you'll need to build *xarray* from source, which
+To test out code changes locally, you'll need to build *xarray* from source, which
 requires a Python environment. If you're making documentation changes, you can
 skip to :ref:`contributing.documentation` but you won't be able to build the
 documentation locally before pushing your changes.
 
-.. _contributiong.dev_python:
+.. note::
+
+    For small changes, such as fixing a typo, you don't necessarily need to build and test xarray locally.
+    If you make your changes then :ref:`commit and push them to a new branch <contributing.pushing>`,
+    xarray's automated :ref:`continuous integration tests <contributing.ci>` will run and check your code in various ways.
+    You can then try to fix these problems by committing and pushing more commits to the same branch.
+    To speed up this feedback loop or for more complex development tasks you should build and test xarray locally.
+
+
+.. _contributing.dev_python:
 
 Creating a Python Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -192,35 +230,6 @@ To return to your root environment::
       conda deactivate
 
 See the full conda docs `here <http://conda.pydata.org/docs>`__.
-
-Creating a branch
------------------
-
-You want your ``main`` branch to reflect only production-ready code, so create a
-feature branch before making your changes. For example::
-
-    git branch shiny-new-feature
-    git checkout shiny-new-feature
-
-The above can be simplified to::
-
-    git checkout -b shiny-new-feature
-
-This changes your working directory to the shiny-new-feature branch.  Keep any
-changes in this branch specific to one bug or feature so it is clear
-what the branch brings to *xarray*. You can have many "shiny-new-features"
-and switch in between them using the ``git checkout`` command.
-
-To update this branch, you need to retrieve the changes from the ``main`` branch::
-
-    git fetch upstream
-    git merge upstream/main
-
-This will combine your commits with the latest *xarray* git ``main``.  If this
-leads to merge conflicts, you must resolve these before submitting your pull
-request.  If you have uncommitted changes, you will need to ``git stash`` them
-prior to updating.  This will effectively store your changes, which can be
-reapplied after updating.
 
 .. _contributing.documentation:
 
@@ -738,6 +747,8 @@ issue/pull request number).
 If your code is an enhancement, it is most likely necessary to add usage
 examples to the existing documentation.  This can be done following the section
 regarding documentation :ref:`above <contributing.documentation>`.
+
+.. _contributing.pushing:
 
 Contributing your changes to *xarray*
 =====================================
