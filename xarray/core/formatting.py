@@ -13,7 +13,6 @@ from reprlib import recursive_repr
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.duck_array_ops import array_equiv
