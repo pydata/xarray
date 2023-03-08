@@ -841,7 +841,13 @@ release.  To submit a pull request:
 #. Click ``Send Pull Request``.
 
 This request then goes to the repository maintainers, and they will review
-the code. If you need to make more changes, you can make them in
+the code.
+
+If you have made updates to the documentation, you can see a preview of the updated docs by clicking on "Details" under
+the ``docs/readthedocs.org`` check near the bottom of the list of checks that run automatically when submitting a PR,
+then clicking on "View Docs" in the top-right.
+
+If you need to make more changes, you can make them in
 your branch, add them to a new commit, push them to GitHub, and the pull request
 will automatically be updated.  Pushing them to GitHub again is done by::
 
