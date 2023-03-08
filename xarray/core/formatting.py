@@ -114,7 +114,6 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    # Timestamp is only valid for 1678 to 2262
     try:
         timestamp = pd.Timestamp(t)
         datetime_str = timestamp.strftime("%Y-%m-%d %H:%M:%s")
