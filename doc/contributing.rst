@@ -362,14 +362,14 @@ Code Formatting
 xarray uses several tools to ensure a consistent code format throughout the project:
 
 - `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
-  code formatting
+  code formatting,
 - `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
-  standardized code formatting in documentation
-- `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
-- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
-  See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+  standardized code formatting in documentation,
+- `flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality (we now use `ruff <https://github.com/charliermarsh/ruff/>`_ to apply these checks),
+- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports
+  (again we use `ruff <https://github.com/charliermarsh/ruff/>`_ to apply this formatting),
 - `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
-  <https://docs.python.org/3/library/typing.html>`_
+  <https://docs.python.org/3/library/typing.html>`_.
 
 We highly recommend that you setup `pre-commit hooks <https://pre-commit.com/>`_
 to automatically run all the above tools every time you make a git commit. This
