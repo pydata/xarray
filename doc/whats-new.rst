@@ -50,6 +50,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Clarify language in contributor's guide (:issue:`7495`, :pull:`7595`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
