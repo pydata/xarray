@@ -19,14 +19,14 @@ enhancements, and ideas are welcome.
 If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
 to find issues that interest you. There are a number of issues listed under
-`Documentation <https://github.com/pydata/xarray/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation>`_
+`Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`_
 and `good first issue
-<https://github.com/pydata/xarray/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`_
+<https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_
 where you could start out. Once you've found an interesting issue, you can
 return here to get your development environment setup.
 
 Feel free to ask questions on the `mailing list
-<https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!forum/xarray>`_.
+<https://groups.google.com/g/xarray>`_.
 
 .. _contributing.bug_reports:
 
