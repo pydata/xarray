@@ -302,6 +302,7 @@ Requirements
 ~~~~~~~~~~~~
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
+You should also use this environment and these steps if you want to view changes you've made to the docstrings.
 
 .. code-block:: sh
 
