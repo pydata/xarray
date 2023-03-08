@@ -118,18 +118,7 @@ def format_timestamp(t):
     # Timestamp is only valid for 1678 to 2262
     try:
         timestamp = pd.Timestamp(t)
-        # With pandas version >= 2.0.0 it is possible for objects representing
-        # dates outside the range of nanosecond-precision datetimes to be cast
-        # to Timestamps (pandas will use a coarser time resolution than
-        # nanoseconds).  To preserve existing behavior in xarray, we will force
-        # any object passed to this function to be cast to a
-        # nanosecond-precision Timestamp.  If we do not do this, the way pandas
-        # represents 0001-01-01 00:00:00 as a string causes some failing tests.
-        # Pandas represents it as 1-01-01 00:00:00, while we expect it to be
-        # represented as 0001-01-01.
-        if Version(pd.__version__).major >= 2:
-            timestamp = timestamp.as_unit("ns")
-        datetime_str = str(timestamp)
+        datetime_str = timestamp.strftime("%Y-%m-%d %H:%M:%s")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
