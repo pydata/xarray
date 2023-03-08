@@ -874,15 +874,13 @@ def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
     theta = np.linspace(0, 2 * np.pi, 5)
     w = np.linspace(-0.25, 0.25, 7)
     r = xr.DataArray(
-        data=1 + w[:, np.newaxis] * np.cos(theta),
-        coords=[("w", w), ("theta", theta)],
+        data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)]
     )
 
     xda = r * np.cos(theta)
     yda = r * np.sin(theta)
     zda = xr.DataArray(
-        data=w[:, np.newaxis] * np.sin(theta),
-        coords=[("w", w), ("theta", theta)],
+        data=w[:, np.newaxis] * np.sin(theta), coords=[("w", w), ("theta", theta)]
     )
 
     kwargs = {"fill_value": None}
@@ -898,10 +896,7 @@ def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
 @requires_scipy
 def test_interp1d_bounds_error() -> None:
     """Ensure exception on bounds error is raised if requested"""
-    da = xr.DataArray(
-        np.sin(0.3 * np.arange(4)),
-        [("time", np.arange(4))],
-    )
+    da = xr.DataArray(np.sin(0.3 * np.arange(4)), [("time", np.arange(4))])
 
     with pytest.raises(ValueError):
         da.interp(time=3.5, kwargs=dict(bounds_error=True))
@@ -933,10 +928,7 @@ def test_coord_attrs(x, expect_same_attrs: bool) -> None:
 @requires_scipy
 def test_interp1d_complex_out_of_bounds() -> None:
     """Ensure complex nans are used by default"""
-    da = xr.DataArray(
-        np.exp(0.3j * np.arange(4)),
-        [("time", np.arange(4))],
-    )
+    da = xr.DataArray(np.exp(0.3j * np.arange(4)), [("time", np.arange(4))])
 
     expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
     actual = da.interp(time=3.5)

@@ -385,8 +385,7 @@ def test_weighted_mean_bool():
 
 
 @pytest.mark.parametrize(
-    ("weights", "expected"),
-    (([1, 2], 2 / 3), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
+    ("weights", "expected"), (([1, 2], 2 / 3), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0))
 )
 def test_weighted_sum_of_squares_no_nan(weights, expected):
     da = DataArray([1, 2])
@@ -399,8 +398,7 @@ def test_weighted_sum_of_squares_no_nan(weights, expected):
 
 
 @pytest.mark.parametrize(
-    ("weights", "expected"),
-    (([1, 2], 0), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
+    ("weights", "expected"), (([1, 2], 0), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0))
 )
 def test_weighted_sum_of_squares_nan(weights, expected):
     da = DataArray([np.nan, 2])

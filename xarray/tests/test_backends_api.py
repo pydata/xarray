@@ -36,10 +36,7 @@ def test_custom_engine() -> None:
 
     class CustomBackend(xr.backends.BackendEntrypoint):
         def open_dataset(
-            self,
-            filename_or_obj,
-            drop_variables=None,
-            **kwargs,
+            self, filename_or_obj, drop_variables=None, **kwargs
         ) -> xr.Dataset:
             return expected.copy(deep=True)
 
@@ -55,10 +52,7 @@ def test_multiindex() -> None:
 
     class MultiindexBackend(xr.backends.BackendEntrypoint):
         def open_dataset(
-            self,
-            filename_or_obj,
-            drop_variables=None,
-            **kwargs,
+            self, filename_or_obj, drop_variables=None, **kwargs
         ) -> xr.Dataset:
             return dataset.copy(deep=True)
 

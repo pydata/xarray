@@ -48,11 +48,7 @@ class TestOps:
     def setUp(self):
         self.x = array(
             [
-                [
-                    [nan, nan, 2.0, nan],
-                    [nan, 5.0, 6.0, nan],
-                    [8.0, 9.0, 10.0, nan],
-                ],
+                [[nan, nan, 2.0, nan], [nan, 5.0, 6.0, nan], [8.0, 9.0, 10.0, nan]],
                 [
                     [nan, 13.0, 14.0, 15.0],
                     [nan, 17.0, 18.0, nan],
@@ -140,11 +136,7 @@ class TestDaskOps(TestOps):
 
         self.x = dask.array.from_array(
             [
-                [
-                    [nan, nan, 2.0, nan],
-                    [nan, 5.0, 6.0, nan],
-                    [8.0, 9.0, 10.0, nan],
-                ],
+                [[nan, nan, 2.0, nan], [nan, 5.0, 6.0, nan], [8.0, 9.0, 10.0, nan]],
                 [
                     [nan, 13.0, 14.0, 15.0],
                     [nan, 17.0, 18.0, nan],

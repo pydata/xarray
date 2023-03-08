@@ -615,10 +615,7 @@ def array_repr(arr):
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
     dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
-    summary = [
-        f"{start}({dims})>",
-        data_repr,
-    ]
+    summary = [f"{start}({dims})>", data_repr]
 
     if hasattr(arr, "coords"):
         if arr.coords:

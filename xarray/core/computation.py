@@ -136,9 +136,7 @@ class _UFuncSignature:
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(
-            type(self).__name__,
-            list(self.input_core_dims),
-            list(self.output_core_dims),
+            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
         )
 
     def __str__(self):
@@ -782,10 +780,7 @@ def apply_variable_ufunc(
         )
 
     objs = _all_of_type(args, Variable)
-    attrs = merge_attrs(
-        [obj.attrs for obj in objs],
-        combine_attrs=keep_attrs,
-    )
+    attrs = merge_attrs([obj.attrs for obj in objs], combine_attrs=keep_attrs)
 
     output: list[Variable] = []
     for dims, data in zip(output_dims, result_data):
@@ -1589,11 +1584,7 @@ def cross(
             # If the arrays have coords we know which indexes to fill
             # with zeros:
             a, b = align(
-                a,
-                b,
-                fill_value=0,
-                join="outer",
-                exclude=set(all_dims) - {dim},
+                a, b, fill_value=0, join="outer", exclude=set(all_dims) - {dim}
             )
         elif min(a.sizes[dim], b.sizes[dim]) == 2:
             # If the array doesn't have coords we can only infer
@@ -1628,11 +1619,7 @@ def cross(
     return c
 
 
-def dot(
-    *arrays,
-    dims: Dims = None,
-    **kwargs: Any,
-):
+def dot(*arrays, dims: Dims = None, **kwargs: Any):
     """Generalized dot product for xarray objects. Like np.einsum, but
     provides a simpler interface based on array dimensions.
 
@@ -2017,7 +2004,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
                 np.datetime64("1970-01-01") if x.dtype.kind == "M" else _cfoffset(x)
             )
             return x.copy(
-                data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
+                data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns")
             )
         elif x.dtype.kind == "m":
             # timedeltas

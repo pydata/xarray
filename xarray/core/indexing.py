@@ -118,9 +118,7 @@ def merge_sel_results(results: list[IndexSelResult]) -> IndexSelResult:
 
 
 def group_indexers_by_index(
-    obj: T_Xarray,
-    indexers: Mapping[Any, Any],
-    options: Mapping[str, Any],
+    obj: T_Xarray, indexers: Mapping[Any, Any], options: Mapping[str, Any]
 ) -> list[tuple[Index, dict[Any, Any]]]:
     """Returns a list of unique indexes and their corresponding indexers."""
     unique_indexes = {}
@@ -1504,10 +1502,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     __slots__ = ("array", "_dtype", "level", "adapter")
 
     def __init__(
-        self,
-        array: pd.MultiIndex,
-        dtype: DTypeLike = None,
-        level: str | None = None,
+        self, array: pd.MultiIndex, dtype: DTypeLike = None, level: str | None = None
     ):
         super().__init__(array, dtype)
         self.level = level

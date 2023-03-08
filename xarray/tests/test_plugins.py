@@ -52,9 +52,7 @@ def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
 
 def test_broken_plugin() -> None:
     broken_backend = EntryPoint(
-        "broken_backend",
-        "xarray.tests.test_plugins:backend_1",
-        "xarray.backends",
+        "broken_backend", "xarray.tests.test_plugins:backend_1", "xarray.backends"
     )
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.build_engines([broken_backend])
@@ -173,10 +171,7 @@ def test_no_matching_engine_found() -> None:
         plugins.guess_engine("foo.nc")
 
 
-@mock.patch(
-    "xarray.backends.plugins.list_engines",
-    mock.MagicMock(return_value={}),
-)
+@mock.patch("xarray.backends.plugins.list_engines", mock.MagicMock(return_value={}))
 def test_engines_not_installed() -> None:
     with pytest.raises(ValueError, match=r"xarray is unable to open"):
         plugins.guess_engine("not-valid")

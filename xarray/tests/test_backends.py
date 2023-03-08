@@ -712,7 +712,7 @@ class DatasetIOBase:
         multiple_indexing(indexers5)
 
     @pytest.mark.xfail(
-        reason="zarr without dask handles negative steps in slices incorrectly",
+        reason="zarr without dask handles negative steps in slices incorrectly"
     )
     def test_vectorized_indexing_negative_step(self) -> None:
         # use dask explicitly when present
@@ -909,11 +909,7 @@ class CFEncodedBase(DatasetIOBase):
                     np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
                     {"standard_name": "standard_error"},
                 ),
-                det_lim=(
-                    (),
-                    0.1,
-                    {"standard_name": "detection_minimum"},
-                ),
+                det_lim=((), 0.1, {"standard_name": "detection_minimum"}),
             ),
             dict(
                 latitude=("latitude", [0, 1], {"units": "degrees_north"}),
@@ -938,7 +934,7 @@ class CFEncodedBase(DatasetIOBase):
             ),
         )
         original["variable"].encoding.update(
-            {"cell_measures": "area: areas", "grid_mapping": "latlon"},
+            {"cell_measures": "area: areas", "grid_mapping": "latlon"}
         )
         original.coords["latitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="latitude_bnds")
@@ -1806,8 +1802,7 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store:
             expected.to_zarr(store, consolidated=False, **self.version_kwargs)
             with pytest.warns(
-                RuntimeWarning,
-                match="Failed to open Zarr store with consolidated",
+                RuntimeWarning, match="Failed to open Zarr store with consolidated"
             ):
                 with xr.open_zarr(store, **self.version_kwargs) as ds:
                     assert_identical(ds, expected)
@@ -3420,10 +3415,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                     )
             else:
                 with xr.open_mfdataset(
-                    files,
-                    combine="nested",
-                    concat_dim="t",
-                    combine_attrs=combine_attrs,
+                    files, combine="nested", concat_dim="t", combine_attrs=combine_attrs
                 ) as ds:
                     assert ds.attrs == expected
 
@@ -5503,14 +5495,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     dask_arr = da.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
-    ds = xr.Dataset(
-        {
-            "test": xr.DataArray(
-                dask_arr,
-                dims=("x", "y"),
-            )
-        }
-    )
+    ds = xr.Dataset({"test": xr.DataArray(dask_arr, dims=("x", "y"))})
     ds["test"].encoding["chunks"] = encoded_chunks
     ds.to_zarr(tmp_path / "test.zarr")
 
@@ -5533,14 +5518,7 @@ def test_chunking_consintency(chunks, tmp_path: Path) -> None:
     dask_arr = da.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
-    ds = xr.Dataset(
-        {
-            "test": xr.DataArray(
-                dask_arr,
-                dims=("x", "y"),
-            )
-        }
-    )
+    ds = xr.Dataset({"test": xr.DataArray(dask_arr, dims=("x", "y"))})
     ds["test"].encoding["chunks"] = encoded_chunks
     ds.to_zarr(tmp_path / "test.zarr")
     ds.to_netcdf(tmp_path / "test.nc")

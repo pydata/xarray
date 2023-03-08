@@ -87,12 +87,7 @@ class TestDatetimeAccessor:
         assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
-        "field, pandas_field",
-        [
-            ("year", "year"),
-            ("week", "week"),
-            ("weekday", "day"),
-        ],
+        "field, pandas_field", [("year", "year"), ("week", "week"), ("weekday", "day")]
     )
     def test_isocalendar(self, field, pandas_field) -> None:
         # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
@@ -168,14 +163,7 @@ class TestDatetimeAccessor:
         assert_equal(actual.compute(), expected.compute())
 
     @requires_dask
-    @pytest.mark.parametrize(
-        "field",
-        [
-            "year",
-            "week",
-            "weekday",
-        ],
-    )
+    @pytest.mark.parametrize("field", ["year", "week", "weekday"])
     def test_isocalendar_dask(self, field) -> None:
         import dask.array as da
 

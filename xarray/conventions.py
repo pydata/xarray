@@ -30,10 +30,7 @@ CF_RELATED_DATA = (
     "cell_measures",
     "formula_terms",
 )
-CF_RELATED_DATA_NEEDS_PARSING = (
-    "cell_measures",
-    "formula_terms",
-)
+CF_RELATED_DATA_NEEDS_PARSING = ("cell_measures", "formula_terms")
 
 
 if TYPE_CHECKING:

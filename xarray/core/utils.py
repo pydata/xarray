@@ -268,9 +268,7 @@ def is_duck_array(value: Any) -> bool:
 
 
 def either_dict_or_kwargs(
-    pos_kwargs: Mapping[Any, T] | None,
-    kw_kwargs: Mapping[str, T],
-    func_name: str,
+    pos_kwargs: Mapping[Any, T] | None, kw_kwargs: Mapping[str, T], func_name: str
 ) -> Mapping[Hashable, T]:
     if pos_kwargs is None or pos_kwargs == {}:
         # Need an explicit cast to appease mypy due to invariance; see

@@ -34,10 +34,7 @@ def create_concat_datasets(
     variables = ["temperature", "pressure", "humidity", "precipitation", "cloud_cover"]
     for i in range(num_datasets):
         if include_day:
-            data_tuple = (
-                ["x", "y", "day"],
-                rng.standard_normal(size=(1, 4, 2)),
-            )
+            data_tuple = (["x", "y", "day"], rng.standard_normal(size=(1, 4, 2)))
             data_vars = {v: data_tuple for v in variables}
             result.append(
                 Dataset(
@@ -50,10 +47,7 @@ def create_concat_datasets(
                 )
             )
         else:
-            data_tuple = (
-                ["x", "y"],
-                rng.standard_normal(size=(1, 4)),
-            )
+            data_tuple = (["x", "y"], rng.standard_normal(size=(1, 4)))
             data_vars = {v: data_tuple for v in variables}
             result.append(
                 Dataset(
@@ -1199,8 +1193,7 @@ def test_concat_preserve_coordinate_order() -> None:
     )
 
     expected = Dataset(
-        {"data": (["time", "y", "x"], data)},
-        coords={"time": time, "y": y, "x": x},
+        {"data": (["time", "y", "x"], data)}, coords={"time": time, "y": y, "x": x}
     )
 
     actual = concat([ds1, ds2], dim="time")

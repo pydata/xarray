@@ -2,15 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Hashable, Iterable, Sequence
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Literal,
-    SupportsIndex,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, SupportsIndex, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -197,9 +189,5 @@ if Version(np.__version__) >= Version("1.22.0"):
     ]
 else:
     QuantileMethods = Literal[  # type: ignore[misc]
-        "linear",
-        "lower",
-        "higher",
-        "midpoint",
-        "nearest",
+        "linear", "lower", "higher", "midpoint", "nearest"
     ]

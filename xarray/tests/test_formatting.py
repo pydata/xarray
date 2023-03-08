@@ -615,10 +615,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     data_vars = dict()
     for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
-            name=v,
-            data=np.array([3, 4]),
-            dims=[_c[0]],
-            coords=dict([_c]),
+            name=v, data=np.array([3, 4]), dims=[_c[0]], coords=dict([_c])
         )
     ds = xr.Dataset(data_vars)
     ds.attrs = attrs

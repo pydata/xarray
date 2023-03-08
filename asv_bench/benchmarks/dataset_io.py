@@ -578,9 +578,7 @@ class IOReadCustomEngine:
                     locker = lock
 
                 manager = xr.backends.CachingFileManager(
-                    xr.backends.DummyFileManager,
-                    filename,
-                    mode=mode,
+                    xr.backends.DummyFileManager, filename, mode=mode
                 )
                 return cls(manager, mode=mode, lock=locker, autoclose=autoclose)
 

@@ -33,12 +33,7 @@ def _days_in_year(year, calendar, use_cftime=True):
 
 
 def convert_calendar(
-    obj,
-    calendar,
-    dim="time",
-    align_on=None,
-    missing=None,
-    use_cftime=None,
+    obj, calendar, dim="time", align_on=None, missing=None, use_cftime=None
 ):
     """Transform a time-indexed Dataset or DataArray to one that uses another calendar.
 

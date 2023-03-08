@@ -222,10 +222,7 @@ _THIS_ARRAY = ReprObject("<this-array>")
 
 
 class DataArray(
-    AbstractArray,
-    DataWithCoords,
-    DataArrayArithmetic,
-    DataArrayAggregations,
+    AbstractArray, DataWithCoords, DataArrayArithmetic, DataArrayAggregations
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -903,25 +900,18 @@ class DataArray(
 
     @overload
     def reset_coords(
-        self: T_DataArray,
-        names: Dims = None,
-        drop: Literal[False] = False,
+        self: T_DataArray, names: Dims = None, drop: Literal[False] = False
     ) -> Dataset:
         ...
 
     @overload
     def reset_coords(
-        self: T_DataArray,
-        names: Dims = None,
-        *,
-        drop: Literal[True],
+        self: T_DataArray, names: Dims = None, *, drop: Literal[True]
     ) -> T_DataArray:
         ...
 
     def reset_coords(
-        self: T_DataArray,
-        names: Dims = None,
-        drop: bool = False,
+        self: T_DataArray, names: Dims = None, drop: bool = False
     ) -> T_DataArray | Dataset:
         """Given names of coordinates, reset them to become variables.
 
@@ -2577,9 +2567,7 @@ class DataArray(
     # change type of self and return to T_DataArray once
     # https://github.com/python/mypy/issues/12846 is resolved
     def reset_index(
-        self,
-        dims_or_levels: Hashable | Sequence[Hashable],
-        drop: bool = False,
+        self, dims_or_levels: Hashable | Sequence[Hashable], drop: bool = False
     ) -> DataArray:
         """Reset the specified index(es) or multi-index level(s).
 
@@ -2744,10 +2732,7 @@ class DataArray(
     # change type of self and return to T_DataArray once
     # https://github.com/python/mypy/issues/12846 is resolved
     def unstack(
-        self,
-        dim: Dims = None,
-        fill_value: Any = dtypes.NA,
-        sparse: bool = False,
+        self, dim: Dims = None, fill_value: Any = dtypes.NA, sparse: bool = False
     ) -> DataArray:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
@@ -2928,10 +2913,7 @@ class DataArray(
     # change type of self and return to T_DataArray once
     # https://github.com/python/mypy/issues/12846 is resolved
     def drop_vars(
-        self,
-        names: Hashable | Iterable[Hashable],
-        *,
-        errors: ErrorOptions = "raise",
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
     ) -> DataArray:
         """Returns an array with dropped variables.
 
@@ -4336,10 +4318,7 @@ class DataArray(
             return da
 
     def _binary_op(
-        self: T_DataArray,
-        other: Any,
-        f: Callable,
-        reflexive: bool = False,
+        self: T_DataArray, other: Any, f: Callable, reflexive: bool = False
     ) -> T_DataArray:
         from xarray.core.groupby import GroupBy
 
@@ -4595,11 +4574,7 @@ class DataArray(
         """
         return self._replace(self.variable.imag)
 
-    def dot(
-        self: T_DataArray,
-        other: T_DataArray,
-        dims: Dims = None,
-    ) -> T_DataArray:
+    def dot(self: T_DataArray, other: T_DataArray, dims: Dims = None) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
         Equivalent to taking taking tensordot over all shared dims.
@@ -6168,9 +6143,7 @@ class DataArray(
         )
 
     def interp_calendar(
-        self,
-        target: pd.DatetimeIndex | CFTimeIndex | DataArray,
-        dim: str = "time",
+        self, target: pd.DatetimeIndex | CFTimeIndex | DataArray, dim: str = "time"
     ) -> DataArray:
         """Interpolates the DataArray to another calendar based on decimal year measure.
 
@@ -6526,11 +6499,7 @@ class DataArray(
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DataArrayCoarsen(
-            self,
-            dim,
-            boundary=boundary,
-            side=side,
-            coord_func=coord_func,
+            self, dim, boundary=boundary, side=side, coord_func=coord_func
         )
 
     def resample(

@@ -34,11 +34,7 @@ class DatasetAggregations:
         raise NotImplementedError()
 
     def count(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
@@ -106,11 +102,7 @@ class DatasetAggregations:
         )
 
     def all(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
@@ -178,11 +170,7 @@ class DatasetAggregations:
         )
 
     def any(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
@@ -1230,11 +1218,7 @@ class DataArrayAggregations:
         raise NotImplementedError()
 
     def count(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
@@ -1289,18 +1273,11 @@ class DataArrayAggregations:
         array(5)
         """
         return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
+            duck_array_ops.count, dim=dim, keep_attrs=keep_attrs, **kwargs
         )
 
     def all(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
@@ -1355,18 +1332,11 @@ class DataArrayAggregations:
         array(False)
         """
         return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
+            duck_array_ops.array_all, dim=dim, keep_attrs=keep_attrs, **kwargs
         )
 
     def any(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
@@ -1421,10 +1391,7 @@ class DataArrayAggregations:
         array(True)
         """
         return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
+            duck_array_ops.array_any, dim=dim, keep_attrs=keep_attrs, **kwargs
         )
 
     def max(
@@ -1499,11 +1466,7 @@ class DataArrayAggregations:
         array(nan)
         """
         return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
+            duck_array_ops.max, dim=dim, skipna=skipna, keep_attrs=keep_attrs, **kwargs
         )
 
     def min(
@@ -1578,11 +1541,7 @@ class DataArrayAggregations:
         array(nan)
         """
         return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
+            duck_array_ops.min, dim=dim, skipna=skipna, keep_attrs=keep_attrs, **kwargs
         )
 
     def mean(
@@ -1661,11 +1620,7 @@ class DataArrayAggregations:
         array(nan)
         """
         return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
+            duck_array_ops.mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs, **kwargs
         )
 
     def prod(
@@ -2327,19 +2282,11 @@ class DatasetGroupByAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
-    def _flox_reduce(
-        self,
-        dim: Dims,
-        **kwargs: Any,
-    ) -> Dataset:
+    def _flox_reduce(self, dim: Dims, **kwargs: Any) -> Dataset:
         raise NotImplementedError()
 
     def count(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
@@ -2433,11 +2380,7 @@ class DatasetGroupByAggregations:
             )
 
     def all(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
@@ -2531,11 +2474,7 @@ class DatasetGroupByAggregations:
             )
 
     def any(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
@@ -3841,19 +3780,11 @@ class DatasetResampleAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
-    def _flox_reduce(
-        self,
-        dim: Dims,
-        **kwargs: Any,
-    ) -> Dataset:
+    def _flox_reduce(self, dim: Dims, **kwargs: Any) -> Dataset:
         raise NotImplementedError()
 
     def count(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
@@ -3947,11 +3878,7 @@ class DatasetResampleAggregations:
             )
 
     def all(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
@@ -4045,11 +3972,7 @@ class DatasetResampleAggregations:
             )
 
     def any(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
@@ -5355,19 +5278,11 @@ class DataArrayGroupByAggregations:
     ) -> DataArray:
         raise NotImplementedError()
 
-    def _flox_reduce(
-        self,
-        dim: Dims,
-        **kwargs: Any,
-    ) -> DataArray:
+    def _flox_reduce(self, dim: Dims, **kwargs: Any) -> DataArray:
         raise NotImplementedError()
 
     def count(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
@@ -5447,18 +5362,11 @@ class DataArrayGroupByAggregations:
             )
         else:
             return self.reduce(
-                duck_array_ops.count,
-                dim=dim,
-                keep_attrs=keep_attrs,
-                **kwargs,
+                duck_array_ops.count, dim=dim, keep_attrs=keep_attrs, **kwargs
             )
 
     def all(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
@@ -5538,18 +5446,11 @@ class DataArrayGroupByAggregations:
             )
         else:
             return self.reduce(
-                duck_array_ops.array_all,
-                dim=dim,
-                keep_attrs=keep_attrs,
-                **kwargs,
+                duck_array_ops.array_all, dim=dim, keep_attrs=keep_attrs, **kwargs
             )
 
     def any(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
@@ -5629,10 +5530,7 @@ class DataArrayGroupByAggregations:
             )
         else:
             return self.reduce(
-                duck_array_ops.array_any,
-                dim=dim,
-                keep_attrs=keep_attrs,
-                **kwargs,
+                duck_array_ops.array_any, dim=dim, keep_attrs=keep_attrs, **kwargs
             )
 
     def max(
@@ -6761,19 +6659,11 @@ class DataArrayResampleAggregations:
     ) -> DataArray:
         raise NotImplementedError()
 
-    def _flox_reduce(
-        self,
-        dim: Dims,
-        **kwargs: Any,
-    ) -> DataArray:
+    def _flox_reduce(self, dim: Dims, **kwargs: Any) -> DataArray:
         raise NotImplementedError()
 
     def count(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
@@ -6853,18 +6743,11 @@ class DataArrayResampleAggregations:
             )
         else:
             return self.reduce(
-                duck_array_ops.count,
-                dim=dim,
-                keep_attrs=keep_attrs,
-                **kwargs,
+                duck_array_ops.count, dim=dim, keep_attrs=keep_attrs, **kwargs
             )
 
     def all(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
@@ -6944,18 +6827,11 @@ class DataArrayResampleAggregations:
             )
         else:
             return self.reduce(
-                duck_array_ops.array_all,
-                dim=dim,
-                keep_attrs=keep_attrs,
-                **kwargs,
+                duck_array_ops.array_all, dim=dim, keep_attrs=keep_attrs, **kwargs
             )
 
     def any(
-        self,
-        dim: Dims = None,
-        *,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
+        self, dim: Dims = None, *, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
@@ -7035,10 +6911,7 @@ class DataArrayResampleAggregations:
             )
         else:
             return self.reduce(
-                duck_array_ops.array_any,
-                dim=dim,
-                keep_attrs=keep_attrs,
-                **kwargs,
+                duck_array_ops.array_any, dim=dim, keep_attrs=keep_attrs, **kwargs
             )
 
     def max(

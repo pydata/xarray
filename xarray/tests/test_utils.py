@@ -263,8 +263,7 @@ def test_infix_dims_errors(supplied, all_):
     ],
 )
 def test_parse_dims(
-    dim: str | Iterable[Hashable] | None,
-    expected: tuple[Hashable, ...],
+    dim: str | Iterable[Hashable] | None, expected: tuple[Hashable, ...]
 ) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     actual = utils.parse_dims(dim, all_dims, replace_none=False)
@@ -312,8 +311,7 @@ def test_parse_dims_raises(dim: str | Iterable[Hashable]) -> None:
     ],
 )
 def test_parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis],
-    expected: tuple[Hashable, ...],
+    dim: str | Sequence[Hashable | ellipsis], expected: tuple[Hashable, ...]
 ) -> None:
     all_dims = ("a", "b", "c")
     actual = utils.parse_ordered_dims(dim, all_dims)

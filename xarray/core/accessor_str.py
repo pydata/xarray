@@ -288,10 +288,7 @@ class StringAccessor(Generic[T_DataArray]):
         """
         return self._apply(func=len, dtype=int)
 
-    def __getitem__(
-        self,
-        key: int | slice,
-    ) -> T_DataArray:
+    def __getitem__(self, key: int | slice) -> T_DataArray:
         if isinstance(key, slice):
             return self.slice(start=key.start, stop=key.stop, step=key.step)
         else:
@@ -300,16 +297,10 @@ class StringAccessor(Generic[T_DataArray]):
     def __add__(self, other: Any) -> T_DataArray:
         return self.cat(other, sep="")
 
-    def __mul__(
-        self,
-        num: int | Any,
-    ) -> T_DataArray:
+    def __mul__(self, num: int | Any) -> T_DataArray:
         return self.repeat(num)
 
-    def __mod__(
-        self,
-        other: Any,
-    ) -> T_DataArray:
+    def __mod__(self, other: Any) -> T_DataArray:
         if isinstance(other, dict):
             other = {key: self._stringify(val) for key, val in other.items()}
             return self._apply(func=lambda x: x % other)
@@ -319,11 +310,7 @@ class StringAccessor(Generic[T_DataArray]):
         else:
             return self._apply(func=lambda x, y: x % y, func_args=(other,))
 
-    def get(
-        self,
-        i: int | Any,
-        default: str | bytes = "",
-    ) -> T_DataArray:
+    def get(self, i: int | Any, default: str | bytes = "") -> T_DataArray:
         """
         Extract character number `i` from each string in the array.
 
@@ -504,17 +491,9 @@ class StringAccessor(Generic[T_DataArray]):
         # sep will go at the end of the input arguments.
         func = lambda *x: x[-1].join(x[:-1])
 
-        return self._apply(
-            func=func,
-            func_args=others,
-            dtype=self._obj.dtype.kind,
-        )
+        return self._apply(func=func, func_args=others, dtype=self._obj.dtype.kind)
 
-    def join(
-        self,
-        dim: Hashable = None,
-        sep: str | bytes | Any = "",
-    ) -> T_DataArray:
+    def join(self, dim: Hashable = None, sep: str | bytes | Any = "") -> T_DataArray:
         """
         Concatenate strings in a DataArray along a particular dimension.
 
@@ -581,11 +560,7 @@ class StringAccessor(Generic[T_DataArray]):
         # concatenate the resulting arrays
         return start.str.cat(*others, sep=sep)
 
-    def format(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> T_DataArray:
+    def format(self, *args: Any, **kwargs: Any) -> T_DataArray:
         """
         Perform python string formatting on each element of the DataArray.
 
@@ -730,10 +705,7 @@ class StringAccessor(Generic[T_DataArray]):
         """
         return self._apply(func=lambda x: x.casefold())
 
-    def normalize(
-        self,
-        form: str,
-    ) -> T_DataArray:
+    def normalize(self, form: str) -> T_DataArray:
         """
         Return the Unicode normal form for the strings in the datarray.
 
@@ -936,10 +908,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def pad(
-        self,
-        width: int | Any,
-        side: str = "left",
-        fillchar: str | bytes | Any = " ",
+        self, width: int | Any, side: str = "left", fillchar: str | bytes | Any = " "
     ) -> T_DataArray:
         """
         Pad strings in the array up to width.
@@ -976,11 +945,7 @@ class StringAccessor(Generic[T_DataArray]):
         return func(width=width, fillchar=fillchar)
 
     def _padder(
-        self,
-        *,
-        func: Callable,
-        width: int | Any,
-        fillchar: str | bytes | Any = " ",
+        self, *, func: Callable, width: int | Any, fillchar: str | bytes | Any = " "
     ) -> T_DataArray:
         """
         Wrapper function to handle padding operations
@@ -1019,11 +984,7 @@ class StringAccessor(Generic[T_DataArray]):
         func = self._obj.dtype.type.center
         return self._padder(func=func, width=width, fillchar=fillchar)
 
-    def ljust(
-        self,
-        width: int | Any,
-        fillchar: str | bytes | Any = " ",
-    ) -> T_DataArray:
+    def ljust(self, width: int | Any, fillchar: str | bytes | Any = " ") -> T_DataArray:
         """
         Pad right side of each string in the array.
 
@@ -1046,11 +1007,7 @@ class StringAccessor(Generic[T_DataArray]):
         func = self._obj.dtype.type.ljust
         return self._padder(func=func, width=width, fillchar=fillchar)
 
-    def rjust(
-        self,
-        width: int | Any,
-        fillchar: str | bytes | Any = " ",
-    ) -> T_DataArray:
+    def rjust(self, width: int | Any, fillchar: str | bytes | Any = " ") -> T_DataArray:
         """
         Pad left side of each string in the array.
 
@@ -1170,10 +1127,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def match(
-        self,
-        pat: str | bytes | Pattern | Any,
-        case: bool | None = None,
-        flags: int = 0,
+        self, pat: str | bytes | Pattern | Any, case: bool | None = None, flags: int = 0
     ) -> T_DataArray:
         """
         Determine if each string in the array matches a regular expression.
@@ -1338,10 +1292,7 @@ class StringAccessor(Generic[T_DataArray]):
         func = lambda x: x.translate(table)
         return self._apply(func=func)
 
-    def repeat(
-        self,
-        repeats: int | Any,
-    ) -> T_DataArray:
+    def repeat(self, repeats: int | Any) -> T_DataArray:
         """
         Repeat each string in the array.
 
@@ -1408,10 +1359,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=func, func_args=(sub, start, end), dtype=int)
 
     def rfind(
-        self,
-        sub: str | bytes | Any,
-        start: int | Any = 0,
-        end: int | Any = None,
+        self, sub: str | bytes | Any, start: int | Any = 0, end: int | Any = None
     ) -> T_DataArray:
         """
         Return highest indexes in each strings in the array
@@ -1491,10 +1439,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=func, func_args=(sub, start, end), dtype=int)
 
     def rindex(
-        self,
-        sub: str | bytes | Any,
-        start: int | Any = 0,
-        end: int | Any = None,
+        self, sub: str | bytes | Any, start: int | Any = 0, end: int | Any = None
     ) -> T_DataArray:
         """
         Return highest indexes in each strings where the substring is
@@ -1921,10 +1866,7 @@ class StringAccessor(Generic[T_DataArray]):
         ).astype(self._obj.dtype.kind)
 
     def findall(
-        self,
-        pat: str | bytes | Pattern | Any,
-        case: bool | None = None,
-        flags: int = 0,
+        self, pat: str | bytes | Pattern | Any, case: bool | None = None, flags: int = 0
     ) -> T_DataArray:
         r"""
         Find all occurrences of pattern or regular expression in the DataArray.
@@ -2014,11 +1956,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=func, func_args=(pat,), dtype=np.object_)
 
     def _partitioner(
-        self,
-        *,
-        func: Callable,
-        dim: Hashable | None,
-        sep: str | bytes | Any | None,
+        self, *, func: Callable, dim: Hashable | None, sep: str | bytes | Any | None
     ) -> T_DataArray:
         """
         Implements logic for `partition` and `rpartition`.
@@ -2046,9 +1984,7 @@ class StringAccessor(Generic[T_DataArray]):
         ).astype(self._obj.dtype.kind)
 
     def partition(
-        self,
-        dim: Hashable | None,
-        sep: str | bytes | Any = " ",
+        self, dim: Hashable | None, sep: str | bytes | Any = " "
     ) -> T_DataArray:
         """
         Split the strings in the DataArray at the first occurrence of separator `sep`.
@@ -2084,9 +2020,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._partitioner(func=self._obj.dtype.type.partition, dim=dim, sep=sep)
 
     def rpartition(
-        self,
-        dim: Hashable | None,
-        sep: str | bytes | Any = " ",
+        self, dim: Hashable | None, sep: str | bytes | Any = " "
     ) -> T_DataArray:
         """
         Split the strings in the DataArray at the last occurrence of separator `sep`.
@@ -2171,10 +2105,7 @@ class StringAccessor(Generic[T_DataArray]):
         ).astype(self._obj.dtype.kind)
 
     def split(
-        self,
-        dim: Hashable | None,
-        sep: str | bytes | Any = None,
-        maxsplit: int = -1,
+        self, dim: Hashable | None, sep: str | bytes | Any = None, maxsplit: int = -1
     ) -> DataArray:
         r"""
         Split strings in a DataArray around the given separator/delimiter `sep`.
@@ -2404,11 +2335,7 @@ class StringAccessor(Generic[T_DataArray]):
             maxsplit=maxsplit,
         )
 
-    def get_dummies(
-        self,
-        dim: Hashable,
-        sep: str | bytes | Any = "|",
-    ) -> DataArray:
+    def get_dummies(self, dim: Hashable, sep: str | bytes | Any = "|") -> DataArray:
         """
         Return DataArray of dummy/indicator variables.
 

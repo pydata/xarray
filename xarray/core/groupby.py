@@ -651,12 +651,7 @@ class GroupBy(Generic[T_Xarray]):
             obj._indexes = filter_indexes_from_coords(obj._indexes, set(obj.coords))
         return obj
 
-    def _flox_reduce(
-        self,
-        dim: Dims,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ):
+    def _flox_reduce(self, dim: Dims, keep_attrs: bool | None = None, **kwargs: Any):
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
@@ -1204,9 +1199,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
 # https://github.com/python/mypy/issues/9031
 class DataArrayGroupBy(  # type: ignore[misc]
-    DataArrayGroupByBase,
-    DataArrayGroupByAggregations,
-    ImplementsArrayReduce,
+    DataArrayGroupByBase, DataArrayGroupByAggregations, ImplementsArrayReduce
 ):
     __slots__ = ()
 
@@ -1365,9 +1358,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
 # https://github.com/python/mypy/issues/9031
 class DatasetGroupBy(  # type: ignore[misc]
-    DatasetGroupByBase,
-    DatasetGroupByAggregations,
-    ImplementsDatasetReduce,
+    DatasetGroupByBase, DatasetGroupByAggregations, ImplementsDatasetReduce
 ):
     __slots__ = ()
 

@@ -136,8 +136,7 @@ class HugeAxisSmallSliceIndexing:
         self.filepath = "test_indexing_huge_axis_small_slice.nc"
         if not os.path.isfile(self.filepath):
             xr.Dataset(
-                {"a": ("x", np.arange(10_000_000))},
-                coords={"x": np.arange(10_000_000)},
+                {"a": ("x", np.arange(10_000_000))}, coords={"x": np.arange(10_000_000)}
             ).to_netcdf(self.filepath, format="NETCDF4")
 
         self.ds = xr.open_dataset(self.filepath)

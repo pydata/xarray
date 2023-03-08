@@ -51,10 +51,7 @@ class Resample(GroupBy[T_Xarray]):
         super().__init__(*args, **kwargs)
 
     def _flox_reduce(
-        self,
-        dim: Dims,
-        keep_attrs: bool | None = None,
-        **kwargs,
+        self, dim: Dims, keep_attrs: bool | None = None, **kwargs
     ) -> T_Xarray:
         from xarray.core.dataarray import DataArray
 

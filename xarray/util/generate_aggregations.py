@@ -230,11 +230,7 @@ ddof = ExtraKwarg(
 
 class Method:
     def __init__(
-        self,
-        name,
-        bool_reduce=False,
-        extra_kwargs=tuple(),
-        numeric_only=False,
+        self, name, bool_reduce=False, extra_kwargs=tuple(), numeric_only=False
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
@@ -296,8 +292,7 @@ class AggregationGenerator:
             extra_kwargs = ""
 
         yield self._template_signature.format(
-            **template_kwargs,
-            extra_kwargs=extra_kwargs,
+            **template_kwargs, extra_kwargs=extra_kwargs
         )
 
         for text in [

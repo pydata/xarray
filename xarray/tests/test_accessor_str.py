@@ -845,15 +845,11 @@ def test_extract_multi_nocase(dtype) -> None:
 
 
 def test_extract_broadcast(dtype) -> None:
-    value = xr.DataArray(
-        ["a_Xy_0", "ab_xY_10", "abc_Xy_01"],
-        dims=["X"],
-    ).astype(dtype)
+    value = xr.DataArray(["a_Xy_0", "ab_xY_10", "abc_Xy_01"], dims=["X"]).astype(dtype)
 
-    pat_str = xr.DataArray(
-        [r"(\w+)_Xy_(\d*)", r"(\w+)_xY_(\d*)"],
-        dims=["Y"],
-    ).astype(dtype)
+    pat_str = xr.DataArray([r"(\w+)_Xy_(\d*)", r"(\w+)_xY_(\d*)"], dims=["Y"]).astype(
+        dtype
+    )
     pat_compiled = value.str._re_compile(pat=pat_str)
 
     expected_list = [
@@ -1192,15 +1188,11 @@ def test_extractall_multi_multi_nocase(dtype) -> None:
 
 
 def test_extractall_broadcast(dtype) -> None:
-    value = xr.DataArray(
-        ["a_Xy_0", "ab_xY_10", "abc_Xy_01"],
-        dims=["X"],
-    ).astype(dtype)
+    value = xr.DataArray(["a_Xy_0", "ab_xY_10", "abc_Xy_01"], dims=["X"]).astype(dtype)
 
-    pat_str = xr.DataArray(
-        [r"(\w+)_Xy_(\d*)", r"(\w+)_xY_(\d*)"],
-        dims=["Y"],
-    ).astype(dtype)
+    pat_str = xr.DataArray([r"(\w+)_Xy_(\d*)", r"(\w+)_xY_(\d*)"], dims=["Y"]).astype(
+        dtype
+    )
     pat_re = value.str._re_compile(pat=pat_str)
 
     expected_list = [
@@ -1292,11 +1284,7 @@ def test_findall_single_multi_case(dtype) -> None:
 
     expected_list: list[list[list]] = [
         [["a"], ["bab", "baab"], ["abc", "cbc"]],
-        [
-            ["abcd", "dcd", "dccd"],
-            [],
-            ["abcdef", "fef"],
-        ],
+        [["abcd", "dcd", "dccd"], [], ["abcdef", "fef"]],
     ]
     expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
     expected_np = np.array(expected_dtype, dtype=np.object_)
@@ -1332,16 +1320,8 @@ def test_findall_single_multi_nocase(dtype) -> None:
     ).astype(dtype)
 
     expected_list: list[list[list]] = [
-        [
-            ["a"],
-            ["ab", "bab", "baab"],
-            ["abc", "cbc"],
-        ],
-        [
-            ["abcd", "dcd", "dccd"],
-            [],
-            ["abcdef", "fef"],
-        ],
+        [["a"], ["ab", "bab", "baab"], ["abc", "cbc"]],
+        [["abcd", "dcd", "dccd"], [], ["abcdef", "fef"]],
     ]
     expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
     expected_np = np.array(expected_dtype, dtype=np.object_)
@@ -1510,15 +1490,9 @@ def test_findall_multi_multi_nocase(dtype) -> None:
 
 
 def test_findall_broadcast(dtype) -> None:
-    value = xr.DataArray(
-        ["a_Xy_0", "ab_xY_10", "abc_Xy_01"],
-        dims=["X"],
-    ).astype(dtype)
+    value = xr.DataArray(["a_Xy_0", "ab_xY_10", "abc_Xy_01"], dims=["X"]).astype(dtype)
 
-    pat_str = xr.DataArray(
-        [r"(\w+)_Xy_\d*", r"\w+_Xy_(\d*)"],
-        dims=["Y"],
-    ).astype(dtype)
+    pat_str = xr.DataArray([r"(\w+)_Xy_\d*", r"\w+_Xy_(\d*)"], dims=["Y"]).astype(dtype)
     pat_re = value.str._re_compile(pat=pat_str)
 
     expected_list: list[list[list]] = [[["a"], ["0"]], [[], []], [["abc"], ["01"]]]
@@ -2471,29 +2445,13 @@ def test_partition_whitespace(dtype) -> None:
     ).astype(dtype)
 
     exp_part_dim_list = [
-        [
-            ["abc", " ", "def"],
-            ["spam", " ", "eggs swallow"],
-            ["red_blue", "", ""],
-        ],
-        [
-            ["test0", " ", "test1 test2 test3"],
-            ["", "", ""],
-            ["abra", " ", "ka da bra"],
-        ],
+        [["abc", " ", "def"], ["spam", " ", "eggs swallow"], ["red_blue", "", ""]],
+        [["test0", " ", "test1 test2 test3"], ["", "", ""], ["abra", " ", "ka da bra"]],
     ]
 
     exp_rpart_dim_list = [
-        [
-            ["abc", " ", "def"],
-            ["spam eggs", " ", "swallow"],
-            ["", "", "red_blue"],
-        ],
-        [
-            ["test0 test1 test2", " ", "test3"],
-            ["", "", ""],
-            ["abra ka da", " ", "bra"],
-        ],
+        [["abc", " ", "def"], ["spam eggs", " ", "swallow"], ["", "", "red_blue"]],
+        [["test0 test1 test2", " ", "test3"], ["", "", ""], ["abra ka da", " ", "bra"]],
     ]
 
     exp_part_dim = xr.DataArray(exp_part_dim_list, dims=["X", "Y", "ZZ"]).astype(dtype)
@@ -2521,11 +2479,7 @@ def test_partition_comma(dtype) -> None:
     ).astype(dtype)
 
     exp_part_dim_list = [
-        [
-            ["abc", ", ", "def"],
-            ["spam", ", ", "eggs, swallow"],
-            ["red_blue", "", ""],
-        ],
+        [["abc", ", ", "def"], ["spam", ", ", "eggs, swallow"], ["red_blue", "", ""]],
         [
             ["test0", ", ", "test1, test2, test3"],
             ["", "", ""],
@@ -2534,11 +2488,7 @@ def test_partition_comma(dtype) -> None:
     ]
 
     exp_rpart_dim_list = [
-        [
-            ["abc", ", ", "def"],
-            ["spam, eggs", ", ", "swallow"],
-            ["", "", "red_blue"],
-        ],
+        [["abc", ", ", "def"], ["spam, eggs", ", ", "swallow"], ["", "", "red_blue"]],
         [
             ["test0, test1, test2", ", ", "test3"],
             ["", "", ""],
@@ -2901,14 +2851,10 @@ def test_split_comma_dim(
 
 def test_splitters_broadcast(dtype) -> None:
     values = xr.DataArray(
-        ["ab cd,de fg", "spam, ,eggs swallow", "red_blue"],
-        dims=["X"],
+        ["ab cd,de fg", "spam, ,eggs swallow", "red_blue"], dims=["X"]
     ).astype(dtype)
 
-    sep = xr.DataArray(
-        [" ", ","],
-        dims=["Y"],
-    ).astype(dtype)
+    sep = xr.DataArray([" ", ","], dims=["Y"]).astype(dtype)
 
     expected_left = xr.DataArray(
         [
@@ -3018,15 +2964,9 @@ def test_get_dummies(dtype) -> None:
 
 
 def test_get_dummies_broadcast(dtype) -> None:
-    values = xr.DataArray(
-        ["x~x|x~x", "x", "x|x~x", "x~x"],
-        dims=["X"],
-    ).astype(dtype)
+    values = xr.DataArray(["x~x|x~x", "x", "x|x~x", "x~x"], dims=["X"]).astype(dtype)
 
-    sep = xr.DataArray(
-        ["|", "~"],
-        dims=["Y"],
-    ).astype(dtype)
+    sep = xr.DataArray(["|", "~"], dims=["Y"]).astype(dtype)
 
     expected_list = [
         [[False, False, True], [True, True, False]],
@@ -3056,10 +2996,7 @@ def test_get_dummies_empty(dtype) -> None:
 
 
 def test_splitters_empty_str(dtype) -> None:
-    values = xr.DataArray(
-        [["", "", ""], ["", "", ""]],
-        dims=["X", "Y"],
-    ).astype(dtype)
+    values = xr.DataArray([["", "", ""], ["", "", ""]], dims=["X", "Y"]).astype(dtype)
 
     targ_partition_dim = xr.DataArray(
         [
@@ -3078,18 +3015,13 @@ def test_splitters_empty_str(dtype) -> None:
     ]
     targ_partition_none_np = np.array(targ_partition_none_list, dtype=np.object_)
     del targ_partition_none_np[-1, -1][-1]
-    targ_partition_none = xr.DataArray(
-        targ_partition_none_np,
-        dims=["X", "Y"],
-    )
+    targ_partition_none = xr.DataArray(targ_partition_none_np, dims=["X", "Y"])
 
     targ_split_dim = xr.DataArray(
-        [[[""], [""], [""]], [[""], [""], [""]]],
-        dims=["X", "Y", "ZZ"],
+        [[[""], [""], [""]], [[""], [""], [""]]], dims=["X", "Y", "ZZ"]
     ).astype(dtype)
     targ_split_none = xr.DataArray(
-        np.array([[[], [], []], [[], [], [""]]], dtype=np.object_),
-        dims=["X", "Y"],
+        np.array([[[], [], []], [[], [], [""]]], dtype=np.object_), dims=["X", "Y"]
     )
     del targ_split_none.data[-1, -1][-1]
 
@@ -3132,8 +3064,7 @@ def test_splitters_empty_str(dtype) -> None:
 
 def test_cat_str(dtype) -> None:
     values_1 = xr.DataArray(
-        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
-        dims=["X", "Y"],
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]], dims=["X", "Y"]
     ).astype(dtype)
     values_2 = "111"
 
@@ -3178,12 +3109,10 @@ def test_cat_str(dtype) -> None:
 
 def test_cat_uniform(dtype) -> None:
     values_1 = xr.DataArray(
-        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
-        dims=["X", "Y"],
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]], dims=["X", "Y"]
     ).astype(dtype)
     values_2 = xr.DataArray(
-        [["11111", "222", "33"], ["4", "5555", "66"]],
-        dims=["X", "Y"],
+        [["11111", "222", "33"], ["4", "5555", "66"]], dims=["X", "Y"]
     )
 
     targ_blank = xr.DataArray(
@@ -3227,13 +3156,9 @@ def test_cat_uniform(dtype) -> None:
 
 def test_cat_broadcast_right(dtype) -> None:
     values_1 = xr.DataArray(
-        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
-        dims=["X", "Y"],
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]], dims=["X", "Y"]
     ).astype(dtype)
-    values_2 = xr.DataArray(
-        ["11111", "222", "33"],
-        dims=["Y"],
-    )
+    values_2 = xr.DataArray(["11111", "222", "33"], dims=["Y"])
 
     targ_blank = xr.DataArray(
         [["a11111", "bb222", "cccc33"], ["ddddd11111", "eeee222", "fff33"]],
@@ -3275,19 +3200,14 @@ def test_cat_broadcast_right(dtype) -> None:
 
 
 def test_cat_broadcast_left(dtype) -> None:
-    values_1 = xr.DataArray(
-        ["a", "bb", "cccc"],
-        dims=["Y"],
-    ).astype(dtype)
+    values_1 = xr.DataArray(["a", "bb", "cccc"], dims=["Y"]).astype(dtype)
     values_2 = xr.DataArray(
-        [["11111", "222", "33"], ["4", "5555", "66"]],
-        dims=["X", "Y"],
+        [["11111", "222", "33"], ["4", "5555", "66"]], dims=["X", "Y"]
     )
 
     targ_blank = (
         xr.DataArray(
-            [["a11111", "bb222", "cccc33"], ["a4", "bb5555", "cccc66"]],
-            dims=["X", "Y"],
+            [["a11111", "bb222", "cccc33"], ["a4", "bb5555", "cccc66"]], dims=["X", "Y"]
         )
         .astype(dtype)
         .T
@@ -3340,14 +3260,8 @@ def test_cat_broadcast_left(dtype) -> None:
 
 
 def test_cat_broadcast_both(dtype) -> None:
-    values_1 = xr.DataArray(
-        ["a", "bb", "cccc"],
-        dims=["Y"],
-    ).astype(dtype)
-    values_2 = xr.DataArray(
-        ["11111", "4"],
-        dims=["X"],
-    )
+    values_1 = xr.DataArray(["a", "bb", "cccc"], dims=["Y"]).astype(dtype)
+    values_2 = xr.DataArray(["11111", "4"], dims=["X"])
 
     targ_blank = (
         xr.DataArray(
@@ -3405,15 +3319,9 @@ def test_cat_broadcast_both(dtype) -> None:
 
 
 def test_cat_multi() -> None:
-    values_1 = xr.DataArray(
-        ["11111", "4"],
-        dims=["X"],
-    )
+    values_1 = xr.DataArray(["11111", "4"], dims=["X"])
 
-    values_2 = xr.DataArray(
-        ["a", "bb", "cccc"],
-        dims=["Y"],
-    ).astype(np.bytes_)
+    values_2 = xr.DataArray(["a", "bb", "cccc"], dims=["Y"]).astype(np.bytes_)
 
     values_3 = np.array(3.4)
 
@@ -3421,10 +3329,7 @@ def test_cat_multi() -> None:
 
     values_5 = np.array("", dtype=np.unicode_)
 
-    sep = xr.DataArray(
-        [" ", ", "],
-        dims=["ZZ"],
-    ).astype(np.unicode_)
+    sep = xr.DataArray([" ", ", "], dims=["ZZ"]).astype(np.unicode_)
 
     expected = xr.DataArray(
         [
@@ -3464,10 +3369,7 @@ def test_join_scalar(dtype) -> None:
 
 
 def test_join_vector(dtype) -> None:
-    values = xr.DataArray(
-        ["a", "bb", "cccc"],
-        dims=["Y"],
-    ).astype(dtype)
+    values = xr.DataArray(["a", "bb", "cccc"], dims=["Y"]).astype(dtype)
 
     targ_blank = xr.DataArray("abbcccc").astype(dtype)
     targ_space = xr.DataArray("a bb cccc").astype(dtype)
@@ -3491,27 +3393,20 @@ def test_join_vector(dtype) -> None:
 
 def test_join_2d(dtype) -> None:
     values = xr.DataArray(
-        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
-        dims=["X", "Y"],
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]], dims=["X", "Y"]
     ).astype(dtype)
 
-    targ_blank_x = xr.DataArray(
-        ["addddd", "bbeeee", "ccccfff"],
-        dims=["Y"],
-    ).astype(dtype)
-    targ_space_x = xr.DataArray(
-        ["a ddddd", "bb eeee", "cccc fff"],
-        dims=["Y"],
-    ).astype(dtype)
+    targ_blank_x = xr.DataArray(["addddd", "bbeeee", "ccccfff"], dims=["Y"]).astype(
+        dtype
+    )
+    targ_space_x = xr.DataArray(["a ddddd", "bb eeee", "cccc fff"], dims=["Y"]).astype(
+        dtype
+    )
 
-    targ_blank_y = xr.DataArray(
-        ["abbcccc", "dddddeeeefff"],
-        dims=["X"],
-    ).astype(dtype)
-    targ_space_y = xr.DataArray(
-        ["a bb cccc", "ddddd eeee fff"],
-        dims=["X"],
-    ).astype(dtype)
+    targ_blank_y = xr.DataArray(["abbcccc", "dddddeeeefff"], dims=["X"]).astype(dtype)
+    targ_space_y = xr.DataArray(["a bb cccc", "ddddd eeee fff"], dims=["X"]).astype(
+        dtype
+    )
 
     res_blank_x = values.str.join(dim="X")
     res_blank_y = values.str.join(dim="Y")
@@ -3536,20 +3431,11 @@ def test_join_2d(dtype) -> None:
 
 
 def test_join_broadcast(dtype) -> None:
-    values = xr.DataArray(
-        ["a", "bb", "cccc"],
-        dims=["X"],
-    ).astype(dtype)
+    values = xr.DataArray(["a", "bb", "cccc"], dims=["X"]).astype(dtype)
 
-    sep = xr.DataArray(
-        [" ", ", "],
-        dims=["ZZ"],
-    ).astype(dtype)
+    sep = xr.DataArray([" ", ", "], dims=["ZZ"]).astype(dtype)
 
-    expected = xr.DataArray(
-        ["a bb cccc", "a, bb, cccc"],
-        dims=["ZZ"],
-    ).astype(dtype)
+    expected = xr.DataArray(["a bb cccc", "a, bb, cccc"], dims=["ZZ"]).astype(dtype)
 
     res = values.str.join(sep=sep)
 
@@ -3559,8 +3445,7 @@ def test_join_broadcast(dtype) -> None:
 
 def test_format_scalar() -> None:
     values = xr.DataArray(
-        ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
-        dims=["X"],
+        ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"], dims=["X"]
     ).astype(np.unicode_)
 
     pos0 = 1
@@ -3572,8 +3457,7 @@ def test_format_scalar() -> None:
     W = "NO!"
 
     expected = xr.DataArray(
-        ["1.X.None", "1,1.2,'test','test'", "'test'-X-None"],
-        dims=["X"],
+        ["1.X.None", "1,1.2,'test','test'", "'test'-X-None"], dims=["X"]
     ).astype(np.unicode_)
 
     res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
@@ -3584,17 +3468,13 @@ def test_format_scalar() -> None:
 
 def test_format_broadcast() -> None:
     values = xr.DataArray(
-        ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
-        dims=["X"],
+        ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"], dims=["X"]
     ).astype(np.unicode_)
 
     pos0 = 1
     pos1 = 1.2
 
-    pos2 = xr.DataArray(
-        ["2.3", "3.44444"],
-        dims=["YY"],
-    )
+    pos2 = xr.DataArray(["2.3", "3.44444"], dims=["YY"])
 
     X = "'test'"
     Y = "X"
@@ -3617,19 +3497,17 @@ def test_format_broadcast() -> None:
 
 
 def test_mod_scalar() -> None:
-    values = xr.DataArray(
-        ["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"],
-        dims=["X"],
-    ).astype(np.unicode_)
+    values = xr.DataArray(["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"], dims=["X"]).astype(
+        np.unicode_
+    )
 
     pos0 = 1
     pos1 = 1.2
     pos2 = "2.3"
 
-    expected = xr.DataArray(
-        ["1.1.2.2.3", "1,1.2,2.3", "1-1.2-2.3"],
-        dims=["X"],
-    ).astype(np.unicode_)
+    expected = xr.DataArray(["1.1.2.2.3", "1,1.2,2.3", "1-1.2-2.3"], dims=["X"]).astype(
+        np.unicode_
+    )
 
     res = values.str % (pos0, pos1, pos2)
 
@@ -3639,18 +3517,16 @@ def test_mod_scalar() -> None:
 
 def test_mod_dict() -> None:
     values = xr.DataArray(
-        ["%(a)s.%(a)s.%(b)s", "%(b)s,%(c)s,%(b)s", "%(c)s-%(b)s-%(a)s"],
-        dims=["X"],
+        ["%(a)s.%(a)s.%(b)s", "%(b)s,%(c)s,%(b)s", "%(c)s-%(b)s-%(a)s"], dims=["X"]
     ).astype(np.unicode_)
 
     a = 1
     b = 1.2
     c = "2.3"
 
-    expected = xr.DataArray(
-        ["1.1.1.2", "1.2,2.3,1.2", "2.3-1.2-1"],
-        dims=["X"],
-    ).astype(np.unicode_)
+    expected = xr.DataArray(["1.1.1.2", "1.2,2.3,1.2", "2.3-1.2-1"], dims=["X"]).astype(
+        np.unicode_
+    )
 
     res = values.str % {"a": a, "b": b, "c": c}
 
@@ -3659,15 +3535,9 @@ def test_mod_dict() -> None:
 
 
 def test_mod_broadcast_single() -> None:
-    values = xr.DataArray(
-        ["%s_1", "%s_2", "%s_3"],
-        dims=["X"],
-    ).astype(np.unicode_)
+    values = xr.DataArray(["%s_1", "%s_2", "%s_3"], dims=["X"]).astype(np.unicode_)
 
-    pos = xr.DataArray(
-        ["2.3", "3.44444"],
-        dims=["YY"],
-    )
+    pos = xr.DataArray(["2.3", "3.44444"], dims=["YY"])
 
     expected = xr.DataArray(
         [["2.3_1", "3.44444_1"], ["2.3_2", "3.44444_2"], ["2.3_3", "3.44444_3"]],
@@ -3681,18 +3551,14 @@ def test_mod_broadcast_single() -> None:
 
 
 def test_mod_broadcast_multi() -> None:
-    values = xr.DataArray(
-        ["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"],
-        dims=["X"],
-    ).astype(np.unicode_)
+    values = xr.DataArray(["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"], dims=["X"]).astype(
+        np.unicode_
+    )
 
     pos0 = 1
     pos1 = 1.2
 
-    pos2 = xr.DataArray(
-        ["2.3", "3.44444"],
-        dims=["YY"],
-    )
+    pos2 = xr.DataArray(["2.3", "3.44444"], dims=["YY"])
 
     expected = xr.DataArray(
         [

@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 
 _styles: MutableMapping[str, Any] = {
     # Add a white border to make it easier seeing overlapping markers:
-    "scatter.edgecolors": "w",
+    "scatter.edgecolors": "w"
 }
 
 
@@ -976,9 +976,7 @@ def _plot1d(plotfunc):
                 levels = kwargs.get("levels", hueplt_norm.levels)
 
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                plotfunc,
-                cast("DataArray", hueplt_norm.values).data,
-                **locals(),
+                plotfunc, cast("DataArray", hueplt_norm.values).data, **locals()
             )
 
             # subset that can be passed to scatter, hist2d
@@ -998,12 +996,7 @@ def _plot1d(plotfunc):
                 ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
             primitive = plotfunc(
-                xplt,
-                yplt,
-                ax=ax,
-                add_labels=add_labels,
-                **cmap_params_subset,
-                **kwargs,
+                xplt, yplt, ax=ax, add_labels=add_labels, **cmap_params_subset, **kwargs
             )
 
         if np.any(np.asarray(add_labels)) and add_title:

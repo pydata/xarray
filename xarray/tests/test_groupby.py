@@ -830,7 +830,7 @@ def test_groupby_math_nD_group() -> None:
             "labels": (
                 "x",
                 np.repeat(["a", "b", "c", "d", "e", "f", "g", "h"], repeats=N // 8),
-            ),
+            )
         },
     )
     da["labels2d"] = xr.broadcast(da.labels, da)[0]
@@ -842,10 +842,7 @@ def test_groupby_math_nD_group() -> None:
     actual = g - mean
     assert_identical(expected, actual)
 
-    da["num"] = (
-        "x",
-        np.repeat([1, 2, 3, 4, 5, 6, 7, 8], repeats=N // 8),
-    )
+    da["num"] = ("x", np.repeat([1, 2, 3, 4, 5, 6, 7, 8], repeats=N // 8))
     da["num2d"] = xr.broadcast(da.num, da)[0]
     g = da.groupby_bins("num2d", bins=[0, 4, 6])
     mean = g.mean()
@@ -2055,13 +2052,8 @@ def test_groupby_cumsum() -> None:
     )
     actual = ds.groupby("group_id").cumsum(dim="x")
     expected = xr.Dataset(
-        {
-            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
-        },
-        coords={
-            "x": [0, 1, 2, 3, 4, 5, 6],
-            "group_id": ds.group_id,
-        },
+        {"foo": (("x",), [7, 10, 1, 2, 1, 2, 3])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ds.group_id},
     )
     # TODO: Remove drop_vars when GH6528 is fixed
     # when Dataset.cumsum propagates indexes, and the group variable?
@@ -2080,13 +2072,8 @@ def test_groupby_cumprod() -> None:
     )
     actual = ds.groupby("group_id").cumprod(dim="x")
     expected = xr.Dataset(
-        {
-            "foo": (("x",), [7, 21, 0, 0, 1, 2, 2]),
-        },
-        coords={
-            "x": [0, 1, 2, 3, 4, 5, 6],
-            "group_id": ds.group_id,
-        },
+        {"foo": (("x",), [7, 21, 0, 0, 1, 2, 2])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ds.group_id},
     )
     # TODO: Remove drop_vars when GH6528 is fixed
     # when Dataset.cumsum propagates indexes, and the group variable?
@@ -2108,16 +2095,12 @@ def test_groupby_cumprod() -> None:
 def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     ds = xr.Dataset(
         {"foo": ("time", [1, 2, 3, 1, 2, np.nan])},
-        coords={
-            "time": pd.date_range("01-01-2001", freq="M", periods=6),
-        },
+        coords={"time": pd.date_range("01-01-2001", freq="M", periods=6)},
     )
     actual = getattr(ds.resample(time="3M"), method)(dim="time")
     expected = xr.Dataset(
         {"foo": (("time",), expected_array)},
-        coords={
-            "time": pd.date_range("01-01-2001", freq="M", periods=6),
-        },
+        coords={"time": pd.date_range("01-01-2001", freq="M", periods=6)},
     )
     # TODO: Remove drop_vars when GH6528 is fixed
     # when Dataset.cumsum propagates indexes, and the group variable?

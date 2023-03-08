@@ -159,10 +159,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
 
 def create_append_string_length_mismatch_test_data(dtype) -> tuple[Dataset, Dataset]:
     def make_datasets(data, data_to_append) -> tuple[Dataset, Dataset]:
-        ds = xr.Dataset(
-            {"temperature": (["time"], data)},
-            coords={"time": [0, 1, 2]},
-        )
+        ds = xr.Dataset({"temperature": (["time"], data)}, coords={"time": [0, 1, 2]})
         ds_to_append = xr.Dataset(
             {"temperature": (["time"], data_to_append)}, coords={"time": [0, 1, 2]}
         )
@@ -2823,10 +2820,7 @@ class TestDataset:
 
     def test_rename(self) -> None:
         data = create_test_data()
-        newnames = {
-            "var1": "renamed_var1",
-            "dim2": "renamed_dim2",
-        }
+        newnames = {"var1": "renamed_var1", "dim2": "renamed_dim2"}
         renamed = data.rename(newnames)
 
         variables = dict(data.variables)
@@ -3432,8 +3426,7 @@ class TestDataset:
 
         exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
         expected = Dataset(
-            data_vars={"b": ("z", [0, 1, 2, 3])},
-            coords={"z": exp_index},
+            data_vars={"b": ("z", [0, 1, 2, 3])}, coords={"z": exp_index}
         )
         # check attrs propagated
         ds["x"].attrs["foo"] = "bar"
@@ -3456,8 +3449,7 @@ class TestDataset:
 
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
         expected = Dataset(
-            data_vars={"b": ("z", [0, 2, 1, 3])},
-            coords={"z": exp_index},
+            data_vars={"b": ("z", [0, 2, 1, 3])}, coords={"z": exp_index}
         )
         expected["x"].attrs["foo"] = "bar"
 
@@ -3467,11 +3459,7 @@ class TestDataset:
 
     @pytest.mark.parametrize(
         "create_index,expected_keys",
-        [
-            (True, ["z", "x", "y"]),
-            (False, []),
-            (None, ["z", "x", "y"]),
-        ],
+        [(True, ["z", "x", "y"]), (False, []), (None, ["z", "x", "y"])],
     )
     def test_stack_create_index(self, create_index, expected_keys) -> None:
         ds = Dataset(
@@ -3516,8 +3504,7 @@ class TestDataset:
 
         exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["xx", "y"])
         expected = Dataset(
-            data_vars={"b": ("z", [0, 1, 2, 3])},
-            coords={"z": exp_index},
+            data_vars={"b": ("z", [0, 1, 2, 3])}, coords={"z": exp_index}
         )
 
         actual = ds.stack(z=["x", "y"])
@@ -3631,10 +3618,7 @@ class TestDataset:
 
     def test_stack_unstack_slow(self) -> None:
         ds = Dataset(
-            data_vars={
-                "a": ("x", [0, 1]),
-                "b": (("x", "y"), [[0, 1], [2, 3]]),
-            },
+            data_vars={"a": ("x", [0, 1]), "b": (("x", "y"), [[0, 1], [2, 3]])},
             coords={"x": [0, 1], "y": ["a", "b"]},
         )
         stacked = ds.stack(z=["x", "y"])
@@ -6619,8 +6603,7 @@ def test_cumulative_integrate(dask) -> None:
     )
     assert_allclose(expected_x, actual.compute())
     assert_equal(
-        ds["var"].cumulative_integrate("x"),
-        ds.cumulative_integrate("x")["var"],
+        ds["var"].cumulative_integrate("x"), ds.cumulative_integrate("x")["var"]
     )
 
     # make sure result is also a dask array (if the source is dask array)
@@ -6629,15 +6612,12 @@ def test_cumulative_integrate(dask) -> None:
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumtrapz(da, da["y"], axis=1, initial=0.0),
-        dims=["x", "y"],
-        coords=da.coords,
+        cumtrapz(da, da["y"], axis=1, initial=0.0), dims=["x", "y"], coords=da.coords
     )
     assert_allclose(expected_y, actual.compute())
     assert_equal(actual, ds.cumulative_integrate("y")["var"])
     assert_equal(
-        ds["var"].cumulative_integrate("y"),
-        ds.cumulative_integrate("y")["var"],
+        ds["var"].cumulative_integrate("y"), ds.cumulative_integrate("y")["var"]
     )
 
     # along x and y

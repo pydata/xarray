@@ -41,16 +41,7 @@ NUMPY_SAME_METHODS = ["item", "searchsorted"]
 
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
-NAN_REDUCE_METHODS = [
-    "max",
-    "min",
-    "mean",
-    "prod",
-    "sum",
-    "std",
-    "var",
-    "median",
-]
+NAN_REDUCE_METHODS = ["max", "min", "mean", "prod", "sum", "std", "var", "median"]
 NAN_CUM_METHODS = ["cumsum", "cumprod"]
 # TODO: wrap take, dot, sort
 

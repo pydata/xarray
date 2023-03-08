@@ -1719,9 +1719,7 @@ class Dataset(
         return obj
 
     def reset_coords(
-        self: T_Dataset,
-        names: Dims = None,
-        drop: bool = False,
+        self: T_Dataset, names: Dims = None, drop: bool = False
     ) -> T_Dataset:
         """Given names of coordinates, reset them to become variables
 
@@ -4123,9 +4121,7 @@ class Dataset(
                 else:
                     current_variables = {}
                 idx, idx_vars = PandasMultiIndex.from_variables_maybe_expand(
-                    dim,
-                    current_variables,
-                    {k: self._variables[k] for k in var_names},
+                    dim, current_variables, {k: self._variables[k] for k in var_names}
                 )
                 for n in idx.index.names:
                     replace_dims[n] = dim
@@ -4437,10 +4433,7 @@ class Dataset(
         return self._replace(variables, indexes=indexes)
 
     def _get_stack_index(
-        self,
-        dim,
-        multi=False,
-        create_index=False,
+        self, dim, multi=False, create_index=False
     ) -> tuple[Index | None, dict[Hashable, Variable]]:
         """Used by stack and unstack to get one pandas (multi-)index among
         the indexed coordinates along dimension `dim`.
@@ -5399,9 +5392,7 @@ class Dataset(
         return self.drop_vars(drop_vars)
 
     def transpose(
-        self: T_Dataset,
-        *dims: Hashable,
-        missing_dims: ErrorOptionsWithWarn = "raise",
+        self: T_Dataset, *dims: Hashable, missing_dims: ErrorOptionsWithWarn = "raise"
     ) -> T_Dataset:
         """Return a new Dataset object with all array dimensions transposed.
 
@@ -8693,7 +8684,7 @@ class Dataset(
                         "param": n_params,
                         "cov_i": n_params,
                         "cov_j": n_params,
-                    },
+                    }
                 },
                 output_dtypes=(np.float64, np.float64),
                 exclude_dims=set(reduce_dims_),
@@ -9147,11 +9138,7 @@ class Dataset(
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return DatasetCoarsen(
-            self,
-            dim,
-            boundary=boundary,
-            side=side,
-            coord_func=coord_func,
+            self, dim, boundary=boundary, side=side, coord_func=coord_func
         )
 
     def resample(

@@ -417,8 +417,7 @@ class TestPandasMultiIndex:
             ValueError, match=r"conflicting dimensions for multi-index product.*"
         ):
             PandasMultiIndex.stack(
-                {"x": xr.Variable("x", ["a", "b"]), "x2": xr.Variable("x", [1, 2])},
-                "z",
+                {"x": xr.Variable("x", ["a", "b"]), "x2": xr.Variable("x", [1, 2])}, "z"
             )
 
     def test_stack_non_unique(self) -> None:

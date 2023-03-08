@@ -90,12 +90,7 @@ class TestIndexers:
 
     def test_map_index_queries(self) -> None:
         def create_sel_results(
-            x_indexer,
-            x_index,
-            other_vars,
-            drop_coords,
-            drop_indexes,
-            rename_dims,
+            x_indexer, x_index, other_vars, drop_coords, drop_indexes, rename_dims
         ):
             dim_indexers = {"x": x_indexer}
             index_vars = x_index.create_variables()
@@ -114,9 +109,7 @@ class TestIndexers:
             )
 
         def test_indexer(
-            data: T_Xarray,
-            x: Any,
-            expected: indexing.IndexSelResult,
+            data: T_Xarray, x: Any, expected: indexing.IndexSelResult
         ) -> None:
             results = indexing.map_index_queries(data, {"x": x})
 

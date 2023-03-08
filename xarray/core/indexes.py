@@ -33,10 +33,7 @@ class Index:
 
     @classmethod
     def from_variables(
-        cls,
-        variables: Mapping[Any, Variable],
-        *,
-        options: Mapping[str, Any],
+        cls, variables: Mapping[Any, Variable], *, options: Mapping[str, Any]
     ) -> Index:
         raise NotImplementedError()
 
@@ -301,10 +298,7 @@ class PandasIndex(Index):
 
     @classmethod
     def from_variables(
-        cls,
-        variables: Mapping[Any, Variable],
-        *,
-        options: Mapping[str, Any],
+        cls, variables: Mapping[Any, Variable], *, options: Mapping[str, Any]
     ) -> PandasIndex:
         if len(variables) != 1:
             raise ValueError(
@@ -635,10 +629,7 @@ class PandasMultiIndex(PandasIndex):
 
     @classmethod
     def from_variables(
-        cls,
-        variables: Mapping[Any, Variable],
-        *,
-        options: Mapping[str, Any],
+        cls, variables: Mapping[Any, Variable], *, options: Mapping[str, Any]
     ) -> PandasMultiIndex:
         _check_dim_compat(variables)
         dim = next(iter(variables.values())).dims[0]
@@ -831,11 +822,7 @@ class PandasMultiIndex(PandasIndex):
 
             data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)
             index_vars[name] = IndexVariable(
-                self.dim,
-                data,
-                attrs=attrs,
-                encoding=encoding,
-                fastpath=True,
+                self.dim, data, attrs=attrs, encoding=encoding, fastpath=True
             )
 
         return index_vars
@@ -1023,8 +1010,7 @@ class PandasMultiIndex(PandasIndex):
 
 
 def create_default_index_implicit(
-    dim_variable: Variable,
-    all_variables: Mapping | Iterable[Hashable] | None = None,
+    dim_variable: Variable, all_variables: Mapping | Iterable[Hashable] | None = None
 ) -> tuple[PandasIndex, IndexVars]:
     """Create a default index from a dimension variable.
 
@@ -1100,9 +1086,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     )
 
     def __init__(
-        self,
-        indexes: dict[Any, T_PandasOrXarrayIndex],
-        variables: dict[Any, Variable],
+        self, indexes: dict[Any, T_PandasOrXarrayIndex], variables: dict[Any, Variable]
     ):
         """Constructor not for public consumption.
 
@@ -1428,9 +1412,7 @@ def indexes_all_equal(
 
 
 def _apply_indexes(
-    indexes: Indexes[Index],
-    args: Mapping[Any, Any],
-    func: str,
+    indexes: Indexes[Index], args: Mapping[Any, Any], func: str
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
     new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes.items()}
     new_index_variables: dict[Hashable, Variable] = {}
@@ -1452,22 +1434,19 @@ def _apply_indexes(
 
 
 def isel_indexes(
-    indexes: Indexes[Index],
-    indexers: Mapping[Any, Any],
+    indexes: Indexes[Index], indexers: Mapping[Any, Any]
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
     return _apply_indexes(indexes, indexers, "isel")
 
 
 def roll_indexes(
-    indexes: Indexes[Index],
-    shifts: Mapping[Any, int],
+    indexes: Indexes[Index], shifts: Mapping[Any, int]
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
     return _apply_indexes(indexes, shifts, "roll")
 
 
 def filter_indexes_from_coords(
-    indexes: Mapping[Any, Index],
-    filtered_coord_names: set,
+    indexes: Mapping[Any, Index], filtered_coord_names: set
 ) -> dict[Hashable, Index]:
     """Filter index items given a (sub)set of coordinate names.
 

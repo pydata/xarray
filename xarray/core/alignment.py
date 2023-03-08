@@ -174,8 +174,7 @@ class Aligner(Generic[DataAlignable]):
         self.results = tuple()
 
     def _normalize_indexes(
-        self,
-        indexes: Mapping[Any, Any],
+        self, indexes: Mapping[Any, Any]
     ) -> tuple[NormalizedIndexes, NormalizedIndexVars]:
         """Normalize the indexes/indexers used for re-indexing or alignment.
 
@@ -362,8 +361,7 @@ class Aligner(Generic[DataAlignable]):
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:
             return functools.partial(
-                functools.reduce,
-                functools.partial(index_cls.join, how=self.join),
+                functools.reduce, functools.partial(index_cls.join, how=self.join)
             )
         elif self.join == "left":
             return operator.itemgetter(0)
@@ -407,8 +405,7 @@ class Aligner(Generic[DataAlignable]):
             else:
                 if len(matching_indexes) > 1:
                     need_reindex = self._need_reindex(
-                        dims,
-                        list(zip(matching_indexes, matching_index_vars)),
+                        dims, list(zip(matching_indexes, matching_index_vars))
                     )
                 else:
                     need_reindex = False
@@ -494,8 +491,7 @@ class Aligner(Generic[DataAlignable]):
         self.results = tuple(objects)
 
     def _get_dim_pos_indexers(
-        self,
-        matching_indexes: dict[MatchingIndexKey, Index],
+        self, matching_indexes: dict[MatchingIndexKey, Index]
     ) -> dict[Hashable, Any]:
         dim_pos_indexers = {}
 
@@ -509,9 +505,7 @@ class Aligner(Generic[DataAlignable]):
         return dim_pos_indexers
 
     def _get_indexes_and_vars(
-        self,
-        obj: DataAlignable,
-        matching_indexes: dict[MatchingIndexKey, Index],
+        self, obj: DataAlignable, matching_indexes: dict[MatchingIndexKey, Index]
     ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
         new_indexes = {}
         new_variables = {}
@@ -532,9 +526,7 @@ class Aligner(Generic[DataAlignable]):
         return new_indexes, new_variables
 
     def _reindex_one(
-        self,
-        obj: DataAlignable,
-        matching_indexes: dict[MatchingIndexKey, Index],
+        self, obj: DataAlignable, matching_indexes: dict[MatchingIndexKey, Index]
     ) -> DataAlignable:
         new_indexes, new_variables = self._get_indexes_and_vars(obj, matching_indexes)
         dim_pos_indexers = self._get_dim_pos_indexers(matching_indexes)

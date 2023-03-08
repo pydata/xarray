@@ -195,10 +195,7 @@ def _format_message(x, y, err_msg, verbose):
         f"Max relative difference: {rel_diff}",
     ]
     if verbose:
-        parts += [
-            f" x: {x!r}",
-            f" y: {y!r}",
-        ]
+        parts += [f" x: {x!r}", f" y: {y!r}"]
 
     return "\n".join(parts)
 

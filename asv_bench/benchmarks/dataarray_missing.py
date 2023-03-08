@@ -24,11 +24,7 @@ class DataArrayMissingInterpolateNA:
 
     @parameterized(
         ["shape", "chunks", "limit"],
-        (
-            [(365, 75, 75)],
-            [None, {"x": 25, "y": 25}],
-            [None, 3],
-        ),
+        ([(365, 75, 75)], [None, {"x": 25, "y": 25}], [None, 3]),
     )
     def time_interpolate_na(self, shape, chunks, limit):
         actual = self.da.interpolate_na(dim="time", method="linear", limit=limit)
@@ -45,11 +41,7 @@ class DataArrayMissingBottleneck:
 
     @parameterized(
         ["shape", "chunks", "limit"],
-        (
-            [(365, 75, 75)],
-            [None, {"x": 25, "y": 25}],
-            [None, 3],
-        ),
+        ([(365, 75, 75)], [None, {"x": 25, "y": 25}], [None, 3]),
     )
     def time_ffill(self, shape, chunks, limit):
         actual = self.da.ffill(dim="time", limit=limit)
@@ -59,11 +51,7 @@ class DataArrayMissingBottleneck:
 
     @parameterized(
         ["shape", "chunks", "limit"],
-        (
-            [(365, 75, 75)],
-            [None, {"x": 25, "y": 25}],
-            [None, 3],
-        ),
+        ([(365, 75, 75)], [None, {"x": 25, "y": 25}], [None, 3]),
     )
     def time_bfill(self, shape, chunks, limit):
         actual = self.da.ffill(dim="time", limit=limit)

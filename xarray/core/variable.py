@@ -41,10 +41,7 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 
-NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    indexing.ExplicitlyIndexed,
-    pd.Index,
-)
+NON_NUMPY_SUPPORTED_ARRAY_TYPES = (indexing.ExplicitlyIndexed, pd.Index)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
@@ -1398,9 +1395,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return result
 
     def _pad_options_dim_to_index(
-        self,
-        pad_option: Mapping[Any, int | tuple[int, int]],
-        fill_with_shape=False,
+        self, pad_option: Mapping[Any, int | tuple[int, int]], fill_with_shape=False
     ):
         if fill_with_shape:
             return [
@@ -1565,9 +1560,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return result
 
     def transpose(
-        self,
-        *dims: Hashable | ellipsis,
-        missing_dims: ErrorOptionsWithWarn = "raise",
+        self, *dims: Hashable | ellipsis, missing_dims: ErrorOptionsWithWarn = "raise"
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
@@ -1813,10 +1806,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         else:
             data = np.full_like(
-                self.data,
-                fill_value=fill_value,
-                shape=new_shape,
-                dtype=dtype,
+                self.data, fill_value=fill_value, shape=new_shape, dtype=dtype
             )
 
             # Indexer is a list of lists of locations. Each list is the locations
@@ -2549,10 +2539,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.isnull,
-            self,
-            dask="allowed",
-            keep_attrs=keep_attrs,
+            duck_array_ops.isnull, self, dask="allowed", keep_attrs=keep_attrs
         )
 
     def notnull(self, keep_attrs: bool | None = None):
@@ -2583,10 +2570,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.notnull,
-            self,
-            dask="allowed",
-            keep_attrs=keep_attrs,
+            duck_array_ops.notnull, self, dask="allowed", keep_attrs=keep_attrs
         )
 
     @property

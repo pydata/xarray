@@ -214,11 +214,7 @@ def test_origin(closed, origin) -> None:
     da_cftimeindex = da(cftime_index)
 
     compare_against_pandas(
-        da_datetimeindex,
-        da_cftimeindex,
-        resample_freq,
-        closed=closed,
-        origin=origin,
+        da_datetimeindex, da_cftimeindex, resample_freq, closed=closed, origin=origin
     )
 
 

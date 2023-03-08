@@ -71,13 +71,7 @@ def test_coarsen_coords_cftime():
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
-@pytest.mark.parametrize(
-    "funcname, argument",
-    [
-        ("reduce", (np.mean,)),
-        ("mean", ()),
-    ],
-)
+@pytest.mark.parametrize("funcname, argument", [("reduce", (np.mean,)), ("mean", ())])
 def test_coarsen_keep_attrs(funcname, argument) -> None:
     global_attrs = {"units": "test", "long_name": "testing"}
     da_attrs = {"da_attr": "test"}
@@ -173,13 +167,7 @@ def test_coarsen_reduce(ds: Dataset, window, name) -> None:
         assert src_var.dims == actual[key].dims
 
 
-@pytest.mark.parametrize(
-    "funcname, argument",
-    [
-        ("reduce", (np.mean,)),
-        ("mean", ()),
-    ],
-)
+@pytest.mark.parametrize("funcname, argument", [("reduce", (np.mean,)), ("mean", ())])
 def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     attrs_da = {"da_attr": "test"}
     attrs_coords = {"attrs_coords": "test"}

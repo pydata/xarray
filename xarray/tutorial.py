@@ -166,13 +166,7 @@ def open_dataset(
     return ds
 
 
-def open_rasterio(
-    name,
-    engine=None,
-    cache=True,
-    cache_dir=None,
-    **kws,
-):
+def open_rasterio(name, engine=None, cache=True, cache_dir=None, **kws):
     """
     Open a rasterio dataset from the online repository (requires internet).
 

@@ -165,12 +165,7 @@ def _parse_envi(meta):
 
 
 def open_rasterio(
-    filename,
-    parse_coordinates=None,
-    chunks=None,
-    cache=None,
-    lock=None,
-    **kwargs,
+    filename, parse_coordinates=None, chunks=None, cache=None, lock=None, **kwargs
 ):
     """Open a file with rasterio.
 
@@ -252,11 +247,7 @@ def open_rasterio(
         lock = RASTERIO_LOCK
 
     manager = CachingFileManager(
-        rasterio.open,
-        filename,
-        lock=lock,
-        mode="r",
-        kwargs=kwargs,
+        rasterio.open, filename, lock=lock, mode="r", kwargs=kwargs
     )
     riods = manager.acquire()
     if vrt_params is not None:

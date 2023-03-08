@@ -36,12 +36,7 @@ class SupportsArithmetic:
     # numpy.lib.mixins.NDArrayOperatorsMixin.
 
     # TODO: allow extending this with some sort of registration system
-    _HANDLED_TYPES = (
-        np.generic,
-        numbers.Number,
-        bytes,
-        str,
-    )
+    _HANDLED_TYPES = (np.generic, numbers.Number, bytes, str)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         from xarray.core.computation import apply_ufunc
@@ -110,11 +105,7 @@ class VariableArithmetic(
     __array_priority__ = 50
 
 
-class DatasetArithmetic(
-    ImplementsDatasetReduce,
-    SupportsArithmetic,
-    DatasetOpsMixin,
-):
+class DatasetArithmetic(ImplementsDatasetReduce, SupportsArithmetic, DatasetOpsMixin):
     __slots__ = ()
     __array_priority__ = 50
 
@@ -130,17 +121,11 @@ class DataArrayArithmetic(
     __array_priority__ = 60
 
 
-class DataArrayGroupbyArithmetic(
-    SupportsArithmetic,
-    DataArrayGroupByOpsMixin,
-):
+class DataArrayGroupbyArithmetic(SupportsArithmetic, DataArrayGroupByOpsMixin):
     __slots__ = ()
 
 
-class DatasetGroupbyArithmetic(
-    SupportsArithmetic,
-    DatasetGroupByOpsMixin,
-):
+class DatasetGroupbyArithmetic(SupportsArithmetic, DatasetGroupByOpsMixin):
     __slots__ = ()
 
 

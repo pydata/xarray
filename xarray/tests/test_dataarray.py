@@ -2335,11 +2335,7 @@ class TestDataArray:
         assert_identical(actual7, expected6)
 
     def test_stack_unstack(self) -> None:
-        orig = DataArray(
-            [[0, 1], [2, 3]],
-            dims=["x", "y"],
-            attrs={"foo": 2},
-        )
+        orig = DataArray([[0, 1], [2, 3]], dims=["x", "y"], attrs={"foo": 2})
         assert_identical(orig, orig.unstack())
 
         # test GH3000
@@ -2358,13 +2354,7 @@ class TestDataArray:
         assert_identical(orig, actual)
 
         dims = ["a", "b", "c", "d", "e"]
-        coords = {
-            "a": [0],
-            "b": [1, 2],
-            "c": [3, 4, 5],
-            "d": [6, 7],
-            "e": [8],
-        }
+        coords = {"a": [0], "b": [1, 2], "c": [3, 4, 5], "d": [6, 7], "e": [8]}
         orig = xr.DataArray(np.random.rand(1, 2, 3, 2, 1), coords=coords, dims=dims)
         stacked = orig.stack(ab=["a", "b"], cd=["c", "d"])
 
@@ -2994,14 +2984,12 @@ class TestDataArray:
 
     def test_align_without_indexes_errors(self) -> None:
         with pytest.raises(
-            ValueError,
-            match=r"cannot.*align.*dimension.*conflicting.*sizes.*",
+            ValueError, match=r"cannot.*align.*dimension.*conflicting.*sizes.*"
         ):
             align(DataArray([1, 2, 3], dims=["x"]), DataArray([1, 2], dims=["x"]))
 
         with pytest.raises(
-            ValueError,
-            match=r"cannot.*align.*dimension.*conflicting.*sizes.*",
+            ValueError, match=r"cannot.*align.*dimension.*conflicting.*sizes.*"
         ):
             align(
                 DataArray([1, 2, 3], dims=["x"]),

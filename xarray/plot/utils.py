@@ -1296,16 +1296,14 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 
 @overload
 def _parse_size(
-    data: None,
-    norm: tuple[float | None, float | None, bool] | Normalize | None,
+    data: None, norm: tuple[float | None, float | None, bool] | Normalize | None
 ) -> None:
     ...
 
 
 @overload
 def _parse_size(
-    data: DataArray,
-    norm: tuple[float | None, float | None, bool] | Normalize | None,
+    data: DataArray, norm: tuple[float | None, float | None, bool] | Normalize | None
 ) -> pd.Series:
     ...
 
@@ -1706,10 +1704,7 @@ def _add_legend(
     primitive = primitive if isinstance(primitive, list) else [primitive]
 
     handles, labels = [], []
-    for huesizeplt, prop in [
-        (hueplt_norm, "colors"),
-        (sizeplt_norm, "sizes"),
-    ]:
+    for huesizeplt, prop in [(hueplt_norm, "colors"), (sizeplt_norm, "sizes")]:
         if huesizeplt.data is not None:
             # Get legend handles and labels that displays the
             # values correctly. Order might be different because

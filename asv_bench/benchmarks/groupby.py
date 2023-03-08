@@ -100,9 +100,7 @@ class GroupByDaskDataFrame(GroupBy):
 class Resample:
     def setup(self, *args, **kwargs):
         self.ds1d = xr.Dataset(
-            {
-                "b": ("time", np.arange(365.0 * 24)),
-            },
+            {"b": ("time", np.arange(365.0 * 24))},
             coords={"time": pd.date_range("2001-01-01", freq="H", periods=365 * 24)},
         )
         self.ds2d = self.ds1d.expand_dims(z=10)

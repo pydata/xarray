@@ -46,11 +46,7 @@ def get_array_namespace(x):
         return np
 
 
-def _dask_or_eager_func(
-    name,
-    eager_module=np,
-    dask_module="dask.array",
-):
+def _dask_or_eager_func(name, eager_module=np, dask_module="dask.array"):
     """Create a function that dispatches to dask for dask array inputs."""
 
     def f(*args, **kwargs):
@@ -83,19 +79,13 @@ pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module="dask
 # np.around has failing doctests, overwrite it so they pass:
 # https://github.com/numpy/numpy/issues/19759
 around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
+    around.__doc__ or "", "array([0.,  2.])", "array([0., 2.])"
 )
 around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.,  2.])",
-    "array([0., 2.])",
+    around.__doc__ or "", "array([0.,  2.])", "array([0., 2.])"
 )
 around.__doc__ = str.replace(
-    around.__doc__ or "",
-    "array([0.4,  1.6])",
-    "array([0.4, 1.6])",
+    around.__doc__ or "", "array([0.4,  1.6])", "array([0.4, 1.6])"
 )
 around.__doc__ = str.replace(
     around.__doc__ or "",

@@ -163,8 +163,7 @@ MergeElement = tuple[Variable, Optional[Index]]
 
 
 def _assert_prioritized_valid(
-    grouped: dict[Hashable, list[MergeElement]],
-    prioritized: Mapping[Any, MergeElement],
+    grouped: dict[Hashable, list[MergeElement]], prioritized: Mapping[Any, MergeElement]
 ) -> None:
     """Make sure that elements given in prioritized will not corrupt any
     index given in grouped.
@@ -306,8 +305,7 @@ def merge_collected(
 
 
 def collect_variables_and_indexes(
-    list_of_mappings: list[DatasetLike],
-    indexes: Mapping[Any, Any] | None = None,
+    list_of_mappings: list[DatasetLike], indexes: Mapping[Any, Any] | None = None
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 

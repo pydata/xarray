@@ -206,10 +206,7 @@ class Weighted(Generic[T_Xarray]):
 
     @staticmethod
     def _reduce(
-        da: DataArray,
-        weights: DataArray,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        da: DataArray, weights: DataArray, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
@@ -249,10 +246,7 @@ class Weighted(Generic[T_Xarray]):
         return sum_of_weights.where(valid_weights)
 
     def _sum_of_squares(
-        self,
-        da: DataArray,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        self, da: DataArray, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
 
@@ -261,20 +255,14 @@ class Weighted(Generic[T_Xarray]):
         return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
 
     def _weighted_sum(
-        self,
-        da: DataArray,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        self, da: DataArray, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
         return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
     def _weighted_mean(
-        self,
-        da: DataArray,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        self, da: DataArray, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
@@ -285,10 +273,7 @@ class Weighted(Generic[T_Xarray]):
         return weighted_sum / sum_of_weights
 
     def _weighted_var(
-        self,
-        da: DataArray,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        self, da: DataArray, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
 
@@ -299,21 +284,14 @@ class Weighted(Generic[T_Xarray]):
         return sum_of_squares / sum_of_weights
 
     def _weighted_std(
-        self,
-        da: DataArray,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        self, da: DataArray, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
         return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
 
     def _weighted_quantile(
-        self,
-        da: DataArray,
-        q: ArrayLike,
-        dim: Dims = None,
-        skipna: bool | None = None,
+        self, da: DataArray, q: ArrayLike, dim: Dims = None, skipna: bool | None = None
     ) -> DataArray:
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
@@ -446,9 +424,7 @@ class Weighted(Generic[T_Xarray]):
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
     def sum_of_weights(
-        self,
-        dim: Dims = None,
-        keep_attrs: bool | None = None,
+        self, dim: Dims = None, keep_attrs: bool | None = None
     ) -> T_Xarray:
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs

@@ -381,7 +381,7 @@ class TestDecodeCF:
                 },
                 "dims": {"time": 3, "timedelta": 3},
                 "data_vars": {
-                    "a": {"dims": ("time", "timedelta"), "data": np.ones((3, 3))},
+                    "a": {"dims": ("time", "timedelta"), "data": np.ones((3, 3))}
                 },
             }
         )

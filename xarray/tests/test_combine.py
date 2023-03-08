@@ -1048,8 +1048,7 @@ class TestCombineMixedObjectsbyCoords:
         da = DataArray([0, 1], dims="x", coords=({"x": [0, 1]}))
         ds = Dataset({"x": [2, 3]})
         with pytest.raises(
-            ValueError,
-            match="Can't automatically combine unnamed DataArrays with",
+            ValueError, match="Can't automatically combine unnamed DataArrays with"
         ):
             combine_by_coords([da, ds])
 

@@ -709,12 +709,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
-        args = (
-            var,
-            range(ndim),
-            *x_arginds,
-            *new_x_arginds,
-        )
+        args = (var, range(ndim), *x_arginds, *new_x_arginds)
 
         _, rechunked = da.unify_chunks(*args)
 

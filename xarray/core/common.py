@@ -1204,10 +1204,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.isnull,
-            self,
-            dask="allowed",
-            keep_attrs=keep_attrs,
+            duck_array_ops.isnull, self, dask="allowed", keep_attrs=keep_attrs
         )
 
     def notnull(
@@ -1249,10 +1246,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.notnull,
-            self,
-            dask="allowed",
-            keep_attrs=keep_attrs,
+            duck_array_ops.notnull, self, dask="allowed", keep_attrs=keep_attrs
         )
 
     def isin(self: T_DataWithCoords, test_elements: Any) -> T_DataWithCoords:
@@ -1772,9 +1766,7 @@ def ones_like(
     return full_like(other, 1, dtype)
 
 
-def get_chunksizes(
-    variables: Iterable[Variable],
-) -> Mapping[Any, tuple[int, ...]]:
+def get_chunksizes(variables: Iterable[Variable]) -> Mapping[Any, tuple[int, ...]]:
     chunks: dict[Any, tuple[int, ...]] = {}
     for v in variables:
         if hasattr(v._data, "chunks"):

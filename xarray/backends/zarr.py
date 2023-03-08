@@ -375,11 +375,7 @@ class ZarrStore(AbstractWritableDataStore):
             # default to 2 if store doesn't specify it's version (e.g. a path)
             zarr_version = getattr(store, "_store_version", 2)
 
-        open_kwargs = dict(
-            mode=mode,
-            synchronizer=synchronizer,
-            path=group,
-        )
+        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         open_kwargs["storage_options"] = storage_options
         if zarr_version > 2:
             open_kwargs["zarr_version"] = zarr_version

@@ -524,10 +524,7 @@ def open_dataset(
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
     backend_ds = backend.open_dataset(
-        filename_or_obj,
-        drop_variables=drop_variables,
-        **decoders,
-        **kwargs,
+        filename_or_obj, drop_variables=drop_variables, **decoders, **kwargs
     )
     ds = _dataset_from_backend_dataset(
         backend_ds,
@@ -963,7 +960,7 @@ def open_mfdataset(
         raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
             "effect. To manually combine along a specific dimension you should "
-            "instead specify combine='nested' along with a value for `concat_dim`.",
+            "instead specify combine='nested' along with a value for `concat_dim`."
         )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)

@@ -567,41 +567,13 @@ def test_keep_attrs() -> None:
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
+        pytest.param(None, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="default"),
+        pytest.param(False, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="False"),
+        pytest.param(True, [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="True"),
         pytest.param(
-            None,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="default",
+            "override", [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="override"
         ),
-        pytest.param(
-            False,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="False",
-        ),
-        pytest.param(
-            True,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="True",
-        ),
-        pytest.param(
-            "override",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="override",
-        ),
-        pytest.param(
-            "drop",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="drop",
-        ),
+        pytest.param("drop", [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="drop"),
         pytest.param(
             "drop_conflicts",
             [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
@@ -636,41 +608,13 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> Non
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
+        pytest.param(None, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="default"),
+        pytest.param(False, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="False"),
+        pytest.param(True, [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="True"),
         pytest.param(
-            None,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="default",
+            "override", [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="override"
         ),
-        pytest.param(
-            False,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="False",
-        ),
-        pytest.param(
-            True,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="True",
-        ),
-        pytest.param(
-            "override",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="override",
-        ),
-        pytest.param(
-            "drop",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="drop",
-        ),
+        pytest.param("drop", [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="drop"),
         pytest.param(
             "drop_conflicts",
             [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
@@ -706,41 +650,13 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> No
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
+        pytest.param(None, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="default"),
+        pytest.param(False, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="False"),
+        pytest.param(True, [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="True"),
         pytest.param(
-            None,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="default",
+            "override", [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="override"
         ),
-        pytest.param(
-            False,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="False",
-        ),
-        pytest.param(
-            True,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="True",
-        ),
-        pytest.param(
-            "override",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="override",
-        ),
-        pytest.param(
-            "drop",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="drop",
-        ),
+        pytest.param("drop", [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="drop"),
         pytest.param(
             "drop_conflicts",
             [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
@@ -801,41 +717,13 @@ def test_keep_attrs_strategies_dataarray_variables(
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
+        pytest.param(None, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="default"),
+        pytest.param(False, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="False"),
+        pytest.param(True, [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="True"),
         pytest.param(
-            None,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="default",
+            "override", [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="override"
         ),
-        pytest.param(
-            False,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="False",
-        ),
-        pytest.param(
-            True,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="True",
-        ),
-        pytest.param(
-            "override",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="override",
-        ),
-        pytest.param(
-            "drop",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="drop",
-        ),
+        pytest.param("drop", [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="drop"),
         pytest.param(
             "drop_conflicts",
             [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
@@ -871,41 +759,13 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
+        pytest.param(None, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="default"),
+        pytest.param(False, [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="False"),
+        pytest.param(True, [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="True"),
         pytest.param(
-            None,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="default",
+            "override", [{"a": 1}, {"a": 2}, {"a": 3}], {"a": 1}, False, id="override"
         ),
-        pytest.param(
-            False,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="False",
-        ),
-        pytest.param(
-            True,
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="True",
-        ),
-        pytest.param(
-            "override",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {"a": 1},
-            False,
-            id="override",
-        ),
-        pytest.param(
-            "drop",
-            [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
-            False,
-            id="drop",
-        ),
+        pytest.param("drop", [{"a": 1}, {"a": 2}, {"a": 3}], {}, False, id="drop"),
         pytest.param(
             "drop_conflicts",
             [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
@@ -1315,10 +1175,7 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array) -> None:
 
     expected = data_array.copy()
     actual = apply_ufunc(
-        identity,
-        data_array.chunk({"x": 1}),
-        vectorize=True,
-        dask="parallelized",
+        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized"
     )
 
     assert_identical(expected, actual)
@@ -2002,7 +1859,7 @@ def test_where_attrs() -> None:
     ds_expected = xr.Dataset(
         data_vars={
             "x": xr.DataArray([1, 0], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
-        },
+        }
     )
     ds_expected["a"].attrs = {"attr": "x_coord"}
     assert_identical(ds_expected, ds_actual)
@@ -2121,8 +1978,7 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
 
     x = xr.DataArray(
-        xr.date_range(date, freq="1S", periods=3, use_cftime=True),
-        dims="x",
+        xr.date_range(date, freq="1S", periods=3, use_cftime=True), dims="x"
     )
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
 
@@ -2210,14 +2066,7 @@ def test_polyfit_polyval_integration(
             "dim_0",
             -1,
         ],
-        [
-            xr.DataArray([1, 2]),
-            xr.DataArray([4, 5, 6]),
-            [1, 2],
-            [4, 5, 6],
-            "dim_0",
-            -1,
-        ],
+        [xr.DataArray([1, 2]), xr.DataArray([4, 5, 6]), [1, 2], [4, 5, 6], "dim_0", -1],
         [
             xr.Variable(dims=["dim_0"], data=[1, 2, 3]),
             xr.Variable(dims=["dim_0"], data=[4, 5, 6]),

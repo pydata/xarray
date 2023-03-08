@@ -794,14 +794,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     DataArray.coarsen
     """
 
-    __slots__ = (
-        "obj",
-        "boundary",
-        "coord_func",
-        "windows",
-        "side",
-        "trim_excess",
-    )
+    __slots__ = ("obj", "boundary", "coord_func", "windows", "side", "trim_excess")
     _attributes = ("windows", "side", "trim_excess")
     obj: T_Xarray
 
@@ -870,10 +863,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         )
 
     def construct(
-        self,
-        window_dim=None,
-        keep_attrs=None,
-        **window_dim_kwargs,
+        self, window_dim=None, keep_attrs=None, **window_dim_kwargs
     ) -> T_Xarray:
         """
         Convert this Coarsen object to a DataArray or Dataset,

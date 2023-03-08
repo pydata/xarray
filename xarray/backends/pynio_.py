@@ -133,11 +133,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
         filename_or_obj = _normalize_path(filename_or_obj)
-        store = NioDataStore(
-            filename_or_obj,
-            mode=mode,
-            lock=lock,
-        )
+        store = NioDataStore(filename_or_obj, mode=mode, lock=lock)
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

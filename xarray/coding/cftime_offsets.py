@@ -1308,8 +1308,5 @@ def date_range_like(source, calendar, use_cftime=None):
         end = end.replace(day=end.daysinmonth)
 
     return date_range(
-        start=start.isoformat(),
-        end=end.isoformat(),
-        freq=freq,
-        calendar=calendar,
+        start=start.isoformat(), end=end.isoformat(), freq=freq, calendar=calendar
     )

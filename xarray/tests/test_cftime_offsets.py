@@ -1017,15 +1017,7 @@ def test_rollback(calendar, offset, initial_date_args, partial_expected_date_arg
 
 
 _CFTIME_RANGE_TESTS = [
-    (
-        "0001-01-01",
-        "0001-01-04",
-        None,
-        "D",
-        "neither",
-        False,
-        [(1, 1, 2), (1, 1, 3)],
-    ),
+    ("0001-01-01", "0001-01-04", None, "D", "neither", False, [(1, 1, 2), (1, 1, 3)]),
     (
         "0001-01-01",
         "0001-01-04",

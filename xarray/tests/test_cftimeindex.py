@@ -744,14 +744,7 @@ def test_cftimeindex_add_timedeltaindex(calendar) -> None:
 @requires_cftime
 @pytest.mark.parametrize("n", [2.0, 1.5])
 @pytest.mark.parametrize(
-    "freq,units",
-    [
-        ("D", "D"),
-        ("H", "H"),
-        ("T", "min"),
-        ("S", "S"),
-        ("L", "ms"),
-    ],
+    "freq,units", [("D", "D"), ("H", "H"), ("T", "min"), ("S", "S"), ("L", "ms")]
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:

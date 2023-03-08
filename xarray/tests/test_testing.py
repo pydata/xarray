@@ -96,10 +96,7 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
 @pytest.mark.parametrize(
     "duckarray",
     (
-        pytest.param(
-            np.array,
-            id="numpy",
-        ),
+        pytest.param(np.array, id="numpy"),
         pytest.param(
             dask_from_array,
             id="dask",

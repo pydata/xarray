@@ -298,10 +298,7 @@ class TestPlot(PlotTestCase):
         assert_array_equal(line.get_ydata(), da.coords["time"].values)
 
     def test_line_plot_wrong_hue(self) -> None:
-        da = xr.DataArray(
-            data=np.array([[0, 1], [5, 9]]),
-            dims=["x", "t"],
-        )
+        da = xr.DataArray(data=np.array([[0, 1], [5, 9]]), dims=["x", "t"])
 
         with pytest.raises(ValueError, match="hue must be one of"):
             da.plot(x="t", hue="wrong_coord")
