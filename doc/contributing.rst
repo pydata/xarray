@@ -368,6 +368,7 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 - `flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality (we now use `ruff <https://github.com/charliermarsh/ruff/>`_ to apply these checks),
 - `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports
   (again we use `ruff <https://github.com/charliermarsh/ruff/>`_ to apply this formatting),
+- `absolufy-imports <https://github.com/MarcoGorelli/absolufy-imports>`_ for absolute instead of relative imports from different files,
 - `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
   <https://docs.python.org/3/library/typing.html>`_.
 
