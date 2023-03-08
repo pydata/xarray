@@ -106,6 +106,12 @@ Getting started with Git
 setting up your SSH key, and configuring git.  All these steps need to be completed before
 you can work seamlessly between your local repository and GitHub.
 
+.. note::
+
+    The following instructions assume you want to learn how to interact with github via the git command-line utility,
+    but contributors who are new to git may find it easier to use other tools instead such as
+    `Github Desktop <https://desktop.github.com/>`_.
+
 .. _contributing.forking:
 
 Forking
