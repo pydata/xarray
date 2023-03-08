@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
 import numpy as np
 import pandas as pd
 
-from xarray.coding import cftime_offsets
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import (
     Frozen,
@@ -1825,22 +1825,3 @@ def _contains_datetime_like_objects(var) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
-
-
-def _convert_base_to_offset(base, freq, index):
-    """Required until we officially deprecate the base argument to resample.  This
-    translates a provided `base` argument to an `offset` argument, following logic
-    from pandas.
-    """
-    from xarray.coding.cftimeindex import CFTimeIndex
-
-    if isinstance(index, pd.DatetimeIndex):
-        freq = pd.tseries.frequencies.to_offset(freq)
-        if isinstance(freq, pd.offsets.Tick):
-            return pd.Timedelta(base * freq.nanos // freq.n)
-    elif isinstance(index, CFTimeIndex):
-        freq = cftime_offsets.to_offset(freq)
-        if isinstance(freq, cftime_offsets.Tick):
-            return base * freq.as_timedelta() // freq.n
-    else:
-        raise ValueError("Can only resample using a DatetimeIndex or CFTimeIndex.")

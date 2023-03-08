@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.resample_cftime import CFTimeGrouper
 
 cftime = pytest.importorskip("cftime")
@@ -270,3 +271,19 @@ def test_resample_invalid_loffset_cftimeindex() -> None:
 
     with pytest.raises(ValueError):
         da.resample(time="24H", loffset=1)  # type: ignore
+
+
+@pytest.mark.parametrize(("base", "freq"), [(1, "10S"), (17, "3H"), (15, "5U")])
+def test__convert_base_to_offset(base, freq):
+    # Verify that the cftime_offset adapted version of _convert_base_to_offset
+    # produces the same result as the pandas version.
+    datetimeindex = pd.date_range("2000", periods=2)
+    cftimeindex = xr.cftime_range("2000", periods=2)
+    pandas_result = _convert_base_to_offset(base, freq, datetimeindex)
+    cftime_result = _convert_base_to_offset(base, freq, cftimeindex)
+    assert pandas_result.to_pytimedelta() == cftime_result
+
+
+def test__convert_base_to_offset_invalid_index():
+    with pytest.raises(ValueError, match="Can only resample"):
+        _convert_base_to_offset(1, "12H", pd.Index([0]))
