@@ -48,7 +48,7 @@ def _get_nan_block_lengths(
         .where(valid)
         .bfill(dim=dim)
         .where(~valid, 0)
-        .fillna(index[-1] - valid_arange.max())
+        .fillna(index[-1] - valid_arange.max(dim))
     )
 
     return nan_block_lengths

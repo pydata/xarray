@@ -542,19 +542,28 @@ def test_bfill_dataset(ds):
 
 @requires_bottleneck
 @pytest.mark.parametrize(
-    "y, lengths",
+    "y, lengths_expected",
     [
-        [np.arange(9), [[3, 3, 3, 0, 3, 3, 0, 2, 2]]],
-        [np.arange(9) * 3, [[9, 9, 9, 0, 9, 9, 0, 6, 6]]],
-        [[0, 2, 5, 6, 7, 8, 10, 12, 14], [[6, 6, 6, 0, 4, 4, 0, 4, 4]]],
+        [np.arange(9), [[1, 0, 7, 7, 7, 7, 7, 7, 0], [3, 3, 3, 0, 3, 3, 0, 2, 2]]],
+        [
+            np.arange(9) * 3,
+            [[3, 0, 21, 21, 21, 21, 21, 21, 0], [9, 9, 9, 0, 9, 9, 0, 6, 6]],
+        ],
+        [
+            [0, 2, 5, 6, 7, 8, 10, 12, 14],
+            [[2, 0, 12, 12, 12, 12, 12, 12, 0], [6, 6, 6, 0, 4, 4, 0, 4, 4]],
+        ],
     ],
 )
-def test_interpolate_na_nan_block_lengths(y, lengths):
-    arr = [[np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan]]
-    da = xr.DataArray(arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+def test_interpolate_na_nan_block_lengths(y, lengths_expected):
+    arr = [
+        [np.nan, 1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 4],
+        [np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan],
+    ]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
     index = get_clean_interp_index(da, dim="y", use_coordinate=True)
     actual = _get_nan_block_lengths(da, dim="y", index=index)
-    expected = da.copy(data=lengths * 2)
+    expected = da.copy(data=lengths_expected)
     assert_equal(actual, expected)
 
 
@@ -660,16 +669,17 @@ def test_interpolate_na_max_gap_time_specifier(
     "coords",
     [
         pytest.param(None, marks=pytest.mark.xfail()),
-        {"x": np.arange(4), "y": np.arange(11)},
+        {"x": np.arange(4), "y": np.arange(12)},
     ],
 )
 def test_interpolate_na_2d(coords):
+    n = np.nan
     da = xr.DataArray(
         [
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
         ],
         dims=["x", "y"],
         coords=coords,
@@ -678,21 +688,32 @@ def test_interpolate_na_2d(coords):
     actual = da.interpolate_na("y", max_gap=2)
     expected_y = da.copy(
         data=[
-            [1, 2, 3, 4, 5, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, 5, 6, 7, np.nan, np.nan, np.nan, 11],
+            [n, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
         ]
     )
     assert_equal(actual, expected_y)
 
+    actual = da.interpolate_na("y", max_gap=1, fill_value="extrapolate")
+    expected_y_extra = da.copy(
+        data=[
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected_y_extra)
+
     actual = da.interpolate_na("x", max_gap=3)
     expected_x = xr.DataArray(
         [
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
         ],
         dims=["x", "y"],
         coords=coords,
