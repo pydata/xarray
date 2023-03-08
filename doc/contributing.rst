@@ -762,11 +762,11 @@ Doing 'git status' again should give something like::
     #       modified:   /relative/path/to/file-you-added.py
     #
 
-The following defines how a commit message should be structured:
+The following defines how a commit message should ideally be structured:
 
-    * A subject line with `< 72` chars.
-    * One blank line.
-    * Optionally, a commit message body.
+* A subject line with `< 72` chars.
+* One blank line.
+* Optionally, a commit message body.
 
 Please reference the relevant GitHub issues in your commit message using ``GH1234`` or
 ``#1234``.  Either style is fine, but the former is generally preferred.
