@@ -419,7 +419,7 @@ of xarray, and for developers of other libraries that depend on xarray.
 Testing With Continuous Integration
 -----------------------------------
 
-The *xarray* test suite runs automatically the
+The *xarray* test suite runs automatically via the
 `GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions>`__,
 continuous integration service, once your pull request is submitted.
 
@@ -481,7 +481,7 @@ the expected correct result::
 Transitioning to ``pytest``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*xarray* existing test structure is *mostly* classed based, meaning that you will
+*xarray* existing test structure is *mostly* class-based, meaning that you will
 typically find tests wrapped in a class.
 
 .. code-block:: python
@@ -517,8 +517,6 @@ features that we like to use.
 
 We would name this file ``test_cool_feature.py`` and put in an appropriate place in the
 ``xarray/tests/`` structure.
-
-.. TODO: confirm that this actually works
 
 .. code-block:: python
 
@@ -570,26 +568,27 @@ A test run of this yields
 
 .. code-block:: shell
 
-   ((xarray) $ pytest test_cool_feature.py -v
-    =============================== test session starts ================================
+    ((xarray) $ pytest test_cool_feature.py -v
+    ================================= test session starts ==================================
     platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
     cachedir: .pytest_cache
     plugins: hypothesis-6.56.3, cov-4.0.0
     collected 11 items
 
-    test_cool_feature.py::test_dtypes[int8] PASSED
-    test_cool_feature.py::test_dtypes[int16] PASSED
-    test_cool_feature.py::test_dtypes[int32] PASSED
-    test_cool_feature.py::test_dtypes[int64] PASSED
-    test_cool_feature.py::test_mark[float32] PASSED
-    test_cool_feature.py::test_mark[int16] SKIPPED
-    test_cool_feature.py::test_mark[int32] xfail
-    test_cool_feature.py::test_series[int8] PASSED
-    test_cool_feature.py::test_series[int16] PASSED
-    test_cool_feature.py::test_series[int32] PASSED
-    test_cool_feature.py::test_series[int64] PASSED
+    xarray/tests/test_cool_feature.py::test_dtypes[int8] PASSED                       [  9%]
+    xarray/tests/test_cool_feature.py::test_dtypes[int16] PASSED                      [ 18%]
+    xarray/tests/test_cool_feature.py::test_dtypes[int32] PASSED                      [ 27%]
+    xarray/tests/test_cool_feature.py::test_dtypes[int64] PASSED                      [ 36%]
+    xarray/tests/test_cool_feature.py::test_mark[float32] PASSED                      [ 45%]
+    xarray/tests/test_cool_feature.py::test_mark[int16] SKIPPED (unconditional skip)  [ 54%]
+    xarray/tests/test_cool_feature.py::test_mark[int32] XFAIL (to show how it works)  [ 63%]
+    xarray/tests/test_cool_feature.py::test_series[int8] PASSED                       [ 72%]
+    xarray/tests/test_cool_feature.py::test_series[int16] PASSED                      [ 81%]
+    xarray/tests/test_cool_feature.py::test_series[int32] PASSED                      [ 90%]
+    xarray/tests/test_cool_feature.py::test_series[int64] PASSED                      [100%]
 
-    ================== 9 passed, 1 skipped, 1 xfailed in 1.83 seconds ==================
+
+    ==================== 9 passed, 1 skipped, 1 xfailed in 1.83 seconds ====================
 
 Tests that we have ``parametrized`` are now accessible via the test name, for
 example we could run these with ``-k int8`` to sub-select *only* those tests
@@ -599,10 +598,10 @@ which match ``int8``.
 .. code-block:: shell
 
    ((xarray) bash-3.2$ pytest  test_cool_feature.py  -v -k int8
-   =========================== test session starts ===========================
-    platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
-    cachedir: .pytest_cache
-    plugins: hypothesis-6.56.3, cov-4.0.0
+   ================================== test session starts ==================================
+   platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
+   cachedir: .pytest_cache
+   plugins: hypothesis-6.56.3, cov-4.0.0
    collected 11 items
 
    test_cool_feature.py::test_dtypes[int8] PASSED
@@ -869,5 +868,5 @@ PR checklist
 
     - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 
-- **Push your code and** `create a PR on GitHub <https://help.github.com/en/articles/creating-a-pull-request>`_.
+- **Push your code** and `create a PR on GitHub <https://help.github.com/en/articles/creating-a-pull-request>`_.
 - **Use a helpful title for your pull request** by summarizing the main contributions rather than using the latest commit message. If the PR addresses an `issue <https://github.com/pydata/xarray/issues>`_, please `reference it <https://help.github.com/en/articles/autolinked-references-and-urls>`_.
