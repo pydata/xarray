@@ -313,7 +313,7 @@ You should also use this environment and these steps if you want to view changes
     # or with older versions of Anaconda:
     source activate xarray-docs
 
-    # Build and install xarray
+    # Build and install a local, editable version of xarray
     pip install -e .
 
 Building the documentation
