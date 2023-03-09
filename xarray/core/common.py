@@ -12,7 +12,8 @@ import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type
+from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
 
 try:
@@ -1366,28 +1367,40 @@ class DataWithCoords(AttrAccessMixin):
 
 @overload
 def full_like(
-    other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None
+    other: DataArray,
+    fill_value: Any,
+    dtype: DTypeLikeSave = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> DataArray:
     ...
 
 
 @overload
 def full_like(
-    other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None
+    other: Dataset,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset:
     ...
 
 
 @overload
 def full_like(
-    other: Variable, fill_value: Any, dtype: DTypeLikeSave = None
+    other: Variable,
+    fill_value: Any,
+    dtype: DTypeLikeSave = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Variable:
     ...
 
 
 @overload
 def full_like(
-    other: Dataset | DataArray, fill_value: Any, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray:
     ...
 
@@ -1397,6 +1410,7 @@ def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
     dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
@@ -1405,6 +1419,7 @@ def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
     dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object with the same shape and type as a given object.
 
@@ -1532,7 +1547,10 @@ def full_like(
 
         data_vars = {
             k: _full_like_variable(
-                v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None)
+                v.variable,
+                fill_value.get(k, dtypes.NA),
+                dtype_.get(k, None),
+                from_array_kwargs,
             )
             for k, v in other.data_vars.items()
         }
@@ -1541,7 +1559,7 @@ def full_like(
         if isinstance(dtype, Mapping):
             raise ValueError("'dtype' cannot be dict-like when passing a DataArray")
         return DataArray(
-            _full_like_variable(other.variable, fill_value, dtype),
+            _full_like_variable(other.variable, fill_value, dtype, from_array_kwargs),
             dims=other.dims,
             coords=other.coords,
             attrs=other.attrs,
@@ -1550,13 +1568,16 @@ def full_like(
     elif isinstance(other, Variable):
         if isinstance(dtype, Mapping):
             raise ValueError("'dtype' cannot be dict-like when passing a Variable")
-        return _full_like_variable(other, fill_value, dtype)
+        return _full_like_variable(other, fill_value, dtype, from_array_kwargs)
     else:
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
 def _full_like_variable(
-    other: Variable, fill_value: Any, dtype: DTypeLike = None
+    other: Variable,
+    fill_value: Any,
+    dtype: DTypeLike = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from xarray.core.variable import Variable
@@ -1564,13 +1585,17 @@ def _full_like_variable(
     if fill_value is dtypes.NA:
         fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)
 
-    if is_duck_dask_array(other.data):
-        import dask.array
+    if is_chunked_array(other.data):
+        chunkmanager = get_chunked_array_type(other.data)
 
         if dtype is None:
             dtype = other.dtype
-        data = dask.array.full(
-            other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
+        data = chunkmanager.array_api.full(
+            other.shape,
+            fill_value,
+            dtype=dtype,
+            chunks=other.data.chunks,
+            from_array_kwargs=from_array_kwargs,
         )
     else:
         data = np.full_like(other.data, fill_value, dtype=dtype)
@@ -1579,36 +1604,54 @@ def _full_like_variable(
 
 
 @overload
-def zeros_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
-    ...
-
-
-@overload
-def zeros_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
-    ...
-
-
-@overload
-def zeros_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+def zeros_like(
+    other: DataArray,
+    dtype: DTypeLikeSave = None,
+    from_array_kwargs: dict[str, Any] = None,
+) -> DataArray:
     ...
 
 
 @overload
 def zeros_like(
-    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+    other: Dataset,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
+) -> Dataset:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Variable,
+    dtype: DTypeLikeSave = None,
+    from_array_kwargs: dict[str, Any] = None,
+) -> Variable:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray:
     ...
 
 
 @overload
 def zeros_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def zeros_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of zeros with the same shape and
     type as a given dataarray or dataset.
@@ -1662,40 +1705,58 @@ def zeros_like(
     full_like
 
     """
-    return full_like(other, 0, dtype)
+    return full_like(other, 0, dtype, from_array_kwargs)
 
 
 @overload
-def ones_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
-    ...
-
-
-@overload
-def ones_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
-    ...
-
-
-@overload
-def ones_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+def ones_like(
+    other: DataArray,
+    dtype: DTypeLikeSave = None,
+    from_array_kwargs: dict[str, Any] = None,
+) -> DataArray:
     ...
 
 
 @overload
 def ones_like(
-    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+    other: Dataset,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
+) -> Dataset:
+    ...
+
+
+@overload
+def ones_like(
+    other: Variable,
+    dtype: DTypeLikeSave = None,
+    from_array_kwargs: dict[str, Any] = None,
+) -> Variable:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray:
     ...
 
 
 @overload
 def ones_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def ones_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping = None,
+    from_array_kwargs: dict[str, Any] = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of ones with the same shape and
     type as a given dataarray or dataset.
@@ -1741,7 +1802,7 @@ def ones_like(
     full_like
 
     """
-    return full_like(other, 1, dtype)
+    return full_like(other, 1, dtype, from_array_kwargs)
 
 
 def get_chunksizes(

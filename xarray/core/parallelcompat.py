@@ -42,8 +42,6 @@ def get_chunked_array_type(*args) -> "ChunkManager":
         if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
     ]
 
-    print(chunked_arrays)
-
     # Asserts all arrays are the same type (or numpy etc.)
     chunked_array_types = {type(a) for a in chunked_arrays}
     if len(chunked_array_types) > 1:
@@ -110,6 +108,10 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def compute(self, data: T_ChunkedArray, **kwargs) -> np.ndarray:
         ...
+
+    def array_api(self) -> Any:
+        """Return the array_api namespace following the python array API standard."""
+        raise NotImplementedError()
 
     @abstractmethod
     def apply_gufunc(
@@ -230,6 +232,11 @@ class DaskManager(ChunkManager[T_DaskArray]):
         from dask.array import compute
 
         return compute(*data, **kwargs)
+
+    def array_api(self) -> Any:
+        from dask import array as da
+
+        return da
 
     def apply_gufunc(
         self,
@@ -378,6 +385,11 @@ class CubedManager(ChunkManager[T_CubedArray]):
         from cubed import compute
 
         return compute(*data, **kwargs)
+
+    def array_api(self) -> Any:
+        from cubed import array_api
+
+        return array_api
 
     def map_blocks(
         self,
