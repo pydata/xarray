@@ -6,7 +6,6 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
@@ -1860,7 +1859,9 @@ class TestDataArrayResample:
 
         with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
             actual = array.resample(time="24H", base=base).mean()
-        expected = DataArray(array.to_series().resample("24H", base=base).mean())
+        expected = DataArray(
+            array.to_series().resample("24H", offset=f"{base}H").mean()
+        )
         assert_identical(expected, actual)
 
     def test_resample_offset(self) -> None:
@@ -1897,15 +1898,22 @@ class TestDataArrayResample:
 
         with pytest.warns(FutureWarning, match="`loffset` parameter"):
             actual = array.resample(time="24H", loffset=loffset).mean()
-        expected = DataArray(array.to_series().resample("24H", loffset=loffset).mean())
+        series = array.to_series().resample("24H").mean()
+        if not isinstance(loffset, pd.DateOffset):
+            loffset = pd.Timedelta(loffset)
+        series.index = series.index + loffset
+        expected = DataArray(series)
         assert_identical(actual, expected)
 
     def test_resample_invalid_loffset(self) -> None:
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
-        with pytest.raises(ValueError, match="`loffset` must be"):
-            array.resample(time="24H", loffset=1).mean()  # type: ignore
+        with pytest.warns(
+            FutureWarning, match="Following pandas, the `loffset` parameter"
+        ):
+            with pytest.raises(ValueError, match="`loffset` must be"):
+                array.resample(time="24H", loffset=1).mean()  # type: ignore
 
 
 class TestDatasetResample:
@@ -1992,14 +2000,6 @@ class TestDatasetResample:
             }
         )
         ds.attrs["dsmeta"] = "dsdata"
-
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        actual = ds.resample(time="24H", loffset="-12H").mean().bar
-        expected_ = ds.bar.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
-        assert_allclose(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
