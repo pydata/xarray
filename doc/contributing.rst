@@ -170,9 +170,12 @@ documentation locally before pushing your changes.
 .. note::
 
     For small changes, such as fixing a typo, you don't necessarily need to build and test xarray locally.
-    If you make your changes then :ref:`commit and push them to a new branch <contributing.pushing>`,
+    If you make your changes then :ref:`commit and push them to a new branch <contributing.changes>`,
     xarray's automated :ref:`continuous integration tests <contributing.ci>` will run and check your code in various ways.
     You can then try to fix these problems by committing and pushing more commits to the same branch.
+
+    You can also avoid building the documentation locally by instead :ref:`viewing the updated documentation via the CI <contributing.pr>`.
+
     To speed up this feedback loop or for more complex development tasks you should build and test xarray locally.
 
 
@@ -754,10 +757,12 @@ If your code is an enhancement, it is most likely necessary to add usage
 examples to the existing documentation.  This can be done following the section
 regarding documentation :ref:`above <contributing.documentation>`.
 
-.. _contributing.pushing:
+.. _contributing.changes:
 
 Contributing your changes to *xarray*
 =====================================
+
+.. _contributing.committing:
 
 Committing your code
 --------------------
@@ -792,6 +797,9 @@ Now you can commit your changes in your local repository::
 
     git commit -m
 
+
+.. _contributing.pushing:
+
 Pushing your changes
 --------------------
 
@@ -816,6 +824,8 @@ like::
 Now your code is on GitHub, but it is not yet a part of the *xarray* project.  For that to
 happen, a pull request needs to be submitted on GitHub.
 
+.. _contributing.review:
+
 Review your code
 ----------------
 
@@ -829,6 +839,8 @@ double check your branch changes against the branch it was based on:
 #. Click on the ``Compare`` button for your feature branch
 #. Select the ``base`` and ``compare`` branches, if necessary. This will be ``main`` and
    ``shiny-new-feature``, respectively.
+
+.. _contributing.pr:
 
 Finally, make the pull request
 ------------------------------
@@ -849,7 +861,7 @@ release.  To submit a pull request:
 This request then goes to the repository maintainers, and they will review
 the code.
 
-If you have made updates to the documentation, you can see a preview of the updated docs by clicking on "Details" under
+If you have made updates to the documentation, you can now see a preview of the updated docs by clicking on "Details" under
 the ``docs/readthedocs.org`` check near the bottom of the list of checks that run automatically when submitting a PR,
 then clicking on the "View Docs" button on the right (not the big green button, the small black one further down).
 
@@ -865,6 +877,8 @@ will automatically be updated.  Pushing them to GitHub again is done by::
 This will automatically update your pull request with the latest code and restart the
 :ref:`Continuous Integration <contributing.ci>` tests.
 
+
+.. _contributing.delete:
 
 Delete your merged branch (optional)
 ------------------------------------
@@ -889,6 +903,8 @@ GitHub. To delete it there do::
 
     git push origin --delete shiny-new-feature
 
+
+.. _contributing.checklist:
 
 PR checklist
 ------------
