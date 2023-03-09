@@ -44,6 +44,10 @@ Bug fixes
 - Fix matplotlib raising a UserWarning when plotting a scatter plot
   with an unfilled marker (:issue:`7313`, :pull:`7318`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix issue with ``max_gap`` in ``interpolate_na``, when applied to
+  multidimensional arrays. (:issue:`7597`, :pull:`7598`).
+  By `Paul Ockenfuß <https://github.com/Ockenfuss>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
