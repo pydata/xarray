@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.resample_cftime import CFTimeGrouper
 
 cftime = pytest.importorskip("cftime")
@@ -130,17 +131,18 @@ def test_resample(freqs, closed, label, base, offset) -> None:
     da_datetimeindex = da(datetime_index)
     da_cftimeindex = da(cftime_index)
 
-    compare_against_pandas(
-        da_datetimeindex,
-        da_cftimeindex,
-        resample_freq,
-        closed=closed,
-        label=label,
-        base=base,
-        offset=offset,
-        origin=origin,
-        loffset=loffset,
-    )
+    with pytest.warns(FutureWarning, match="`loffset` parameter"):
+        compare_against_pandas(
+            da_datetimeindex,
+            da_cftimeindex,
+            resample_freq,
+            closed=closed,
+            label=label,
+            base=base,
+            offset=offset,
+            origin=origin,
+            loffset=loffset,
+        )
 
 
 @pytest.mark.parametrize(
@@ -245,3 +247,43 @@ def test_timedelta_offset() -> None:
     timedelta_result = da_cftime.resample(time="2D", offset=timedelta).mean()
     string_result = da_cftime.resample(time="2D", offset=string).mean()
     xr.testing.assert_identical(timedelta_result, string_result)
+
+
+@pytest.mark.parametrize("loffset", ["12H", datetime.timedelta(hours=-12)])
+def test_resample_loffset_cftimeindex(loffset) -> None:
+    datetimeindex = pd.date_range("2000-01-01", freq="6H", periods=10)
+    da_datetimeindex = xr.DataArray(np.arange(10), [("time", datetimeindex)])
+
+    cftimeindex = xr.cftime_range("2000-01-01", freq="6H", periods=10)
+    da_cftimeindex = xr.DataArray(np.arange(10), [("time", cftimeindex)])
+
+    with pytest.warns(FutureWarning, match="`loffset` parameter"):
+        result = da_cftimeindex.resample(time="24H", loffset=loffset).mean()
+        expected = da_datetimeindex.resample(time="24H", loffset=loffset).mean()
+
+    result["time"] = result.xindexes["time"].to_pandas_index().to_datetimeindex()
+    xr.testing.assert_identical(result, expected)
+
+
+def test_resample_invalid_loffset_cftimeindex() -> None:
+    times = xr.cftime_range("2000-01-01", freq="6H", periods=10)
+    da = xr.DataArray(np.arange(10), [("time", times)])
+
+    with pytest.raises(ValueError):
+        da.resample(time="24H", loffset=1)  # type: ignore
+
+
+@pytest.mark.parametrize(("base", "freq"), [(1, "10S"), (17, "3H"), (15, "5U")])
+def test__convert_base_to_offset(base, freq):
+    # Verify that the cftime_offset adapted version of _convert_base_to_offset
+    # produces the same result as the pandas version.
+    datetimeindex = pd.date_range("2000", periods=2)
+    cftimeindex = xr.cftime_range("2000", periods=2)
+    pandas_result = _convert_base_to_offset(base, freq, datetimeindex)
+    cftime_result = _convert_base_to_offset(base, freq, cftimeindex)
+    assert pandas_result.to_pytimedelta() == cftime_result
+
+
+def test__convert_base_to_offset_invalid_index():
+    with pytest.raises(ValueError, match="Can only resample"):
+        _convert_base_to_offset(1, "12H", pd.Index([0]))

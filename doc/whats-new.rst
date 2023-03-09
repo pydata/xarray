@@ -34,10 +34,20 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Following pandas, the ``base`` and ``loffset`` parameters of
+  :py:meth:`xr.DataArray.resample` and :py:meth:`xr.Dataset.resample` have been
+  deprecated and will be removed in a future version of xarray.  Using the
+  ``origin`` or ``offset`` parameters is recommended as a replacement for using
+  the ``base`` parameter and using time offset arithmetic is recommended as a
+  replacement for using the ``loffset`` parameter (:pull:`8459`).  By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
 
 
 Bug fixes
 ~~~~~~~~~
+
+- Improve error message when using in :py:meth:`Dataset.drop_vars` to state which variables can't be dropped. (:pull:`7518`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Require to explicitly defining optional dimensions such as hue
   and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
@@ -47,7 +57,8 @@ Bug fixes
 - Fix issue with ``max_gap`` in ``interpolate_na``, when applied to
   multidimensional arrays. (:issue:`7597`, :pull:`7598`).
   By `Paul Ockenfuß <https://github.com/Ockenfuss>`_.
-
+- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
+  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
