@@ -298,6 +298,7 @@ def _chunk_ds(
     chunks,
     overwrite_encoded_chunks,
     inline_array,
+    from_array_kwargs,
     **extra_tokens,
 ):
     from dask.base import tokenize
@@ -317,6 +318,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
+            from_array_kwargs=from_array_kwargs,
         )
     return backend_ds._replace(variables)
 
@@ -329,6 +331,7 @@ def _dataset_from_backend_dataset(
     cache,
     overwrite_encoded_chunks,
     inline_array,
+    from_array_kwargs,
     **extra_tokens,
 ):
     if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
@@ -347,6 +350,7 @@ def _dataset_from_backend_dataset(
             chunks,
             overwrite_encoded_chunks,
             inline_array,
+            from_array_kwargs,
             **extra_tokens,
         )
 
@@ -374,6 +378,7 @@ def open_dataset(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    from_array_kwargs=None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> Dataset:
@@ -537,6 +542,7 @@ def open_dataset(
         cache,
         overwrite_encoded_chunks,
         inline_array,
+        from_array_kwargs,
         drop_variables=drop_variables,
         **decoders,
         **kwargs,
@@ -559,6 +565,7 @@ def open_dataarray(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    from_array_kwargs: dict[str, Any] = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
@@ -696,6 +703,7 @@ def open_dataarray(
         cache=cache,
         drop_variables=drop_variables,
         inline_array=inline_array,
+        from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
