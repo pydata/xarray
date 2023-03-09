@@ -24,17 +24,29 @@ def _select_along_axis(values, idx, axis):
     return values[sl]
 
 
-def nanfirst(values, axis):
+def nanfirst(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     idx_first = np.argmax(~pd.isnull(values), axis=axis)
-    return _select_along_axis(values, idx_first, axis)
+    result = _select_along_axis(values, idx_first, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
-def nanlast(values, axis):
+def nanlast(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     rev = (slice(None),) * axis + (slice(None, None, -1),)
     idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
-    return _select_along_axis(values, idx_last, axis)
+    result = _select_along_axis(values, idx_last, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
 def inverse_permutation(indices, N=None):

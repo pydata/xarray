@@ -1267,7 +1267,7 @@ def date_range_like(source, calendar, use_cftime=None):
     if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
         isinstance(source, DataArray)
         and (source.ndim != 1)
-        or not _contains_datetime_like_objects(source)
+        or not _contains_datetime_like_objects(source.variable)
     ):
         raise ValueError(
             "'source' must be a 1D array of datetime objects for inferring its range."

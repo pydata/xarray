@@ -25,6 +25,8 @@ New Features
 
 - Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Support dask arrays in ``first`` and ``last`` reductions.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -32,6 +34,13 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Following pandas, the ``base`` and ``loffset`` parameters of
+  :py:meth:`xr.DataArray.resample` and :py:meth:`xr.Dataset.resample` have been
+  deprecated and will be removed in a future version of xarray.  Using the
+  ``origin`` or ``offset`` parameters is recommended as a replacement for using
+  the ``base`` parameter and using time offset arithmetic is recommended as a
+  replacement for using the ``loffset`` parameter (:pull:`8459`).  By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
 
 
 Bug fixes
@@ -42,6 +51,8 @@ Bug fixes
 - Fix matplotlib raising a UserWarning when plotting a scatter plot
   with an unfilled marker (:issue:`7313`, :pull:`7318`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
+  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~

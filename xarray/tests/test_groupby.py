@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import warnings
 
 import numpy as np
@@ -17,6 +18,7 @@ from xarray.tests import (
     assert_identical,
     create_test_data,
     has_cftime,
+    has_pandas_version_two,
     requires_dask,
     requires_flox,
     requires_scipy,
@@ -1499,13 +1501,6 @@ class TestDataArrayResample:
         expected = resample_as_pandas(array, "24H", closed="right")
         assert_identical(expected, actual)
 
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        actual = array.resample(time="24H", loffset="-12H").mean()
-        expected = resample_as_pandas(array, "24H")
-        expected["time"] = expected.indexes["time"] + pd.to_timedelta("-12H")
-        assert_identical(actual, expected)
-
         with pytest.raises(ValueError, match=r"index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
 
@@ -1856,12 +1851,15 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_base(self) -> None:
         times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         base = 11
-        actual = array.resample(time="24H", base=base).mean()
+
+        with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
+            actual = array.resample(time="24H", base=base).mean()
         expected = DataArray(array.to_series().resample("24H", base=base).mean())
         assert_identical(expected, actual)
 
@@ -1882,6 +1880,32 @@ class TestDataArrayResample:
         actual = array.resample(time="24H", origin=origin).mean()
         expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
         assert_identical(expected, actual)
+
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
+    @pytest.mark.parametrize(
+        "loffset",
+        [
+            "-12H",
+            datetime.timedelta(hours=-12),
+            pd.Timedelta(hours=-12),
+            pd.DateOffset(hours=-12),
+        ],
+    )
+    def test_resample_loffset(self, loffset) -> None:
+        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.warns(FutureWarning, match="`loffset` parameter"):
+            actual = array.resample(time="24H", loffset=loffset).mean()
+        expected = DataArray(array.to_series().resample("24H", loffset=loffset).mean())
+        assert_identical(actual, expected)
+
+    def test_resample_invalid_loffset(self) -> None:
+        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.raises(ValueError, match="`loffset` must be"):
+            array.resample(time="24H", loffset=1).mean()  # type: ignore
 
 
 class TestDatasetResample:

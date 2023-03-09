@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import DatetimeLike, SideOptions
     from xarray.core.utils import Frozen
 
     GroupKey = Any
@@ -250,7 +251,10 @@ def _unique_and_monotonic(group: T_Group) -> bool:
     return index.is_unique and index.is_monotonic_increasing
 
 
-def _apply_loffset(grouper, result):
+def _apply_loffset(
+    loffset: str | pd.DateOffset | datetime.timedelta | pd.Timedelta,
+    result: pd.Series | pd.DataFrame,
+):
     """
     (copied from pandas)
     if loffset is set, offset the result index
@@ -263,34 +267,29 @@ def _apply_loffset(grouper, result):
     result : Series or DataFrame
         the result of resample
     """
+    # pd.Timedelta is a subclass of datetime.timedelta so we do not need to
+    # include it in instance checks.
+    if not isinstance(loffset, (str, pd.DateOffset, datetime.timedelta)):
+        raise ValueError(
+            f"`loffset` must be a str, pd.DateOffset, datetime.timedelta, or pandas.Timedelta object. "
+            f"Got {loffset}."
+        )
+
+    if isinstance(loffset, str):
+        loffset = pd.tseries.frequencies.to_offset(loffset)
 
     needs_offset = (
-        isinstance(grouper.loffset, (pd.DateOffset, datetime.timedelta))
+        isinstance(loffset, (pd.DateOffset, datetime.timedelta))
         and isinstance(result.index, pd.DatetimeIndex)
         and len(result.index) > 0
     )
 
     if needs_offset:
-        result.index = result.index + grouper.loffset
-
-    grouper.loffset = None
+        result.index = result.index + loffset
 
 
 def _get_index_and_items(index, grouper):
-    from xarray.core.resample_cftime import CFTimeGrouper
-
-    s = pd.Series(np.arange(index.size), index)
-    if isinstance(grouper, CFTimeGrouper):
-        first_items, codes = grouper.first_items(index)
-    else:
-        grouped = s.groupby(grouper)
-        first_items = grouped.first()
-        counts = grouped.count()
-        # This way we generate codes for the final output index: full_index.
-        # So for _flox_reduce we avoid one reindex and copy by avoiding
-        # _maybe_restore_empty_groups
-        codes = np.repeat(np.arange(len(first_items)), counts)
-        _apply_loffset(grouper, first_items)
+    first_items, codes = grouper.first_items(index)
     full_index = first_items.index
     if first_items.isnull().any():
         first_items = first_items.dropna()
@@ -1408,3 +1407,56 @@ class DatasetGroupBy(  # type: ignore[misc]
     ImplementsDatasetReduce,
 ):
     __slots__ = ()
+
+
+class TimeResampleGrouper:
+    def __init__(
+        self,
+        freq: str,
+        closed: SideOptions | None,
+        label: SideOptions | None,
+        origin: str | DatetimeLike,
+        offset: pd.Timedelta | datetime.timedelta | str | None,
+        loffset: datetime.timedelta | str | None,
+    ):
+        self.freq = freq
+        self.closed = closed
+        self.label = label
+        self.origin = origin
+        self.offset = offset
+        self.loffset = loffset
+
+    def first_items(self, index):
+        from xarray import CFTimeIndex
+        from xarray.core.resample_cftime import CFTimeGrouper
+
+        if isinstance(index, CFTimeIndex):
+            grouper = CFTimeGrouper(
+                freq=self.freq,
+                closed=self.closed,
+                label=self.label,
+                origin=self.origin,
+                offset=self.offset,
+                loffset=self.loffset,
+            )
+            return grouper.first_items(index)
+        else:
+            s = pd.Series(np.arange(index.size), index)
+            grouper = pd.Grouper(
+                freq=self.freq,
+                closed=self.closed,
+                label=self.label,
+                origin=self.origin,
+                offset=self.offset,
+            )
+
+            grouped = s.groupby(grouper)
+            first_items = grouped.first()
+            counts = grouped.count()
+            # This way we generate codes for the final output index: full_index.
+            # So for _flox_reduce we avoid one reindex and copy by avoiding
+            # _maybe_restore_empty_groups
+            codes = np.repeat(np.arange(len(first_items)), counts)
+            if self.loffset is not None:
+                _apply_loffset(self.loffset, first_items)
+            return first_items, codes
