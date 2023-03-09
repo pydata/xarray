@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type
+from xarray.core.pycompat import is_chunked_array
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -57,7 +58,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """
 
     def __init__(self, array, func: Callable, dtype: np.typing.DTypeLike):
-        assert not is_duck_dask_array(array)
+        assert not is_chunked_array(array)
         self.array = indexing.as_indexable(array)
         self.func = func
         self._dtype = dtype
@@ -93,10 +94,10 @@ def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
     """
-    if is_duck_dask_array(array):
-        import dask.array as da
+    if is_chunked_array(array):
+        chunkmanager = get_chunked_array_type(array)
 
-        return da.map_blocks(func, array, dtype=dtype)
+        return chunkmanager.map_blocks(func, array, dtype=dtype)
     else:
         return _ElementwiseFunctionArray(array, func, dtype)
 
