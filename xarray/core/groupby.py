@@ -59,7 +59,7 @@ def check_reduce_dims(reduce_dims, dimensions):
 
 def unique_value_groups(
     ar, sort: bool = True
-) -> tuple[np.ndarray | pd.Index, list[list[int]]]:
+) -> tuple[np.ndarray | pd.Index, list[list[int]], np.ndarray]:
     """Group an array by its unique values.
 
     Parameters
@@ -706,6 +706,7 @@ class GroupBy(Generic[T_Xarray]):
         from xarray.core.dataset import Dataset
 
         obj = self._original_obj
+        group = self._original_group
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
@@ -735,16 +736,9 @@ class GroupBy(Generic[T_Xarray]):
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
-        if isinstance(self._original_group, _DummyGroup):
-            group = self._original_group.name
-        else:
-            group = self._original_group
-
-        unindexed_dims: tuple[str, ...] = tuple()
-        if isinstance(group, str):
-            if group in obj.dims and group not in obj._indexes and self._bins is None:
-                unindexed_dims = (group,)
-            group = self._original_obj[group]
+        unindexed_dims: tuple[Hashable, ...] = tuple()
+        if isinstance(group, _DummyGroup) and self._bins is None:
+            unindexed_dims = (group.name,)
 
         parsed_dim: tuple[Hashable, ...]
         if isinstance(dim, str):
@@ -752,15 +746,13 @@ class GroupBy(Generic[T_Xarray]):
         elif dim is None:
             parsed_dim = group.dims
         elif dim is ...:
-            parsed_dim = tuple(self._original_obj.dims)
+            parsed_dim = tuple(obj.dims)
         else:
             parsed_dim = tuple(dim)
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
-        if any(
-            d not in group.dims and d not in self._original_obj.dims for d in parsed_dim
-        ):
+        if any(d not in group.dims and d not in obj.dims for d in parsed_dim):
             raise ValueError(f"cannot reduce over dimensions {dim}.")
 
         if kwargs["func"] not in ["all", "any", "count"]:
