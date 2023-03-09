@@ -45,6 +45,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Improve error message when using in :py:meth:`Dataset.drop_vars` to state which variables can't be dropped. (:pull:`7518`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Require to explicitly defining optional dimensions such as hue
   and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
