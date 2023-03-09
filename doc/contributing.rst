@@ -851,7 +851,10 @@ the code.
 
 If you have made updates to the documentation, you can see a preview of the updated docs by clicking on "Details" under
 the ``docs/readthedocs.org`` check near the bottom of the list of checks that run automatically when submitting a PR,
-then clicking on "View Docs" in the top-right.
+then clicking on the "View Docs" button on the right (not the big green button, the small black one further down).
+
+.. image:: _static/view-docs.png
+
 
 If you need to make more changes, you can make them in
 your branch, add them to a new commit, push them to GitHub, and the pull request
