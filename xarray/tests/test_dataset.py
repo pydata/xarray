@@ -2504,7 +2504,12 @@ class TestDataset:
         actual = data.drop_vars(["time"])
         assert_identical(expected, actual)
 
-        with pytest.raises(ValueError, match=r"cannot be found"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "These variables cannot be found in this dataset: ['not_found_here']"
+            ),
+        ):
             data.drop_vars("not_found_here")
 
         actual = data.drop_vars("not_found_here", errors="ignore")

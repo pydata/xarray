@@ -6223,7 +6223,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims
@@ -6299,7 +6299,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims
