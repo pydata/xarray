@@ -13,8 +13,14 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.utils import Frozen, either_dict_or_kwargs, is_scalar
+from xarray.core.utils import (
+    Frozen,
+    either_dict_or_kwargs,
+    emit_user_level_warning,
+    is_scalar,
+)
 
 try:
     import cftime
@@ -845,6 +851,12 @@ class DataWithCoords(AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
+
+            .. deprecated:: 2023.03.0
+                Following pandas, the ``base`` parameter is deprecated in favor
+                of the ``origin`` and ``offset`` parameters, and will be removed
+                in a future version of xarray.
+
         origin : {'epoch', 'start', 'start_day', 'end', 'end_day'}, pd.Timestamp, datetime.datetime, np.datetime64, or cftime.datetime, default 'start_day'
             The datetime on which to adjust the grouping. The timezone of origin
             must match the timezone of the index.
@@ -860,6 +872,12 @@ class DataWithCoords(AttrAccessMixin):
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
+
+            .. deprecated:: 2023.03.0
+                Following pandas, the ``loffset`` parameter is deprecated in favor
+                of using time offset arithmetic, and will be removed in a future
+                version of xarray.
+
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -930,8 +948,8 @@ class DataWithCoords(AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from xarray.coding.cftimeindex import CFTimeIndex
         from xarray.core.dataarray import DataArray
+        from xarray.core.groupby import TimeResampleGrouper
         from xarray.core.resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
@@ -961,28 +979,36 @@ class DataWithCoords(AttrAccessMixin):
         dim_name: Hashable = dim
         dim_coord = self[dim]
 
-        if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
-            from xarray.core.resample_cftime import CFTimeGrouper
+        if loffset is not None:
+            emit_user_level_warning(
+                "Following pandas, the `loffset` parameter to resample will be deprecated "
+                "in a future version of xarray.  Switch to using time offset arithmetic.",
+                FutureWarning,
+            )
 
-            grouper = CFTimeGrouper(
-                freq=freq,
-                closed=closed,
-                label=label,
-                base=base,
-                loffset=loffset,
-                origin=origin,
-                offset=offset,
+        if base is not None:
+            emit_user_level_warning(
+                "Following pandas, the `base` parameter to resample will be deprecated in "
+                "a future version of xarray.  Switch to using `origin` or `offset` instead.",
+                FutureWarning,
             )
-        else:
-            grouper = pd.Grouper(
-                freq=freq,
-                closed=closed,
-                label=label,
-                base=base,
-                offset=offset,
-                origin=origin,
-                loffset=loffset,
-            )
+
+        if base is not None and offset is not None:
+            raise ValueError("base and offset cannot be present at the same time")
+
+        if base is not None:
+            index = self._indexes[dim_name].to_pandas_index()
+            offset = _convert_base_to_offset(base, freq, index)
+
+        grouper = TimeResampleGrouper(
+            freq=freq,
+            closed=closed,
+            label=label,
+            origin=origin,
+            offset=offset,
+            loffset=loffset,
+        )
+
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
