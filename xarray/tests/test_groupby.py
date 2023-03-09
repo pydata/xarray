@@ -807,6 +807,25 @@ def test_groupby_math_more() -> None:
         ds + ds.groupby("time.month")
 
 
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_bins_cut_kwargs(use_flox):
+    da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
+    x_bins = (0, 2, 4, 6)
+
+    with xr.set_options(use_flox=use_flox):
+        actual = da.groupby_bins(
+            "x", bins=x_bins, include_lowest=True, right=False
+        ).mean()
+    expected = xr.DataArray(
+        np.array([[1.0, 2.0], [5.0, 6.0], [9.0, 10.0]]),
+        dims=("x_bins", "y"),
+        coords={
+            "x_bins": ("x_bins", pd.IntervalIndex.from_breaks(x_bins, closed="left"))
+        },
+    )
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize("indexed_coord", [True, False])
 def test_groupby_bins_math(indexed_coord) -> None:
     N = 7
@@ -2181,6 +2200,3 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     actual = getattr(ds.foo.resample(time="3M"), method)(dim="time")
     expected.coords["time"] = ds.time
     assert_identical(expected.drop_vars(["time"]).foo, actual)
-
-
-# TODO: move other groupby tests from test_dataset and test_dataarray over here
