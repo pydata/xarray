@@ -676,7 +676,7 @@ def test_interpolate_na_2d(coords):
     n = np.nan
     da = xr.DataArray(
         [
-            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
             [n, n, 3, n, n, 6, n, n, n, 10, n, n],
             [n, n, 3, n, n, 6, n, n, n, 10, n, n],
             [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
@@ -688,7 +688,7 @@ def test_interpolate_na_2d(coords):
     actual = da.interpolate_na("y", max_gap=2)
     expected_y = da.copy(
         data=[
-            [n, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
+            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
             [n, n, 3, n, n, 6, n, n, n, 10, n, n],
             [n, n, 3, n, n, 6, n, n, n, 10, n, n],
             [n, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
@@ -710,7 +710,7 @@ def test_interpolate_na_2d(coords):
     actual = da.interpolate_na("x", max_gap=3)
     expected_x = xr.DataArray(
         [
-            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
             [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
             [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
             [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
