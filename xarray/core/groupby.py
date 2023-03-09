@@ -479,7 +479,7 @@ class GroupBy(Generic[T_Xarray]):
                 "dimension"
             )
 
-        self._codes: DataArray = None
+        self._codes: DataArray
         if grouper is not None:
             unique_coord, group_indices, codes, full_index = _factorize_grouper(
                 group, grouper
