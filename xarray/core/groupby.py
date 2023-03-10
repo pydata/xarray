@@ -247,9 +247,7 @@ def _ensure_1d(
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
         # these dimensions get created by the stack operation
         inserted_dims = [dim for dim in group.dims if dim not in group.coords]
-        # the copy is necessary here, otherwise read only array raises error
-        # in pandas: https://github.com/pydata/pandas/issues/12813
-        newgroup = group.stack({stacked_dim: orig_dims}).copy()
+        newgroup = group.stack({stacked_dim: orig_dims})
         newobj = obj.stack({stacked_dim: orig_dims})
         return cast(T_Group, newgroup), newobj, stacked_dim, inserted_dims
 
