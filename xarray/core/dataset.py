@@ -5051,9 +5051,9 @@ class Dataset(
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
+            ordered_bad_names = [name for name in names if name in bad_names]
             raise ValueError(
-                "One or more of the specified variables "
-                "cannot be found in this dataset"
+                f"These variables cannot be found in this dataset: {ordered_bad_names}"
             )
 
     def drop_vars(
@@ -8933,6 +8933,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
@@ -9014,6 +9016,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby
         DataArray.groupby_bins
         core.groupby.DatasetGroupBy

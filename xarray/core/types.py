@@ -7,7 +7,6 @@ from typing import (
     Any,
     Callable,
     Literal,
-    Protocol,
     SupportsIndex,
     TypeVar,
     Union,
@@ -18,6 +17,7 @@ import pandas as pd
 from packaging.version import Version
 
 if TYPE_CHECKING:
+    from numpy._typing import _SupportsDType
     from numpy.typing import ArrayLike
 
     from xarray.backends.common import BackendEntrypoint
@@ -50,19 +50,12 @@ if TYPE_CHECKING:
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
     _DTypeLikeNested = Any  # TODO: wait for support for recursive types
 
-    # once NumPy 1.21 is minimum version, use NumPys definition directly
-    # 1.20 uses a non-generic Protocol (like we define here for simplicity)
-    class _SupportsDType(Protocol):
-        @property
-        def dtype(self) -> np.dtype:
-            ...
-
     # Xarray requires a Mapping[Hashable, dtype] in many places which
     # conflics with numpys own DTypeLike (with dtypes for fields).
     # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[
-        np.dtype,
+        np.dtype[Any],
         # default data type (float64)
         None,
         # array-scalar types and generic types
@@ -78,7 +71,7 @@ if TYPE_CHECKING:
         # because numpy does the same?
         list[Any],
         # anything with a dtype attribute
-        _SupportsDType,
+        _SupportsDType[np.dtype[Any]],
     ]
     try:
         from cftime import datetime as CFTimeDatetime
