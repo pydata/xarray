@@ -193,8 +193,8 @@ To read format X in xarray, you need to know the `format of the data <https://do
 
 .. csv-table::
    :header: "File Format", "xarray IO Function", " Other Packages"
-   :widths: 15, 35, 15   
-   
+   :widths: 15, 35, 15
+
    "NetCDF (.nc, .nc4, .cdf)","xarray.open_dataset() OR xarray.open_mfdataset()", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
    "HDF5 (.h5, .hdf5)","xarray.open_dataset() OR xarray.open_mfdataset()", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
    "GRIB1/GRIB2 (.grb, .grib)", "xarray.open_dataset()", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
