@@ -186,6 +186,136 @@ What other projects leverage xarray?
 
 See section :ref:`ecosystem`.
 
+How can I read format X in xarray?
+----------------------------------
+
+To read format X in xarray, you need to know the `format of the data <https://docs.xarray.dev/en/stable/user-guide/io.html#csv-and-other-formats-supported-by-pandas/>`_ you want to read. If the format is supported, you can use the appropriate IO function provided by xarray. The following table provides links to IO functions for different file formats in xarray, as well as links to other packages that can be used to read these formats:
+
+.. csv-table::
+   :header: "File Format", "xarray IO Function", " Other Packages"
+   :widths: 15, 35, 15   
+   
+   "NetCDF (.nc, .nc4, .cdf)","xarray.open_dataset() OR xarray.open_mfdataset()", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
+   "HDF5 (.h5, .hdf5)","xarray.open_dataset() OR xarray.open_mfdataset()", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
+   "GRIB1/GRIB2 (.grb, .grib)", "xarray.open_dataset()", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
+   "Zarr","xarray.open_zarr()","`zarr <https://zarr.readthedocs.io/en/stable/>`_ , `fsspec <https://filesystem-spec.readthedocs.io/en/latest/>`_"
+   "CSV (.csv)","xarray.open_dataset()<br>xarray.open_mfdataset()","`pandas <https://pandas.pydata.org/>`_ , `dask <https://www.dask.org/>`_ "
+   "Excel (.xls, .xlsx)","xarray.open_dataset()","`pandas <https://pandas.pydata.org/>`_, `openpyxl <https://pypi.org/project/openpyxl/>`_ "
+   "JSON (.json)","xarray.open_dataset()","`json <https://docs.python.org/3/library/json.html>`_, `pandas <https://pandas.pydata.org/>`_"
+
+To use these IO functions in xarray, you can simply call them with the path to the file(s) you want to read as an argument.
+
+NetCDF
+------
+::
+
+  import xarray as xr
+
+  # Open a NetCDF file using xarray
+  ds = xr.open_dataset('/path/to/my/file.nc')
+
+  # Open multiple NetCDF files as a single dataset using xarray
+  ds = xr.open_mfdataset('/path/to/my/files/*.nc')
+
+  # Open a NetCDF file using netCDF4 package
+  from netCDF4 import Dataset
+  nc = Dataset('/path/to/my/file.nc', 'r')
+
+  # Open a NetCDF file using cdms2 package
+  import cdms2
+  f = cdms2.open('/path/to/my/file.nc')
+
+HDF5
+----
+::
+
+  import xarray as xr
+
+  # Open a HDF5 file using xarray
+  ds = xr.open_dataset('/path/to/my/file.h5')
+
+  # Open a HDF5 file using h5py package
+  import h5py
+  f = h5py.File('/path/to/my/file.h5', 'r')
+
+  # Open a HDF5 file using pytables package
+  import tables
+  f = tables.open_file('/path/to/my/file.h5', 'r')
+
+GRIB1/GRIB2
+-----------
+::
+
+  import xarray as xr
+
+  # Open a GRIB file using xarray
+  ds = xr.open_dataset('/path/to/my/file.grb')
+
+  # Open a GRIB file using cfgrib package
+  import cfgrib
+  ds = cfgrib.open_dataset('/path/to/my/file.grb')
+
+  # Open a GRIB file using pygrib package
+  import pygrib
+  grbs = pygrib.open('/path/to/my/file.grb')
+
+
+Zarr
+----
+::
+
+  import xarray as xr
+
+  # Open a Zarr store using xarray
+  store = xr.open_zarr('/path/to/my/store.zarr')
+  ds = xr.open_zarr(store)
+
+  # Open a Zarr store using zarr package
+  import zarr
+  store = zarr.open('/path/to/my/store.zarr')
+
+CSV
+---
+::
+
+  import xarray as xr
+
+  # Open a CSV file using xarray
+  ds = xr.open_dataset('/path/to/my/file.csv')
+
+  # Open a CSV file using pandas package
+  import pandas as pd
+  df = pd.read_csv('/path/to/my/file.csv')
+
+Excel
+-----
+::
+
+  import xarray as xr
+
+  # Open an Excel file using xarray
+  ds = xr.open_dataset('/path/to/my/file.xlsx', engine='openpyxl')
+
+  # Open an Excel file using pandas package
+  import pandas as pd
+  df = pd.read_excel('/path/to/my/file.xlsx')
+
+JSON
+----
+::
+
+  import xarray as xr
+
+  # Open a JSON file using xarray
+  ds = xr.open_dataset('/path/to/my/file.json')
+
+  # Open a JSON file using json package
+  import json
+  with open('/path/to/my/file.json', 'r') as f:
+  data = json.load(f)
+
+These are just examples and may not cover all possible use cases. Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
+
 How should I cite xarray?
 -------------------------
 
