@@ -35,16 +35,16 @@ class GroupBy:
         getattr(ds.groupby("b"), method)()
 
     def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_mean
+        self.ds1d.groupby("b") - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
-        self.ds2d - self.ds2d_mean
+        self.ds2d.groupby("b") - self.ds2d_mean
 
     def peakmem_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_mean
+        self.ds1d.groupby("b") - self.ds1d_mean
 
     def peakmem_groupby_binary_op_2d(self):
-        self.ds2d - self.ds2d_mean
+        self.ds2d.groupby("b") - self.ds2d_mean
 
 
 class GroupByDask(GroupBy):
@@ -124,16 +124,16 @@ class Resample:
         getattr(ds.resample(time="48H"), method)()
 
     def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_mean
+        self.ds1d.groupby("b") - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
-        self.ds2d - self.ds2d_mean
+        self.ds2d.groupby("b") - self.ds2d_mean
 
     def peakmem_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_mean
+        self.ds1d.groupby("b") - self.ds1d_mean
 
     def peakmem_groupby_binary_op_2d(self):
-        self.ds2d - self.ds2d_mean
+        self.ds2d.groupby("b") - self.ds2d_mean
 
 
 class ResampleDask(Resample):
