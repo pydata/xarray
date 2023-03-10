@@ -186,7 +186,7 @@ What other projects leverage xarray?
 
 See section :ref:`ecosystem`.
 
-How do I open X file format as an xarray.Dataset?
+How do I open format X file as an xarray.Dataset?
 -------------------------------------------------
 
 To open format X file in xarray, you need to know the `format of the data <https://docs.xarray.dev/en/stable/user-guide/io.html#csv-and-other-formats-supported-by-pandas/>`_ you want to read. If the format is supported, you can use the appropriate function provided by xarray. The following table provides links to the functions for different file formats in xarray, as well as links to other packages that can be used:
@@ -203,7 +203,7 @@ To open format X file in xarray, you need to know the `format of the data <https
    "Excel (.xls, .xlsx)","xarray.open_dataset()","`pandas <https://pandas.pydata.org/>`_, `openpyxl <https://pypi.org/project/openpyxl/>`_ "
    "JSON (.json)","xarray.open_dataset()","`json <https://docs.python.org/3/library/json.html>`_, `pandas <https://pandas.pydata.org/>`_"
 
-To use these IO functions in xarray, you can simply call them with the path to the file(s) you want to read as an argument.
+To use these backend functions in xarray, you can simply call them with the path to the file(s) you want to read as an argument.
 
 NetCDF
 ------
@@ -212,15 +212,27 @@ Use xarray.open_dataset() to open a NetCDF file and return an xarray.Dataset obj
 
   import xarray as xr
 
-  # Open a NetCDF file using xarray
-  ds = xr.open_dataset('/path/to/my/file.nc')
+  # use xarray to open the file and return an xarray.Dataset object
+  dataset = xr.open_dataset('/path/to/my/file.nc')
+
+  # print the contents of the dataset
+  print(dataset)
 
   # Open multiple NetCDF files as a single dataset using xarray
   ds = xr.open_mfdataset('/path/to/my/files/*.nc')
 
   # Open a NetCDF file using netCDF4 package
-  from netCDF4 import Dataset
-  nc = Dataset('/path/to/my/file.nc', 'r')
+  import xarray as xr
+  import netCDF4 as nc
+  
+  # use netCDF4 to open the file
+  nc_file = nc.Dataset("path/to/your/netcdf/file.nc")
+
+  # use xarray to convert the netCDF4.Dataset to an xarray.Dataset
+  dataset = xr.open_dataset(xr.backends.NetCDF4DataStore(nc_file))
+
+  # print the contents of the dataset
+  print(dataset)
 
   # Open a NetCDF file using cdms2 package
   import cdms2
