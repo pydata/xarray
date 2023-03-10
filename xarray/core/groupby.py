@@ -294,7 +294,7 @@ def _apply_loffset(
 
 
 class Grouper:
-    def __init__(self, group):
+    def __init__(self, group: T_Group):
         self.group = group
         self.codes = None
         self.labels = None
@@ -304,21 +304,21 @@ class Grouper:
         self._group_as_index = None
 
     @property
-    def name(self):
+    def name(self) -> Hashable:
         return self.group1d.name
 
     @property
-    def size(self):
+    def size(self) -> int:
         return len(self)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.full_index)
 
     @property
     def dims(self):
         return self.group1d.dims
 
-    def factorize(self, squeeze):
+    def factorize(self, squeeze: bool) -> None:
         raise NotImplementedError
 
     @property
@@ -334,7 +334,7 @@ class Grouper:
             self._group_as_index = safe_cast_to_index(self.group1d)
         return self._group_as_index
 
-    def _resolve_group(self, obj):
+    def _resolve_group(self, obj) -> None:
         from xarray.core.dataarray import DataArray
 
         group = self.group
@@ -429,7 +429,7 @@ class BinGrouper(Grouper):
         self.bins = bins
         self.cut_kwargs = cut_kwargs
 
-    def factorize(self, squeeze) -> None:
+    def factorize(self, squeeze: bool) -> None:
         from xarray.core.dataarray import DataArray
 
         data = self.group1d.values
@@ -532,13 +532,7 @@ class TimeResampleGrouper(Grouper):
                 _apply_loffset(self.loffset, first_items)
             return first_items, codes
 
-    def factorize(
-        self, squeeze
-    ) -> tuple[
-        DataArray | IndexVariable | _DummyGroup,
-        list[slice] | list[list[int]] | np.ndarray,
-        np.ndarray,
-    ]:
+    def factorize(self, squeeze: bool) -> None:
         self.full_index, first_items, codes = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         self.group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
