@@ -224,7 +224,7 @@ Use xarray.open_dataset() to open a NetCDF file and return an xarray.Dataset obj
   # Open a NetCDF file using netCDF4 package
   import xarray as xr
   import netCDF4 as nc
-  
+
   # use netCDF4 to open the file
   nc_file = nc.Dataset("path/to/your/netcdf/file.nc")
 
