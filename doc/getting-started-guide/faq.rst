@@ -186,13 +186,13 @@ What other projects leverage xarray?
 
 See section :ref:`ecosystem`.
 
-How can I read format X in xarray?
-----------------------------------
+How do I open X file format as an xarray.Dataset?
+-------------------------------------------------
 
-To read format X in xarray, you need to know the `format of the data <https://docs.xarray.dev/en/stable/user-guide/io.html#csv-and-other-formats-supported-by-pandas/>`_ you want to read. If the format is supported, you can use the appropriate IO function provided by xarray. The following table provides links to IO functions for different file formats in xarray, as well as links to other packages that can be used to read these formats:
+To open format X file in xarray, you need to know the `format of the data <https://docs.xarray.dev/en/stable/user-guide/io.html#csv-and-other-formats-supported-by-pandas/>`_ you want to read. If the format is supported, you can use the appropriate function provided by xarray. The following table provides links to the functions for different file formats in xarray, as well as links to other packages that can be used:
 
 .. csv-table::
-   :header: "File Format", "xarray IO Function", " Other Packages"
+   :header: "File Format", "xarray Backend", " Other Packages"
    :widths: 15, 35, 15
 
    "NetCDF (.nc, .nc4, .cdf)","xarray.open_dataset() OR xarray.open_mfdataset()", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
