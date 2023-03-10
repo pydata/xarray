@@ -1197,7 +1197,7 @@ class TestDiscreteColorMap:
     def test_discrete_colormap_provided_boundary_norm_matching_cmap_levels(self):
         norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
         primitive = self.darray.plot.contourf(norm=norm)
-        assert primitive.colorbar.norm.Ncmap + 1 == primitive.colorbar.norm.N
+        assert primitive.colorbar.norm.Ncmap == primitive.colorbar.norm.N
 
 
 class Common2dMixin:
