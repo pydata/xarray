@@ -207,6 +207,7 @@ To use these IO functions in xarray, you can simply call them with the path to t
 
 NetCDF
 ------
+Use xarray.open_dataset() to open a NetCDF file and return an xarray.Dataset object.
 ::
 
   import xarray as xr
@@ -227,9 +228,19 @@ NetCDF
 
 HDF5
 ----
+Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset object.
 ::
 
   import xarray as xr
+
+  # specify the file path
+  file_path = "path/to/your/hdf5/file.h5"
+
+  # use xarray to open the file and return an xarray.Dataset object
+  dataset = xr.open_dataset(file_path, engine="h5netcdf")
+
+  # print the contents of the dataset
+  print(dataset)
 
   # Open a HDF5 file using xarray
   ds = xr.open_dataset('/path/to/my/file.h5')
@@ -244,6 +255,7 @@ HDF5
 
 GRIB1/GRIB2
 -----------
+To open a GRIB1 or GRIB2 file and return an xarray.Dataset object using pygrib.open(), you can use the following code:
 ::
 
   import xarray as xr
@@ -269,10 +281,6 @@ Zarr
   # Open a Zarr store using xarray
   store = xr.open_zarr('/path/to/my/store.zarr')
   ds = xr.open_zarr(store)
-
-  # Open a Zarr store using zarr package
-  import zarr
-  store = zarr.open('/path/to/my/store.zarr')
 
 CSV
 ---
