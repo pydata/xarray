@@ -112,3 +112,10 @@ complete examples, please consult the relevant documentation.*
         ``__array_ufunc__`` and ``__array_function__`` protocols are also required.
 
         __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
+
+    Align
+        To arrange multiple ``DataArray`` objects so that they
+        have the same dimensions and coordinates. This is important when working
+        with multi-dimensional arrays of different shapes and coordinates.
+        It ensures they have a compatible structure which makes
+        performing mathematical computations across them easier.
