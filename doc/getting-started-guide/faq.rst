@@ -272,10 +272,12 @@ Zarr
 
   import xarray as xr
 
-  # Open a Zarr store using xarray
-  store = xr.open_zarr('/path/to/my/store.zarr')
-  ds = xr.open_zarr(store)
+  # Open the Zarr file and load it into an xarray dataset
+  dataset = xr.open_dataset('/path/to/file.zarr', engine='zarr')
 
+  # Print the dataset to see its contents
+  print(dataset)
+  
 CSV
 ---
 ::
@@ -291,20 +293,38 @@ CSV
 
 Excel
 -----
+Excel files are not typically used for scientific data storage, and xarray does not have a built-in method to read Excel files. However, if your Excel file contains data that is organized in a way that can be converted to an xarray dataset, you can use the pandas and xarray packages in Python to read the file and convert it to an xarray object.
 ::
 
+  import pandas as pd
   import xarray as xr
 
-  # Open an Excel file using xarray
-  ds = xr.open_dataset('/path/to/my/file.xlsx', engine='openpyxl')
+  # Open the Excel file and read the data into a pandas dataframe using the openpyxl engine
+  df = pd.read_excel('/path/to/your/file.xlsx', engine='openpyxl', sheet_name='Sheet1')
 
-  # Open an Excel file using pandas package
-  import pandas as pd
-  df = pd.read_excel('/path/to/my/file.xlsx')
+  # Convert the pandas dataframe to an xarray dataset
+  dataset = xr.Dataset.from_dataframe(df)
+
+  # Print the dataset to see its contents
+  print(dataset)
 
 JSON
 ----
+JSON is not a file format that is commonly used for scientific data, and xarray does not have a built-in method to read JSON files. However, if your JSON file contains data that is organized in a way that can be converted to an xarray dataset, you can use the json and xarray packages in Python to read the file and convert it to an xarray object.
 ::
+  import json
+  import xarray as xr
+
+  # Open the JSON file and read its contents
+  with open('/path/to/your/file.json', 'r') as f:
+     data_dict = json.load(f)
+
+  # Convert the JSON data to an xarray dataset
+  dataset = xr.Dataset.from_dict(data_dict)
+
+  # Print the dataset to see its contents
+  print(dataset)
+
   import pandas as pd
   import xarray as xr
 
@@ -316,18 +336,8 @@ JSON
 
   # Print xarray Dataset object
   print(ds)
-
-
-
-  import xarray as xr
-
-  # Open a JSON file using xarray
-  ds = xr.open_dataset('/path/to/my/file.json')
-
-  # Open a JSON file using json package
-  import json
-  with open('/path/to/my/file.json', 'r') as f:
-  data = json.load(f)
+  
+Note that the structure of your JSON file needs to be compatible with the xarray data model for this approach to work. Specifically, your JSON data needs to be organized as a dictionary of arrays, where each key in the dictionary corresponds to a variable name and each value is an array of data.
 
 These are just examples and may not cover all possible use cases. Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
 
