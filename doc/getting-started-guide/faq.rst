@@ -231,9 +231,6 @@ Use xarray.open_dataset() to open a NetCDF file and return an xarray.Dataset obj
   # use xarray to convert the netCDF4.Dataset to an xarray.Dataset
   dataset = xr.open_dataset(xr.backends.NetCDF4DataStore(nc_file))
 
-  # print the contents of the dataset
-  print(dataset)
-
   # Open a NetCDF file using cdms2 package
   import cdms2
   f = cdms2.open('/path/to/my/file.nc')
@@ -245,18 +242,12 @@ Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset obje
 
   import xarray as xr
 
-  # specify the file path
-  file_path = "path/to/your/hdf5/file.h5"
+  # Open HDF5 file as an xarray Dataset
+  ds = xr.open_dataset('path/to/hdf5/file.h5', engine='h5netcdf')
 
-  # use xarray to open the file and return an xarray.Dataset object
-  dataset = xr.open_dataset(file_path, engine="h5netcdf")
-
-  # print the contents of the dataset
-  print(dataset)
-
-  # Open a HDF5 file using xarray
-  ds = xr.open_dataset('/path/to/my/file.h5')
-
+  # Print Dataset object
+  print(ds)
+  
   # Open a HDF5 file using h5py package
   import h5py
   f = h5py.File('/path/to/my/file.h5', 'r')
@@ -267,17 +258,33 @@ Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset obje
 
 GRIB1/GRIB2
 -----------
-To open a GRIB1 or GRIB2 file and return an xarray.Dataset object using pygrib.open(), you can use the following code:
+use the cfgrib.open_dataset() function from the cfgrib package to open a GRIB1 file as an xarray Dataset.
 ::
 
   import xarray as xr
-
-  # Open a GRIB file using xarray
-  ds = xr.open_dataset('/path/to/my/file.grb')
-
-  # Open a GRIB file using cfgrib package
   import cfgrib
-  ds = cfgrib.open_dataset('/path/to/my/file.grb')
+
+  # Open GRIB1 file as an xarray Dataset
+  ds = xr.open_dataset('path/to/grib1/file.grb', engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
+
+  # Print Dataset object
+  print(ds)
+  # path/to/grib1/file.grb should be replaced with the actual file path to your GRIB1 file.The engine parameter is set to cfgrib, which is required for reading GRIB1 files as xarray Datasets
+The open_dataset() function reads the GRIB1 file and returns an xarray Dataset object, which can be used to access and manipulate the data in the file. Note that the backend_kwargs parameter is used to filter the GRIB messages in the file by their keys. In this example, only surface-level data is read from the GRIB1 file.
+
+
+import xarray as xr
+import cfgrib
+
+# Open GRIB2 file as an xarray Dataset
+ds = xr.open_dataset('path/to/grib2/file.grb2', engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
+
+# Print Dataset object
+print(ds)
+
+path/to/grib2/file.grb2 should be replaced with the actual file path to your GRIB2 file. Additionally, note that the engine parameter is set to cfgrib, which is required for reading GRIB2 files as xarray Datasets.
+
+The open_dataset() function reads the GRIB2 file and returns an xarray Dataset object, which can be used to access and manipulate the data in the file. Note that the backend_kwargs parameter is used to filter the GRIB messages in the file by their keys. In this example, only surface-level data is read from the GRIB2 file.
 
   # Open a GRIB file using pygrib package
   import pygrib
