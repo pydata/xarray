@@ -207,15 +207,15 @@ To use these backend functions in xarray, you can simply call them with the path
 
 NetCDF
 ------
-Use xarray.open_dataset() to open a NetCDF file and return an xarray.Dataset object.
+Use xarray.open_dataset() to open a NetCDF file and return an xarray Dataset object.
 ::
 
   import xarray as xr
 
   # use xarray to open the file and return an xarray.Dataset object
   dataset = xr.open_dataset('/path/to/my/file.nc')
-
-  # print the contents of the dataset
+  
+  # Print Dataset object
   print(dataset)
 
   # Open multiple NetCDF files as a single dataset using xarray
