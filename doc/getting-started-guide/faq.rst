@@ -247,7 +247,7 @@ Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset obje
 
   # Print Dataset object
   print(ds)
-  
+
   # Open a HDF5 file using h5py package
   import h5py
   f = h5py.File('/path/to/my/file.h5', 'r')
