@@ -214,7 +214,7 @@ Use xarray.open_dataset() to open a NetCDF file and return an xarray Dataset obj
 
   # use xarray to open the file and return an xarray.Dataset object
   dataset = xr.open_dataset('/path/to/my/file.nc')
-  
+
   # Print Dataset object
   print(dataset)
 
