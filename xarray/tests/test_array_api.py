@@ -14,6 +14,8 @@ with warnings.catch_warnings():
     import numpy.array_api as xp  # isort:skip
     from numpy.array_api._array_object import Array  # isort:skip
 
+_STATISTICAL_FUNCTIONS = ("max", "min", "mean", "prod", "sum", "std", "var")
+
 
 @pytest.fixture
 def arrays() -> tuple[xr.DataArray, xr.DataArray]:
@@ -39,17 +41,20 @@ def test_arithmetic(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     assert_equal(actual, expected)
 
 
-def test_aggregation(arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
+@pytest.mark.parametrize("method", _STATISTICAL_FUNCTIONS)
+def test_aggregation(method: str, arrays: tuple[xr.DataArray, xr.DataArray]) -> None:
     np_arr, xp_arr = arrays
-    expected = np_arr.sum()
-    actual = xp_arr.sum()
+    expected = getattr(np_arr, method)()
+    actual = getattr(xp_arr, method)()
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)
 
 
-def test_aggregation_skipna(arrays) -> None:
+@pytest.mark.parametrize("method", _STATISTICAL_FUNCTIONS)
+def test_aggregation_skipna(method: str, arrays) -> None:
     np_arr, xp_arr = arrays
-    expected = np_arr.sum(skipna=False)
+    expected = getattr(np_arr, method)(skipna=False)
+    actual = getattr(xp_arr, method)(skipna=False)
     actual = xp_arr.sum(skipna=False)
     assert isinstance(actual.data, Array)
     assert_equal(actual, expected)

@@ -7,6 +7,7 @@ import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 
 from xarray.core.options import OPTIONS
+from xarray.core.utils import get_array_namespace
 
 try:
     import bottleneck as bn
@@ -147,7 +148,7 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_bottleneck_method(name, npmodule=np):
+def _create_bottleneck_method(name):
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
@@ -166,7 +167,8 @@ def _create_bottleneck_method(name, npmodule=np):
             kwargs.pop("dtype", None)
             result = bn_func(values, axis=axis, **kwargs)
         else:
-            result = getattr(npmodule, name)(values, axis=axis, **kwargs)
+            xp = get_array_namespace(values)
+            result = getattr(xp, name)(values, axis=axis, **kwargs)
 
         return result
 
