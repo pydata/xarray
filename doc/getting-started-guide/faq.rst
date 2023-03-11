@@ -252,13 +252,13 @@ use the cfgrib.open_dataset() function from the cfgrib package to open a GRIB1 f
 
   # Open GRIB1 file as an xarray Dataset
   ds = xr.open_dataset('path/to/grib1/file.grb', engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
-  
+
   # OR open GRIB2 file as an xarray Dataset
   ds = xr.open_dataset('path/to/grib2/file.grb2', engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
 
   # Print Dataset object
   print(ds)
-  
+
 The open_dataset() function reads the GRIB file and returns an xarray Dataset object, which can be used to access and manipulate the data in the file. Note that the backend_kwargs parameter is used to filter the GRIB messages in the file by their keys. In this example, only surface-level data is read from the GRIB file.
 
 We recommend installing cfgrib via conda:
@@ -316,9 +316,9 @@ JSON
 
   # Print xarray Dataset object
   print(ds)
-  
-  
-  
+
+
+
   import xarray as xr
 
   # Open a JSON file using xarray
