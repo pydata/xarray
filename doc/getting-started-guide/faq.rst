@@ -277,7 +277,7 @@ Zarr
 
   # Print the dataset to see its contents
   print(dataset)
-  
+
 CSV
 ---
 ::
@@ -336,7 +336,7 @@ JSON is not a file format that is commonly used for scientific data, and xarray 
 
   # Print xarray Dataset object
   print(ds)
-  
+
 Note that the structure of your JSON file needs to be compatible with the xarray data model for this approach to work. Specifically, your JSON data needs to be organized as a dictionary of arrays, where each key in the dictionary corresponds to a variable name and each value is an array of data.
 
 These are just examples and may not cover all possible use cases. Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
