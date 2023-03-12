@@ -2294,8 +2294,7 @@ def pcolormesh(
             infer_intervals = True
 
     if any(np.issubdtype(k.dtype, str) for k in (x, y)):
-        # do not infer intervals if any axis contains str ticks
-        # see https://github.com/pydata/xarray/issues/6775
+        # do not infer intervals if any axis contains str ticks, see #6775
         infer_intervals = False
 
     if infer_intervals and (
