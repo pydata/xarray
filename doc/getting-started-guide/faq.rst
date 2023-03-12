@@ -208,7 +208,8 @@ To use these backend functions in xarray, you can simply call them with the path
 NetCDF
 ------
 Use xarray.open_dataset() to open a NetCDF file and return an xarray Dataset object.
-::
+
+.. code:: python
 
   import xarray as xr
 
@@ -224,7 +225,8 @@ Use xarray.open_dataset() to open a NetCDF file and return an xarray Dataset obj
 HDF5
 ----
 Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset object.
-::
+
+.. code:: python
 
   import xarray as xr
 
@@ -245,7 +247,8 @@ Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset obje
 GRIB1/GRIB2
 -----------
 use the cfgrib.open_dataset() function from the cfgrib package to open a GRIB1 file as an xarray Dataset.
-::
+
+.. code:: python
 
   import xarray as xr
   import cfgrib
@@ -268,7 +271,8 @@ We recommend installing cfgrib via conda:
 
 Zarr
 ----
-::
+
+.. code:: python
 
   import xarray as xr
 
@@ -280,7 +284,7 @@ Zarr
 
 CSV
 ---
-::
+.. code:: python
 
   import xarray as xr
 
@@ -294,7 +298,8 @@ CSV
 Excel
 -----
 Excel files are not typically used for scientific data storage, and xarray does not have a built-in method to read Excel files. However, if your Excel file contains data that is organized in a way that can be converted to an xarray dataset, you can use the pandas and xarray packages in Python to read the file and convert it to an xarray object.
-::
+
+.. code:: python
 
   import pandas as pd
   import xarray as xr
@@ -311,7 +316,8 @@ Excel files are not typically used for scientific data storage, and xarray does 
 JSON
 ----
 JSON is not a file format that is commonly used for scientific data, and xarray does not have a built-in method to read JSON files. However, if your JSON file contains data that is organized in a way that can be converted to an xarray dataset, you can use the json and xarray packages in Python to read the file and convert it to an xarray object.
-::
+
+.. code:: python
   import json
   import xarray as xr
 
