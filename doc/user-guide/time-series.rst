@@ -101,7 +101,7 @@ You can also select a particular time by indexing with a
 
     ds.sel(time=datetime.time(12))
 
-For more details, read the pandas documentation and the section on `Indexing Using Datetime Components <datetime_component_indexing>`_ (i.e. using the ``.dt`` accessor).
+For more details, read the pandas documentation and the section on :ref:`datetime_component_indexing` (i.e. using the ``.dt`` accessor).
 
 .. _dt_accessor:
 
