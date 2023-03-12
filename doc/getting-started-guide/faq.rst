@@ -211,16 +211,16 @@ Use xarray.open_dataset() to open a NetCDF file and return an xarray Dataset obj
 
 .. code:: python
 
-  import xarray as xr
+    import xarray as xr
 
-  # use xarray to open the file and return an xarray.Dataset object
-  ds = xr.open_dataset('/path/to/my/file.nc')
+    # use xarray to open the file and return an xarray.Dataset object
+    ds = xr.open_dataset("/path/to/my/file.nc")
 
-  # Print Dataset object
-  print(ds)
+    # Print Dataset object
+    print(ds)
 
-  # Open multiple NetCDF files as a single dataset using xarray
-  ds = xr.open_mfdataset('/path/to/my/files/*.nc')
+    # Open multiple NetCDF files as a single dataset using xarray
+    ds = xr.open_mfdataset("/path/to/my/files/*.nc")
 
 HDF5
 ----
@@ -228,21 +228,23 @@ Use xarray.open_dataset() to open an HDF5 file and return an xarray.Dataset obje
 
 .. code:: python
 
-  import xarray as xr
+    import xarray as xr
 
-  # Open HDF5 file as an xarray Dataset
-  ds = xr.open_dataset('path/to/hdf5/file.h5', engine='h5netcdf')
+    # Open HDF5 file as an xarray Dataset
+    ds = xr.open_dataset("path/to/hdf5/file.h5", engine="h5netcdf")
 
-  # Print Dataset object
-  print(ds)
+    # Print Dataset object
+    print(ds)
 
-  # Open a HDF5 file using h5py package
-  import h5py
-  f = h5py.File('/path/to/my/file.h5', 'r')
+    # Open a HDF5 file using h5py package
+    import h5py
 
-  # Open a HDF5 file using pytables package
-  import tables
-  f = tables.open_file('/path/to/my/file.h5', 'r')
+    f = h5py.File("/path/to/my/file.h5", "r")
+
+    # Open a HDF5 file using pytables package
+    import tables
+
+    f = tables.open_file("/path/to/my/file.h5", "r")
 
 GRIB1/GRIB2
 -----------
@@ -250,17 +252,25 @@ use the cfgrib.open_dataset() function from the cfgrib package to open a GRIB1 f
 
 .. code:: python
 
-  import xarray as xr
-  import cfgrib
+    import xarray as xr
+    import cfgrib
 
-  # Open GRIB1 file as an xarray Dataset
-  ds = xr.open_dataset('path/to/grib1/file.grb', engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
+    # Open GRIB1 file as an xarray Dataset
+    ds = xr.open_dataset(
+        "path/to/grib1/file.grb",
+        engine="cfgrib",
+        backend_kwargs={"filter_by_keys": {"typeOfLevel": "surface"}},
+    )
 
-  # OR open GRIB2 file as an xarray Dataset
-  ds = xr.open_dataset('path/to/grib2/file.grb2', engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
+    # OR open GRIB2 file as an xarray Dataset
+    ds = xr.open_dataset(
+        "path/to/grib2/file.grb2",
+        engine="cfgrib",
+        backend_kwargs={"filter_by_keys": {"typeOfLevel": "surface"}},
+    )
 
-  # Print Dataset object
-  print(ds)
+    # Print Dataset object
+    print(ds)
 
 The open_dataset() function reads the GRIB file and returns an xarray Dataset object, which can be used to access and manipulate the data in the file. Note that the backend_kwargs parameter is used to filter the GRIB messages in the file by their keys. In this example, only surface-level data is read from the GRIB file.
 
@@ -274,26 +284,27 @@ Zarr
 
 .. code:: python
 
-  import xarray as xr
+    import xarray as xr
 
-  # Open the Zarr file and load it into an xarray dataset
-  dataset = xr.open_dataset('/path/to/file.zarr', engine='zarr')
+    # Open the Zarr file and load it into an xarray dataset
+    dataset = xr.open_dataset("/path/to/file.zarr", engine="zarr")
 
-  # Print the dataset to see its contents
-  print(dataset)
+    # Print the dataset to see its contents
+    print(dataset)
 
 CSV
 ---
 .. code:: python
 
-  import xarray as xr
+    import xarray as xr
 
-  # Open a CSV file using xarray
-  ds = xr.open_dataset('/path/to/my/file.csv')
+    # Open a CSV file using xarray
+    ds = xr.open_dataset("/path/to/my/file.csv")
 
-  # Open a CSV file using pandas package
-  import pandas as pd
-  df = pd.read_csv('/path/to/my/file.csv')
+    # Open a CSV file using pandas package
+    import pandas as pd
+
+    df = pd.read_csv("/path/to/my/file.csv")
 
 Excel
 -----
@@ -301,47 +312,48 @@ Excel files are not typically used for scientific data storage, and xarray does 
 
 .. code:: python
 
-  import pandas as pd
-  import xarray as xr
+    import pandas as pd
+    import xarray as xr
 
-  # Open the Excel file and read the data into a pandas dataframe using the openpyxl engine
-  df = pd.read_excel('/path/to/your/file.xlsx', engine='openpyxl', sheet_name='Sheet1')
+    # Open the Excel file and read the data into a pandas dataframe using the openpyxl engine
+    df = pd.read_excel("/path/to/your/file.xlsx", engine="openpyxl", sheet_name="Sheet1")
 
-  # Convert the pandas dataframe to an xarray dataset
-  dataset = xr.Dataset.from_dataframe(df)
+    # Convert the pandas dataframe to an xarray dataset
+    dataset = xr.Dataset.from_dataframe(df)
 
-  # Print the dataset to see its contents
-  print(dataset)
+    # Print the dataset to see its contents
+    print(dataset)
 
 JSON
 ----
 JSON is not a file format that is commonly used for scientific data, and xarray does not have a built-in method to read JSON files. However, if your JSON file contains data that is organized in a way that can be converted to an xarray dataset, you can use the json and xarray packages in Python to read the file and convert it to an xarray object.
 
 .. code:: python
-  import json
-  import xarray as xr
 
-  # Open the JSON file and read its contents
-  with open('/path/to/your/file.json', 'r') as f:
-     data_dict = json.load(f)
+    import json
+    import xarray as xr
 
-  # Convert the JSON data to an xarray dataset
-  dataset = xr.Dataset.from_dict(data_dict)
+    # Open the JSON file and read its contents
+    with open("/path/to/your/file.json", "r") as f:
+        data_dict = json.load(f)
 
-  # Print the dataset to see its contents
-  print(dataset)
+    # Convert the JSON data to an xarray dataset
+    dataset = xr.Dataset.from_dict(data_dict)
 
-  import pandas as pd
-  import xarray as xr
+    # Print the dataset to see its contents
+    print(dataset)
 
-  # Load JSON file as a pandas DataFrame
-  df = pd.read_json('path/to/json/file.json')
+    import pandas as pd
+    import xarray as xr
 
-  # Convert pandas DataFrame to xarray Dataset
-  ds = df.to_xarray()
+    # Load JSON file as a pandas DataFrame
+    df = pd.read_json("path/to/json/file.json")
 
-  # Print xarray Dataset object
-  print(ds)
+    # Convert pandas DataFrame to xarray Dataset
+    ds = df.to_xarray()
+
+    # Print xarray Dataset object
+    print(ds)
 
 Note that the structure of your JSON file needs to be compatible with the xarray data model for this approach to work. Specifically, your JSON data needs to be organized as a dictionary of arrays, where each key in the dictionary corresponds to a variable name and each value is an array of data.
 
