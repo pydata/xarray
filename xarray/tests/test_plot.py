@@ -2112,9 +2112,11 @@ class TestFacetGrid(PlotTestCase):
 
     def test_colorbar_scatter(self) -> None:
         ds = Dataset({"a": (("x", "y"), np.arange(4).reshape(2, 2))})
-        fg = ds.plot.scatter(x="a", y="a", row="x", hue="a")
-        assert fg.cbar.vmin == 0
-        assert fg.cbar.vmax == 3
+        fg: xplt.FacetGrid = ds.plot.scatter(x="a", y="a", row="x", hue="a")
+        cbar = fg.cbar
+        assert cbar is not None
+        assert cbar.vmin == 0
+        assert cbar.vmax == 3
 
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
