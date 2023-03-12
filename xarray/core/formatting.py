@@ -116,7 +116,7 @@ def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
     try:
         timestamp = pd.Timestamp(t)
-        datetime_str = timestamp.strftime("%Y-%m-%d %H:%M:%s")
+        datetime_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
