@@ -109,6 +109,7 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
     def compute(self, data: T_ChunkedArray, **kwargs) -> np.ndarray:
         ...
 
+    @property
     def array_api(self) -> Any:
         """Return the array_api namespace following the python array API standard."""
         raise NotImplementedError()
@@ -233,6 +234,7 @@ class DaskManager(ChunkManager[T_DaskArray]):
 
         return compute(*data, **kwargs)
 
+    @property
     def array_api(self) -> Any:
         from dask import array as da
 
@@ -386,6 +388,7 @@ class CubedManager(ChunkManager[T_CubedArray]):
 
         return compute(*data, **kwargs)
 
+    @property
     def array_api(self) -> Any:
         from cubed import array_api
 

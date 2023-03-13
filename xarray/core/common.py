@@ -1590,12 +1590,16 @@ def _full_like_variable(
 
         if dtype is None:
             dtype = other.dtype
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
         data = chunkmanager.array_api.full(
             other.shape,
             fill_value,
             dtype=dtype,
             chunks=other.data.chunks,
-            from_array_kwargs=from_array_kwargs,
+            **from_array_kwargs,
         )
     else:
         data = np.full_like(other.data, fill_value, dtype=dtype)
