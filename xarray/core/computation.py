@@ -1968,7 +1968,7 @@ def polyval(
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."
         )
-    if coeffs[degree_dim].dtype.kind not in 'i':
+    if coeffs[degree_dim].dtype.kind not in "i":
         raise ValueError(
             f"Dimension `{degree_dim}` should be of integer dtype. Received {coeffs[degree_dim].dtype} instead."
         )
