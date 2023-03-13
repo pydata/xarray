@@ -316,7 +316,9 @@ Excel files are not typically used for scientific data storage, and xarray does 
     import xarray as xr
 
     # Open the Excel file and read the data into a pandas dataframe using the openpyxl engine
-    df = pd.read_excel("/path/to/your/file.xlsx", engine="openpyxl", sheet_name="Sheet1")
+    df = pd.read_excel(
+        "/path/to/your/file.xlsx", engine="openpyxl", sheet_name="Sheet1"
+    )
 
     # Convert the pandas dataframe to an xarray dataset
     dataset = xr.Dataset.from_dataframe(df)
