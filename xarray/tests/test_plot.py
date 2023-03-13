@@ -2110,6 +2110,14 @@ class TestFacetGrid(PlotTestCase):
 
         assert 1 == len(find_possible_colorbars())
 
+    def test_colorbar_scatter(self) -> None:
+        ds = Dataset({"a": (("x", "y"), np.arange(4).reshape(2, 2))})
+        fg: xplt.FacetGrid = ds.plot.scatter(x="a", y="a", row="x", hue="a")
+        cbar = fg.cbar
+        assert cbar is not None
+        assert cbar.vmin == 0
+        assert cbar.vmax == 3
+
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
         g = xplt.FacetGrid(self.darray, col="z", col_wrap=2)
