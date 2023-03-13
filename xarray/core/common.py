@@ -15,7 +15,7 @@ from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pdcompat import _convert_base_to_offset
-from xarray.core.pycompat import is_duck_dask_array, is_chunked_array
+from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
