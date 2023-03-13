@@ -38,6 +38,7 @@ except ImportError:
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
+warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -143,7 +144,18 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
         self.array = array
 
     def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data")
+        raise UnexpectedDataAccess("Tried accessing data.")
+
+    def __array__(self):
+        raise UnexpectedDataAccess("Tried accessing data.")
+
+
+class FirstElementAccessibleArray(InaccessibleArray):
+    def __getitem__(self, key):
+        tuple_idxr = key.tuple
+        if len(tuple_idxr) > 1:
+            raise UnexpectedDataAccess("Tried accessing more than one element.")
+        return self.array[tuple_idxr]
 
 
 class ReturnItem:
