@@ -17,6 +17,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.parallelcompat import get_chunkmanager
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import (
     FrozenDict,
@@ -804,9 +805,13 @@ def open_zarr(
     """
     from xarray.backends.api import open_dataset
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     if chunks == "auto":
+        manager = from_array_kwargs.get("manager", "dask")
         try:
-            import dask.array  # noqa
+            get_chunkmanager(manager)  # attempt to import that parallel backend
 
             chunks = {}
         except ImportError:
