@@ -23,6 +23,7 @@ dependencies:
   - pandas>=1.4
   - pooch
   - pip
+  - pre-commit
   - pyproj
   - rasterio>=1.1
   - scipy!=1.10.0
