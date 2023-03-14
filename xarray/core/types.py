@@ -34,11 +34,6 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
 
-    try:
-        from cubed import Spec
-    except ImportError:
-        Spec = None  # type: ignore
-
     # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
     # Can be uncommented if using pyright though.
     # import sys
@@ -109,7 +104,6 @@ VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
 
 T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
-T_CubedSpec = TypeVar("T_CubedSpec", bound="Spec")
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]

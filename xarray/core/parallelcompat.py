@@ -5,7 +5,7 @@ but for now it is just a private experiment.
 """
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any, Callable, Generic, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union
 
 import numpy as np
 
@@ -17,6 +17,17 @@ T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 CHUNK_MANAGERS: dict[str, T_ChunkManager] = {}
+
+if TYPE_CHECKING:
+    try:
+        from cubed import Array as CubedArray
+    except ImportError:
+        CubedArray = Any
+
+    try:
+        from zarr.core import Array as ZarrArray
+    except ImportError:
+        ZarrArray = Any
 
 
 def get_chunkmanager(name: str) -> "ChunkManager":
@@ -172,6 +183,15 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         self, *args, **kwargs
     ) -> tuple[dict[str, T_Chunks], list[T_ChunkedArray]]:
         """Called by xr.unify_chunks."""
+        raise NotImplementedError()
+
+    def store(
+        self,
+        sources: Union[T_ChunkedArray, Sequence[T_ChunkedArray]],
+        targets: Any,
+        **kwargs: dict[str, Any],
+    ):
+        """Used when writing to any backend."""
         raise NotImplementedError()
 
 
@@ -379,6 +399,22 @@ class DaskManager(ChunkManager[T_DaskArray]):
 
         return unify_chunks(*args, **kwargs)
 
+    def store(
+        self,
+        sources: Union[T_DaskArray, Sequence[T_DaskArray]],
+        targets: Any,
+        **kwargs: dict[str, Any],
+    ):
+        from dask.array import store
+
+        # TODO separate expected store kwargs from other compute kwargs?
+
+        return store(
+            sources=sources,
+            targets=targets,
+            **kwargs,
+        )
+
 
 try:
     import dask
@@ -388,19 +424,16 @@ except ImportError:
     pass
 
 
-T_CubedArray = TypeVar("T_CubedArray", bound="cubed.Array")
-
-
-class CubedManager(ChunkManager[T_CubedArray]):
+class CubedManager(ChunkManager[CubedArray]):
     def __init__(self):
         from cubed import Array
 
         self.array_cls = Array
 
-    def chunks(self, data: T_CubedArray) -> T_Chunks:
+    def chunks(self, data: CubedArray) -> T_Chunks:
         return data.chunks
 
-    def from_array(self, data: np.ndarray, chunks, **kwargs) -> T_CubedArray:
+    def from_array(self, data: np.ndarray, chunks, **kwargs) -> CubedArray:
         import cubed  # type: ignore
 
         spec = kwargs.pop("spec", None)
@@ -418,10 +451,10 @@ class CubedManager(ChunkManager[T_CubedArray]):
 
         return data
 
-    def rechunk(self, data: T_CubedArray, chunks, **kwargs) -> T_CubedArray:
+    def rechunk(self, data: CubedArray, chunks, **kwargs) -> CubedArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: T_CubedArray, **kwargs) -> np.ndarray:
+    def compute(self, *data: CubedArray, **kwargs) -> np.ndarray:
         from cubed import compute
 
         return compute(*data, **kwargs)
@@ -543,15 +576,28 @@ class CubedManager(ChunkManager[T_CubedArray]):
 
     def unify_chunks(
         self, *args, **kwargs
-    ) -> tuple[dict[str, T_Chunks], list[T_CubedArray]]:
+    ) -> tuple[dict[str, T_Chunks], list[CubedArray]]:
         from cubed.core import unify_chunks
 
         return unify_chunks(*args, **kwargs)
 
+    def store(
+        self,
+        sources: Union[CubedArray, Sequence[CubedArray]],
+        targets: Union[ZarrArray, Sequence[ZarrArray]],
+        **kwargs: dict[str, Any],
+    ):
+        """Used when writing to any backend."""
+        from cubed.core.ops import store
+
+        return store(
+            sources,
+            targets,
+            **kwargs,
+        )
+
 
 try:
-    import cubed  # type: ignore
-
     CHUNK_MANAGERS["cubed"] = CubedManager
 except ImportError:
     pass
