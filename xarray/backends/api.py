@@ -6,7 +6,16 @@ from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Final,
+    Literal,
+    Union,
+    cast,
+    overload,
+)
 
 import numpy as np
 
@@ -371,8 +380,8 @@ def _dataset_from_backend_dataset(
 def open_dataset(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
-    engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    engine: T_Engine | None = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -561,8 +570,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
-    engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    engine: T_Engine | None = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -573,7 +582,7 @@ def open_dataarray(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
-    from_array_kwargs: dict[str, Any] = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
@@ -743,7 +752,7 @@ def open_dataarray(
 
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     concat_dim: str
     | DataArray
     | Index
@@ -753,7 +762,7 @@ def open_mfdataset(
     | None = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine = None,
+    engine: T_Engine | None = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -1548,7 +1557,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
-    store_kwargs: dict[str, Any] = None,
+    store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore

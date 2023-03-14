@@ -5,7 +5,7 @@ but for now it is just a private experiment.
 """
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, TypeVar, Union
 
 import numpy as np
 
@@ -132,10 +132,10 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         self,
         arr: T_ChunkedArray,
         func: Callable,
-        combine_func: Callable = None,
-        aggregate_func: Callable = None,
-        axis: Union[int, Sequence[int]] = None,
-        dtype: np.dtype = None,
+        combine_func: Optional[Callable] = None,
+        aggregate_func: Optional[Callable] = None,
+        axis: Optional[Union[int, Sequence[int]]] = None,
+        dtype: Optional[np.dtype] = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         """Used in some reductions like nanfirst, which is used by groupby.first"""
@@ -282,10 +282,10 @@ class DaskManager(ChunkManager[T_DaskArray]):
         self,
         arr: T_ChunkedArray,
         func: Callable,
-        combine_func: Callable = None,
-        aggregate_func: Callable = None,
-        axis: Union[int, Sequence[int]] = None,
-        dtype: np.dtype = None,
+        combine_func: Optional[Callable] = None,
+        aggregate_func: Optional[Callable] = None,
+        axis: Optional[Union[int, Sequence[int]]] = None,
+        dtype: Optional[np.dtype] = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         from dask.array import reduction
@@ -471,10 +471,10 @@ class CubedManager(ChunkManager["CubedArray"]):
         self,
         arr: T_ChunkedArray,
         func: Callable,
-        combine_func: Callable = None,
-        aggregate_func: Callable = None,
-        axis: Union[int, Sequence[int]] = None,
-        dtype: np.dtype = None,
+        combine_func: Optional[Callable] = None,
+        aggregate_func: Optional[Callable] = None,
+        axis: Optional[Union[int, Sequence[int]]] = None,
+        dtype: Optional[np.dtype] = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         from cubed.core.ops import reduction

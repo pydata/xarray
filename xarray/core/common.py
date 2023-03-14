@@ -160,7 +160,7 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
+    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -1397,8 +1397,8 @@ class DataWithCoords(AttrAccessMixin):
 def full_like(
     other: DataArray,
     fill_value: Any,
-    dtype: DTypeLikeSave = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLikeSave | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
     ...
 
@@ -1407,8 +1407,8 @@ def full_like(
 def full_like(
     other: Dataset,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
     ...
 
@@ -1417,8 +1417,8 @@ def full_like(
 def full_like(
     other: Variable,
     fill_value: Any,
-    dtype: DTypeLikeSave = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLikeSave | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     ...
 
@@ -1427,8 +1427,8 @@ def full_like(
 def full_like(
     other: Dataset | DataArray,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
     ...
 
@@ -1437,8 +1437,8 @@ def full_like(
 def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
@@ -1446,8 +1446,8 @@ def full_like(
 def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object with the same shape and type as a given object.
 
@@ -1604,8 +1604,8 @@ def full_like(
 def _full_like_variable(
     other: Variable,
     fill_value: Any,
-    dtype: DTypeLike = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLike | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from xarray.core.variable import Variable
@@ -1638,8 +1638,8 @@ def _full_like_variable(
 @overload
 def zeros_like(
     other: DataArray,
-    dtype: DTypeLikeSave = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLikeSave | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
     ...
 
@@ -1647,8 +1647,8 @@ def zeros_like(
 @overload
 def zeros_like(
     other: Dataset,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
     ...
 
@@ -1656,8 +1656,8 @@ def zeros_like(
 @overload
 def zeros_like(
     other: Variable,
-    dtype: DTypeLikeSave = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLikeSave | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     ...
 
@@ -1665,8 +1665,8 @@ def zeros_like(
 @overload
 def zeros_like(
     other: Dataset | DataArray,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
     ...
 
@@ -1674,16 +1674,16 @@ def zeros_like(
 @overload
 def zeros_like(
     other: Dataset | DataArray | Variable,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def zeros_like(
     other: Dataset | DataArray | Variable,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of zeros with the same shape and
     type as a given dataarray or dataset.
@@ -1743,8 +1743,8 @@ def zeros_like(
 @overload
 def ones_like(
     other: DataArray,
-    dtype: DTypeLikeSave = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLikeSave | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
     ...
 
@@ -1752,8 +1752,8 @@ def ones_like(
 @overload
 def ones_like(
     other: Dataset,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
     ...
 
@@ -1761,8 +1761,8 @@ def ones_like(
 @overload
 def ones_like(
     other: Variable,
-    dtype: DTypeLikeSave = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeLikeSave | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     ...
 
@@ -1770,8 +1770,8 @@ def ones_like(
 @overload
 def ones_like(
     other: Dataset | DataArray,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
     ...
 
@@ -1779,16 +1779,16 @@ def ones_like(
 @overload
 def ones_like(
     other: Dataset | DataArray | Variable,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def ones_like(
     other: Dataset | DataArray | Variable,
-    dtype: DTypeMaybeMapping = None,
-    from_array_kwargs: dict[str, Any] = None,
+    dtype: DTypeMaybeMapping | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of ones with the same shape and
     type as a given dataarray or dataset.
