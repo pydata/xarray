@@ -208,7 +208,7 @@ def _get_chunk(var, chunks):
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
 
-    import dask.array as da
+    from dask.array.core import normalize_chunks
 
     if isinstance(var, IndexVariable):
         return {}
@@ -226,7 +226,9 @@ def _get_chunk(var, chunks):
         chunks.get(dim, None) or preferred_chunk_sizes
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
     )
-    chunk_shape = da.core.normalize_chunks(
+
+    # TODO ideally replace this with non-dask version
+    chunk_shape = normalize_chunks(
         chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
 
@@ -273,16 +275,21 @@ def _maybe_chunk(
     inline_array=False,
     from_array_kwargs=None,
 ):
-    from dask.base import tokenize
-
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
     if var.ndim:
-        # when rechunking by different amounts, make sure dask names change
-        # by providing chunks as an input to tokenize.
-        # subtle bugs result otherwise. see GH3350
-        token2 = tokenize(name, token if token else var._data, chunks)
-        name2 = f"{name_prefix}{name}-{token2}"
+        if from_array_kwargs["manager"] == "dask":
+            from dask.base import tokenize
+
+            # when rechunking by different amounts, make sure dask names change
+            # by providing chunks as an input to tokenize.
+            # subtle bugs result otherwise. see GH3350
+            token2 = tokenize(name, token if token else var._data, chunks)
+            name2 = f"{name_prefix}{name}-{token2}"
+        else:
+            # not used
+            name2 = None
+
         var = var.chunk(
             chunks,
             name=name2,
@@ -2267,6 +2274,9 @@ class Dataset(
             raise ValueError(
                 f"some chunks keys are not dimensions on this object: {bad_dims}"
             )
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {"manager": "dask"}
 
         variables = {
             k: _maybe_chunk(

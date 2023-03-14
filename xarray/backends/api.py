@@ -301,11 +301,16 @@ def _chunk_ds(
     from_array_kwargs,
     **extra_tokens,
 ):
-    from dask.base import tokenize
+    if from_array_kwargs["manager"] == "dask":
+        from dask.base import tokenize
 
-    mtime = _get_mtime(filename_or_obj)
-    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-    name_prefix = f"open_dataset-{token}"
+        mtime = _get_mtime(filename_or_obj)
+        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+        name_prefix = f"open_dataset-{token}"
+    else:
+        # not used
+        token = (None,)
+        name_prefix = None
 
     variables = {}
     for name, var in backend_ds.variables.items():
@@ -513,6 +518,9 @@ def open_dataset(
 
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
+
+    if from_array_kwargs is None:
+        from_array_kwargs = {"manager": "dask"}
 
     backend = plugins.get_backend(engine)
 

@@ -806,7 +806,7 @@ def open_zarr(
     from xarray.backends.api import open_dataset
 
     if from_array_kwargs is None:
-        from_array_kwargs = {}
+        from_array_kwargs = {"manager": "dask"}
 
     if chunks == "auto":
         manager = from_array_kwargs.get("manager", "dask")

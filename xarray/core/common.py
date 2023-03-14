@@ -1619,6 +1619,8 @@ def _full_like_variable(
         if dtype is None:
             dtype = other.dtype
 
+        raise NotImplementedError()
+
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
