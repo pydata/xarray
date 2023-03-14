@@ -756,19 +756,11 @@ class DatasetIOBase:
     def test_outer_indexing_reversed(self) -> None:
         # regression test for GH6560
         ds = xr.Dataset(
-            {
-                "z": (
-                    ("time", "isoBaricInhPa", "latitude", "longitude"),
-                    np.ones((1, 5, 721, 1440)),
-                )
-            },
-            coords={"latitude": np.linspace(-90, 90, 721)},
+            {"z": (("t", "p", "y", "x"), np.ones((1, 1, 31, 40)))},
         )
 
         with self.roundtrip(ds) as on_disk:
-            subset = on_disk.isel(time=[0], isoBaricInhPa=1).z[:, ::10, ::10][
-                :, ::-1, :
-            ]
+            subset = on_disk.isel(t=[0], p=0).z[:, ::10, ::10][:, ::-1, :]
             assert subset.sizes == subset.load().sizes
 
     def test_isel_dataarray(self) -> None:
