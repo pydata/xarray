@@ -7,10 +7,10 @@ from xarray.core.parallelcompat import (
     CHUNK_MANAGERS,
     ChunkManager,
     DaskManager,
+    T_Chunks,
     get_chunked_array_type,
     get_chunkmanager,
 )
-from xarray.core.types import T_Chunks
 
 dask = pytest.importorskip("dask")
 

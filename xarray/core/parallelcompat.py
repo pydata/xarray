@@ -12,14 +12,13 @@ import numpy as np
 from xarray.core import utils
 from xarray.core.pycompat import DuckArrayModule, is_chunked_array, is_duck_dask_array
 
-T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 # TODO importing TypeAlias is a pain on python 3.9 without typing_extensions in the CI
 # T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 T_Chunks = Any
 
-CHUNK_MANAGERS: dict[str, T_ChunkManager] = {}
+CHUNK_MANAGERS: dict[str, type["ChunkManager"]] = {}
 
 if TYPE_CHECKING:
     try:
