@@ -685,7 +685,7 @@ Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are many different `options for compression and filtering possible with
-zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_. 
+zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
 
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
