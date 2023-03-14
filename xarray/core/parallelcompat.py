@@ -436,16 +436,16 @@ class CubedManager(ChunkManager["CubedArray"]):
         return data.chunks
 
     def from_array(self, data: np.ndarray, chunks, **kwargs) -> "CubedArray":
-        import cubed  # type: ignore
+        from cubed import Array, from_array
 
         spec = kwargs.pop("spec", None)
 
-        if isinstance(data, cubed.Array):
+        if isinstance(data, Array):
             data = data.rechunk(chunks)
         elif is_duck_dask_array(data):
             raise TypeError("Trying to rechunk a dask array using cubed")
         else:
-            data = cubed.from_array(
+            data = from_array(
                 data,
                 chunks,
                 spec=spec,
@@ -600,6 +600,8 @@ class CubedManager(ChunkManager["CubedArray"]):
 
 
 try:
+    import cubed  # noqa
+
     CHUNK_MANAGERS["cubed"] = CubedManager
 except ImportError:
     pass
