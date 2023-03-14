@@ -16,8 +16,8 @@ from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer,
-    ChunkedIndexingAdapter,
     CopyOnWriteArray,
+    DaskIndexingAdapter,
     LazilyIndexedArray,
     MemoryCachedArray,
     NumpyIndexingAdapter,
@@ -2725,15 +2725,15 @@ class TestBackendIndexing:
         self.check_vectorized_indexing(v)
 
     @requires_dask
-    def test_ChunkedIndexingAdapter(self):
+    def test_DaskIndexingAdapter(self):
         import dask.array as da
 
         da = da.asarray(self.d)
-        v = Variable(dims=("x", "y"), data=ChunkedIndexingAdapter(da))
+        v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(da))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(ChunkedIndexingAdapter(da)))
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
 

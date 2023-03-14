@@ -772,7 +772,7 @@ class DatasetIOBase:
                     if isinstance(obj.array, np.ndarray):
                         assert isinstance(obj, indexing.NumpyIndexingAdapter)
                     elif isinstance(obj.array, dask_array_type):
-                        assert isinstance(obj, indexing.ChunkedIndexingAdapter)
+                        assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
                         assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
