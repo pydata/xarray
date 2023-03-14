@@ -631,6 +631,7 @@ DataArray methods
    DataArray.from_iris
    DataArray.from_series
    DataArray.to_cdms2
+   DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
    DataArray.to_dict
