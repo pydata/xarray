@@ -5,6 +5,12 @@ Reshaping and reorganizing data
 ###############################
 
 These methods allow you to reorganize your data by changing dimensions, array shape, order of values, or indexes.
+Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks.
+To reorder dimensions on a DataArray or across all variables on a Dataset, use the transpose() method. An ellipsis (...) can be used to represent all other dimensions. To expand a DataArray or all variables on a Dataset along a new dimension, use the expand_dims() method. This method attaches a new dimension with size 1 to all data variables. To remove such a size-1 dimension from the DataArray or Dataset, use the squeeze() method.
+To convert from a Dataset to a DataArray, use the to_array() method. This method broadcasts all data variables in the dataset against each other, then concatenates them along a new dimension into a new array while preserving coordinates. To convert back from a DataArray to a Dataset, use the to_dataset() method.
+Xarray also provides the stack() and unstack() methods, which can be used to combine or split dimensions. An ellipsis (...) can be used to represent all unlisted dimensions. Unlike pandas, xarray's stack() method does not automatically drop missing values.
+These methods are particularly useful for reshaping xarray objects for use in machine learning packages, such as scikit-learn, that usually require two-dimensional numpy arrays as inputs. However, combining multiple variables in a Dataset is more complicated. If the variables in the dataset have matching numbers of dimensions, we can call to_array() and then stack along the new coordinate. But to_array() will broadcast the data arrays together, which will effectively tile the lower dimensional variable along the missing dimensions
+
 
 .. ipython:: python
     :suppress:
