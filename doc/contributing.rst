@@ -35,8 +35,8 @@ Bug reports and enhancement requests
 
 Bug reports are an important part of making *xarray* more stable. Having a complete bug
 report will allow others to reproduce the bug and provide insight into fixing. See
-`this stackoverflow article <https://stackoverflow.com/help/mcve>`_ for tips on
-writing a good bug report.
+this `stackoverflow article for tips on
+writing a good bug report <https://stackoverflow.com/help/mcve>`_ .
 
 Trying out the bug-producing code on the *main* branch is often a worthwhile exercise
 to confirm that the bug still exists. It is also worth searching existing bug reports and
@@ -102,7 +102,7 @@ Some great resources for learning Git:
 Getting started with Git
 ------------------------
 
-`GitHub has instructions <https://help.github.com/set-up-git-redirect>`__ for installing git,
+`GitHub has instructions for setting up Git <https://help.github.com/set-up-git-redirect>`__ including installing git,
 setting up your SSH key, and configuring git.  All these steps need to be completed before
 you can work seamlessly between your local repository and GitHub.
 
@@ -238,7 +238,7 @@ To return to your root environment::
 
       conda deactivate
 
-See the full conda docs `here <http://conda.pydata.org/docs>`__.
+See the full `conda docs here <http://conda.pydata.org/docs>`__.
 
 .. _contributing.documentation:
 
@@ -277,7 +277,7 @@ Some other important things to know about the docs:
 
 - The docstrings follow the **NumPy Docstring Standard**, which is used widely
   in the Scientific Python community. This standard specifies the format of
-  the different sections of the docstring. See `this document
+  the different sections of the docstring. Refer to the `documentation for the Numpy docstring format
   <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_
   for a detailed explanation, or look at some of the existing functions to
   extend it in a similar manner.
@@ -732,8 +732,8 @@ or, to use a specific Python interpreter,::
 This will display stderr from the benchmarks, and use your local
 ``python`` that comes from your ``$PATH``.
 
-Information on how to write a benchmark and how to use asv can be found in the
-`asv documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_.
+Learn `how to write a benchmark and how to use asv from the documentayion <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_ .
+
 
 ..
    TODO: uncomment once we have a working setup
@@ -752,8 +752,7 @@ GitHub issue number when adding your entry (using ``:issue:`1234```, where ``123
 issue/pull request number).
 
 If your code is an enhancement, it is most likely necessary to add usage
-examples to the existing documentation.  This can be done following the section
-regarding documentation :ref:`above <contributing.documentation>`.
+examples to the existing documentation.  This can be done by following the :ref:`guidelines for contributing to the documentation <contributing.documentation>`.
 
 .. _contributing.changes:
 

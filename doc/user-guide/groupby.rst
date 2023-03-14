@@ -25,12 +25,9 @@ the same pipeline.
 .. tip::
 
    To substantially improve the performance of GroupBy operations, particularly
-   with dask install the `flox <https://flox.readthedocs.io>`_ package. flox also
-   `extends <https://flox.readthedocs.io/en/latest/xarray.html>`_
-   Xarray's in-built GroupBy capabilities by allowing grouping by multiple variables,
-   and lazy grouping by dask arrays. Xarray will automatically use flox by default
-   if it is installed.
-
+   with dask `install the flox package <https://flox.readthedocs.io>`_. flox
+   `extends Xarray's in-built GroupBy capabilities <https://flox.readthedocs.io/en/latest/xarray.html>`_ 
+   by allowing grouping by multiple variables, and lazy grouping by dask arrays. If installed, Xarray will automatically use flox by default.
 
 Split
 ~~~~~
