@@ -424,16 +424,16 @@ except ImportError:
     pass
 
 
-class CubedManager(ChunkManager[CubedArray]):
+class CubedManager(ChunkManager["CubedArray"]):
     def __init__(self):
         from cubed import Array
 
         self.array_cls = Array
 
-    def chunks(self, data: CubedArray) -> T_Chunks:
+    def chunks(self, data: "CubedArray") -> T_Chunks:
         return data.chunks
 
-    def from_array(self, data: np.ndarray, chunks, **kwargs) -> CubedArray:
+    def from_array(self, data: np.ndarray, chunks, **kwargs) -> "CubedArray":
         import cubed  # type: ignore
 
         spec = kwargs.pop("spec", None)
@@ -451,10 +451,10 @@ class CubedManager(ChunkManager[CubedArray]):
 
         return data
 
-    def rechunk(self, data: CubedArray, chunks, **kwargs) -> CubedArray:
+    def rechunk(self, data: "CubedArray", chunks, **kwargs) -> "CubedArray":
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: CubedArray, **kwargs) -> np.ndarray:
+    def compute(self, *data: "CubedArray", **kwargs) -> np.ndarray:
         from cubed import compute
 
         return compute(*data, **kwargs)
@@ -576,15 +576,15 @@ class CubedManager(ChunkManager[CubedArray]):
 
     def unify_chunks(
         self, *args, **kwargs
-    ) -> tuple[dict[str, T_Chunks], list[CubedArray]]:
+    ) -> tuple[dict[str, T_Chunks], list["CubedArray"]]:
         from cubed.core import unify_chunks
 
         return unify_chunks(*args, **kwargs)
 
     def store(
         self,
-        sources: Union[CubedArray, Sequence[CubedArray]],
-        targets: Union[ZarrArray, Sequence[ZarrArray]],
+        sources: Union["CubedArray", Sequence["CubedArray"]],
+        targets: Union["ZarrArray", Sequence["ZarrArray"]],
         **kwargs: dict[str, Any],
     ):
         """Used when writing to any backend."""
