@@ -323,7 +323,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
-            from_array_kwargs=from_array_kwargs,
+            from_array_kwargs=from_array_kwargs.copy(),
         )
     return backend_ds._replace(variables)
 

@@ -2287,7 +2287,7 @@ class Dataset(
                 lock,
                 name_prefix,
                 inline_array=inline_array,
-                from_array_kwargs=from_array_kwargs,
+                from_array_kwargs=from_array_kwargs.copy(),
             )
             for k, v in self.variables.items()
         }
