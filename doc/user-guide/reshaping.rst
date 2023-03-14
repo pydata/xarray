@@ -6,7 +6,7 @@ Reshaping and reorganizing data
 
 These methods allow you to reorganize your data by changing dimensions, array shape, order of values, or indexes.
 
-Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks. 
+Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks.
 
 To reorder dimensions on a DataArray or across all variables on a Dataset, use the transpose() method. An ellipsis (...) can be used to represent all other dimensions. To expand a DataArray or all variables on a Dataset along a new dimension, use the expand_dims() method. This method attaches a new dimension with size 1 to all data variables. To remove such a size-1 dimension from the DataArray or Dataset, use the squeeze() method.
 
