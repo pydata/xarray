@@ -12,7 +12,7 @@ from xarray.core.utils import is_duck_array, module_available
 integer_types = (int, np.integer)
 
 if TYPE_CHECKING:
-    ModType = Literal["dask", "pint", "cupy", "sparse"]
+    ModType = Literal["dask", "pint", "cupy", "sparse", "cubed"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
 
 

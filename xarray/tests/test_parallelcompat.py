@@ -44,6 +44,11 @@ class DummyChunkedArray(np.ndarray):
             return
         self.chunks = getattr(obj, "chunks", None)
 
+    def rechunk(self, chunks, **kwargs):
+        copied = self.copy()
+        copied.chunks = chunks
+        return copied
+
 
 class DummyChunkManager(ChunkManager):
     """Mock-up of ChunkManager class for DummyChunkedArray"""

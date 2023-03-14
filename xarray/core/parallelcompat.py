@@ -21,15 +21,7 @@ T_Chunks = Any
 CHUNK_MANAGERS: dict[str, type["ChunkManager"]] = {}
 
 if TYPE_CHECKING:
-    try:
-        from cubed import Array as CubedArray
-    except ImportError:
-        CubedArray = Any
-
-    try:
-        from zarr.core import Array as ZarrArray
-    except ImportError:
-        ZarrArray = Any
+    from xarray.core.types import CubedArray, DaskArray, ZarrArray
 
 
 def get_chunkmanager(name: str) -> "ChunkManager":
@@ -197,11 +189,8 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
 
-T_DaskArray = TypeVar("T_DaskArray", bound="dask.array.Array")
-
-
-class DaskManager(ChunkManager[T_DaskArray]):
-    array_cls: T_DaskArray
+class DaskManager(ChunkManager["DaskArray"]):
+    array_cls: type["DaskArray"]
 
     def __init__(self):
         # TODO can we replace this with a class attribute instead?
@@ -213,10 +202,10 @@ class DaskManager(ChunkManager[T_DaskArray]):
     def is_chunked_array(self, data: Any) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: T_DaskArray) -> T_Chunks:
+    def chunks(self, data: "DaskArray") -> T_Chunks:
         return data.chunks
 
-    def from_array(self, data: np.ndarray, chunks, **kwargs) -> T_DaskArray:
+    def from_array(self, data, chunks, **kwargs) -> "DaskArray":
         import dask.array as da
 
         from xarray.core import indexing
@@ -264,10 +253,10 @@ class DaskManager(ChunkManager[T_DaskArray]):
         return data
 
     # TODO is simple method propagation like this necessary?
-    def rechunk(self, data: T_DaskArray, chunks, **kwargs) -> T_DaskArray:
+    def rechunk(self, data: "DaskArray", chunks, **kwargs) -> "DaskArray":
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: T_DaskArray, **kwargs) -> np.ndarray:
+    def compute(self, *data: "DaskArray", **kwargs) -> np.ndarray:
         from dask.array import compute
 
         return compute(*data, **kwargs)
@@ -396,16 +385,16 @@ class DaskManager(ChunkManager[T_DaskArray]):
 
     def unify_chunks(
         self, *args, **kwargs
-    ) -> tuple[dict[str, T_Chunks], list[T_DaskArray]]:
+    ) -> tuple[dict[str, T_Chunks], list["DaskArray"]]:
         from dask.array.core import unify_chunks
 
         return unify_chunks(*args, **kwargs)
 
     def store(
         self,
-        sources: Union[T_DaskArray, Sequence[T_DaskArray]],
+        sources: Union["DaskArray", Sequence["DaskArray"]],
         targets: Any,
-        **kwargs: dict[str, Any],
+        **kwargs,
     ):
         from dask.array import store
 
@@ -419,14 +408,14 @@ class DaskManager(ChunkManager[T_DaskArray]):
 
 
 try:
-    import dask
-
     CHUNK_MANAGERS["dask"] = DaskManager
 except ImportError:
     pass
 
 
 class CubedManager(ChunkManager["CubedArray"]):
+    array_cls: type["CubedArray"]
+
     def __init__(self):
         from cubed import Array
 
