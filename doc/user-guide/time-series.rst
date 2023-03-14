@@ -111,7 +111,7 @@ Datetime components
 Similar to `pandas accessors`_, the components of datetime objects contained in a
 given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
-.. _pandas accessor: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
+.. _pandas accessors: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
 
 .. ipython:: python
 
