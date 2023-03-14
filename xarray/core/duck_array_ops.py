@@ -33,6 +33,7 @@ from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.nputils import nanfirst, nanlast
+from xarray.core.parallelcompat import is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
 from xarray.core.utils import is_duck_array, module_available
 
@@ -640,7 +641,7 @@ def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        if is_duck_dask_array(values):
+        if is_chunked_array(values):
             return dask_array_ops.nanfirst(values, axis)
         else:
             return nanfirst(values, axis)
@@ -651,7 +652,7 @@ def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        if is_duck_dask_array(values):
+        if is_chunked_array(values):
             return dask_array_ops.nanlast(values, axis)
         else:
             return nanlast(values, axis)

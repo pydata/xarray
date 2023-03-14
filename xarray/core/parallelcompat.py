@@ -4,7 +4,8 @@ It could later be used as the basis for a public interface allowing any N framew
 but for now it is just a private experiment.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from collections.abc import Sequence
+from typing import Any, Callable, Generic, TypeVar, Union
 
 import numpy as np
 
@@ -112,6 +113,19 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
     @property
     def array_api(self) -> Any:
         """Return the array_api namespace following the python array API standard."""
+        raise NotImplementedError()
+
+    def reduction(
+        self,
+        arr: T_ChunkedArray,
+        func: Callable,
+        combine_func: Callable = None,
+        aggregate_func: Callable = None,
+        axis: Union[int, Sequence[int]] = None,
+        dtype: np.dtype = None,
+        keepdims: bool = False,
+    ) -> T_ChunkedArray:
+        """Used in some reductions like nanfirst, which is used by groupby.first"""
         raise NotImplementedError()
 
     @abstractmethod
@@ -239,6 +253,28 @@ class DaskManager(ChunkManager[T_DaskArray]):
         from dask import array as da
 
         return da
+
+    def reduction(
+        self,
+        arr: T_ChunkedArray,
+        func: Callable,
+        combine_func: Callable = None,
+        aggregate_func: Callable = None,
+        axis: Union[int, Sequence[int]] = None,
+        dtype: np.dtype = None,
+        keepdims: bool = False,
+    ) -> T_ChunkedArray:
+        from dask.array import reduction
+
+        return reduction(
+            arr,
+            chunk=func,
+            combine=combine_func,
+            aggregate=aggregate_func,
+            axis=axis,
+            dtype=dtype,
+            keepdims=keepdims,
+        )
 
     def apply_gufunc(
         self,
@@ -393,6 +429,28 @@ class CubedManager(ChunkManager[T_CubedArray]):
         from cubed import array_api
 
         return array_api
+
+    def reduction(
+        self,
+        arr: T_ChunkedArray,
+        func: Callable,
+        combine_func: Callable = None,
+        aggregate_func: Callable = None,
+        axis: Union[int, Sequence[int]] = None,
+        dtype: np.dtype = None,
+        keepdims: bool = False,
+    ) -> T_ChunkedArray:
+        from cubed.core.ops import reduction
+
+        return reduction(
+            arr,
+            func=func,
+            combine_func=combine_func,
+            aggegrate_func=aggregate_func,  # TODO fix the typo in argument name in cubed
+            axis=axis,
+            dtype=dtype,
+            keepdims=keepdims,
+        )
 
     def map_blocks(
         self,
