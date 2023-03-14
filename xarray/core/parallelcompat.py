@@ -9,7 +9,7 @@ from typing import Any, Callable, Generic, TypeVar, Union
 
 import numpy as np
 
-from xarray.core import indexing, utils
+from xarray.core import utils
 from xarray.core.pycompat import DuckArrayModule, is_chunked_array, is_duck_dask_array
 from xarray.core.types import T_Chunks
 
@@ -196,6 +196,8 @@ class DaskManager(ChunkManager[T_DaskArray]):
 
     def from_array(self, data: np.ndarray, chunks, **kwargs) -> T_DaskArray:
         import dask.array as da
+
+        from xarray.core import indexing
 
         # dask-specific kwargs
         name = kwargs.pop("name", None)
