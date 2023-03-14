@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import sys
 from collections.abc import Hashable, Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -16,11 +15,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 from packaging.version import Version
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from numpy._typing import _SupportsDType
@@ -107,8 +101,6 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
-
-T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
