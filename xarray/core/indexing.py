@@ -18,7 +18,7 @@ from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.core.pycompat import array_type, integer_types, is_duck_dask_array
+from xarray.core.pycompat import array_type, integer_types
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
@@ -676,8 +676,8 @@ def as_indexable(array):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
         return PandasIndexingAdapter(array)
-    if is_duck_dask_array(array):
-        return DaskIndexingAdapter(array)
+    if is_chunked_array(array):
+        return ChunkedIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
     if hasattr(array, "__array_namespace__"):
@@ -1309,7 +1309,7 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, OuterIndexer):
-            # manual orthogonal indexing (implemented like DaskIndexingAdapter)
+            # manual orthogonal indexing (implemented like ChunkedIndexingAdapter)
             key = key.tuple
             value = self.array
             for axis, subkey in reversed(list(enumerate(key))):
@@ -1335,8 +1335,8 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return xp.permute_dims(self.array, order)
 
 
-class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Wrap a dask array to support explicit indexing."""
+class ChunkedIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+    """Wrap a chunked array (e.g. a dask array) to support explicit indexing."""
 
     __slots__ = ("array",)
 
