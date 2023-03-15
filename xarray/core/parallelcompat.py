@@ -155,6 +155,9 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         func,
         *args,
         dtype=None,
+        chunks=None,
+        drop_axis=[],
+        new_axis=None,
         **kwargs,
     ):
         """Currently only called in a couple of really niche places in xarray. Not even called in xarray.map_blocks."""
@@ -327,7 +330,7 @@ class DaskManager(ChunkManager["DaskArray"]):
         *args,
         dtype=None,
         chunks=None,
-        drop_axis=None,
+        drop_axis=[],
         new_axis=None,
         **kwargs,
     ):
