@@ -325,29 +325,22 @@ class DaskManager(ChunkManager["DaskArray"]):
         self,
         func,
         *args,
-        name=None,
-        token=None,
         dtype=None,
         chunks=None,
         drop_axis=None,
         new_axis=None,
-        enforce_ndim=False,
-        meta=None,
         **kwargs,
     ):
         from dask.array import map_blocks
 
+        # pass through name, meta, token as kwargs
         return map_blocks(
             func,
             *args,
-            name=name,
-            token=token,
             dtype=dtype,
             chunks=chunks,
             drop_axis=drop_axis,
             new_axis=new_axis,
-            enforce_ndim=enforce_ndim,
-            meta=meta,
             **kwargs,
         )
 
