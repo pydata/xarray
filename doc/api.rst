@@ -498,6 +498,7 @@ String manipulation
    DataArray.str.upper
    DataArray.str.wrap
    DataArray.str.zfill
+   DataArray.roundStringify
 
 Datetimelike properties
 -----------------------
