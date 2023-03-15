@@ -6712,3 +6712,29 @@ class TestStackEllipsis:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
             da.stack(flat=...)  # type: ignore
+
+class TestRoundStringify:
+    # https://github.com/pydata/xarray/issues/5985
+    @pytest.fixture
+    def my_obj(self):
+        data = [1.234567, 2.345678, 3.456789]
+        coords = {"x": [0, 1, 2]}
+        dims="x"
+        darray = xr.DataArray(data, dims=dims, coords=coords, name="my_data")
+        return DataArray(darray)
+
+    def test_roundStringify_output_type(self, my_obj):
+        result = my_obj.roundStringify(3)
+        assert isinstance(result, xr.DataArray), 'output should be a DataArray'
+
+    @pytest.mark.parametrize("n, expected_vals", [(2, np.array(['1.2', '2.3', '3.5'])), (3, np.array(['1.23','2.35','3.45']))])
+    def test_roundStringify_values(self, my_obj, n, expected_vals):
+        result = my_obj.roundStringify(n).values
+        np.testing.assert_array_almost_equal(expected_vals, result, decimal=3, err_msg='values are not as expected')
+
+    def test_roundStringify_attrs(self, my_obj):
+        attrs = {'units': 'meters'}
+        my_obj.attrs = attrs
+        new_da = my_obj.roundStringify(2)
+        assert 'units' in new_da.attrs.keys(), 'expected attribute not found'
+        assert new_da.attrs['units'] == attrs['units'], 'attribute values not matched'

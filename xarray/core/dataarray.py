@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overlo
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -6670,6 +6671,41 @@ class DataArray(
             **indexer_kwargs,
         )
 
+    def roundStringify(self, n: int) -> DataArray:
+        """
+        Converts rounded DataArray with specific significant figures to strings.
+
+        Parameters
+        ----------
+        n : int
+            The number of significant figures the DataArray would be converted to 
+
+        Returns
+        -------
+        DataArray
+
+        Example
+        -------
+        Create a sample DataArray
+        >>> data = [1.234567, 2.345678, 3.456789]
+        >>> da = xr.DataArray(data, dims='x', name='my_data')
+        >>> rounded_da = da.roundStringify(3)
+
+        >>> da
+        <xarray.DataArray 'my_data' (x: 3)>
+        array([1.234567, 2.345678, 3.456789])
+        Dimensions without coordinates: x
+        >>> rounded_da
+        <xarray.DataArray 'None' (x: 3)>
+        array(['1.23', '2.35', '3.46'], dtype='<U4')
+        Dimensions without coordinates: x
+        """
+        precision = n - 1 - np.floor(np.log10(np.abs(self.values))).astype(int)
+        rounded_arr = np.trunc(self.values * 10 ** precision) / 10 ** precision
+        new_name = f"{self.name}_rounded_to_{n}_sigfigs"
+        
+        return DataArray(rounded_arr.astype(object), dims=self.dims, name=new_name, attrs=self.attrs, coords=self.coords)
+    
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
