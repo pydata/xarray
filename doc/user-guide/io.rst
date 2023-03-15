@@ -1277,7 +1277,7 @@ Formats supported by PyNIO
 
 .. warning::
 
-    The PyNIO backend is deprecated_. PyNIO is no longer maintained_. See
+    The PyNIO backend is deprecated_. PyNIO is no longer maintained_.
 
 Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
