@@ -17,7 +17,12 @@ import pandas as pd
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import array_type, integer_types, is_duck_dask_array
+from xarray.core.pycompat import (
+    array_type,
+    integer_types,
+    is_duck_array,
+    is_duck_dask_array,
+)
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
@@ -368,17 +373,17 @@ class OuterIndexer(ExplicitIndexer):
                 k = int(k)
             elif isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif isinstance(k, np.ndarray):
+            elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
                     )
-                if k.ndim != 1:
+                if k.ndim > 1:
                     raise TypeError(
-                        f"invalid indexer array for {type(self).__name__}; must have "
-                        f"exactly 1 dimension: {k!r}"
+                        f"invalid indexer array for {type(self).__name__}; must be scalar "
+                        f"or have 1 dimension: {k!r}"
                     )
-                k = np.asarray(k, dtype=np.int64)
+                k = k.astype(np.int64)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -409,7 +414,13 @@ class VectorizedIndexer(ExplicitIndexer):
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif isinstance(k, np.ndarray):
+            elif is_duck_dask_array(k):
+                raise ValueError(
+                    "Vectorized indexing with Dask arrays is not supported. "
+                    "Please pass a numpy array by calling ``.compute``. "
+                    "See https://github.com/dask/dask/issues/8958."
+                )
+            elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
@@ -422,7 +433,7 @@ class VectorizedIndexer(ExplicitIndexer):
                         "invalid indexer key: ndarray arguments "
                         f"have different numbers of dimensions: {ndims}"
                     )
-                k = np.asarray(k, dtype=np.int64)
+                k = k.astype(np.int64)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"
@@ -1351,8 +1362,9 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             rewritten_indexer = False
             new_indexer = []
             for idim, k in enumerate(key.tuple):
-                if isinstance(k, Iterable) and duck_array_ops.array_equiv(
-                    k, np.arange(self.array.shape[idim])
+                if isinstance(k, Iterable) and (
+                    not is_duck_dask_array(k)
+                    and duck_array_ops.array_equiv(k, np.arange(self.array.shape[idim]))
                 ):
                     new_indexer.append(slice(None))
                     rewritten_indexer = True

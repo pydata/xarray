@@ -26,7 +26,12 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import array_type, integer_types, is_duck_dask_array
+from xarray.core.pycompat import (
+    array_type,
+    integer_types,
+    is_0d_dask_array,
+    is_duck_dask_array,
+)
 from xarray.core.utils import (
     Frozen,
     NdimSizeLenMixin,
@@ -687,11 +692,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
-        # Convert a scalar Variable to an integer
+        # Convert a scalar Variable to a 0d-array
         key = tuple(
-            k.data.item() if isinstance(k, Variable) and k.ndim == 0 else k for k in key
+            k.data if isinstance(k, Variable) and k.ndim == 0 else k for k in key
         )
-        # Convert a 0d-array to an integer
+        # Convert a 0d numpy arrays to an integer
+        # dask 0d arrays are passed through
         key = tuple(
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
@@ -732,7 +738,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         for dim, k in zip(self.dims, key):
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
-                    k = np.asarray(k)
+                    if not is_duck_array(k):
+                        k = np.asarray(k)
                     if k.ndim > 1:
                         raise IndexError(
                             "Unlabeled multi-dimensional array cannot be "
@@ -749,6 +756,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                             "{}-dimensional boolean indexing is "
                             "not supported. ".format(k.ndim)
                         )
+                    if is_duck_dask_array(k.data):
+                        raise KeyError(
+                            "Indexing with a boolean dask array is not allowed. "
+                            "This will result in a dask array of unknown shape. "
+                            "Such arrays are unsupported by Xarray."
+                            "Please compute the indexer first using .compute()"
+                        )
                     if getattr(k, "dims", (dim,)) != (dim,):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
@@ -759,10 +773,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         )
 
     def _broadcast_indexes_outer(self, key):
+        # drop dim if k is integer or if k is a 0d dask array
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims)
-            if not isinstance(k, integer_types)
+            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
         )
 
         new_key = []
@@ -770,7 +785,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if isinstance(k, Variable):
                 k = k.data
             if not isinstance(k, BASIC_INDEXING_TYPES):
-                k = np.asarray(k)
+                if not is_duck_array(k):
+                    k = np.asarray(k)
                 if k.size == 0:
                     # Slice by empty list; numpy could not infer the dtype
                     k = k.astype(int)
