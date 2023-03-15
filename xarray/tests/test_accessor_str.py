@@ -47,6 +47,7 @@ import pytest
 import xarray as xr
 from xarray.tests import assert_equal, assert_identical, requires_dask
 
+
 @pytest.fixture(
     params=[pytest.param(np.str_, id="str"), pytest.param(np.bytes_, id="bytes")]
 )
