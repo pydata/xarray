@@ -6731,6 +6731,7 @@ class TestRoundStringify:
     def test_roundStringify_output_type(self, my_obj):
         result = my_obj.roundStringify(3)
         assert isinstance(result, xr.DataArray), "output should be a DataArray"
+        assert isinstance(result, xr.DataArray), "output should be a DataArray"
 
     def test_roundStringify_attrs(self, my_obj):
         attrs = {"units": "meters"}
