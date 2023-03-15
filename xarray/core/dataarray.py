@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overlo
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -6678,7 +6677,7 @@ class DataArray(
         Parameters
         ----------
         n : int
-            The number of significant figures the DataArray would be converted to 
+            The number of significant figures the DataArray would be converted to
 
         Returns
         -------
@@ -6688,7 +6687,7 @@ class DataArray(
         -------
         Create a sample DataArray
         >>> data = [1.234567, 2.345678, 3.456789]
-        >>> da = xr.DataArray(data, dims='x', name='my_data')
+        >>> da = xr.DataArray(data, dims="x", name="my_data")
         >>> rounded_da = da.roundStringify(3)
 
         >>> da
@@ -6700,12 +6699,39 @@ class DataArray(
         array(['1.23', '2.35', '3.46'], dtype='<U4')
         Dimensions without coordinates: x
         """
-        precision = n - 1 - np.floor(np.log10(np.abs(self.values))).astype(int)
-        rounded_arr = np.trunc(self.values * 10 ** precision) / 10 ** precision
+        # Handle edge cases
+        non_zero_vals = np.where(np.abs(self.values.astype(float)) == 0, False, True)
+
+        if not non_zero_vals.any():
+            new_name = f"{self.name}_rounded_to_{n}_sigfigs"
+            return DataArray(
+                np.full((self.size,), "0", dtype=str),
+                dims=self.dims,
+                name=new_name,
+                attrs=self.attrs,
+                coords=self.coords,
+            )
+        # Ensure non-negative precision
+        precision = max(
+            n
+            - 1
+            - np.floor(
+                np.log10(np.abs(self.values[non_zero_vals].astype(float))).astype(int)
+            ).any(),
+            0,
+        )
+        factor = 10**precision
+        rounded_arr = np.floor(self.values.astype(float) * factor) / factor
         new_name = f"{self.name}_rounded_to_{n}_sigfigs"
-        
-        return DataArray(rounded_arr.astype(object), dims=self.dims, name=new_name, attrs=self.attrs, coords=self.coords)
-    
+
+        return DataArray(
+            rounded_arr.astype(str),
+            dims=self.dims,
+            name=new_name,
+            attrs=self.attrs,
+            coords=self.coords,
+        )
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
