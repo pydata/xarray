@@ -22,10 +22,13 @@ v2023.03.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Add ``xarray.DataArray.roundStringify`` for arrays by rounding them to significant figures and 
+- Add ``xarray.DataArray.roundStringify`` for arrays by rounding them to significant figures and
   formatting output as strings for (:issue:`5985`)
 - Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Allow indexing along unindexed dimensions with dask arrays
+  (:issue:`2511`, :issue:`4276`, :issue:`4663`, :pull:`5873`).
+  By `Abel Aoun <https://github.com/bzah>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Support dask arrays in ``first`` and ``last`` reductions.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
