@@ -98,6 +98,8 @@ Bug fixes
   By `Paul Ockenfuß <https://github.com/Ockenfuss>`_.
 - Fix :py:meth:`DataArray.plot.pcolormesh` which now works if one of the coordinates has str dtype  (:issue:`6775`, :pull:`7612`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improve error message when trying to open a file which you do not have permission to read (:issue:`6523`, :pull:`7629`).
+  By `Thomas Coleman <https://github.com/ColemanTom>`_.
 
 Documentation
 ~~~~~~~~~~~~~
