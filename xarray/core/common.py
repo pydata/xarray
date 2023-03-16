@@ -1462,6 +1462,12 @@ def full_like(
     dtype : dtype or dict-like of dtype, optional
         dtype of the new array. If a dict-like, maps dtypes to
         variables. If omitted, it defaults to other.dtype.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+
 
     Returns
     -------
@@ -1694,6 +1700,11 @@ def zeros_like(
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1799,6 +1810,11 @@ def ones_like(
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------

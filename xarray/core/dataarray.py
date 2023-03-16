@@ -1281,6 +1281,11 @@ class DataArray(
         inline_array: optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        from_array_kwargs: dict
+            Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.

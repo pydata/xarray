@@ -1959,6 +1959,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore:
         ...
 
@@ -1979,6 +1980,7 @@ class Dataset(
         region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
+        store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed:
         ...
 
@@ -1997,6 +1999,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
@@ -2085,6 +2088,10 @@ class Dataset(
             The desired zarr spec version to target (currently 2 or 3). The
             default of None will attempt to determine the zarr version from
             ``store`` when possible, otherwise defaulting to 2.
+        store_kwargs : dict
+            Additional keyword arguments passed on to the `ChunkManager.store` method used to store
+            chunked arrays. For example for a dask array additional kwargs will be passed eventually to
+            :py:func:`dask.array.store()`. Experimental API that should not be relied upon.
 
         Returns
         -------
@@ -2246,6 +2253,11 @@ class Dataset(
         inline_array: bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        from_array_kwargs: dict
+            Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided

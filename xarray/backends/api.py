@@ -392,7 +392,7 @@ def open_dataset(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
-    from_array_kwargs=None,
+    from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> Dataset:
@@ -485,6 +485,11 @@ def open_dataset(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -677,6 +682,11 @@ def open_dataarray(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -1516,6 +1526,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1538,6 +1549,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed:
     ...
 
