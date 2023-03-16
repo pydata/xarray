@@ -25,6 +25,9 @@ New Features
 
 - Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Allow indexing along unindexed dimensions with dask arrays
+  (:issue:`2511`, :issue:`4276`, :issue:`4663`, :pull:`5873`).
+  By `Abel Aoun <https://github.com/bzah>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Support dask arrays in ``first`` and ``last`` reductions.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -62,6 +65,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Clarify language in contributor's guide (:issue:`7495`, :pull:`7595`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
