@@ -74,7 +74,12 @@ from xarray.core.merge import (
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type
-from xarray.core.pycompat import array_type, is_chunked_array, is_duck_dask_array
+from xarray.core.pycompat import (
+    array_type,
+    is_chunked_array,
+    is_duck_array,
+    is_duck_dask_array,
+)
 from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
     Default,
@@ -2320,7 +2325,8 @@ class Dataset(
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                v = np.asarray(v)
+                if not is_duck_array(v):
+                    v = np.asarray(v)
 
                 if v.dtype.kind in "US":
                     index = self._indexes[k].to_pandas_index()
