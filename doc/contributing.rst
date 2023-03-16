@@ -732,7 +732,7 @@ or, to use a specific Python interpreter,::
 This will display stderr from the benchmarks, and use your local
 ``python`` that comes from your ``$PATH``.
 
-Learn `how to write a benchmark and how to use asv from the documentayion <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_ .
+Learn `how to write a benchmark and how to use asv from the documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_ .
 
 
 ..

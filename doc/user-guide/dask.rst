@@ -549,7 +549,7 @@ larger chunksizes.
 
 .. tip::
 
-   Check out the `dask documentation of chunks <https://docs.dask.org/en/latest/array-chunks.html>`_.
+   Check out the `dask documentation on chunks <https://docs.dask.org/en/latest/array-chunks.html>`_.
 
 
 Optimization Tips
