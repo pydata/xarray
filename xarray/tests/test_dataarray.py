@@ -4249,37 +4249,40 @@ class TestDataArray:
         d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
             object
         )
-        if backend == "numpy":
-            aa = DataArray(data=a, dims=["x"], name="a")
-            bb = DataArray(data=b, dims=["x"], name="b")
-            cc = DataArray(data=c, dims=["y"], name="c")
-            dd = DataArray(data=d, dims=["z"], name="d")
+        aa = DataArray(data=a, dims=["x"], name="a", coords={"a2": ("x", a)})
+        bb = DataArray(data=b, dims=["x"], name="b", coords={"b2": ("x", b)})
+        cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
+        dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        elif backend == "dask":
+        if backend == "dask":
             import dask.array as da
 
-            aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
-            bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
-            cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
-            dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+            aa = aa.copy(data=da.from_array(a, chunks=3))
+            bb = bb.copy(data=da.from_array(b, chunks=3))
+            cc = cc.copy(data=da.from_array(c, chunks=7))
+            dd = dd.copy(data=da.from_array(d, chunks=12))
 
         # query single dim, single variable
-        actual = aa.query(x="a > 5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
         expect = aa.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
-        actual = aa.query(dict(x="a > 5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(dict(x="a2 > 5"), engine=engine, parser=parser)
         expect = aa.isel(dict(x=(a > 5)))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = bb.query(x="b > 50", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = bb.query(x="b2 > 50", engine=engine, parser=parser)
         expect = bb.isel(x=(b > 50))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = cc.query(y="c < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = cc.query(y="c2 < .5", engine=engine, parser=parser)
         expect = cc.isel(y=(c < 0.5))
         assert_identical(expect, actual)
 
@@ -4287,7 +4290,8 @@ class TestDataArray:
         if parser == "pandas":
             # N.B., this query currently only works with the pandas parser
             # xref https://github.com/pandas-dev/pandas/issues/40436
-            actual = dd.query(z='d == "bar"', engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = dd.query(z='d2 == "bar"', engine=engine, parser=parser)
             expect = dd.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 
