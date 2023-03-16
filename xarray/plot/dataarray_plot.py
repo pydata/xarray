@@ -2293,27 +2293,23 @@ def pcolormesh(
         else:
             infer_intervals = True
 
-    if (
-        infer_intervals
-        and not np.issubdtype(x.dtype, str)
-        and (
-            (np.shape(x)[0] == np.shape(z)[1])
-            or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
-        )
+    if any(np.issubdtype(k.dtype, str) for k in (x, y)):
+        # do not infer intervals if any axis contains str ticks, see #6775
+        infer_intervals = False
+
+    if infer_intervals and (
+        (np.shape(x)[0] == np.shape(z)[1])
+        or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
     ):
-        if len(x.shape) == 1:
+        if x.ndim == 1:
             x = _infer_interval_breaks(x, check_monotonic=True, scale=xscale)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1, scale=xscale)
             x = _infer_interval_breaks(x, axis=0, scale=xscale)
 
-    if (
-        infer_intervals
-        and not np.issubdtype(y.dtype, str)
-        and (np.shape(y)[0] == np.shape(z)[0])
-    ):
-        if len(y.shape) == 1:
+    if infer_intervals and (np.shape(y)[0] == np.shape(z)[0]):
+        if y.ndim == 1:
             y = _infer_interval_breaks(y, check_monotonic=True, scale=yscale)
         else:
             # we have to infer the intervals on both axes
