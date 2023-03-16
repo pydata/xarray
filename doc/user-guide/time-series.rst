@@ -108,10 +108,10 @@ For more details, read the pandas documentation and the section on :ref:`datetim
 Datetime components
 -------------------
 
-Similar `to pandas`_, the components of datetime objects contained in a
+Similar to `pandas accessors`_, the components of datetime objects contained in a
 given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
-.. _to pandas: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
+.. _pandas accessors: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
 
 .. ipython:: python
 

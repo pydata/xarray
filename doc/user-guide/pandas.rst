@@ -8,7 +8,7 @@ Working with pandas
 One of the most important features of xarray is the ability to convert to and
 from :py:mod:`pandas` objects to interact with the rest of the PyData
 ecosystem. For example, for plotting labeled data, we highly recommend
-using the visualization `built in to pandas itself`__ or provided by the pandas
+using the `visualization built in to pandas itself`__ or provided by the pandas
 aware libraries such as `Seaborn`__.
 
 __ https://pandas.pydata.org/pandas-docs/stable/visualization.html
@@ -168,7 +168,7 @@ multi-dimensional arrays to xarray.
 Xarray has most of ``Panel``'s features, a more explicit API (particularly around
 indexing), and the ability to scale to >3 dimensions with the same interface.
 
-As discussed :ref:`elsewhere <data structures>` in the docs, there are two primary data structures in
+As discussed in the :ref:`data structures section of the docs <data structures>`, there are two primary data structures in
 xarray: ``DataArray`` and ``Dataset``. You can imagine a ``DataArray`` as a
 n-dimensional pandas ``Series`` (i.e. a single typed array), and a ``Dataset``
 as the ``DataFrame`` equivalent (i.e. a dict of aligned ``DataArray`` objects).
@@ -240,6 +240,6 @@ While the xarray docs are relatively complete, a few items stand out for Panel u
   the Person dimension of a Dataset of Person x Score x Time.
 
 While xarray may take some getting used to, it's worth it! If anything is unclear,
-please post an issue on `GitHub <https://github.com/pydata/xarray>`__ or
+please `post an issue on GitHub <https://github.com/pydata/xarray>`__ or
 `StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>`__,
 and we'll endeavor to respond to the specific case or improve the general docs.
