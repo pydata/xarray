@@ -69,6 +69,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Experimental support for wrapping chunked array libraries other than dask .
+  A new ABC is defined :py:class:`xr.core.parallelcompat.ChunkManager` which can be overridden and then registered
+  by chunked array implementations. (:issue:`6807`, :pull:`7019`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
 
 .. _whats-new.2023.02.0:
 
