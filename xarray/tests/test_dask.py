@@ -123,14 +123,15 @@ class TestVariable(DaskTestCase):
             (da.array([99, 99, 3, 99]), [0, -1, 1]),
             (da.array([99, 99, 99, 4]), np.arange(3)),
             (da.array([1, 99, 99, 99]), [False, True, True, True]),
-            (da.array([1, 99, 99, 99]), np.arange(4) > 0),
-            (da.array([99, 99, 99, 99]), Variable(("x"), da.array([1, 2, 3, 4])) > 0),
+            (da.array([1, 99, 99, 99]), np.array([False, True, True, True])),
+            (da.array([99, 99, 99, 99]), Variable(("x"), np.array([True] * 4))),
         ],
     )
     def test_setitem_dask_array(self, expected_data, index):
         arr = Variable(("x"), da.array([1, 2, 3, 4]))
         expected = Variable(("x"), expected_data)
-        arr[index] = 99
+        with raise_if_dask_computes():
+            arr[index] = 99
         assert_identical(arr, expected)
 
     def test_squeeze(self):
