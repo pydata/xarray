@@ -80,10 +80,8 @@ class ZarrArrayWrapper(BackendArray):
             ]
         else:
             assert isinstance(key, indexing.OuterIndexer)
-            # Lie about IndexingSupport so that we do
-            # rewrite negative slices to positive slices
             return indexing.explicit_indexing_adapter(
-                key, array.shape, indexing.IndexingSupport.OUTER, self._oindex
+                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._oindex
             )
 
         # if self.ndim == 0:

@@ -23,6 +23,7 @@ from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
+    is_scalar,
     to_0d_array,
 )
 
@@ -980,12 +981,25 @@ def _decompose_outer_indexer(
            [14, 15, 14],
            [ 8,  9,  8]])
     """
-    if indexing_support == IndexingSupport.VECTORIZED:
-        return indexer, BasicIndexer(())
-    assert isinstance(indexer, (OuterIndexer, BasicIndexer))
-
     backend_indexer: list[Any] = []
     np_indexer = []
+
+    assert isinstance(indexer, (OuterIndexer, BasicIndexer))
+
+    if indexing_support == IndexingSupport.VECTORIZED:
+        for k, s in zip(indexer.tuple, shape):
+            if isinstance(k, slice):
+                # If it is a slice, then we will slice it as-is
+                # (but make its step positive) in the backend,
+                bk_slice, np_slice = _decompose_slice(k, s)
+                backend_indexer.append(bk_slice)
+                np_indexer.append(np_slice)
+            else:
+                backend_indexer.append(k)
+                if not is_scalar(k):
+                    np_indexer.append(slice(None))
+        return type(indexer)(tuple(backend_indexer)), BasicIndexer(tuple(np_indexer))
+
     # make indexer positive
     pos_indexer: list[np.ndarray | int | np.number] = []
     for k, s in zip(indexer.tuple, shape):
