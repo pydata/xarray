@@ -101,17 +101,17 @@ You can also select a particular time by indexing with a
 
     ds.sel(time=datetime.time(12))
 
-For more details, read the pandas documentation and the section on `Indexing Using Datetime Components <datetime_component_indexing>`_ (i.e. using the ``.dt`` accessor).
+For more details, read the pandas documentation and the section on :ref:`datetime_component_indexing` (i.e. using the ``.dt`` accessor).
 
 .. _dt_accessor:
 
 Datetime components
 -------------------
 
-Similar `to pandas`_, the components of datetime objects contained in a
+Similar to `pandas accessors`_, the components of datetime objects contained in a
 given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
-.. _to pandas: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
+.. _pandas accessors: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
 
 .. ipython:: python
 

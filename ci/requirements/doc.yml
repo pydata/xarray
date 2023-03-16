@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - bottleneck
   - cartopy
   - cfgrib>=0.9
@@ -23,7 +23,7 @@ dependencies:
   - pandas>=1.4
   - pooch
   - pip
-  - pydata-sphinx-theme>=0.4.3
+  - pre-commit
   - pyproj
   - rasterio>=1.1
   - scipy!=1.10.0
@@ -31,10 +31,10 @@ dependencies:
   - setuptools
   - sparse
   - sphinx-autosummary-accessors
-  - sphinx-book-theme >= 0.0.38
+  - sphinx-book-theme >= 0.3.0
   - sphinx-copybutton
   - sphinx-design
-  - sphinx!=4.4.0
+  - sphinx>=5.0
   - zarr>=2.10
   - pip:
       - sphinxext-rediraffe
