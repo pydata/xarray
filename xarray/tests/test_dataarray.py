@@ -3205,6 +3205,39 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    def test_to_dask_dataframe(self) -> None:
+        arr_np = np.random.randn(3, 4)
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+        expected = arr.to_series()
+        actual = arr.to_dask_dataframe()["foo"]
+
+        assert_array_equal(actual.name, expected.name)
+        assert_array_equal(actual.values, expected.values)
+
+        actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
+
+        # regression test for coords with different dimensions
+
+        arr.coords["C"] = ("B", [-1, -2, -3])
+        expected = arr.to_series().to_frame()
+        expected["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected = expected[["C", "foo"]]
+        actual = arr.to_dask_dataframe()[["C", "foo"]]
+
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.columns.values, actual.columns.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dask_dataframe(dim_order=["B", "A", "C"])
+
+        with pytest.raises(ValueError, match=r"cannot convert a scalar"):
+            arr.sel(A="c", B=2).to_dataframe()
+
+        arr.name = None
+        with pytest.raises(ValueError, match=r"unnamed"):
+            arr.to_dataframe()
+
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
