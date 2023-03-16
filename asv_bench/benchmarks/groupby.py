@@ -123,22 +123,6 @@ class Resample:
         ds = getattr(self, f"ds{ndim}d")
         getattr(ds.resample(time="48H"), method)()
 
-    def time_binary_op_1d(self):
-        raise NotImplementedError("Skipping this test...")
-        # self.ds1d.resample(time="48H") - self.ds1d_mean
-
-    def time_binary_op_2d(self):
-        raise NotImplementedError("Skipping this test...")
-        # self.ds2d.resample(time="48H") - self.ds2d_mean
-
-    def peakmem_binary_op_1d(self):
-        raise NotImplementedError("Skipping this test...")
-        # self.ds1d.resample(time="48H") - self.ds1d_mean
-
-    def peakmem_binary_op_2d(self):
-        raise NotImplementedError("Skipping this test...")
-        # self.ds2d.resample(time="48H") - self.ds2d_mean
-
 
 class ResampleDask(Resample):
     def setup(self, *args, **kwargs):
