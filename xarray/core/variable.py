@@ -205,10 +205,10 @@ def _as_nanosecond_precision(data):
             nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
         else:
             nanosecond_precision_dtype = "datetime64[ns]"
-        return data.astype(nanosecond_precision_dtype)
+        return duck_array_ops.astype(data, nanosecond_precision_dtype)
     elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
         utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
-        return data.astype("timedelta64[ns]")
+        return duck_array_ops.astype(data, "timedelta64[ns]")
     else:
         return data
 

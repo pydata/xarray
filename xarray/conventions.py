@@ -136,7 +136,7 @@ def maybe_encode_nonstring_dtype(var: Variable, name: T_Name = None) -> Variable
                         stacklevel=10,
                     )
                 data = np.around(data)
-            data = data.astype(dtype=dtype)
+            data = duck_array_ops.astype(data, dtype=dtype)
         var = Variable(dims, data, attrs, encoding, fastpath=True)
     return var
 

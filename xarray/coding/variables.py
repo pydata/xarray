@@ -264,7 +264,7 @@ class CFScaleOffsetCoder(VariableCoder):
 
         if "scale_factor" in encoding or "add_offset" in encoding:
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
-            data = data.astype(dtype=dtype, copy=True)
+            data = duck_array_ops.astype(data, dtype=dtype, copy=True)
         if "add_offset" in encoding:
             data -= pop_to(encoding, attrs, "add_offset", name=name)
         if "scale_factor" in encoding:
@@ -311,7 +311,7 @@ class UnsignedIntegerCoder(VariableCoder):
             if "_FillValue" in attrs:
                 new_fill = signed_dtype.type(attrs["_FillValue"])
                 attrs["_FillValue"] = new_fill
-            data = duck_array_ops.around(data).astype(signed_dtype)
+            data = duck_array_ops.astype(duck_array_ops.around(data), signed_dtype)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:

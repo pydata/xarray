@@ -2022,7 +2022,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
             )
         elif x.dtype.kind == "m":
             # timedeltas
-            return x.astype(float)
+            return duck_array_ops.astype(x, dtype=float)
         return x
 
     if isinstance(data, Dataset):
