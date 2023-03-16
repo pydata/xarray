@@ -295,12 +295,12 @@ def _apply_loffset(
 
 class Grouper:
     def __init__(self, group: T_Group):
-        self.group = group
-        self.codes = None
+        self.group : T_Group | None = group
+        self.codes : np.ndarry | None = None
         self.labels = None
-        self.group_indices = None
+        self.group_indices : list[list[int, ...]] | None= None
         self.unique_coord = None
-        self.full_index = None
+        self.full_index : pd.Index | None = None
         self._group_as_index = None
 
     @property
@@ -334,9 +334,10 @@ class Grouper:
             self._group_as_index = safe_cast_to_index(self.group1d)
         return self._group_as_index
 
-    def _resolve_group(self, obj) -> None:
+    def _resolve_group(self, obj: T_DataArray | T_Dataset) -> None:
         from xarray.core.dataarray import DataArray
 
+        group: T_Group
         group = self.group
         if not isinstance(group, (DataArray, IndexVariable)):
             if not hashable(group):
@@ -345,11 +346,11 @@ class Grouper:
                     "name of an xarray variable or dimension. "
                     f"Received {group!r} instead."
                 )
-            group = obj[group]
-            if len(group) == 0:
-                raise ValueError(f"{group.name} must not be empty")
+            group_da : T_DataArray = obj[group]
+            if len(group_da) == 0:
+                raise ValueError(f"{group_da.name} must not be empty")
 
-            if group.name not in obj.coords and group.name in obj.dims:
+            if group_da.name not in obj.coords and group_da.name in obj.dims:
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)
 
