@@ -3707,3 +3707,46 @@ def test_mod_broadcast_multi() -> None:
 
     assert res.dtype == expected.dtype
     assert_equal(res, expected)
+
+
+class TestSigStr:
+    @pytest.fixture(scope="module")
+    def data(self):
+        # Test inputs
+        data = [-123.4567, -0.0001234567, 123.5678, np.nan, np.inf, 1345756]
+        da = xr.DataArray(data, dims="x", name="my_data")
+        return da
+
+    # Parametrized tests
+    @pytest.mark.parametrize(
+        "n, expected",
+        [
+            (
+                3,
+                xr.DataArray(
+                    ["-123.0", "-0.000123", "124.0", "nan", "inf", "1350000.0"],
+                    dims="x",
+                    name="my_data",
+                ),
+            ),
+            (
+                5,
+                xr.DataArray(
+                    ["-123.46", "-0.00012346", "123.57", "nan", "inf", "1345800.0"],
+                    dims="x",
+                    name="my_data",
+                ),
+            ),
+            (
+                4,
+                xr.DataArray(
+                    ["-123.5", "-0.0001235", "123.6", "nan", "inf", "1346000.0"],
+                    dims="x",
+                    name="my_data",
+                ),
+            ),
+        ],
+    )
+    def test_sig_str(self, data, n, expected):
+        result = data.str.sig_str(n)
+        np.testing.assert_array_equal(result, expected)

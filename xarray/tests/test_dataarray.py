@@ -6716,33 +6716,3 @@ class TestStackEllipsis:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
             da.stack(flat=...)  # type: ignore
-
-
-class TestRoundStringify:
-    # https://github.com/pydata/xarray/issues/5985
-    @pytest.fixture
-    def my_obj(self):
-        data = np.array([1.234567, 2.345678, 3.456789], dtype=float)
-        coords = {"x": [0, 1, 2]}
-        dims = "x"
-        darray = xr.DataArray(data, dims=dims, coords=coords, name="my_data")
-        return DataArray(darray)
-
-    def test_roundStringify_output_type(self, my_obj):
-        result = my_obj.roundStringify(3)
-        assert isinstance(result, xr.DataArray), "output should be a DataArray"
-        assert isinstance(result, xr.DataArray), "output should be a DataArray"
-
-    def test_roundStringify_attrs(self, my_obj):
-        attrs = {"units": "meters"}
-        my_obj.attrs = attrs
-        new_da = my_obj.roundStringify(2)
-        assert "units" in new_da.attrs.keys(), "expected attribute not found"
-        assert new_da.attrs["units"] == attrs["units"], "attribute values not matched"
-
-    def test_roundStringify_edge_case(self):
-        # test case when all values are zero
-        zeros = xr.DataArray(np.zeros((3,), dtype=float), dims=["x"])
-        rounded_zeros = zeros.roundStringify(n=3)
-        expected_result = xr.DataArray(["0", "0", "0"], dims=["x"])
-        xr.testing.assert_allclose(rounded_zeros, expected_result)

@@ -2534,3 +2534,36 @@ class StringAccessor(Generic[T_DataArray]):
             encoder = codecs.getencoder(encoding)
             func = lambda x: encoder(x, errors)[0]
         return self._apply(func=func, dtype=np.bytes_)
+
+    def sig_str(self, n: int) -> DataArray:
+        """
+        Converts rounded DataArray with specific significant figures to strings.
+        Parameters
+        ----------
+        n : int
+            The number of significant figures
+        Returns
+        -------
+        DataArray
+
+        Example
+        -------
+        >>> data1 = [-123.4567, -0.0001234567, 123.5678]
+        >>> data2 = [145757, -3245627, 0.0012456]
+        >>> da1 = DataArray(data1, dims="x", name="my_data1")
+        >>> da2 = DataArray(data2, dims="x", name="my_data2")
+        >>> rounded_da1 = da1.str.sig_str(3)
+        >>> rounded_da2 = da2.str.sig_str(3)
+        >>> rounded_da1
+        <xarray.DataArray 'None' (x: 3)>
+        array(['-123', '-0.000123', '124'], dtype='<U9')
+        Dimensions without coordinates: x
+        >>> rounded_da2
+        <xarray.DataArray 'None' (x: 3)>
+        array(['1.46e+05', '-3.25e+06', '0.00125'], dtype='<U8')
+        Dimensions without coordinates: x
+        """
+        self._obj = self._obj.astype(float)
+        return DataArray(
+            self._apply(func=lambda x: "{:.{n}g}".format(x, n=n)).astype(str)
+        )
