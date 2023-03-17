@@ -3205,8 +3205,9 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask
     def test_to_dask_dataframe(self) -> None:
-        arr_np = np.random.randn(3, 4)
+        arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
         expected = arr.to_series()
         actual = arr.to_dask_dataframe()["foo"]
