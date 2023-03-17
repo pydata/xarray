@@ -58,6 +58,10 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     try:
+        from dask.dataframe import DataFrame as DaskDataFrame
+    except ImportError:
+        DaskDataFrame = None
+    try:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
@@ -95,11 +99,6 @@ if TYPE_CHECKING:
     from xarray.core.weighted import DataArrayWeighted
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
-
-    try:
-        from dask.dataframe import DataFrame as DaskDataFrame
-    except ImportError:
-        DaskDataFrame = None
 
 
 def _infer_coords_and_dims(
@@ -6676,24 +6675,33 @@ class DataArray(
         )
 
     def to_dask_dataframe(
-        self, dim_order: Sequence[Hashable] = None, *, name: Hashable = None
+        self,
+        dim_order: Sequence[Hashable] | None = None,
+        set_index: bool = False,
+        *,
+        name: Hashable | None = None,
     ) -> DaskDataFrame:
         """Convert this array into a dask.dataframe.DataFrame.
 
         Parameters
         ----------
+        dim_order : Sequence of Hashable or None , optional
+            Hierarchical dimension order for the resulting dataframe.
+            Array content is transposed to this order and then written out as flat
+            vectors in contiguous order , so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major influence
+            on which operations are efficient on the resulting dask dataframe.
 
-        dim_order: Sequence of Hashable or None , optional
-        Hierarchical dimension order for the resulting dataframe.
-        Array content is transposed to this order and then written out as flat
-        vectors in contiguous order , so the last dimension in this list
-        will be contiguous in the resulting DataFrame. This has a major influence on
-        which operations are efficient on the resulting dask dataframe.
+        name : Hashable or None, optional
+            Name given to this array(required if unnamed).
+            It is a keyword-only argument. A keyword-only argument can only be passed
+            to the function using its name as a keyword argument , and not as a
+            positional argument.
 
-        name: Hashable or None, optional
-        Name given to this array(required if unnamed).
-        It is a keyword-only argument. A keyword-only argument can only be passed to the
-        function using its name as a keyword argument , and not as a positional argument.
+        set_index : bool, default: False
+            If set_index=True, the dask DataFrame is indexed by this dataset's
+            coordinate. Since dask DataFrames do not support multi-indexes,
+            set_index only works if the dataset only contains one dimension.
 
         Returns
         -------
@@ -6701,42 +6709,36 @@ class DataArray(
 
         Examples
         --------
-
-        da=xr.DataArray(np.random.rand(4,3,2),
-                dims=('time','lat','lon'),
-                coords={'time':np.arange(4),
-                        'lat':[-30,-20,-10],
-                        'lon':[120,130]},
-                name='temperature',
-                attrs={'units':'Celsius',
-                      'description':'Random temperature data'})
-
-        da.to_dask_dataframe(['lat','lon','time'],name="temp_dataframe")
-
+        >>> da = xr.DataArray(
+        ...     np.arange(4 * 3 * 2).reshape(4, 3, 2),
+        ...     dims=("time", "lat", "lon"),
+        ...     coords={
+        ...         "time": np.arange(4),
+        ...         "lat": [-30, -20, -10],
+        ...         "lon": [120, 130],
+        ...     },
+        ...     name="temperature",
+        ...     attrs={"units": "Celsius", "description": "Random temperature data"},
+        ... )
+        >>> da.to_dask_dataframe(["lat", "lon", "time"], name="temp_dataframe")
         Dask DataFrame Structure:
-                          lat     lon     time    temp_dataframe
+                     lat	lon	time	temp_dataframe
         npartitions=1
-                    0    int64   int64    int64          float64
-                   23      ...     ...      ...              ...
-        Dask Name: concat-indexed,30 tasks
+                    0	int64	int64	int64	int64
+                    23	  ...     ...	  ...	  ...
+        Dask Name: concat-indexed, 30 tasks
 
         """
-
         if name is None:
             name = self.name
 
         if name is None:
             raise ValueError(
                 "Cannot convert an unnamed DataArray to a "
-                "dask dataframe : use the ``name`` parameter"
+                "dask dataframe : use the ``name`` parameter ."
             )
-
-        if self.ndim == 0:
-            raise ValueError("Cannot convert a scalar to a dataframe")
-
-        tmp_dataset = Dataset({name: self})
-        dask_dataframe = tmp_dataset.to_dask_dataframe(dim_order)
-        return dask_dataframe
+        ds = self._to_dataset_whole(name)
+        return ds.to_dask_dataframe(dim_order, set_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
