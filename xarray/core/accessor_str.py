@@ -51,6 +51,7 @@ from unicodedata import normalize
 
 import numpy as np
 
+import xarray as xr
 from xarray.core.computation import apply_ufunc
 from xarray.core.types import T_DataArray
 
@@ -2550,8 +2551,8 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         >>> data1 = [-123.4567, -0.0001234567, 123.5678]
         >>> data2 = [145757, -3245627, 0.0012456]
-        >>> da1 = DataArray(data1, dims="x", name="my_data1")
-        >>> da2 = DataArray(data2, dims="x", name="my_data2")
+        >>> da1 = xr.DataArray(data1, dims="x", name="my_data1")
+        >>> da2 = xr.DataArray(data2, dims="x", name="my_data2")
         >>> rounded_da1 = da1.str.sig_str(3)
         >>> rounded_da2 = da2.str.sig_str(3)
         >>> rounded_da1
@@ -2564,6 +2565,6 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
         """
         self._obj = self._obj.astype(float)
-        return DataArray(
+        return xr.DataArray(
             self._apply(func=lambda x: "{:.{n}g}".format(x, n=n)).astype(str)
         )
