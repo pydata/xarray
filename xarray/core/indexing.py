@@ -982,7 +982,7 @@ def _decompose_outer_indexer(
            [ 8,  9,  8]])
     """
     backend_indexer: list[Any] = []
-    np_indexer = []
+    np_indexer: list[Any] = []
 
     assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
