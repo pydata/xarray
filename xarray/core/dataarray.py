@@ -6727,6 +6727,7 @@ class DataArray(
         0              int64  int64  int64          int64
         23               ...    ...    ...            ...
         Dask Name: concat-indexed, 1 graph layer
+
         """
         if name is None:
             name = self.name
