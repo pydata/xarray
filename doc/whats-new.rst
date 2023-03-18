@@ -25,6 +25,9 @@ New Features
 
 - Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Allow indexing along unindexed dimensions with dask arrays
+  (:issue:`2511`, :issue:`4276`, :issue:`4663`, :pull:`5873`).
+  By `Abel Aoun <https://github.com/bzah>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Support dask arrays in ``first`` and ``last`` reductions.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added new method :py:meth:`DataArray.to_dask_dataframe`,convert a dataarray into a dask dataframe (:issue:`7409`).
@@ -55,8 +58,13 @@ Bug fixes
 - Fix matplotlib raising a UserWarning when plotting a scatter plot
   with an unfilled marker (:issue:`7313`, :pull:`7318`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix issue with ``max_gap`` in ``interpolate_na``, when applied to
+  multidimensional arrays. (:issue:`7597`, :pull:`7598`).
+  By `Paul Ockenfuß <https://github.com/Ockenfuss>`_.
 - Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
   By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix :py:meth:`DataArray.plot.pcolormesh` which now works if one of the coordinates has str dtype  (:issue:`6775`, :pull:`7612`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
