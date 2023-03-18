@@ -20,6 +20,9 @@ What's New
 v2023.03.0 (March 20, 2023)
 ---------------------------
 
+This release brings many bug fixes, and some new features. Thanks to our 18 contributors:
+Abel Aoun, Alex Goodman, Deepak Cherian, Illviljan, Jody Klymak, Joe Hamman, Justus Magin, Mary Gathoni, Mathias Hauser, Mattia Almansi, Mick, Oriol Abril-Pla, Paul Ockenfuß, Pierre, Shreyal Gupta, Spencer Clark, Tom Nicholas, Tom Vo
+
 New Features
 ~~~~~~~~~~~~
 
@@ -30,6 +33,8 @@ New Features
   By `Abel Aoun <https://github.com/bzah>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Support dask arrays in ``first`` and ``last`` reductions.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
+  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -60,8 +65,6 @@ Bug fixes
 - Fix issue with ``max_gap`` in ``interpolate_na``, when applied to
   multidimensional arrays. (:issue:`7597`, :pull:`7598`).
   By `Paul Ockenfuß <https://github.com/Ockenfuss>`_.
-- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
-  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:meth:`DataArray.plot.pcolormesh` which now works if one of the coordinates has str dtype  (:issue:`6775`, :pull:`7612`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
