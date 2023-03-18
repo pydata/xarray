@@ -60,7 +60,7 @@ if TYPE_CHECKING:
     try:
         from dask.dataframe import DataFrame as DaskDataFrame
     except ImportError:
-        DaskDataFrame = None
+        DaskDataFrame = None  # type: ignore
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -6722,12 +6722,11 @@ class DataArray(
         ... )
         >>> da.to_dask_dataframe(["lat", "lon", "time"], name="temp_dataframe")
         Dask DataFrame Structure:
-                     lat	lon	time	temp_dataframe
+                        lat    lon   time temp_dataframe
         npartitions=1
-                    0	int64	int64	int64	int64
-                    23	  ...     ...	  ...	  ...
-        Dask Name: concat-indexed, 30 tasks
-
+        0              int64  int64  int64          int64
+        23               ...    ...    ...            ...
+        Dask Name: concat-indexed, 1 graph layer
         """
         if name is None:
             name = self.name
