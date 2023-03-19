@@ -346,7 +346,7 @@ def _factorize_bins(
 
     new_dim_name = str(group.name) + "_bins"
     group_ = DataArray(binned, getattr(group, "coords", None), name=new_dim_name)
-    unique_coord = IndexVariable(group.name, unique_values)
+    unique_coord = IndexVariable(new_dim_name, unique_values)
     return unique_coord, group_indices, codes, full_index, group_
 
 
