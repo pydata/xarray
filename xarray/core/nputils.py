@@ -50,7 +50,7 @@ def nanlast(values, axis, keepdims=False):
         return result
 
 
-def inverse_permutation(indices, N=None):
+def inverse_permutation(indices: np.ndarray, N: int | None = None) -> np.ndarray:
     """Return indices for an inverse permutation.
 
     Parameters

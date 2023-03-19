@@ -45,6 +45,9 @@ if TYPE_CHECKING:
 
     GroupKey = Any
 
+    T_GroupIndicesListInt = list[list[int]]
+    T_GroupIndices = Union[T_GroupIndicesListInt, list[slice], np.ndarray]
+
 
 def check_reduce_dims(reduce_dims, dimensions):
     if reduce_dims is not ...:
@@ -59,7 +62,7 @@ def check_reduce_dims(reduce_dims, dimensions):
 
 def unique_value_groups(
     ar, sort: bool = True
-) -> tuple[np.ndarray | pd.Index, list[list[int]], np.ndarray]:
+) -> tuple[np.ndarray | pd.Index, T_GroupIndices, np.ndarray]:
     """Group an array by its unique values.
 
     Parameters
@@ -84,8 +87,8 @@ def unique_value_groups(
     return values, groups, inverse
 
 
-def _codes_to_groups(inverse, N):
-    groups: list[list[int]] = [[] for _ in range(N)]
+def _codes_to_groups(inverse: np.ndarray, N: int) -> T_GroupIndicesListInt:
+    groups: T_GroupIndicesListInt = [[] for _ in range(N)]
     for n, g in enumerate(inverse):
         if g >= 0:
             groups[g].append(n)
@@ -151,7 +154,7 @@ def _consolidate_slices(slices):
     return result
 
 
-def _inverse_permutation_indices(positions, N=None):
+def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray | None:
     """Like inverse_permutation, but also handles slices.
 
     Parameters
@@ -213,6 +216,9 @@ class _DummyGroup:
         if isinstance(key, tuple):
             key = key[0]
         return self.values[key]
+
+    def copy(self, deep: bool = True, data: Any = None):
+        raise NotImplementedError
 
 
 T_Group = TypeVar("T_Group", bound=Union["DataArray", "IndexVariable", _DummyGroup])
@@ -300,7 +306,7 @@ def _factorize_grouper(
     group, grouper
 ) -> tuple[
     DataArray | IndexVariable | _DummyGroup,
-    list[slice] | list[list[int]] | np.ndarray,
+    T_GroupIndices,
     np.ndarray,
     pd.Index,
 ]:
@@ -310,14 +316,16 @@ def _factorize_grouper(
         raise ValueError("index must be monotonic for resampling")
     full_index, first_items, codes = _get_index_and_items(index, grouper)
     sbins = first_items.values.astype(np.int64)
-    group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
-        slice(sbins[-1], None)
-    ]
+    group_indices: T_GroupIndices = [
+        slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])
+    ] + [slice(sbins[-1], None)]
     unique_coord = IndexVariable(group.name, first_items.index)
     return unique_coord, group_indices, codes, full_index
 
 
-def _factorize_bins(group, bins, cut_kwargs):
+def _factorize_bins(
+    group, bins, cut_kwargs: Mapping | None
+) -> tuple[IndexVariable, T_GroupIndices, np.ndarray, pd.IntervalIndex, DataArray]:
     from xarray.core.dataarray import DataArray
 
     if cut_kwargs is None:
@@ -337,12 +345,14 @@ def _factorize_bins(group, bins, cut_kwargs):
         raise ValueError(f"None of the data falls within bins with edges {bins!r}")
 
     new_dim_name = str(group.name) + "_bins"
-    group = DataArray(binned, getattr(group, "coords", None), name=new_dim_name)
+    group_ = DataArray(binned, getattr(group, "coords", None), name=new_dim_name)
     unique_coord = IndexVariable(group.name, unique_values)
-    return unique_coord, group_indices, codes, full_index, group
+    return unique_coord, group_indices, codes, full_index, group_
 
 
-def _factorize_rest(group):
+def _factorize_rest(
+    group,
+) -> tuple[IndexVariable, T_GroupIndices, np.ndarray]:
     # look through group to find the unique values
     group_as_index = safe_cast_to_index(group)
     sort = not isinstance(group_as_index, pd.MultiIndex)
@@ -355,8 +365,11 @@ def _factorize_rest(group):
     return unique_coord, group_indices, codes
 
 
-def _factorize_dummy(group, squeeze):
+def _factorize_dummy(
+    group, squeeze: bool
+) -> tuple[IndexVariable, T_GroupIndices, np.ndarray]:
     # no need to factorize
+    group_indices: T_GroupIndices
     if not squeeze:
         # use slices to do views instead of fancy indexing
         # equivalent to: group_indices = group_indices.reshape(-1, 1)
@@ -410,7 +423,7 @@ class GroupBy(Generic[T_Xarray]):
     def __init__(
         self,
         obj: T_Xarray,
-        group,  #: Hashable | DataArray | IndexVariable,
+        group: Hashable | DataArray | IndexVariable,
         squeeze: bool = False,
         grouper: pd.Grouper | None = None,
         bins: ArrayLike | None = None,
@@ -1027,7 +1040,7 @@ class GroupBy(Generic[T_Xarray]):
         return self.map(lambda ds: ds.assign_coords(**coords_kwargs))
 
 
-def _maybe_reorder(xarray_obj, dim, positions, N):
+def _maybe_reorder(xarray_obj, dim, positions, N: int | None):
     order = _inverse_permutation_indices(positions, N)
 
     if order is None or len(order) != xarray_obj.sizes[dim]:

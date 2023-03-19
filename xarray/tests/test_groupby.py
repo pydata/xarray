@@ -808,7 +808,7 @@ def test_groupby_math_more() -> None:
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
-def test_groupby_bins_cut_kwargs(use_flox):
+def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
     da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
     x_bins = (0, 2, 4, 6)
 
@@ -1486,7 +1486,7 @@ class TestDataArrayGroupBy:
 
 class TestDataArrayResample:
     @pytest.mark.parametrize("use_cftime", [True, False])
-    def test_resample(self, use_cftime):
+    def test_resample(self, use_cftime: bool) -> None:
         if use_cftime and not has_cftime:
             pytest.skip()
         times = xr.date_range(
@@ -1523,7 +1523,7 @@ class TestDataArrayResample:
             array[[2, 0, 1]].resample(time="1D")
 
     @pytest.mark.parametrize("use_cftime", [True, False])
-    def test_resample_doctest(self, use_cftime):
+    def test_resample_doctest(self, use_cftime: bool) -> None:
         # run the doctest example here so we are not surprised
         if use_cftime and not has_cftime:
             pytest.skip()
