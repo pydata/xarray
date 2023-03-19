@@ -6256,22 +6256,13 @@ class DataArray(
         core.groupby.DataArrayGroupBy
         pandas.DataFrame.groupby
         """
-        from xarray.core.groupby import DataArrayGroupBy, UniqueGrouper
+        from xarray.core.groupby import DataArrayGroupBy
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
-
-        grouper = UniqueGrouper(group)
-        return DataArrayGroupBy(
-            self, grouper, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+        return self._groupby(
+            groupby_cls=DataArrayGroupBy,
+            group=group,
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def groupby_bins(
@@ -6342,33 +6333,16 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import BinGrouper, DataArrayGroupBy
+        from xarray.core.groupby import DataArrayGroupBy
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
-
-        grouper = BinGrouper(
+        return self._groupby_bins(
+            groupby_cls=DataArrayGroupBy,
             group=group,
             bins=bins,
-            cut_kwargs={
-                "right": right,
-                "labels": labels,
-                "precision": precision,
-                "include_lowest": include_lowest,
-            },
-        )
-
-        return DataArrayGroupBy(
-            self,
-            grouper,
+            right=right,
+            labels=labels,
+            precision=precision,
+            include_lowest=include_lowest,
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )

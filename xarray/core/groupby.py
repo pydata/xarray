@@ -301,9 +301,7 @@ def _apply_loffset(
 
 
 class Grouper:
-    def __init__(self, group: T_Group | Hashable):
-        self.group: T_Group | Hashable = group
-
+    def __init__(self):
         self.labels = None
         self._group_as_index: pd.Index | None = None
 
@@ -343,26 +341,13 @@ class Grouper:
             self._group_as_index = safe_cast_to_index(self.group1d)
         return self._group_as_index
 
-    def _resolve_group(self, obj: T_Xarray):
-        from xarray.core.dataarray import DataArray
-
-        group = self.group
-        if not isinstance(group, (DataArray, IndexVariable)):
-            if not hashable(group):
-                raise TypeError(
-                    "`group` must be an xarray.DataArray or the "
-                    "name of an xarray variable or dimension. "
-                    f"Received {group!r} instead."
-                )
-            group = obj[group]
-            if len(group) == 0:
-                raise ValueError(f"{group.name} must not be empty")
-            if group.name not in obj._indexes and group.name in obj.dims:
-                # DummyGroups should not appear on groupby results
-                group = _DummyGroup(obj, group.name, group.coords)
-
-        elif getattr(group, "name", None) is None:
-            group.name = "group"
+    def _resolve_group(self, obj: T_Xarray, group_name: Hashable):
+        group = obj[group_name]
+        if len(group) == 0:
+            raise ValueError(f"{group.name} must not be empty")
+        if group.name not in obj._indexes and group.name in obj.dims:
+            # DummyGroups should not appear on groupby results
+            group = _DummyGroup(obj, group.name, group.coords)
 
         self.group = group
 
@@ -380,6 +365,14 @@ class Grouper:
             )
 
         return self, stacked_obj
+
+    def copy(self, deep=False):
+        import copy
+
+        if deep:
+            return copy.deepcopy(self)
+        else:
+            return copy.copy(self)
 
 
 class UniqueGrouper(Grouper):
@@ -433,7 +426,6 @@ class BinGrouper(Grouper):
         if cut_kwargs is None:
             cut_kwargs = {}
 
-        self.group = group
         self.bins = bins
         self.cut_kwargs = cut_kwargs
 
@@ -459,7 +451,7 @@ class BinGrouper(Grouper):
             binned, getattr(self.group1d, "coords", None), name=new_dim_name
         )
         self.unique_coord = IndexVariable(
-            self.group1d.name, unique_values, self.group.attrs
+            new_dim_name, unique_values, self.group.attrs
         )
         self.codes = self.group1d.copy(data=codes)
         # TODO: support IntervalIndex in IndexVariable
@@ -470,7 +462,6 @@ class BinGrouper(Grouper):
 class TimeResampleGrouper(Grouper):
     def __init__(
         self,
-        group,
         freq: str,
         closed: SideOptions | None,
         label: SideOptions | None,
@@ -478,16 +469,19 @@ class TimeResampleGrouper(Grouper):
         offset: pd.Timedelta | datetime.timedelta | str | None,
         loffset: datetime.timedelta | str | None,
     ):
-        from xarray import CFTimeIndex
-        from xarray.core.resample_cftime import CFTimeGrouper
-
-        self.group = group
         self.freq = freq
         self.closed = closed
         self.label = label
         self.origin = origin
         self.offset = offset
         self.loffset = loffset
+
+    def _resolve_group(self, obj, group_name):
+        from xarray import CFTimeIndex
+        from xarray.core.resample_cftime import CFTimeGrouper
+
+        group = obj[group_name]
+        self.group = group
         self._group_as_index = safe_cast_to_index(group)
         group_as_index = self._group_as_index
 
@@ -513,6 +507,12 @@ class TimeResampleGrouper(Grouper):
                 offset=self.offset,
             )
         self.grouper: CFTimeGrouper | pd.Grouper = grouper
+
+        self.group1d, stacked_obj, self.stacked_dim, self.inserted_dims = _ensure_1d(
+            group, obj
+        )
+
+        return self, stacked_obj
 
     def _get_index_and_items(self) -> tuple[pd.Index, pd.Series, np.ndarray]:
         first_items, codes = self.first_items()
@@ -551,6 +551,25 @@ class TimeResampleGrouper(Grouper):
             self.group.name, first_items.index, self.group.attrs
         )
         self.codes = self.group.copy(data=codes)
+
+
+def _validate_group(obj, group):
+    from xarray.core.dataarray import DataArray
+
+    if isinstance(group, (DataArray, IndexVariable)):
+        name = group.name or "group"
+        newobj = obj.copy().assign_coords({name: group})
+    else:
+        if not hashable(group):
+            raise TypeError(
+                "`group` must be an xarray.DataArray or the "
+                "name of an xarray variable or dimension. "
+                f"Received {group!r} instead."
+            )
+        name = group
+        newobj = obj
+
+    return newobj, name
 
 
 class GroupBy(Generic[T_Xarray]):
@@ -596,8 +615,7 @@ class GroupBy(Generic[T_Xarray]):
     def __init__(
         self,
         obj: T_Xarray,
-        grouper: Grouper,
-        *,
+        groupers: Dict[Hashable, Grouper],
         squeeze: bool = False,
         restore_coord_dims: bool = True,
     ) -> None:
@@ -615,7 +633,8 @@ class GroupBy(Generic[T_Xarray]):
         """
         self._original_obj: T_Xarray = obj
 
-        grouper, obj = grouper._resolve_group(obj)
+        for group_name, grouper_ in groupers.items():
+            grouper, obj = grouper_.copy()._resolve_group(obj, group_name)
 
         self._original_group = grouper.group
         self.groupers = (grouper,)

@@ -814,6 +814,74 @@ class DataWithCoords(AttrAccessMixin):
 
         return rolling_exp.RollingExp(self, window, window_type)
 
+    def _groupby(self, groupby_cls, group, squeeze: bool, restore_coord_dims):
+        from xarray.core.groupby import UniqueGrouper, _validate_group
+
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
+        newobj, name = _validate_group(self, group)
+
+        grouper = UniqueGrouper()
+        return groupby_cls(
+            newobj,
+            {name: grouper},
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
+        )
+
+    def _groupby_bins(
+        self,
+        groupby_cls,
+        group: Hashable | DataArray | IndexVariable,
+        bins: ArrayLike,
+        right: bool = True,
+        labels: ArrayLike | None = None,
+        precision: int = 3,
+        include_lowest: bool = False,
+        squeeze: bool = True,
+        restore_coord_dims: bool = False,
+    ):
+        from xarray.core.groupby import BinGrouper, _validate_group
+
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
+        newobj, name = _validate_group(self, group)
+
+        grouper = BinGrouper(
+            bins=bins,
+            cut_kwargs={
+                "right": right,
+                "labels": labels,
+                "precision": precision,
+                "include_lowest": include_lowest,
+            },
+        )
+
+        return groupby_cls(
+            newobj,
+            {name: grouper},
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
+        )
+
     def _resample(
         self,
         resample_cls: type[T_Resample],
@@ -1000,12 +1068,13 @@ class DataWithCoords(AttrAccessMixin):
         if base is not None:
             offset = _convert_base_to_offset(base, freq, index)
 
+        name = RESAMPLE_DIM
         group = DataArray(
-            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
+            dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=name
         )
+        newobj = self.copy().assign_coords({name: group})
 
         grouper = TimeResampleGrouper(
-            group=group,
             freq=freq,
             closed=closed,
             label=label,
@@ -1015,8 +1084,8 @@ class DataWithCoords(AttrAccessMixin):
         )
 
         return resample_cls(
-            self,
-            grouper=grouper,
+            newobj,
+            {name: grouper},
             dim=dim_name,
             resample_dim=RESAMPLE_DIM,
             restore_coord_dims=restore_coord_dims,
