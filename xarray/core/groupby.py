@@ -309,7 +309,10 @@ class Grouper:
         self.group_indices: list[int] | list[slice] | list[list[int]]
         self.unique_coord: IndexVariable | _DummyGroup
         self.full_index: pd.Index
-        self.name: Hashable
+
+    @property
+    def name(self) -> Hashable:
+        return self.group1d.name
 
     @property
     def size(self) -> int:
@@ -339,23 +342,17 @@ class Grouper:
         return self._group_as_index
 
     def _resolve_group(self, obj: T_Xarray, group_name: Hashable):
-        # handles virtual variables like time.month properly
-        group_da = obj[group_name]
-        name = group_da.name
-        self.name = name
-
-        if len(group_da) == 0:
-            raise ValueError(f"{name} must not be empty")
-        if name not in obj._indexes and name in obj.dims:
+        group = obj[group_name]
+        if len(group) == 0:
+            raise ValueError(f"{group.name} must not be empty")
+        if group.name not in obj._indexes and group.name in obj.dims:
             # DummyGroups should not appear on groupby results
-            group = _DummyGroup(obj, name, group_da.coords)
-        else:
-            group = group_da.variable
+            group = _DummyGroup(obj, group.name, group.coords)
 
         self.group = group
 
         self.group1d, stacked_obj, self.stacked_dim, self.inserted_dims = _ensure_1d(
-            group_da, obj
+            group, obj
         )
 
         (group_dim,) = self.group1d.dims
@@ -380,14 +377,13 @@ class Grouper:
 
 class UniqueGrouper(Grouper):
     def factorize(self, squeeze) -> None:
-        is_dimension = self.group.dims == (self.name,)
+        is_dimension = self.group.dims == (self.group.name,)
         if is_dimension and self.is_unique_and_monotonic:
             self._factorize_dummy(squeeze)
         else:
             self._factorize_unique()
 
     def _factorize_unique(self) -> None:
-        from .dataarray import DataArray
         # look through group to find the unique values
         sort = not isinstance(self.group_as_index, pd.MultiIndex)
         unique_values, group_indices, codes = unique_value_groups(
@@ -398,14 +394,13 @@ class UniqueGrouper(Grouper):
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
         self.unique_coord = IndexVariable(
-            self.name, unique_values, attrs=self.group.attrs
+            self.group.name, unique_values, attrs=self.group.attrs
         )
-        self.codes = DataArray(self.group1d, name=self.name).copy(data=codes)
+        self.codes = self.group1d.copy(data=codes)
         self.group_indices = group_indices
         self.full_index = self.unique_coord
 
     def _factorize_dummy(self, squeeze) -> None:
-        from .dataarray import DataArray
         size = self.group.size
         # no need to factorize
         if not squeeze:
@@ -418,15 +413,13 @@ class UniqueGrouper(Grouper):
         if isinstance(self.group, _DummyGroup):
             self.codes = self.group.as_dataarray().copy(data=codes)
         else:
-            self.codes = DataArray(self.group).copy(data=codes)
-
-        self.codes.name = self.name
+            self.codes = self.group.copy(data=codes)
         self.unique_coord = self.group
         self.full_index = IndexVariable(self.name, self.group.values, self.group.attrs)
 
 
 class BinGrouper(Grouper):
-    def __init__(self, bins, cut_kwargs: Mapping | None):
+    def __init__(self, group, bins, cut_kwargs: Mapping | None):
         if duck_array_ops.isnull(bins).all():
             raise ValueError("All bin edges are NaN.")
 
@@ -453,15 +446,14 @@ class BinGrouper(Grouper):
         if len(group_indices) == 0:
             raise ValueError(f"None of the data falls within bins with edges {bins!r}")
 
-        new_dim_name = str(self.name) + "_bins"
+        new_dim_name = str(self.group.name) + "_bins"
         self.group1d = DataArray(
             binned, getattr(self.group1d, "coords", None), name=new_dim_name
         )
         self.unique_coord = IndexVariable(
             new_dim_name, unique_values, self.group.attrs
         )
-        from .dataarray import DataArray
-        self.codes = DataArray(self.group1d, name=self.name).copy(data=codes)
+        self.codes = self.group1d.copy(data=codes)
         # TODO: support IntervalIndex in IndexVariable
         self.full_index = full_index
         self.group_indices = group_indices
@@ -550,16 +542,15 @@ class TimeResampleGrouper(Grouper):
             return first_items, codes
 
     def factorize(self, squeeze: bool) -> None:
-        from .dataarray import DataArray
         self.full_index, first_items, codes = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         self.group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
             slice(sbins[-1], None)
         ]
         self.unique_coord = IndexVariable(
-            self.name, first_items.index, self.group.attrs
+            self.group.name, first_items.index, self.group.attrs
         )
-        self.codes = DataArray(self.group, name=self.name).copy(data=codes)
+        self.codes = self.group.copy(data=codes)
 
 
 def _validate_group(obj, group):
@@ -924,7 +915,6 @@ class GroupBy(Generic[T_Xarray]):
             kwargs.setdefault("fill_value", np.nan)
             kwargs.setdefault("min_count", 1)
 
-        from .dataarray import DataArray
         output_index = grouper.full_index
         result = xarray_reduce(
             obj.drop_vars(non_numeric.keys()),
@@ -1229,7 +1219,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         group = grouper.group1d
 
         def lookup_order(dimension):
-            if dimension == grouper.name:
+            if dimension == group.name:
                 (dimension,) = group.dims
             if dimension in self._obj.dims:
                 axis = self._obj.get_axis_num(dimension)
