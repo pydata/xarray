@@ -214,7 +214,7 @@ If you are reading a netCDF file with a ".nc" extension, the default engine is `
 
 Use ``open_dataset()`` to open a NetCDF file and return an xarray Dataset object.
 
-.. code:: python
+.. code:: 
 
     import xarray as xr
 
@@ -233,7 +233,7 @@ You should specify the `engine` keyword argument when reading HDF5 files with xa
 
 To read HDF5 files with xarray, you can use the ``open_dataset()`` function from the `h5netcdf` backend, as follows:
 
-.. code:: python
+.. code:: 
 
     import h5netcdf
     import xarray as xr
@@ -254,7 +254,7 @@ We recommend you to install `h5netcdf` library using
 
 If you want to use the `netCDF4` backend to read a file with a ".h5" extension (which is typically associated with the HDF5 file format), you can specify the engine argument as follows:
 
-.. code:: python
+.. code:: 
 
     ds = xr.open_dataset('path/to/file.h5', engine='netcdf4')
 
@@ -264,7 +264,7 @@ You should specify the `engine` keyword argument when reading GRIB files with xa
 
 Use the ``open_dataset()`` function from the `cfgrib` package to open a GRIB file as an xarray Dataset.
 
-.. code:: python
+.. code:: 
 
   import xarray as xr
 
@@ -279,7 +279,7 @@ Use the ``open_dataset()`` function from the `cfgrib` package to open a GRIB fil
     
 We recommend installing `cfgrib` via conda:
 
-.. code:: python
+.. code:: 
 
   conda install -c conda-forge cfgrib
 
@@ -290,7 +290,7 @@ In such cases, you can specify the engine argument when reading the CSV file wit
 
 To read CSV files with xarray, use the `open_dataset()` function and specify the path to the CSV file as follows:
 
-.. code:: python
+.. code:: 
 
   import xarray as xr
   import pandas as pd
