@@ -9,7 +9,7 @@ from xarray.core.parallelcompat import (
     DaskManager,
     T_Chunks,
     get_chunked_array_type,
-    get_chunkmanager,
+    guess_chunkmanager,
 )
 
 dask = pytest.importorskip("dask")
@@ -116,12 +116,12 @@ class TestGetChunkManager:
     def test_get_chunkmanger(self):
         CHUNK_MANAGERS["dummy"] = DummyChunkManager
 
-        chunkmanager = get_chunkmanager("dummy")
+        chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
 
     def test_fail_on_nonexistent_chunkmanager(self):
         with pytest.raises(ImportError, match="nonsense has not been defined"):
-            get_chunkmanager("nonsense")
+            guess_chunkmanager("nonsense")
 
 
 class TestGetChunkedArrayType:

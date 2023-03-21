@@ -1,12 +1,14 @@
 from collections.abc import Sequence
-from typing import Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import numpy as np
 
 from xarray.core import utils
 from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray, T_Chunks
 from xarray.core.pycompat import DuckArrayModule, is_duck_dask_array
-from xarray.core.types import DaskArray
+
+if TYPE_CHECKING:
+    from xarray.core.types import DaskArray
 
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):

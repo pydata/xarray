@@ -2293,7 +2293,7 @@ class Dataset(
             )
 
         if from_array_kwargs is None:
-            from_array_kwargs = {"manager": "dask"}
+            from_array_kwargs = {"manager": None}
 
         variables = {
             k: _maybe_chunk(

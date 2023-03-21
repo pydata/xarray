@@ -28,8 +28,6 @@ T_ChunkedArray = TypeVar("T_ChunkedArray")
 # T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 T_Chunks = Any
 
-CHUNK_MANAGERS: dict[str, type["ChunkManagerEntrypoint"]] = {}
-
 if TYPE_CHECKING:
     pass
 
@@ -37,7 +35,7 @@ if TYPE_CHECKING:
 @functools.lru_cache(maxsize=1)
 def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     """
-    Return a dictionary of available engines and their BackendEntrypoint objects.
+    Return a dictionary of available chunk managers and their ChunkManagerEntrypoint objects.
 
     Notes
     -----
@@ -48,26 +46,38 @@ def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     else:
         entrypoints = entry_points().get("xarray.chunkmanagers", ())
 
-    # Load entrypoints and instantiate chunkmanagers only once
+    # Load entrypoints and instantiate chunkmanagers only once,
     return {entrypoint.name: entrypoint.load()() for entrypoint in entrypoints}
 
 
-def get_chunkmanager(manager: str) -> "ChunkManagerEntrypoint":
-    """Get namespace of chunk-handling methods for a specified parallel chunk manager, e.g. dask."""
+def guess_chunkmanager(manager: Optional[str]) -> "ChunkManagerEntrypoint":
+    """
+    Get namespace of chunk-handling methods, guessing from what's available.
+
+    If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
+    Else use whatever is installed, defaulting to dask if there are multiple options.
+    """
+
+    chunkmanagers = list_chunkmanagers()
+
+    if manager is None:
+        if len(chunkmanagers) == 1:
+            # use the only option available
+            manager = next(iter(chunkmanagers.keys()))
+        else:
+            # default to trying to use dask
+            manager = "dask"
 
     if isinstance(manager, str):
-        chunkmanagers = list_chunkmanagers()
         if manager not in chunkmanagers:
             raise ValueError(
                 f"unrecognized chunk manager {manager} - must be one of: {list(chunkmanagers)}"
             )
 
-        chunkmanager = chunkmanagers[manager]
+        return chunkmanagers[manager]
     else:
         # TODO should we accept type[ChunkManagerEntrypoint] too?
         raise TypeError("manager must be a string")
-
-    return chunkmanager
 
 
 def get_chunked_array_type(*args) -> "ChunkManagerEntrypoint":
