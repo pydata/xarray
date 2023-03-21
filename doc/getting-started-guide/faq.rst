@@ -185,7 +185,7 @@ What other projects leverage xarray?
 ------------------------------------
 
 See section :ref:`ecosystem`.
- 
+
 How do I open format X file as an xarray dataset?
 -------------------------------------------------
 
@@ -202,9 +202,9 @@ To open format X file in xarray, you need to know the `format of the data <https
 
 To use these backend functions in xarray, you can call them with the path to the file(s) you want to read as an argument.
 
-Xarray provides a default engine to read files, which is usually determined by the file extension or type. If you don't specify the engine, xarray will try to guess it based on the file extension or type, and may fall back to a different engine if it cannot determine the correct one. 
+Xarray provides a default engine to read files, which is usually determined by the file extension or type. If you don't specify the engine, xarray will try to guess it based on the file extension or type, and may fall back to a different engine if it cannot determine the correct one.
 
-Therefore, it's good practice to always specify the engine explicitly, especially when working with complex data formats or non-standard file extensions. So, specify the engine explicitly when reading files with xarray, to ensure that the correct backend is used. 
+Therefore, it's good practice to always specify the engine explicitly, especially when working with complex data formats or non-standard file extensions. So, specify the engine explicitly when reading files with xarray, to ensure that the correct backend is used.
 
 For example, you can use the `engine` argument to specify the backend when calling ``open_dataset()`` or other reading functions in xarray, as shown below:
 
@@ -220,7 +220,7 @@ Use :py:func:`~xarray.open_dataset` to open a NetCDF file and return an xarray D
 
     # use xarray to open the file and return an xarray.Dataset object
 
-    ds = xr.open_dataset('/path/to/my/file.nc', engine='netcdf4')
+    ds = xr.open_dataset("/path/to/my/file.nc", engine="netcdf4")
 
     # Print Dataset object
 
@@ -240,23 +240,21 @@ To read HDF5 files with xarray, you can use the :py:func:`~xarray.open_dataset` 
 
     # Open HDF5 file as an xarray Dataset
 
-    ds = xr.open_dataset('path/to/hdf5/file.hdf5', engine='h5netcdf')
+    ds = xr.open_dataset("path/to/hdf5/file.hdf5", engine="h5netcdf")
 
     # Print Dataset object
 
     print(ds)
 
-We recommend you to install `h5netcdf` library using 
+We recommend you to install `h5netcdf` library using the below given code:
 
-.. code::
-
-    pip install h5netcdf
+    conda install -c conda-forge h5netcdf
 
 If you want to use the `netCDF4` backend to read a file with a ".h5" extension (which is typically associated with the HDF5 file format), you can specify the engine argument as follows:
 
 .. code:: python
 
-    ds = xr.open_dataset('path/to/file.h5', engine='netcdf4')
+    ds = xr.open_dataset("path/to/file.h5", engine="netcdf4")
 
 GRIB
 -----------
@@ -266,22 +264,20 @@ Use the :py:func:`~xarray.open_dataset` function from the `cfgrib` package to op
 
 .. code:: python
 
-  import xarray as xr
+    import xarray as xr
 
-  # define the path to your GRIB file and the engine you want to use to open the file
-  # use ``open_dataset()`` to open the file with the specified engine and return an xarray.Dataset object
-  
-  ds = xr.open_dataset('path/to/your/file.grib', engine='cfgrib')
+    # define the path to your GRIB file and the engine you want to use to open the file
+    # use ``open_dataset()`` to open the file with the specified engine and return an xarray.Dataset object
 
-  # Print Dataset object
-  
-  print(ds)
-    
-We recommend installing `cfgrib` via conda:
+    ds = xr.open_dataset("path/to/your/file.grib", engine="cfgrib")
 
-.. code::
+    # Print Dataset object
 
-  conda install -c conda-forge cfgrib
+    print(ds)
+
+We recommend installing `cfgrib` via conda using the below given code:
+
+    conda install -c conda-forge cfgrib
 
 CSV
 ---
@@ -292,20 +288,20 @@ To read CSV files with xarray, use the :py:func:`~xarray.open_dataset` function 
 
 .. code:: python
 
-  import xarray as xr
-  import pandas as pd
-   
-  # Load CSV file into pandas DataFrame using the "c" engine
-  
-  df = pd.read_csv('your_file.csv', engine='c')
+    import xarray as xr
+    import pandas as pd
 
-  # Convert `:py:func:pandas` DataFrame to xarray.Dataset
-  
-  ds = xr.Dataset.from_dataframe(df)
+    # Load CSV file into pandas DataFrame using the "c" engine
 
-  #Prints the resulting xarray dataset
-  
-  print(ds)
+    df = pd.read_csv("your_file.csv", engine="c")
+
+    # Convert `:py:func:pandas` DataFrame to xarray.Dataset
+
+    ds = xr.Dataset.from_dataframe(df)
+
+    # Prints the resulting xarray dataset
+
+    print(ds)
 
 Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
 
