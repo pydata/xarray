@@ -212,7 +212,7 @@ NetCDF
 ------
 If you are reading a netCDF file with a ".nc" extension, the default engine is `netcdf4`. However if you have files with non-standard extensions or if the file format is ambiguous. Specify the engine explicitly when reading files with xarray, to ensure that the correct backend is used.
 
-Use ``open_dataset()`` to open a NetCDF file and return an xarray Dataset object.
+Use :py:func:`~xarray.open_dataset` to open a NetCDF file and return an xarray Dataset object.
 
 .. code:: python
 
@@ -228,10 +228,10 @@ Use ``open_dataset()`` to open a NetCDF file and return an xarray Dataset object
 
 HDF5
 ----
-Use ``open_dataset()`` to open an HDF5 file and return an xarray.Dataset object.
+Use :py:func:`~xarray.open_dataset` to open an HDF5 file and return an xarray Dataset object.
 You should specify the `engine` keyword argument when reading HDF5 files with xarray, as there are multiple backends that can be used to read HDF5 files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
 
-To read HDF5 files with xarray, you can use the ``open_dataset()`` function from the `h5netcdf` backend, as follows:
+To read HDF5 files with xarray, you can use the :py:func:`~xarray.open_dataset` function from the `h5netcdf` backend, as follows:
 
 .. code:: python
 
@@ -247,11 +247,10 @@ To read HDF5 files with xarray, you can use the ``open_dataset()`` function from
     print(ds)
 
 We recommend you to install `h5netcdf` library using 
-To install the `h5netcdf` package in Conda using the Conda Forge channel, run the following command:
 
-.. code:: 
+.. code::
 
-    conda install -c conda-forge h5netcdf
+    pip install h5netcdf
 
 If you want to use the `netCDF4` backend to read a file with a ".h5" extension (which is typically associated with the HDF5 file format), you can specify the engine argument as follows:
 
@@ -263,7 +262,7 @@ GRIB
 -----------
 You should specify the `engine` keyword argument when reading GRIB files with xarray, as there are multiple backends that can be used to read GRIB files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
 
-Use the ``open_dataset()`` function from the `cfgrib` package to open a GRIB file as an xarray Dataset.
+Use the :py:func:`~xarray.open_dataset` function from the `cfgrib` package to open a GRIB file as an xarray Dataset.
 
 .. code:: python
 
@@ -280,7 +279,7 @@ Use the ``open_dataset()`` function from the `cfgrib` package to open a GRIB fil
     
 We recommend installing `cfgrib` via conda:
 
-.. code:: 
+.. code::
 
   conda install -c conda-forge cfgrib
 
@@ -289,7 +288,7 @@ CSV
 By default, xarray uses the built-in `pandas` library to read CSV files. In general, you don't need to specify the engine keyword argument when reading CSV files with xarray, as the default `pandas` engine is usually sufficient for most use cases. If you are working with very large CSV files or if you need to perform certain types of data processing that are not supported by the default `pandas` engine, you may want to use a different backend.
 In such cases, you can specify the engine argument when reading the CSV file with xarray.
 
-To read CSV files with xarray, use the `open_dataset()` function and specify the path to the CSV file as follows:
+To read CSV files with xarray, use the :py:func:`~xarray.open_dataset` function and specify the path to the CSV file as follows:
 
 .. code:: python
 
