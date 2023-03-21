@@ -218,11 +218,12 @@ Use ``open_dataset()`` to open a NetCDF file and return an xarray Dataset object
 
     import xarray as xr
 
-    # Use forward slashes(/), while mentioning the file location
     # use xarray to open the file and return an xarray.Dataset object
+
     ds = xr.open_dataset('/path/to/my/file.nc', engine='netcdf4')
 
     # Print Dataset object
+
     print(ds)
 
 HDF5
@@ -238,14 +239,16 @@ To read HDF5 files with xarray, you can use the ``open_dataset()`` function from
     import xarray as xr
 
     # Open HDF5 file as an xarray Dataset
+
     ds = xr.open_dataset('path/to/hdf5/file.hdf5', engine='h5netcdf')
 
     # Print Dataset object
+
     print(ds)
 
 We recommend you to install `h5netcdf` library using 
 
-.. code:: python
+.. code:: 
 
     pip install h5netcdf
 
@@ -267,9 +270,11 @@ Use the ``open_dataset()`` function from the `cfgrib` package to open a GRIB fil
 
   # define the path to your GRIB file and the engine you want to use to open the file
   # use ``open_dataset()`` to open the file with the specified engine and return an xarray.Dataset object
+  
   ds = xr.open_dataset('path/to/your/file.grib', engine='cfgrib')
 
   # Print Dataset object
+  
   print(ds)
     
 We recommend installing `cfgrib` via conda:
@@ -291,12 +296,15 @@ To read CSV files with xarray, use the `open_dataset()` function and specify the
   import pandas as pd
    
   # Load CSV file into `:py:func:pandas` DataFrame using the "c" engine
+  
   df = pd.read_csv('your_file.csv', engine='c')
 
   # Convert `:py:func:pandas` DataFrame to xarray.Dataset
+  
   ds = xr.Dataset.from_dataframe(df)
 
   #Prints the resulting xarray dataset
+  
   print(ds)
 
 Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
