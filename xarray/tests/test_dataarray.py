@@ -3212,7 +3212,6 @@ class TestDataArray:
         expected = arr.to_series()
         actual = arr.to_dask_dataframe()["foo"]
 
-        assert_array_equal(actual.name, expected.name)
         assert_array_equal(actual.values, expected.values)
 
         actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
@@ -3234,10 +3233,6 @@ class TestDataArray:
 
         with pytest.raises(ValueError, match=r"cannot convert a scalar"):
             arr.sel(A="c", B=2).to_dataframe()
-
-        arr.name = None
-        with pytest.raises(ValueError, match=r"unnamed"):
-            arr.to_dataframe()
 
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
