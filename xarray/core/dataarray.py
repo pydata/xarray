@@ -6678,8 +6678,6 @@ class DataArray(
         self,
         dim_order: Sequence[Hashable] | None = None,
         set_index: bool = False,
-        *,
-        name: Hashable | None = None,
     ) -> DaskDataFrame:
         """Convert this array into a dask.dataframe.DataFrame.
 
@@ -6691,12 +6689,6 @@ class DataArray(
             vectors in contiguous order , so the last dimension in this list
             will be contiguous in the resulting DataFrame. This has a major influence
             on which operations are efficient on the resulting dask dataframe.
-
-        name : Hashable or None, optional
-            Name given to this array(required if unnamed).
-            It is a keyword-only argument. A keyword-only argument can only be passed
-            to the function using its name as a keyword argument , and not as a
-            positional argument.
 
         set_index : bool, default: False
             If set_index=True, the dask DataFrame is indexed by this dataset's
@@ -6717,27 +6709,21 @@ class DataArray(
         ...         "lat": [-30, -20, -10],
         ...         "lon": [120, 130],
         ...     },
-        ...     name="temperature",
+        ...     name="eg_dataarray",
         ...     attrs={"units": "Celsius", "description": "Random temperature data"},
         ... )
-        >>> da.to_dask_dataframe(["lat", "lon", "time"], name="temp_dataframe")
+        >>> da.to_dask_dataframe(["lat", "lon", "time"])
         Dask DataFrame Structure:
-                        lat    lon   time temp_dataframe
+                        lat    lon   time  eg_dataarray
         npartitions=1
         0              int64  int64  int64          int64
         23               ...    ...    ...            ...
         Dask Name: concat-indexed, 1 graph layer
 
         """
-        if name is None:
-            name = self.name
 
-        if name is None:
-            raise ValueError(
-                "Cannot convert an unnamed DataArray to a "
-                "dask dataframe : use the ``name`` parameter ."
-            )
-        ds = self._to_dataset_whole(name)
+        name = self.name if self.name is not None else _THIS_ARRAY
+        ds = self._to_dataset_whole(name, shallow_copy=False)
         return ds.to_dask_dataframe(dim_order, set_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
