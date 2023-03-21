@@ -247,6 +247,7 @@ To read HDF5 files with xarray, you can use the ``open_dataset()`` function from
     print(ds)
 
 We recommend you to install `h5netcdf` library using 
+To install the `h5netcdf` package in Conda using the Conda Forge channel, run the following command:
 
 .. code:: 
 
