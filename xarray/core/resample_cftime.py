@@ -164,7 +164,7 @@ class CFTimeGrouper:
             raise ValueError("Value falls after last bin")
 
         integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[:-1]
-        first_items = pd.Series(integer_bins, labels)
+        first_items = pd.Series(integer_bins, labels, copy=False)
 
         # Mask duplicate values with NaNs, preserving the last values
         non_duplicate = ~first_items.duplicated("last")
