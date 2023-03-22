@@ -25,7 +25,7 @@ dependencies:
   # - numbagg
   - numpy
   - packaging
-  - pandas
+  - pandas<2
   - pint
   - pip
   - pre-commit
