@@ -17,11 +17,12 @@ What's New
 
 .. _whats-new.2023.03.0:
 
-v2023.03.0 (March 20, 2023)
+v2023.03.0 (March 22, 2023)
 ---------------------------
 
-This release brings many bug fixes, and some new features. Thanks to our 18 contributors:
-Abel Aoun, Alex Goodman, Deepak Cherian, Illviljan, Jody Klymak, Joe Hamman, Justus Magin, Mary Gathoni, Mathias Hauser, Mattia Almansi, Mick, Oriol Abril-Pla, Paul Ockenfuß, Pierre, Shreyal Gupta, Spencer Clark, Tom Nicholas, Tom Vo
+This release brings many bug fixes, and some new features. The maximum pandas version is pinned to ``<2`` until we can support the new pandas datetime types.
+Thanks to our 19 contributors:
+Abel Aoun, Alex Goodman, Deepak Cherian, Illviljan, Jody Klymak, Joe Hamman, Justus Magin, Mary Gathoni, Mathias Hauser, Mattia Almansi, Mick, Oriol Abril-Pla, Patrick Hoefler, Paul Ockenfuß, Pierre, Shreyal Gupta, Spencer Clark, Tom Nicholas, Tom Vo
 
 New Features
 ~~~~~~~~~~~~
@@ -76,7 +77,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
+- Pin pandas to ``<2``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2023.02.0:
 
