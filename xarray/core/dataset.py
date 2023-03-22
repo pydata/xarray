@@ -73,7 +73,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type
+from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager_name
 from xarray.core.pycompat import (
     array_type,
     is_chunked_array,
@@ -2293,7 +2293,7 @@ class Dataset(
             )
 
         if from_array_kwargs is None:
-            from_array_kwargs = {"manager": None}
+            from_array_kwargs = {"manager": guess_chunkmanager_name(None)}
 
         variables = {
             k: _maybe_chunk(

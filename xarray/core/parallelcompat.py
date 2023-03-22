@@ -50,14 +50,7 @@ def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     return {entrypoint.name: entrypoint.load()() for entrypoint in entrypoints}
 
 
-def guess_chunkmanager(manager: Optional[str]) -> "ChunkManagerEntrypoint":
-    """
-    Get namespace of chunk-handling methods, guessing from what's available.
-
-    If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
-    Else use whatever is installed, defaulting to dask if there are multiple options.
-    """
-
+def guess_chunkmanager_name(manager: Optional[str]) -> str:
     chunkmanagers = list_chunkmanagers()
 
     if manager is None:
@@ -67,6 +60,20 @@ def guess_chunkmanager(manager: Optional[str]) -> "ChunkManagerEntrypoint":
         else:
             # default to trying to use dask
             manager = "dask"
+
+    return manager
+
+
+def guess_chunkmanager(manager: Optional[str]) -> "ChunkManagerEntrypoint":
+    """
+    Get namespace of chunk-handling methods, guessing from what's available.
+
+    If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
+    Else use whatever is installed, defaulting to dask if there are multiple options.
+    """
+
+    chunkmanagers = list_chunkmanagers()
+    manager = guess_chunkmanager_name(manager)
 
     if isinstance(manager, str):
         if manager not in chunkmanagers:
