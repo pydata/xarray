@@ -163,7 +163,7 @@ class CFTimeGrouper:
         integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)
         counts = np.diff(integer_bins)
         codes = np.repeat(np.arange(len(labels)), counts)
-        first_items = pd.Series(integer_bins[:-1], labels)
+        first_items = pd.Series(integer_bins[:-1], labels, copy=False)
 
         # Mask duplicate values with NaNs, preserving the last values
         non_duplicate = ~first_items.duplicated("last")
