@@ -292,7 +292,11 @@ class set_options:
 
 def get_options():
     """
-    Get options for xarray.
+    Retrieves the current global option for xarray
+    
+    Returns
+    -------
+    dictionary containing current global options and their corresponding values
 
     See Also
     ----------
