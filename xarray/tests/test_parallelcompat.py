@@ -3,10 +3,10 @@ from typing import Any, Optional
 import numpy as np
 import pytest
 
+from xarray.core.daskmanager import DaskManager
 from xarray.core.parallelcompat import (
-    CHUNK_MANAGERS,
-    ChunkManager,
-    DaskManager,
+    EXAMPLE_CHUNKMANAGERS,
+    ChunkManagerEntrypoint,
     T_Chunks,
     get_chunked_array_type,
     guess_chunkmanager,
@@ -50,7 +50,7 @@ class DummyChunkedArray(np.ndarray):
         return copied
 
 
-class DummyChunkManager(ChunkManager):
+class DummyChunkManager(ChunkManagerEntrypoint):
     """Mock-up of ChunkManager class for DummyChunkedArray"""
 
     def __init__(self):
@@ -114,26 +114,26 @@ class TestGetChunkManager:
     # TODO do these need setups and teardowns?
 
     def test_get_chunkmanger(self):
-        CHUNK_MANAGERS["dummy"] = DummyChunkManager
+        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
 
         chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
 
     def test_fail_on_nonexistent_chunkmanager(self):
-        with pytest.raises(ImportError, match="nonsense has not been defined"):
-            guess_chunkmanager("nonsense")
+        with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
+            guess_chunkmanager("foo")
 
 
 class TestGetChunkedArrayType:
     def test_detect_chunked_arrays(self):
-        CHUNK_MANAGERS["dummy"] = DummyChunkManager
+        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         chunk_manager = get_chunked_array_type(dummy_arr)
         assert isinstance(chunk_manager, DummyChunkManager)
 
     def test_ignore_inmemory_arrays(self):
-        CHUNK_MANAGERS["dummy"] = DummyChunkManager
+        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         chunk_manager = get_chunked_array_type(*[dummy_arr, 1.0, np.array([5, 6])])
@@ -149,7 +149,7 @@ class TestGetChunkedArrayType:
         assert isinstance(chunk_manager, DaskManager)
 
     def test_raise_on_mixed_types(self):
-        CHUNK_MANAGERS["dummy"] = DummyChunkManager
+        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
         dummy_arr = DummyChunkedArray([1, 2, 3])
         dask_arr = dask.array.from_array([1, 2, 3], chunks=(1,))
 

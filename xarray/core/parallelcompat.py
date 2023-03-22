@@ -32,6 +32,10 @@ if TYPE_CHECKING:
     pass
 
 
+# Only used for testing purposes, as a real entrypoint is hard to mock
+EXAMPLE_CHUNKMANAGERS: dict[str, "ChunkManagerEntrypoint"] = {}
+
+
 @functools.lru_cache(maxsize=1)
 def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     """
@@ -46,8 +50,11 @@ def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     else:
         entrypoints = entry_points().get("xarray.chunkmanagers", ())
 
-    # Load entrypoints and instantiate chunkmanagers only once,
-    return {entrypoint.name: entrypoint.load()() for entrypoint in entrypoints}
+    # Load entrypoints and instantiate chunkmanagers only once
+    _example_chunkmanagers = {k: v() for k, v in EXAMPLE_CHUNKMANAGERS.items()}
+    return {
+        entrypoint.name: entrypoint.load()() for entrypoint in entrypoints
+    } | _example_chunkmanagers
 
 
 def guess_chunkmanager_name(manager: Optional[str]) -> str:
