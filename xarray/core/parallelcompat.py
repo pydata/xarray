@@ -9,7 +9,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib.metadata import EntryPoint, entry_points
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
@@ -28,12 +27,9 @@ T_ChunkedArray = TypeVar("T_ChunkedArray")
 # T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
 T_Chunks = Any
 
-if TYPE_CHECKING:
-    pass
-
 
 # Only used for testing purposes, as a real entrypoint is hard to mock
-EXAMPLE_CHUNKMANAGERS: dict[str, "ChunkManagerEntrypoint"] = {}
+EXAMPLE_CHUNKMANAGERS: dict[str, type["ChunkManagerEntrypoint"]] = {}
 
 
 @functools.lru_cache(maxsize=1)
@@ -54,7 +50,7 @@ def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
 
 
 def load_chunkmanagers(
-    entrypoints: dict[str, EntryPoint]
+    entrypoints: Sequence[EntryPoint],
 ) -> dict[str, "ChunkManagerEntrypoint"]:
     """Load entrypoints and instantiate chunkmanagers only once."""
 
