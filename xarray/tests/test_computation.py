@@ -2092,6 +2092,36 @@ def test_where_attrs() -> None:
             xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
             id="timedelta",
         ),
+        pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray(
+                [2, 3, 4],
+                dims="degree",
+                coords={"degree": np.array([0, 1, 2], dtype=np.int64)},
+            ),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            id="int64-degree",
+        ),
+        pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray(
+                [2, 3, 4],
+                dims="degree",
+                coords={"degree": np.array([0, 1, 2], dtype=np.int32)},
+            ),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            id="int32-degree",
+        ),
+        pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray(
+                [2, 3, 4],
+                dims="degree",
+                coords={"degree": np.array([0, 1, 2], dtype=np.uint8)},
+            ),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            id="uint8-degree",
+        ),
     ],
 )
 def test_polyval(
