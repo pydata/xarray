@@ -239,6 +239,12 @@ def _extract_nc4_variable_encoding(
         "_FillValue",
         "dtype",
         "compression",
+        "significant_digits",
+        "quantize_mode",
+        "blosc_shuffle",
+        "szip_coding",
+        "szip_pixels_per_block",
+        "endian"
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
