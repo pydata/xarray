@@ -244,7 +244,7 @@ def _extract_nc4_variable_encoding(
         "blosc_shuffle",
         "szip_coding",
         "szip_pixels_per_block",
-        "endian"
+        "endian",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
