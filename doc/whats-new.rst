@@ -113,8 +113,6 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-
 - Pin pandas to ``<2``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2023.02.0:
