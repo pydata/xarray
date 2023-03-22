@@ -225,7 +225,7 @@ def _possibly_convert_objects(values):
     within the valid date range for ns precision, as pandas will raise an error
     if they are not.
     """
-    as_series = pd.Series(values.ravel())
+    as_series = pd.Series(values.ravel(), copy=False)
     if as_series.dtype.kind in "mM":
         as_series = _as_nanosecond_precision(as_series)
     return np.asarray(as_series).reshape(values.shape)
