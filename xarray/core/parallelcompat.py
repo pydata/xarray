@@ -7,7 +7,7 @@ import functools
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from importlib.metadata import entry_points
+from importlib.metadata import EntryPoint, entry_points
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -50,11 +50,25 @@ def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     else:
         entrypoints = entry_points().get("xarray.chunkmanagers", ())
 
-    # Load entrypoints and instantiate chunkmanagers only once
-    _example_chunkmanagers = {k: v() for k, v in EXAMPLE_CHUNKMANAGERS.items()}
-    return {
-        entrypoint.name: entrypoint.load()() for entrypoint in entrypoints
-    } | _example_chunkmanagers
+    return load_chunkmanagers(entrypoints)
+
+
+def load_chunkmanagers(
+    entrypoints: dict[str, EntryPoint]
+) -> dict[str, "ChunkManagerEntrypoint"]:
+    """Load entrypoints and instantiate chunkmanagers only once."""
+
+    loaded_entrypoints = {
+        entrypoint.name: entrypoint.load() for entrypoint in entrypoints
+    }
+
+    # TODO will this work if dask is not installed? We don't want to instantiate the chunkmanager if its not available
+    available_chunkmanagers = {
+        name: chunkmanager()
+        for name, chunkmanager in (loaded_entrypoints | EXAMPLE_CHUNKMANAGERS).items()
+        if chunkmanager.available
+    }
+    return available_chunkmanagers
 
 
 def guess_chunkmanager_name(manager: Optional[str]) -> str:
@@ -149,6 +163,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     """
 
     array_cls: type[T_ChunkedArray]
+    available: bool = True
 
     @abstractmethod
     def __init__(self):

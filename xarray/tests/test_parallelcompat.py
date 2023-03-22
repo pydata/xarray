@@ -11,8 +11,7 @@ from xarray.core.parallelcompat import (
     get_chunked_array_type,
     guess_chunkmanager,
 )
-
-dask = pytest.importorskip("dask")
+from xarray.tests import requires_dask
 
 
 class DummyChunkedArray(np.ndarray):
@@ -144,15 +143,21 @@ class TestGetChunkedArrayType:
         with pytest.raises(TypeError, match="Expected a chunked array"):
             get_chunked_array_type(5.0)
 
+    @requires_dask
     def test_detect_dask_by_default(self):
-        dask_arr = dask.array.from_array([1, 2, 3], chunks=(1,))
+        import dask.array as da
+
+        dask_arr = da.from_array([1, 2, 3], chunks=(1,))
 
         chunk_manager = get_chunked_array_type(dask_arr)
         assert isinstance(chunk_manager, DaskManager)
 
+    @requires_dask
     def test_raise_on_mixed_types(self, register_dummy_chunkmanager):
+        import dask.array as da
+
         dummy_arr = DummyChunkedArray([1, 2, 3])
-        dask_arr = dask.array.from_array([1, 2, 3], chunks=(1,))
+        dask_arr = da.from_array([1, 2, 3], chunks=(1,))
 
         with pytest.raises(TypeError, match="received multiple types"):
             get_chunked_array_type(*[dask_arr, dummy_arr])

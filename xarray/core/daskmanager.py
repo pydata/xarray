@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 import numpy as np
 
 from xarray.core import utils
+from xarray.core.duck_array_ops import dask_available
 from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray, T_Chunks
 from xarray.core.pycompat import DuckArrayModule, is_duck_dask_array
 
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     array_cls: type["DaskArray"]
+    available: bool = dask_available
 
     def __init__(self):
         # TODO can we replace this with a class attribute instead?
@@ -220,9 +222,3 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             targets=targets,
             **kwargs,
         )
-
-
-# try:
-#     CHUNK_MANAGERS["dask"] = DaskManager
-# except ImportError:
-#     pass
