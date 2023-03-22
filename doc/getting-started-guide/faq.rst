@@ -250,7 +250,7 @@ We recommend you to install `h5netcdf` library using the below given code:
 
     conda install -c conda-forge h5netcdf
 
-If you want to use the `netCDF4` backend to read a file with a ".h5" extension (which is typically associated with the HDF5 file format), you can specify the engine argument as follows:
+If you want to use the `netCDF4` backend to read a file with a ".h5" extension (which is typically associated with HDF5 file format), you can specify the engine argument as follows:
 
 .. code:: python
 
