@@ -45,6 +45,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Experimental support for wrapping chunked array libraries other than dask.
+  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntryPoint` - which can be overridden and then
+  registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
 .. _whats-new.2023.03.0:
 
 v2023.03.0 (March 22, 2023)
@@ -107,11 +113,6 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-- Experimental support for wrapping chunked array libraries other than dask .
-  A new ABC is defined :py:class:`xr.core.parallelcompat.ChunkManager` which can be overridden and then registered
-  by chunked array implementations. (:issue:`6807`, :pull:`7019`)
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 - Pin pandas to ``<2``. By `Deepak Cherian <https://github.com/dcherian>`_.
