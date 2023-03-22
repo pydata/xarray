@@ -110,12 +110,16 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         )
 
 
+@pytest.fixture
+def register_dummy_chunkmanager():
+    """Mocks the registering of an additional ChunkManagerEntrypoint."""
+    EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
+    yield
+    del EXAMPLE_CHUNKMANAGERS["dummy"]
+
+
 class TestGetChunkManager:
-    # TODO do these need setups and teardowns?
-
-    def test_get_chunkmanger(self):
-        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
-
+    def test_get_chunkmanger(self, register_dummy_chunkmanager):
         chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
 
@@ -125,15 +129,13 @@ class TestGetChunkManager:
 
 
 class TestGetChunkedArrayType:
-    def test_detect_chunked_arrays(self):
-        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
+    def test_detect_chunked_arrays(self, register_dummy_chunkmanager):
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         chunk_manager = get_chunked_array_type(dummy_arr)
         assert isinstance(chunk_manager, DummyChunkManager)
 
-    def test_ignore_inmemory_arrays(self):
-        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
+    def test_ignore_inmemory_arrays(self, register_dummy_chunkmanager):
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         chunk_manager = get_chunked_array_type(*[dummy_arr, 1.0, np.array([5, 6])])
@@ -148,8 +150,7 @@ class TestGetChunkedArrayType:
         chunk_manager = get_chunked_array_type(dask_arr)
         assert isinstance(chunk_manager, DaskManager)
 
-    def test_raise_on_mixed_types(self):
-        EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
+    def test_raise_on_mixed_types(self, register_dummy_chunkmanager):
         dummy_arr = DummyChunkedArray([1, 2, 3])
         dask_arr = dask.array.from_array([1, 2, 3], chunks=(1,))
 
