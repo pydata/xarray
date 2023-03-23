@@ -28,10 +28,6 @@ T_ChunkedArray = TypeVar("T_ChunkedArray")
 T_Chunks = Any
 
 
-# Only used for testing purposes, as a real entrypoint is hard to mock
-EXAMPLE_CHUNKMANAGERS: dict[str, type["ChunkManagerEntrypoint"]] = {}
-
-
 @functools.lru_cache(maxsize=1)
 def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
     """
@@ -58,10 +54,9 @@ def load_chunkmanagers(
         entrypoint.name: entrypoint.load() for entrypoint in entrypoints
     }
 
-    # TODO will this work if dask is not installed? We don't want to instantiate the chunkmanager if its not available
     available_chunkmanagers = {
         name: chunkmanager()
-        for name, chunkmanager in (loaded_entrypoints | EXAMPLE_CHUNKMANAGERS).items()
+        for name, chunkmanager in loaded_entrypoints.items()
         if chunkmanager.available
     }
     return available_chunkmanagers

@@ -5,11 +5,11 @@ import pytest
 
 from xarray.core.daskmanager import DaskManager
 from xarray.core.parallelcompat import (
-    EXAMPLE_CHUNKMANAGERS,
     ChunkManagerEntrypoint,
     T_Chunks,
     get_chunked_array_type,
     guess_chunkmanager,
+    list_chunkmanagers,
 )
 from xarray.tests import requires_dask
 
@@ -110,11 +110,24 @@ class DummyChunkManager(ChunkManagerEntrypoint):
 
 
 @pytest.fixture
-def register_dummy_chunkmanager():
-    """Mocks the registering of an additional ChunkManagerEntrypoint."""
-    EXAMPLE_CHUNKMANAGERS["dummy"] = DummyChunkManager
+def register_dummy_chunkmanager(monkeypatch):
+    """
+    Mocks the registering of an additional ChunkManagerEntrypoint.
+
+    This preserves the presence of the existing DaskManager, so a test that relies on this and DaskManager both being
+    returned from list_chunkmanagers() at once would still work.
+
+    The monkeypatching changes the behavior of list_chunkmanagers when called inside xarray.core.parallelcompat,
+    but not when called from this tests file.
+    """
+    # Should include DaskManager iff dask is available to be imported
+    preregistered_chunkmanagers = list_chunkmanagers()
+
+    monkeypatch.setattr(
+        "xarray.core.parallelcompat.list_chunkmanagers",
+        lambda: {"dummy": DummyChunkManager()} | preregistered_chunkmanagers,
+    )
     yield
-    del EXAMPLE_CHUNKMANAGERS["dummy"]
 
 
 class TestGetChunkManager:
@@ -151,6 +164,8 @@ class TestGetChunkedArrayType:
 
         chunk_manager = get_chunked_array_type(dask_arr)
         assert isinstance(chunk_manager, DaskManager)
+
+    # TODO test that dask is default choice even if other chunkmanagers installed
 
     @requires_dask
     def test_raise_on_mixed_types(self, register_dummy_chunkmanager):
