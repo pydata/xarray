@@ -164,7 +164,6 @@ class ArrayWriter:
 
     def sync(self, compute=True, store_kwargs=None):
         if self.sources:
-            print(self.sources)
             chunkmanager = get_chunked_array_type(*self.sources)
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
