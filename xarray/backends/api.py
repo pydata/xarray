@@ -489,7 +489,7 @@ def open_dataset(
         Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
         Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        :py:func:`dask.array.from_array`. This is experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
