@@ -814,7 +814,7 @@ def open_zarr(
             guess_chunkmanager(manager)  # attempt to import that parallel backend
 
             chunks = {}
-        except ImportError:
+        except ValueError:
             chunks = None
 
     if kwargs:
