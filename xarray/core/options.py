@@ -292,7 +292,25 @@ class set_options:
 
 def get_options():
     """
+    
+    Desciption
+    ----------
     Get options for xarray.
+    
+    
+    Parameters
+    ----------
+    key(str or None) : The name of the configuration option to get. If None, all configuration options are returned. Defaults to None.
+    default(optional) : The value to return if the configuration option is not set. Defaults to None.
+    
+    
+    Returns
+    ----------
+    If key is None, a dictionary containing all the configuration options and their values is returned.
+    Otherwise, the value of the specified configuration option is returned. 
+    If the specified configuration option is not set and default is not provided, a ValueError is raised.
+    
+    
 
     See Also
     ----------
