@@ -205,15 +205,15 @@ To use these backend functions in xarray, you can call them with the path to the
 
 Xarray provides a default engine to read files, which is usually determined by the file extension or type. If you don't specify the engine, xarray will try to guess it based on the file extension or type, and may fall back to a different engine if it cannot determine the correct one.
 
-Therefore, it's good practice to always specify the engine explicitly, especially when working with complex data formats or non-standard file extensions. So, specify the engine explicitly when reading files with xarray, to ensure that the correct backend is used.
+Therefore, it's good practice to always specify the engine explicitly, to ensure that the correct backend is used and especially when working with complex data formats or non-standard file extensions.
 
 :py:func:`xarray.backends.list_engines` is a function in xarray that returns a dictionary of available engines and their BackendEntrypoint objects.
 
 For example, you can use the `engine` argument to specify the backend when calling ``open_dataset()`` or other reading functions in xarray, as shown below:
 
 NetCDF
-------
-If you are reading a netCDF file with a ".nc" extension, the default engine is `netcdf4`. However if you have files with non-standard extensions or if the file format is ambiguous. Specify the engine explicitly when reading files with xarray, to ensure that the correct backend is used.
+~~~~~~
+If you are reading a netCDF file with a ".nc" extension, the default engine is `netcdf4`. However if you have files with non-standard extensions or if the file format is ambiguous. Specify the engine explicitly, to ensure that the correct backend is used.
 
 Use :py:func:`~xarray.open_dataset` to open a NetCDF file and return an xarray Dataset object.
 
@@ -239,10 +239,10 @@ We recommend installing `scipy` via conda using the below given code:
 
     conda install scipy
 
-
 HDF5
-----
+~~~~
 Use :py:func:`~xarray.open_dataset` to open an HDF5 file and return an xarray Dataset object.
+
 You should specify the `engine` keyword argument when reading HDF5 files with xarray, as there are multiple backends that can be used to read HDF5 files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
 
 To read HDF5 files with xarray, you can use the :py:func:`~xarray.open_dataset` function from the `h5netcdf` backend, as follows:
@@ -272,7 +272,7 @@ If you want to use the `netCDF4` backend to read a file with a ".h5" extension (
     ds = xr.open_dataset("path/to/file.h5", engine="netcdf4")
 
 GRIB
------------
+~~~~
 You should specify the `engine` keyword argument when reading GRIB files with xarray, as there are multiple backends that can be used to read GRIB files, and xarray may not always be able to automatically detect the correct one based on the file extension or file format.
 
 Use the :py:func:`~xarray.open_dataset` function from the `cfgrib` package to open a GRIB file as an xarray Dataset.
@@ -297,7 +297,7 @@ We recommend installing `cfgrib` via conda using the below given code:
     conda install -c conda-forge cfgrib
 
 CSV
----
+~~~
 By default, xarray uses the built-in `pandas` library to read CSV files. In general, you don't need to specify the engine keyword argument when reading CSV files with xarray, as the default `pandas` engine is usually sufficient for most use cases. If you are working with very large CSV files or if you need to perform certain types of data processing that are not supported by the default `pandas` engine, you may want to use a different backend.
 In such cases, you can specify the engine argument when reading the CSV file with xarray.
 
@@ -321,7 +321,7 @@ To read CSV files with xarray, use the :py:func:`~xarray.open_dataset` function 
     print(ds)
 
 Zarr
-----
+~~~~
 When opening a Zarr dataset with xarray, the `engine` is automatically detected based on the file extension or the type of input provided. If the dataset is stored in a directory with a ".zarr" extension, xarray will automatically use the "zarr" engine.
 
 To read zarr files with xarray, use the :py:func:`~xarray.open_dataset` function and specify the path to the zarr file as follows:
@@ -344,7 +344,7 @@ We recommend installing `zarr` via conda using the below given code:
 
     conda install -c conda-forge zarr
 
-However, there may be situations where you need to specify the engine manually using the `engine` keyword argument. For example, if you have a Zarr dataset stored in a file with a different extension (e.g., ".npy"), you will need to specify the engine as "zarr" explicitly when opening the dataset.
+There may be situations where you need to specify the engine manually using the `engine` keyword argument. For example, if you have a Zarr dataset stored in a file with a different extension (e.g., ".npy"), you will need to specify the engine as "zarr" explicitly when opening the dataset.
 
 Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
 
