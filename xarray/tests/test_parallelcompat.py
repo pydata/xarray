@@ -175,6 +175,14 @@ class TestGetChunkedArrayType:
         with pytest.raises(TypeError, match="Expected a chunked array "):
             get_chunked_array_type(*[1.0, np.array([5, 6])])
 
+    def test_raise_if_no_matching_chunkmanagers(self):
+        dummy_arr = DummyChunkedArray([1, 2, 3])
+
+        with pytest.raises(
+            TypeError, match="Could not find a Chunk Manager which recognises"
+        ):
+            get_chunked_array_type(dummy_arr)
+
     @requires_dask
     def test_detect_dask_if_installed(self):
         import dask.array as da

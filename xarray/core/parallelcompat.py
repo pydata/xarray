@@ -131,13 +131,9 @@ def get_chunked_array_type(*args) -> "ChunkManagerEntrypoint":
         if chunkmanager.is_chunked_array(chunked_arr):
             return chunkmanager
 
-    raise ChunkManagerNotFoundError(
+    raise TypeError(
         f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
     )
-
-
-class ChunkManagerNotFoundError(Exception):
-    ...
 
 
 class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
