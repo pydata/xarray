@@ -11,7 +11,7 @@ from xarray.core.parallelcompat import (
     guess_chunkmanager,
     list_chunkmanagers,
 )
-from xarray.tests import requires_dask
+from xarray.tests import has_dask, requires_dask
 
 
 class DummyChunkedArray(np.ndarray):
@@ -139,6 +139,21 @@ class TestGetChunkManager:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
             guess_chunkmanager("foo")
 
+    @requires_dask
+    def test_get_dask_if_installed(self):
+        chunk_manager = guess_chunkmanager(None)
+        assert isinstance(chunk_manager, DaskManager)
+
+    @pytest.mark.skipif(has_dask, reason="requires dask not to be installed")
+    def test_dont_get_dask_if_not_installed(self):
+        with pytest.raises(ValueError, match="unrecognized chunk manager dask"):
+            guess_chunkmanager("dask")
+
+    @requires_dask
+    def test_choose_dask_over_other_chunkmanagers(self, register_dummy_chunkmanager):
+        chunk_manager = guess_chunkmanager(None)
+        assert isinstance(chunk_manager, DaskManager)
+
 
 class TestGetChunkedArrayType:
     def test_detect_chunked_arrays(self, register_dummy_chunkmanager):
@@ -156,8 +171,12 @@ class TestGetChunkedArrayType:
         with pytest.raises(TypeError, match="Expected a chunked array"):
             get_chunked_array_type(5.0)
 
+    def test_raise_if_no_arrays_chunked(self, register_dummy_chunkmanager):
+        with pytest.raises(TypeError, match="Expected a chunked array "):
+            get_chunked_array_type(*[1.0, np.array([5, 6])])
+
     @requires_dask
-    def test_detect_dask_by_default(self):
+    def test_detect_dask_if_installed(self):
         import dask.array as da
 
         dask_arr = da.from_array([1, 2, 3], chunks=(1,))
@@ -165,10 +184,8 @@ class TestGetChunkedArrayType:
         chunk_manager = get_chunked_array_type(dask_arr)
         assert isinstance(chunk_manager, DaskManager)
 
-    # TODO test that dask is default choice even if other chunkmanagers installed
-
     @requires_dask
-    def test_raise_on_mixed_types(self, register_dummy_chunkmanager):
+    def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager):
         import dask.array as da
 
         dummy_arr = DummyChunkedArray([1, 2, 3])
