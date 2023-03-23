@@ -19,6 +19,7 @@ What's New
 
 v2023.04.0 (unreleased)
 -----------------------
+- Added new method :py:meth:`DataArray.to_dask_dataframe`,convert a dataarray into a dask dataframe (:issue:`7409`).
 
 New Features
 ~~~~~~~~~~~~
@@ -66,7 +67,6 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
   By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
-- Added new method :py:meth:`DataArray.to_dask_dataframe`,convert a dataarray into a dask dataframe (:issue:`7409`).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
