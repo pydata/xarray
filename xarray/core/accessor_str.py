@@ -675,7 +675,9 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'], dims="x")
+        >>> da = xr.DataArray(
+        ...     ["temperature", "PRESSURE", "PreCipiTation", "daily rainfall"], dims="x"
+        ... )
         >>> da
         array(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'], dtype='<U14')
         >>> da.str.capitalize()
@@ -693,7 +695,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['Temperature', 'PRESSURE'], dims="item")
+        >>> da = xr.DataArray(["Temperature", "PRESSURE"], dims="item")
         >>> da
         array(['Temperature', 'PRESSURE'], dtype='<U11')
         >>> da.str.lower()
@@ -711,7 +713,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['temperature', 'PRESSURE', 'HuMiDiTy'], dims="item")
+        >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="item")
         >>> da
         array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
         >>> da.str.swapcase()
@@ -729,7 +731,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['temperature', 'PRESSURE', 'HuMiDiTy'], dims="item")
+        >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="item")
         >>> da
         array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
         >>> da.str.title()
@@ -747,7 +749,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['temperature', 'HuMiDiTy'], dims="item")
+        >>> da = xr.DataArray(["temperature", "HuMiDiTy"], dims="item")
         >>> da
         array(['temperature', 'HuMiDiTy'], dtype='<U11')
         >>> da.str.upper()
@@ -772,13 +774,13 @@ class StringAccessor(Generic[T_DataArray]):
 
         Examples
         --------
-        >>> da = xr.DataArray(['TEMPERATURE', 'HuMiDiTy'], dims="item")
+        >>> da = xr.DataArray(["TEMPERATURE", "HuMiDiTy"], dims="item")
         >>> da
         array(['TEMPERATURE', 'HuMiDiTy'], dtype='<U11')
         >>> da.str.casefold()
         array(['temperature', 'humidity'], dtype='<U11')
 
-        >>> da = xr.DataArray(['ß', 'İ'], dims='x')
+        >>> da = xr.DataArray(["ß", "İ"], dims="x")
         >>> da
         array(['ß', 'İ'], dtype='<U1')
         >>> da.str.casefold()
@@ -819,7 +821,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['H2O', 'NaCl-'], dims='x')
+        >>> da = xr.DataArray(["H2O", "NaCl-"], dims="x")
         >>> da
         array(['H2O', 'NaCl-'], dtype='<U5')
         >>> da.str.isalnum()
@@ -835,10 +837,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isalpha : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['Mn' 'H2O', 'NaCl-'], dims='x')
+        >>> da = xr.DataArray(["Mn" "H2O", "NaCl-"], dims="x")
         >>> da
         array(['Mn', 'H2O', 'NaCl-'], dtype='<U5')
         >>> da.str.isalpha()
@@ -854,10 +856,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isdecimal : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['2.3', '123', '0'], dims='x')
+        >>> da = xr.DataArray(["2.3", "123", "0"], dims="x")
         >>> da
         array(['2.3', '123', '0'], dtype='<U3')
         >>> da.str.isdecimal()
@@ -873,10 +875,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isdigit : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['123', '1.2', '0', 'CO2', 'NaCl'], dims='x')
+        >>> da = xr.DataArray(["123", "1.2", "0", "CO2", "NaCl"], dims="x")
         >>> da
         array(['123', '1.2', '0', 'CO2', 'NaCl'], dtype='<U4')
         >>> da.str.isdigit()
@@ -893,10 +895,10 @@ class StringAccessor(Generic[T_DataArray]):
         islower : array of bool
             Array of boolean values with the same shape as the original array indicating whether each
             element of the string array is lowercase (True) or not (False).
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dims='x')
+        >>> da = xr.DataArray(["temperature", "HUMIDITY", "pREciPiTaTioN"], dims="x")
         >>> da
         array(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dtype='<U13')
         >>> da.str.islower()
@@ -912,10 +914,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isnumeric : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dims='x')
+        >>> da = xr.DataArray(["123", "2.3", "H2O", "NaCl-", "Mn"], dims="x")
         >>> da
         array(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dtype='<U5')
         >>> da.str.isnumeric()
@@ -931,7 +933,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isspace : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
         >>> da = xr.DataArray(['', ' ', '\\t', '\\n'], dims='x')
@@ -950,10 +952,17 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         istitle : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['The Evolution Of Species', 'The Theory of relativity', 'the quantum mechanics of atoms'], dims='title')
+        >>> da = xr.DataArray(
+        ...     [
+        ...         "The Evolution Of Species",
+        ...         "The Theory of relativity",
+        ...         "the quantum mechanics of atoms",
+        ...     ],
+        ...     dims="title",
+        ... )
         >>> da
         xr.DataArray(['The Evolution Of Species', 'The Theory of relativity', 'the quantum mechanics of atoms'], dims='title')
         >>> da.str.istitle()
@@ -969,10 +978,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isupper : array of bool
             Array of boolean values with the same shape as the original array.
-        
+
         Example
         -------
-        >>> da = xr.DataArray(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dims='x')
+        >>> da = xr.DataArray(["TEMPERATURE", "humidity", "PreCIpiTAtioN"], dims="x")
         >>> da
         array(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dtype='<U13')
         >>> da.str.isupper()
@@ -1015,7 +1024,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Examples
         --------
-        >>> da = xr.DataArray(['jjklmn','opjjqrs','t-euuJJvwx'], dims='x')
+        >>> da = xr.DataArray(["jjklmn", "opjjqrs", "t-euuJJvwx"], dims="x")
         >>> da
         array(['jjklmn', 'opjjqrs', 't-euuJJvwx'], dtype='<U10')
 
@@ -1025,15 +1034,15 @@ class StringAccessor(Generic[T_DataArray]):
 
         Enable case-insensitive matching by setting case to false:
         >>> import re
-        >>> da.str.count('jj', case=False)
+        >>> da.str.count("jj", case=False)
         array([1, 1, 1])
 
         Using regex:
-        >>> da.str.count(r'jj')
+        >>> da.str.count(r"jj")
         array([1, 1, 0])
 
         Using a list of strings (returns a count of matches for each element):
-        >>> da.str.count(['jj'])
+        >>> da.str.count(["jj"])
         array([2, 2, 0,])
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
@@ -1059,10 +1068,10 @@ class StringAccessor(Generic[T_DataArray]):
         startswith : array of bool
             An array of booleans indicating whether the given pattern matches
             the start of each string element.
-        
+
         Example
         -------
-        >>> da=xr.DataArray(['$100','£23', '100'], dims='x')
+        >>> da = xr.DataArray(["$100", "£23", "100"], dims="x")
         >>> da
         array(['$100', '£23', '100'], dtype='<U4')
         >>> da.str.startswith("$")
@@ -1093,10 +1102,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da=xr.DataArray(['10C', '10c''100F'], dims='x')
+        >>> da = xr.DataArray(["10C", "10c" "100F"], dims="x")
         >>> da
         array(['10C', '10c', '100F'], dtype='<U4')
-        >>> da.str.endswith("C")     
+        >>> da.str.endswith("C")
         array([ True, False, False])
         """
         pat = self._stringify(pat)
