@@ -726,6 +726,14 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         titled : same type as values
+
+        Example
+        -------
+        >>> da = xr.DataArray(['temperature', 'PRESSURE', 'HuMiDiTy'], dims="item")
+        >>> da
+        array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
+        >>> da.str.title()
+        array(['Temperature', 'Pressure', 'Humidity'], dtype='<U11')
         """
         return self._apply(func=lambda x: x.title())
 
