@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import functools
 import itertools
 import math
 import numbers
@@ -29,7 +28,6 @@ from xarray.core.indexing import (
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import (
-    DuckArrayModule,
     array_type,
     integer_types,
     is_0d_dask_array,
@@ -50,17 +48,10 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 
-
-@functools.cache
-def _get_non_numpy_supported_array_types():
-    """Required instead of a global to avoid circular import errors with cubed"""
-
-    return (
-        indexing.ExplicitlyIndexed,
-        pd.Index,
-    ) + DuckArrayModule("cubed").type
-
-
+NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
+    indexing.ExplicitlyIndexed,
+    pd.Index,
+)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
@@ -263,7 +254,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, (Variable, DataArray)):
         return data.data
 
-    if isinstance(data, _get_non_numpy_supported_array_types()):
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
         return _maybe_wrap_data(data)
 
