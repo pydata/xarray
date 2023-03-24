@@ -816,6 +816,14 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isalnum : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Example
+        -------
+        >>> da = xr.DataArray(['H2O', 'NaCl-'], dims='x')
+        >>> da
+        array(['H2O', 'NaCl-'], dtype='<U5')
+        >>> da.str.isalnum()
+        array([ True, False])
         """
         return self._apply(func=lambda x: x.isalnum(), dtype=bool)
 
