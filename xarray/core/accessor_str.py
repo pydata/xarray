@@ -708,6 +708,14 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         swapcased : same type as values
+
+        Example
+        -------
+        >>> da = xr.DataArray(['temperature', 'PRESSURE', 'HuMiDiTy'], dims="item")
+        >>> da
+        array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
+        >>> da.str.swapcase()
+        array(['TEMPERATURE', 'pressure', 'hUmIdItY'], dtype='<U11')
         """
         return self._apply(func=lambda x: x.swapcase())
 
