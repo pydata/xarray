@@ -672,6 +672,14 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         capitalized : same type as values
+
+        Example
+        -------
+        >>> da = xr.DataArray(['temperature', 'pressure'], dims="item")
+        >>> da
+        array(['temperature', 'pressure'], dtype='<U11')
+        >>> da.str.capitalize()
+        array(['Temperature', 'Pressure'], dtype='<U11')
         """
         return self._apply(func=lambda x: x.capitalize())
 
