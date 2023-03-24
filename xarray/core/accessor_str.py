@@ -744,6 +744,14 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         uppered : same type as values
+
+        Example
+        -------
+        >>> da = xr.DataArray(['temperature', 'HuMiDiTy'], dims="item")
+        >>> da
+        array(['temperature', 'HuMiDiTy'], dtype='<U11')
+        >>> da.str.upper()
+        array(['TEMPERATURE', 'HUMIDITY'], dtype='<U11')
         """
         return self._apply(func=lambda x: x.upper())
 
