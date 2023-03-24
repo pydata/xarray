@@ -1012,6 +1012,29 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         counts : array of int
+
+        Examples
+        --------
+        >>> da = xr.DataArray(['jjklmn','opjjqrs','t-euuJJvwx'], dims='x')
+        >>> da
+        array(['jjklmn', 'opjjqrs', 't-euuJJvwx'], dtype='<U10')
+
+        Using a string:
+        >>> da.str.count("jj")
+        array([1, 1, 0])
+
+        Enable case-insensitive matching by setting case to false:
+        >>> import re
+        >>> da.str.count('jj', case=False)
+        array([1, 1, 1])
+
+        Using regex:
+        >>> da.str.count(r'jj')
+        array([1, 1, 0])
+
+        Using a list of strings (returns a count of matches for each element):
+        >>> da.str.count(['jj'])
+        array([2, 2, 0,])
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
