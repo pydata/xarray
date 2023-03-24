@@ -90,7 +90,6 @@ ENGINES_AND_FORMATS = [
 def test_dask_distributed_netcdf_roundtrip(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -98,7 +97,6 @@ def test_dask_distributed_netcdf_roundtrip(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data().chunk(chunks)
 
             if engine == "scipy":
@@ -122,10 +120,8 @@ def test_dask_distributed_netcdf_roundtrip(
 def test_dask_distributed_write_netcdf_with_dimensionless_variables(
     loop, tmp_netcdf_filename
 ):
-
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = xr.Dataset({"x": da.zeros(())})
             original.to_netcdf(tmp_netcdf_filename)
 
@@ -200,7 +196,6 @@ def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
 def test_dask_distributed_read_netcdf_integration_test(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -208,7 +203,6 @@ def test_dask_distributed_read_netcdf_integration_test(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
 
@@ -331,7 +325,6 @@ async def test_serializable_locks(c, s, a, b) -> None:
         CombinedLock([HDF5_LOCK]),
         CombinedLock([HDF5_LOCK, Lock("filename.nc")]),
     ]:
-
         futures = c.map(f, list(range(10)), lock=lock)
         await c.gather(futures)
 

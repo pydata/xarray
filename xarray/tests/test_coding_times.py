@@ -31,6 +31,7 @@ from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    FirstElementAccessibleArray,
     arm_xfail,
     assert_array_equal,
     assert_no_warnings,
@@ -670,7 +671,6 @@ def test_decode_cf(calendar) -> None:
 
 
 def test_decode_cf_time_bounds() -> None:
-
     da = DataArray(
         np.arange(6, dtype="int64").reshape((3, 2)),
         coords={"time": [1, 2, 3]},
@@ -713,7 +713,6 @@ def test_decode_cf_time_bounds() -> None:
 
 @requires_cftime
 def test_encode_time_bounds() -> None:
-
     time = pd.date_range("2000-01-16", periods=1)
     time_bounds = pd.date_range("2000-01-01", periods=2, freq="MS")
     ds = Dataset(dict(time=time, time_bounds=time_bounds))
@@ -789,35 +788,35 @@ def times_3d(times):
 
 @requires_cftime
 def test_contains_cftime_datetimes_1d(data) -> None:
-    assert contains_cftime_datetimes(data.time)
+    assert contains_cftime_datetimes(data.time.variable)
 
 
 @requires_cftime
 @requires_dask
 def test_contains_cftime_datetimes_dask_1d(data) -> None:
-    assert contains_cftime_datetimes(data.time.chunk())
+    assert contains_cftime_datetimes(data.time.variable.chunk())
 
 
 @requires_cftime
 def test_contains_cftime_datetimes_3d(times_3d) -> None:
-    assert contains_cftime_datetimes(times_3d)
+    assert contains_cftime_datetimes(times_3d.variable)
 
 
 @requires_cftime
 @requires_dask
 def test_contains_cftime_datetimes_dask_3d(times_3d) -> None:
-    assert contains_cftime_datetimes(times_3d.chunk())
+    assert contains_cftime_datetimes(times_3d.variable.chunk())
 
 
 @pytest.mark.parametrize("non_cftime_data", [DataArray([]), DataArray([1, 2])])
 def test_contains_cftime_datetimes_non_cftimes(non_cftime_data) -> None:
-    assert not contains_cftime_datetimes(non_cftime_data)
+    assert not contains_cftime_datetimes(non_cftime_data.variable)
 
 
 @requires_dask
 @pytest.mark.parametrize("non_cftime_data", [DataArray([]), DataArray([1, 2])])
 def test_contains_cftime_datetimes_non_cftimes_dask(non_cftime_data) -> None:
-    assert not contains_cftime_datetimes(non_cftime_data.chunk())
+    assert not contains_cftime_datetimes(non_cftime_data.variable.chunk())
 
 
 @requires_cftime
@@ -834,7 +833,6 @@ def test_encode_cf_datetime_overflow(shape) -> None:
 
 
 def test_encode_expected_failures() -> None:
-
     dates = pd.date_range("2000", periods=3)
     with pytest.raises(ValueError, match="invalid time units"):
         encode_cf_datetime(dates, units="days after 2000-01-01")
@@ -1179,3 +1177,17 @@ def test_scalar_unit() -> None:
     variable = Variable(("x", "y"), np.array([[0, 1], [2, 3]]), {"units": np.nan})
     result = coding.times.CFDatetimeCoder().decode(variable)
     assert np.isnan(result.attrs["units"])
+
+
+@requires_cftime
+def test_contains_cftime_lazy() -> None:
+    import cftime
+
+    from xarray.core.common import _contains_cftime_datetimes
+
+    times = np.array(
+        [cftime.DatetimeGregorian(1, 1, 2, 0), cftime.DatetimeGregorian(1, 1, 2, 0)],
+        dtype=object,
+    )
+    array = FirstElementAccessibleArray(times)
+    assert _contains_cftime_datetimes(array)

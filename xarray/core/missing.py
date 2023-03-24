@@ -48,7 +48,7 @@ def _get_nan_block_lengths(
         .where(valid)
         .bfill(dim=dim)
         .where(~valid, 0)
-        .fillna(index[-1] - valid_arange.max())
+        .fillna(index[-1] - valid_arange.max(dim=[dim]))
     )
 
     return nan_block_lengths
@@ -80,7 +80,6 @@ class NumpyInterpolator(BaseInterpolator):
     """
 
     def __init__(self, xi, yi, method="linear", fill_value=None, period=None):
-
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
 

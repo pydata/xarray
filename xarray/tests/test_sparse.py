@@ -59,7 +59,6 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-
         # cannot pass np.sum when using pytest-xdist
         kwargs = self.kwargs.copy()
         if "func" in self.kwargs:

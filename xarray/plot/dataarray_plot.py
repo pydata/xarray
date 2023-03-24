@@ -19,6 +19,7 @@ from xarray.plot.utils import (
     _assert_valid_xy,
     _determine_guide,
     _ensure_plottable,
+    _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
     _Normalize,
@@ -52,11 +53,15 @@ if TYPE_CHECKING:
     )
     from xarray.plot.facetgrid import FacetGrid
 
+_styles: MutableMapping[str, Any] = {
+    # Add a white border to make it easier seeing overlapping markers:
+    "scatter.edgecolors": "w",
+}
+
 
 def _infer_line_data(
     darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
 ) -> tuple[DataArray, DataArray, DataArray | None, str]:
-
     ndims = len(darray.dims)
 
     if x is not None and y is not None:
@@ -138,48 +143,45 @@ def _infer_line_data(
     return xplt, yplt, hueplt, huelabel
 
 
-def _infer_plot_dims(
-    darray: DataArray,
-    dims_plot: MutableMapping[str, Hashable],
-    default_guess: Iterable[str] = ("x", "hue", "size"),
-) -> MutableMapping[str, Hashable]:
+def _prepare_plot1d_data(
+    darray: T_DataArray,
+    coords_to_plot: MutableMapping[str, Hashable],
+    plotfunc_name: str | None = None,
+    _is_facetgrid: bool = False,
+) -> dict[str, T_DataArray]:
     """
-    Guess what dims to plot if some of the values in dims_plot are None which
-    happens when the user has not defined all available ways of visualizing
-    the data.
+    Prepare data for usage with plt.scatter.
 
     Parameters
     ----------
-    darray : DataArray
-        The DataArray to check.
-    dims_plot : T_DimsPlot
-        Dims defined by the user to plot.
-    default_guess : Iterable[str], optional
-        Default values and order to retrieve dims if values in dims_plot is
-        missing, default: ("x", "hue", "size").
+    darray : T_DataArray
+        Base DataArray.
+    coords_to_plot : MutableMapping[str, Hashable]
+        Coords that will be plotted.
+    plotfunc_name : str | None
+        Name of the plotting function that will be used.
+
+    Returns
+    -------
+    plts : dict[str, T_DataArray]
+        Dict of DataArrays that will be sent to matplotlib.
+
+    Examples
+    --------
+    >>> # Make sure int coords are plotted:
+    >>> a = xr.DataArray(
+    ...     data=[1, 2],
+    ...     coords={1: ("x", [0, 1], {"units": "s"})},
+    ...     dims=("x",),
+    ...     name="a",
+    ... )
+    >>> plts = xr.plot.dataarray_plot._prepare_plot1d_data(
+    ...     a, coords_to_plot={"x": 1, "z": None, "hue": None, "size": None}
+    ... )
+    >>> # Check which coords to plot:
+    >>> print({k: v.name for k, v in plts.items()})
+    {'y': 'a', 'x': 1}
     """
-    dims_plot_exist = {k: v for k, v in dims_plot.items() if v is not None}
-    dims_avail = tuple(v for v in darray.dims if v not in dims_plot_exist.values())
-
-    # If dims_plot[k] isn't defined then fill with one of the available dims:
-    for k, v in zip(default_guess, dims_avail):
-        if dims_plot.get(k, None) is None:
-            dims_plot[k] = v
-
-    for k, v in dims_plot.items():
-        _assert_valid_xy(darray, v, k)
-
-    return dims_plot
-
-
-def _infer_line_data2(
-    darray: T_DataArray,
-    dims_plot: MutableMapping[str, Hashable],
-    plotfunc_name: None | str = None,
-) -> dict[str, T_DataArray]:
-    # Guess what dims to use if some of the values in plot_dims are None:
-    dims_plot = _infer_plot_dims(darray, dims_plot)
-
     # If there are more than 1 dimension in the array than stack all the
     # dimensions so the plotter can plot anything:
     if darray.ndim > 1:
@@ -189,11 +191,11 @@ def _infer_line_data2(
         dims_T = []
         if np.issubdtype(darray.dtype, np.floating):
             for v in ["z", "x"]:
-                dim = dims_plot.get(v, None)
+                dim = coords_to_plot.get(v, None)
                 if (dim is not None) and (dim in darray.dims):
                     darray_nan = np.nan * darray.isel({dim: -1})
                     darray = concat([darray, darray_nan], dim=dim)
-                    dims_T.append(dims_plot[v])
+                    dims_T.append(coords_to_plot[v])
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
@@ -203,11 +205,13 @@ def _infer_line_data2(
         darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
-    out = dict(y=darray)
-    out.update({k: darray[v] for k, v in dims_plot.items() if v is not None})
-    out = dict(zip(out.keys(), broadcast(*(out.values()))))
+    plts = dict(y=darray)
+    plts.update(
+        {k: darray.coords[v] for k, v in coords_to_plot.items() if v is not None}
+    )
+    plts = dict(zip(plts.keys(), broadcast(*(plts.values()))))
 
-    return out
+    return plts
 
 
 # return type is Any due to the many different possibilities
@@ -884,6 +888,8 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
+        plt = import_matplotlib_pyplot()
+
         if subplot_kws is None:
             subplot_kws = dict()
 
@@ -895,6 +901,7 @@ def _plot1d(plotfunc):
             allargs = locals().copy()
             allargs.update(allargs.pop("kwargs"))
             allargs.pop("darray")
+            allargs.pop("plt")
             allargs["plotfunc"] = globals()[plotfunc.__name__]
 
             return _easy_facetgrid(darray, kind="plot1d", **allargs)
@@ -931,15 +938,20 @@ def _plot1d(plotfunc):
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "scatter":
-            size_ = markersize
+            size_ = kwargs.pop("_size", markersize)
             size_r = _MARKERSIZE_RANGE
         else:
-            size_ = linewidth
+            size_ = kwargs.pop("_size", linewidth)
             size_r = _LINEWIDTH_RANGE
 
         # Get data to plot:
-        dims_plot = dict(x=x, z=z, hue=hue, size=size_)
-        plts = _infer_line_data2(darray, dims_plot, plotfunc.__name__)
+        coords_to_plot: MutableMapping[str, Hashable | None] = dict(
+            x=x, z=z, hue=hue, size=size_
+        )
+        if not _is_facetgrid:
+            # Guess what coords to use if some of the values in coords_to_plot are None:
+            coords_to_plot = _guess_coords_to_plot(darray, coords_to_plot, kwargs)
+        plts = _prepare_plot1d_data(darray, coords_to_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
@@ -974,24 +986,25 @@ def _plot1d(plotfunc):
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        if z is not None:
-            if ax is None:
-                subplot_kws.update(projection="3d")
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
-            # Using 30, 30 minimizes rotation of the plot. Making it easier to
-            # build on your intuition from 2D plots:
-            ax.view_init(azim=30, elev=30, vertical_axis="y")
-        else:
-            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+        with plt.rc_context(_styles):
+            if z is not None:
+                if ax is None:
+                    subplot_kws.update(projection="3d")
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                # Using 30, 30 minimizes rotation of the plot. Making it easier to
+                # build on your intuition from 2D plots:
+                ax.view_init(azim=30, elev=30, vertical_axis="y")
+            else:
+                ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-        primitive = plotfunc(
-            xplt,
-            yplt,
-            ax=ax,
-            add_labels=add_labels,
-            **cmap_params_subset,
-            **kwargs,
-        )
+            primitive = plotfunc(
+                xplt,
+                yplt,
+                ax=ax,
+                add_labels=add_labels,
+                **cmap_params_subset,
+                **kwargs,
+            )
 
         if np.any(np.asarray(add_labels)) and add_title:
             ax.set_title(darray._title_for_slice())
@@ -1233,9 +1246,6 @@ def scatter(
     zplt: DataArray | None = kwargs.pop("zplt", None)
     hueplt: DataArray | None = kwargs.pop("hueplt", None)
     sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
-
-    # Add a white border to make it easier seeing overlapping markers:
-    kwargs.update(edgecolors=kwargs.pop("edgecolors", "w"))
 
     if hueplt is not None:
         kwargs.update(c=hueplt.to_numpy().ravel())
@@ -2283,27 +2293,23 @@ def pcolormesh(
         else:
             infer_intervals = True
 
-    if (
-        infer_intervals
-        and not np.issubdtype(x.dtype, str)
-        and (
-            (np.shape(x)[0] == np.shape(z)[1])
-            or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
-        )
+    if any(np.issubdtype(k.dtype, str) for k in (x, y)):
+        # do not infer intervals if any axis contains str ticks, see #6775
+        infer_intervals = False
+
+    if infer_intervals and (
+        (np.shape(x)[0] == np.shape(z)[1])
+        or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
     ):
-        if len(x.shape) == 1:
+        if x.ndim == 1:
             x = _infer_interval_breaks(x, check_monotonic=True, scale=xscale)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1, scale=xscale)
             x = _infer_interval_breaks(x, axis=0, scale=xscale)
 
-    if (
-        infer_intervals
-        and not np.issubdtype(y.dtype, str)
-        and (np.shape(y)[0] == np.shape(z)[0])
-    ):
-        if len(y.shape) == 1:
+    if infer_intervals and (np.shape(y)[0] == np.shape(z)[0]):
+        if y.ndim == 1:
             y = _infer_interval_breaks(y, check_monotonic=True, scale=yscale)
         else:
             # we have to infer the intervals on both axes

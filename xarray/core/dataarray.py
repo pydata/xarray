@@ -395,7 +395,6 @@ class DataArray(
 
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
-
                 if isinstance(data, DataArray):
                     coords = data.coords
                 elif isinstance(data, pd.Series):
@@ -6250,6 +6249,8 @@ class DataArray(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         DataArray.groupby_bins
         Dataset.groupby
         core.groupby.DataArrayGroupBy
@@ -6329,6 +6330,8 @@ class DataArray(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         DataArray.groupby
         Dataset.groupby_bins
         core.groupby.DataArrayGroupBy
@@ -6485,7 +6488,7 @@ class DataArray(
 
         Examples
         --------
-        Coarsen the long time series by averaging over every four days.
+        Coarsen the long time series by averaging over every three days.
 
         >>> da = xr.DataArray(
         ...     np.linspace(0, 364, num=364),

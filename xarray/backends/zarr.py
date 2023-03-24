@@ -207,7 +207,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
                 "which are required for xarray to determine variable dimensions."
             ) from e
 
-    nc_attrs = [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
+    nc_attrs = [attr for attr in zarr_obj.attrs if attr.lower().startswith("_nc")]
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
     return dimensions, attributes
 
@@ -230,6 +230,7 @@ def extract_zarr_variable_encoding(
     """
     encoding = variable.encoding.copy()
 
+    safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "chunks",
         "compressor",
@@ -237,6 +238,10 @@ def extract_zarr_variable_encoding(
         "cache_metadata",
         "write_empty_chunks",
     }
+
+    for k in safe_to_drop:
+        if k in encoding:
+            del encoding[k]
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -490,7 +495,7 @@ class ZarrStore(AbstractWritableDataStore):
         return {
             k: v
             for k, v in self.zarr_group.attrs.asdict().items()
-            if not k.startswith("_NC")
+            if not k.lower().startswith("_nc")
         }
 
     def get_dimensions(self):
@@ -882,7 +887,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         stacklevel=3,
         zarr_version=None,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,

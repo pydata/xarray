@@ -69,7 +69,6 @@ class TestDatetimeAccessor:
         ],
     )
     def test_field_access(self, field) -> None:
-
         if field in ["week", "weekofyear"]:
             data = self.times.isocalendar()["week"]
         else:
@@ -96,7 +95,6 @@ class TestDatetimeAccessor:
         ],
     )
     def test_isocalendar(self, field, pandas_field) -> None:
-
         # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
         expected = pd.Index(getattr(self.times.isocalendar(), pandas_field).astype(int))
         expected = xr.DataArray(
@@ -403,7 +401,6 @@ def times_3d(times):
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
 def test_field_access(data, field) -> None:
-
     result = getattr(data.time.dt, field)
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
@@ -421,7 +418,6 @@ def test_calendar_cftime(data) -> None:
     assert data.time.dt.calendar == expected
 
 
-@requires_cftime
 def test_calendar_datetime64_2d() -> None:
     data = xr.DataArray(np.zeros((4, 5), dtype="datetime64[ns]"), dims=("x", "y"))
     assert data.dt.calendar == "proleptic_gregorian"
@@ -458,7 +454,6 @@ def test_calendar_dask_cftime() -> None:
 
 @requires_cftime
 def test_isocalendar_cftime(data) -> None:
-
     with pytest.raises(
         AttributeError, match=r"'CFTimeIndex' object has no attribute 'isocalendar'"
     ):
@@ -467,7 +462,6 @@ def test_isocalendar_cftime(data) -> None:
 
 @requires_cftime
 def test_date_cftime(data) -> None:
-
     with pytest.raises(
         AttributeError,
         match=r"'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor\('D'\)`.",

@@ -1648,7 +1648,6 @@ class TestDataArray:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_reindex_str_dtype(self, dtype) -> None:
-
         data = DataArray(
             [1, 2], dims="x", coords={"x": np.array(["a", "b"], dtype=dtype)}
         )
@@ -1660,7 +1659,6 @@ class TestDataArray:
         assert actual.dtype == expected.dtype
 
     def test_rename(self) -> None:
-
         da = xr.DataArray(
             [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
         )
@@ -2166,13 +2164,11 @@ class TestDataArray:
         assert_identical(a - b, expected)
 
     def test_non_overlapping_dataarrays_return_empty_result(self) -> None:
-
         a = DataArray(range(5), [("x", range(5))])
         result = a.isel(x=slice(2)) + a.isel(x=slice(2, None))
         assert len(result["x"]) == 0
 
     def test_empty_dataarrays_return_empty_result(self) -> None:
-
         a = DataArray(data=[])
         result = a * a
         assert len(result["dim_0"]) == 0
@@ -2735,7 +2731,6 @@ class TestDataArray:
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna) -> None:
-
         va = self.va.copy(deep=True)
         va[0, 0] = np.NaN
 
@@ -2764,7 +2759,6 @@ class TestDataArray:
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
-
         da = DataArray(self.va)
         q = [0.25, 0.5, 0.75]
 
@@ -3015,7 +3009,6 @@ class TestDataArray:
             )
 
     def test_align_str_dtype(self) -> None:
-
         a = DataArray([0, 1], dims=["x"], coords={"x": ["a", "b"]})
         b = DataArray([1, 2], dims=["x"], coords={"x": ["b", "c"]})
 
@@ -3589,7 +3582,6 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_to_dataset_retains_keys(self) -> None:
-
         # use dates as convenient non-str objects. Not a specific date test
         import datetime
 
@@ -3852,7 +3844,6 @@ class TestDataArray:
         assert_equal(expected2, actual2)
 
     def test_matmul(self) -> None:
-
         # copied from above (could make a fixture)
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
@@ -4158,7 +4149,6 @@ class TestDataArray:
     @pytest.mark.parametrize("mode", ("reflect", "symmetric"))
     @pytest.mark.parametrize("reflect_type", (None, "even", "odd"))
     def test_pad_reflect(self, mode, reflect_type) -> None:
-
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(
             dim_0=(1, 3), dim_2=(2, 2), mode=mode, reflect_type=reflect_type
@@ -4226,37 +4216,40 @@ class TestDataArray:
         d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
             object
         )
-        if backend == "numpy":
-            aa = DataArray(data=a, dims=["x"], name="a")
-            bb = DataArray(data=b, dims=["x"], name="b")
-            cc = DataArray(data=c, dims=["y"], name="c")
-            dd = DataArray(data=d, dims=["z"], name="d")
+        aa = DataArray(data=a, dims=["x"], name="a", coords={"a2": ("x", a)})
+        bb = DataArray(data=b, dims=["x"], name="b", coords={"b2": ("x", b)})
+        cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
+        dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        elif backend == "dask":
+        if backend == "dask":
             import dask.array as da
 
-            aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
-            bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
-            cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
-            dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+            aa = aa.copy(data=da.from_array(a, chunks=3))
+            bb = bb.copy(data=da.from_array(b, chunks=3))
+            cc = cc.copy(data=da.from_array(c, chunks=7))
+            dd = dd.copy(data=da.from_array(d, chunks=12))
 
         # query single dim, single variable
-        actual = aa.query(x="a > 5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
         expect = aa.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
-        actual = aa.query(dict(x="a > 5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(dict(x="a2 > 5"), engine=engine, parser=parser)
         expect = aa.isel(dict(x=(a > 5)))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = bb.query(x="b > 50", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = bb.query(x="b2 > 50", engine=engine, parser=parser)
         expect = bb.isel(x=(b > 50))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = cc.query(y="c < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = cc.query(y="c2 < .5", engine=engine, parser=parser)
         expect = cc.isel(y=(c < 0.5))
         assert_identical(expect, actual)
 
@@ -4264,7 +4257,8 @@ class TestDataArray:
         if parser == "pandas":
             # N.B., this query currently only works with the pandas parser
             # xref https://github.com/pandas-dev/pandas/issues/40436
-            actual = dd.query(z='d == "bar"', engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = dd.query(z='d2 == "bar"', engine=engine, parser=parser)
             expect = dd.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 
@@ -5693,7 +5687,6 @@ class TestReduce3D(TestReduce):
         nanindices_yz: dict[str, np.ndarray],
         nanindices_xyz: dict[str, np.ndarray],
     ) -> None:
-
         ar = xr.DataArray(
             x,
             dims=["x", "y", "z"],
@@ -5921,7 +5914,6 @@ class TestReduce3D(TestReduce):
         nanindices_yz: dict[str, np.ndarray],
         nanindices_xyz: dict[str, np.ndarray],
     ) -> None:
-
         ar = xr.DataArray(
             x,
             dims=["x", "y", "z"],
@@ -6231,7 +6223,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims
@@ -6307,7 +6299,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims
