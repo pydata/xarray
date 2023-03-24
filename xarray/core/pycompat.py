@@ -84,7 +84,7 @@ def is_duck_dask_array(x):
 
 
 def is_chunked_array(x):
-    return is_duck_dask_array(x) or hasattr(x, "chunks")
+    return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
 
 
 def is_0d_dask_array(x):
