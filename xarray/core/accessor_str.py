@@ -1059,6 +1059,14 @@ class StringAccessor(Generic[T_DataArray]):
         startswith : array of bool
             An array of booleans indicating whether the given pattern matches
             the start of each string element.
+        
+        Example
+        -------
+        >>> da=xr.DataArray(['$100','£23', '100'], dims='x')
+        >>> da
+        array(['$100', '£23', '100'], dtype='<U4')
+        >>> da.str.startswith("$")
+        array([ True,  False, False])
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.startswith(y)
