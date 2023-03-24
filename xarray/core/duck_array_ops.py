@@ -643,7 +643,7 @@ def first(values, axis, skipna=None):
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
         if is_chunked_array(values):
-            return nanfirst(values, axis)
+            return chunked_nanfirst(values, axis)
         else:
             return nputils.nanfirst(values, axis)
     return take(values, 0, axis=axis)
@@ -654,7 +654,7 @@ def last(values, axis, skipna=None):
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
         if is_chunked_array(values):
-            return nanlast(values, axis)
+            return chunked_nanlast(values, axis)
         else:
             return nputils.nanlast(values, axis)
     return take(values, -1, axis=axis)
@@ -681,7 +681,7 @@ def _first_last_wrapper(array, *, axis, op, keepdims):
     return op(array, axis, keepdims=keepdims)
 
 
-def _first_or_last(darray, axis, op):
+def _chunked_first_or_last(darray, axis, op):
     chunkmanager = get_chunked_array_type(darray)
 
     # This will raise the same error message seen for numpy
@@ -698,9 +698,9 @@ def _first_or_last(darray, axis, op):
     )
 
 
-def nanfirst(darray, axis):
-    return _first_or_last(darray, axis, op=nputils.nanfirst)
+def chunked_nanfirst(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanfirst)
 
 
-def nanlast(darray, axis):
-    return _first_or_last(darray, axis, op=nputils.nanlast)
+def chunked_nanlast(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanlast)
