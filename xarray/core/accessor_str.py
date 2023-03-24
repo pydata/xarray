@@ -690,6 +690,14 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         lowerd : same type as values
+
+        Example
+        -------
+        >>> da = xr.DataArray(['Temperature', 'PRESSURE'], dims="item")
+        >>> da
+        array(['Temperature', 'PRESSURE'], dtype='<U11')
+        >>> da.str.lower()
+        array(['temperature', 'pressure'], dtype='<U11')
         """
         return self._apply(func=lambda x: x.lower())
 
