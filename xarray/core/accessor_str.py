@@ -1090,6 +1090,14 @@ class StringAccessor(Generic[T_DataArray]):
         endswith : array of bool
             A Series of booleans indicating whether the given pattern matches
             the end of each string element.
+
+        Example
+        -------
+        >>> da=xr.DataArray(['10C', '10c''100F'], dims='x')
+        >>> da
+        array(['10C', '10c', '100F'], dtype='<U4')
+        >>> da.str.endswith("C")     
+        array([ True, False, False])
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.endswith(y)
