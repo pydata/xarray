@@ -51,6 +51,7 @@ from xarray.core.common import (
 )
 from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.daskvendor import normalize_chunks
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -213,8 +214,6 @@ def _get_chunk(var, chunks):
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
 
-    from dask.array.core import normalize_chunks
-
     if isinstance(var, IndexVariable):
         return {}
     dims = var.dims
@@ -232,7 +231,6 @@ def _get_chunk(var, chunks):
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
     )
 
-    # TODO ideally replace this with non-dask version
     chunk_shape = normalize_chunks(
         chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
