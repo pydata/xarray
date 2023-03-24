@@ -6,7 +6,7 @@ import numpy as np
 from xarray.core import utils
 from xarray.core.duck_array_ops import dask_available
 from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray, T_Chunks
-from xarray.core.pycompat import DuckArrayModule, is_duck_dask_array
+from xarray.core.pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
     from xarray.core.types import DaskArray
@@ -41,8 +41,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         if is_duck_dask_array(data):
             data = self.rechunk(data, chunks)
-        elif isinstance(data, DuckArrayModule("cubed").type):
-            raise TypeError("Trying to rechunk a cubed array using dask")
         else:
             if isinstance(data, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
