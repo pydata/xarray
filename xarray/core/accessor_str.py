@@ -835,6 +835,14 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isalpha : array of bool
             Array of boolean values with the same shape as the original array.
+        
+        Example
+        -------
+        >>> da = xr.DataArray(['Mn' 'H2O', 'NaCl-'], dims='x')
+        >>> da
+        array(['Mn', 'H2O', 'NaCl-'], dtype='<U5')
+        >>> da.str.isalpha()
+        array([ True, False, False])
         """
         return self._apply(func=lambda x: x.isalpha(), dtype=bool)
 
