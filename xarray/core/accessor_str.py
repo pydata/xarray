@@ -854,6 +854,14 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isdecimal : array of bool
             Array of boolean values with the same shape as the original array.
+        
+        Example
+        -------
+        >>> da = xr.DataArray(['2.3', '123', '0'], dims='x')
+        >>> da
+        array(['2.3', '123', '0'], dtype='<U3')
+        >>> da.str.isdecimal()
+        array([False,  True,  True])
         """
         return self._apply(func=lambda x: x.isdecimal(), dtype=bool)
 
