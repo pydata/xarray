@@ -48,4 +48,3 @@ python -m pip install \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
     git+https://github.com/h5netcdf/h5netcdf
-python -m pip install pytest-timeout
