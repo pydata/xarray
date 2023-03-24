@@ -912,6 +912,14 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isnumeric : array of bool
             Array of boolean values with the same shape as the original array.
+        
+        Example
+        -------
+        >>> da = xr.DataArray(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dims='x')
+        >>> da
+        array(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dtype='<U5')
+        >>> da.str.isnumeric()
+        array([ True, False, False, False, False])
         """
         return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
