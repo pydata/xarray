@@ -192,16 +192,24 @@ How do I open format X file as an xarray dataset?
 To open format X file in xarray, you need to know the `format of the data <https://docs.xarray.dev/en/stable/user-guide/io.html#csv-and-other-formats-supported-by-pandas/>`_ you want to read. If the format is supported, you can use the appropriate function provided by xarray. The following table provides functions used for different file formats in xarray, as well as links to other packages that can be used:
 
 .. csv-table::
-   :header: "File Format", "xarray Backend", " Other Packages"
+   :header: "File Format", "Open via", " Related Packages"
    :widths: 15, 45, 15
 
    "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
    "HDF5 (.h5, .hdf5)","``open_dataset()`` OR ``open_mfdataset()``", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
    "GRIB (.grb, .grib)", "``open_dataset()``", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
-   "CSV (.csv)","``open_dataset()``", "`_pandas <https://pandas.pydata.org/>`_ , `dask <https://www.dask.org/>`_"
-   "Zarr (.zarr)","``open_dataset()``", "`zarr <https://pypi.org/project/zarr/>`_ , `_dask <https://www.dask.org/>`_ "
+   "CSV (.csv)","``open_dataset()``", "pandas_ , `dask <https://www.dask.org/>`_"
+   "Zarr (.zarr)","``open_dataset()`` OR ``open_mfdataset()``", "`zarr <https://pypi.org/project/zarr/>`_ , `dask <https://www.dask.org/>`_ "
 
-To use these backend functions in xarray, you can call them with the path to the file(s) you want to read as an argument.
+.. _pandas: https://pandas.pydata.org
+
+If you are unable to open a file in xarray:
+
+- You should check that you are having all necessary dependencies installed, including any optional dependencies (like scipy, h5netcdf, cfgrib etc as mentioned below) that may be required for the specific use case.
+
+- If all necessary dependencies are installed but the file still cannot be opened, you must check if there are any specialized backends available for the specific file format you are working with. You can consult the xarray documentation or the documentation for the file format to determine if a specialized backend is required, and if so, how to install and use it with xarray.
+
+- If the file format is not supported by xarray or any of its available backends, the user may need to use a different library or tool to work with the file. You can consult the documentation for the file format to determine which tools are recommended for working with it.
 
 Xarray provides a default engine to read files, which is usually determined by the file extension or type. If you don't specify the engine, xarray will try to guess it based on the file extension or type, and may fall back to a different engine if it cannot determine the correct one.
 
@@ -209,7 +217,7 @@ Therefore, it's good practice to always specify the engine explicitly, to ensure
 
 :py:func:`xarray.backends.list_engines` is a function in xarray that returns a dictionary of available engines and their BackendEntrypoint objects.
 
-For example, you can use the `engine` argument to specify the backend when calling ``open_dataset()`` or other reading functions in xarray, as shown below:
+You can use the `engine` argument to specify the backend when calling ``open_dataset()`` or other reading functions in xarray, as shown below:
 
 NetCDF
 ~~~~~~
