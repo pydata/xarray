@@ -44,6 +44,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio=1.2
   - scipy=1.7
   - seaborn=0.11
