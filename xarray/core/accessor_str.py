@@ -891,7 +891,16 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         islower : array of bool
-            Array of boolean values with the same shape as the original array.
+            Array of boolean values with the same shape as the original array indicating whether each
+            element of the string array is lowercase (True) or not (False).
+        
+        Example
+        -------
+        >>> da = xr.DataArray(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dims='x')
+        >>> da
+        array(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dtype='<U13')
+        >>> da.str.islower()
+        array([ True, False, False])
         """
         return self._apply(func=lambda x: x.islower(), dtype=bool)
 
