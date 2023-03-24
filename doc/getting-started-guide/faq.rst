@@ -198,7 +198,7 @@ To open format X file in xarray, you need to know the `format of the data <https
    "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `netcdf <https://pypi.org/project/netcdf/>`_ , `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
    "HDF5 (.h5, .hdf5)","``open_dataset()`` OR ``open_mfdataset()``", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
    "GRIB (.grb, .grib)", "``open_dataset()``", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
-   "CSV (.csv)","``open_dataset()``", "pandas_ , `dask <https://www.dask.org/>`_"
+   "CSV (.csv)","``open_dataset()``", "`pandas`_ , `dask <https://www.dask.org/>`_"
    "Zarr (.zarr)","``open_dataset()`` OR ``open_mfdataset()``", "`zarr <https://pypi.org/project/zarr/>`_ , `dask <https://www.dask.org/>`_ "
 
 .. _pandas: https://pandas.pydata.org
