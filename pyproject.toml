@@ -37,6 +37,7 @@ module = [
   "cartopy.*",
   "cdms2.*",
   "cf_units.*",
+  "cfgrib.*",
   "cftime.*",
   "cupy.*",
   "fsspec.*",
