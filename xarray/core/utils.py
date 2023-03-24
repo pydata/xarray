@@ -295,7 +295,7 @@ def _is_scalar(value, include_0d):
         include_0d
         or isinstance(value, (str, bytes))
         or not (
-            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES())
+            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
             or hasattr(value, "__array_namespace__")
         )
