@@ -969,6 +969,14 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isupper : array of bool
             Array of boolean values with the same shape as the original array.
+        
+        Example
+        -------
+        >>> da = xr.DataArray(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dims='x')
+        >>> da
+        array(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dtype='<U13')
+        >>> da.str.isupper()
+        array([ True, False, False])
         """
         return self._apply(func=lambda x: x.isupper(), dtype=bool)
 
