@@ -575,7 +575,7 @@ def open_dataarray(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio",
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
