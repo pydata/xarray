@@ -1004,7 +1004,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['', ' ', '\\t', '\\n'], dims='x')
+        >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)>
         array(['', ' ', '\\t', '\\n'], dtype='<U1')
