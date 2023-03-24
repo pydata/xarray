@@ -675,11 +675,11 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['temperature', 'pressure'], dims="item")
+        >>> da = xr.DataArray(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'], dims="x")
         >>> da
-        array(['temperature', 'pressure'], dtype='<U11')
+        array(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'], dtype='<U14')
         >>> da.str.capitalize()
-        array(['Temperature', 'Pressure'], dtype='<U11')
+        array(['Temperature', 'Pressure', 'Precipitation', 'Daily rainfall'], dtype='<U14')
         """
         return self._apply(func=lambda x: x.capitalize())
 
