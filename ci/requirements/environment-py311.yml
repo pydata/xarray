@@ -28,7 +28,7 @@ dependencies:
   - numexpr
   - numpy
   - packaging
-  - pandas
+  - pandas<2
   - pint
   - pip
   - pooch
@@ -39,6 +39,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
