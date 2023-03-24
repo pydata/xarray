@@ -936,7 +936,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Example
         -------
-        >>> da = xr.DataArray(['', ' ', '\\t', '\\n'], dims='x')
+        >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
         >>> da
         array(['', ' ', '\\t', '\\n'], dtype='<U2')
         >>> da.str.isspace()
