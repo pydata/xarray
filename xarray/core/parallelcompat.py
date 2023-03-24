@@ -169,11 +169,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     ) -> T_ChunkedArray:
         ...
 
-    @abstractmethod
     def rechunk(
         self, data: T_ChunkedArray, chunks: T_Chunks, **kwargs
     ) -> T_ChunkedArray:
-        ...
+        """Called when .chunk is called on an xarray object that is already chunked."""
+        return data.rechunk(chunks, **kwargs)
 
     @abstractmethod
     def compute(self, data: T_ChunkedArray, **kwargs) -> np.ndarray:

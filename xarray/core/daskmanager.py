@@ -76,10 +76,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             )
         return data
 
-    # TODO is simple method propagation like this necessary?
-    def rechunk(self, data: "DaskArray", chunks, **kwargs) -> "DaskArray":
-        return data.rechunk(chunks, **kwargs)
-
     def compute(self, *data: "DaskArray", **kwargs) -> np.ndarray:
         from dask.array import compute
 
