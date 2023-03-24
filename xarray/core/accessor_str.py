@@ -1061,7 +1061,7 @@ class StringAccessor(Generic[T_DataArray]):
         Example
         -------
         >>> da = xr.DataArray(["TEMPERATURE", "humidity", "PreCIpiTAtioN"], dims="x")
-        >>> da  
+        >>> da
         <xarray.DataArray (x: 3)>
         array(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dtype='<U13')
         Dimensions without coordinates: x
@@ -1134,7 +1134,7 @@ class StringAccessor(Generic[T_DataArray]):
         <xarray.DataArray (x: 3)>
         array([1, 1, 0])
         Dimensions without coordinates: x
-        
+
         Using a list of strings (returns a count of matches for each element):
         >>> counts = da.str.count(["jj"])
         >>> counts
