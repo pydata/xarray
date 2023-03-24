@@ -39,6 +39,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
