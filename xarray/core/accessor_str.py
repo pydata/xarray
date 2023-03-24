@@ -950,6 +950,14 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         istitle : array of bool
             Array of boolean values with the same shape as the original array.
+        
+        Example
+        -------
+        >>> da = xr.DataArray(['The Evolution Of Species', 'The Theory of relativity', 'the quantum mechanics of atoms'], dims='title')
+        >>> da
+        xr.DataArray(['The Evolution Of Species', 'The Theory of relativity', 'the quantum mechanics of atoms'], dims='title')
+        >>> da.str.istitle()
+        array([ True, False, False])
         """
         return self._apply(func=lambda x: x.istitle(), dtype=bool)
 
