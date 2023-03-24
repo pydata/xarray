@@ -673,8 +673,8 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         capitalized : same type as values
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(
         ...     ["temperature", "PRESSURE", "PreCipiTation", "daily rainfall"], dims="x"
         ... )
@@ -700,8 +700,8 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         lowerd : same type as values
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["Temperature", "PRESSURE"], dims="x")
         >>> da
         <xarray.DataArray (x: 2)>
@@ -747,8 +747,8 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         titled : same type as values
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
@@ -770,8 +770,8 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         uppered : same type as values
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["temperature", "HuMiDiTy"], dims="x")
         >>> da
         <xarray.DataArray (x: 2)>
@@ -857,8 +857,8 @@ class StringAccessor(Generic[T_DataArray]):
         isalnum : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["H2O", "NaCl-"], dims="x")
         >>> da
         <xarray.DataArray (x: 2)>
@@ -881,8 +881,8 @@ class StringAccessor(Generic[T_DataArray]):
         isalpha : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["Mn", "H2O", "NaCl-"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
@@ -905,8 +905,8 @@ class StringAccessor(Generic[T_DataArray]):
         isdecimal : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["2.3", "123", "0"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
@@ -929,8 +929,8 @@ class StringAccessor(Generic[T_DataArray]):
         isdigit : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["123", "1.2", "0", "CO2", "NaCl"], dims="x")
         >>> da
         <xarray.DataArray (x: 5)>
@@ -954,8 +954,8 @@ class StringAccessor(Generic[T_DataArray]):
             Array of boolean values with the same shape as the original array indicating whether each
             element of the string array is lowercase (True) or not (False).
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["temperature", "HUMIDITY", "pREciPiTaTioN"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
@@ -978,8 +978,8 @@ class StringAccessor(Generic[T_DataArray]):
         isnumeric : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["123", "2.3", "H2O", "NaCl-", "Mn"], dims="x")
         >>> da
         <xarray.DataArray (x: 5)>
@@ -1002,8 +1002,8 @@ class StringAccessor(Generic[T_DataArray]):
         isspace : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)>
@@ -1026,8 +1026,8 @@ class StringAccessor(Generic[T_DataArray]):
         istitle : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(
         ...     [
         ...         "The Evolution Of Species",
@@ -1058,8 +1058,8 @@ class StringAccessor(Generic[T_DataArray]):
         isupper : array of bool
             Array of boolean values with the same shape as the original array.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["TEMPERATURE", "humidity", "PreCIpiTAtioN"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
@@ -1166,8 +1166,8 @@ class StringAccessor(Generic[T_DataArray]):
             An array of booleans indicating whether the given pattern matches
             the start of each string element.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["$100", "£23", "100"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
@@ -1202,8 +1202,8 @@ class StringAccessor(Generic[T_DataArray]):
             A Series of booleans indicating whether the given pattern matches
             the end of each string element.
 
-        Example
-        -------
+        Examples
+        --------
         >>> da = xr.DataArray(["10C", "10c", "100F"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
