@@ -26,7 +26,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Remove deprecated rasterio backend in favor of rioxarray  (:pull:`7392`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
 
 Deprecations
 ~~~~~~~~~~~~
