@@ -762,11 +762,27 @@ class StringAccessor(Generic[T_DataArray]):
         Casefolding is similar to converting to lowercase,
         but removes all case distinctions.
         This is important in some languages that have more complicated
-        cases and case conversions.
+        cases and case conversions. For example,
+        the 'ß' character in German is case-folded to 'ss', whereas it is lowercased
+        to 'ß'.
 
         Returns
         -------
         casefolded : same type as values
+
+        Examples
+        --------
+        >>> da = xr.DataArray(['TEMPERATURE', 'HuMiDiTy'], dims="item")
+        >>> da
+        array(['TEMPERATURE', 'HuMiDiTy'], dtype='<U11')
+        >>> da.str.casefold()
+        array(['temperature', 'humidity'], dtype='<U11')
+
+        >>> da = xr.DataArray(['ß', 'İ'], dims='x')
+        >>> da
+        array(['ß', 'İ'], dtype='<U1')
+        >>> da.str.casefold()
+        array(['ss', 'i̇'], dtype='<U2')
         """
         return self._apply(func=lambda x: x.casefold())
 
