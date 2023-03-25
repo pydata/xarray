@@ -4,17 +4,28 @@
 Contributing to xarray
 **********************
 
-
 .. note::
 
   Large parts of this document came from the `Pandas Contributing
   Guide <http://pandas.pydata.org/pandas-docs/stable/contributing.html>`_.
 
+We welcome your skills and enthusiasm at the xarray project!.
+
+There are numerous opportunities to contribute, beyond just programming, as you can see below.
+All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas are welcome.
+
+If you have any questions on the process or how to fix something feel free to ask on
+`Discord <https://discord.com/invite/wEKPCt4PDu>`_ or on `Discussions <https://github.com/pydata/xarray/discussions>`_
+
+Feel free to ask questions on the `mailing list <https://groups.google.com/g/xarray>`_.
+
+We also have a biweekly community call, details of which are announced on the
+`Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_. You are very welcome to
+join. If you are new to contributing to open source, we also highly recommend reading
+`this guide <https://opensource.guide/how-to-contribute/>`_.
+
 Where to start?
 ===============
-
-All contributions, bug reports, bug fixes, documentation improvements,
-enhancements, and ideas are welcome.
 
 If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
@@ -24,9 +35,6 @@ and `good first issue
 <https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_
 where you could start out. Once you've found an interesting issue, you can
 return here to get your development environment setup.
-
-Feel free to ask questions on the `mailing list
-<https://groups.google.com/g/xarray>`_.
 
 .. _contributing.bug_reports:
 
