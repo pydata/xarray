@@ -35,6 +35,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`xr.polyval` with non-system standard integer coeffs (:pull:`7619`).
+  By `Shreyal Gupta <https://github.com/Ravenin7>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
