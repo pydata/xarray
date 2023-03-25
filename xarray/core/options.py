@@ -295,7 +295,7 @@ def get_options():
     
     Desciption
     ----------
-    Get options for xarray.
+    Retrieve the current global option for xarray.
     
     
     Parameters
