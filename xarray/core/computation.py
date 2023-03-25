@@ -8,17 +8,8 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import (
-    TYPE_CHECKING,
-    AbstractSet,
-    Any,
-    Callable,
-    Literal,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, overload
 
 import numpy as np
 
@@ -211,7 +202,7 @@ def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
 def build_output_coords_and_indexes(
     args: Iterable[Any],
     signature: _UFuncSignature,
-    exclude_dims: AbstractSet = frozenset(),
+    exclude_dims: Set = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
@@ -561,7 +552,7 @@ def apply_groupby_func(func, *args):
 
 
 def unified_dim_sizes(
-    variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
+    variables: Iterable[Variable], exclude_dims: Set = frozenset()
 ) -> dict[Hashable, int]:
     dim_sizes: dict[Hashable, int] = {}
 
@@ -846,7 +837,7 @@ def apply_ufunc(
     *args: Any,
     input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
-    exclude_dims: AbstractSet = frozenset(),
+    exclude_dims: Set = frozenset(),
     vectorize: bool = False,
     join: JoinOptions = "exact",
     dataset_join: str = "exact",
@@ -1986,7 +1977,7 @@ def polyval(
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."
         )
-    if not np.issubdtype(coeffs[degree_dim].dtype, int):
+    if not np.issubdtype(coeffs[degree_dim].dtype, np.integer):
         raise ValueError(
             f"Dimension `{degree_dim}` should be of integer dtype. Received {coeffs[degree_dim].dtype} instead."
         )
