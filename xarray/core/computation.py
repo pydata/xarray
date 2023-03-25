@@ -1947,8 +1947,30 @@ def polyval(
     Returns
     -------
     DataArray or Dataset
-        Evaluated polynomial.
+    Evaluated polynomial.
 
+
+    Example
+    -------
+    import xarray as xr
+    import numpy as np
+
+    # Create a data array with polynomial coefficients
+    p = xr.DataArray(np.array([1, -2, 3]), dims=('degree',))
+
+    # Create a data array with x values
+    x = xr.DataArray(np.array([0, 1, 2]), dims=('x',))
+
+    # Evaluate the polynomial at the x values
+    y = xr.polyval(p, x)
+
+    # Print the result
+    print(y)
+    
+    
+    
+    
+    
     See Also
     --------
     xarray.DataArray.polyfit
