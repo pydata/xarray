@@ -1948,7 +1948,7 @@ def polyval(
     -------
     DataArray or Dataset
         Evaluated polynomial.
-        
+
     Example
     -------
     import xarray as xr
@@ -1965,7 +1965,7 @@ def polyval(
 
     # Print the result
     print(y)
-   
+
 
     See Also
     --------

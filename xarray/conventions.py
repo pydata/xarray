@@ -660,8 +660,8 @@ def decode_cf(
     Returns
     -------
     Union[xr.Dataset, xr.DataArray]: The decoded xarray Dataset or DataArray
-    
-    
+
+
     Example
     -------
     import xarray as xr
@@ -674,7 +674,7 @@ def decode_cf(
 
     # Print the decoded dataset
     print(decoded)
-    
+
 
     """
     from xarray.backends.common import AbstractDataStore
