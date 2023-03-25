@@ -659,7 +659,23 @@ def decode_cf(
 
     Returns
     -------
-    decoded : Dataset
+    Union[xr.Dataset, xr.DataArray]: The decoded xarray Dataset or DataArray
+    
+    
+    Example
+    -------
+    import xarray as xr
+
+    # Load an example NetCDF file
+    ds = xr.open_dataset('example.nc')
+
+    # Decode the dataset
+    decoded = xr.decode_cf(ds)
+
+    # Print the decoded dataset
+    print(decoded)
+    
+
     """
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
