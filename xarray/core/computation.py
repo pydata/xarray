@@ -1966,11 +1966,11 @@ def polyval(
 
     # Print the result
     print(y)
-    
-    
-    
-    
-    
+
+
+
+
+
     See Also
     --------
     xarray.DataArray.polyfit
