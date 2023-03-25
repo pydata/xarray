@@ -17,7 +17,7 @@ All contributions, bug reports, bug fixes, documentation improvements, enhanceme
 If you have any questions on the process or how to fix something feel free to ask on
 `Discord <https://discord.com/invite/wEKPCt4PDu>`_ or on `Discussions <https://github.com/pydata/xarray/discussions>`_
 
-Feel free to ask questions on the `mailing list <https://groups.google.com/g/xarray>`_.
+We even have our `mailing list <https://groups.google.com/g/xarray>`_ for you to ask questions.
 
 We also have a biweekly community call, details of which are announced on the
 `Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_. You are very welcome to
