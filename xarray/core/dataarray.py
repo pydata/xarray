@@ -1053,7 +1053,7 @@ class DataArray(
 
         Parameters
         ----------
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
@@ -1078,7 +1078,7 @@ class DataArray(
 
         Parameters
         ----------
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
@@ -1097,7 +1097,7 @@ class DataArray(
 
         Parameters
         ----------
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
 
         See Also
@@ -3369,7 +3369,7 @@ class DataArray(
             If True, the dataarray's attributes (`attrs`) will be copied from
             the original object to the new one.  If False, the new
             object will be returned without attributes.
-        **kwargs : dict, optional
+        kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
         Returns
@@ -3624,7 +3624,7 @@ class DataArray(
         ----------
         func : callable
             Function which can be called in the form
-            `f(x, axis=axis, **kwargs)` to return the result of reducing an
+            `f(x, axis=axis, kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dim : "...", str, Iterable of Hashable or None, optional
             Dimension(s) over which to apply `func`. By default `func` is
@@ -3642,7 +3642,7 @@ class DataArray(
             If True, the dimensions which are reduced are left in the result
             as dimensions of size one. Coordinates that use these dimensions
             are removed.
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to `func`.
 
         Returns
@@ -5094,7 +5094,7 @@ class DataArray(
             User-provided function that accepts a DataArray as its first
             parameter. The function will receive a subset or 'block' of this DataArray (see below),
             corresponding to one chunk along each chunked dimension. ``func`` will be
-            executed as ``func(subset_dataarray, *subset_args, **kwargs)``.
+            executed as ``func(subset_dataarray, *subset_args, kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
@@ -5126,7 +5126,7 @@ class DataArray(
         ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
-        equivalent to calling ``func(obj, *args, **kwargs)``.
+        equivalent to calling ``func(obj, *args, kwargs)``.
 
         See Also
         --------
@@ -5936,7 +5936,7 @@ class DataArray(
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        **kwargs : optional
+        kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns

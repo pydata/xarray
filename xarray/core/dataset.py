@@ -728,7 +728,7 @@ class Dataset(
 
         Parameters
         ----------
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
@@ -901,7 +901,7 @@ class Dataset(
 
         Parameters
         ----------
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
@@ -939,7 +939,7 @@ class Dataset(
 
         Parameters
         ----------
-        **kwargs : dict
+        kwargs : dict
             Additional keyword arguments passed on to ``dask.persist``.
 
         See Also
@@ -5661,7 +5661,7 @@ class Dataset(
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        **kwargs : dict, optional
+        kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
         Returns
@@ -5819,7 +5819,7 @@ class Dataset(
         ----------
         func : callable
             Function which can be called in the form
-            `f(x, axis=axis, **kwargs)` to return the result of reducing an
+            `f(x, axis=axis, kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dim : str, Iterable of Hashable or None, optional
             Dimension(s) over which to apply `func`. By default `func` is
@@ -5834,7 +5834,7 @@ class Dataset(
             are removed.
         numeric_only : bool, default: False
             If True, only apply ``func`` to variables with a numeric dtype.
-        **kwargs : Any
+        kwargs : Any
             Additional keyword arguments passed on to ``func``.
 
         Returns
@@ -5916,7 +5916,7 @@ class Dataset(
         Parameters
         ----------
         func : callable
-            Function which can be called in the form `func(x, *args, **kwargs)`
+            Function which can be called in the form `func(x, *args, kwargs)`
             to transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool or None, optional
@@ -5925,7 +5925,7 @@ class Dataset(
             and variables will be returned without copying the attributes.
         args : iterable, optional
             Positional arguments passed on to `func`.
-        **kwargs : Any
+        kwargs : Any
             Keyword arguments passed on to `func`.
 
         Returns
@@ -7534,7 +7534,7 @@ class Dataset(
 
         Parameters
         ----------
-        **kwargs
+        kwargs
             key : str
                 Attribute name.
             value : callable or obj
@@ -7681,7 +7681,7 @@ class Dataset(
         ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
-        equivalent to calling ``func(obj, *args, **kwargs)``.
+        equivalent to calling ``func(obj, *args, kwargs)``.
 
         See Also
         --------
@@ -8577,7 +8577,7 @@ class Dataset(
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        **kwargs : optional
+        kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
