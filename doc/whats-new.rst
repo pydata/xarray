@@ -278,6 +278,9 @@ Documentation
 - Add example of reading and writing individual groups to a single netCDF file to I/O docs page. (:pull:`7338`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 
 .. _whats-new.2022.11.0:
 
