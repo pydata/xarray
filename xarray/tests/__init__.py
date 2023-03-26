@@ -154,9 +154,6 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
     def __getitem__(self, key):
         raise UnexpectedDataAccess("Tried accessing data.")
 
-    def __array__(self):
-        raise UnexpectedDataAccess("Tried accessing data.")
-
 
 class FirstElementAccessibleArray(InaccessibleArray):
     def __getitem__(self, key):
