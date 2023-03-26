@@ -42,8 +42,7 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Update FAQ page on how do I open format X file as an xarray dataset? (:issue:`1285`, :pull:`7638`) using :py:func:`~xarray.open_dataset`
-  By `Harshitha <https://github.com/harshitha1201>`_ , `Tom Nicholas <https://github.com/TomNicholas>`_ and
-  `Michael Niklas <https://github.com/headtr1ck>`_.
+  By `Harshitha <https://github.com/harshitha1201>`_ , `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -54,8 +53,8 @@ v2023.03.0 (March 22, 2023)
 ---------------------------
 
 This release brings many bug fixes, and some new features. The maximum pandas version is pinned to ``<2`` until we can support the new pandas datetime types.
-Thanks to our 20 contributors:
-Abel Aoun, Alex Goodman, Deepak Cherian, Harshitha, Illviljan, Jody Klymak, Joe Hamman, Justus Magin, Mary Gathoni, Mathias Hauser, Mattia Almansi, Mick, Oriol Abril-Pla, Patrick Hoefler, Paul Ockenfuß, Pierre, Shreyal Gupta, Spencer Clark, Tom Nicholas, Tom Vo
+Thanks to our 19 contributors:
+Abel Aoun, Alex Goodman, Deepak Cherian, Illviljan, Jody Klymak, Joe Hamman, Justus Magin, Mary Gathoni, Mathias Hauser, Mattia Almansi, Mick, Oriol Abril-Pla, Patrick Hoefler, Paul Ockenfuß, Pierre, Shreyal Gupta, Spencer Clark, Tom Nicholas, Tom Vo
 
 New Features
 ~~~~~~~~~~~~
