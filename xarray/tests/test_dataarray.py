@@ -4302,7 +4302,9 @@ class TestDataArray:
         assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
 
         da = da.compute()
-        fit = da.curvefit(coords="t", func=np.power, reduce_dims="x", kwargs={"param_names":"a"})
+        fit = da.curvefit(
+            coords="t", func=np.power, reduce_dims="x", kwargs={"param_names": "a"}
+        )
         assert "a" in fit.param
         assert "x" not in fit.dims
 
