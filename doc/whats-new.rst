@@ -41,6 +41,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Update FAQ page on how do I open format X file as an xarray dataset? (:issue:`1285`, :pull:`7638`) using :py:func:`~xarray.open_dataset`
+  By `Harshitha <https://github.com/harshitha1201>`_ , `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
