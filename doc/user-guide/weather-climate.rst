@@ -10,7 +10,7 @@ Weather and climate data
 
     import xarray as xr
 
-Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
+Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include :ref:`automatic labelling of plots<plotting>` with descriptive names and units if proper metadata is present and support for non-standard calendars used in climate science through the ``cftime`` module(Explained in the :ref:`CFTimeIndex` section). There are also a number of :ref:`geosciences-focused projects that build on xarray<ecosystem>`.
 
 .. _Climate and Forecast (CF) conventions: https://cfconventions.org
 
@@ -49,10 +49,10 @@ variable with the attribute, rather than with the dimensions.
 CF-compliant coordinate variables
 ---------------------------------
 
-`MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a `cartopy_crs` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See `their documentation`_ for more information.
+`MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a `cartopy_crs` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See the `metpy documentation`_ for more information.
 
 .. _`MetPy`: https://unidata.github.io/MetPy/dev/index.html
-.. _`their documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
+.. _`metpy documentation`:	https://unidata.github.io/MetPy/dev/tutorials/xarray_tutorial.html#coordinates
 .. _`Cartopy`: https://scitools.org.uk/cartopy/docs/latest/crs/projections.html
 
 .. _CFTimeIndex:

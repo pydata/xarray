@@ -125,6 +125,7 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -n 4
+          --timeout 180
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml

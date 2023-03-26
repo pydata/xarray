@@ -684,9 +684,9 @@ instance and pass this, as follows:
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are many different options for compression and filtering possible with
-zarr. These are described in the
-`zarr documentation <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+There are many different `options for compression and filtering possible with
+zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
@@ -720,7 +720,7 @@ As of xarray version 0.18, xarray by default uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
-`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
 By default, xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
@@ -1165,7 +1165,7 @@ rasterio is installed. Here is an example of how to use
 
         Deprecated in favor of rioxarray.
         For information about transitioning, see:
-        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
+        `rioxarray getting started docs<https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html>``
 
 .. ipython::
     :verbatim:
@@ -1277,7 +1277,7 @@ Formats supported by PyNIO
 
 .. warning::
 
-    The PyNIO backend is deprecated_. PyNIO is no longer maintained_. See
+    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
 
 Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
@@ -1288,8 +1288,8 @@ We recommend installing PyNIO via conda::
     conda install -c conda-forge pynio
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-.. _deprecated: https://github.com/pydata/xarray/issues/4491
-.. _maintained: https://github.com/NCAR/pynio/issues/53
+.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
+.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
 .. _io.PseudoNetCDF:
 

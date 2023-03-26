@@ -1404,7 +1404,7 @@ class TimeResampleGrouper:
             )
             return grouper.first_items(index)
         else:
-            s = pd.Series(np.arange(index.size), index)
+            s = pd.Series(np.arange(index.size), index, copy=False)
             grouper = pd.Grouper(
                 freq=self.freq,
                 closed=self.closed,

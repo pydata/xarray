@@ -20,9 +20,10 @@ dependencies:
   - numba
   - numpy>=1.21,<1.24
   - packaging>=21.3
-  - pandas>=1.4
+  - pandas>=1.4,<2
   - pooch
   - pip
+  - pre-commit
   - pyproj
   - rasterio>=1.1
   - scipy!=1.10.0
