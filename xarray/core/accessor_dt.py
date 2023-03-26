@@ -65,7 +65,7 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
-    values_as_series = pd.Series(values.ravel())
+    values_as_series = pd.Series(values.ravel(), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
@@ -125,7 +125,7 @@ def _round_through_series_or_index(values, name, freq):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if is_np_datetime_like(values.dtype):
-        values_as_series = pd.Series(values.ravel())
+        values_as_series = pd.Series(values.ravel(), copy=False)
         method = getattr(values_as_series.dt, name)
     else:
         values_as_cftimeindex = CFTimeIndex(values.ravel())
@@ -182,7 +182,7 @@ def _strftime_through_series(values, date_format: str):
     """Coerce an array of datetime-like values to a pandas Series and
     apply string formatting
     """
-    values_as_series = pd.Series(values.ravel())
+    values_as_series = pd.Series(values.ravel(), copy=False)
     strs = values_as_series.dt.strftime(date_format)
     return strs.values.reshape(values.shape)
 
@@ -574,7 +574,7 @@ class CombinedDatetimelikeAccessor(
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
-        if not _contains_datetime_like_objects(obj):
+        if not _contains_datetime_like_objects(obj.variable):
             raise TypeError(
                 "'.dt' accessor only available for "
                 "DataArray with datetime64 timedelta64 dtype or "

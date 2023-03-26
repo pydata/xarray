@@ -73,7 +73,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.pycompat import array_type, is_duck_array, is_duck_dask_array
 from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
     Default,
@@ -2292,7 +2292,8 @@ class Dataset(
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                v = np.asarray(v)
+                if not is_duck_array(v):
+                    v = np.asarray(v)
 
                 if v.dtype.kind in "US":
                     index = self._indexes[k].to_pandas_index()
@@ -5051,9 +5052,9 @@ class Dataset(
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
+            ordered_bad_names = [name for name in names if name in bad_names]
             raise ValueError(
-                "One or more of the specified variables "
-                "cannot be found in this dataset"
+                f"These variables cannot be found in this dataset: {ordered_bad_names}"
             )
 
     def drop_vars(
@@ -5474,7 +5475,7 @@ class Dataset(
             - all : if all values are NA, drop that label
 
         thresh : int or None, optional
-            If supplied, require this many non-NA values.
+            If supplied, require this many non-NA values (summed over all the subset variables).
         subset : iterable of hashable or None, optional
             Which variables to check for missing values. By default, all
             variables in the dataset are checked.
@@ -8933,6 +8934,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
@@ -9014,6 +9017,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby
         DataArray.groupby_bins
         core.groupby.DatasetGroupBy
