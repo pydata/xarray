@@ -86,7 +86,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        return self[key]
+        return self[key]  # type: ignore [index]
 
 
 class AbstractDataStore:
