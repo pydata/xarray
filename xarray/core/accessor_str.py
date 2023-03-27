@@ -1128,7 +1128,8 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Using regex:
-        >>> counts = da.str.count(r"jj")
+        >>> pat = 'jj\\w+'
+        >>> counts = da.str.count(pat)
         >>> counts
         <xarray.DataArray (x: 3)>
         array([1, 1, 0])
