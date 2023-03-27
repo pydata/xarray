@@ -666,7 +666,7 @@ class Dataset(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
 
-    def reset_encoding(self: T_Dataset) -> None:
+    def reset_encoding(self: T_Dataset) -> T_Dataset:
         """Return a new Dataset without encoding on the dataset or any of its
         variables/coords."""
         variables = {k: v.reset_encoding() for k, v in self.variables.items()}
