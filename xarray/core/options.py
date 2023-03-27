@@ -290,8 +290,8 @@ class set_options:
         self._apply_update(self.old)
 
 
-def get_options(*, join: str = 'inner', copy: bool = True, 
-                indexes: Tuple[str, ...] = None, 
+def get_options(*, join: str = 'inner', copy: bool = True,
+                indexes: Tuple[str, ...] = None,
                 exclude: FrozenSet[str] = frozenset(),
                 fill_value: Any = None) -> FrozenDict[str, Any]):
     """
