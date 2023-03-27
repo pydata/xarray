@@ -28,6 +28,7 @@ from xarray.core.utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
+    is_scalar,
     to_0d_array,
 )
 
@@ -840,9 +841,21 @@ def decompose_indexer(
     raise TypeError(f"unexpected key type: {indexer}")
 
 
-def _decompose_slice(key, size):
+def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
     """convert a slice to successive two slices. The first slice always has
     a positive step.
+
+    >>> _decompose_slice(slice(2, 98, 2), 99)
+    (slice(2, 98, 2), slice(None, None, None))
+
+    >>> _decompose_slice(slice(98, 2, -2), 99)
+    (slice(4, 99, 2), slice(None, None, -1))
+
+    >>> _decompose_slice(slice(98, 2, -2), 98)
+    (slice(3, 98, 2), slice(None, None, -1))
+
+    >>> _decompose_slice(slice(360, None, -10), 361)
+    (slice(0, 361, 10), slice(None, None, -1))
     """
     start, stop, step = key.indices(size)
     if step > 0:
@@ -850,10 +863,10 @@ def _decompose_slice(key, size):
         return key, slice(None)
     else:
         # determine stop precisely for step > 1 case
+        # Use the range object to do the calculation
         # e.g. [98:2:-2] -> [98:3:-2]
-        stop = start + int((stop - start - 1) / step) * step + 1
-        start, stop = stop + 1, start + 1
-        return slice(start, stop, -step), slice(None, None, -1)
+        exact_stop = range(start, stop, step)[-1]
+        return slice(exact_stop, start + 1, -step), slice(None, None, -1)
 
 
 def _decompose_vectorized_indexer(
@@ -979,12 +992,25 @@ def _decompose_outer_indexer(
            [14, 15, 14],
            [ 8,  9,  8]])
     """
-    if indexing_support == IndexingSupport.VECTORIZED:
-        return indexer, BasicIndexer(())
+    backend_indexer: list[Any] = []
+    np_indexer: list[Any] = []
+
     assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
-    backend_indexer: list[Any] = []
-    np_indexer = []
+    if indexing_support == IndexingSupport.VECTORIZED:
+        for k, s in zip(indexer.tuple, shape):
+            if isinstance(k, slice):
+                # If it is a slice, then we will slice it as-is
+                # (but make its step positive) in the backend,
+                bk_slice, np_slice = _decompose_slice(k, s)
+                backend_indexer.append(bk_slice)
+                np_indexer.append(np_slice)
+            else:
+                backend_indexer.append(k)
+                if not is_scalar(k):
+                    np_indexer.append(slice(None))
+        return type(indexer)(tuple(backend_indexer)), BasicIndexer(tuple(np_indexer))
+
     # make indexer positive
     pos_indexer: list[np.ndarray | int | np.number] = []
     for k, s in zip(indexer.tuple, shape):
