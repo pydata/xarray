@@ -1128,7 +1128,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Using regex:
-        >>> pat = 'jj\\w+'
+        >>> pat = "jj\\w+"
         >>> counts = da.str.count(pat)
         >>> counts
         <xarray.DataArray (x: 3)>
@@ -1136,7 +1136,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Using an array of strings (the pattern will be broadcast against the array):
-        >>> pat= xr.DataArray(["jj", "JJ"], dims="y")
+        >>> pat = xr.DataArray(["jj", "JJ"], dims="y")
         >>> counts = da.str.count(pat)
         >>> counts
         <xarray.DataArray (x: 3, y: 2)>
