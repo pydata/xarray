@@ -427,6 +427,16 @@ class TestPlot(PlotTestCase):
             _, unique_counts = np.unique(v[:-1], axis=0, return_counts=True)
             assert np.all(unique_counts == 1)
 
+    def test_str_coordinates_pcolormesh(self) -> None:
+        # test for #6775
+        x = DataArray(
+            [[1, 2, 3], [4, 5, 6]],
+            dims=("a", "b"),
+            coords={"a": [1, 2], "b": ["a", "b", "c"]},
+        )
+        x.plot.pcolormesh()
+        x.T.plot.pcolormesh()
+
     def test_contourf_cmap_set(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
