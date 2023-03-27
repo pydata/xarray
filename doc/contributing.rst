@@ -11,17 +11,20 @@ Contributing to xarray
   Guide <http://pandas.pydata.org/pandas-docs/stable/contributing.html>`_.
 
 We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
-contribute, beyond just programming, as you can see below.
-All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas
-are welcome.
+contribute beyond just writing code.
+All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
+and other ideas are welcome.
 
-If you have any questions on the process or how to fix something feel free to ask on
-`Discord <https://discord.com/invite/wEKPCt4PDu>`_ or on `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
-or on our `mailing list <https://groups.google.com/g/xarray>`_.
+If you have any questions on the process or how to fix something feel free to ask us!
+The recommended place to ask a question is  on `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
+, but we also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
+`mailing list <https://groups.google.com/g/xarray>`_. There is also a
+`"python-xarray" tag on Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`_ which we monitor for questions.
 
 We also have a biweekly community call, details of which are announced on the
 `Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_.
-You are very welcome to join.
+You are very welcome to join! Though we would love to hear from you, there is no expectation to
+contribute during the meeting either - you are always welcome to just sit in and listen.
 
 Where to start?
 ===============
@@ -770,6 +773,9 @@ Contributing your changes to *xarray*
 
 Committing your code
 --------------------
+
+`Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
+are the mechanism for contributing to xarray's code and documentation.
 
 Keep style fixes to a separate commit to make your pull request more readable.
 
