@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import gc
 import pickle
 import threading
@@ -8,6 +10,7 @@ import pytest
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
+from xarray.tests import assert_no_warnings
 
 
 @pytest.fixture(params=[1, 2, 3, None])
@@ -19,7 +22,7 @@ def file_cache(request):
         yield LRUCache(maxsize)
 
 
-def test_file_manager_mock_write(file_cache):
+def test_file_manager_mock_write(file_cache) -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
     lock = mock.MagicMock(spec=threading.Lock())
@@ -36,18 +39,24 @@ def test_file_manager_mock_write(file_cache):
     lock.__enter__.assert_has_calls([mock.call(), mock.call()])
 
 
-@pytest.mark.parametrize("expected_warning", [None, RuntimeWarning])
-def test_file_manager_autoclose(expected_warning):
+@pytest.mark.parametrize("warn_for_unclosed_files", [True, False])
+def test_file_manager_autoclose(warn_for_unclosed_files) -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(return_value=mock_file)
-    cache = {}
+    cache: dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
     assert cache
 
-    with set_options(warn_for_unclosed_files=expected_warning is not None):
-        with pytest.warns(expected_warning):
+    # can no longer use pytest.warns(None)
+    if warn_for_unclosed_files:
+        ctx = pytest.warns(RuntimeWarning)
+    else:
+        ctx = assert_no_warnings()  # type: ignore
+
+    with set_options(warn_for_unclosed_files=warn_for_unclosed_files):
+        with ctx:
             del manager
             gc.collect()
 
@@ -55,10 +64,10 @@ def test_file_manager_autoclose(expected_warning):
     mock_file.close.assert_called_once_with()
 
 
-def test_file_manager_autoclose_while_locked():
+def test_file_manager_autoclose_while_locked() -> None:
     opener = mock.Mock()
     lock = threading.Lock()
-    cache = {}
+    cache: dict = {}
 
     manager = CachingFileManager(opener, "filename", lock=lock, cache=cache)
     manager.acquire()
@@ -74,64 +83,88 @@ def test_file_manager_autoclose_while_locked():
     assert cache
 
 
-def test_file_manager_repr():
+def test_file_manager_repr() -> None:
     opener = mock.Mock()
     manager = CachingFileManager(opener, "my-file")
     assert "my-file" in repr(manager)
 
 
-def test_file_manager_refcounts():
+def test_file_manager_cache_and_refcounts() -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
-    cache = {}
-    ref_counts = {}
+    cache: dict = {}
+    ref_counts: dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     assert ref_counts[manager._key] == 1
-    manager.acquire()
-    assert cache
 
-    manager2 = CachingFileManager(
-        opener, "filename", cache=cache, ref_counts=ref_counts
-    )
-    assert cache
-    assert manager._key == manager2._key
-    assert ref_counts[manager._key] == 2
+    assert not cache
+    manager.acquire()
+    assert len(cache) == 1
 
     with set_options(warn_for_unclosed_files=False):
         del manager
-        gc.collect()
-
-    assert cache
-    assert ref_counts[manager2._key] == 1
-    mock_file.close.assert_not_called()
-
-    with set_options(warn_for_unclosed_files=False):
-        del manager2
         gc.collect()
 
     assert not ref_counts
     assert not cache
 
 
-def test_file_manager_replace_object():
-    opener = mock.Mock()
-    cache = {}
-    ref_counts = {}
+def test_file_manager_cache_repeated_open() -> None:
+    mock_file = mock.Mock()
+    opener = mock.Mock(spec=open, return_value=mock_file)
+    cache: dict = {}
 
-    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
+    manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
-    assert ref_counts[manager._key] == 1
-    assert cache
+    assert len(cache) == 1
 
-    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
-    assert ref_counts[manager._key] == 1
-    assert cache
+    manager2 = CachingFileManager(opener, "filename", cache=cache)
+    manager2.acquire()
+    assert len(cache) == 2
 
-    manager.close()
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    assert len(cache) == 1
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager2
+        gc.collect()
+
+    assert not cache
 
 
-def test_file_manager_write_consecutive(tmpdir, file_cache):
+def test_file_manager_cache_with_pickle(tmpdir) -> None:
+    path = str(tmpdir.join("testing.txt"))
+    with open(path, "w") as f:
+        f.write("data")
+    cache: dict = {}
+
+    with mock.patch("xarray.backends.file_manager.FILE_CACHE", cache):
+        assert not cache
+
+        manager = CachingFileManager(open, path, mode="r")
+        manager.acquire()
+        assert len(cache) == 1
+
+        manager2 = pickle.loads(pickle.dumps(manager))
+        manager2.acquire()
+        assert len(cache) == 1
+
+        with set_options(warn_for_unclosed_files=False):
+            del manager
+            gc.collect()
+        # assert len(cache) == 1
+
+        with set_options(warn_for_unclosed_files=False):
+            del manager2
+            gc.collect()
+        assert not cache
+
+
+def test_file_manager_write_consecutive(tmpdir, file_cache) -> None:
     path1 = str(tmpdir.join("testing1.txt"))
     path2 = str(tmpdir.join("testing2.txt"))
     manager1 = CachingFileManager(open, path1, mode="w", cache=file_cache)
@@ -154,7 +187,7 @@ def test_file_manager_write_consecutive(tmpdir, file_cache):
         assert f.read() == "bar"
 
 
-def test_file_manager_write_concurrent(tmpdir, file_cache):
+def test_file_manager_write_concurrent(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
     manager = CachingFileManager(open, path, mode="w", cache=file_cache)
     f1 = manager.acquire()
@@ -174,7 +207,7 @@ def test_file_manager_write_concurrent(tmpdir, file_cache):
         assert f.read() == "foobarbaz"
 
 
-def test_file_manager_write_pickle(tmpdir, file_cache):
+def test_file_manager_write_pickle(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
     manager = CachingFileManager(open, path, mode="w", cache=file_cache)
     f = manager.acquire()
@@ -190,7 +223,7 @@ def test_file_manager_write_pickle(tmpdir, file_cache):
         assert f.read() == "foobar"
 
 
-def test_file_manager_read(tmpdir, file_cache):
+def test_file_manager_read(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
 
     with open(path, "w") as f:
@@ -202,7 +235,7 @@ def test_file_manager_read(tmpdir, file_cache):
     manager.close()
 
 
-def test_file_manager_acquire_context(tmpdir, file_cache):
+def test_file_manager_acquire_context(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
 
     with open(path, "w") as f:

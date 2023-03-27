@@ -1,12 +1,11 @@
 """Coders for strings."""
+from __future__ import annotations
+
 from functools import partial
 
 import numpy as np
 
-from ..core import indexing
-from ..core.pycompat import is_duck_dask_array
-from ..core.variable import Variable
-from .variables import (
+from xarray.coding.variables import (
     VariableCoder,
     lazy_elemwise_func,
     pop_to,
@@ -14,9 +13,14 @@ from .variables import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
+from xarray.core import indexing
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.variable import Variable
 
 
 def create_vlen_dtype(element_type):
+    if element_type not in (str, bytes):
+        raise TypeError(f"unsupported type for vlen_dtype: {element_type!r}")
     # based on h5py.special_dtype
     return np.dtype("O", metadata={"element_type": element_type})
 
@@ -221,11 +225,11 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype("S" + str(self.array.shape[-1]))
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape[:-1]
 
     def __repr__(self):
-        return "{}({!r})".format(type(self).__name__, self.array)
+        return f"{type(self).__name__}({self.array!r})"
 
     def __getitem__(self, key):
         # require slicing the last dimension completely

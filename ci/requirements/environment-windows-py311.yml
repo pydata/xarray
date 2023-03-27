@@ -1,44 +1,45 @@
 name: xarray-tests
 channels:
   - conda-forge
-  - nodefaults
 dependencies:
-  - python=3.8
-  - black
-  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
-  - cfgrib
+  # - cdms2  # Not available on Windows
+  # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
   - cftime
-  - coveralls
+  - dask-core
+  - distributed
+  - flox
+  - fsspec!=2021.7.0
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
-  - lxml    # Optional dep of pydap
+  - iris
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  - numba
+  # - numba
+  # - numbagg
   - numpy
-  - pandas
+  - packaging
+  - pandas<2
   - pint
   - pip
+  - pre-commit
   - pseudonetcdf
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
-  - setuptools
-  - sparse
+  # - sparse
   - toolz
+  - typing_extensions
   - zarr
-  - pip:
-    - numbagg

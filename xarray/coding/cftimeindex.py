@@ -38,21 +38,31 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
+import math
 import re
 import warnings
 from datetime import timedelta
-from distutils.version import LooseVersion
-from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
+from xarray.coding.times import (
+    _STANDARD_CALENDARS,
+    cftime_to_nptime,
+    infer_calendar_name,
+)
+from xarray.core.common import _contains_cftime_datetimes
+from xarray.core.options import OPTIONS
 from xarray.core.utils import is_scalar
 
-from ..core.common import _contains_cftime_datetimes
-from ..core.options import OPTIONS
-from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 
 # constants for cftimeindex.repr
 CFTIME_REPR_LENGTH = 19
@@ -60,7 +70,7 @@ ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
-OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS: tuple[type[Exception], ...]
 try:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 except AttributeError:
@@ -114,7 +124,8 @@ def parse_iso8601_like(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     default = date_type(1, 1, 1)
     result = parse_iso8601_like(timestr)
@@ -127,12 +138,6 @@ def _parse_iso8601_with_reso(date_type, timestr):
             # TODO: Consider adding support for sub-second resolution?
             replace[attr] = int(value)
             resolution = attr
-    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
-        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-        # the returned date object in versions of cftime between 1.0.2 and
-        # 1.0.3.4.  It can be removed for versions of cftime greater than
-        # 1.0.3.4.
-        replace["dayofwk"] = -1
     return default.replace(**replace), resolution
 
 
@@ -189,17 +194,16 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
-        version = cftime.__version__
-
-        if LooseVersion(version) >= LooseVersion(min_cftime_version):
+        if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
         else:
             raise ImportError(
-                "The {!r} accessor requires a minimum "
-                "version of cftime of {}. Found an "
-                "installed version of {}.".format(name, min_cftime_version, version)
+                f"The {name:!r} accessor requires a minimum "
+                f"version of cftime of {min_cftime_version}. Found an "
+                f"installed version of {cftime.__version__}."
             )
 
     f.__name__ = name
@@ -215,7 +219,8 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if len(data) > 0:
         sample = data[0]
@@ -248,7 +253,7 @@ def format_times(
 ):
     """Format values of cftimeindex as pd.Index."""
     n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
-    n_rows = int(np.ceil(len(index) / n_per_row))
+    n_rows = math.ceil(len(index) / n_per_row)
 
     representation = ""
     for row in range(n_rows):
@@ -309,7 +314,7 @@ class CFTimeIndex(pd.Index):
     )
     date_type = property(get_date_type)
 
-    def __new__(cls, data, name=None):
+    def __new__(cls, data, name=None, **kwargs):
         assert_all_valid_date_type(data)
         if name is None and hasattr(data, "name"):
             name = data.name
@@ -406,7 +411,7 @@ class CFTimeIndex(pd.Index):
 
         times = self._data
 
-        if self.is_monotonic:
+        if self.is_monotonic_increasing:
             if len(times) and (
                 (start < times[0] and end < times[0])
                 or (start > times[-1] and end > times[-1])
@@ -458,12 +463,12 @@ class CFTimeIndex(pd.Index):
         indexer = np.where(distance <= tolerance, indexer, -1)
         return indexer
 
-    def get_loc(self, key, method=None, tolerance=None):
+    def get_loc(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
         if isinstance(key, str):
             return self._get_string_slice(key)
         else:
-            return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
+            return super().get_loc(key)
 
     def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
@@ -510,7 +515,7 @@ class CFTimeIndex(pd.Index):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(self, n, freq):
+    def shift(self, n: int | float, freq: str | timedelta):
         """Shift the CFTimeIndex a multiple of the given frequency.
 
         See the documentation for :py:func:`~xarray.cftime_range` for a
@@ -518,7 +523,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        n : int
+        n : int, float if freq of days or below
             Periods to shift by
         freq : str or datetime.timedelta
             A frequency string or datetime.timedelta object to shift by
@@ -536,18 +541,19 @@ class CFTimeIndex(pd.Index):
         >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
         >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
+        >>> index.shift(1.5, "D")
+        CFTimeIndex([2000-02-01 12:00:00],
+                    dtype='object', length=1, calendar='standard', freq=None)
         """
-        from .cftime_offsets import to_offset
-
-        if not isinstance(n, int):
-            raise TypeError(f"'n' must be an int, got {n}.")
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
+            from xarray.coding.cftime_offsets import to_offset
+
             return self + n * to_offset(freq)
         else:
             raise TypeError(
@@ -625,7 +631,7 @@ class CFTimeIndex(pd.Index):
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-                    dtype='object', length=2, calendar='gregorian', freq=None)
+                    dtype='object', length=2, calendar='standard', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
@@ -676,7 +682,7 @@ class CFTimeIndex(pd.Index):
     @property
     def asi8(self):
         """Convert to integers with units of microseconds since 1970-01-01."""
-        from ..core.resample_cftime import exact_cftime_datetime_difference
+        from xarray.core.resample_cftime import exact_cftime_datetime_difference
 
         epoch = self.date_type(1970, 1, 1)
         return np.array(
@@ -690,20 +696,20 @@ class CFTimeIndex(pd.Index):
     @property
     def calendar(self):
         """The calendar used by the datetimes in the index."""
-        from .times import infer_calendar_name
+        from xarray.coding.times import infer_calendar_name
 
         return infer_calendar_name(self)
 
     @property
     def freq(self):
         """The frequency used by the dates in the index."""
-        from .frequencies import infer_freq
+        from xarray.coding.frequencies import infer_freq
 
         return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
-        from .cftime_offsets import CFTIME_TICKS, to_offset
+        from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
 
         offset = to_offset(freq)
         if not isinstance(offset, CFTIME_TICKS):

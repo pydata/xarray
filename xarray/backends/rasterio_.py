@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import os
 import warnings
 
 import numpy as np
 
-from ..core import indexing
-from ..core.dataarray import DataArray
-from ..core.utils import is_scalar
-from .common import BackendArray
-from .file_manager import CachingFileManager
-from .locks import SerializableLock
+from xarray.backends.common import BackendArray
+from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.locks import SerializableLock
+from xarray.core import indexing
+from xarray.core.dataarray import DataArray
+from xarray.core.utils import is_scalar
 
 # TODO: should this be GDAL_LOCK instead?
 RASTERIO_LOCK = SerializableLock()
@@ -46,7 +48,7 @@ class RasterioArrayWrapper(BackendArray):
         return self._dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self._shape
 
     def _get_indexer(self, key):
@@ -170,7 +172,13 @@ def open_rasterio(
     lock=None,
     **kwargs,
 ):
-    """Open a file with rasterio (experimental).
+    """Open a file with rasterio.
+
+    .. deprecated:: 0.20.0
+
+        Deprecated in favor of rioxarray.
+        For information about transitioning, see:
+        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
 
     This should work with any file that rasterio can open (most often:
     geoTIFF). The x and y coordinates are generated automatically from the
@@ -178,49 +186,6 @@ def open_rasterio(
     `"PixelIsArea" Raster Space
     <http://web.archive.org/web/20160326194152/http://remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2>`_
     for more information).
-
-    You can generate 2D coordinates from the file's attributes with::
-
-        >>> from affine import Affine
-        >>> da = xr.open_rasterio(
-        ...     "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif"
-        ... )
-        >>> da
-        <xarray.DataArray (band: 3, y: 718, x: 791)>
-        [1703814 values with dtype=uint8]
-        Coordinates:
-          * band     (band) int64 1 2 3
-          * y        (y) float64 2.827e+06 2.826e+06 2.826e+06 ... 2.612e+06 2.612e+06
-          * x        (x) float64 1.021e+05 1.024e+05 1.027e+05 ... 3.389e+05 3.392e+05
-        Attributes:
-            transform:      (300.0379266750948, 0.0, 101985.0, 0.0, -300.041782729805...
-            crs:            +init=epsg:32618
-            res:            (300.0379266750948, 300.041782729805)
-            is_tiled:       0
-            nodatavals:     (0.0, 0.0, 0.0)
-            scales:         (1.0, 1.0, 1.0)
-            offsets:        (0.0, 0.0, 0.0)
-            AREA_OR_POINT:  Area
-        >>> transform = Affine(*da.attrs["transform"])
-        >>> transform
-        Affine(300.0379266750948, 0.0, 101985.0,
-               0.0, -300.041782729805, 2826915.0)
-        >>> nx, ny = da.sizes["x"], da.sizes["y"]
-        >>> x, y = transform * np.meshgrid(np.arange(nx) + 0.5, np.arange(ny) + 0.5)
-        >>> x
-        array([[102135.01896334, 102435.05689001, 102735.09481669, ...,
-                338564.90518331, 338864.94310999, 339164.98103666],
-               [102135.01896334, 102435.05689001, 102735.09481669, ...,
-                338564.90518331, 338864.94310999, 339164.98103666],
-               [102135.01896334, 102435.05689001, 102735.09481669, ...,
-                338564.90518331, 338864.94310999, 339164.98103666],
-               ...,
-               [102135.01896334, 102435.05689001, 102735.09481669, ...,
-                338564.90518331, 338864.94310999, 339164.98103666],
-               [102135.01896334, 102435.05689001, 102735.09481669, ...,
-                338564.90518331, 338864.94310999, 339164.98103666],
-               [102135.01896334, 102435.05689001, 102735.09481669, ...,
-                338564.90518331, 338864.94310999, 339164.98103666]])
 
     Parameters
     ----------
@@ -252,6 +217,13 @@ def open_rasterio(
     data : DataArray
         The newly created DataArray.
     """
+    warnings.warn(
+        "open_rasterio is Deprecated in favor of rioxarray. "
+        "For information about transitioning, see: "
+        "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     import rasterio
     from rasterio.vrt import WarpedVRT
 
@@ -397,7 +369,7 @@ def open_rasterio(
 
         # augment the token with the file modification time
         try:
-            mtime = os.path.getmtime(filename)
+            mtime = os.path.getmtime(os.path.expanduser(filename))
         except OSError:
             # the filename is probably an s3 bucket rather than a regular file
             mtime = None

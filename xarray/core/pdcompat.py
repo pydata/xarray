@@ -1,6 +1,3 @@
-# The remove_unused_levels defined here was copied based on the source code
-# defined in pandas.core.indexes.muli.py
-
 # For reference, here is a copy of the pandas copyright notice:
 
 # (c) 2011-2012, Lambda Foundry, Inc. and PyData Development Team
@@ -36,18 +33,14 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
-from distutils.version import LooseVersion
+from enum import Enum
+from typing import Literal
 
 import pandas as pd
 
-# allow ourselves to type checks for Panel even after it's removed
-if LooseVersion(pd.__version__) < "0.25.0":
-    Panel = pd.Panel
-else:
-
-    class Panel:  # type: ignore[no-redef]
-        pass
+from xarray.coding import cftime_offsets
 
 
 def count_not_none(*args) -> int:
@@ -56,3 +49,45 @@ def count_not_none(*args) -> int:
     Copied from pandas.core.common.count_not_none (not part of the public API)
     """
     return sum(arg is not None for arg in args)
+
+
+class _NoDefault(Enum):
+    """Used by pandas to specify a default value for a deprecated argument.
+    Copied from pandas._libs.lib._NoDefault.
+
+    See also:
+    - pandas-dev/pandas#30788
+    - pandas-dev/pandas#40684
+    - pandas-dev/pandas#40715
+    - pandas-dev/pandas#47045
+    """
+
+    no_default = "NO_DEFAULT"
+
+    def __repr__(self) -> str:
+        return "<no_default>"
+
+
+no_default = (
+    _NoDefault.no_default
+)  # Sentinel indicating the default value following pandas
+NoDefault = Literal[_NoDefault.no_default]  # For typing following pandas
+
+
+def _convert_base_to_offset(base, freq, index):
+    """Required until we officially deprecate the base argument to resample.  This
+    translates a provided `base` argument to an `offset` argument, following logic
+    from pandas.
+    """
+    from xarray.coding.cftimeindex import CFTimeIndex
+
+    if isinstance(index, pd.DatetimeIndex):
+        freq = pd.tseries.frequencies.to_offset(freq)
+        if isinstance(freq, pd.offsets.Tick):
+            return pd.Timedelta(base * freq.nanos // freq.n)
+    elif isinstance(index, CFTimeIndex):
+        freq = cftime_offsets.to_offset(freq)
+        if isinstance(freq, cftime_offsets.Tick):
+            return base * freq.as_timedelta() // freq.n
+    else:
+        raise ValueError("Can only resample using a DatetimeIndex or CFTimeIndex.")

@@ -1,37 +1,20 @@
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
+from __future__ import annotations
 
 import collections
 import itertools
 import operator
-from typing import (
-    Any,
-    Callable,
-    DefaultDict,
-    Dict,
-    Hashable,
-    Iterable,
-    List,
-    Mapping,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
-from .alignment import align
-from .dataarray import DataArray
-from .dataset import Dataset
+from xarray.core.alignment import align
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.pycompat import is_dask_collection
 
-T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+if TYPE_CHECKING:
+    from xarray.core.types import T_Xarray
 
 
 def unzip(iterable):
@@ -48,9 +31,8 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 
 
 def check_result_variables(
-    result: Union[DataArray, Dataset], expected: Mapping[str, Any], kind: str
+    result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
-
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":
@@ -108,6 +90,8 @@ def make_meta(obj):
     else:
         return obj
 
+    from dask.array.utils import meta_from_array
+
     meta = Dataset()
     for name, variable in obj.variables.items():
         meta_obj = meta_from_array(variable.data, ndim=variable.ndim)
@@ -121,8 +105,8 @@ def make_meta(obj):
 
 
 def infer_template(
-    func: Callable[..., T_DSorDA], obj: Union[DataArray, Dataset], *args, **kwargs
-) -> T_DSorDA:
+    func: Callable[..., T_Xarray], obj: DataArray | Dataset, *args, **kwargs
+) -> T_Xarray:
     """Infer return object by running the function on meta objects."""
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
@@ -143,7 +127,7 @@ def infer_template(
     return template
 
 
-def make_dict(x: Union[DataArray, Dataset]) -> Dict[Hashable, Any]:
+def make_dict(x: DataArray | Dataset) -> dict[Hashable, Any]:
     """Map variable name to numpy(-like) data
     (Dataset.to_dict() is too complicated).
     """
@@ -161,12 +145,12 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
 
 
 def map_blocks(
-    func: Callable[..., T_DSorDA],
-    obj: Union[DataArray, Dataset],
+    func: Callable[..., T_Xarray],
+    obj: DataArray | Dataset,
     args: Sequence[Any] = (),
-    kwargs: Mapping[str, Any] = None,
-    template: Union[DataArray, Dataset] = None,
-) -> T_DSorDA:
+    kwargs: Mapping[str, Any] | None = None,
+    template: DataArray | Dataset | None = None,
+) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.
 
     .. warning::
@@ -266,7 +250,7 @@ def map_blocks(
 
     def _wrapper(
         func: Callable,
-        args: List,
+        args: list,
         kwargs: dict,
         arg_is_array: Iterable[bool],
         expected: dict,
@@ -291,7 +275,7 @@ def map_blocks(
             )
 
         # check that index lengths and values are as expected
-        for name, index in result.xindexes.items():
+        for name, index in result._indexes.items():
             if name in expected["shapes"]:
                 if result.sizes[name] != expected["shapes"][name]:
                     raise ValueError(
@@ -324,14 +308,22 @@ def map_blocks(
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     for value in kwargs.values():
-        if dask.is_dask_collection(value):
+        if is_dask_collection(value):
             raise TypeError(
                 "Cannot pass dask collections in kwargs yet. Please compute or "
                 "load values before passing to map_blocks."
             )
 
-    if not dask.is_dask_collection(obj):
+    if not is_dask_collection(obj):
         return func(obj, *args, **kwargs)
+
+    try:
+        import dask
+        import dask.array
+        from dask.highlevelgraph import HighLevelGraph
+
+    except ImportError:
+        pass
 
     all_args = [obj] + list(args)
     is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in all_args]
@@ -348,8 +340,8 @@ def map_blocks(
     # all xarray objects must be aligned. This is consistent with apply_ufunc.
     aligned = align(*xarray_objs, join="exact")
     xarray_objs = tuple(
-        dataarray_to_dataset(arg) if is_da else arg
-        for is_da, arg in zip(is_array, aligned)
+        dataarray_to_dataset(arg) if isinstance(arg, DataArray) else arg
+        for arg in aligned
     )
 
     _, npargs = unzip(
@@ -358,33 +350,33 @@ def map_blocks(
 
     # check that chunk sizes are compatible
     input_chunks = dict(npargs[0].chunks)
-    input_indexes = dict(npargs[0].xindexes)
+    input_indexes = dict(npargs[0]._indexes)
     for arg in xarray_objs[1:]:
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
-        input_indexes.update(arg.xindexes)
+        input_indexes.update(arg._indexes)
 
     if template is None:
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
-        template_indexes = set(template.xindexes)
+        template_indexes = set(template._indexes)
         preserved_indexes = template_indexes & set(input_indexes)
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template.xindexes[k] for k in new_indexes})
-        output_chunks = {
+        indexes.update({k: template._indexes[k] for k in new_indexes})
+        output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        indexes = dict(template.xindexes)
-        if isinstance(template, DataArray):
-            output_chunks = dict(
-                zip(template.dims, template.chunks)  # type: ignore[arg-type]
+        indexes = dict(template._indexes)
+        output_chunks = template.chunksizes
+        if not output_chunks:
+            raise ValueError(
+                "Provided template has no dask arrays. "
+                " Please construct a template with appropriately chunked dask arrays."
             )
-        else:
-            output_chunks = dict(template.chunks)
 
     for dim in output_chunks:
         if dim in input_chunks and len(input_chunks[dim]) != len(output_chunks[dim]):
@@ -410,8 +402,10 @@ def map_blocks(
     # for each variable in the dataset, which is the result of the
     # func applied to the values.
 
-    graph: Dict[Any, Any] = {}
-    new_layers: DefaultDict[str, Dict[Any, Any]] = collections.defaultdict(dict)
+    graph: dict[Any, Any] = {}
+    new_layers: collections.defaultdict[str, dict[Any, Any]] = collections.defaultdict(
+        dict
+    )
     gname = "{}-{}".format(
         dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
     )
@@ -511,14 +505,14 @@ def map_blocks(
         graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
 
         # mapping from variable name to dask graph key
-        var_key_map: Dict[Hashable, str] = {}
+        var_key_map: dict[Hashable, str] = {}
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
 
-            key: Tuple[Any, ...] = (gname_l,)
+            key: tuple[Any, ...] = (gname_l,)
             for dim in variable.dims:
                 if dim in chunk_index:
                     key += (chunk_index[dim],)
@@ -557,7 +551,7 @@ def map_blocks(
         attrs=template.attrs,
     )
 
-    for index in result.xindexes:
+    for index in result._indexes:
         result[index].attrs = template[index].attrs
         result[index].encoding = template[index].encoding
 
@@ -567,7 +561,7 @@ def map_blocks(
         for dim in dims:
             if dim in output_chunks:
                 var_chunks.append(output_chunks[dim])
-            elif dim in result.xindexes:
+            elif dim in result._indexes:
                 var_chunks.append((result.sizes[dim],))
             elif dim in template.dims:
                 # new unindexed dimension

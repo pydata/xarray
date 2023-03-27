@@ -110,7 +110,7 @@ stub_da = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...
     @overload
     def {method}(self: T_DataArray, other: DaCompatible) -> T_DataArray: ..."""
 stub_var = """\
@@ -124,7 +124,7 @@ stub_dsgb = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DataArray") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DataArray") -> "Dataset": ...
     @overload
     def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
 stub_dagb = """\
@@ -190,31 +190,36 @@ STUBFILE_PREAMBLE = '''\
 """Stub file for mixin classes with arithmetic operators."""
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
-from typing import NoReturn, TypeVar, Union, overload
+from typing import NoReturn, TypeVar, overload
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
-from .npcompat import ArrayLike
+from .types import (
+    DaCompatible,
+    DsCompatible,
+    GroupByIncompatible,
+    ScalarOrArray,
+    VarCompatible,
+)
 from .variable import Variable
 
 try:
     from dask.array import Array as DaskArray
 except ImportError:
-    DaskArray = np.ndarray
+    DaskArray = np.ndarray  # type: ignore
 
 # DatasetOpsMixin etc. are parent classes of Dataset etc.
+# Because of https://github.com/pydata/xarray/issues/5755, we redefine these. Generally
+# we use the ones in `types`. (We're open to refining this, and potentially integrating
+# the `py` & `pyi` files to simplify them.)
 T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
 T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
-T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
+T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")'''
 
-ScalarOrArray = Union[ArrayLike, np.generic, np.ndarray, DaskArray]
-DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
-DaCompatible = Union[DataArray, Variable, DataArrayGroupBy, ScalarOrArray]
-VarCompatible = Union[Variable, ScalarOrArray]
-GroupByIncompatible = Union[Variable, GroupBy]'''
 
 CLASS_PREAMBLE = """{newline}
 class {cls_name}:
@@ -249,7 +254,6 @@ def _render_classbody(method_blocks, is_module):
 
 
 if __name__ == "__main__":
-
     option = sys.argv[1].lower() if len(sys.argv) == 2 else None
     if option not in {"--module", "--stubs"}:
         raise SystemExit(f"Usage: {sys.argv[0]} --module | --stubs")

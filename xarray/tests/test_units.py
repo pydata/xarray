@@ -1,27 +1,31 @@
+from __future__ import annotations
+
 import functools
 import operator
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging import version
+
+import xarray as xr
+from xarray.core import dtypes, duck_array_ops
+from xarray.tests import (
+    assert_allclose,
+    assert_duckarray_allclose,
+    assert_equal,
+    assert_identical,
+    requires_dask,
+    requires_matplotlib,
+)
+from xarray.tests.test_plot import PlotTestCase
+from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
 
-import xarray as xr
-from xarray.core import dtypes, duck_array_ops
-
-from . import (
-    assert_allclose,
-    assert_duckarray_allclose,
-    assert_equal,
-    assert_identical,
-    requires_matplotlib,
-)
-from .test_plot import PlotTestCase
-from .test_variable import _PAD_XR_NP_ARGS
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
@@ -29,7 +33,7 @@ DimensionalityError = pint.errors.DimensionalityError
 
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
-unit_registry = pint.UnitRegistry(force_ndarray=True)
+unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
 
@@ -145,10 +149,10 @@ def strip_units(obj):
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
     elif isinstance(obj, xr.DataArray):
-        data = array_strip_units(obj.data)
+        data = array_strip_units(obj.variable._data)
         coords = {
             strip_units(name): (
-                (value.dims, array_strip_units(value.data))
+                (value.dims, array_strip_units(value.variable._data))
                 if isinstance(value.data, Quantity)
                 else value  # to preserve multiindexes
             )
@@ -196,8 +200,7 @@ def attach_units(obj, units):
             name: (
                 (value.dims, array_attach_units(value.data, units.get(name) or 1))
                 if name in units
-                # to preserve multiindexes
-                else value
+                else (value.dims, value.data)
             )
             for name, value in obj.coords.items()
         }
@@ -1527,8 +1530,12 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -1836,21 +1843,43 @@ class TestVariable:
 
         assert expected == actual
 
+    @pytest.mark.parametrize("dask", [False, pytest.param(True, marks=[requires_dask])])
     @pytest.mark.parametrize(
-        "indices",
+        ["variable", "indexers"],
         (
-            pytest.param(4, id="single index"),
-            pytest.param([5, 2, 9, 1], id="multiple indices"),
+            pytest.param(
+                xr.Variable("x", np.linspace(0, 5, 10)),
+                {"x": 4},
+                id="single value-single indexer",
+            ),
+            pytest.param(
+                xr.Variable("x", np.linspace(0, 5, 10)),
+                {"x": [5, 2, 9, 1]},
+                id="multiple values-single indexer",
+            ),
+            pytest.param(
+                xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
+                {"x": 1, "y": 4},
+                id="single value-multiple indexers",
+            ),
+            pytest.param(
+                xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
+                {"x": [0, 1, 2], "y": [0, 2, 4]},
+                id="multiple values-multiple indexers",
+            ),
         ),
     )
-    def test_isel(self, indices, dtype):
-        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.s
-        variable = xr.Variable("x", array)
+    def test_isel(self, variable, indexers, dask, dtype):
+        if dask:
+            variable = variable.chunk({dim: 2 for dim in variable.dims})
+        quantified = xr.Variable(
+            variable.dims, variable.data.astype(dtype) * unit_registry.s
+        )
 
         expected = attach_units(
-            strip_units(variable).isel(x=indices), extract_units(variable)
+            strip_units(quantified).isel(indexers), extract_units(quantified)
         )
-        actual = variable.isel(x=indices)
+        actual = quantified.isel(indexers)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -2362,8 +2391,12 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -2427,10 +2460,7 @@ class TestDataArray:
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(
-                operator.eq,
-                id="equal",
-            ),
+            pytest.param(operator.eq, id="equal"),
         ),
     )
     @pytest.mark.parametrize(
@@ -3611,7 +3641,10 @@ class TestDataArray:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        assert_identical(expected, actual)
+        if func.name == "reset_index":
+            assert_identical(expected, actual, check_default_indexes=False)
+        else:
+            assert_identical(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
@@ -4057,8 +4090,12 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
@@ -4720,7 +4757,10 @@ class TestDataset:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        if func.name == "reset_index":
+            assert_equal(expected, actual, check_default_indexes=False)
+        else:
+            assert_equal(expected, actual)
 
     @pytest.mark.xfail(
         reason="stacked dimension's labels have to be hashable, but is a numpy.array"
@@ -5318,8 +5358,12 @@ class TestDataset:
         units = extract_units(ds)
 
         args = [] if func.name != "groupby" else ["y"]
-        expected = attach_units(func(strip_units(ds)).mean(*args), units)
-        actual = func(ds).mean(*args)
+        # Doesn't work with flox because pint doesn't implement
+        # ufunc.reduceat or np.bincount
+        #  kwargs = {"engine": "numpy"} if "groupby" in func.name else {}
+        kwargs = {}
+        expected = attach_units(func(strip_units(ds)).mean(*args, **kwargs), units)
+        actual = func(ds).mean(*args, **kwargs)
 
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
@@ -5460,7 +5504,7 @@ class TestDataset:
     def test_content_manipulation(self, func, variant, dtype):
         variants = {
             "data": (
-                (unit_registry.m ** 3, unit_registry.Pa, unit_registry.degK),
+                (unit_registry.m**3, unit_registry.Pa, unit_registry.degK),
                 1,
                 1,
             ),
@@ -5504,7 +5548,10 @@ class TestDataset:
         actual = func(ds)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        if func.name == "rename_dims":
+            assert_equal(expected, actual, check_default_indexes=False)
+        else:
+            assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -5578,23 +5625,99 @@ class TestDataset:
         assert_equal(expected, actual)
 
 
+@requires_dask
+class TestPintWrappingDask:
+    def test_duck_array_ops(self):
+        import dask.array
+
+        d = dask.array.array([1, 2, 3])
+        q = pint.Quantity(d, units="m")
+        da = xr.DataArray(q, dims="x")
+
+        actual = da.mean().compute()
+        actual.name = None
+        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+
+        assert_units_equal(expected, actual)
+        # Don't use isinstance b/c we don't want to allow subclasses through
+        assert type(expected.data) == type(actual.data)  # noqa
+
+
 @requires_matplotlib
 class TestPlots(PlotTestCase):
-    def test_units_in_line_plot_labels(self):
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
+            ),
+        ],
+    )
+    def test_units_in_line_plot_labels(self, coord_unit, coord_attrs):
         arr = np.linspace(1, 10, 3) * unit_registry.Pa
-        # TODO make coord a Quantity once unit-aware indexes supported
-        x_coord = xr.DataArray(
-            np.linspace(1, 3, 3), dims="x", attrs={"units": "meters"}
-        )
+        coord_arr = np.linspace(1, 3, 3) * coord_unit
+        x_coord = xr.DataArray(coord_arr, dims="x", attrs=coord_attrs)
         da = xr.DataArray(data=arr, dims="x", coords={"x": x_coord}, name="pressure")
 
         da.plot.line()
 
         ax = plt.gca()
         assert ax.get_ylabel() == "pressure [pascal]"
-        assert ax.get_xlabel() == "x [meters]"
+        assert ax.get_xlabel() == "x [meter]"
 
-    def test_units_in_2d_plot_labels(self):
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
+            ),
+        ],
+    )
+    def test_units_in_slice_line_plot_labels_sel(self, coord_unit, coord_attrs):
+        arr = xr.DataArray(
+            name="var_a",
+            data=np.array([[1, 2], [3, 4]]),
+            coords=dict(
+                a=("a", np.array([5, 6]) * coord_unit, coord_attrs),
+                b=("b", np.array([7, 8]) * coord_unit, coord_attrs),
+            ),
+            dims=("a", "b"),
+        )
+        arr.sel(a=5).plot(marker="o")
+
+        assert plt.gca().get_title() == "a = 5 [meter]"
+
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="pint.errors.UnitStrippedWarning"),
+            ),
+        ],
+    )
+    def test_units_in_slice_line_plot_labels_isel(self, coord_unit, coord_attrs):
+        arr = xr.DataArray(
+            name="var_a",
+            data=np.array([[1, 2], [3, 4]]),
+            coords=dict(
+                a=("x", np.array([5, 6]) * coord_unit, coord_attrs),
+                b=("y", np.array([7, 8])),
+            ),
+            dims=("x", "y"),
+        )
+        arr.isel(x=0).plot(marker="o")
+        assert plt.gca().get_title() == "a = 5 [meter]"
+
+    def test_units_in_2d_plot_colorbar_label(self):
         arr = np.ones((2, 3)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
 
@@ -5602,3 +5725,27 @@ class TestPlots(PlotTestCase):
         ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
 
         assert cax.get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_plot_labels(self):
+        arr = np.ones((2, 3)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
+
+        fig, (ax, cax) = plt.subplots(1, 2)
+        fgrid = da.plot.line(x="x", col="y")
+
+        assert fgrid.axs[0, 0].get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z", "w"], name="pressure")
+
+        da.plot.imshow(x="x", y="y", col="w")  # no colorbar to check labels of
+
+    def test_units_facetgrid_2d_contourf_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z"], name="pressure")
+
+        fig, (ax1, ax2, ax3, cax) = plt.subplots(1, 4)
+        fgrid = da.plot.contourf(x="x", y="y", col="z")
+
+        assert fgrid.cbar.ax.get_ylabel() == "pressure [pascal]"

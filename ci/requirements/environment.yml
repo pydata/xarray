@@ -10,39 +10,40 @@ dependencies:
   - cdms2
   - cfgrib
   - cftime
-  - dask
+  - dask-core
   - distributed
+  - flox
   - fsspec!=2021.7.0
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
   - iris
-  - lxml    # Optional dep of pydap
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
+  - numbagg
   - numexpr
-  - numpy
-  - pandas
+  - numpy<1.24
+  - packaging
+  - pandas<2
   - pint
   - pip
   - pooch
   - pre-commit
   - pseudonetcdf
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
-  - setuptools
   - sparse
   - toolz
+  - typing_extensions
   - zarr
-  - pip:
-    - numbagg

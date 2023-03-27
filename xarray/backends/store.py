@@ -1,10 +1,18 @@
-from .. import conventions
-from ..core.dataset import Dataset
-from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
+from __future__ import annotations
+
+from xarray import conventions
+from xarray.backends.common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendEntrypoint,
+)
+from xarray.core.dataset import Dataset
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
     available = True
+    description = "Open AbstractDataStore instances in Xarray"
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, AbstractDataStore)

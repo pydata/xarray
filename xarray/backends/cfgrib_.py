@@ -1,34 +1,22 @@
+from __future__ import annotations
+
 import os
 import warnings
 
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .locks import SerializableLock, ensure_lock
-from .store import StoreBackendEntrypoint
-
-try:
-    import cfgrib
-
-    has_cfgrib = True
-except ModuleNotFoundError:
-    has_cfgrib = False
-# cfgrib throws a RuntimeError if eccodes is not installed
-except (ImportError, RuntimeError):
-    warnings.warn(
-        "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
-        "Try `import cfgrib` to get the full error message"
-    )
-    has_cfgrib = False
+from xarray.backends.locks import SerializableLock, ensure_lock
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.variable import Variable
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -59,6 +47,15 @@ class CfGribDataStore(AbstractDataStore):
     """
 
     def __init__(self, filename, lock=None, **backend_kwargs):
+        try:
+            import cfgrib
+        # cfgrib throws a RuntimeError if eccodes is not installed
+        except (ImportError, RuntimeError) as err:
+            warnings.warn(
+                "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
+                "Try `import cfgrib` to get the full error message"
+            )
+            raise err
 
         if lock is None:
             lock = ECCODES_LOCK
@@ -94,7 +91,7 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
-    available = has_cfgrib
+    available = module_available("cfgrib")
 
     def guess_can_open(self, filename_or_obj):
         try:
@@ -122,7 +119,6 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         squeeze=True,
         time_dims=("time", "step"),
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,

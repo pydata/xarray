@@ -4,9 +4,10 @@ Property-based tests for encoding/decoding methods.
 These ones pass, just as you'd hope!
 
 """
-import pytest  # isort:skip
+import pytest
 
 pytest.importorskip("hypothesis")
+# isort: split
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -24,7 +25,7 @@ an_array = npst.arrays(
 
 @pytest.mark.slow
 @given(st.data(), an_array)
-def test_CFMask_coder_roundtrip(data, arr):
+def test_CFMask_coder_roundtrip(data, arr) -> None:
     names = data.draw(
         st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
             tuple
@@ -38,7 +39,7 @@ def test_CFMask_coder_roundtrip(data, arr):
 
 @pytest.mark.slow
 @given(st.data(), an_array)
-def test_CFScaleOffset_coder_roundtrip(data, arr):
+def test_CFScaleOffset_coder_roundtrip(data, arr) -> None:
     names = data.draw(
         st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
             tuple

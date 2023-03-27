@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from datetime import datetime
-from distutils.version import LooseVersion
 from itertools import product
 
 import numpy as np
@@ -12,6 +13,7 @@ from xarray import (
     combine_by_coords,
     combine_nested,
     concat,
+    merge,
 )
 from xarray.core import dtypes
 from xarray.core.combine import (
@@ -22,9 +24,8 @@ from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _new_tile_id,
 )
-
-from . import assert_equal, assert_identical, requires_cftime
-from .test_dataset import create_test_data
+from xarray.tests import assert_equal, assert_identical, requires_cftime
+from xarray.tests.test_dataset import create_test_data
 
 
 def assert_combined_tile_ids_equal(dict1, dict2):
@@ -391,7 +392,7 @@ class TestNestedCombine:
 
     def test_combine_nested_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     def test_empty_input(self):
@@ -688,7 +689,7 @@ class TestNestedCombine:
             combine_nested(objs, "x")
 
 
-class TestCombineAuto:
+class TestCombineDatasetsbyCoords:
     def test_combine_by_coords(self):
         objs = [Dataset({"x": [0]}), Dataset({"x": [1]})]
         actual = combine_by_coords(objs)
@@ -730,17 +731,6 @@ class TestCombineAuto:
     def test_empty_input(self):
         assert_identical(Dataset(), combine_by_coords([]))
 
-    def test_combine_coords_mixed_datasets_arrays(self):
-        objs = [
-            DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
-            Dataset({"x": [2, 3]}),
-        ]
-        with pytest.raises(
-            ValueError,
-            match=r"Can't automatically combine datasets with unnamed arrays.",
-        ):
-            combine_by_coords(objs)
-
     @pytest.mark.parametrize(
         "join, expected",
         [
@@ -757,7 +747,7 @@ class TestCombineAuto:
 
     def test_combine_coords_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     @pytest.mark.parametrize(
@@ -1044,7 +1034,35 @@ class TestCombineAuto:
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
 
-    def test_combine_by_coords_unnamed_arrays(self):
+
+class TestCombineMixedObjectsbyCoords:
+    def test_combine_by_coords_mixed_unnamed_dataarrays(self):
+        named_da = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+        unnamed_da = DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+
+        with pytest.raises(
+            ValueError, match="Can't automatically combine unnamed DataArrays with"
+        ):
+            combine_by_coords([named_da, unnamed_da])
+
+        da = DataArray([0, 1], dims="x", coords=({"x": [0, 1]}))
+        ds = Dataset({"x": [2, 3]})
+        with pytest.raises(
+            ValueError,
+            match="Can't automatically combine unnamed DataArrays with",
+        ):
+            combine_by_coords([da, ds])
+
+    def test_combine_coords_mixed_datasets_named_dataarrays(self):
+        da = DataArray(name="a", data=[4, 5], dims="x", coords=({"x": [0, 1]}))
+        ds = Dataset({"b": ("x", [2, 3])})
+        actual = combine_by_coords([da, ds])
+        expected = Dataset(
+            {"a": ("x", [4, 5]), "b": ("x", [2, 3])}, coords={"x": ("x", [0, 1])}
+        )
+        assert_identical(expected, actual)
+
+    def test_combine_by_coords_all_unnamed_dataarrays(self):
         unnamed_array = DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
 
         actual = combine_by_coords([unnamed_array])
@@ -1058,6 +1076,33 @@ class TestCombineAuto:
         expected = DataArray(
             data=[1.0, 2.0, 3.0, 4.0], coords={"x": [0, 1, 2, 3]}, dims="x"
         )
+        assert_identical(expected, actual)
+
+    def test_combine_by_coords_all_named_dataarrays(self):
+        named_da = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+
+        actual = combine_by_coords([named_da])
+        expected = named_da.to_dataset()
+        assert_identical(expected, actual)
+
+        named_da1 = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+        named_da2 = DataArray(name="b", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+
+        actual = combine_by_coords([named_da1, named_da2])
+        expected = Dataset(
+            {
+                "a": DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x"),
+                "b": DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x"),
+            }
+        )
+        assert_identical(expected, actual)
+
+    def test_combine_by_coords_all_dataarrays_with_the_same_name(self):
+        named_da1 = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+        named_da2 = DataArray(name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+
+        actual = combine_by_coords([named_da1, named_da2])
+        expected = merge([named_da1, named_da2])
         assert_identical(expected, actual)
 
 
@@ -1096,17 +1141,17 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    if LooseVersion(cftime.__version__) >= LooseVersion("1.5"):
-        error_msg = "Cannot combine along dimension 'time' with mixed types."
-    else:
-        error_msg = r"cannot compare .* \(different calendars\)"
-
+    error_msg = (
+        "Cannot combine along dimension 'time' with mixed types."
+        " Found:.*"
+        " If importing data directly from a file then setting"
+        " `use_cftime=True` may fix this issue."
+    )
     with pytest.raises(TypeError, match=error_msg):
         combine_by_coords([da_1, da_2])
 
 
 def test_combine_by_coords_raises_for_differing_types():
-
     # str and byte cannot be compared
     da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()

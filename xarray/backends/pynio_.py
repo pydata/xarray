@@ -1,26 +1,28 @@
+from __future__ import annotations
+
+import warnings
+
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .file_manager import CachingFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
-from .store import StoreBackendEntrypoint
-
-try:
-    import Nio
-
-    has_pynio = True
-except ModuleNotFoundError:
-    has_pynio = False
-
+from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    NETCDFC_LOCK,
+    SerializableLock,
+    combine_locks,
+    ensure_lock,
+)
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error, module_available
+from xarray.core.variable import Variable
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -59,6 +61,13 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO"""
 
     def __init__(self, filename, mode="r", lock=None, **kwargs):
+        import Nio
+
+        warnings.warn(
+            "The PyNIO backend is Deprecated and will be removed from Xarray in a future release. "
+            "See https://github.com/pydata/xarray/issues/4491 for more information",
+            DeprecationWarning,
+        )
 
         if lock is None:
             lock = PYNIO_LOCK
@@ -99,7 +108,16 @@ class NioDataStore(AbstractDataStore):
 
 
 class PynioBackendEntrypoint(BackendEntrypoint):
-    available = has_pynio
+    """
+    PyNIO backend
+
+        .. deprecated:: 0.20.0
+
+        Deprecated as PyNIO is no longer supported. See
+        https://github.com/pydata/xarray/issues/4491 for more information
+    """
+
+    available = module_available("Nio")
 
     def open_dataset(
         self,

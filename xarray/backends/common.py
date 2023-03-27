@@ -1,16 +1,21 @@
+from __future__ import annotations
+
 import logging
-import os.path
+import os
 import time
 import traceback
-from pathlib import Path
-from typing import Any, Dict, Tuple, Type, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 
-from ..conventions import cf_encoder
-from ..core import indexing
-from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.conventions import cf_encoder
+from xarray.core import indexing
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -20,8 +25,8 @@ NONE_VAR_NAME = "__values__"
 
 
 def _normalize_path(path):
-    if isinstance(path, Path):
-        path = str(path)
+    if isinstance(path, os.PathLike):
+        path = os.fspath(path)
 
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
@@ -66,7 +71,7 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
         except catch:
             if n == max_retries:
                 raise
-            base_delay = initial_delay * 2 ** n
+            base_delay = initial_delay * 2**n
             next_delay = base_delay + np.random.randint(base_delay)
             msg = (
                 f"getitem failed, waiting {next_delay} ms before trying again "
@@ -161,7 +166,7 @@ class ArrayWriter:
             import dask.array as da
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
-            # for any discernable difference in perforance, e.g.,
+            # for any discernible difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
             delayed_store = da.store(
@@ -368,15 +373,42 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
+
+    Attributes
+    ----------
+
+    available : bool, default: True
+        Indicate wether this backend is available given the installed packages.
+        The setting of this attribute is not mandatory.
+    open_dataset_parameters : tuple, default: None
+        A list of ``open_dataset`` method parameters.
+        The setting of this attribute is not mandatory.
+    description : str, default: ""
+        A short string describing the engine.
+        The setting of this attribute is not mandatory.
+    url : str, default: ""
+        A string with the URL to the backend's documentation.
+        The setting of this attribute is not mandatory.
     """
 
-    open_dataset_parameters: Union[Tuple, None] = None
-    """list of ``open_dataset`` method parameters"""
+    available: ClassVar[bool] = True
+
+    open_dataset_parameters: ClassVar[tuple | None] = None
+    description: ClassVar[str] = ""
+    url: ClassVar[str] = ""
+
+    def __repr__(self) -> str:
+        txt = f"<{type(self).__name__}>"
+        if self.description:
+            txt += f"\n  {self.description}"
+        if self.url:
+            txt += f"\n  Learn more at {self.url}"
+        return txt
 
     def open_dataset(
         self,
-        filename_or_obj: str,
-        drop_variables: Tuple[str] = None,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
     ):
         """
@@ -385,7 +417,10 @@ class BackendEntrypoint:
 
         raise NotImplementedError
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ):
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -393,4 +428,4 @@ class BackendEntrypoint:
         return False
 
 
-BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}
+BACKEND_ENTRYPOINTS: dict[str, type[BackendEntrypoint]] = {}

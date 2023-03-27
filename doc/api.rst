@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _api:
+
 #############
 API reference
 #############
@@ -30,11 +32,13 @@ Top-level functions
    ones_like
    cov
    corr
+   cross
    dot
    polyval
    map_blocks
    show_versions
    set_options
+   get_options
    unify_chunks
 
 Dataset
@@ -57,13 +61,14 @@ Attributes
 
    Dataset.dims
    Dataset.sizes
+   Dataset.dtypes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
    Dataset.encoding
    Dataset.indexes
-   Dataset.get_index
    Dataset.chunks
+   Dataset.chunksizes
    Dataset.nbytes
 
 Dictionary interface
@@ -102,9 +107,14 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop_vars
+   Dataset.drop_indexes
+   Dataset.drop_duplicates
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.convert_calendar
+   Dataset.interp_calendar
+   Dataset.get_index
 
 Comparisons
 -----------
@@ -137,6 +147,7 @@ Indexing
    Dataset.reindex_like
    Dataset.set_index
    Dataset.reset_index
+   Dataset.set_xindex
    Dataset.reorder_levels
    Dataset.query
 
@@ -181,43 +192,45 @@ Computation
    Dataset.polyfit
    Dataset.curvefit
 
-**Aggregation**:
-:py:attr:`~Dataset.all`
-:py:attr:`~Dataset.any`
-:py:attr:`~Dataset.argmax`
-:py:attr:`~Dataset.argmin`
-:py:attr:`~Dataset.idxmax`
-:py:attr:`~Dataset.idxmin`
-:py:attr:`~Dataset.max`
-:py:attr:`~Dataset.mean`
-:py:attr:`~Dataset.median`
-:py:attr:`~Dataset.min`
-:py:attr:`~Dataset.prod`
-:py:attr:`~Dataset.sum`
-:py:attr:`~Dataset.std`
-:py:attr:`~Dataset.var`
+Aggregation
+-----------
 
-**ndarray methods**:
-:py:attr:`~Dataset.astype`
-:py:attr:`~Dataset.argsort`
-:py:attr:`~Dataset.clip`
-:py:attr:`~Dataset.conj`
-:py:attr:`~Dataset.conjugate`
-:py:attr:`~Dataset.imag`
-:py:attr:`~Dataset.round`
-:py:attr:`~Dataset.real`
-:py:attr:`~Dataset.cumsum`
-:py:attr:`~Dataset.cumprod`
-:py:attr:`~Dataset.rank`
+.. autosummary::
+   :toctree: generated/
 
-**Grouped operations**:
-:py:attr:`~core.groupby.DatasetGroupBy.assign`
-:py:attr:`~core.groupby.DatasetGroupBy.assign_coords`
-:py:attr:`~core.groupby.DatasetGroupBy.first`
-:py:attr:`~core.groupby.DatasetGroupBy.last`
-:py:attr:`~core.groupby.DatasetGroupBy.fillna`
-:py:attr:`~core.groupby.DatasetGroupBy.where`
-:py:attr:`~core.groupby.DatasetGroupBy.quantile`
+   Dataset.all
+   Dataset.any
+   Dataset.argmax
+   Dataset.argmin
+   Dataset.count
+   Dataset.idxmax
+   Dataset.idxmin
+   Dataset.max
+   Dataset.min
+   Dataset.mean
+   Dataset.median
+   Dataset.prod
+   Dataset.sum
+   Dataset.std
+   Dataset.var
+   Dataset.cumsum
+   Dataset.cumprod
+
+ndarray methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.argsort
+   Dataset.astype
+   Dataset.clip
+   Dataset.conj
+   Dataset.conjugate
+   Dataset.imag
+   Dataset.round
+   Dataset.real
+   Dataset.rank
 
 Reshaping and reorganizing
 --------------------------
@@ -234,17 +247,6 @@ Reshaping and reorganizing
    Dataset.pad
    Dataset.sortby
    Dataset.broadcast_like
-
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   Dataset.plot.scatter
-   Dataset.plot.quiver
-   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -269,15 +271,21 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
-   DataArray.get_index
+   DataArray.chunksizes
 
-**ndarray attributes**:
-:py:attr:`~DataArray.ndim`
-:py:attr:`~DataArray.shape`
-:py:attr:`~DataArray.size`
-:py:attr:`~DataArray.dtype`
-:py:attr:`~DataArray.nbytes`
-:py:attr:`~DataArray.chunks`
+ndarray attributes
+------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.ndim
+   DataArray.nbytes
+   DataArray.shape
+   DataArray.size
+   DataArray.dtype
+   DataArray.chunks
+
 
 DataArray contents
 ------------------
@@ -292,14 +300,15 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
-
-**ndarray methods**:
-:py:attr:`~DataArray.astype`
-:py:attr:`~DataArray.item`
-
+   DataArray.convert_calendar
+   DataArray.interp_calendar
+   DataArray.get_index
+   DataArray.astype
+   DataArray.item
 
 Indexing
 --------
@@ -324,6 +333,7 @@ Indexing
    DataArray.reindex_like
    DataArray.set_index
    DataArray.reset_index
+   DataArray.set_xindex
    DataArray.reorder_levels
    DataArray.query
 
@@ -379,43 +389,46 @@ Computation
    DataArray.map_blocks
    DataArray.curvefit
 
-**Aggregation**:
-:py:attr:`~DataArray.all`
-:py:attr:`~DataArray.any`
-:py:attr:`~DataArray.argmax`
-:py:attr:`~DataArray.argmin`
-:py:attr:`~DataArray.idxmax`
-:py:attr:`~DataArray.idxmin`
-:py:attr:`~DataArray.max`
-:py:attr:`~DataArray.mean`
-:py:attr:`~DataArray.median`
-:py:attr:`~DataArray.min`
-:py:attr:`~DataArray.prod`
-:py:attr:`~DataArray.sum`
-:py:attr:`~DataArray.std`
-:py:attr:`~DataArray.var`
+Aggregation
+-----------
 
-**ndarray methods**:
-:py:attr:`~DataArray.argsort`
-:py:attr:`~DataArray.clip`
-:py:attr:`~DataArray.conj`
-:py:attr:`~DataArray.conjugate`
-:py:attr:`~DataArray.imag`
-:py:attr:`~DataArray.searchsorted`
-:py:attr:`~DataArray.round`
-:py:attr:`~DataArray.real`
-:py:attr:`~DataArray.T`
-:py:attr:`~DataArray.cumsum`
-:py:attr:`~DataArray.cumprod`
-:py:attr:`~DataArray.rank`
+.. autosummary::
+   :toctree: generated/
 
-**Grouped operations**:
-:py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
-:py:attr:`~core.groupby.DataArrayGroupBy.first`
-:py:attr:`~core.groupby.DataArrayGroupBy.last`
-:py:attr:`~core.groupby.DataArrayGroupBy.fillna`
-:py:attr:`~core.groupby.DataArrayGroupBy.where`
-:py:attr:`~core.groupby.DataArrayGroupBy.quantile`
+   DataArray.all
+   DataArray.any
+   DataArray.argmax
+   DataArray.argmin
+   DataArray.count
+   DataArray.idxmax
+   DataArray.idxmin
+   DataArray.max
+   DataArray.min
+   DataArray.mean
+   DataArray.median
+   DataArray.prod
+   DataArray.sum
+   DataArray.std
+   DataArray.var
+   DataArray.cumsum
+   DataArray.cumprod
+
+ndarray methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.argsort
+   DataArray.clip
+   DataArray.conj
+   DataArray.conjugate
+   DataArray.imag
+   DataArray.searchsorted
+   DataArray.round
+   DataArray.real
+   DataArray.T
+   DataArray.rank
 
 
 String manipulation
@@ -513,6 +526,7 @@ Datetimelike properties
    DataArray.dt.season
    DataArray.dt.time
    DataArray.dt.date
+   DataArray.dt.calendar
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
@@ -569,8 +583,108 @@ Reshaping and reorganizing
    DataArray.sortby
    DataArray.broadcast_like
 
+IO / Conversion
+===============
+
+Dataset methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   load_dataset
+   open_dataset
+   open_mfdataset
+   open_rasterio
+   open_zarr
+   save_mfdataset
+   Dataset.as_numpy
+   Dataset.from_dataframe
+   Dataset.from_dict
+   Dataset.to_array
+   Dataset.to_dataframe
+   Dataset.to_dask_dataframe
+   Dataset.to_dict
+   Dataset.to_netcdf
+   Dataset.to_pandas
+   Dataset.to_zarr
+   Dataset.chunk
+   Dataset.close
+   Dataset.compute
+   Dataset.filter_by_attrs
+   Dataset.info
+   Dataset.load
+   Dataset.persist
+   Dataset.unify_chunks
+
+DataArray methods
+-----------------
+
+.. autosummary::
+   :toctree: generated/
+
+   load_dataarray
+   open_dataarray
+   DataArray.as_numpy
+   DataArray.from_cdms2
+   DataArray.from_dict
+   DataArray.from_iris
+   DataArray.from_series
+   DataArray.to_cdms2
+   DataArray.to_dataframe
+   DataArray.to_dataset
+   DataArray.to_dict
+   DataArray.to_index
+   DataArray.to_iris
+   DataArray.to_masked_array
+   DataArray.to_netcdf
+   DataArray.to_numpy
+   DataArray.to_pandas
+   DataArray.to_series
+   DataArray.chunk
+   DataArray.close
+   DataArray.compute
+   DataArray.persist
+   DataArray.load
+   DataArray.unify_chunks
+
+Coordinates objects
+===================
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DatasetCoordinates.dtypes
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DataArrayCoordinates.dtypes
+
 Plotting
---------
+========
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
+   Dataset.plot.quiver
+   Dataset.plot.streamplot
+
+DataArray
+---------
 
 .. autosummary::
    :toctree: generated/
@@ -589,237 +703,326 @@ Plotting
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.scatter
    DataArray.plot.surface
 
-.. _api.ufuncs:
 
-Universal functions
-===================
-
-.. warning::
-
-   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obviates the need
-   for the ``xarray.ufuncs`` module, which should not be used for new code
-   unless compatibility with versions of NumPy prior to v1.13 is
-   required. They will be removed once support for NumPy prior to
-   v1.17 is dropped.
-
-These functions are copied from NumPy, but extended to work on NumPy arrays,
-dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
-module:
-
-:py:attr:`~ufuncs.angle`
-:py:attr:`~ufuncs.arccos`
-:py:attr:`~ufuncs.arccosh`
-:py:attr:`~ufuncs.arcsin`
-:py:attr:`~ufuncs.arcsinh`
-:py:attr:`~ufuncs.arctan`
-:py:attr:`~ufuncs.arctan2`
-:py:attr:`~ufuncs.arctanh`
-:py:attr:`~ufuncs.ceil`
-:py:attr:`~ufuncs.conj`
-:py:attr:`~ufuncs.copysign`
-:py:attr:`~ufuncs.cos`
-:py:attr:`~ufuncs.cosh`
-:py:attr:`~ufuncs.deg2rad`
-:py:attr:`~ufuncs.degrees`
-:py:attr:`~ufuncs.exp`
-:py:attr:`~ufuncs.expm1`
-:py:attr:`~ufuncs.fabs`
-:py:attr:`~ufuncs.fix`
-:py:attr:`~ufuncs.floor`
-:py:attr:`~ufuncs.fmax`
-:py:attr:`~ufuncs.fmin`
-:py:attr:`~ufuncs.fmod`
-:py:attr:`~ufuncs.fmod`
-:py:attr:`~ufuncs.frexp`
-:py:attr:`~ufuncs.hypot`
-:py:attr:`~ufuncs.imag`
-:py:attr:`~ufuncs.iscomplex`
-:py:attr:`~ufuncs.isfinite`
-:py:attr:`~ufuncs.isinf`
-:py:attr:`~ufuncs.isnan`
-:py:attr:`~ufuncs.isreal`
-:py:attr:`~ufuncs.ldexp`
-:py:attr:`~ufuncs.log`
-:py:attr:`~ufuncs.log10`
-:py:attr:`~ufuncs.log1p`
-:py:attr:`~ufuncs.log2`
-:py:attr:`~ufuncs.logaddexp`
-:py:attr:`~ufuncs.logaddexp2`
-:py:attr:`~ufuncs.logical_and`
-:py:attr:`~ufuncs.logical_not`
-:py:attr:`~ufuncs.logical_or`
-:py:attr:`~ufuncs.logical_xor`
-:py:attr:`~ufuncs.maximum`
-:py:attr:`~ufuncs.minimum`
-:py:attr:`~ufuncs.nextafter`
-:py:attr:`~ufuncs.rad2deg`
-:py:attr:`~ufuncs.radians`
-:py:attr:`~ufuncs.real`
-:py:attr:`~ufuncs.rint`
-:py:attr:`~ufuncs.sign`
-:py:attr:`~ufuncs.signbit`
-:py:attr:`~ufuncs.sin`
-:py:attr:`~ufuncs.sinh`
-:py:attr:`~ufuncs.sqrt`
-:py:attr:`~ufuncs.square`
-:py:attr:`~ufuncs.tan`
-:py:attr:`~ufuncs.tanh`
-:py:attr:`~ufuncs.trunc`
-
-IO / Conversion
-===============
-
-Dataset methods
----------------
-
+Faceting
+--------
 .. autosummary::
    :toctree: generated/
 
-   open_dataset
-   load_dataset
-   open_mfdataset
-   open_rasterio
-   open_zarr
-   Dataset.to_netcdf
-   Dataset.to_pandas
-   Dataset.as_numpy
-   Dataset.to_zarr
-   save_mfdataset
-   Dataset.to_array
-   Dataset.to_dataframe
-   Dataset.to_dask_dataframe
-   Dataset.to_dict
-   Dataset.from_dataframe
-   Dataset.from_dict
-   Dataset.close
-   Dataset.compute
-   Dataset.persist
-   Dataset.load
-   Dataset.chunk
-   Dataset.unify_chunks
-   Dataset.filter_by_attrs
-   Dataset.info
+   plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.map_plot1d
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
 
-DataArray methods
------------------
 
-.. autosummary::
-   :toctree: generated/
-
-   open_dataarray
-   load_dataarray
-   DataArray.to_dataset
-   DataArray.to_netcdf
-   DataArray.to_pandas
-   DataArray.to_series
-   DataArray.to_dataframe
-   DataArray.to_numpy
-   DataArray.as_numpy
-   DataArray.to_index
-   DataArray.to_masked_array
-   DataArray.to_cdms2
-   DataArray.to_iris
-   DataArray.from_iris
-   DataArray.to_dict
-   DataArray.from_series
-   DataArray.from_cdms2
-   DataArray.from_dict
-   DataArray.close
-   DataArray.compute
-   DataArray.persist
-   DataArray.load
-   DataArray.chunk
-   DataArray.unify_chunks
-
-Coordinates objects
-===================
-
-.. autosummary::
-   :toctree: generated/
-
-   core.coordinates.DataArrayCoordinates
-   core.coordinates.DatasetCoordinates
 
 GroupBy objects
 ===============
 
+.. currentmodule:: xarray.core.groupby
+
+Dataset
+-------
+
 .. autosummary::
    :toctree: generated/
 
-   core.groupby.DataArrayGroupBy
-   core.groupby.DataArrayGroupBy.map
-   core.groupby.DataArrayGroupBy.reduce
-   core.groupby.DatasetGroupBy
-   core.groupby.DatasetGroupBy.map
-   core.groupby.DatasetGroupBy.reduce
+   DatasetGroupBy
+   DatasetGroupBy.map
+   DatasetGroupBy.reduce
+   DatasetGroupBy.assign
+   DatasetGroupBy.assign_coords
+   DatasetGroupBy.first
+   DatasetGroupBy.last
+   DatasetGroupBy.fillna
+   DatasetGroupBy.quantile
+   DatasetGroupBy.where
+   DatasetGroupBy.all
+   DatasetGroupBy.any
+   DatasetGroupBy.count
+   DatasetGroupBy.cumsum
+   DatasetGroupBy.cumprod
+   DatasetGroupBy.max
+   DatasetGroupBy.mean
+   DatasetGroupBy.median
+   DatasetGroupBy.min
+   DatasetGroupBy.prod
+   DatasetGroupBy.std
+   DatasetGroupBy.sum
+   DatasetGroupBy.var
+   DatasetGroupBy.dims
+   DatasetGroupBy.groups
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayGroupBy
+   DataArrayGroupBy.map
+   DataArrayGroupBy.reduce
+   DataArrayGroupBy.assign_coords
+   DataArrayGroupBy.first
+   DataArrayGroupBy.last
+   DataArrayGroupBy.fillna
+   DataArrayGroupBy.quantile
+   DataArrayGroupBy.where
+   DataArrayGroupBy.all
+   DataArrayGroupBy.any
+   DataArrayGroupBy.count
+   DataArrayGroupBy.cumsum
+   DataArrayGroupBy.cumprod
+   DataArrayGroupBy.max
+   DataArrayGroupBy.mean
+   DataArrayGroupBy.median
+   DataArrayGroupBy.min
+   DataArrayGroupBy.prod
+   DataArrayGroupBy.std
+   DataArrayGroupBy.sum
+   DataArrayGroupBy.var
+   DataArrayGroupBy.dims
+   DataArrayGroupBy.groups
+
 
 Rolling objects
 ===============
 
-.. autosummary::
-   :toctree: generated/
+.. currentmodule:: xarray.core.rolling
 
-   core.rolling.DataArrayRolling
-   core.rolling.DataArrayRolling.construct
-   core.rolling.DataArrayRolling.reduce
-   core.rolling.DatasetRolling
-   core.rolling.DatasetRolling.construct
-   core.rolling.DatasetRolling.reduce
-   core.rolling_exp.RollingExp
-
-Weighted objects
-================
+Dataset
+-------
 
 .. autosummary::
    :toctree: generated/
 
-   core.weighted.DataArrayWeighted
-   core.weighted.DataArrayWeighted.mean
-   core.weighted.DataArrayWeighted.sum
-   core.weighted.DataArrayWeighted.sum_of_weights
-   core.weighted.DatasetWeighted
-   core.weighted.DatasetWeighted.mean
-   core.weighted.DatasetWeighted.sum
-   core.weighted.DatasetWeighted.sum_of_weights
+   DatasetRolling
+   DatasetRolling.construct
+   DatasetRolling.reduce
+   DatasetRolling.argmax
+   DatasetRolling.argmin
+   DatasetRolling.count
+   DatasetRolling.max
+   DatasetRolling.mean
+   DatasetRolling.median
+   DatasetRolling.min
+   DatasetRolling.prod
+   DatasetRolling.std
+   DatasetRolling.sum
+   DatasetRolling.var
 
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayRolling
+   DataArrayRolling.__iter__
+   DataArrayRolling.construct
+   DataArrayRolling.reduce
+   DataArrayRolling.argmax
+   DataArrayRolling.argmin
+   DataArrayRolling.count
+   DataArrayRolling.max
+   DataArrayRolling.mean
+   DataArrayRolling.median
+   DataArrayRolling.min
+   DataArrayRolling.prod
+   DataArrayRolling.std
+   DataArrayRolling.sum
+   DataArrayRolling.var
 
 Coarsen objects
 ===============
 
+Dataset
+-------
+
 .. autosummary::
    :toctree: generated/
 
-   core.rolling.DataArrayCoarsen
-   core.rolling.DatasetCoarsen
+   DatasetCoarsen
+   DatasetCoarsen.all
+   DatasetCoarsen.any
+   DatasetCoarsen.construct
+   DatasetCoarsen.count
+   DatasetCoarsen.max
+   DatasetCoarsen.mean
+   DatasetCoarsen.median
+   DatasetCoarsen.min
+   DatasetCoarsen.prod
+   DatasetCoarsen.reduce
+   DatasetCoarsen.std
+   DatasetCoarsen.sum
+   DatasetCoarsen.var
 
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayCoarsen
+   DataArrayCoarsen.all
+   DataArrayCoarsen.any
+   DataArrayCoarsen.construct
+   DataArrayCoarsen.count
+   DataArrayCoarsen.max
+   DataArrayCoarsen.mean
+   DataArrayCoarsen.median
+   DataArrayCoarsen.min
+   DataArrayCoarsen.prod
+   DataArrayCoarsen.reduce
+   DataArrayCoarsen.std
+   DataArrayCoarsen.sum
+   DataArrayCoarsen.var
+
+Exponential rolling objects
+===========================
+
+.. currentmodule:: xarray.core.rolling_exp
+
+.. autosummary::
+   :toctree: generated/
+
+   RollingExp
+   RollingExp.mean
+   RollingExp.sum
+
+Weighted objects
+================
+
+.. currentmodule:: xarray.core.weighted
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   DatasetWeighted
+   DatasetWeighted.mean
+   DatasetWeighted.quantile
+   DatasetWeighted.sum
+   DatasetWeighted.std
+   DatasetWeighted.var
+   DatasetWeighted.sum_of_weights
+   DatasetWeighted.sum_of_squares
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayWeighted
+   DataArrayWeighted.mean
+   DataArrayWeighted.quantile
+   DataArrayWeighted.sum
+   DataArrayWeighted.std
+   DataArrayWeighted.var
+   DataArrayWeighted.sum_of_weights
+   DataArrayWeighted.sum_of_squares
 
 Resample objects
 ================
 
-Resample objects also implement the GroupBy interface
-(methods like ``map()``, ``reduce()``, ``mean()``, ``sum()``, etc.).
+.. currentmodule:: xarray.core.resample
+
+Dataset
+-------
 
 .. autosummary::
    :toctree: generated/
 
-   core.resample.DataArrayResample
-   core.resample.DataArrayResample.asfreq
-   core.resample.DataArrayResample.backfill
-   core.resample.DataArrayResample.interpolate
-   core.resample.DataArrayResample.nearest
-   core.resample.DataArrayResample.pad
-   core.resample.DatasetResample
-   core.resample.DatasetResample.asfreq
-   core.resample.DatasetResample.backfill
-   core.resample.DatasetResample.interpolate
-   core.resample.DatasetResample.nearest
-   core.resample.DatasetResample.pad
+   DatasetResample
+   DatasetResample.asfreq
+   DatasetResample.backfill
+   DatasetResample.interpolate
+   DatasetResample.nearest
+   DatasetResample.pad
+   DatasetResample.all
+   DatasetResample.any
+   DatasetResample.apply
+   DatasetResample.assign
+   DatasetResample.assign_coords
+   DatasetResample.bfill
+   DatasetResample.count
+   DatasetResample.ffill
+   DatasetResample.fillna
+   DatasetResample.first
+   DatasetResample.last
+   DatasetResample.map
+   DatasetResample.max
+   DatasetResample.mean
+   DatasetResample.median
+   DatasetResample.min
+   DatasetResample.prod
+   DatasetResample.quantile
+   DatasetResample.reduce
+   DatasetResample.std
+   DatasetResample.sum
+   DatasetResample.var
+   DatasetResample.where
+   DatasetResample.dims
+   DatasetResample.groups
+
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayResample
+   DataArrayResample.asfreq
+   DataArrayResample.backfill
+   DataArrayResample.interpolate
+   DataArrayResample.nearest
+   DataArrayResample.pad
+   DataArrayResample.all
+   DataArrayResample.any
+   DataArrayResample.apply
+   DataArrayResample.assign_coords
+   DataArrayResample.bfill
+   DataArrayResample.count
+   DataArrayResample.ffill
+   DataArrayResample.fillna
+   DataArrayResample.first
+   DataArrayResample.last
+   DataArrayResample.map
+   DataArrayResample.max
+   DataArrayResample.mean
+   DataArrayResample.median
+   DataArrayResample.min
+   DataArrayResample.prod
+   DataArrayResample.quantile
+   DataArrayResample.reduce
+   DataArrayResample.std
+   DataArrayResample.sum
+   DataArrayResample.var
+   DataArrayResample.where
+   DataArrayResample.dims
+   DataArrayResample.groups
 
 Accessors
 =========
+
+.. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/
@@ -841,25 +1044,8 @@ Creating custom indexes
    :toctree: generated/
 
    cftime_range
-
-Faceting
---------
-.. autosummary::
-   :toctree: generated/
-
-   plot.FacetGrid
-   plot.FacetGrid.add_colorbar
-   plot.FacetGrid.add_legend
-   plot.FacetGrid.add_quiverkey
-   plot.FacetGrid.map
-   plot.FacetGrid.map_dataarray
-   plot.FacetGrid.map_dataarray_line
-   plot.FacetGrid.map_dataset
-   plot.FacetGrid.set_axis_labels
-   plot.FacetGrid.set_ticks
-   plot.FacetGrid.set_titles
-   plot.FacetGrid.set_xlabels
-   plot.FacetGrid.set_ylabels
+   date_range
+   date_range_like
 
 Tutorial
 ========
@@ -902,12 +1088,19 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   indexes.Index
    Context
    register_dataset_accessor
    register_dataarray_accessor
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+   backends.list_engines
+
+Default, pandas-backed indexes built-in Xarray:
+
+   indexes.PandasIndex
+   indexes.PandasMultiIndex
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
@@ -918,11 +1111,27 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
+   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.ZarrStore
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+These BackendEntrypoints provide a basic interface to the most commonly
+used filetypes in the xarray universe.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4BackendEntrypoint
+   backends.H5netcdfBackendEntrypoint
+   backends.PseudoNetCDFBackendEntrypoint
+   backends.PydapBackendEntrypoint
+   backends.ScipyBackendEntrypoint
+   backends.StoreBackendEntrypoint
+   backends.ZarrBackendEntrypoint
 
 Deprecated / Pending Deprecation
 ================================

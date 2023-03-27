@@ -1,18 +1,16 @@
+from __future__ import annotations
+
 import multiprocessing
 import threading
 import weakref
-from typing import Any, MutableMapping, Optional
+from collections.abc import MutableMapping
+from typing import Any
 
 try:
     from dask.utils import SerializableLock
 except ImportError:
     # no need to worry about serializing the lock
-    SerializableLock = threading.Lock
-
-try:
-    from dask.distributed import Lock as DistributedLock
-except ImportError:
-    DistributedLock = None
+    SerializableLock = threading.Lock  # type: ignore
 
 
 # Locks used by multiple backends.
@@ -39,14 +37,6 @@ def _get_multiprocessing_lock(key):
     return multiprocessing.Lock()
 
 
-_LOCK_MAKERS = {
-    None: _get_threaded_lock,
-    "threaded": _get_threaded_lock,
-    "multiprocessing": _get_multiprocessing_lock,
-    "distributed": DistributedLock,
-}
-
-
 def _get_lock_maker(scheduler=None):
     """Returns an appropriate function for creating resource locks.
 
@@ -59,10 +49,26 @@ def _get_lock_maker(scheduler=None):
     --------
     dask.utils.get_scheduler_lock
     """
-    return _LOCK_MAKERS[scheduler]
+
+    if scheduler is None:
+        return _get_threaded_lock
+    elif scheduler == "threaded":
+        return _get_threaded_lock
+    elif scheduler == "multiprocessing":
+        return _get_multiprocessing_lock
+    elif scheduler == "distributed":
+        # Lazy import distributed since it is can add a significant
+        # amount of time to import
+        try:
+            from dask.distributed import Lock as DistributedLock
+        except ImportError:
+            DistributedLock = None
+        return DistributedLock
+    else:
+        raise KeyError(scheduler)
 
 
-def _get_scheduler(get=None, collection=None) -> Optional[str]:
+def _get_scheduler(get=None, collection=None) -> str | None:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.
@@ -126,15 +132,12 @@ def acquire(lock, blocking=True):
     if blocking:
         # no arguments needed
         return lock.acquire()
-    elif DistributedLock is not None and isinstance(lock, DistributedLock):
-        # distributed.Lock doesn't support the blocking argument yet:
-        # https://github.com/dask/distributed/pull/2412
-        return lock.acquire(timeout=0)
     else:
         # "blocking" keyword argument not supported for:
         # - threading.Lock on Python 2.
         # - dask.SerializableLock with dask v1.0.0 or earlier.
         # - multiprocessing.Lock calls the argument "block" instead.
+        # - dask.distributed.Lock uses the blocking argument as the first one
         return lock.acquire(blocking)
 
 

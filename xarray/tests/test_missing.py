@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 
 import numpy as np
@@ -12,7 +14,7 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.core.pycompat import dask_array_type
+from xarray.core.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
@@ -24,6 +26,8 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
+
+dask_array_type = array_type("dask")
 
 
 @pytest.fixture
@@ -94,8 +98,7 @@ def test_interpolate_pd_compat():
     frac_nans = [0, 0.5, 1]
     methods = ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 
-    for (shape, frac_nan, method) in itertools.product(shapes, frac_nans, methods):
-
+    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
@@ -116,7 +119,7 @@ def test_interpolate_pd_compat():
 @pytest.mark.parametrize("method", ["barycentric", "krog", "pchip", "spline", "akima"])
 def test_scipy_methods_function(method):
     # Note: Pandas does some wacky things with these methods and the full
-    # integration tests wont work.
+    # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
     actual = da.interpolate_na(method=method, dim="time")
     assert (da.count("time") <= actual.count("time")).all()
@@ -128,8 +131,7 @@ def test_interpolate_pd_compat_non_uniform_index():
     frac_nans = [0, 0.5, 1]
     methods = ["time", "index", "values"]
 
-    for (shape, frac_nan, method) in itertools.product(shapes, frac_nans, methods):
-
+    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
         da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
         for dim in ["time", "x"]:
             if method == "time" and dim != "time":
@@ -156,8 +158,7 @@ def test_interpolate_pd_compat_polynomial():
     frac_nans = [0, 0.5, 1]
     orders = [1, 2, 3]
 
-    for (shape, frac_nan, order) in itertools.product(shapes, frac_nans, orders):
-
+    for shape, frac_nan, order in itertools.product(shapes, frac_nans, orders):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
@@ -243,7 +244,6 @@ def test_interpolate_keep_attrs():
 
 
 def test_interpolate():
-
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
     mvals = vals.copy()
@@ -255,19 +255,30 @@ def test_interpolate():
     assert_equal(actual, expected)
 
 
-def test_interpolate_nonans():
-
-    vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
-    expected = xr.DataArray(vals, dims="x")
-    actual = expected.interpolate_na(dim="x")
-    assert_equal(actual, expected)
-
-
 @requires_scipy
-def test_interpolate_allnans():
-    vals = np.full(6, np.nan, dtype=np.float64)
+@pytest.mark.parametrize(
+    "method,vals",
+    [
+        pytest.param(method, vals, id=f"{desc}:{method}")
+        for method in [
+            "linear",
+            "nearest",
+            "zero",
+            "slinear",
+            "quadratic",
+            "cubic",
+            "polynomial",
+        ]
+        for (desc, vals) in [
+            ("no nans", np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)),
+            ("one nan", np.array([1, np.nan, np.nan], dtype=np.float64)),
+            ("all nans", np.full(6, np.nan, dtype=np.float64)),
+        ]
+    ],
+)
+def test_interp1d_fastrack(method, vals):
     expected = xr.DataArray(vals, dims="x")
-    actual = expected.interpolate_na(dim="x")
+    actual = expected.interpolate_na(dim="x", method=method)
 
     assert_equal(actual, expected)
 
@@ -392,6 +403,38 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
+def test_ffill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+@requires_dask
+def test_ffill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+def test_bfill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
+@requires_dask
+def test_bfill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
 @requires_bottleneck
 @requires_dask
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
@@ -420,8 +463,10 @@ def test_ffill_bfill_dask(method):
     assert_equal(actual, expected)
 
     # limit < axis size
-    with pytest.raises(NotImplementedError):
+    with raise_if_dask_computes():
         actual = dask_method("x", limit=2)
+    expected = numpy_method("x", limit=2)
+    assert_equal(actual, expected)
 
     # limit > axis size
     with raise_if_dask_computes():
@@ -432,7 +477,6 @@ def test_ffill_bfill_dask(method):
 
 @requires_bottleneck
 def test_ffill_bfill_nonans():
-
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
 
@@ -445,7 +489,6 @@ def test_ffill_bfill_nonans():
 
 @requires_bottleneck
 def test_ffill_bfill_allnans():
-
     vals = np.full(6, np.nan, dtype=np.float64)
     expected = xr.DataArray(vals, dims="x")
 
@@ -499,19 +542,28 @@ def test_bfill_dataset(ds):
 
 @requires_bottleneck
 @pytest.mark.parametrize(
-    "y, lengths",
+    "y, lengths_expected",
     [
-        [np.arange(9), [[3, 3, 3, 0, 3, 3, 0, 2, 2]]],
-        [np.arange(9) * 3, [[9, 9, 9, 0, 9, 9, 0, 6, 6]]],
-        [[0, 2, 5, 6, 7, 8, 10, 12, 14], [[6, 6, 6, 0, 4, 4, 0, 4, 4]]],
+        [np.arange(9), [[1, 0, 7, 7, 7, 7, 7, 7, 0], [3, 3, 3, 0, 3, 3, 0, 2, 2]]],
+        [
+            np.arange(9) * 3,
+            [[3, 0, 21, 21, 21, 21, 21, 21, 0], [9, 9, 9, 0, 9, 9, 0, 6, 6]],
+        ],
+        [
+            [0, 2, 5, 6, 7, 8, 10, 12, 14],
+            [[2, 0, 12, 12, 12, 12, 12, 12, 0], [6, 6, 6, 0, 4, 4, 0, 4, 4]],
+        ],
     ],
 )
-def test_interpolate_na_nan_block_lengths(y, lengths):
-    arr = [[np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan]]
-    da = xr.DataArray(arr * 2, dims=["x", "y"], coords={"x": [0, 1], "y": y})
+def test_interpolate_na_nan_block_lengths(y, lengths_expected):
+    arr = [
+        [np.nan, 1, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 4],
+        [np.nan, np.nan, np.nan, 1, np.nan, np.nan, 4, np.nan, np.nan],
+    ]
+    da = xr.DataArray(arr, dims=["x", "y"], coords={"x": [0, 1], "y": y})
     index = get_clean_interp_index(da, dim="y", use_coordinate=True)
     actual = _get_nan_block_lengths(da, dim="y", index=index)
-    expected = da.copy(data=lengths * 2)
+    expected = da.copy(data=lengths_expected)
     assert_equal(actual, expected)
 
 
@@ -617,16 +669,17 @@ def test_interpolate_na_max_gap_time_specifier(
     "coords",
     [
         pytest.param(None, marks=pytest.mark.xfail()),
-        {"x": np.arange(4), "y": np.arange(11)},
+        {"x": np.arange(4), "y": np.arange(12)},
     ],
 )
 def test_interpolate_na_2d(coords):
+    n = np.nan
     da = xr.DataArray(
         [
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
         ],
         dims=["x", "y"],
         coords=coords,
@@ -635,23 +688,55 @@ def test_interpolate_na_2d(coords):
     actual = da.interpolate_na("y", max_gap=2)
     expected_y = da.copy(
         data=[
-            [1, 2, 3, 4, 5, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, np.nan, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, 5, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, 2, 3, 4, 5, 6, n, n, n, 10, 11, n],
         ]
     )
     assert_equal(actual, expected_y)
 
+    actual = da.interpolate_na("y", max_gap=1, fill_value="extrapolate")
+    expected_y_extra = da.copy(
+        data=[
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [n, n, 3, n, n, 6, n, n, n, 10, n, n],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, 12],
+        ]
+    )
+    assert_equal(actual, expected_y_extra)
+
     actual = da.interpolate_na("x", max_gap=3)
     expected_x = xr.DataArray(
         [
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
-            [1, 2, 3, 4, np.nan, 6, 7, np.nan, np.nan, np.nan, 11],
+            [1, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
+            [n, 2, 3, 4, n, 6, n, n, n, 10, 11, n],
         ],
         dims=["x", "y"],
         coords=coords,
     )
     assert_equal(actual, expected_x)
+
+
+@requires_scipy
+def test_interpolators_complex_out_of_bounds():
+    """Ensure complex nans are used for complex data"""
+
+    xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
+    yi = np.exp(1j * xi)
+    x = np.array([-2, 1, 6], dtype=np.float64)
+
+    expected = np.array(
+        [np.nan + np.nan * 1j, np.exp(1j), np.nan + np.nan * 1j], dtype=yi.dtype
+    )
+
+    for method, interpolator in [
+        ("linear", NumpyInterpolator),
+        ("linear", ScipyInterpolator),
+    ]:
+        f = interpolator(xi, yi, method=method)
+        actual = f(x)
+        assert_array_equal(actual, expected)

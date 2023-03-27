@@ -1,12 +1,15 @@
 *.py[cod]
 __pycache__
+.env
+.venv
 
 # example caches from Hypothesis
 .hypothesis/
 
 # temp files from docs build
+doc/*.nc
 doc/auto_gallery
-doc/example.nc
+doc/rasm.zarr
 doc/savefig
 
 # C extensions
@@ -72,4 +75,7 @@ xarray/tests/data/*.grib.*.idx
 Icon*
 
 .ipynb_checkpoints
-doc/rasm.zarr
+doc/team-panel.txt
+doc/external-examples-gallery.txt
+doc/notebooks-examples-gallery.txt
+doc/videos-gallery.txt

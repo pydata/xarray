@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+import pickle
 from datetime import timedelta
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -14,14 +18,27 @@ from xarray.coding.cftimeindex import (
     assert_all_valid_date_type,
     parse_iso8601_like,
 )
-from xarray.tests import assert_array_equal, assert_identical
-
-from . import requires_cftime
-from .test_coding_times import (
+from xarray.tests import (
+    assert_array_equal,
+    assert_identical,
+    has_cftime,
+    requires_cftime,
+)
+from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _all_cftime_date_types,
 )
+
+# cftime 1.5.2 renames "gregorian" to "standard"
+standard_or_gregorian = ""
+if has_cftime:
+    import cftime
+
+    if Version(cftime.__version__) >= Version("1.5.2"):
+        standard_or_gregorian = "standard"
+    else:
+        standard_or_gregorian = "gregorian"
 
 
 def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
@@ -345,65 +362,58 @@ def test_get_loc(date_type, index):
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound(date_type, index, kind):
-    result = index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound(date_type, index):
+    result = index.get_slice_bound("0001", "left")
     expected = 0
     assert result == expected
 
-    result = index.get_slice_bound("0001", "right", kind)
+    result = index.get_slice_bound("0001", "right")
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "left", kind)
+    result = index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 2
     assert result == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index, kind):
-    result = monotonic_decreasing_index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index):
+    result = monotonic_decreasing_index.get_slice_bound("0001", "left")
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound("0001", "right", kind)
+    result = monotonic_decreasing_index.get_slice_bound("0001", "right")
     expected = 4
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "left", kind
-    )
+    result = monotonic_decreasing_index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "right", kind
-    )
+    result = monotonic_decreasing_index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 2
     assert result == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound_length_one_index(date_type, length_one_index, kind):
-    result = length_one_index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound_length_one_index(date_type, length_one_index):
+    result = length_one_index.get_slice_bound("0001", "left")
     expected = 0
     assert result == expected
 
-    result = length_one_index.get_slice_bound("0001", "right", kind)
+    result = length_one_index.get_slice_bound("0001", "right")
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left", kind)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 1
     assert result == expected
 
@@ -722,13 +732,51 @@ def test_cftimeindex_add(index):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_add_timedeltaindex(calendar):
+def test_cftimeindex_add_timedeltaindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = a + deltas
     expected = a.shift(2, "D")
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("n", [2.0, 1.5])
+@pytest.mark.parametrize(
+    "freq,units",
+    [
+        ("D", "D"),
+        ("H", "H"),
+        ("T", "min"),
+        ("S", "S"),
+        ("L", "ms"),
+    ],
+)
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
+    a = xr.cftime_range("2000", periods=3, calendar=calendar, freq="D")
+    result = a + pd.Timedelta(n, units)
+    expected = a.shift(n, freq)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+def test_cftimeindex_shift_float_us() -> None:
+    a = xr.cftime_range("2000", periods=3, freq="D")
+    with pytest.raises(
+        ValueError, match="Could not convert to integer offset at any resolution"
+    ):
+        a.shift(2.5, "us")
+
+
+@requires_cftime
+@pytest.mark.parametrize("freq", ["AS", "A", "YS", "Y", "QS", "Q", "MS", "M"])
+def test_cftimeindex_shift_float_fails_for_non_tick_freqs(freq) -> None:
+    a = xr.cftime_range("2000", periods=3, freq="D")
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        a.shift(2.5, freq)
 
 
 @requires_cftime
@@ -748,7 +796,7 @@ def test_cftimeindex_radd(index):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_timedeltaindex_add_cftimeindex(calendar):
+def test_timedeltaindex_add_cftimeindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = deltas + a
@@ -796,7 +844,7 @@ def test_cftimeindex_sub_timedelta_array(index, other):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_sub_cftimeindex(calendar):
+def test_cftimeindex_sub_cftimeindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     b = a.shift(2, "D")
     result = b - a
@@ -835,7 +883,7 @@ def test_distant_cftime_datetime_sub_cftimeindex(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_sub_timedeltaindex(calendar):
+def test_cftimeindex_sub_timedeltaindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = a - deltas
@@ -871,7 +919,7 @@ def test_cftimeindex_rsub(index):
 
 @requires_cftime
 @pytest.mark.parametrize("freq", ["D", timedelta(days=1)])
-def test_cftimeindex_shift(index, freq):
+def test_cftimeindex_shift(index, freq) -> None:
     date_type = index.date_type
     expected_dates = [
         date_type(1, 1, 3),
@@ -886,14 +934,14 @@ def test_cftimeindex_shift(index, freq):
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_n():
+def test_cftimeindex_shift_invalid_n() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift("a", "D")
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_freq():
+def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift(1, 1)
@@ -907,7 +955,8 @@ def test_cftimeindex_shift_invalid_freq():
         ("365_day", "noleap"),
         ("360_day", "360_day"),
         ("julian", "julian"),
-        ("gregorian", "gregorian"),
+        ("gregorian", standard_or_gregorian),
+        ("standard", standard_or_gregorian),
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
@@ -924,7 +973,8 @@ def test_cftimeindex_calendar_property(calendar, expected):
         ("365_day", "noleap"),
         ("360_day", "360_day"),
         ("julian", "julian"),
-        ("gregorian", "gregorian"),
+        ("gregorian", standard_or_gregorian),
+        ("standard", standard_or_gregorian),
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
@@ -961,20 +1011,20 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
     [
         (
             2,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian', freq=None)""",
+            dtype='object', length=2, calendar='{standard_or_gregorian}', freq=None)""",
         ),
         (
             4,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00],
-            dtype='object', length=4, calendar='gregorian', freq='D')""",
+            dtype='object', length=4, calendar='{standard_or_gregorian}', freq='D')""",
         ),
         (
             101,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00, 2000-01-05 00:00:00, 2000-01-06 00:00:00,
              2000-01-07 00:00:00, 2000-01-08 00:00:00, 2000-01-09 00:00:00,
@@ -984,7 +1034,7 @@ CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
              2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
              2000-04-10 00:00:00],
-            dtype='object', length=101, calendar='gregorian', freq='D')""",
+            dtype='object', length=101, calendar='{standard_or_gregorian}', freq='D')""",
         ),
     ],
 )
@@ -1255,3 +1305,11 @@ def test_infer_freq(freq, calendar):
     indx = xr.cftime_range("2000-01-01", periods=3, freq=freq, calendar=calendar)
     out = xr.infer_freq(indx)
     assert out == freq
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_pickle_cftimeindex(calendar):
+    idx = xr.cftime_range("2000-01-01", periods=3, freq="D", calendar=calendar)
+    idx_pkl = pickle.loads(pickle.dumps(idx))
+    assert (idx == idx_pkl).all()

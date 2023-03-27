@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+
+from xarray.core.options import OPTIONS
+from xarray.core.pycompat import is_duck_array
 
 try:
     import bottleneck as bn
@@ -20,17 +25,29 @@ def _select_along_axis(values, idx, axis):
     return values[sl]
 
 
-def nanfirst(values, axis):
+def nanfirst(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     idx_first = np.argmax(~pd.isnull(values), axis=axis)
-    return _select_along_axis(values, idx_first, axis)
+    result = _select_along_axis(values, idx_first, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
-def nanlast(values, axis):
+def nanlast(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     rev = (slice(None),) * axis + (slice(None, None, -1),)
     idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
-    return _select_along_axis(values, idx_last, axis)
+    result = _select_along_axis(values, idx_last, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
 def inverse_permutation(indices):
@@ -101,11 +118,14 @@ def _advanced_indexer_subspaces(key):
         # Nothing to reorder: dimensions on the indexing result are already
         # ordered like vindex. See NumPy's rule for "Combining advanced and
         # basic indexing":
-        # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
-    ndim = len(np.broadcast(*non_slices).shape)
+    broadcasted_shape = np.broadcast_shapes(
+        *[item.shape if is_duck_array(item) else (0,) for item in non_slices]
+    )
+    ndim = len(broadcasted_shape)
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)
     vindex_positions = np.arange(ndim)
     return mixed_positions, vindex_positions
@@ -138,6 +158,7 @@ def _create_bottleneck_method(name, npmodule=np):
 
         if (
             _USE_BOTTLENECK
+            and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
             and not isinstance(axis, tuple)

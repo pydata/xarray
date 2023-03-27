@@ -15,22 +15,29 @@
 import datetime
 import inspect
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
+from textwrap import dedent, indent
 
 import sphinx_autosummary_accessors
+import yaml
+from sphinx.application import Sphinx
+from sphinx.util import logging
 
 import xarray
+
+LOGGER = logging.getLogger("conf")
 
 allowed_failures = set()
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 
-if "conda" in sys.executable:
+if "CONDA_DEFAULT_ENV" in os.environ or "conda" in sys.executable:
     print("conda environment:")
-    subprocess.run(["conda", "list"])
+    subprocess.run([os.environ.get("CONDA_EXE", "conda"), "list"])
 else:
     print("pip environment:")
     subprocess.run([sys.executable, "-m", "pip", "list"])
@@ -60,6 +67,8 @@ except ImportError:
         ]
     )
 
+nbsphinx_allow_errors = True
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -80,15 +89,16 @@ extensions = [
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
-    "sphinx_panels",
     "sphinxext.opengraph",
     "sphinx_copybutton",
     "sphinxext.rediraffe",
+    "sphinx_design",
 ]
 
+
 extlinks = {
-    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH"),
-    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
+    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
+    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
 }
 
 # sphinx-copybutton configurations
@@ -147,14 +157,18 @@ napoleon_type_aliases = {
     "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",
     "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
     "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
-    # objects without namespace
+    # objects without namespace: xarray
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
     "Variable": "~xarray.Variable",
+    "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
+    "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
+    # objects without namespace: numpy
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",
     "dtype": "~numpy.dtype",
     "ComplexWarning": "~numpy.ComplexWarning",
+    # objects without namespace: pandas
     "Index": "~pandas.Index",
     "MultiIndex": "~pandas.MultiIndex",
     "CategoricalIndex": "~pandas.CategoricalIndex",
@@ -182,7 +196,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "xarray"
-copyright = "2014-%s, xarray Developers" % datetime.datetime.now().year
+copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
 # The short X.Y version.
 version = xarray.__version__.split("+")[0]
@@ -230,12 +244,11 @@ html_theme_options = dict(
     use_repository_button=True,
     use_issues_button=True,
     home_page_in_toc=False,
-    extra_navbar="",
-    navbar_footer_text="",
     extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_devs",
+    icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
 )
 
 
@@ -256,12 +269,12 @@ html_css_files = ["style.css"]
 
 
 # configuration for sphinxext.opengraph
-ogp_site_url = "https://xarray.pydata.org/en/latest/"
-ogp_image = "https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png"
+ogp_site_url = "https://docs.xarray.dev/en/latest/"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
-    '<meta property="twitter:site" content="@xarray_dev />',
-    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png">',
+    '<meta property="twitter:site" content="@xarray_dev" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
 ]
 
 # Redirects for pages that were moved to new locations
@@ -314,7 +327,7 @@ intersphinx_mapping = {
     "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
+    "numba": ("https://numba.readthedocs.io/en/stable/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
@@ -379,5 +392,74 @@ def html_page_context(app, pagename, templatename, context, doctree):
         context["theme_use_edit_page_button"] = False
 
 
-def setup(app):
+def update_gallery(app: Sphinx):
+    """Update the gallery page."""
+
+    LOGGER.info("Updating gallery page...")
+
+    gallery = yaml.safe_load(pathlib.Path(app.srcdir, "gallery.yml").read_bytes())
+
+    for key in gallery:
+        items = [
+            f"""
+         .. grid-item-card::
+            :text-align: center
+            :link: {item['path']}
+
+            .. image:: {item['thumbnail']}
+                :alt: {item['title']}
+            +++
+            {item['title']}
+            """
+            for item in gallery[key]
+        ]
+
+        items_md = indent(dedent("\n".join(items)), prefix="    ")
+        markdown = f"""
+.. grid:: 1 2 2 2
+    :gutter: 2
+
+    {items_md}
+    """
+        pathlib.Path(app.srcdir, f"{key}-gallery.txt").write_text(markdown)
+        LOGGER.info(f"{key} gallery page updated.")
+    LOGGER.info("Gallery page updated.")
+
+
+def update_videos(app: Sphinx):
+    """Update the videos page."""
+
+    LOGGER.info("Updating videos page...")
+
+    videos = yaml.safe_load(pathlib.Path(app.srcdir, "videos.yml").read_bytes())
+
+    items = []
+    for video in videos:
+        authors = " | ".join(video["authors"])
+        item = f"""
+.. grid-item-card:: {" ".join(video["title"].split())}
+    :text-align: center
+
+    .. raw:: html
+
+        {video['src']}
+    +++
+    {authors}
+        """
+        items.append(item)
+
+    items_md = indent(dedent("\n".join(items)), prefix="    ")
+    markdown = f"""
+.. grid:: 1 2 2 2
+    :gutter: 2
+
+    {items_md}
+    """
+    pathlib.Path(app.srcdir, "videos-gallery.txt").write_text(markdown)
+    LOGGER.info("Videos page updated.")
+
+
+def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
+    app.connect("builder-inited", update_gallery)
+    app.connect("builder-inited", update_videos)

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import math
 import pickle
 from textwrap import dedent
 
@@ -6,17 +9,16 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.core.pycompat import array_type
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
 
 sparse = pytest.importorskip("sparse")
+sparse_array_type = array_type("sparse")
 
 
 def assert_sparse_equal(a, b):
@@ -26,7 +28,7 @@ def assert_sparse_equal(a, b):
 
 
 def make_ndarray(shape):
-    return np.arange(np.prod(shape)).reshape(shape)
+    return np.arange(math.prod(shape)).reshape(shape)
 
 
 def make_sparray(shape):
@@ -57,7 +59,6 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-
         # cannot pass np.sum when using pytest-xdist
         kwargs = self.kwargs.copy()
         if "func" in self.kwargs:
@@ -271,19 +272,22 @@ class TestSparseVariable:
         self.data = sparse.random((4, 6), random_state=0, density=0.5)
         self.var = xr.Variable(("x", "y"), self.data)
 
+    def test_nbytes(self):
+        assert self.var.nbytes == self.data.nbytes
+
     def test_unary_op(self):
         assert_sparse_equal(-self.var.data, -self.data)
         assert_sparse_equal(abs(self.var).data, abs(self.data))
         assert_sparse_equal(self.var.round().data, self.data.round())
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
-        assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
+        assert_sparse_equal(np.sin(self.data), np.sin(self.var).data)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
@@ -664,11 +668,6 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
-    def test_ufuncs(self):
-        x = self.sp_xr
-        assert_equal(np.sin(x), xu.sin(x))
-
     def test_dataarray_repr(self):
         a = xr.DataArray(
             sparse.COO.from_numpy(np.ones(4)),
@@ -702,8 +701,8 @@ class TestSparseDataArrayAndDataset:
         )
         assert expected == repr(ds)
 
+    @requires_dask
     def test_sparse_dask_dataset_repr(self):
-        pytest.importorskip("dask", minversion="2.0")
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
@@ -799,7 +798,7 @@ class TestSparseDataArrayAndDataset:
         t1 = xr.DataArray(
             np.linspace(0, 11, num=12),
             coords=[
-                pd.date_range("15/12/1999", periods=12, freq=pd.DateOffset(months=1))
+                pd.date_range("1999-12-15", periods=12, freq=pd.DateOffset(months=1))
             ],
             dims="time",
         )

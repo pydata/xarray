@@ -1,22 +1,14 @@
+from __future__ import annotations
+
 import functools
 import operator
 import os
-import pathlib
 from contextlib import suppress
 
 import numpy as np
 
-from .. import coding
-from ..coding.variables import pop_to
-from ..core import indexing
-from ..core.utils import (
-    FrozenDict,
-    close_on_error,
-    is_remote_uri,
-    try_read_magic_number_from_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray import coding
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
@@ -25,18 +17,26 @@ from .common import (
     find_root_and_group,
     robust_getitem,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
-from .store import StoreBackendEntrypoint
-
-try:
-    import netCDF4
-
-    has_netcdf4 = True
-except ModuleNotFoundError:
-    has_netcdf4 = False
-
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    NETCDFC_LOCK,
+    combine_locks,
+    ensure_lock,
+    get_write_lock,
+)
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.variables import pop_to
+from xarray.core import indexing
+from xarray.core.utils import (
+    FrozenDict,
+    close_on_error,
+    is_remote_uri,
+    module_available,
+    try_read_magic_number_from_path,
+)
+from xarray.core.variable import Variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -238,11 +238,11 @@ def _extract_nc4_variable_encoding(
         "shuffle",
         "_FillValue",
         "dtype",
+        "compression",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
     if h5py_okay:
-        valid_encodings.add("compression")
         valid_encodings.add("compression_opts")
 
     if not raise_on_invalid and encoding.get("chunksizes") is not None:
@@ -309,6 +309,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
+        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -345,8 +346,9 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
+        import netCDF4
 
-        if isinstance(filename, pathlib.Path):
+        if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
         if not isinstance(filename, str):
@@ -512,7 +514,32 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
-    available = has_netcdf4
+    """
+    Backend for netCDF files based on the netCDF4 package.
+
+    It can open ".nc", ".nc4", ".cdf" files and will be choosen
+    as default for these files.
+
+    Additionally it can open valid HDF5 files, see
+    https://h5netcdf.org/#invalid-netcdf-files for more info.
+    It will not be detected as valid backend for such files, so make
+    sure to specify ``engine="netcdf4"`` in ``open_dataset``.
+
+    For more information about the underlying library, visit:
+    https://unidata.github.io/netcdf4-python
+
+    See Also
+    --------
+    backends.NetCDF4DataStore
+    backends.H5netcdfBackendEntrypoint
+    backends.ScipyBackendEntrypoint
+    """
+
+    available = module_available("netCDF4")
+    description = (
+        "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
+    )
+    url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
     def guess_can_open(self, filename_or_obj):
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
@@ -546,7 +573,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         lock=None,
         autoclose=False,
     ):
-
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,

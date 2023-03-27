@@ -8,6 +8,10 @@ on:
       - "*"
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -18,15 +22,15 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1.1
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
@@ -38,41 +42,72 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.7", "3.9"]
+        python-version: ["3.9", "3.10", "3.11"]
+        env: [""]
+        include:
+          # Minimum python version:
+          - env: "bare-minimum"
+            python-version: "3.9"
+            os: ubuntu-latest
+          - env: "min-all-deps"
+            python-version: "3.9"
+            os: ubuntu-latest
+          # Latest python version:
+          - env: "all-but-dask"
+            python-version: "3.10"
+            os: ubuntu-latest
+          - env: "flaky"
+            python-version: "3.10"
+            os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.os }} == windows* ]] ;
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+          if [[ "${{matrix.python-version}}" == "3.11" ]]; then
+            if [[ ${{matrix.os}} == windows* ]]; then
+              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-py311.yml" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/environment-py311.yml" >> $GITHUB_ENV
+            fi
+          elif [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
+          elif [[ "${{ matrix.env }}" != "" ]] ;
+          then
+            if [[ "${{ matrix.env }}" == "flaky" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+            fi
           else
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-
           fi
+
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
-      - name: Cache conda
-        uses: actions/cache@v2
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@v15
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
-            hashFiles('ci/requirements/**.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: ${{ matrix.python-version }}
-          use-only-tar-bz2: true
+          environment-file: ${{ env.CONDA_ENV_FILE }}
+          environment-name: xarray-tests
+          cache-env: true
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+          extra-specs: |
+            python=${{matrix.python-version}}
+            conda
 
-      - name: Install conda dependencies
+      # We only want to install this on one run, because otherwise we'll have
+      # duplicate annotations.
+      - name: Install error reporter
+        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.10'
         run: |
-          mamba env update -f $CONDA_ENV_FILE
+          python -m pip install pytest-github-actions-annotate-failures
 
       - name: Install xarray
         run: |
@@ -83,24 +118,28 @@ jobs:
           conda info -a
           conda list
           python xarray/util/print_versions.py
+
       - name: Import xarray
         run: |
           python -c "import xarray"
+
       - name: Run tests
         run: python -m pytest -n 4
+          --timeout 180
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
+          $PYTEST_EXTRA_FLAGS
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v2.0.2
+        uses: codecov/codecov-action@v3.1.1
         with:
           file: ./coverage.xml
           flags: unittests
@@ -108,19 +147,13 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  publish-test-results:
-    needs: test
+  event_file:
+    name: "Event File"
     runs-on: ubuntu-latest
-    # the build-and-test job might be skipped, we don't need to run this job then
-    if: success() || failure()
-
+    if: github.repository == 'pydata/xarray'
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
+      - name: Upload
+        uses: actions/upload-artifact@v3
         with:
-          path: test-results
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        with:
-          files: test-results/**/*.xml
+          name: Event File
+          path: ${{ github.event_path }}

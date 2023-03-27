@@ -1,0 +1,17 @@
+name: 📝 Issue
+description: General issue, that's not a bug report.
+labels: ["needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe your issue here.
+  - type: textarea
+    id: issue-description
+    attributes:
+      label: What is your issue?
+      description: |
+        Thank you for filing an issue! Please give us further information on how we can help you.
+      placeholder: Please describe your issue.
+    validations:
+      required: true

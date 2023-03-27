@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
@@ -13,11 +14,9 @@ from . import (
     raise_if_dask_computes,
     requires_cftime,
 )
-from .test_dataarray import da
-from .test_dataset import ds
 
 
-def test_coarsen_absent_dims_error(ds):
+def test_coarsen_absent_dims_error(ds: Dataset) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):
         ds.coarsen(foo=2)
 
@@ -58,7 +57,7 @@ def test_coarsen_coords(ds, dask):
     da = xr.DataArray(
         np.linspace(0, 365, num=364),
         dims="time",
-        coords={"time": pd.date_range("15/12/1999", periods=364)},
+        coords={"time": pd.date_range("1999-12-15", periods=364)},
     )
     actual = da.coarsen(time=2).mean()
 
@@ -79,7 +78,7 @@ def test_coarsen_coords_cftime():
         ("mean", ()),
     ],
 )
-def test_coarsen_keep_attrs(funcname, argument):
+def test_coarsen_keep_attrs(funcname, argument) -> None:
     global_attrs = {"units": "test", "long_name": "testing"}
     da_attrs = {"da_attr": "test"}
     attrs_coords = {"attrs_coords": "test"}
@@ -157,8 +156,8 @@ def test_coarsen_keep_attrs(funcname, argument):
 @pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_coarsen_reduce(ds, window, name):
-    # Use boundary="trim" to accomodate all window sizes used in tests
+def test_coarsen_reduce(ds: Dataset, window, name) -> None:
+    # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = ds.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
@@ -181,7 +180,7 @@ def test_coarsen_reduce(ds, window, name):
         ("mean", ()),
     ],
 )
-def test_coarsen_da_keep_attrs(funcname, argument):
+def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     attrs_da = {"da_attr": "test"}
     attrs_coords = {"attrs_coords": "test"}
 
@@ -237,11 +236,11 @@ def test_coarsen_da_keep_attrs(funcname, argument):
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_coarsen_da_reduce(da, window, name):
+def test_coarsen_da_reduce(da, window, name) -> None:
     if da.isnull().sum() > 1 and window == 1:
         pytest.skip("These parameters lead to all-NaN slices")
 
-    # Use boundary="trim" to accomodate all window sizes used in tests
+    # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = da.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
@@ -250,71 +249,90 @@ def test_coarsen_da_reduce(da, window, name):
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_construct(dask):
-
-    ds = Dataset(
-        {
-            "vart": ("time", np.arange(48), {"a": "b"}),
-            "varx": ("x", np.arange(10), {"a": "b"}),
-            "vartx": (("x", "time"), np.arange(480).reshape(10, 48), {"a": "b"}),
-            "vary": ("y", np.arange(12)),
-        },
-        coords={"time": np.arange(48), "y": np.arange(12)},
-        attrs={"foo": "bar"},
-    )
-
-    if dask and has_dask:
-        ds = ds.chunk({"x": 4, "time": 10})
-
-    expected = xr.Dataset(attrs={"foo": "bar"})
-    expected["vart"] = (("year", "month"), ds.vart.data.reshape((-1, 12)), {"a": "b"})
-    expected["varx"] = (("x", "x_reshaped"), ds.varx.data.reshape((-1, 5)), {"a": "b"})
-    expected["vartx"] = (
-        ("x", "x_reshaped", "year", "month"),
-        ds.vartx.data.reshape(2, 5, 4, 12),
-        {"a": "b"},
-    )
-    expected["vary"] = ds.vary
-    expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
-
-    with raise_if_dask_computes():
-        actual = ds.coarsen(time=12, x=5).construct(
-            {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+class TestCoarsenConstruct:
+    @pytest.mark.parametrize("dask", [True, False])
+    def test_coarsen_construct(self, dask: bool) -> None:
+        ds = Dataset(
+            {
+                "vart": ("time", np.arange(48), {"a": "b"}),
+                "varx": ("x", np.arange(10), {"a": "b"}),
+                "vartx": (("x", "time"), np.arange(480).reshape(10, 48), {"a": "b"}),
+                "vary": ("y", np.arange(12)),
+            },
+            coords={"time": np.arange(48), "y": np.arange(12)},
+            attrs={"foo": "bar"},
         )
-    assert_identical(actual, expected)
 
-    with raise_if_dask_computes():
-        actual = ds.coarsen(time=12, x=5).construct(
-            time=("year", "month"), x=("x", "x_reshaped")
+        if dask and has_dask:
+            ds = ds.chunk({"x": 4, "time": 10})
+
+        expected = xr.Dataset(attrs={"foo": "bar"})
+        expected["vart"] = (
+            ("year", "month"),
+            ds.vart.data.reshape((-1, 12)),
+            {"a": "b"},
         )
-    assert_identical(actual, expected)
-
-    with raise_if_dask_computes():
-        actual = ds.coarsen(time=12, x=5).construct(
-            {"time": ("year", "month"), "x": ("x", "x_reshaped")}, keep_attrs=False
+        expected["varx"] = (
+            ("x", "x_reshaped"),
+            ds.varx.data.reshape((-1, 5)),
+            {"a": "b"},
         )
-        for var in actual:
-            assert actual[var].attrs == {}
-        assert actual.attrs == {}
-
-    with raise_if_dask_computes():
-        actual = ds.vartx.coarsen(time=12, x=5).construct(
-            {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+        expected["vartx"] = (
+            ("x", "x_reshaped", "year", "month"),
+            ds.vartx.data.reshape(2, 5, 4, 12),
+            {"a": "b"},
         )
-    assert_identical(actual, expected["vartx"])
+        expected["vary"] = ds.vary
+        expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
 
-    with pytest.raises(ValueError):
-        ds.coarsen(time=12).construct(foo="bar")
+        with raise_if_dask_computes():
+            actual = ds.coarsen(time=12, x=5).construct(
+                {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+            )
+        assert_identical(actual, expected)
 
-    with pytest.raises(ValueError):
-        ds.coarsen(time=12, x=2).construct(time=("year", "month"))
+        with raise_if_dask_computes():
+            actual = ds.coarsen(time=12, x=5).construct(
+                time=("year", "month"), x=("x", "x_reshaped")
+            )
+        assert_identical(actual, expected)
 
-    with pytest.raises(ValueError):
-        ds.coarsen(time=12).construct()
+        with raise_if_dask_computes():
+            actual = ds.coarsen(time=12, x=5).construct(
+                {"time": ("year", "month"), "x": ("x", "x_reshaped")}, keep_attrs=False
+            )
+            for var in actual:
+                assert actual[var].attrs == {}
+            assert actual.attrs == {}
 
-    with pytest.raises(ValueError):
-        ds.coarsen(time=12).construct(time="bar")
+        with raise_if_dask_computes():
+            actual = ds.vartx.coarsen(time=12, x=5).construct(
+                {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+            )
+        assert_identical(actual, expected["vartx"])
 
-    with pytest.raises(ValueError):
-        ds.coarsen(time=12).construct(time=("bar",))
+        with pytest.raises(ValueError):
+            ds.coarsen(time=12).construct(foo="bar")
+
+        with pytest.raises(ValueError):
+            ds.coarsen(time=12, x=2).construct(time=("year", "month"))
+
+        with pytest.raises(ValueError):
+            ds.coarsen(time=12).construct()
+
+        with pytest.raises(ValueError):
+            ds.coarsen(time=12).construct(time="bar")
+
+        with pytest.raises(ValueError):
+            ds.coarsen(time=12).construct(time=("bar",))
+
+    def test_coarsen_construct_keeps_all_coords(self):
+        da = xr.DataArray(np.arange(24), dims=["time"])
+        da = da.assign_coords(day=365 * da)
+
+        result = da.coarsen(time=12).construct(time=("year", "month"))
+        assert list(da.coords) == list(result.coords)
+
+        ds = da.to_dataset(name="T")
+        result = ds.coarsen(time=12).construct(time=("year", "month"))
+        assert list(da.coords) == list(result.coords)

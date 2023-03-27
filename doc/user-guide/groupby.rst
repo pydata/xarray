@@ -1,13 +1,15 @@
 .. _groupby:
 
-GroupBy: split-apply-combine
-----------------------------
+GroupBy: Group and Bin Data
+---------------------------
 
-xarray supports `"group by"`__ operations with the same API as pandas to
-implement the `split-apply-combine`__ strategy:
+Often we want to bin or group data, produce statistics (mean, variance) on
+the groups, and then return a reduced data set. To do this, Xarray supports
+`"group by"`__ operations with the same API as pandas to implement the
+`split-apply-combine`__ strategy:
 
-__ http://pandas.pydata.org/pandas-docs/stable/groupby.html
-__ http://www.jstatsoft.org/v40/i01/paper
+__ https://pandas.pydata.org/pandas-docs/stable/groupby.html
+__ https://www.jstatsoft.org/v40/i01/paper
 
 - Split your data into multiple independent groups.
 - Apply some function to each group.
@@ -19,6 +21,13 @@ a single one-dimensional variable, although support for grouping
 over a multi-dimensional variable has recently been implemented. Note that for
 one-dimensional data, it is usually faster to rely on pandas' implementation of
 the same pipeline.
+
+.. tip::
+
+   To substantially improve the performance of GroupBy operations, particularly
+   with dask `install the flox package <https://flox.readthedocs.io>`_. flox
+   `extends Xarray's in-built GroupBy capabilities <https://flox.readthedocs.io/en/latest/xarray.html>`_
+   by allowing grouping by multiple variables, and lazy grouping by dask arrays. If installed, Xarray will automatically use flox by default.
 
 Split
 ~~~~~
@@ -201,7 +210,7 @@ which is different from the logical grid dimensions (e.g. nx, ny). Such
 variables are valid under the `CF conventions`__. Xarray supports groupby
 operations over multidimensional coordinate variables:
 
-__ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimensional_latitude_longitude_coordinate_variables
+__ https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimensional_latitude_longitude_coordinate_variables
 
 .. ipython:: python
 

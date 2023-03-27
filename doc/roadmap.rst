@@ -3,9 +3,9 @@
 Development roadmap
 ===================
 
-Authors: Stephan Hoyer, Joe Hamman and xarray developers
+Authors: Xarray developers
 
-Date: July 24, 2018
+Date: September 7, 2021
 
 Xarray is an open source Python library for labeled multidimensional
 arrays and datasets.
@@ -20,7 +20,7 @@ Why has xarray been successful? In our opinion:
 
    -  The dominant use-case for xarray is for analysis of gridded
       dataset in the geosciences, e.g., as part of the
-      `Pangeo <http://pangeo-data.org>`__ project.
+      `Pangeo <https://pangeo.io>`__ project.
    -  Xarray is also used more broadly in the physical sciences, where
       we've found the needs for analyzing multidimensional datasets are
       remarkably consistent (e.g., see
@@ -28,7 +28,7 @@ Why has xarray been successful? In our opinion:
       `PlasmaPy <https://github.com/PlasmaPy/PlasmaPy/issues/59>`__).
    -  Finally, xarray is used in a variety of other domains, including
       finance, `probabilistic
-      programming <https://github.com/arviz-devs/arviz/issues/97>`__ and
+      programming <https://arviz-devs.github.io/arviz/>`__ and
       genomics.
 
 -  Xarray is also a **domain agnostic** solution:
@@ -37,7 +37,7 @@ Why has xarray been successful? In our opinion:
       labeled multidimensional arrays, rather than solving particular
       problems.
    -  This facilitates collaboration between users with different needs,
-      and helps us attract a broad community of contributers.
+      and helps us attract a broad community of contributors.
    -  Importantly, this retains flexibility, for use cases that don't
       fit particularly well into existing frameworks.
 
@@ -82,16 +82,21 @@ We think the right approach to extending xarray's user community and the
 usefulness of the project is to focus on improving key interfaces that
 can be used externally to meet domain-specific needs.
 
-We can generalize the community's needs into three main catagories:
+We can generalize the community's needs into three main categories:
 
 -  More flexible grids/indexing.
 -  More flexible arrays/computing.
 -  More flexible storage backends.
+-  More flexible data structures.
 
 Each of these are detailed further in the subsections below.
 
 Flexible indexes
 ~~~~~~~~~~~~~~~~
+
+.. note::
+   Work on flexible grids and indexes is currently underway. See
+   `GH Project #1 <https://github.com/pydata/xarray/projects/1>`__ for more detail.
 
 Xarray currently keeps track of indexes associated with coordinates by
 storing them in the form of a ``pandas.Index`` in special
@@ -107,10 +112,9 @@ A cleaner model would be to elevate ``indexes`` to an explicit part of
 xarray's data model, e.g., as attributes on the ``Dataset`` and
 ``DataArray`` classes. Indexes would need to be propagated along with
 coordinates in xarray operations, but will no longer would need to have
-a one-to-one correspondance with coordinate variables. Instead, an index
+a one-to-one correspondence with coordinate variables. Instead, an index
 should be able to refer to multiple (possibly multidimensional)
-coordinates that define it. See `GH
-1603 <https://github.com/pydata/xarray/issues/1603>`__ for full details
+coordinates that define it. See :issue:`1603` for full details.
 
 Specific tasks:
 
@@ -129,6 +133,10 @@ build upon indexing, such as groupby operations with multiple variables.
 
 Flexible arrays
 ~~~~~~~~~~~~~~~
+
+.. note::
+   Work on flexible arrays is currently underway. See
+   `GH Project #2 <https://github.com/pydata/xarray/projects/2>`__ for more detail.
 
 Xarray currently supports wrapping multidimensional arrays defined by
 NumPy, dask and to a limited-extent pandas. It would be nice to have
@@ -160,6 +168,10 @@ third-party libraries.
 Flexible storage
 ~~~~~~~~~~~~~~~~
 
+.. note::
+   Work on flexible storage backends is currently underway. See
+   `GH Project #3 <https://github.com/pydata/xarray/projects/3>`__ for more detail.
+
 The xarray backends module has grown in size and complexity. Much of
 this growth has been "organic" and mostly to support incremental
 additions to the supported backends. This has left us with a fragile
@@ -169,11 +181,9 @@ backends means that users can not easily build backend interface for
 xarray in third-party libraries.
 
 The idea of refactoring the backends API and exposing it to users was
-originally proposed in `GH
-1970 <https://github.com/pydata/xarray/issues/1970>`__. The idea would
-be to develop a well tested and generic backend base class and
-associated utilities for external use. Specific tasks for this
-development would include:
+originally proposed in :issue:`1970`. The idea would be to develop a
+well tested and generic backend base class and associated utilities
+for external use. Specific tasks for this development would include:
 
 -  Exposing an abstract backend for writing new storage systems.
 -  Exposing utilities for features like automatic closing of files,
@@ -181,8 +191,65 @@ development would include:
 -  Possibly moving some infrequently used backends to third-party
    packages.
 
+Flexible data structures
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray provides two primary data structures, the ``xarray.DataArray`` and
+the ``xarray.Dataset``. This section describes two possible data model
+extensions.
+
+Tree-like data structure
+++++++++++++++++++++++++
+
+.. note::
+   Work on developing a hierarchical data structure in xarray is just
+   beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__
+   for an early prototype.
+
+Xarray’s highest-level object is currently an ``xarray.Dataset``, whose data
+model echoes that of a single netCDF group. However real-world datasets are
+often better represented by a collection of related Datasets. Particular common
+examples include:
+
+-  Multi-resolution datasets,
+-  Collections of time series datasets with differing lengths,
+-  Heterogeneous datasets comprising multiple different types of related
+   observational or simulation data,
+-  Bayesian workflows involving various statistical distributions over multiple
+   variables,
+-  Whole netCDF files containing multiple groups.
+-  Comparison of output from many similar models (such as in the IPCC's Coupled Model Intercomparison Projects)
+
+A new tree-like data structure which is essentially a structured hierarchical
+collection of Datasets could represent these cases, and would instead map to
+multiple netCDF groups (see :issue:`4118`).
+
+Currently there are several libraries which have wrapped xarray in order to build
+domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
+but a general ``xarray.DataTree`` object would obviate the need for these and]
+consolidate effort in a single domain-agnostic tool, much as xarray has already achieved.
+
+Labeled array without coordinates
++++++++++++++++++++++++++++++++++
+
+There is a need for a lightweight array structure with named dimensions for
+convenient indexing and broadcasting. Xarray includes such a structure internally
+(``xarray.Variable``). We want to factor out xarray's “Variable”  object into a
+standalone package with minimal dependencies for integration with libraries that
+don't want to inherit xarray's dependency on pandas (e.g. scikit-learn).
+The new “Variable” class will follow established array protocols and the new
+data-apis standard. It will be capable of wrapping multiple array-like objects
+(e.g. NumPy, Dask, Sparse, Pint, CuPy, Pytorch). While “DataArray” fits some of
+these requirements, it offers a more complex data model than is desired for
+many applications and depends on pandas.
+
 Engaging more users
 -------------------
+
+.. note::
+   Work on improving xarray’s documentation and user engagement is
+   currently underway. See `GH Project #4 <https://github.com/pydata/xarray/projects/4>`__
+   for more detail.
 
 Like many open-source projects, the documentation of xarray has grown
 together with the library's features. While we think that the xarray
@@ -197,7 +264,7 @@ In order to lower this adoption barrier, we propose to:
 
 -  Develop entry-level tutorials for users with different backgrounds. For
    example, we would like to develop tutorials for users with or without
-   previous knowledge of pandas, numpy, netCDF, etc. These tutorials may be
+   previous knowledge of pandas, NumPy, netCDF, etc. These tutorials may be
    built as part of xarray's documentation or included in a separate repository
    to enable interactive use (e.g. mybinder.org).
 -  Document typical user workflows in a dedicated website, following the example
