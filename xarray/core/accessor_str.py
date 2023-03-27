@@ -1135,12 +1135,15 @@ class StringAccessor(Generic[T_DataArray]):
         array([1, 1, 0])
         Dimensions without coordinates: x
 
-        Using a list of strings (returns a count of matches for each element):
-        >>> counts = da.str.count(["jj"])
+        Using an array of strings (the pattern will be broadcast against the array):
+        >>> pat= xr.DataArray(["jj", "JJ"], dims="y")
+        >>> counts = da.str.count(pat)
         >>> counts
-        <xarray.DataArray (x: 3)>
-        array([2, 2, 0])
-        Dimensions without coordinates: x
+        <xarray.DataArray (x: 3, y: 2)>
+        array([[1, 0],
+               [1, 0],
+               [0, 1]])
+        Dimensions without coordinates: x, y
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
