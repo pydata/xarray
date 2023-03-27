@@ -290,13 +290,16 @@ class set_options:
         self._apply_update(self.old)
 
 
-def get_options():
+def get_options(*, join: str = 'inner', copy: bool = True, 
+                indexes: Tuple[str, ...] = None, 
+                exclude: FrozenSet[str] = frozenset(),
+                fill_value: Any = None) -> FrozenDict[str, Any]):
     """
-    Retrieves the current global option for xarray
+    Retrieve the current global option for xarray
 
     Returns
     -------
-    dictionary containing current global options and their corresponding values
+    FrozenDict[str, Any]: A read-only dictionary view of a frozen set containing a set of example options.
 
     See Also
     ----------
