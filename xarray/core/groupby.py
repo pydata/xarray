@@ -625,7 +625,7 @@ class GroupBy(Generic[T_Xarray]):
             # TODO: What about datasets with some dask vars, and others not?
             other = other.chunk({name: 1})
 
-        expanded = other.sel({name: group}).drop_vars(name)
+        expanded = other.sel({name: group})
 
         result = g(obj, expanded)
 
