@@ -613,7 +613,19 @@ class GroupBy(Generic[T_Xarray]):
                 )
 
         other, _ = align(other, coord, join="outer")
-        expanded = other.sel({name: group})
+
+        # if other is dask-backed, that's a hint that the
+        # "expanded" dataset is too big to hold in memory.
+        # this can be the case when `other` was read from disk
+        # We need to check for dask-backed Datasets
+        # so utils.is_duck_dask_array does not work for this check
+        if obj.__dask_graph__() is not None and other.__dask_graph__() is None:
+            # a chunk size of 1 seems reasonable since we expect it to be repeated
+            # TODO: what about dims other than `name``
+            # TODO: What about datasets with some dask vars, and others not?
+            other = other.chunk({name: 1})
+
+        expanded = other.sel({name: group}).drop_vars(name)
 
         result = g(obj, expanded)
 
