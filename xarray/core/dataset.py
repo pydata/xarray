@@ -666,6 +666,12 @@ class Dataset(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
 
+    def reset_encoding(self: T_Dataset) -> None:
+        """Return a new Dataset without encoding on the dataset or any of its
+        variables/coords."""
+        variables = {k: v.reset_encoding() for k, v in self.variables.items()}
+        return self._replace(variables=variables, encoding={})
+
     @property
     def dims(self) -> Frozen[Hashable, int]:
         """Mapping from dimension names to lengths.
