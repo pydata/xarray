@@ -1121,7 +1121,6 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Enable case-insensitive matching by setting case to false:
-        >>> import re
         >>> counts = da.str.count("jj", case=False)
         >>> counts
         <xarray.DataArray (x: 3)>
