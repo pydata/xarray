@@ -135,6 +135,8 @@ def guess_engine(
         try:
             if backend.guess_can_open(store_spec):
                 return engine
+        except PermissionError:
+            raise
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
