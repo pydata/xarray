@@ -6711,6 +6711,7 @@ class DataArray(
         ...     name="eg_dataarray",
         ...     attrs={"units": "Celsius", "description": "Random temperature data"},
         ... )
+<<<<<<< HEAD
         >>>da.to_dask_dataframe(["lat", "lon", "time"]).compute()
             lat  lon  time  eg_dataarray
         0   -30  120     0             0
@@ -6729,6 +6730,15 @@ class DataArray(
         13  -20  130     1             7
         14  -20  130     2            11
         15  -20  130     3            15
+=======
+        >>> da.to_dask_dataframe(["lat", "lon", "time"])
+        Dask DataFrame Structure:
+                         lat    lon   time eg_dataarray
+        npartitions=1
+        0              int64  int64  int64        int64
+        23               ...    ...    ...          ...
+        Dask Name: concat-indexed, 1 graph layer
+>>>>>>> origin/method-dataarray-to-daskdataframe
 
         """
 
