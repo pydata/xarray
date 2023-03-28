@@ -617,6 +617,13 @@ store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
 
+DataArrays can also be saved to disk using the :py:meth:`DataArray.to_zarr` method,
+and loaded from disk using the :py:func:`open_dataarray` function with `engine='zarr'`.
+Similar to :py:meth:`DataArray.to_netcdf`, :py:meth:`DataArray.to_zarr` will
+convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
+when loading, ensuring that the ``DataArray`` that is loaded is always exactly
+the same as the one that was saved.
+
 .. note::
 
     xarray does not write NCZarr attributes. Therefore, NCZarr data must be

@@ -641,6 +641,7 @@ DataArray methods
    DataArray.to_numpy
    DataArray.to_pandas
    DataArray.to_series
+   DataArray.to_zarr
    DataArray.chunk
    DataArray.close
    DataArray.compute
