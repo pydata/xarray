@@ -6714,7 +6714,7 @@ class DataArray(
         >>> da.to_dask_dataframe(["lat", "lon", "time"])
         Dask DataFrame Structure:
                          lat    lon   time eg_dataarray
-        npartitions=1                                  
+        npartitions=1
         0              int64  int64  int64        int64
         23               ...    ...    ...          ...
         Dask Name: concat-indexed, 1 graph layer
