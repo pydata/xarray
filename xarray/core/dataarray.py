@@ -4021,7 +4021,7 @@ class DataArray(
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
     ) -> ZarrStore | Delayed:
-        """Write DataArray contents to a netCDF file.
+        """Write DataArray contents to a Zarr store
 
         Zarr chunks are determined in the following way:
 
