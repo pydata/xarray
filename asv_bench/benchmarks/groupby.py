@@ -71,7 +71,7 @@ class GroupByPandasDataFrame(GroupBy):
 
         super().setup(**kwargs)
         self.ds1d = self.ds1d.to_dataframe()
-        self.ds1d_mean = self.ds1d.groupby("b").mean().compute()
+        self.ds1d_mean = self.ds1d.groupby("b").mean()
 
     def time_binary_op_2d(self):
         raise NotImplementedError
