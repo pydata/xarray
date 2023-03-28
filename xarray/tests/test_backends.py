@@ -753,6 +753,16 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers)
 
+    def test_outer_indexing_reversed(self) -> None:
+        # regression test for GH6560
+        ds = xr.Dataset(
+            {"z": (("t", "p", "y", "x"), np.ones((1, 1, 31, 40)))},
+        )
+
+        with self.roundtrip(ds) as on_disk:
+            subset = on_disk.isel(t=[0], p=0).z[:, ::10, ::10][:, ::-1, :]
+            assert subset.sizes == subset.load().sizes
+
     def test_isel_dataarray(self) -> None:
         # Make sure isel works lazily. GH:issue:1688
         in_memory = create_test_data()
