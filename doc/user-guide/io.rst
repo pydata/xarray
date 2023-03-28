@@ -254,27 +254,10 @@ You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
 :py:attr:`DataArray.encoding` attributes:
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
 
-    In [1]: ds_disk["y"].encoding
-    Out[1]:
-    {'zlib': False,
-     'shuffle': False,
-     'complevel': 0,
-     'fletcher32': False,
-     'contiguous': True,
-     'chunksizes': None,
-     'source': 'saved_on_disk.nc',
-     'original_shape': (5,),
-     'dtype': dtype('int64'),
-     'units': 'days since 2000-01-01 00:00:00',
-     'calendar': 'proleptic_gregorian'}
-
-    In [9]: ds_disk.encoding
-    Out[9]:
-    {'unlimited_dims': set(),
-     'source': 'saved_on_disk.nc'}
+    ds_disk["y"].encoding
+    ds_disk.encoding
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
@@ -283,12 +266,10 @@ In some cases it is useful to intentionally reset a dataset's original encoding 
 This can be done with either the :py:meth:`Dataset.reset_encoding` or
 :py:meth:`DataArray.reset_encoding` methods.
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
 
-    In [1]: ds_no_encoding = ds_disk.reset_encoding()
-    In [2]: ds_no_encoding["y"]
-    Out[2]: {}
+    ds_no_encoding = ds_disk.reset_encoding()
+    ds_no_encoding.encoding
 
 .. _combining multiple files:
 
