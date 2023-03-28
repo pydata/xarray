@@ -6701,23 +6701,34 @@ class DataArray(
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.arange(4 * 3 * 2).reshape(4, 3, 2),
+        ...     np.arange(4 * 2 * 2).reshape(4, 2, 2),
         ...     dims=("time", "lat", "lon"),
         ...     coords={
         ...         "time": np.arange(4),
-        ...         "lat": [-30, -20, -10],
+        ...         "lat": [-30, -20],
         ...         "lon": [120, 130],
         ...     },
         ...     name="eg_dataarray",
         ...     attrs={"units": "Celsius", "description": "Random temperature data"},
         ... )
-        >>> da.to_dask_dataframe(["lat", "lon", "time"])
-        Dask DataFrame Structure:
-                         lat    lon   time eg_dataarray
-        npartitions=1                                  
-        0              int64  int64  int64        int64
-        23               ...    ...    ...          ...
-        Dask Name: concat-indexed, 1 graph layer
+        >>>da.to_dask_dataframe(["lat", "lon", "time"]).compute()
+            lat  lon  time  eg_dataarray
+        0   -30  120     0             0
+        1   -30  120     1             4
+        2   -30  120     2             8
+        3   -30  120     3            12
+        4   -30  130     0             1
+        5   -30  130     1             5
+        6   -30  130     2             9
+        7   -30  130     3            13
+        8   -20  120     0             2
+        9   -20  120     1             6
+        10  -20  120     2            10
+        11  -20  120     3            14
+        12  -20  130     0             3
+        13  -20  130     1             7
+        14  -20  130     2            11
+        15  -20  130     3            15
 
         """
 
