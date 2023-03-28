@@ -4,10 +4,9 @@
 Reshaping and reorganizing data
 ###############################
 
-Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks. To convert from a Dataset to a DataArray, use the to_array() method. Unlike pandas, xarray's stack() method does not automatically drop missing values.
+Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks. Unlike pandas, xarray's stack() method does not automatically drop missing values.
 
-These methods are particularly useful for reshaping xarray objects for use in machine learning packages, such as scikit-learn, that usually require two-dimensional numpy arrays as inputs. It can also be used in working with geospatial data where we need to analyze and visualize geospatial data, such as satellite imagery or geospatial datasets. Xarray can also be used for time series analysis, including forecasting and anomaly detection.
-
+These methods are particularly useful for reshaping xarray objects for use in machine learning packages, such as scikit-learn, that usually require two-dimensional numpy arrays as inputs. It can also be used in working with geospatial data where we need to analyze and visualize geospatial data, such as satellite imagery or geospatial datasets.
 .. ipython:: python
     :suppress:
 
