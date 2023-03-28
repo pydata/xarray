@@ -373,6 +373,57 @@ If you want to do a full clean build, do::
     make clean
     make html
 
+Writing ReST pages
+------------------
+
+Most documentation is either in the docstrings of individual classes and methods, in explicit
+``.rst`` files, or in examples and tutorials. All of these use the
+`ReST <https://docutils.sourceforge.io/rst.html>`_ syntax and are processed by
+`Sphinx <https://www.sphinx-doc.org/en/master/>`_.
+
+This section contains additional information and conventions how ReST is used in the
+xarray documentation.
+
+Section formatting
+~~~~~~~~~~~~~~~~~~
+
+We aim to follow the recommendations from the
+`Python documentation <https://devguide.python.org/documentation/start-documenting/index.html#sections>`_
+and the `Sphinx reStructuredText documentation <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections>`_ f
+or section markup characters,
+
+- ``#`` with overline, for parts. This is reserved for the main title in ``index.rst``. All other pages should start with "chapter" or lower.
+
+- ``*`` with overline, for chapters
+
+- ``=``, for sections
+
+- ``-``, for subsections
+
+- ``^``, for subsubsections
+
+- ``"``, for paragraphs
+
+Referring to other documents and sections
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`Sphinx  <https://www.sphinx-doc.org/en/master/>`_ allows internal
+`references <https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html>`_ between documents.
+
+Documents can be linked with the ``:doc:`` directive:
+
+::
+
+    See the :doc:`/getting-started-guide/installing`
+
+    See the tutorial :doc:`/getting-started-guide/quick-overview`
+
+will render as:
+
+    See the `Installation <https://docs.xarray.dev/en/stable/getting-started-guide/installing.html>`_
+
+    See the `Quick Overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_
+
 .. _contributing.code:
 
 Contributing to the code base
