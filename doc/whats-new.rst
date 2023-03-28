@@ -40,6 +40,8 @@ Bug fixes
   By `Shreyal Gupta <https://github.com/Ravenin7>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
 - Improve error message when trying to open a file which you do not have permission to read (:issue:`6523`, :pull:`7629`).
   By `Thomas Coleman <https://github.com/ColemanTom>`_.
+- Proper plotting when passing :py:class:`~matplotlib.colors.BoundaryNorm` type argument in :py:meth:`DataArray.plot`. (:issue:`4061`, :issue:`7014`,:pull:`7553`)
+  By `Jelmer Veenstra <https://github.com/veenstrajelmer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
