@@ -6686,10 +6686,9 @@ class DataArray(
         dim_order : Sequence of Hashable or None , optional
             Hierarchical dimension order for the resulting dataframe.
             Array content is transposed to this order and then written out as flat
-            vectors in contiguous order , so the last dimension in this list
+            vectors in contiguous order, so the last dimension in this list
             will be contiguous in the resulting DataFrame. This has a major influence
             on which operations are efficient on the resulting dask dataframe.
-
         set_index : bool, default: False
             If set_index=True, the dask DataFrame is indexed by this dataset's
             coordinate. Since dask DataFrames do not support multi-indexes,
