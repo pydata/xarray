@@ -552,8 +552,7 @@ Writing tests
 All tests should go into the ``tests`` subdirectory of the specific package.
 This folder contains many current examples of tests, and we suggest looking to these for
 inspiration.  If your test requires working with files or
-network connectivity, there is more information on the `testing page
-<https://github.com/pydata/xarray/wiki/Testing>`_ of the wiki.
+network connectivity.
 
 The ``xarray.testing`` module has many special ``assert`` functions that
 make it easier to make statements about whether DataArray or Dataset objects are
