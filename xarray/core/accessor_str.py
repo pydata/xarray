@@ -1250,6 +1250,49 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
             Array with a minimum number of char in each element.
+
+        Examples
+        --------
+        Pad strings in the array with a single string on the left side.
+        
+        Define the string in the array.
+        >>> da=xr.DataArray(['PAR184', 'TKO65', 'NBO9139', 'NZ39'], dims='x')
+        
+        Pad the strings
+        >>> filled = da.str.pad(8, side='left', fillchar='0')
+        >>> filled
+        <xarray.DataArray (x: 4)>
+        array(['00PAR184', '000TKO65', '0NBO9139', '0000NZ39'], dtype='<U8')
+        Dimensions without coordinates: x
+
+        Pad strings on the right side
+        >>> filled = da.str.pad(8, side='right', fillchar='0')
+        >>> filled    
+        <xarray.DataArray (x: 4)>
+        array(['PAR18400', 'TKO65000', 'NBO91390', 'NZ390000'], dtype='<U8')
+        Dimensions without coordinates: x
+
+        Pad strings on both sides
+        >>> filled = da.str.pad(8, side='both', fillchar='0')
+        >>> filled       
+        <xarray.DataArray (x: 4)>
+        array(['0PAR1840', '0TKO6500', 'NBO91390', '00NZ3900'], dtype='<U8')
+        Dimensions without coordinates: x
+
+        Using an array-like width
+        >>> width = xr.DataArray([8,10], dims='y')
+        >>> filled = da.str.pad(width, side='left', fillchar='0')
+        >>> filled
+        <xarray.DataArray (x: 4, y: 2)>
+        array([['00PAR184', '0000PAR184'],
+               ['000TKO65', '00000TKO65'],
+               ['0NBO9139', '000NBO9139'],
+               ['0000NZ39', '000000NZ39']], dtype='<U10')
+        Dimensions without coordinates: x, y
+
+        Using an array-like value for fillchar
+        >>> fillchar = xr.DataArray(['0','-'], dims='y')
+        >>> filled = da.str.pad(8, side='left', fillchar=fillchar)
         """
         if side == "left":
             func = self.rjust
