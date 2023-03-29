@@ -1253,6 +1253,7 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunk_manager: str | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
@@ -1281,11 +1282,15 @@ class DataArray(
         inline_array: optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunk_manager: str, optional
+            Which chunked array type to coerce the underlying data array to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Experimental API that should not be relied upon.
         from_array_kwargs: dict
-            Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
-            chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
-            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1323,6 +1328,7 @@ class DataArray(
             token=token,
             lock=lock,
             inline_array=inline_array,
+            chunk_manager=chunk_manager,
             from_array_kwargs=from_array_kwargs,
         )
         return self._from_temp_dataset(ds)

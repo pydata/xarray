@@ -307,10 +307,11 @@ def _chunk_ds(
     chunks,
     overwrite_encoded_chunks,
     inline_array,
+    chunk_manager,
     from_array_kwargs,
     **extra_tokens,
 ):
-    if from_array_kwargs["manager"] == "dask":
+    if chunk_manager == "dask":
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)
@@ -332,6 +333,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
+            chunk_manager=chunk_manager,
             from_array_kwargs=from_array_kwargs.copy(),
         )
     return backend_ds._replace(variables)
@@ -345,6 +347,7 @@ def _dataset_from_backend_dataset(
     cache,
     overwrite_encoded_chunks,
     inline_array,
+    chunk_manager,
     from_array_kwargs,
     **extra_tokens,
 ):
@@ -364,6 +367,7 @@ def _dataset_from_backend_dataset(
             chunks,
             overwrite_encoded_chunks,
             inline_array,
+            chunk_manager,
             from_array_kwargs,
             **extra_tokens,
         )
@@ -392,6 +396,7 @@ def open_dataset(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    chunk_manager: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
@@ -485,11 +490,15 @@ def open_dataset(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    chunk_manager: str, optional
+        Which chunked array type to coerce this datasets' arrays to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
     from_array_kwargs: dict
-        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
-        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
-        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-        :py:func:`dask.array.from_array`. This is experimental API that should not be relied upon.
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -534,7 +543,7 @@ def open_dataset(
         engine = plugins.guess_engine(filename_or_obj)
 
     if from_array_kwargs is None:
-        from_array_kwargs = {"manager": None}
+        from_array_kwargs = {}
 
     backend = plugins.get_backend(engine)
 
@@ -564,6 +573,7 @@ def open_dataset(
         cache,
         overwrite_encoded_chunks,
         inline_array,
+        chunk_manager,
         from_array_kwargs,
         drop_variables=drop_variables,
         **decoders,
@@ -587,6 +597,7 @@ def open_dataarray(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    chunk_manager: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
@@ -682,11 +693,15 @@ def open_dataarray(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+   chunk_manager: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
     from_array_kwargs: dict
-        Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
-        chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
-        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -730,6 +745,7 @@ def open_dataarray(
         cache=cache,
         drop_variables=drop_variables,
         inline_array=inline_array,
+        chunk_manager=chunk_manager,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,

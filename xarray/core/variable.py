@@ -1150,6 +1150,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunk_manager: str | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> Variable:
@@ -1177,6 +1178,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         inline_array: optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunk_manager: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Experimental API that should not be relied upon.
         from_array_kwargs: dict
             Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
             chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
@@ -1198,14 +1203,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dask.array.from_array
         """
 
-        if from_array_kwargs is None:
-            from_array_kwargs = {}
-        chunk_manager = guess_chunkmanager(from_array_kwargs.pop("manager", None))
-
-        _from_array_kwargs = dict(
-            name=name, lock=lock, inline_array=inline_array, **from_array_kwargs
-        )
-
         if chunks is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
@@ -1215,6 +1212,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             chunks = {}
 
         if isinstance(chunks, (float, str, int, tuple, list)):
+            # TODO we shouldn't assume here that other chunkmanagers can handle these types
             pass  # dask.array.from_array can handle these directly
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -1222,7 +1220,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
 
-        data = chunk_manager.from_array(self._data, chunks, **_from_array_kwargs)
+        _chunk_manager = guess_chunkmanager(chunk_manager)
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+        _from_array_kwargs = dict(
+            name=name, lock=lock, inline_array=inline_array, **from_array_kwargs
+        )
+
+        data = _chunk_manager.from_array(self._data, chunks, **_from_array_kwargs)
 
         return self._replace(data=data)
 
@@ -2878,6 +2884,7 @@ class IndexVariable(Variable):
         name=None,
         lock=False,
         inline_array=False,
+        chunk_manager=None,
         from_array_kwargs=None,
     ):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()

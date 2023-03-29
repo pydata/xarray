@@ -276,12 +276,13 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
+    chunk_manager=None,
     from_array_kwargs=None,
 ):
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
     if var.ndim:
-        if from_array_kwargs["manager"] == "dask":
+        if chunk_manager == "dask":
             from dask.base import tokenize
 
             # when rechunking by different amounts, make sure dask names change
@@ -298,6 +299,7 @@ def _maybe_chunk(
             name=name2,
             lock=lock,
             inline_array=inline_array,
+            chunk_manager=chunk_manager,
             from_array_kwargs=from_array_kwargs,
         )
 
@@ -2223,6 +2225,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunk_manager: str | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
@@ -2251,11 +2254,15 @@ class Dataset(
         inline_array: bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunk_manager: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Experimental API that should not be relied upon.
         from_array_kwargs: dict
-            Additional keyword arguments passed on to the `ChunkManager.from_array` method used to create
-            chunked arrays, via whichever chunk manager is specified through the `manager` kwarg.
-            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided
@@ -2290,8 +2297,9 @@ class Dataset(
                 f"some chunks keys are not dimensions on this object: {bad_dims}"
             )
 
+        chunk_manager = guess_chunkmanager_name(chunk_manager)
         if from_array_kwargs is None:
-            from_array_kwargs = {"manager": guess_chunkmanager_name(None)}
+            from_array_kwargs = {}
 
         variables = {
             k: _maybe_chunk(
@@ -2302,6 +2310,7 @@ class Dataset(
                 lock,
                 name_prefix,
                 inline_array=inline_array,
+                chunk_manager=chunk_manager,
                 from_array_kwargs=from_array_kwargs.copy(),
             )
             for k, v in self.variables.items()
