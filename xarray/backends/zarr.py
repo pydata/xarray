@@ -704,7 +704,7 @@ def open_zarr(
     decode_timedelta=None,
     use_cftime=None,
     zarr_version=None,
-    chunk_manager: str | None = None,
+    chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ):
@@ -790,15 +790,15 @@ def open_zarr(
         The desired zarr spec version to target (currently 2 or 3). The default
         of None will attempt to determine the zarr version from ``store`` when
         possible, otherwise defaulting to 2.
-    chunk_manager: str, optional
+    chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
-        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        Additional keyword arguments passed on to the `ChunkManagerEntryPoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
-        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -821,7 +821,9 @@ def open_zarr(
 
     if chunks == "auto":
         try:
-            guess_chunkmanager(chunk_manager)  # attempt to import that parallel backend
+            guess_chunkmanager(
+                chunked_array_type
+            )  # attempt to import that parallel backend
 
             chunks = {}
         except ValueError:
@@ -853,7 +855,7 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
-        chunk_manager=chunk_manager,
+        chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         decode_timedelta=decode_timedelta,

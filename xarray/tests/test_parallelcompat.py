@@ -141,8 +141,8 @@ class TestGetChunkManager:
 
     @requires_dask
     def test_get_dask_if_installed(self):
-        chunk_manager = guess_chunkmanager(None)
-        assert isinstance(chunk_manager, DaskManager)
+        chunkmanager = guess_chunkmanager(None)
+        assert isinstance(chunkmanager, DaskManager)
 
     @pytest.mark.skipif(has_dask, reason="requires dask not to be installed")
     def test_dont_get_dask_if_not_installed(self):

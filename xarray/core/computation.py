@@ -694,7 +694,7 @@ def apply_variable_ufunc(
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
-            chunk_manager = get_chunked_array_type(*input_data)
+            chunkmanager = get_chunked_array_type(*input_data)
 
             numpy_func = func
 
@@ -743,7 +743,7 @@ def apply_variable_ufunc(
                     )
 
             def func(*arrays):
-                res = chunk_manager.apply_gufunc(
+                res = chunkmanager.apply_gufunc(
                     numpy_func,
                     signature.to_gufunc_string(exclude_dims),
                     *arrays,
