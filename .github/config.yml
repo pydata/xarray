@@ -1,6 +1,6 @@
 # Comment to be posted to on first time issues
 newIssueWelcomeComment: >
-  Thanks for opening your first issue here! Be sure to follow the issue template!
+  Thanks for opening your first issue here at xarray! Be sure to follow the issue template!
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
