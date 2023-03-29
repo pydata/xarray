@@ -37,13 +37,23 @@ Bug fixes
 
 - Fix :py:meth:`xr.polyval` with non-system standard integer coeffs (:pull:`7619`).
   By `Shreyal Gupta <https://github.com/Ravenin7>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improve error message when trying to open a file which you do not have permission to read (:issue:`6523`, :pull:`7629`).
+  By `Thomas Coleman <https://github.com/ColemanTom>`_.
+- Proper plotting when passing :py:class:`~matplotlib.colors.BoundaryNorm` type argument in :py:meth:`DataArray.plot`. (:issue:`4061`, :issue:`7014`,:pull:`7553`)
+  By `Jelmer Veenstra <https://github.com/veenstrajelmer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Update FAQ page on how do I open format X file as an xarray dataset? (:issue:`1285`, :pull:`7638`) using :py:func:`~xarray.open_dataset`
+  By `Harshitha <https://github.com/harshitha1201>`_ , `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
+  backend interface, so no existing code should break.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2023.03.0:
 
