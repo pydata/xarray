@@ -359,122 +359,21 @@ Some packages may have additional functionality beyond what is shown here. You c
 How xarray handles missing values?
 ----------------------------------
 
-Xarray represents missing values using the "NaN" (Not a Number) value from NumPy, which is a
-special floating-point value that indicates a value that is undefined or unrepresentable.
-There are several methods for handling missing values in xarray:
+**xarray can handle missing values using ``np.NaN``**
 
-:py:meth:`~xarray.DataArray.isnull` is a method in xarray that can be used to check for missing or null values in an xarray object.
-It returns a new xarray object with the same dimensions as the original object, but with boolean values
-indicating where **missing values** are present.
+- ``np.NaN`` is  used to represent missing values in labeled arrays and datasets. It is a commonly used standard for representing missing or undefined numerical data in scientific computing. ``np.NaN`` is a constant value in NumPy that represents "Not a Number" or missing values.
 
-.. ipython:: python
+- Most of xarray's computation methods are designed to automatically handle missing values appropriately.
 
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.isnull()
+  For example, when performing operations like addition or multiplication on arrays that contain missing values, xarray will automatically ignore the missing values and only perform the operation on the valid data. This makes it easy to work with data that may contain missing or undefined values without having to worry about handling them explicitly.
 
-In this example, the third and fourth elements of 'x' are NaN, so the resulting :py:class:`~xarray.DataArray`
-object has 'True' values in the third and fourth positions and 'False' values in the other positions.
+- Many of xarray's `aggregation methods <https://docs.xarray.dev/en/stable/user-guide/computation.html#aggregation>`_, such as ``sum()``, ``mean()``, ``min()``, ``max()``, and others, have a skipna argument that controls whether missing values (represented by NaN) should be skipped (True) or treated as NaN (False) when performing the calculation.
 
-:py:meth:`~xarray.DataArray.notnull` is a method in xarray that can be used to check for non-missing or non-null values in an xarray
-object. It returns a new xarray object with the same dimensions as the original object, but with boolean
-values indicating where **non-missing values** are present.
+  By default, ``skipna`` is set to `True`, so missing values are ignored when computing the result. However, you can set ``skipna`` to `False` if you want missing values to be treated as NaN and included in the calculation.
 
-.. ipython:: python
+- On `plotting <https://docs.xarray.dev/en/stable/user-guide/plotting.html#missing-values>`_ an xarray dataset or array that contains missing values, xarray will simply leave the missing values as blank spaces in the plot.
 
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.notnull()
-
-In this example, the first two and the last elements of x are not NaN, so the resulting
-:py:class:`~xarray.DataArray` object has 'True' values in these positions, and 'False' values in the
-third and fourth positions where NaN is located.
-
-:py:meth:`~xarray.DataArray.count` is a method in xarray that can be used to count the number of
-non-missing values along one or more dimensions of an xarray object. It returns a new xarray object with
-the same dimensions as the original object, but with each element replaced by the count of non-missing
-values along the specified dimensions.
-
-.. ipython:: python
-
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.count()
-
-In this example, 'x' has five elements, but two of them are NaN, so the resulting
-:py:class:`~xarray.DataArray` object having a single element containing the value '3', which represents
-the number of non-null elements in x.
-
-:py:meth:`~xarray.DataArray.dropna` is a method in xarray that can be used to remove missing or null values from an xarray object.
-It returns a new xarray object with the same dimensions as the original object, but with missing values
-removed.
-
-.. ipython:: python
-
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.dropna(dim="x")
-
-In this example, on calling x.dropna(dim="x") removes any missing values and returns a new
-:py:class:`~xarray.DataArray` object with only the non-null elements [0, 1, 2] of 'x', in the
-original order.
-
-:py:meth:`~xarray.DataArray.fillna` is a method in xarray that can be used to fill missing or null values in an xarray object with a
-specified value or method. It returns a new xarray object with the same dimensions as the original object, but with missing values filled.
-
-.. ipython:: python
-
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.fillna(-1)
-
-In this example, there are two NaN values in 'x', so calling x.fillna(-1) replaces these values with -1 and
-returns a new :py:class:`~xarray.DataArray` object with five elements, containing the values
-[0, 1, -1, -1, 2] in the original order.
-
-:py:meth:`~xarray.DataArray.ffill` is a method in xarray that can be used to forward fill (or fill forward) missing values in an
-xarray object along one or more dimensions. It returns a new xarray object with the same dimensions as the
-original object, but with missing values replaced by the last non-missing value along the specified dimensions.
-
-.. ipython:: python
-
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.ffill("x")
-
-In this example, there are two NaN values in 'x', so calling x.ffill("x") fills these values with the last
-non-null value in the same dimension, which are 0 and 1, respectively. The resulting :py:class:`~xarray.DataArray` object has
-five elements, containing the values [0, 1, 1, 1, 2] in the original order.
-
-:py:meth:`~xarray.DataArray.bfill` is a method in xarray that can be used to backward fill (or fill backward) missing values in an
-xarray object along one or more dimensions. It returns a new xarray object with the same dimensions as the original object, but
-with missing values replaced by the next non-missing value along the specified dimensions.
-
-.. ipython:: python
-
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
-    x.bfill("x")
-
-In this example, there are two NaN values in 'x', so calling x.bfill("x") fills these values with the next
-non-null value in the same dimension, which are 2 and 2, respectively. The resulting :py:class:`~xarray.DataArray` object has
-five elements, containing the values [0, 1, 2, 2, 2] in the original order.
-
-:py:meth:`~xarray.DataArray.interpolate_na` is a method in xarray that can be used to interpolate missing or null values in an
-xarray object using various interpolation methods. It returns a new xarray object with the same dimensions
-as the original object, but with missing values interpolated.
-
-.. ipython:: python
-
-    x = xr.DataArray(
-        [0, 1, np.nan, np.nan, 2],
-        dims=["x"],
-        coords={"xx": xr.Variable("x", [0, 1, 1.1, 1.9, 3])},
-    )
-    x.interpolate_na(dim="x", method="linear", use_coordinate="xx")
-
-In this example, there are two NaN values in 'x', so calling x.interpolate_na(dim="x", method="linear",
-use_coordinate="xx") fills these values with interpolated values along the "x" dimension using linear
-interpolation based on the values of the xx coordinate. The resulting :py:class:`~xarray.DataArray` object has five elements,
-containing the values [0., 1., 1.05, 1.45, 2.] in the original order. Note that the interpolated values
-are calculated based on the values of the 'xx' coordinate, which has non-integer values, resulting in
-non-integer interpolated values.
-
-Overall, xarray provides a range of methods and functions for handling missing values, making it a
-**powerful tool** for working with data that may have missing or incomplete elements.
+- We have a set of `special methods <https://docs.xarray.dev/en/stable/user-guide/computation.html#missing-values>`_ for manipulating missing and filling values.
 
 How should I cite xarray?
 -------------------------
