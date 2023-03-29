@@ -3,7 +3,6 @@
 DataStores provide a uniform interface for saving and loading data in different
 formats. They should not be used directly, but rather through Dataset objects.
 """
-from xarray.backends.cfgrib_ import CfGribDataStore
 from xarray.backends.common import AbstractDataStore, BackendArray, BackendEntrypoint
 from xarray.backends.file_manager import (
     CachingFileManager,
@@ -30,7 +29,6 @@ __all__ = [
     "BackendEntrypoint",
     "FileManager",
     "CachingFileManager",
-    "CfGribDataStore",
     "DummyFileManager",
     "InMemoryDataStore",
     "NetCDF4DataStore",

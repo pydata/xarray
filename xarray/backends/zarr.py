@@ -75,6 +75,9 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self.datastore.zarr_group[self.variable_name]
 
+    def _oindex(self, key):
+        return self.get_array().oindex[key]
+
     def __getitem__(self, key):
         array = self.get_array()
         if isinstance(key, indexing.BasicIndexer):
@@ -85,7 +88,10 @@ class ZarrArrayWrapper(BackendArray):
             ]
         else:
             assert isinstance(key, indexing.OuterIndexer)
-            return array.oindex[key.tuple]
+            return indexing.explicit_indexing_adapter(
+                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._oindex
+            )
+
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
