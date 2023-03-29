@@ -8,4 +8,4 @@ newPRWelcomeComment: >
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >
-  Congratulations on merging your first pull request! We here at xarray are proud of you!
+  Congratulations on merging your first pull request! We here at xarray are proud of you! Good work!
