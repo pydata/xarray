@@ -41,8 +41,6 @@ For netCDF and IO
 - `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
-- `rasterio <https://github.com/rasterio/rasterio>`__: for reading GeoTiffs and
-  other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 

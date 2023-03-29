@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import os
 import pathlib
-import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from xarray.backends.api import open_dataset as _open_dataset
-from xarray.backends.rasterio_ import open_rasterio as _open_rasterio
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 
@@ -40,10 +38,6 @@ def _construct_cache_dir(path):
 
 
 external_urls = {}  # type: dict
-external_rasterio_urls = {
-    "RGB.byte": "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/RGB.byte.tif",
-    "shade": "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/shade.tif",
-}
 file_formats = {
     "air_temperature": 3,
     "air_temperature_gradient": 4,
@@ -170,84 +164,6 @@ def open_dataset(
         pathlib.Path(filepath).unlink()
 
     return ds
-
-
-def open_rasterio(
-    name,
-    engine=None,
-    cache=True,
-    cache_dir=None,
-    **kws,
-):
-    """
-    Open a rasterio dataset from the online repository (requires internet).
-
-    .. deprecated:: 0.20.0
-
-        Deprecated in favor of rioxarray.
-        For information about transitioning, see:
-        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
-
-    If a local copy is found then always use that to avoid network traffic.
-
-    Available datasets:
-
-    * ``"RGB.byte"``: TIFF file derived from USGS Landsat 7 ETM imagery.
-    * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
-
-    ``RGB.byte`` and ``shade`` are downloaded from the ``rasterio`` repository [1]_.
-
-    Parameters
-    ----------
-    name : str
-        Name of the file containing the dataset.
-        e.g. 'RGB.byte'
-    cache_dir : path-like, optional
-        The directory in which to search for and write cached data.
-    cache : bool, optional
-        If True, then cache data locally for use on subsequent calls
-    **kws : dict, optional
-        Passed to xarray.open_rasterio
-
-    See Also
-    --------
-    xarray.open_rasterio
-
-    References
-    ----------
-    .. [1] https://github.com/rasterio/rasterio
-    """
-    warnings.warn(
-        "open_rasterio is Deprecated in favor of rioxarray. "
-        "For information about transitioning, see: "
-        "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    try:
-        import pooch
-    except ImportError as e:
-        raise ImportError(
-            "tutorial.open_rasterio depends on pooch to download and manage datasets."
-            " To proceed please install pooch."
-        ) from e
-
-    logger = pooch.get_logger()
-    logger.setLevel("WARNING")
-
-    cache_dir = _construct_cache_dir(cache_dir)
-    url = external_rasterio_urls.get(name)
-    if url is None:
-        raise ValueError(f"unknown rasterio dataset: {name}")
-
-    # retrieve the file
-    filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
-    arr = _open_rasterio(filepath, **kws)
-    if not cache:
-        arr = arr.load()
-        pathlib.Path(filepath).unlink()
-
-    return arr
 
 
 def load_dataset(*args, **kwargs) -> Dataset:
