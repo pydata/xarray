@@ -50,20 +50,11 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio  # noqa: F401
-except ImportError:
-    allowed_failures.update(
-        ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
-    )
-
-try:
     import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
             "gallery/plot_cartopy_facetgrid.py",
-            "gallery/plot_rasterio_rgb.py",
-            "gallery/plot_rasterio.py",
         ]
     )
 
@@ -331,7 +322,6 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
-    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
 }
 
