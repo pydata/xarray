@@ -153,6 +153,12 @@ def open_dataset(
         elif path.suffix == ".grib":
             if engine is None:
                 engine = "cfgrib"
+                try:
+                    import cfgrib  # noqa
+                except ImportError as e:
+                    raise ImportError(
+                        "Reading this tutorial dataset requires the cfgrib package."
+                    ) from e
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
