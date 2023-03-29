@@ -4,7 +4,6 @@
 Contributing to xarray
 **********************
 
-
 .. note::
 
   Large parts of this document came from the `Pandas Contributing
@@ -389,20 +388,20 @@ Section formatting
 
 We aim to follow the recommendations from the
 `Python documentation <https://devguide.python.org/documentation/start-documenting/index.html#sections>`_
-and the `Sphinx reStructuredText documentation <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections>`_ f
-or section markup characters,
+and the `Sphinx reStructuredText documentation <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections>`_
+for section markup characters,
 
 - ``#`` with overline, for parts. This is reserved for the main title in ``index.rst``. All other pages should start with "chapter" or lower.
 
 - ``*`` with overline, for chapters
 
-- ``=``, for sections
+- ``=``, for heading
 
-- ``-``, for subsections
+- ``-``, for sections
 
-- ``^``, for subsubsections
+- ``~``, for subsections
 
-- ``"``, for paragraphs
+- ``**`` text ``**``, for **bold** text
 
 Referring to other documents and sections
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -416,7 +415,7 @@ Documents can be linked with the ``:doc:`` directive:
 
     See the :doc:`/getting-started-guide/installing`
 
-    See the tutorial :doc:`/getting-started-guide/quick-overview`
+    See the :doc:`/getting-started-guide/quick-overview`
 
 will render as:
 
@@ -551,8 +550,7 @@ Writing tests
 
 All tests should go into the ``tests`` subdirectory of the specific package.
 This folder contains many current examples of tests, and we suggest looking to these for
-inspiration.  If your test requires working with files or
-network connectivity.
+inspiration.
 
 The ``xarray.testing`` module has many special ``assert`` functions that
 make it easier to make statements about whether DataArray or Dataset objects are
