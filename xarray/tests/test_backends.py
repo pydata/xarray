@@ -63,7 +63,6 @@ from xarray.tests import (
     has_scipy,
     mock,
     network,
-    requires_cfgrib,
     requires_cftime,
     requires_dask,
     requires_fsspec,
@@ -4184,51 +4183,6 @@ class TestPyNio(CFEncodedBase, NetCDF3Only):
             actual = on_disk.rename({"foo": "bar", "x": "y"})
             del on_disk  # trigger garbage collection
             assert_identical(actual, expected)
-
-
-@requires_cfgrib
-class TestCfGrib:
-    def test_read(self) -> None:
-        expected = {
-            "number": 2,
-            "time": 3,
-            "isobaricInhPa": 2,
-            "latitude": 3,
-            "longitude": 4,
-        }
-        with open_example_dataset("example.grib", engine="cfgrib") as ds:
-            assert ds.dims == expected
-            assert list(ds.data_vars) == ["z", "t"]
-            assert ds["z"].min() == 12660.0
-
-    def test_read_filter_by_keys(self) -> None:
-        kwargs = {"filter_by_keys": {"shortName": "t"}}
-        expected = {
-            "number": 2,
-            "time": 3,
-            "isobaricInhPa": 2,
-            "latitude": 3,
-            "longitude": 4,
-        }
-        with open_example_dataset(
-            "example.grib", engine="cfgrib", backend_kwargs=kwargs
-        ) as ds:
-            assert ds.dims == expected
-            assert list(ds.data_vars) == ["t"]
-            assert ds["t"].min() == 231.0
-
-    def test_read_outer(self) -> None:
-        expected = {
-            "number": 2,
-            "time": 3,
-            "isobaricInhPa": 2,
-            "latitude": 2,
-            "longitude": 3,
-        }
-        with open_example_dataset("example.grib", engine="cfgrib") as ds:
-            res = ds.isel(latitude=[0, 2], longitude=[0, 1, 2])
-            assert res.dims == expected
-            assert res["t"].min() == 231.0
 
 
 @requires_pseudonetcdf

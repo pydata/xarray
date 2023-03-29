@@ -35,7 +35,6 @@ from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
     has_scipy,
-    requires_cfgrib,
     requires_cftime,
     requires_netCDF4,
     requires_rasterio,
@@ -45,7 +44,6 @@ from xarray.tests.test_backends import (
     ON_WINDOWS,
     create_tmp_file,
     create_tmp_geotiff,
-    open_example_dataset,
 )
 from xarray.tests.test_dataset import create_test_data
 
@@ -208,20 +206,6 @@ def test_dask_distributed_rasterio_integration_test(loop) -> None:
                 assert isinstance(da_tiff.data, da.Array)
                 actual = da_tiff.compute()
                 assert_allclose(actual, expected)
-
-
-@requires_cfgrib
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_cfgrib_integration_test(loop) -> None:
-    with cluster() as (s, [a, b]):
-        with Client(s["address"], loop=loop):
-            with open_example_dataset(
-                "example.grib", engine="cfgrib", chunks={"time": 1}
-            ) as ds:
-                with open_example_dataset("example.grib", engine="cfgrib") as expected:
-                    assert isinstance(ds["t"].data, da.Array)
-                    actual = ds.compute()
-                    assert_allclose(actual, expected)
 
 
 @pytest.mark.xfail(
