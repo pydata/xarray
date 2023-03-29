@@ -369,7 +369,7 @@ How xarray handles missing values?
 
 - Many of xarray's `aggregation methods <https://docs.xarray.dev/en/stable/user-guide/computation.html#aggregation>`_, such as ``sum()``, ``mean()``, ``min()``, ``max()``, and others, have a skipna argument that controls whether missing values (represented by NaN) should be skipped (True) or treated as NaN (False) when performing the calculation.
 
-  By default, ``skipna`` is set to `True`, so missing values are ignored when computing the result. However, you can set ``skipna`` to `False` if you want missing values to be treated as NaN and included in the calculation.
+  By default, ``skipna`` is set to True, so missing values are ignored when computing the result. However, you can set ``skipna`` to False if you want missing values to be treated as NaN and included in the calculation.
 
 - On `plotting <https://docs.xarray.dev/en/stable/user-guide/plotting.html#missing-values>`_ an xarray dataset or array that contains missing values, xarray will simply leave the missing values as blank spaces in the plot.
 
