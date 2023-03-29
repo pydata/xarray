@@ -43,8 +43,6 @@ For netCDF and IO
   (ffi1001) and many other.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
-- `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
-  *ECMWF ecCodes* library.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~

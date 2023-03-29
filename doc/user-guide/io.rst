@@ -1218,7 +1218,7 @@ GRIB format via cfgrib
 
 Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
-to :py:func:`open_dataset`:
+to :py:func:`open_dataset` after installing cfgrib_:
 
 .. ipython::
     :verbatim:
