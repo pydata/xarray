@@ -554,6 +554,17 @@ class TimeResampleGrouper(Grouper):
         self.codes = self.group.copy(data=codes)
 
 
+def _validate_groupby_squeeze(squeeze):
+    # While we don't generally check the type of every arg, passing
+    # multiple dimensions as multiple arguments is common enough, and the
+    # consequences hidden enough (strings evaluate as true) to warrant
+    # checking here.
+    # A future version could make squeeze kwarg only, but would face
+    # backward-compat issues.
+    if not isinstance(squeeze, bool):
+        raise TypeError(f"`squeeze` must be True or False, but {squeeze} was supplied")
+
+
 def _validate_group(obj, group):
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset

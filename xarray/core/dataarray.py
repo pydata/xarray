@@ -6256,11 +6256,19 @@ class DataArray(
         core.groupby.DataArrayGroupBy
         pandas.DataFrame.groupby
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            DataArrayGroupBy,
+            UniqueGrouper,
+            _validate_group,
+            _validate_groupby_squeeze,
+        )
 
-        return self._groupby(
-            groupby_cls=DataArrayGroupBy,
-            group=group,
+        _validate_groupby_squeeze(squeeze)
+        newobj, name = _validate_group(self, group)
+        grouper = UniqueGrouper()
+        return DataArrayGroupBy(
+            newobj,
+            {name: grouper},
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
@@ -6333,16 +6341,28 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DataArrayGroupBy,
+            _validate_group,
+            _validate_groupby_squeeze,
+        )
 
-        return self._groupby_bins(
-            groupby_cls=DataArrayGroupBy,
-            group=group,
+        _validate_groupby_squeeze(squeeze)
+        newobj, name = _validate_group(self, group)
+        grouper = BinGrouper(
             bins=bins,
-            right=right,
-            labels=labels,
-            precision=precision,
-            include_lowest=include_lowest,
+            cut_kwargs={
+                "right": right,
+                "labels": labels,
+                "precision": precision,
+                "include_lowest": include_lowest,
+            },
+        )
+
+        return DataArrayGroupBy(
+            newobj,
+            {name: grouper},
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )

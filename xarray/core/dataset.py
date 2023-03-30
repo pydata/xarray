@@ -8943,11 +8943,20 @@ class Dataset(
         Dataset.resample
         DataArray.resample
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import (
+            DatasetGroupBy,
+            UniqueGrouper,
+            _validate_group,
+            _validate_groupby_squeeze,
+        )
 
-        return self._groupby(
-            groupby_cls=DatasetGroupBy,
-            group=group,
+        _validate_groupby_squeeze(squeeze)
+        newobj, name = _validate_group(self, group)
+        grouper = UniqueGrouper()
+
+        return DatasetGroupBy(
+            self,
+            {name: grouper},
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
@@ -9020,16 +9029,28 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DatasetGroupBy,
+            _validate_group,
+            _validate_groupby_squeeze,
+        )
 
-        return self._groupby_bins(
-            groupby_cls=DatasetGroupBy,
-            group=group,
+        _validate_groupby_squeeze(squeeze)
+        newobj, name = _validate_group(self, group)
+        grouper = BinGrouper(
             bins=bins,
-            right=right,
-            labels=labels,
-            precision=precision,
-            include_lowest=include_lowest,
+            cut_kwargs={
+                "right": right,
+                "labels": labels,
+                "precision": precision,
+                "include_lowest": include_lowest,
+            },
+        )
+
+        return DatasetGroupBy(
+            self,
+            {name: grouper},
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
