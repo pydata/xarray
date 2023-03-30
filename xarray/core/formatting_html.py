@@ -23,7 +23,7 @@ STATIC_FILES = (
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        files(package).joinpath(resource).read_bytes().decode("utf-8")
+        files(package).joinpath(resource).read_text(encoding="utf-8")
         for package, resource in STATIC_FILES
     ]
 
