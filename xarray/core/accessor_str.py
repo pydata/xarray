@@ -1108,10 +1108,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         Examples
         --------
-        >>> da = xr.DataArray(["jjklmn", "opjjqrs", "t-euuJJvwx"], dims="x")
+        >>> da = xr.DataArray(["jjklmn", "opjjqrs", "t-JJ99vwx"], dims="x")
         >>> da
         <xarray.DataArray (x: 3)>
-        array(['jjklmn', 'opjjqrs', 't-euuJJvwx'], dtype='<U10')
+        array(['jjklmn', 'opjjqrs', 't-JJ99vwx'], dtype='<U9')
         Dimensions without coordinates: x
 
         Using a string:
@@ -1128,11 +1128,11 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Using regex:
-        >>> pat = "jj\\w+"
+        >>> pat = r'JJ\\d{2}[a-z]{3}'
         >>> counts = da.str.count(pat)
         >>> counts
         <xarray.DataArray (x: 3)>
-        array([1, 1, 0])
+        array([0, 0, 1])
         Dimensions without coordinates: x
 
         Using an array of strings (the pattern will be broadcast against the array):
