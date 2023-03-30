@@ -556,11 +556,14 @@ class TimeResampleGrouper(Grouper):
 
 def _validate_group(obj, group):
     from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     if isinstance(group, (DataArray, IndexVariable)):
         name = group.name or "group"
         newobj = obj.copy()
-        if group.name in newobj:
+        if group.name in newobj.coords or (
+            isinstance(newobj, Dataset) and group.name in newobj.data_vars
+        ):
             newobj[group.name] = group
         else:
             try:
