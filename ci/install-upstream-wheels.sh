@@ -14,7 +14,6 @@ conda uninstall -y --force \
     fsspec \
     zarr \
     cftime \
-    rasterio \
     packaging \
     pint \
     bottleneck \
@@ -39,7 +38,6 @@ python -m pip install \
     git+https://github.com/dask/distributed \
     git+https://github.com/zarr-developers/zarr \
     git+https://github.com/Unidata/cftime \
-    git+https://github.com/rasterio/rasterio \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/pydata/bottleneck \
