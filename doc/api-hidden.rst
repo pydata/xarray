@@ -234,6 +234,7 @@
    Variable.dims
    Variable.dtype
    Variable.encoding
+   Variable.reset_encoding
    Variable.imag
    Variable.nbytes
    Variable.ndim

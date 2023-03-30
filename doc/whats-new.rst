@@ -22,11 +22,15 @@ v2023.04.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- New methods to reset an objects encoding (:py:meth:`Dataset.reset_encoding`, :py:meth:`DataArray.reset_encoding`).
+  (:issue:`7686`, :pull:`7689`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Remove deprecated rasterio backend in favor of rioxarray  (:pull:`7392`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -50,6 +54,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
+  backend interface, so no existing code should break.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2023.03.0:
 
