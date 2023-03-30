@@ -13,7 +13,6 @@ import pytest
 
 from xarray.backends import common, plugins
 from xarray.tests import (
-    has_cfgrib,
     has_h5netcdf,
     has_netCDF4,
     has_pseudonetcdf,
