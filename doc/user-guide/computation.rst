@@ -88,7 +88,7 @@ indicating where **missing values** are present.
     x.isnull()
 
 In this example, the third and fourth elements of 'x' are NaN, so the resulting :py:class:`~xarray.DataArray`
-object has True values in the third and fourth positions and False values in the other positions.
+object has 'True' values in the third and fourth positions and 'False' values in the other positions.
 
 :py:meth:`~xarray.DataArray.notnull` is a method in xarray that can be used to check for non-missing or non-null values in an xarray
 object. It returns a new xarray object with the same dimensions as the original object, but with boolean
@@ -100,7 +100,7 @@ values indicating where **non-missing values** are present.
     x.notnull()
 
 In this example, the first two and the last elements of x are not NaN, so the resulting
-:py:class:`~xarray.DataArray` object has True values in these positions, and False values in the
+:py:class:`~xarray.DataArray` object has 'True' values in these positions, and 'False' values in the
 third and fourth positions where NaN is located.
 
 :py:meth:`~xarray.DataArray.count` is a method in xarray that can be used to count the number of
