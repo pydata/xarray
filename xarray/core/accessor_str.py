@@ -698,7 +698,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         Returns
         -------
-        lowerd : same type as values
+        lowered : same type as values
 
         Examples
         --------
@@ -707,8 +707,8 @@ class StringAccessor(Generic[T_DataArray]):
         <xarray.DataArray (x: 2)>
         array(['Temperature', 'PRESSURE'], dtype='<U11')
         Dimensions without coordinates: x
-        >>> lowerd = da.str.lower()
-        >>> lowerd
+        >>> lowered = da.str.lower()
+        >>> lowered
         <xarray.DataArray (x: 2)>
         array(['temperature', 'pressure'], dtype='<U11')
         Dimensions without coordinates: x
