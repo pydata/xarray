@@ -337,7 +337,7 @@ class AggregationGenerator:
         >>> da = xr.DataArray({method.np_example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )"""

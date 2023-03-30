@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
+        Literal["pydap", "pynio", "pseudonetcdf", "zarr"],
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -73,7 +73,6 @@ ENGINES = {
     "h5netcdf": backends.H5NetCDFStore.open,
     "pynio": backends.NioDataStore,
     "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
-    "cfgrib": backends.CfGribDataStore,
     "zarr": backends.ZarrStore.open_group,
 }
 
@@ -411,7 +410,7 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -512,7 +511,7 @@ def open_dataset(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -616,7 +615,7 @@ def open_dataarray(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -715,7 +714,7 @@ def open_dataarray(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -854,7 +853,7 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine

@@ -126,12 +126,12 @@ def test_set_missing_parameters_raise_error() -> None:
 )
 def test_build_engines() -> None:
     dummy_pkg_entrypoint = EntryPoint(
-        "cfgrib", "xarray.tests.test_plugins:backend_1", "xarray_backends"
+        "dummy", "xarray.tests.test_plugins:backend_1", "xarray_backends"
     )
     backend_entrypoints = plugins.build_engines([dummy_pkg_entrypoint])
 
-    assert isinstance(backend_entrypoints["cfgrib"], DummyBackendEntrypoint1)
-    assert backend_entrypoints["cfgrib"].open_dataset_parameters == (
+    assert isinstance(backend_entrypoints["dummy"], DummyBackendEntrypoint1)
+    assert backend_entrypoints["dummy"].open_dataset_parameters == (
         "filename_or_obj",
         "decoder",
     )
@@ -192,7 +192,6 @@ def test_lazy_import() -> None:
     Only when running code for the first time that requires them.
     """
     blacklisted = [
-        # "cfgrib",  # TODO: cfgrib has its own plugin now, deprecate?
         "h5netcdf",
         "netCDF4",
         "PseudoNetCDF",

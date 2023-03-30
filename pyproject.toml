@@ -58,7 +58,6 @@ module = [
   "PseudoNetCDF.*",
   "pydap.*",
   "pytest.*",
-  "rasterio.*",
   "scipy.*",
   "seaborn.*",
   "setuptools",

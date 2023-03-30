@@ -8,7 +8,6 @@ dependencies:
   - bottleneck
   - cartopy
   - cdms2
-  - cfgrib
   - cftime
   - dask-core
   - distributed
@@ -39,6 +38,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
