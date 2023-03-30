@@ -1257,6 +1257,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         Define the string in the array.
         >>> da = xr.DataArray(["PAR184", "TKO65", "NBO9139", "NZ39"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 4)>
+        array(['PAR184', 'TKO65', 'NBO9139', 'NZ39'], dtype='<U7')
+        Dimensions without coordinates: x
 
         Pad the strings
         >>> filled = da.str.pad(8, side="left", fillchar="0")
@@ -1293,6 +1297,13 @@ class StringAccessor(Generic[T_DataArray]):
         Using an array-like value for fillchar
         >>> fillchar = xr.DataArray(["0", "-"], dims="y")
         >>> filled = da.str.pad(8, side="left", fillchar=fillchar)
+        >>> filled
+        <xarray.DataArray (x: 4, y: 2)>
+        array([['00PAR184', '--PAR184'],
+               ['000TKO65', '---TKO65'],
+               ['0NBO9139', '-NBO9139'],
+               ['0000NZ39', '----NZ39']], dtype='<U8')
+        Dimensions without coordinates: x, y
         """
         if side == "left":
             func = self.rjust
