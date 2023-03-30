@@ -596,7 +596,6 @@ Dataset methods
    load_dataset
    open_dataset
    open_mfdataset
-   open_rasterio
    open_zarr
    save_mfdataset
    Dataset.as_numpy
@@ -1055,7 +1054,6 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
-   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
