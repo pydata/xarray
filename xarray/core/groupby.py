@@ -364,15 +364,6 @@ class Grouper:
             group, obj
         )
 
-        (group_dim,) = self.group1d.dims
-        expected_size = stacked_obj.sizes[group_dim]
-        if group.size != expected_size:
-            raise ValueError(
-                "the group variable's length does not "
-                "match the length of this variable along its "
-                "dimension"
-            )
-
         return self, stacked_obj
 
     def copy(self, deep=False):
@@ -569,6 +560,15 @@ def _validate_group(obj, group):
         if group.name in newobj:
             newobj[group.name] = group
         else:
+            try:
+                align(newobj, group, join="exact", copy=False)
+            except ValueError:
+                raise ValueError(
+                    "the group variable's length does not "
+                    "match the length of this variable along its "
+                    "dimensions"
+                )
+
             newobj = newobj.assign_coords({name: group})
     else:
         if not hashable(group):
