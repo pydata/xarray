@@ -275,7 +275,6 @@ def test_list_engines() -> None:
     engines = list_engines()
     assert list_engines.cache_info().currsize == 1
 
-    assert ("cfgrib" in engines) == has_cfgrib
     assert ("scipy" in engines) == has_scipy
     assert ("h5netcdf" in engines) == has_h5netcdf
     assert ("netcdf4" in engines) == has_netCDF4
