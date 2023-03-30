@@ -2,8 +2,17 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from collections.abc import Hashable, Iterator, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, Union, cast
+from collections.abc import Hashable, Iterator, Mapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -419,7 +428,7 @@ class UniqueGrouper(Grouper):
 
 
 class BinGrouper(Grouper):
-    def __init__(self, group, bins, cut_kwargs: Mapping | None):
+    def __init__(self, bins, cut_kwargs: Mapping | None):
         if duck_array_ops.isnull(bins).all():
             raise ValueError("All bin edges are NaN.")
 
@@ -450,9 +459,7 @@ class BinGrouper(Grouper):
         self.group1d = DataArray(
             binned, getattr(self.group1d, "coords", None), name=new_dim_name
         )
-        self.unique_coord = IndexVariable(
-            new_dim_name, unique_values, self.group.attrs
-        )
+        self.unique_coord = IndexVariable(new_dim_name, unique_values, self.group.attrs)
         self.codes = self.group1d.copy(data=codes)
         # TODO: support IntervalIndex in IndexVariable
         self.full_index = full_index
@@ -558,7 +565,11 @@ def _validate_group(obj, group):
 
     if isinstance(group, (DataArray, IndexVariable)):
         name = group.name or "group"
-        newobj = obj.copy().assign_coords({name: group})
+        newobj = obj.copy()
+        if group.name in newobj:
+            newobj[group.name] = group
+        else:
+            newobj = newobj.assign_coords({name: group})
     else:
         if not hashable(group):
             raise TypeError(
@@ -615,7 +626,7 @@ class GroupBy(Generic[T_Xarray]):
     def __init__(
         self,
         obj: T_Xarray,
-        groupers: Dict[Hashable, Grouper],
+        groupers: dict[Hashable, Grouper],
         squeeze: bool = False,
         restore_coord_dims: bool = True,
     ) -> None:
