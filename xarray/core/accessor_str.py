@@ -951,8 +951,8 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         islower : array of bool
-            Array of boolean values with the same shape as the original array indicating whether each
-            element of the string array is lowercase (True) or not (False).
+            Array of boolean values with the same shape as the original array indicating whether all characters of each
+            element of the string array are lowercase (True) or not (False).
 
         Examples
         --------
