@@ -476,9 +476,12 @@ class TimeResampleGrouper(Grouper):
 
     def _resolve_group(self, obj, group_name):
         from xarray import CFTimeIndex
+        from xarray.core.resample import RESAMPLE_DIM
         from xarray.core.resample_cftime import CFTimeGrouper
 
-        group = obj[group_name]
+        group = obj[group_name].reset_coords(drop=True)
+        obj = obj.drop_vars(RESAMPLE_DIM)
+
         self.group = group
         self._group_as_index = safe_cast_to_index(group)
         group_as_index = self._group_as_index
