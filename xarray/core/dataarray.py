@@ -877,6 +877,12 @@ class DataArray(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = dict(value)
 
+    def reset_encoding(self: T_DataArray) -> T_DataArray:
+        """Return a new DataArray without encoding on the array or any attached
+        coords."""
+        ds = self._to_temp_dataset().reset_encoding()
+        return self._from_temp_dataset(ds)
+
     @property
     def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing.

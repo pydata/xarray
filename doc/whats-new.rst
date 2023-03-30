@@ -22,6 +22,9 @@ v2023.04.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- New methods to reset an objects encoding (:py:meth:`Dataset.reset_encoding`, :py:meth:`DataArray.reset_encoding`).
+  (:issue:`7686`, :pull:`7689`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 
 Breaking changes

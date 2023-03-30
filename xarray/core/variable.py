@@ -977,6 +977,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         except ValueError:
             raise ValueError("encoding must be castable to a dictionary")
 
+    def reset_encoding(self: T_Variable) -> T_Variable:
+        """Return a new Variable without encoding."""
+        return self._replace(encoding={})
+
     def copy(
         self: T_Variable, deep: bool = True, data: ArrayLike | None = None
     ) -> T_Variable:

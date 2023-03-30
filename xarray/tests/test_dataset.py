@@ -2827,6 +2827,21 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"contain all variables in original"):
             orig.copy(data={"var1": new_var1})
 
+    def test_reset_encoding(self) -> None:
+        orig = create_test_data()
+        vencoding = {"scale_factor": 10}
+        orig.encoding = {"foo": "bar"}
+
+        for k, v in orig.variables.items():
+            orig[k].encoding = vencoding
+
+        actual = orig.reset_encoding()
+        assert actual.encoding == {}
+        for k, v in actual.variables.items():
+            assert v.encoding == {}
+
+        assert_equal(actual, orig)
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
