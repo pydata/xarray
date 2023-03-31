@@ -57,6 +57,11 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Don't assume that arrays read from disk will be Numpy arrays. This is a step toward
+  enabling reads from a Zarr store using the `Kvikio <https://docs.rapids.ai/api/kvikio/stable/api.html#zarr>`_
+  or `TensorStore <https://google.github.io/tensorstore/>`_ libraries.
+  (:pull:`6874`). By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
   backend interface, so no existing code should break.
   By `Deepak Cherian <https://github.com/dcherian>`_.

@@ -426,6 +426,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if is_duck_array(self._data):
             return self._data
+        elif isinstance(self._data, indexing.ExplicitlyIndexed):
+            return self._data.get_duck_array()
         else:
             return self.values
 
@@ -533,6 +535,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if is_duck_dask_array(self._data):
             self._data = as_compatible_data(self._data.compute(**kwargs))
+        elif isinstance(self._data, indexing.ExplicitlyIndexed):
+            self._data = self._data.get_duck_array()
         elif not is_duck_array(self._data):
             self._data = np.asarray(self._data)
         return self
