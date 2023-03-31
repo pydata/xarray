@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from collections.abc import Hashable, Iterator, Mapping, Sequence
 from abc import ABC, abstractmethod
+from collections.abc import Hashable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
