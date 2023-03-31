@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import warnings
 from collections.abc import Hashable, Iterator, Mapping, Sequence
+from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
     from xarray.core.utils import Frozen
 
     GroupKey = Any
-    GroupIndex = int | slice | list[int]
+    GroupIndex = Union[int, slice, list[int]]
 
     T_GroupIndicesListInt = list[list[int]]
     T_GroupIndices = Union[T_GroupIndicesListInt, list[slice], np.ndarray]
@@ -309,7 +310,7 @@ def _apply_loffset(
         result.index = result.index + loffset
 
 
-class Grouper:
+class Grouper(ABC):
     def __init__(self):
         self.labels = None
         self._group_as_index: pd.Index | None = None
@@ -334,6 +335,7 @@ class Grouper:
     def dims(self):
         return self.group1d.dims
 
+    @abstractmethod
     def factorize(self, squeeze: bool) -> None:
         raise NotImplementedError
 
