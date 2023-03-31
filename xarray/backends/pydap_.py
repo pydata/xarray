@@ -54,6 +54,7 @@ class PydapArrayWrapper(BackendArray):
         # downloading coordinate data twice
         array = getattr(self.array, "array", self.array)
         result = robust_getitem(array, key, catch=ValueError)
+        result = np.asarray(result)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
         if result.ndim + len(axis) != array.ndim and axis:
