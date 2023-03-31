@@ -104,16 +104,10 @@ Working with the code
 Now that you have an issue you want to fix, enhancement to add, or documentation
 to improve, you need to learn how to work with GitHub and the *xarray* code base.
 
-
 .. _contributing.version_control:
 
 Version control, Git, and GitHub
 --------------------------------
-
-To the new user, working with Git is one of the more daunting aspects of contributing
-to *xarray*.  It can very quickly become overwhelming, but sticking to the guidelines
-below will help keep the process straightforward and mostly trouble free.  As always,
-if you are having difficulties please feel free to ask for help.
 
 The code is hosted on `GitHub <https://www.github.com/pydata/xarray>`_. To
 contribute you will need to sign up for a `free GitHub account
@@ -141,48 +135,49 @@ you can work seamlessly between your local repository and GitHub.
 
 .. _contributing.forking:
 
-Forking
--------
+How to contribute
+-----------------
 
-You will need your own fork to work on the code. Go to the `xarray project
-page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button. You will
-want to clone your fork to your machine::
+The preferred way to contribute to `xarray <https://github.com/pydata/xarray>`_
+is to fork the main repository on GitHub, then submit a "pull request" (PR).
+`Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
+are the mechanism for contributing to xarray's code and documentation.
+
+1. `Create an account <https://github.com/>`_ on GitHub if you do not already have one.
+
+2. You will need your own fork to work on the code. Go to the `xarray project
+   page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button near the top of the page.
+   This creates a copy of the code under your account on the GitHub server.
+
+3. Clone your fork to your machine::
 
     git clone https://github.com/your-user-name/xarray.git
     cd xarray
     git remote add upstream https://github.com/pydata/xarray.git
 
-This creates the directory `xarray` and connects your repository to
-the upstream (main project) *xarray* repository.
+   This creates the directory `xarray` and connects your repository to
+   the upstream (main project) *xarray* repository.
 
-Creating a branch
------------------
-
-You want your ``main`` branch to reflect only production-ready code, so create a
-feature branch before making your changes. For example::
-
-    git branch shiny-new-feature
-    git checkout shiny-new-feature
-
-The above can be simplified to::
+4. Create a branch to save your changes, even before you start making changes. You want your ``main branch``
+   to contain only production-ready code::
 
     git checkout -b shiny-new-feature
 
-This changes your working directory to the shiny-new-feature branch.  Keep any
-changes in this branch specific to one bug or feature so it is clear
-what the branch brings to *xarray*. You can have many "shiny-new-features"
-and switch in between them using the ``git checkout`` command.
+   This changes your working directory to the ``shiny-new-feature`` branch.  Keep any
+   changes in this branch specific to one bug or feature so it is clear
+   what the branch brings to *xarray*. You can have many "shiny-new-features"
+   and switch in between them using the ``git checkout`` command.
 
-To update this branch, you need to retrieve the changes from the ``main`` branch::
+5. To update this branch, you need to retrieve the changes from the ``main`` branch::
 
     git fetch upstream
     git merge upstream/main
 
-This will combine your commits with the latest *xarray* git ``main``.  If this
-leads to merge conflicts, you must resolve these before submitting your pull
-request.  If you have uncommitted changes, you will need to ``git stash`` them
-prior to updating.  This will effectively store your changes, which can be
-reapplied after updating.
+   This will combine your commits with the latest *xarray* git ``main``.  If this
+   leads to merge conflicts, you must resolve these before submitting your pull
+   request.  If you have uncommitted changes, you will need to ``git stash`` them
+   prior to updating.  This will effectively store your changes, which can be
+   reapplied after updating.
 
 .. _contributing.dev_env:
 
@@ -839,9 +834,6 @@ Contributing your changes to *xarray*
 
 Committing your code
 --------------------
-
-`Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
-are the mechanism for contributing to xarray's code and documentation.
 
 Keep style fixes to a separate commit to make your pull request more readable.
 
