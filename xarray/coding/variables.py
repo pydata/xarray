@@ -298,9 +298,24 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTyp
     return data
 
 
-def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[Any]]:
-    """Return a float dtype that can losslessly represent `dtype` values."""
-    # Keep float32 as-is.  Upcast half-precision to single-precision,
+def _choose_float_dtype(
+    dtype: np.dtype, encoding: MutableMapping
+) -> type[np.floating[Any]]:
+    # check scale/offset first to derive dtype with
+    if "scale_factor" in encoding or "add_offset" in encoding:
+        scale_factor = encoding.get("scale_factor", False)
+        add_offset = encoding.get("add_offset", False)
+        # minimal floating point size -> 4 byte
+        maxsize = 4
+        if scale_factor and np.issubdtype(type(scale_factor), np.floating):
+            maxsize = max(maxsize, np.dtype(type(scale_factor)).itemsize)
+        if add_offset and np.issubdtype(type(add_offset), np.floating):
+            maxsize = max(maxsize, np.dtype(type(add_offset)).itemsize)
+        if maxsize == 4:
+            return np.float32
+        else:
+            return np.float64
+    # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
     if dtype.itemsize <= 4 and np.issubdtype(dtype, np.floating):
         return np.float32
@@ -308,10 +323,7 @@ def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[A
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
         # A scale factor is entirely safe (vanishing into the mantissa),
         # but a large integer offset could lead to loss of precision.
-        # Sensitivity analysis can be tricky, so we just use a float64
-        # if there's any offset at all - better unoptimised than wrong!
-        if not has_offset:
-            return np.float32
+        return np.float32
     # For all other types and circumstances, we just use float64.
     # (safe because eg. complex numbers are not supported in NetCDF)
     return np.float64
@@ -328,7 +340,7 @@ class CFScaleOffsetCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         if "scale_factor" in encoding or "add_offset" in encoding:
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
+            dtype = _choose_float_dtype(data.dtype, encoding)
             data = data.astype(dtype=dtype, copy=True)
         if "add_offset" in encoding:
             data -= pop_to(encoding, attrs, "add_offset", name=name)
@@ -344,7 +356,7 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
+            dtype = _choose_float_dtype(data.dtype, encoding)
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:

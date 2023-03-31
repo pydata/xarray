@@ -138,96 +138,96 @@ def open_example_mfdataset(names, *args, **kwargs) -> Dataset:
     )
 
 
-def create_masked_and_scaled_data() -> Dataset:
-    x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=np.float32)
+def create_masked_and_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+    x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=dtype)
     encoding = {
         "_FillValue": -1,
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
         "dtype": "i2",
     }
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_masked_and_scaled_data() -> Dataset:
-    attributes = {"_FillValue": -1, "add_offset": 10, "scale_factor": np.float32(0.1)}
+def create_encoded_masked_and_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+    attributes = {"_FillValue": -1, "add_offset": 10, "scale_factor": dtype(0.1)}
     return Dataset(
         {"x": ("t", np.array([-1, -1, 0, 1, 2], dtype=np.int16), attributes)}
     )
 
 
-def create_unsigned_masked_scaled_data() -> Dataset:
+def create_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
     encoding = {
         "_FillValue": 255,
         "_Unsigned": "true",
         "dtype": "i1",
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
     }
-    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=dtype)
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_unsigned_masked_scaled_data() -> Dataset:
+def create_encoded_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
         "_FillValue": -1,
         "_Unsigned": "true",
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
     }
     # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype="i1")
     return Dataset({"x": ("t", sb, attributes)})
 
 
-def create_bad_unsigned_masked_scaled_data() -> Dataset:
+def create_bad_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
     encoding = {
         "_FillValue": 255,
         "_Unsigned": True,
         "dtype": "i1",
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
     }
-    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=dtype)
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_bad_encoded_unsigned_masked_scaled_data() -> Dataset:
+def create_bad_encoded_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
         "_FillValue": -1,
         "_Unsigned": True,
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype="i1")
     return Dataset({"x": ("t", sb, attributes)})
 
 
-def create_signed_masked_scaled_data() -> Dataset:
+def create_signed_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
     encoding = {
         "_FillValue": -127,
         "_Unsigned": "false",
         "dtype": "i1",
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
     }
-    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=np.float32)
+    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=dtype)
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_signed_masked_scaled_data() -> Dataset:
+def create_encoded_signed_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
         "_FillValue": -127,
         "_Unsigned": "false",
         "add_offset": 10,
-        "scale_factor": np.float32(0.1),
+        "scale_factor": dtype(0.1),
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([-110, 1, 127, -127], dtype="i1")
@@ -857,6 +857,7 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
         [
@@ -876,12 +877,19 @@ class CFEncodedBase(DatasetIOBase):
             (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
         ],
     )
-    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn) -> None:
-        decoded = decoded_fn()
-        encoded = encoded_fn()
+    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
+        if dtype == np.float32 and isinstance(
+            self, (TestZarrDirectoryStore, TestZarrDictStore)
+        ):
+            pytest.skip(
+                "zarr attributes (eg. `scale_factor` are unconditionally promoted to `float64`"
+            )
+        decoded = decoded_fn(dtype)
+        encoded = encoded_fn(dtype)
 
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
+                print(k, decoded.variables[k].dtype)
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
 
@@ -899,7 +907,7 @@ class CFEncodedBase(DatasetIOBase):
 
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        assert_allclose(encoded, encoded_fn(), decode_bytes=False)
+        assert_allclose(encoded, encoded_fn(dtype), decode_bytes=False)
 
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
@@ -1533,7 +1541,8 @@ class NetCDF4Base(NetCDFBase):
         with self.roundtrip(ds) as actual:
             assert_equal(ds, actual)
 
-    def test_mask_and_scale(self) -> None:
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    def test_mask_and_scale(self, dtype) -> None:
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("t", 5)
@@ -1541,21 +1550,23 @@ class NetCDF4Base(NetCDFBase):
                 v = nc.variables["x"]
                 v.set_auto_maskandscale(False)
                 v.add_offset = 10
-                v.scale_factor = 0.1
+                v.scale_factor = dtype(0.1)
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
             # first make sure netCDF4 reads the masked and scaled data
             # correctly
             with nc4.Dataset(tmp_file, mode="r") as nc:
                 expected = np.ma.array(
-                    [-1, -1, 10, 10.1, 10.2], mask=[True, True, False, False, False]
+                    [-1, -1, 10, 10.1, 10.2],
+                    mask=[True, True, False, False, False],
+                    dtype=dtype,
                 )
                 actual = nc.variables["x"][:]
                 assert_array_equal(expected, actual)
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
-                expected = create_masked_and_scaled_data()
+                expected = create_masked_and_scaled_data(dtype)
                 assert_identical(expected, ds)
 
     def test_0dimensional_variable(self) -> None:
