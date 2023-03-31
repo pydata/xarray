@@ -630,6 +630,9 @@ class DatasetIOBase:
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
             assert actual["x"].dtype == "bool"
+            with self.roundtrip(actual) as actual2:
+                assert_identical(original, actual2)
+                assert actual2["x"].dtype == "bool"
 
     def test_orthogonal_indexing(self) -> None:
         in_memory = create_test_data()
