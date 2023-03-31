@@ -4060,7 +4060,7 @@ class DataArray(
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
-        compute : bool, optional
+        compute : bool, default: True
             If True write array data immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed to write
             array data later. Metadata is always updated eagerly.
@@ -4094,7 +4094,7 @@ class DataArray(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
-        safe_chunks : bool, optional
+        safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.
             Set False to override this restriction; however, data may become corrupted
@@ -4143,19 +4143,18 @@ class DataArray(
             # If no name is set then use a generic xarray name
             dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
         elif self.name in self.coords or self.name in self.dims:
-            # The name is the same as one of the coords names, which netCDF
-            # doesn't support, so rename it but keep track of the old name
+            # The name is the same as one of the coords names, which the netCDF data model
+            # does not support, so rename it but keep track of the old name
             dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
             dataset.attrs[DATAARRAY_NAME] = self.name
         else:
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        return to_zarr(  # type: ignore
+        return to_zarr(  # type: ignore[call-overload,misc]
             dataset,
             store=store,
             chunk_store=chunk_store,
-            storage_options=storage_options,
             mode=mode,
             synchronizer=synchronizer,
             group=group,
@@ -4165,6 +4164,7 @@ class DataArray(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            storage_options=storage_options,
             zarr_version=zarr_version,
         )
 
