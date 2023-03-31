@@ -26,6 +26,8 @@ New Features
   (:issue:`7686`, :pull:`7689`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Allow refreshing backend engines with :py:meth:`xarray.backends.refresh_engines` (:issue:`7478`, :pull:`7523`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
