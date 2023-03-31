@@ -373,7 +373,7 @@ How xarray handles missing values?
 
 - On `plotting <https://docs.xarray.dev/en/stable/user-guide/plotting.html#missing-values>`_ an xarray dataset or array that contains missing values, xarray will simply leave the missing values as blank spaces in the plot.
 
-- We have a set of `special methods <https://docs.xarray.dev/en/stable/user-guide/computation.html#missing-values>`_ for manipulating missing and filling values.
+- We have a set of `methods <https://docs.xarray.dev/en/stable/user-guide/computation.html#missing-values>`_ for manipulating missing and filling values.
 
 How should I cite xarray?
 -------------------------
