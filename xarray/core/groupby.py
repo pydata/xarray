@@ -351,7 +351,7 @@ class Grouper:
         return self._group_as_index
 
     def _resolve_group(self, obj: T_Xarray, group_name: Hashable):
-        group = obj[group_name]
+        group = obj[group_name].reset_coords(drop=True)
         if group.name not in obj._indexes and group.name in obj.dims:
             # DummyGroups should not appear on groupby results
             group = _DummyGroup(obj, group.name, group.coords)
@@ -568,15 +568,12 @@ def _validate_group(obj, group):
     from xarray.core.dataset import Dataset
 
     if isinstance(group, (DataArray, IndexVariable)):
-        if len(group) == 0:
-            raise ValueError(f"{group.name} must not be empty")
-
-        name = group.name or "group"
+        group_name = group.name or "group"
         newobj = obj.copy()
         if group.name in newobj.coords or (
             isinstance(newobj, Dataset) and group.name in newobj.data_vars
         ):
-            newobj[group.name] = group
+            newobj[group_name] = group
         else:
             try:
                 align(newobj, group, join="exact", copy=False)
@@ -587,7 +584,7 @@ def _validate_group(obj, group):
                     "dimensions"
                 )
 
-            newobj = newobj.assign_coords({name: group})
+            newobj = newobj.assign_coords({group_name: group})
     else:
         if not hashable(group):
             raise TypeError(
@@ -595,10 +592,13 @@ def _validate_group(obj, group):
                 "name of an xarray variable or dimension. "
                 f"Received {group!r} instead."
             )
-        name = group
+        group_name = group
         newobj = obj
 
-    return newobj, name
+    if len(newobj[group_name]) == 0:
+        raise ValueError(f"{group_name} must not be empty")
+
+    return newobj, group_name
 
 
 class GroupBy(Generic[T_Xarray]):
@@ -825,6 +825,7 @@ class GroupBy(Generic[T_Xarray]):
         mask = codes == -1
         if mask.any():
             obj = obj.where(~mask, drop=True)
+            group = group.where(~mask, drop=True)
             codes = codes.where(~mask, drop=True).astype(int)
 
         other, _ = align(other, coord, join="outer", copy=False)
