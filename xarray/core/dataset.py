@@ -8955,7 +8955,7 @@ class Dataset(
         grouper = UniqueGrouper()
 
         return DatasetGroupBy(
-            self,
+            newobj,
             {name: grouper},
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
