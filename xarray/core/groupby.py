@@ -352,8 +352,6 @@ class Grouper:
 
     def _resolve_group(self, obj: T_Xarray, group_name: Hashable):
         group = obj[group_name]
-        if len(group) == 0:
-            raise ValueError(f"{group.name} must not be empty")
         if group.name not in obj._indexes and group.name in obj.dims:
             # DummyGroups should not appear on groupby results
             group = _DummyGroup(obj, group.name, group.coords)
@@ -570,6 +568,9 @@ def _validate_group(obj, group):
     from xarray.core.dataset import Dataset
 
     if isinstance(group, (DataArray, IndexVariable)):
+        if len(group) == 0:
+            raise ValueError(f"{group.name} must not be empty")
+
         name = group.name or "group"
         newobj = obj.copy()
         if group.name in newobj.coords or (
