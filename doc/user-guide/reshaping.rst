@@ -8,7 +8,7 @@ Reshaping and reorganizing data refers to the process of changing the structure 
 
 These methods are particularly useful for reshaping xarray objects for use in machine learning packages, such as scikit-learn, that usually require two-dimensional numpy arrays as inputs. Reshaping can also be required before passing data to external visualization tools, for example geospatial data might expect input organized into a particular format corresponding to stacks of satellite images.
 
-Importing the library 
+Importing the library
 ---------------------
 
 .. ipython:: python
