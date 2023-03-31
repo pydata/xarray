@@ -456,7 +456,8 @@ class BooleanCoder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.attrs.get("dtype", False) == "bool":
             dims, data, attrs, encoding = unpack_for_decoding(variable)
-            del attrs["dtype"]
+            # overwrite encoding accordingly and remove from attrs
+            encoding["dtype"] = attrs.pop("dtype")
             data = BoolTypeArray(data)
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
