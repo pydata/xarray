@@ -254,31 +254,22 @@ You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
 :py:attr:`DataArray.encoding` attributes:
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
 
-    In [1]: ds_disk["y"].encoding
-    Out[1]:
-    {'zlib': False,
-     'shuffle': False,
-     'complevel': 0,
-     'fletcher32': False,
-     'contiguous': True,
-     'chunksizes': None,
-     'source': 'saved_on_disk.nc',
-     'original_shape': (5,),
-     'dtype': dtype('int64'),
-     'units': 'days since 2000-01-01 00:00:00',
-     'calendar': 'proleptic_gregorian'}
-
-    In [9]: ds_disk.encoding
-    Out[9]:
-    {'unlimited_dims': set(),
-     'source': 'saved_on_disk.nc'}
+    ds_disk["y"].encoding
+    ds_disk.encoding
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
 
+In some cases it is useful to intentionally reset a dataset's original encoding values.
+This can be done with either the :py:meth:`Dataset.reset_encoding` or
+:py:meth:`DataArray.reset_encoding` methods.
+
+.. ipython:: python
+
+    ds_no_encoding = ds_disk.reset_encoding()
+    ds_no_encoding.encoding
 
 .. _combining multiple files:
 
@@ -684,9 +675,9 @@ instance and pass this, as follows:
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are many different options for compression and filtering possible with
-zarr. These are described in the
-`zarr documentation <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+There are many different `options for compression and filtering possible with
+zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
@@ -720,7 +711,7 @@ As of xarray version 0.18, xarray by default uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
-`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
 By default, xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
@@ -1157,46 +1148,7 @@ search indices or other automated data discovery tools.
 Rasterio
 --------
 
-GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
-rasterio is installed. Here is an example of how to use
-:py:func:`open_rasterio` to read one of rasterio's `test files`_:
-
-.. deprecated:: 0.20.0
-
-        Deprecated in favor of rioxarray.
-        For information about transitioning, see:
-        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
-
-.. ipython::
-    :verbatim:
-
-    In [7]: rio = xr.open_rasterio("RGB.byte.tif")
-
-    In [8]: rio
-    Out[8]:
-    <xarray.DataArray (band: 3, y: 718, x: 791)>
-    [1703814 values with dtype=uint8]
-    Coordinates:
-      * band     (band) int64 1 2 3
-      * y        (y) float64 2.827e+06 2.826e+06 2.826e+06 2.826e+06 2.826e+06 ...
-      * x        (x) float64 1.021e+05 1.024e+05 1.027e+05 1.03e+05 1.033e+05 ...
-    Attributes:
-        res:        (300.0379266750948, 300.041782729805)
-        transform:  (300.0379266750948, 0.0, 101985.0, 0.0, -300.041782729805, 28...
-        is_tiled:   0
-        crs:        +init=epsg:32618
-
-
-The ``x`` and ``y`` coordinates are generated out of the file's metadata
-(``bounds``, ``width``, ``height``), and they can be understood as cartesian
-coordinates defined in the file's projection provided by the ``crs`` attribute.
-``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
-See :ref:`/examples/visualization_gallery.ipynb#Parsing-rasterio-geocoordinates`
-for an example of how to convert these to longitudes and latitudes.
-
-
-Additionally, you can use `rioxarray`_ for reading in GeoTiff, netCDF or other
-GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIFF.
+GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened using the `rioxarray`_ extension.
 `rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
 
 .. ipython::
@@ -1257,7 +1209,7 @@ GRIB format via cfgrib
 
 Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
-to :py:func:`open_dataset`:
+to :py:func:`open_dataset` after installing cfgrib_:
 
 .. ipython::
     :verbatim:
@@ -1277,7 +1229,7 @@ Formats supported by PyNIO
 
 .. warning::
 
-    The PyNIO backend is deprecated_. PyNIO is no longer maintained_. See
+    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
 
 Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
@@ -1288,8 +1240,8 @@ We recommend installing PyNIO via conda::
     conda install -c conda-forge pynio
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-.. _deprecated: https://github.com/pydata/xarray/issues/4491
-.. _maintained: https://github.com/NCAR/pynio/issues/53
+.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
+.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
 .. _io.PseudoNetCDF:
 

@@ -73,7 +73,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.pycompat import array_type, is_duck_array, is_duck_dask_array
 from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
     Default,
@@ -665,6 +665,12 @@ class Dataset(
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
+
+    def reset_encoding(self: T_Dataset) -> T_Dataset:
+        """Return a new Dataset without encoding on the dataset or any of its
+        variables/coords."""
+        variables = {k: v.reset_encoding() for k, v in self.variables.items()}
+        return self._replace(variables=variables, encoding={})
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
@@ -2292,7 +2298,8 @@ class Dataset(
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                v = np.asarray(v)
+                if not is_duck_array(v):
+                    v = np.asarray(v)
 
                 if v.dtype.kind in "US":
                     index = self._indexes[k].to_pandas_index()
@@ -5051,9 +5058,9 @@ class Dataset(
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
+            ordered_bad_names = [name for name in names if name in bad_names]
             raise ValueError(
-                "One or more of the specified variables "
-                "cannot be found in this dataset"
+                f"These variables cannot be found in this dataset: {ordered_bad_names}"
             )
 
     def drop_vars(

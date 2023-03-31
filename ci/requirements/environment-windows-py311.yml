@@ -6,7 +6,6 @@ dependencies:
   - bottleneck
   - cartopy
   # - cdms2  # Not available on Windows
-  # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
   - cftime
   - dask-core
   - distributed
@@ -25,7 +24,7 @@ dependencies:
   # - numbagg
   - numpy
   - packaging
-  - pandas
+  - pandas<2
   - pint
   - pip
   - pre-commit
@@ -35,6 +34,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn

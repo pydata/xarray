@@ -455,6 +455,23 @@ class VariableSubclassobjects:
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
+    def test_reset_encoding(self) -> None:
+        encoding1 = {"scale_factor": 1}
+        # encoding set via cls constructor
+        v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
+        assert v1.encoding == encoding1
+        v2 = v1.reset_encoding()
+        assert v1.encoding == encoding1
+        assert v2.encoding == {}
+
+        # encoding set via setter
+        encoding3 = {"scale_factor": 10}
+        v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
+        assert v3.encoding == encoding3
+        v4 = v3.reset_encoding()
+        assert v3.encoding == encoding3
+        assert v4.encoding == {}
+
     def test_concat(self):
         x = np.arange(5)
         y = np.arange(5, 10)
@@ -2201,9 +2218,13 @@ class TestVariable(VariableSubclassobjects):
         assert new.attrs == _attrs
 
 
+def _init_dask_variable(*args, **kwargs):
+    return Variable(*args, **kwargs).chunk()
+
+
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
-    cls = staticmethod(lambda *args: Variable(*args).chunk())
+    cls = staticmethod(_init_dask_variable)
 
     def test_chunk(self):
         unblocked = Variable(["dim_0", "dim_1"], np.ones((3, 4)))

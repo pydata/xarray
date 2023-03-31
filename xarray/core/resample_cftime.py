@@ -71,7 +71,6 @@ class CFTimeGrouper:
         freq: str | BaseCFTimeOffset,
         closed: SideOptions | None = None,
         label: SideOptions | None = None,
-        base: int | None = None,
         loffset: str | datetime.timedelta | BaseCFTimeOffset | None = None,
         origin: str | CFTimeDatetime = "start_day",
         offset: str | datetime.timedelta | None = None,
@@ -79,10 +78,6 @@ class CFTimeGrouper:
         self.offset: datetime.timedelta | None
         self.closed: SideOptions
         self.label: SideOptions
-
-        if base is not None and offset is not None:
-            raise ValueError("base and offset cannot be provided at the same time")
-
         self.freq = to_offset(freq)
         self.loffset = loffset
         self.origin = origin
@@ -122,9 +117,6 @@ class CFTimeGrouper:
                 else:
                     self.label = label
 
-        if base is not None and isinstance(self.freq, Tick):
-            offset = type(self.freq)(n=base % self.freq.n).as_timedelta()
-
         if offset is not None:
             try:
                 self.offset = _convert_offset_to_timedelta(offset)
@@ -150,10 +142,17 @@ class CFTimeGrouper:
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
         if self.loffset is not None:
-            if isinstance(self.loffset, datetime.timedelta):
-                labels = labels + self.loffset
-            else:
-                labels = labels + to_offset(self.loffset)
+            if not isinstance(
+                self.loffset, (str, datetime.timedelta, BaseCFTimeOffset)
+            ):
+                # BaseCFTimeOffset is not public API so we do not include it in
+                # the error message for now.
+                raise ValueError(
+                    f"`loffset` must be a str or datetime.timedelta object. "
+                    f"Got {self.loffset}."
+                )
+
+            labels = labels + pd.to_timedelta(self.loffset)
 
         # check binner fits data
         if index[0] < datetime_bins[0]:
@@ -161,12 +160,14 @@ class CFTimeGrouper:
         if index[-1] > datetime_bins[-1]:
             raise ValueError("Value falls after last bin")
 
-        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[:-1]
-        first_items = pd.Series(integer_bins, labels)
+        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)
+        counts = np.diff(integer_bins)
+        codes = np.repeat(np.arange(len(labels)), counts)
+        first_items = pd.Series(integer_bins[:-1], labels, copy=False)
 
         # Mask duplicate values with NaNs, preserving the last values
         non_duplicate = ~first_items.duplicated("last")
-        return first_items.where(non_duplicate)
+        return first_items.where(non_duplicate), codes
 
 
 def _get_time_bins(
