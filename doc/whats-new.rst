@@ -22,15 +22,14 @@ v2023.04.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
-  (:issue:`7692`, :pull:`7693`) .
-  By `Joe Hamman <https://github.com/jhamman>`_.
 - New methods to reset an objects encoding (:py:meth:`Dataset.reset_encoding`, :py:meth:`DataArray.reset_encoding`).
   (:issue:`7686`, :pull:`7689`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
 - Allow refreshing backend engines with :py:meth:`xarray.backends.refresh_engines` (:issue:`7478`, :pull:`7523`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
+  (:issue:`7692`, :pull:`7693`) .
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
