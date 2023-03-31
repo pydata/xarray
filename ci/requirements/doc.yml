@@ -30,7 +30,7 @@ dependencies:
   - setuptools
   - sparse
   - sphinx-autosummary-accessors
-  - sphinx-book-theme == 1.0.0
+  - sphinx-book-theme >= 0.3.0
   - sphinx-copybutton
   - sphinx-design
   - sphinx>=5.0
