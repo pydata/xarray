@@ -179,6 +179,8 @@ are the mechanism for contributing to xarray's code and documentation.
    prior to updating.  This will effectively store your changes, which can be
    reapplied after updating.
 
+Finally, go to the web page of your fork of the xarray repo, and click 'Pull request' to send your changes to the maintainers for review.
+
 .. _contributing.dev_env:
 
 Creating a development environment
@@ -261,6 +263,22 @@ To return to your root environment::
       conda deactivate
 
 See the full `conda docs here <http://conda.pydata.org/docs>`__.
+
+Install pre-commit hooks
+------------------------
+
+We highly recommend that you setup `pre-commit <https://pre-commit.com/>`_ hooks to automatically
+run all the above tools every time you make a git commit. To install the hooks::
+
+    python -m pip install pre-commit
+    pre-commit install
+
+This can be done by running: ::
+
+    pre-commit run
+
+from the root of the xarray repository. You can skip the pre-commit checks with
+``git commit --no-verify``.
 
 .. _contributing.documentation:
 
