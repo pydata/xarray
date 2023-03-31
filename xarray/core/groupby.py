@@ -310,8 +310,8 @@ def _apply_loffset(
         result.index = result.index + loffset
 
 
-class Grouper(ABC):
-    def __init__(self):
+class ResolvedGrouper(ABC):
+    def __init__(self, grouper: Grouper, group, obj):
         self.labels = None
         self._group_as_index: pd.Index | None = None
 
@@ -319,6 +319,15 @@ class Grouper(ABC):
         self.group_indices: list[int] | list[slice] | list[list[int]]
         self.unique_coord: IndexVariable | _DummyGroup
         self.full_index: pd.Index
+
+        self.grouper = grouper
+        self.group = group
+        (
+            self.group1d,
+            self.stacked_obj,
+            self.stacked_dim,
+            self.inserted_dims,
+        ) = _ensure_1d(group, obj)
 
     @property
     def name(self) -> Hashable:
@@ -352,30 +361,8 @@ class Grouper(ABC):
             self._group_as_index = safe_cast_to_index(self.group1d)
         return self._group_as_index
 
-    def _resolve_group(self, obj: T_Xarray, group_name: Hashable):
-        group = obj[group_name].reset_coords(drop=True)
-        if group.name not in obj._indexes and group.name in obj.dims:
-            # DummyGroups should not appear on groupby results
-            group = _DummyGroup(obj, group.name, group.coords)
 
-        self.group = group
-
-        self.group1d, stacked_obj, self.stacked_dim, self.inserted_dims = _ensure_1d(
-            group, obj
-        )
-
-        return self, stacked_obj
-
-    def copy(self, deep=False):
-        import copy
-
-        if deep:
-            return copy.deepcopy(self)
-        else:
-            return copy.copy(self)
-
-
-class UniqueGrouper(Grouper):
+class ResolvedUniqueGrouper(ResolvedGrouper):
     def factorize(self, squeeze) -> None:
         is_dimension = self.group.dims == (self.group.name,)
         if is_dimension and self.is_unique_and_monotonic:
@@ -418,22 +405,14 @@ class UniqueGrouper(Grouper):
         self.full_index = IndexVariable(self.name, self.group.values, self.group.attrs)
 
 
-class BinGrouper(Grouper):
-    def __init__(self, bins, cut_kwargs: Mapping | None):
-        if duck_array_ops.isnull(bins).all():
-            raise ValueError("All bin edges are NaN.")
-
-        if cut_kwargs is None:
-            cut_kwargs = {}
-
-        self.bins = bins
-        self.cut_kwargs = cut_kwargs
-
+class ResolvedBinGrouper(ResolvedGrouper):
     def factorize(self, squeeze: bool) -> None:
         from xarray.core.dataarray import DataArray
 
         data = self.group1d.values
-        binned, bins = pd.cut(data, self.bins, **self.cut_kwargs, retbins=True)
+        binned, bins = pd.cut(
+            data, self.grouper.bins, **self.grouper.cut_kwargs, retbins=True
+        )
         codes = binned.codes
         if (codes == -1).all():
             raise ValueError(f"None of the data falls within bins with edges {bins!r}")
@@ -457,7 +436,102 @@ class BinGrouper(Grouper):
         self.group_indices = group_indices
 
 
+class ResolvedTimeResampleGrouper(ResolvedGrouper):
+    def __init__(self, grouper, group, obj):
+        from xarray import CFTimeIndex
+        from xarray.core.resample_cftime import CFTimeGrouper
+
+        super().__init__(grouper, group, obj)
+
+        self._group_as_index = safe_cast_to_index(group)
+        group_as_index = self._group_as_index
+
+        if not group_as_index.is_monotonic_increasing:
+            # TODO: sort instead of raising an error
+            raise ValueError("index must be monotonic for resampling")
+
+        if isinstance(group_as_index, CFTimeIndex):
+            index_grouper = CFTimeGrouper(
+                freq=grouper.freq,
+                closed=grouper.closed,
+                label=grouper.label,
+                origin=grouper.origin,
+                offset=grouper.offset,
+                loffset=grouper.loffset,
+            )
+        else:
+            index_grouper = pd.Grouper(
+                freq=grouper.freq,
+                closed=grouper.closed,
+                label=grouper.label,
+                origin=grouper.origin,
+                offset=grouper.offset,
+            )
+        self.index_grouper: CFTimeGrouper | pd.Grouper = index_grouper
+
+    def _get_index_and_items(self) -> tuple[pd.Index, pd.Series, np.ndarray]:
+        first_items, codes = self.first_items()
+        full_index = first_items.index
+        if first_items.isnull().any():
+            first_items = first_items.dropna()
+
+        full_index = full_index.rename("__resample_dim__")
+        return full_index, first_items, codes
+
+    def first_items(self) -> tuple[pd.Series, np.ndarray]:
+        from xarray import CFTimeIndex
+
+        if isinstance(self.group_as_index, CFTimeIndex):
+            return self.index_grouper.first_items(self.group_as_index)
+        else:
+            s = pd.Series(np.arange(self.group_as_index.size), self.group_as_index)
+            grouped = s.groupby(self.index_grouper)
+            first_items = grouped.first()
+            counts = grouped.count()
+            # This way we generate codes for the final output index: full_index.
+            # So for _flox_reduce we avoid one reindex and copy by avoiding
+            # _maybe_restore_empty_groups
+            codes = np.repeat(np.arange(len(first_items)), counts)
+            if self.grouper.loffset is not None:
+                _apply_loffset(self.grouper.loffset, first_items)
+            return first_items, codes
+
+    def factorize(self, squeeze: bool) -> None:
+        self.full_index, first_items, codes = self._get_index_and_items()
+        sbins = first_items.values.astype(np.int64)
+        self.group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
+            slice(sbins[-1], None)
+        ]
+        self.unique_coord = IndexVariable(
+            self.group.name, first_items.index, self.group.attrs
+        )
+        self.codes = self.group.copy(data=codes)
+
+
+class Grouper(ABC):
+    pass
+
+class UniqueGrouper(Grouper):
+    _resolved_cls = ResolvedUniqueGrouper
+
+
+class BinGrouper(Grouper):
+    _resolved_cls = ResolvedBinGrouper
+
+    def __init__(self, bins, cut_kwargs: Mapping | None):
+        if duck_array_ops.isnull(bins).all():
+            raise ValueError("All bin edges are NaN.")
+
+        if cut_kwargs is None:
+            cut_kwargs = {}
+
+        self.bins = bins
+        self.cut_kwargs = cut_kwargs
+
+
 class TimeResampleGrouper(Grouper):
+    _resolved_cls = ResolvedTimeResampleGrouper
+
     def __init__(
         self,
         freq: str,
@@ -474,84 +548,13 @@ class TimeResampleGrouper(Grouper):
         self.offset = offset
         self.loffset = loffset
 
-    def _resolve_group(self, obj, group_name):
-        from xarray import CFTimeIndex
+    def _resolve_group(self, obj, group_name) -> ResolvedGrouper:
         from xarray.core.resample import RESAMPLE_DIM
-        from xarray.core.resample_cftime import CFTimeGrouper
 
         group = obj[group_name].reset_coords(drop=True)
-        obj = obj.drop_vars(RESAMPLE_DIM)
-
-        self.group = group
-        self._group_as_index = safe_cast_to_index(group)
-        group_as_index = self._group_as_index
-
-        if not group_as_index.is_monotonic_increasing:
-            # TODO: sort instead of raising an error
-            raise ValueError("index must be monotonic for resampling")
-
-        if isinstance(group_as_index, CFTimeIndex):
-            grouper = CFTimeGrouper(
-                freq=self.freq,
-                closed=self.closed,
-                label=self.label,
-                origin=self.origin,
-                offset=self.offset,
-                loffset=self.loffset,
-            )
-        else:
-            grouper = pd.Grouper(
-                freq=self.freq,
-                closed=self.closed,
-                label=self.label,
-                origin=self.origin,
-                offset=self.offset,
-            )
-        self.grouper: CFTimeGrouper | pd.Grouper = grouper
-
-        self.group1d, stacked_obj, self.stacked_dim, self.inserted_dims = _ensure_1d(
-            group, obj
-        )
-
-        return self, stacked_obj
-
-    def _get_index_and_items(self) -> tuple[pd.Index, pd.Series, np.ndarray]:
-        first_items, codes = self.first_items()
-        full_index = first_items.index
-        if first_items.isnull().any():
-            first_items = first_items.dropna()
-
-        full_index = full_index.rename("__resample_dim__")
-        return full_index, first_items, codes
-
-    def first_items(self) -> tuple[pd.Series, np.ndarray]:
-        from xarray import CFTimeIndex
-
-        if isinstance(self.group_as_index, CFTimeIndex):
-            return self.grouper.first_items(self.group_as_index)
-        else:
-            s = pd.Series(np.arange(self.group_as_index.size), self.group_as_index)
-            grouped = s.groupby(self.grouper)
-            first_items = grouped.first()
-            counts = grouped.count()
-            # This way we generate codes for the final output index: full_index.
-            # So for _flox_reduce we avoid one reindex and copy by avoiding
-            # _maybe_restore_empty_groups
-            codes = np.repeat(np.arange(len(first_items)), counts)
-            if self.loffset is not None:
-                _apply_loffset(self.loffset, first_items)
-            return first_items, codes
-
-    def factorize(self, squeeze: bool) -> None:
-        self.full_index, first_items, codes = self._get_index_and_items()
-        sbins = first_items.values.astype(np.int64)
-        self.group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
-            slice(sbins[-1], None)
-        ]
-        self.unique_coord = IndexVariable(
-            self.group.name, first_items.index, self.group.attrs
-        )
-        self.codes = self.group.copy(data=codes)
+        # TODO: This is an ugly in-place modification
+        del obj[RESAMPLE_DIM]
+        return ResolvedTimeResampleGrouper(self, group, obj)
 
 
 def _validate_groupby_squeeze(squeeze):
@@ -662,18 +665,21 @@ class GroupBy(Generic[T_Xarray]):
             If True, also restore the dimension order of multi-dimensional
             coordinates.
         """
+        self.groupers: tuple[ResolvedGrouper] = tuple(
+            grouper_._resolve_group(obj, group_name)
+            for group_name, grouper_ in groupers.items()
+        )
+
         self._original_obj: T_Xarray = obj
 
-        for group_name, grouper_ in groupers.items():
-            grouper, obj = grouper_.copy()._resolve_group(obj, group_name)
+        for grouper_ in self.groupers:
+            grouper_.factorize(squeeze)
 
+        (grouper,) = self.groupers
         self._original_group = grouper.group
-        self.groupers = (grouper,)
-
-        grouper.factorize(squeeze)
 
         # specification for the groupby operation
-        self._obj: T_Xarray = obj
+        self._obj: T_Xarray = grouper.stacked_obj
         self._restore_coord_dims = restore_coord_dims
         self._squeeze = squeeze
 
@@ -855,7 +861,7 @@ class GroupBy(Generic[T_Xarray]):
         """
         (grouper,) = self.groupers
         if (
-            isinstance(grouper, (BinGrouper, TimeResampleGrouper))
+            isinstance(grouper, (ResolvedBinGrouper, ResolvedTimeResampleGrouper))
             and grouper.name in combined.dims
         ):
             indexers = {grouper.name: grouper.full_index}
@@ -889,7 +895,7 @@ class GroupBy(Generic[T_Xarray]):
 
         obj = self._original_obj
         (grouper,) = self.groupers
-        isbin = isinstance(grouper, BinGrouper)
+        isbin = isinstance(grouper, ResolvedBinGrouper)
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
