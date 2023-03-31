@@ -12,7 +12,7 @@ from xarray.backends.file_manager import (
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint, H5NetCDFStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.backends.netCDF4_ import NetCDF4BackendEntrypoint, NetCDF4DataStore
-from xarray.backends.plugins import list_engines
+from xarray.backends.plugins import list_engines, refresh_engines
 from xarray.backends.pseudonetcdf_ import (
     PseudoNetCDFBackendEntrypoint,
     PseudoNetCDFDataStore,
@@ -46,4 +46,5 @@ __all__ = [
     "StoreBackendEntrypoint",
     "ZarrBackendEntrypoint",
     "list_engines",
+    "refresh_engines",
 ]

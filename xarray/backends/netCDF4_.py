@@ -3,7 +3,9 @@ from __future__ import annotations
 import functools
 import operator
 import os
+from collections.abc import Iterable
 from contextlib import suppress
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -33,10 +35,15 @@ from xarray.core.utils import (
     FrozenDict,
     close_on_error,
     is_remote_uri,
-    module_available,
     try_read_magic_number_from_path,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -535,33 +542,37 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     backends.ScipyBackendEntrypoint
     """
 
-    available = module_available("netCDF4")
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
         magic_number = try_read_magic_number_from_path(filename_or_obj)
         if magic_number is not None:
             # netcdf 3 or HDF5
             return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
-        try:
-            _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".nc", ".nc4", ".cdf"}
 
-    def open_dataset(
+        if isinstance(filename_or_obj, (str, os.PathLike)):
+            _, ext = os.path.splitext(filename_or_obj)
+            return ext in {".nc", ".nc4", ".cdf"}
+
+        return False
+
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
@@ -572,7 +583,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
@@ -601,4 +612,4 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint
+BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)
