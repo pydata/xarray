@@ -25,17 +25,27 @@ We also have a biweekly community call, details of which are announced on the
 You are very welcome to join! Though we would love to hear from you, there is no expectation to
 contribute during the meeting either - you are always welcome to just sit in and listen.
 
+This project is a community effort, and everyone is welcome to contribute. Everyone within the community
+is expected to abide by our `code of conduct <https://github.com/pydata/xarray/blob/main/CODE_OF_CONDUCT.md>`_.
+
 Where to start?
 ===============
 
 If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
-to find issues that interest you. There are a number of issues listed under
-`Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`_
+to find issues that interest you.
+Some issues are particularly suited for new contributors by the label `Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`_
 and `good first issue
-<https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_
-where you could start out. Once you've found an interesting issue, you can
-return here to get your development environment setup.
+<https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_ where you could start out.
+These are well documented issues, that do not require a deep understanding of the internals of xarray.
+Once you've found an interesting issue, you can return here to get your development environment setup.
+
+The xarray project does not assign issues. Issues are "assigned" by opening
+a PR; there is no other assignment mechanism. If you have opened such a PR, please comment on the issue
+thread to avoid duplication of work. Please check if there is an existing PR for the issue you are
+addressing. If there is, try to work with the author by submitting reviews of their code or commenting
+on the PR rather than opening a new PR. However, if the existing PR is an outline, unlikely to work, or
+stalled, and the original author is unresponsive, feel free to open a new PR referencing the old one.
 
 .. _contributing.bug_reports:
 
@@ -43,15 +53,20 @@ Bug reports and enhancement requests
 ====================================
 
 Bug reports are an important part of making *xarray* more stable. Having a complete bug
-report will allow others to reproduce the bug and provide insight into fixing. See
-this `stackoverflow article for tips on
-writing a good bug report <https://stackoverflow.com/help/mcve>`_ .
+report will allow others to reproduce the bug and provide insight into fixing.
 
 Trying out the bug-producing code on the *main* branch is often a worthwhile exercise
 to confirm that the bug still exists. It is also worth searching existing bug reports and
 pull requests to see if the issue has already been reported and/or fixed.
 
-Bug reports must:
+Submitting a bug report
+-----------------------
+
+If you find a bug in the code or documentation, do not hesitate to submit a ticket to the
+`Issue Tracker <https://github.com/pydata/xarray/issues>`_.
+You are also welcome to post feature requests or pull requests.
+
+If you are reporting a bug, please do your best to include the following:
 
 #. Include a short, self-contained Python snippet reproducing the problem.
    You can format the code nicely by using `GitHub Flavored Markdown
@@ -76,8 +91,10 @@ Bug reports must:
 
 #. Explain why the current behavior is wrong/not desired and what you expect instead.
 
-The issue will then show up to the *xarray* community and be open to comments/ideas
-from others.
+The issue will then show up to the *xarray* community and be open to comments/ideas from others.
+
+See this `stackoverflow article for tips on writing a good bug report <https://stackoverflow.com/help/mcve>`_ .
+
 
 .. _contributing.github:
 
@@ -86,6 +103,7 @@ Working with the code
 
 Now that you have an issue you want to fix, enhancement to add, or documentation
 to improve, you need to learn how to work with GitHub and the *xarray* code base.
+
 
 .. _contributing.version_control:
 
