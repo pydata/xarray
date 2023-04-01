@@ -298,12 +298,13 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTyp
 
 
 def _choose_float_dtype(
-    dtype: np.dtype, encoding: MutableMapping
+    dtype: np.dtype, mapping: MutableMapping
 ) -> type[np.floating[Any]]:
-    # check scale/offset first to derive dtype with
-    if "scale_factor" in encoding or "add_offset" in encoding:
-        scale_factor = encoding.get("scale_factor", False)
-        add_offset = encoding.get("add_offset", False)
+    # check scale/offset first to derive dtype
+    # see https://github.com/pydata/xarray/issues/5597#issuecomment-879561954
+    scale_factor = mapping.get("scale_factor", False)
+    add_offset = mapping.get("add_offset", False)
+    if scale_factor or add_offset:
         # minimal floating point size -> 4 byte
         maxsize = 4
         if scale_factor and np.issubdtype(type(scale_factor), np.floating):
@@ -337,29 +338,28 @@ class CFScaleOffsetCoder(VariableCoder):
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-
-        if "scale_factor" in encoding or "add_offset" in encoding:
-            dtype = _choose_float_dtype(data.dtype, encoding)
+        scale_factor = pop_to(encoding, attrs, "scale_factor", name=name)
+        add_offset = pop_to(encoding, attrs, "add_offset", name=name)
+        if scale_factor or add_offset:
+            dtype = _choose_float_dtype(data.dtype, attrs)
             data = data.astype(dtype=dtype, copy=True)
-        if "add_offset" in encoding:
-            data -= pop_to(encoding, attrs, "add_offset", name=name)
-        if "scale_factor" in encoding:
-            data /= pop_to(encoding, attrs, "scale_factor", name=name)
+        if add_offset:
+            data -= add_offset
+        if scale_factor:
+            data /= scale_factor
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        _attrs = variable.attrs
-        if "scale_factor" in _attrs or "add_offset" in _attrs:
-            dims, data, attrs, encoding = unpack_for_decoding(variable)
-
-            scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
-            add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            dtype = _choose_float_dtype(data.dtype, encoding)
+        dims, data, attrs, encoding = unpack_for_decoding(variable)
+        scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
+        add_offset = pop_to(attrs, encoding, "add_offset", name=name)
+        if scale_factor or add_offset:
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
+            dtype = _choose_float_dtype(data.dtype, encoding)
             transform = partial(
                 _scale_offset_decoding,
                 scale_factor=scale_factor,

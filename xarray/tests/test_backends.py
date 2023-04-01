@@ -138,7 +138,7 @@ def open_example_mfdataset(names, *args, **kwargs) -> Dataset:
     )
 
 
-def create_masked_and_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_masked_and_scaled_data(dtype: type[np.number] = np.float32) -> Dataset:
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=dtype)
     encoding = {
         "_FillValue": -1,
@@ -150,7 +150,7 @@ def create_masked_and_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Da
 
 
 def create_encoded_masked_and_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     attributes = {"_FillValue": -1, "add_offset": 10, "scale_factor": dtype(0.1)}
     return Dataset(
@@ -159,7 +159,7 @@ def create_encoded_masked_and_scaled_data(
 
 
 def create_unsigned_masked_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     encoding = {
         "_FillValue": 255,
@@ -173,7 +173,7 @@ def create_unsigned_masked_scaled_data(
 
 
 def create_encoded_unsigned_masked_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
@@ -189,7 +189,7 @@ def create_encoded_unsigned_masked_scaled_data(
 
 
 def create_bad_unsigned_masked_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     encoding = {
         "_FillValue": 255,
@@ -203,7 +203,7 @@ def create_bad_unsigned_masked_scaled_data(
 
 
 def create_bad_encoded_unsigned_masked_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
@@ -219,7 +219,7 @@ def create_bad_encoded_unsigned_masked_scaled_data(
 
 
 def create_signed_masked_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     encoding = {
         "_FillValue": -127,
@@ -233,7 +233,7 @@ def create_signed_masked_scaled_data(
 
 
 def create_encoded_signed_masked_scaled_data(
-    dtype: np.typing.DTypeLike = np.float32,
+    dtype: type[np.number] = np.float32,
 ) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
@@ -903,7 +903,6 @@ class CFEncodedBase(DatasetIOBase):
 
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
-                print(k, decoded.variables[k].dtype)
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
 
