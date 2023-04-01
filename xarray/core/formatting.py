@@ -116,9 +116,7 @@ def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
     try:
         timestamp = pd.Timestamp(t)
-        datetime_str = timestamp.isoformat()
-        if datetime_str != "NaT":
-            datetime_str = datetime_str.replace("T", " ")
+        datetime_str = timestamp.isoformat(sep=" ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
