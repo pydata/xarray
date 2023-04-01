@@ -162,11 +162,11 @@ you ``git push`` this new branch up to your GitHub repo. Generally (if you follo
 these pages, and by default), git will have a link to your fork of the GitHub repo, called ``origin``.
 You push up to your own fork with: ::
 
-    git push origin my-new-feature
+    git push origin shiny-new-feature
 
 In git >= 1.7 you can ensure that the link is correctly set by using the ``--set-upstream`` option: ::
 
-    git push --set-upstream origin my-new-feature
+    git push --set-upstream origin shiny-new-feature
 
 From now on git will know that ``shiny-new-feature`` is related to the ``shiny-new-feature branch`` in the GitHub repo.
 
@@ -177,7 +177,7 @@ The editing workflow
 
 2. See which files have changed with ``git status``. You'll see a listing like this one: ::
 
-    # On branch my-new-feature
+    # On branch shiny-new-feature
     # Changed but not updated:
     #   (use "git add <file>..." to update what will be committed)
     #   (use "git checkout -- <file>..." to discard changes in working directory)
