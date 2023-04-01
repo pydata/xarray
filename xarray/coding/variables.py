@@ -143,7 +143,6 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-
 def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     """Lazily apply an element-wise function to an array.
     Parameters
@@ -444,6 +443,7 @@ class DefaultFillvalueCoder(VariableCoder):
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
+
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()
 
@@ -523,4 +523,3 @@ class NonStringCoder(VariableCoder):
 
     def decode(self):
         raise NotImplementedError()
-

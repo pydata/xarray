@@ -149,14 +149,18 @@ def create_masked_and_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Da
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_masked_and_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_encoded_masked_and_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     attributes = {"_FillValue": -1, "add_offset": 10, "scale_factor": dtype(0.1)}
     return Dataset(
         {"x": ("t", np.array([-1, -1, 0, 1, 2], dtype=np.int16), attributes)}
     )
 
 
-def create_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_unsigned_masked_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     encoding = {
         "_FillValue": 255,
         "_Unsigned": "true",
@@ -168,7 +172,9 @@ def create_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) 
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_encoded_unsigned_masked_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
@@ -182,7 +188,9 @@ def create_encoded_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.f
     return Dataset({"x": ("t", sb, attributes)})
 
 
-def create_bad_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_bad_unsigned_masked_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     encoding = {
         "_FillValue": 255,
         "_Unsigned": True,
@@ -194,7 +202,9 @@ def create_bad_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_bad_encoded_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_bad_encoded_unsigned_masked_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {
@@ -208,7 +218,9 @@ def create_bad_encoded_unsigned_masked_scaled_data(dtype: np.typing.DTypeLike = 
     return Dataset({"x": ("t", sb, attributes)})
 
 
-def create_signed_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_signed_masked_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     encoding = {
         "_FillValue": -127,
         "_Unsigned": "false",
@@ -220,7 +232,9 @@ def create_signed_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) ->
     return Dataset({"x": ("t", x, {}, encoding)})
 
 
-def create_encoded_signed_masked_scaled_data(dtype: np.typing.DTypeLike = np.float32) -> Dataset:
+def create_encoded_signed_masked_scaled_data(
+    dtype: np.typing.DTypeLike = np.float32,
+) -> Dataset:
     # These are values as written to the file: the _FillValue will
     # be represented in the signed form.
     attributes = {

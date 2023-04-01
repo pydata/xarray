@@ -10,7 +10,7 @@ import pandas as pd
 
 from xarray.coding import strings, times, variables
 from xarray.coding.variables import SerializationWarning, pop_to
-from xarray.core import duck_array_ops, indexing
+from xarray.core import indexing
 from xarray.core.common import (
     _contains_datetime_like_objects,
     contains_cftime_datetimes,
