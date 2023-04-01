@@ -99,7 +99,9 @@ def test_coder_roundtrip() -> None:
 @pytest.mark.parametrize("packed_dtype", "u1 u2 i1 i2 f2 f4".split())
 def test_scaling_converts_to_float32(packed_dtype, unpacked_dtype) -> None:
     original = xr.Variable(
-        ("x",), np.arange(10, dtype=packed_dtype), encoding=dict(scale_factor=unpacked_dtype(10))
+        ("x",),
+        np.arange(10, dtype=packed_dtype),
+        encoding=dict(scale_factor=unpacked_dtype(10)),
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)
