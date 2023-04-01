@@ -95,10 +95,11 @@ def test_coder_roundtrip() -> None:
     assert_identical(original, roundtripped)
 
 
-@pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(dtype) -> None:
+@pytest.mark.parametrize("unpacked_dtype", [np.float32, np.float64, np.int32])
+@pytest.mark.parametrize("packed_dtype", "u1 u2 i1 i2 f2 f4".split())
+def test_scaling_converts_to_float32(packed_dtype, unpacked_dtype) -> None:
     original = xr.Variable(
-        ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=10)
+        ("x",), np.arange(10, dtype=packed_dtype), encoding=dict(scale_factor=unpacked_dtype(10))
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)

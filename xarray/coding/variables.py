@@ -302,8 +302,8 @@ def _choose_float_dtype(
 ) -> type[np.floating[Any]]:
     # check scale/offset first to derive dtype
     # see https://github.com/pydata/xarray/issues/5597#issuecomment-879561954
-    scale_factor = mapping.get("scale_factor", False)
-    add_offset = mapping.get("add_offset", False)
+    scale_factor = mapping.get("scale_factor")
+    add_offset = mapping.get("add_offset")
     if scale_factor or add_offset:
         # get the maximum itemsize from scale_factor/add_offset to determine
         # the needed floating point type
@@ -320,7 +320,7 @@ def _choose_float_dtype(
         # but a large integer offset could lead to loss of precision.
         # Sensitivity analysis can be tricky, so we just use a float64
         # if there's any offset at all - better unoptimised than wrong!
-        if maxsize == 4 and np.issubdtype(add_offset_type, np.floating):
+        if maxsize == 4 or not np.issubdtype(add_offset_type, np.floating):
             return np.float32
         else:
             return np.float64
@@ -350,12 +350,14 @@ class CFScaleOffsetCoder(VariableCoder):
         if scale_factor or add_offset:
             dtype = _choose_float_dtype(data.dtype, attrs)
             data = data.astype(dtype=dtype, copy=True)
-        if add_offset:
-            data -= add_offset
-        if scale_factor:
-            data /= scale_factor
+            if add_offset:
+                data -= add_offset
+            if scale_factor:
+                data /= scale_factor
 
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_decoding(variable)
