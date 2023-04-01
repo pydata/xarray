@@ -9,6 +9,9 @@ Contributing to xarray
   Large parts of this document came from the `Pandas Contributing
   Guide <http://pandas.pydata.org/pandas-docs/stable/contributing.html>`_.
 
+Overview
+========
+
 We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
 contribute beyond just writing code.
 All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
@@ -38,7 +41,6 @@ Some issues are particularly suited for new contributors by the label `Documenta
 and `good first issue
 <https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_ where you could start out.
 These are well documented issues, that do not require a deep understanding of the internals of xarray.
-Once you've found an interesting issue, you can return here to get your development environment setup.
 
 The xarray project does not assign issues. Issues are "assigned" by opening
 a PR; there is no other assignment mechanism. If you have opened such a PR, please comment on the issue
@@ -46,6 +48,8 @@ thread to avoid duplication of work. Please check if there is an existing PR for
 addressing. If there is, try to work with the author by submitting reviews of their code or commenting
 on the PR rather than opening a new PR. However, if the existing PR is an outline, unlikely to work, or
 stalled, and the original author is unresponsive, feel free to open a new PR referencing the old one.
+
+Once you've found an interesting issue, you can return here to get your development environment setup.
 
 .. _contributing.bug_reports:
 
