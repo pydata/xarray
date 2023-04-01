@@ -1584,6 +1584,46 @@ class NetCDF4Base(NetCDFBase):
                 expected = create_masked_and_scaled_data(dtype)
                 assert_identical(expected, ds)
 
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("offset_cf_conforming", [True, False])
+    def test_mask_and_scale_non_cf_conforming(self, dtype, offset_cf_conforming) -> None:
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("t", 5)
+                nc.createVariable("x", "int16", ("t",), fill_value=-1)
+                v = nc.variables["x"]
+                v.set_auto_maskandscale(False)
+                if offset_cf_conforming:
+                    v.add_offset = dtype(10)
+                else:
+                    v.add_offset = 10
+                v.scale_factor = dtype(0.1)
+                v[:] = np.array([-1, -1, 0, 1, 2])
+
+            # first make sure netCDF4 reads the masked and scaled data
+            # correctly
+            with nc4.Dataset(tmp_file, mode="r") as nc:
+                expected = np.ma.array(
+                    [-1, -1, 10, 10.1, 10.2],
+                    mask=[True, True, False, False, False],
+                    dtype=dtype,
+                )
+                actual = nc.variables["x"][:]
+                assert_array_equal(expected, actual)
+
+            # now check xarray
+            with open_dataset(tmp_file) as ds:
+                if not offset_cf_conforming:
+                    # if not conforming, this get's promoted to float64 in any case
+                    # if add_offset is available
+                    expected = create_masked_and_scaled_data(np.float64)
+                    # here we have slight differences possibly
+                    # due to using float32 first and casting to float64 later
+                    assert_allclose(expected, ds)
+                else:
+                    expected = create_masked_and_scaled_data(dtype)
+                    assert_identical(expected, ds)
+
     def test_0dimensional_variable(self) -> None:
         # This fix verifies our work-around to this netCDF4-python bug:
         # https://github.com/Unidata/netcdf4-python/pull/220
