@@ -117,6 +117,8 @@ def format_timestamp(t):
     try:
         timestamp = pd.Timestamp(t)
         datetime_str = timestamp.isoformat()
+        if datetime_str != "NaT":
+            datetime_str = datetime_str.replace("T", " ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
