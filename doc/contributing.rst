@@ -99,6 +99,41 @@ The issue will then show up to the *xarray* community and be open to comments/id
 
 See this `stackoverflow article for tips on writing a good bug report <https://stackoverflow.com/help/mcve>`_ .
 
+
+.. _contributing.github:
+
+Now that you have an issue you want to fix, enhancement to add, or documentation
+to improve, you need to learn how to work with GitHub and the *xarray* code base.
+
+.. _contributing.version_control:
+
+Version control, Git, and GitHub
+================================
+
+The code is hosted on `GitHub <https://www.github.com/pydata/xarray>`_. To
+contribute you will need to sign up for a `free GitHub account
+<https://github.com/signup/free>`_. We use `Git <http://git-scm.com/>`_ for
+version control to allow many people to work together on the project.
+
+Some great resources for learning Git:
+
+* the `GitHub help pages <https://help.github.com/>`_.
+* the `NumPy's documentation <https://numpy.org/doc/stable/dev/index.html>`_.
+* Matthew Brett's `Pydagogue <https://matthew-brett.github.io/pydagogue/>`_.
+
+Getting started with Git
+------------------------
+
+`GitHub has instructions for setting up Git <https://help.github.com/set-up-git-redirect>`__ including installing git,
+setting up your SSH key, and configuring git.  All these steps need to be completed before
+you can work seamlessly between your local repository and GitHub.
+
+.. note::
+
+    The following instructions assume you want to learn how to interact with github via the git command-line utility,
+    but contributors who are new to git may find it easier to use other tools instead such as
+    `Github Desktop <https://desktop.github.com/>`_.
+
 Development workflow
 ====================
 
@@ -138,24 +173,23 @@ feature branch from that. From time to time you should fetch the upstream change
     git fetch upstream
     git merge upstream/main
 
-   This will combine your commits with the latest *xarray* git ``main``.  If this
-   leads to merge conflicts, you must resolve these before submitting your pull
-   request.  If you have uncommitted changes, you will need to ``git stash`` them
-   prior to updating.  This will effectively store your changes, which can be
-   reapplied after updating.
+This will combine your commits with the latest *xarray* git ``main``.  If this
+leads to merge conflicts, you must resolve these before submitting your pull
+request.  If you have uncommitted changes, you will need to ``git stash`` them
+prior to updating.  This will effectively store your changes, which can be
+reapplied after updating.
 
 Create a new feature branch
 ---------------------------
 
-Create a branch to save your changes, even before you start making changes. You want your ``main branch``
-   to contain only production-ready code::
+Create a branch to save your changes, even before you start making changes. You want your
+``main branch`` to contain only production-ready code::
 
     git checkout -b shiny-new-feature
 
-   This changes your working directory to the ``shiny-new-feature`` branch.  Keep any
-   changes in this branch specific to one bug or feature so it is clear
-   what the branch brings to *xarray*. You can have many "shiny-new-features"
-   and switch in between them using the ``git checkout`` command.
+This changes your working directory to the ``shiny-new-feature`` branch.  Keep any changes in this
+branch specific to one bug or feature so it is clear what the branch brings to *xarray*. You can have
+many "shiny-new-features" and switch in between them using the ``git checkout`` command.
 
 Generally, you will want to keep your feature branches on your public GitHub fork of xarray. To do this,
 you ``git push`` this new branch up to your GitHub repo. Generally (if you followed the instructions in
@@ -213,47 +247,10 @@ like particular attention for - such as a complicated change or some code you ar
 If you don't think your request is ready to be merged, just say so in your pull request message and use
 the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
 
-.. _contributing.github:
-
-Working with the code
-=====================
-
-Now that you have an issue you want to fix, enhancement to add, or documentation
-to improve, you need to learn how to work with GitHub and the *xarray* code base.
-
-.. _contributing.version_control:
-
-Version control, Git, and GitHub
---------------------------------
-
-The code is hosted on `GitHub <https://www.github.com/pydata/xarray>`_. To
-contribute you will need to sign up for a `free GitHub account
-<https://github.com/signup/free>`_. We use `Git <http://git-scm.com/>`_ for
-version control to allow many people to work together on the project.
-
-Some great resources for learning Git:
-
-* the `GitHub help pages <https://help.github.com/>`_.
-* the `NumPy's documentation <https://numpy.org/doc/stable/dev/index.html>`_.
-* Matthew Brett's `Pydagogue <https://matthew-brett.github.io/pydagogue/>`_.
-
-Getting started with Git
-------------------------
-
-`GitHub has instructions for setting up Git <https://help.github.com/set-up-git-redirect>`__ including installing git,
-setting up your SSH key, and configuring git.  All these steps need to be completed before
-you can work seamlessly between your local repository and GitHub.
-
-.. note::
-
-    The following instructions assume you want to learn how to interact with github via the git command-line utility,
-    but contributors who are new to git may find it easier to use other tools instead such as
-    `Github Desktop <https://desktop.github.com/>`_.
-
 .. _contributing.dev_env:
 
 Creating a development environment
-----------------------------------
+==================================
 
 To test out code changes locally, you'll need to build *xarray* from source, which
 requires a Python environment. If you're making documentation changes, you can
@@ -275,7 +272,7 @@ documentation locally before pushing your changes.
 .. _contributing.dev_python:
 
 Creating a Python Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 
 Before starting any development, you'll need to create an isolated xarray
 development environment:
