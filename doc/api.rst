@@ -1097,6 +1097,7 @@ Advanced API
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
+   backends.refresh_engines
 
 Default, pandas-backed indexes built-in Xarray:
 
