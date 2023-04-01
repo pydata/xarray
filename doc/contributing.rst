@@ -488,8 +488,6 @@ We aim to follow the recommendations from the
 and the `Sphinx reStructuredText documentation <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections>`_
 for section markup characters,
 
-- ``#`` with overline, for parts. This is reserved for the main title in ``index.rst``. All other pages should start with "chapter" or lower.
-
 - ``*`` with overline, for chapters
 
 - ``=``, for heading
@@ -516,9 +514,14 @@ Documents can be linked with the ``:doc:`` directive:
 
 will render as:
 
-    See the `Installation <https://docs.xarray.dev/en/stable/getting-started-guide/installing.html>`_
+See the `Installation <https://docs.xarray.dev/en/stable/getting-started-guide/installing.html>`_
 
-    See the `Quick Overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_
+See the `Quick Overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_
+
+Including figures and files
+---------------------------
+
+Image files can be directly included in pages with the ``image::`` directive.
 
 .. _contributing.code:
 
