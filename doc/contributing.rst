@@ -51,97 +51,6 @@ stalled, and the original author is unresponsive, feel free to open a new PR ref
 
 Once you've found an interesting issue, you can return here to get your development environment setup.
 
-Development workflow
-====================
-
-To keep your work well organized, with readable history, and in turn make it easier for project
-maintainers to see what you've done, and why you did it, we recommend you to follow workflow:
-
-Creating a development environment
-----------------------------------
-
-To test out code changes locally, you'll need to build *xarray* from source, which requires you to
-`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_.
-
-Update the ``main`` branch
---------------------------
-
-First make sure you have followed `Setting up xarray for development
-<https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_
-
-Before starting a new set of changes, fetch all changes from ``upstream/main``, and start a new
-feature branch from that. From time to time you should fetch the upstream changes from GitHub: ::
-
-    # Update the main branch
-    git fetch upstream
-
-This will pull down any commits you don't have, and set the remote branches to point to the right commit.
-
-Create a new feature branch
----------------------------
-
-Make a new branch for each feature or bug fix — "one task, one branch" making it easier for
-someone reviewing your branch to see what you are doing.
-
-Name your branch for the purpose of the changes - e.g. ``my-new-feature``. ::
-
-    git checkout -b my-new-feature
-
-Generally, you will want to keep your feature branches on your public GitHub fork of xarray. To do this,
-you ``git push`` this new branch up to your GitHub repo. Generally (if you followed the instructions in
-these pages, and by default), git will have a link to your fork of the GitHub repo, called ``origin``.
-You push up to your own fork with: ::
-
-    git push origin my-new-feature
-
-In git >= 1.7 you can ensure that the link is correctly set by using the ``--set-upstream`` option: ::
-
-    git push --set-upstream origin my-new-feature
-
-From now on git will know that ``my-new-feature`` is related to the ``my-new-feature branch`` in the GitHub repo.
-
-The editing workflow
---------------------
-
-1. Make some changes
-
-2. See which files have changed with ``git status``. You'll see a listing like this one: ::
-
-    # On branch my-new-feature
-    # Changed but not updated:
-    #   (use "git add <file>..." to update what will be committed)
-    #   (use "git checkout -- <file>..." to discard changes in working directory)
-    #
-    #  modified:   README
-
-3. Check what the actual changes are with ``git diff``.
-
-4. Build the `documentation run <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
-for the documentation changes.
-
-   `Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_
-   for code changes.
-
-Commit and push your changes
-----------------------------
-
-1. To commit all modified files into the local copy of your repo, do ``git commit -am 'A commit message'``.
-
-2. To push the changes up to your forked repo on GitHub, do a ``git push``.
-
-Open a pull request
--------------------
-
-When you're ready or need feedback on your code, open a
-`Pull Request (PR) <https://docs.github.com/en/pull-requests>`_ so that the xarray developers can
-give feedback and eventually include your suggested code into the ``main`` branch.
-
-Enter a title for the set of changes with some explanation of what you've done. Mention anything you'd
-like particular attention for - such as a complicated change or some code you are not happy with.
-
-If you don't think your request is ready to be merged, just say so in your pull request message and use
-the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
-
 .. _contributing.bug_reports:
 
 Bug reports and enhancement requests
@@ -190,6 +99,119 @@ The issue will then show up to the *xarray* community and be open to comments/id
 
 See this `stackoverflow article for tips on writing a good bug report <https://stackoverflow.com/help/mcve>`_ .
 
+Development workflow
+====================
+
+To keep your work well organized, with readable history, and in turn make it easier for project
+maintainers to see what you've done, and why you did it, we recommend you to follow workflow:
+
+1. `Create an account <https://github.com/>`_ on GitHub if you do not already have one.
+
+2. You will need your own fork to work on the code. Go to the `xarray project
+   page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button near the top of the page.
+   This creates a copy of the code under your account on the GitHub server.
+
+3. Clone your fork to your machine::
+
+    git clone https://github.com/your-user-name/xarray.git
+    cd xarray
+    git remote add upstream https://github.com/pydata/xarray.git
+
+   This creates the directory `xarray` and connects your repository to
+   the upstream (main project) *xarray* repository.
+
+Creating a development environment
+----------------------------------
+
+To test out code changes locally, you'll need to build *xarray* from source, which requires you to
+`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_.
+
+Update the ``main`` branch
+--------------------------
+
+First make sure you have followed `Setting up xarray for development
+<https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_
+
+Before starting a new set of changes, fetch all changes from ``upstream/main``, and start a new
+feature branch from that. From time to time you should fetch the upstream changes from GitHub: ::
+
+    git fetch upstream
+    git merge upstream/main
+
+   This will combine your commits with the latest *xarray* git ``main``.  If this
+   leads to merge conflicts, you must resolve these before submitting your pull
+   request.  If you have uncommitted changes, you will need to ``git stash`` them
+   prior to updating.  This will effectively store your changes, which can be
+   reapplied after updating.
+
+Create a new feature branch
+---------------------------
+
+Create a branch to save your changes, even before you start making changes. You want your ``main branch``
+   to contain only production-ready code::
+
+    git checkout -b shiny-new-feature
+
+   This changes your working directory to the ``shiny-new-feature`` branch.  Keep any
+   changes in this branch specific to one bug or feature so it is clear
+   what the branch brings to *xarray*. You can have many "shiny-new-features"
+   and switch in between them using the ``git checkout`` command.
+
+Generally, you will want to keep your feature branches on your public GitHub fork of xarray. To do this,
+you ``git push`` this new branch up to your GitHub repo. Generally (if you followed the instructions in
+these pages, and by default), git will have a link to your fork of the GitHub repo, called ``origin``.
+You push up to your own fork with: ::
+
+    git push origin my-new-feature
+
+In git >= 1.7 you can ensure that the link is correctly set by using the ``--set-upstream`` option: ::
+
+    git push --set-upstream origin my-new-feature
+
+From now on git will know that ``shiny-new-feature`` is related to the ``shiny-new-feature branch`` in the GitHub repo.
+
+The editing workflow
+--------------------
+
+1. Make some changes
+
+2. See which files have changed with ``git status``. You'll see a listing like this one: ::
+
+    # On branch my-new-feature
+    # Changed but not updated:
+    #   (use "git add <file>..." to update what will be committed)
+    #   (use "git checkout -- <file>..." to discard changes in working directory)
+    #
+    #  modified:   README
+
+3. Check what the actual changes are with ``git diff``.
+
+4. Build the `documentation run <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
+for the documentation changes.
+
+`Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_
+for code changes.
+
+Commit and push your changes
+----------------------------
+
+1. To commit all modified files into the local copy of your repo, do ``git commit -am 'A commit message'``.
+
+2. To push the changes up to your forked repo on GitHub, do a ``git push``.
+
+Open a pull request
+-------------------
+
+When you're ready or need feedback on your code, open a Pull Request (PR) so that the xarray developers can
+give feedback and eventually include your suggested code into the ``main`` branch.
+`Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
+are the mechanism for contributing to xarray's code and documentation.
+
+Enter a title for the set of changes with some explanation of what you've done. Mention anything you'd
+like particular attention for - such as a complicated change or some code you are not happy with.
+
+If you don't think your request is ready to be merged, just say so in your pull request message and use
+the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
 
 .. _contributing.github:
 
@@ -227,54 +249,6 @@ you can work seamlessly between your local repository and GitHub.
     The following instructions assume you want to learn how to interact with github via the git command-line utility,
     but contributors who are new to git may find it easier to use other tools instead such as
     `Github Desktop <https://desktop.github.com/>`_.
-
-.. _contributing.forking:
-
-How to contribute
------------------
-
-The preferred way to contribute to `xarray <https://github.com/pydata/xarray>`_
-is to fork the main repository on GitHub, then submit a "pull request" (PR).
-`Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
-are the mechanism for contributing to xarray's code and documentation.
-
-1. `Create an account <https://github.com/>`_ on GitHub if you do not already have one.
-
-2. You will need your own fork to work on the code. Go to the `xarray project
-   page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button near the top of the page.
-   This creates a copy of the code under your account on the GitHub server.
-
-3. Clone your fork to your machine::
-
-    git clone https://github.com/your-user-name/xarray.git
-    cd xarray
-    git remote add upstream https://github.com/pydata/xarray.git
-
-   This creates the directory `xarray` and connects your repository to
-   the upstream (main project) *xarray* repository.
-
-4. Create a branch to save your changes, even before you start making changes. You want your ``main branch``
-   to contain only production-ready code::
-
-    git checkout -b shiny-new-feature
-
-   This changes your working directory to the ``shiny-new-feature`` branch.  Keep any
-   changes in this branch specific to one bug or feature so it is clear
-   what the branch brings to *xarray*. You can have many "shiny-new-features"
-   and switch in between them using the ``git checkout`` command.
-
-5. To update this branch, you need to retrieve the changes from the ``main`` branch::
-
-    git fetch upstream
-    git merge upstream/main
-
-   This will combine your commits with the latest *xarray* git ``main``.  If this
-   leads to merge conflicts, you must resolve these before submitting your pull
-   request.  If you have uncommitted changes, you will need to ``git stash`` them
-   prior to updating.  This will effectively store your changes, which can be
-   reapplied after updating.
-
-Finally, go to the web page of your fork of the xarray repo, and click 'Pull request' to send your changes to the maintainers for review.
 
 .. _contributing.dev_env:
 
