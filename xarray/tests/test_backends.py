@@ -1586,7 +1586,9 @@ class NetCDF4Base(NetCDFBase):
 
     @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     @pytest.mark.parametrize("offset_cf_conforming", [True, False])
-    def test_mask_and_scale_non_cf_conforming(self, dtype, offset_cf_conforming) -> None:
+    def test_mask_and_scale_non_cf_conforming(
+        self, dtype, offset_cf_conforming
+    ) -> None:
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("t", 5)
