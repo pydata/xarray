@@ -305,13 +305,22 @@ def _choose_float_dtype(
     scale_factor = mapping.get("scale_factor", False)
     add_offset = mapping.get("add_offset", False)
     if scale_factor or add_offset:
-        # minimal floating point size -> 4 byte
+        # get the maximum itemsize from scale_factor/add_offset to determine
+        # the needed floating point type
+        # start with minimal floating point size -> 4 byte
         maxsize = 4
         if scale_factor and np.issubdtype(type(scale_factor), np.floating):
             maxsize = max(maxsize, np.dtype(type(scale_factor)).itemsize)
-        if add_offset and np.issubdtype(type(add_offset), np.floating):
-            maxsize = max(maxsize, np.dtype(type(add_offset)).itemsize)
-        if maxsize == 4:
+        add_offset_type = type(add_offset)
+        if add_offset and np.issubdtype(add_offset_type, np.floating):
+            maxsize = max(maxsize, np.dtype(add_offset_type).itemsize)
+        # if add_offset is malformed (eg. no float32 or no float64 as
+        # cf conventions expects):
+        # A scale factor is entirely safe (vanishing into the mantissa),
+        # but a large integer offset could lead to loss of precision.
+        # Sensitivity analysis can be tricky, so we just use a float64
+        # if there's any offset at all - better unoptimised than wrong!
+        if maxsize == 4 and np.issubdtype(add_offset_type, np.floating):
             return np.float32
         else:
             return np.float64
@@ -321,8 +330,6 @@ def _choose_float_dtype(
         return np.float32
     # float32 can exactly represent all integers up to 24 bits
     if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
-        # A scale factor is entirely safe (vanishing into the mantissa),
-        # but a large integer offset could lead to loss of precision.
         return np.float32
     # For all other types and circumstances, we just use float64.
     # (safe because eg. complex numbers are not supported in NetCDF)
