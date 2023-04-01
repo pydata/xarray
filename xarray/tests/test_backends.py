@@ -142,7 +142,7 @@ def create_masked_and_scaled_data(dtype: type[np.number] = np.float32) -> Datase
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=dtype)
     encoding = {
         "_FillValue": -1,
-        "add_offset": 10,
+        "add_offset": dtype(10),
         "scale_factor": dtype(0.1),
         "dtype": "i2",
     }
@@ -152,7 +152,7 @@ def create_masked_and_scaled_data(dtype: type[np.number] = np.float32) -> Datase
 def create_encoded_masked_and_scaled_data(
     dtype: type[np.number] = np.float32,
 ) -> Dataset:
-    attributes = {"_FillValue": -1, "add_offset": 10, "scale_factor": dtype(0.1)}
+    attributes = {"_FillValue": -1, "add_offset": dtype(10), "scale_factor": dtype(0.1)}
     return Dataset(
         {"x": ("t", np.array([-1, -1, 0, 1, 2], dtype=np.int16), attributes)}
     )
@@ -165,7 +165,7 @@ def create_unsigned_masked_scaled_data(
         "_FillValue": 255,
         "_Unsigned": "true",
         "dtype": "i1",
-        "add_offset": 10,
+        "add_offset": dtype(10),
         "scale_factor": dtype(0.1),
     }
     x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=dtype)
@@ -180,7 +180,7 @@ def create_encoded_unsigned_masked_scaled_data(
     attributes = {
         "_FillValue": -1,
         "_Unsigned": "true",
-        "add_offset": 10,
+        "add_offset": dtype(10),
         "scale_factor": dtype(0.1),
     }
     # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
@@ -195,7 +195,7 @@ def create_bad_unsigned_masked_scaled_data(
         "_FillValue": 255,
         "_Unsigned": True,
         "dtype": "i1",
-        "add_offset": 10,
+        "add_offset": dtype(0),
         "scale_factor": dtype(0.1),
     }
     x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=dtype)
@@ -210,7 +210,7 @@ def create_bad_encoded_unsigned_masked_scaled_data(
     attributes = {
         "_FillValue": -1,
         "_Unsigned": True,
-        "add_offset": 10,
+        "add_offset": dtype(10),
         "scale_factor": dtype(0.1),
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
@@ -225,7 +225,7 @@ def create_signed_masked_scaled_data(
         "_FillValue": -127,
         "_Unsigned": "false",
         "dtype": "i1",
-        "add_offset": 10,
+        "add_offset": dtype(10),
         "scale_factor": dtype(0.1),
     }
     x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=dtype)
@@ -240,7 +240,7 @@ def create_encoded_signed_masked_scaled_data(
     attributes = {
         "_FillValue": -127,
         "_Unsigned": "false",
-        "add_offset": 10,
+        "add_offset": dtype(10),
         "scale_factor": dtype(0.1),
     }
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
@@ -1564,7 +1564,7 @@ class NetCDF4Base(NetCDFBase):
                 nc.createVariable("x", "int16", ("t",), fill_value=-1)
                 v = nc.variables["x"]
                 v.set_auto_maskandscale(False)
-                v.add_offset = 10
+                v.add_offset = dtype(10)
                 v.scale_factor = dtype(0.1)
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
