@@ -42,14 +42,8 @@ and `good first issue
 <https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_ where you could start out.
 These are well documented issues, that do not require a deep understanding of the internals of xarray.
 
-The xarray project does not assign issues. Issues are "assigned" by opening
-a PR; there is no other assignment mechanism. If you have opened such a PR, please comment on the issue
-thread to avoid duplication of work. Please check if there is an existing PR for the issue you are
-addressing. If there is, try to work with the author by submitting reviews of their code or commenting
-on the PR rather than opening a new PR. However, if the existing PR is an outline, unlikely to work, or
-stalled, and the original author is unresponsive, feel free to open a new PR referencing the old one.
-
 Once you've found an interesting issue, you can return here to get your development environment setup.
+The xarray project does not assign issues. Issues are "assigned" by opening a Pull Request(PR).
 
 .. _contributing.bug_reports:
 
@@ -70,7 +64,7 @@ If you find a bug in the code or documentation, do not hesitate to submit a tick
 `Issue Tracker <https://github.com/pydata/xarray/issues>`_.
 You are also welcome to post feature requests or pull requests.
 
-If you are reporting a bug, please do your best to include the following:
+If you are reporting a bug, please use the provided template which includes the following:
 
 #. Include a short, self-contained Python snippet reproducing the problem.
    You can format the code nicely by using `GitHub Flavored Markdown
@@ -223,8 +217,7 @@ The editing workflow
 4. Build the `documentation run <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
 for the documentation changes.
 
-`Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_
-for code changes.
+`Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
 
 Commit and push your changes
 ----------------------------
@@ -241,9 +234,15 @@ give feedback and eventually include your suggested code into the ``main`` branc
 `Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
 are the mechanism for contributing to xarray's code and documentation.
 
-Enter a title for the set of changes with some explanation of what you've done. Mention anything you'd
-like particular attention for - such as a complicated change or some code you are not happy with.
+Enter a title for the set of changes with some explanation of what you've done.
+Follow the PR template, which looks like this. ::
 
+    [ ]Closes #xxxx
+    [ ]Tests added
+    [ ]User visible changes (including notable bug fixes) are documented in whats-new.rst
+    [ ]New functions/methods are listed in api.rst
+
+Mention anything you'd like particular attention for - such as a complicated change or some code you are not happy with.
 If you don't think your request is ready to be merged, just say so in your pull request message and use
 the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
 
