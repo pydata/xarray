@@ -4,6 +4,7 @@ import datetime
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Iterator, Mapping, Sequence
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -513,10 +514,12 @@ class Grouper(ABC):
     pass
 
 
+@dataclass
 class UniqueGrouper(Grouper):
     pass
 
 
+@dataclass(init=False)
 class BinGrouper(Grouper):
     def __init__(self, bins, cut_kwargs: Mapping | None):
         if duck_array_ops.isnull(bins).all():
@@ -529,22 +532,14 @@ class BinGrouper(Grouper):
         self.cut_kwargs = cut_kwargs
 
 
+@dataclass
 class TimeResampleGrouper(Grouper):
-    def __init__(
-        self,
-        freq: str,
-        closed: SideOptions | None,
-        label: SideOptions | None,
-        origin: str | DatetimeLike,
-        offset: pd.Timedelta | datetime.timedelta | str | None,
-        loffset: datetime.timedelta | str | None,
-    ):
-        self.freq = freq
-        self.closed = closed
-        self.label = label
-        self.origin = origin
-        self.offset = offset
-        self.loffset = loffset
+    freq: str
+    closed: SideOptions | None
+    label: SideOptions | None
+    origin: str | DatetimeLike | None
+    offset: pd.Timedelta | datetime.timedelta | str | None
+    loffset: datetime.timedelta | str | None
 
 
 def _validate_groupby_squeeze(squeeze):
