@@ -238,7 +238,7 @@ class _DummyGroup:
     def copy(self, deep: bool = True, data: Any = None):
         raise NotImplementedError
 
-    def as_dataarray(self) -> DataArray:
+    def to_dataarray(self) -> DataArray:
         from xarray.core.dataarray import DataArray
 
         return DataArray(
@@ -399,7 +399,7 @@ class ResolvedUniqueGrouper(ResolvedGrouper):
             self.group_indices = list(range(size))
         codes = np.arange(size)
         if isinstance(self.group, _DummyGroup):
-            self.codes = self.group.as_dataarray().copy(data=codes)
+            self.codes = self.group.to_dataarray().copy(data=codes)
         else:
             self.codes = self.group.copy(data=codes)
         self.unique_coord = self.group
@@ -784,7 +784,7 @@ class GroupBy(Generic[T_Xarray]):
         dims = group.dims
 
         if isinstance(group, _DummyGroup):
-            group = coord = group.as_dataarray()
+            group = coord = group.to_dataarray()
         else:
             coord = grouper.unique_coord
             if not isinstance(coord, DataArray):
