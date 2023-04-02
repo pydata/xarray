@@ -6258,17 +6258,16 @@ class DataArray(
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
+            ResolvedUniqueGrouper,
             UniqueGrouper,
-            _validate_group,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        newobj, name = _validate_group(self, group)
-        grouper = UniqueGrouper()
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
         return DataArrayGroupBy(
-            newobj,
-            {name: grouper},
+            self,
+            (rgrouper,),
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
@@ -6344,12 +6343,11 @@ class DataArray(
         from xarray.core.groupby import (
             BinGrouper,
             DataArrayGroupBy,
-            _validate_group,
+            ResolvedBinGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        newobj, name = _validate_group(self, group)
         grouper = BinGrouper(
             bins=bins,
             cut_kwargs={
@@ -6359,10 +6357,11 @@ class DataArray(
                 "include_lowest": include_lowest,
             },
         )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
 
         return DataArrayGroupBy(
-            newobj,
-            {name: grouper},
+            self,
+            (rgrouper,),
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )

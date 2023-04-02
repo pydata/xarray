@@ -321,13 +321,14 @@ class ResolvedGrouper(ABC):
         self.full_index: pd.Index
 
         self.grouper = grouper
-        self.group = group
+        self.group = _resolve_group(obj, group)
+
         (
             self.group1d,
             self.stacked_obj,
             self.stacked_dim,
             self.inserted_dims,
-        ) = _ensure_1d(group, obj)
+        ) = _ensure_1d(self.group, obj)
 
     @property
     def name(self) -> Hashable:
@@ -511,13 +512,12 @@ class ResolvedTimeResampleGrouper(ResolvedGrouper):
 class Grouper(ABC):
     pass
 
+
 class UniqueGrouper(Grouper):
-    _resolved_cls = ResolvedUniqueGrouper
+    pass
 
 
 class BinGrouper(Grouper):
-    _resolved_cls = ResolvedBinGrouper
-
     def __init__(self, bins, cut_kwargs: Mapping | None):
         if duck_array_ops.isnull(bins).all():
             raise ValueError("All bin edges are NaN.")
@@ -530,8 +530,6 @@ class BinGrouper(Grouper):
 
 
 class TimeResampleGrouper(Grouper):
-    _resolved_cls = ResolvedTimeResampleGrouper
-
     def __init__(
         self,
         freq: str,
@@ -548,14 +546,6 @@ class TimeResampleGrouper(Grouper):
         self.offset = offset
         self.loffset = loffset
 
-    def _resolve_group(self, obj, group_name) -> ResolvedGrouper:
-        from xarray.core.resample import RESAMPLE_DIM
-
-        group = obj[group_name].reset_coords(drop=True)
-        # TODO: This is an ugly in-place modification
-        del obj[RESAMPLE_DIM]
-        return ResolvedTimeResampleGrouper(self, group, obj)
-
 
 def _validate_groupby_squeeze(squeeze):
     # While we don't generally check the type of every arg, passing
@@ -568,28 +558,22 @@ def _validate_groupby_squeeze(squeeze):
         raise TypeError(f"`squeeze` must be True or False, but {squeeze} was supplied")
 
 
-def _validate_group(obj, group):
+def _resolve_group(obj, group: T_Group | Hashable) -> T_Group:
     from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
 
     if isinstance(group, (DataArray, IndexVariable)):
-        group_name = group.name or "group"
-        newobj = obj.copy()
-        if group.name in newobj.coords or (
-            isinstance(newobj, Dataset) and group.name in newobj.data_vars
-        ):
-            newobj[group_name] = group
-        else:
-            try:
-                align(newobj, group, join="exact", copy=False)
-            except ValueError:
-                raise ValueError(
-                    "the group variable's length does not "
-                    "match the length of this variable along its "
-                    "dimensions"
-                )
+        try:
+            align(obj, group, join="exact", copy=False)
+        except ValueError:
+            raise ValueError(
+                "the group variable's length does not "
+                "match the length of this variable along its "
+                "dimensions"
+            )
 
-            newobj = newobj.assign_coords({group_name: group})
+        newgroup = group.copy()
+        newgroup.name = group.name or "group"
+
     else:
         if not hashable(group):
             raise TypeError(
@@ -597,13 +581,17 @@ def _validate_group(obj, group):
                 "name of an xarray variable or dimension. "
                 f"Received {group!r} instead."
             )
-        group_name = group
-        newobj = obj
+        group = obj[group]
+        if group.name not in obj._indexes and group.name in obj.dims:
+            # DummyGroups should not appear on groupby results
+            newgroup = _DummyGroup(obj, group.name, group.coords)
+        else:
+            newgroup = group
 
-    if len(newobj[group_name]) == 0:
-        raise ValueError(f"{group_name} must not be empty")
+    if newgroup.size == 0:
+        raise ValueError(f"{newgroup.name} must not be empty")
 
-    return newobj, group_name
+    return newgroup
 
 
 class GroupBy(Generic[T_Xarray]):
@@ -649,7 +637,7 @@ class GroupBy(Generic[T_Xarray]):
     def __init__(
         self,
         obj: T_Xarray,
-        groupers: dict[Hashable, Grouper],
+        groupers: tuple[ResolvedGrouper],
         squeeze: bool = False,
         restore_coord_dims: bool = True,
     ) -> None:
@@ -665,10 +653,7 @@ class GroupBy(Generic[T_Xarray]):
             If True, also restore the dimension order of multi-dimensional
             coordinates.
         """
-        self.groupers: tuple[ResolvedGrouper] = tuple(
-            grouper_._resolve_group(obj, group_name)
-            for group_name, grouper_ in groupers.items()
-        )
+        self.groupers = groupers
 
         self._original_obj: T_Xarray = obj
 

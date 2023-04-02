@@ -8945,18 +8945,17 @@ class Dataset(
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
+            ResolvedUniqueGrouper,
             UniqueGrouper,
-            _validate_group,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        newobj, name = _validate_group(self, group)
-        grouper = UniqueGrouper()
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
 
         return DatasetGroupBy(
-            newobj,
-            {name: grouper},
+            self,
+            (rgrouper,),
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
@@ -9032,12 +9031,11 @@ class Dataset(
         from xarray.core.groupby import (
             BinGrouper,
             DatasetGroupBy,
-            _validate_group,
+            ResolvedBinGrouper,
             _validate_groupby_squeeze,
         )
 
         _validate_groupby_squeeze(squeeze)
-        newobj, name = _validate_group(self, group)
         grouper = BinGrouper(
             bins=bins,
             cut_kwargs={
@@ -9047,10 +9045,11 @@ class Dataset(
                 "include_lowest": include_lowest,
             },
         )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
 
         return DatasetGroupBy(
             self,
-            {name: grouper},
+            (rgrouper,),
             squeeze=squeeze,
             restore_coord_dims=restore_coord_dims,
         )
