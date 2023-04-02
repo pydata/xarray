@@ -97,7 +97,9 @@ def test_coder_roundtrip() -> None:
 
 @pytest.mark.parametrize("unpacked_dtype", [np.float32, np.float64, np.int32])
 @pytest.mark.parametrize("packed_dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(packed_dtype: str, unpacked_dtype: type[np.number]) -> None:
+def test_scaling_converts_to_float32(
+    packed_dtype: str, unpacked_dtype: type[np.number]
+) -> None:
     # if scale_facor but no add_offset is given transform to float32 in any case
     # this minimizes memory usage, see #1840, #1842
     original = xr.Variable(
