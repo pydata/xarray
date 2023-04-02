@@ -4,7 +4,7 @@ import datetime
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -519,17 +519,14 @@ class UniqueGrouper(Grouper):
     pass
 
 
-@dataclass(init=False)
+@dataclass
 class BinGrouper(Grouper):
-    def __init__(self, bins, cut_kwargs: Mapping | None):
-        if duck_array_ops.isnull(bins).all():
+    bins: Any  # TODO: What is the typing?
+    cut_kwargs: Mapping = field(default_factory=dict)
+
+    def __post_init__(self):
+        if duck_array_ops.isnull(self.bins).all():
             raise ValueError("All bin edges are NaN.")
-
-        if cut_kwargs is None:
-            cut_kwargs = {}
-
-        self.bins = bins
-        self.cut_kwargs = cut_kwargs
 
 
 @dataclass
