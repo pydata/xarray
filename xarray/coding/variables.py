@@ -509,7 +509,10 @@ class NonStringCoder(VariableCoder):
     """Encode NonString variables if dtypes differ."""
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if "dtype" in variable.encoding and variable.encoding["dtype"] not in ("S1", str):
+        if "dtype" in variable.encoding and variable.encoding["dtype"] not in (
+            "S1",
+            str,
+        ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = np.dtype(encoding.pop("dtype"))
             if dtype != variable.dtype:

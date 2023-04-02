@@ -894,7 +894,10 @@ class CFEncodedBase(DatasetIOBase):
         ],
     )
     def test_roundtrip_mask_and_scale(
-        self, decoded_fn: Callable[[type[np.number]], Dataset], encoded_fn: Callable[[type[np.number]], Dataset], dtype: type[np.number]
+        self,
+        decoded_fn: Callable[[type[np.number]], Dataset],
+        encoded_fn: Callable[[type[np.number]], Dataset],
+        dtype: type[np.number],
     ) -> None:
         if dtype == np.float32 and isinstance(
             self, (TestZarrDirectoryStore, TestZarrDictStore)
