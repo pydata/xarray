@@ -305,25 +305,30 @@ def _choose_float_dtype(
     scale_factor = mapping.get("scale_factor")
     add_offset = mapping.get("add_offset")
     if scale_factor or add_offset:
-        # get the maximum itemsize from scale_factor/add_offset to determine
+        # get the type from scale_factor/add_offset to determine
         # the needed floating point type
-        # start with minimal floating point size -> 4 byte
-        maxsize = 4
-        if scale_factor and np.issubdtype(type(scale_factor), np.floating):
-            maxsize = max(maxsize, np.dtype(type(scale_factor)).itemsize)
-        add_offset_type = type(add_offset)
-        if add_offset and np.issubdtype(add_offset_type, np.floating):
-            maxsize = max(maxsize, np.dtype(add_offset_type).itemsize)
-        # if add_offset is malformed (eg. no float32 or no float64 as
-        # cf conventions expects):
+        if scale_factor:
+            scale_type = type(scale_factor)
+        if add_offset:
+            offset_type = type(add_offset)
+        # CF conforming, both scale_factor and add-offset are given and
+        # of same floating point type
+        if (
+            add_offset
+            and scale_factor
+            and offset_type == scale_type
+            and np.issubdtype(scale_type, np.floating)
+        ):
+            return np.dtype(scale_type)
+        # Not CF conforming and add_offset given:
         # A scale factor is entirely safe (vanishing into the mantissa),
         # but a large integer offset could lead to loss of precision.
         # Sensitivity analysis can be tricky, so we just use a float64
         # if there's any offset at all - better unoptimised than wrong!
-        if maxsize == 4 or not np.issubdtype(add_offset_type, np.floating):
-            return np.float32
-        else:
+        if add_offset:
             return np.float64
+        # return float32 in other cases where only scale_factor is given
+        return np.float32
     # If no scale_factor or add_offset is given, use some general rules.
     # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
@@ -355,7 +360,6 @@ class CFScaleOffsetCoder(VariableCoder):
                 data -= add_offset
             if scale_factor:
                 data /= scale_factor
-
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
