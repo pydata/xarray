@@ -319,7 +319,7 @@ def _choose_float_dtype(
             and offset_type == scale_type
             and np.issubdtype(scale_type, np.floating)
         ):
-            return np.dtype(scale_type)
+            return np.dtype(scale_type).type
         # Not CF conforming and add_offset given:
         # A scale factor is entirely safe (vanishing into the mantissa),
         # but a large integer offset could lead to loss of precision.
@@ -509,10 +509,7 @@ class NonStringCoder(VariableCoder):
     """Encode NonString variables if dtypes differ."""
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if "dtype" in variable.encoding and variable.encoding["dtype"] not in (
-            "S1",
-            str,
-        ):
+        if "dtype" in variable.encoding and variable.encoding["dtype"] not in ("S1", str):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = np.dtype(encoding.pop("dtype"))
             if dtype != variable.dtype:

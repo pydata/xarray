@@ -894,7 +894,7 @@ class CFEncodedBase(DatasetIOBase):
         ],
     )
     def test_roundtrip_mask_and_scale(
-        self, decoded_fn: Callable, encoded_fn: Callable, dtype: type[np.number]
+        self, decoded_fn: Callable[[type[np.number]], Dataset], encoded_fn: Callable[[type[np.number]], Dataset], dtype: type[np.number]
     ) -> None:
         if dtype == np.float32 and isinstance(
             self, (TestZarrDirectoryStore, TestZarrDictStore)
@@ -1589,7 +1589,7 @@ class NetCDF4Base(NetCDFBase):
     @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     @pytest.mark.parametrize("offset_cf_conforming", [True, False])
     def test_mask_and_scale_non_cf_conforming(
-        self, dtype, offset_cf_conforming
+        self, dtype: type[np.number], offset_cf_conforming: bool
     ) -> None:
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
