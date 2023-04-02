@@ -300,7 +300,7 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTyp
 def _choose_float_dtype(
     dtype: np.dtype, mapping: MutableMapping
 ) -> type[np.floating[Any]]:
-    # check scale/offset first to derive dtype
+    # check scale/offset first to derive wanted float dtype
     # see https://github.com/pydata/xarray/issues/5597#issuecomment-879561954
     scale_factor = mapping.get("scale_factor")
     add_offset = mapping.get("add_offset")
@@ -324,6 +324,7 @@ def _choose_float_dtype(
             return np.float32
         else:
             return np.float64
+    # If no scale_factor or add_offset is given, use some general rules.
     # Keep float32 as-is. Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
     if dtype.itemsize <= 4 and np.issubdtype(dtype, np.floating):
@@ -477,7 +478,7 @@ class BooleanCoder(VariableCoder):
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.attrs.get("dtype", False) == "bool":
             dims, data, attrs, encoding = unpack_for_decoding(variable)
-            # overwrite encoding accordingly and remove from attrs
+            # overwrite (!) encoding accordingly and remove from attrs
             encoding["dtype"] = attrs.pop("dtype")
             data = BoolTypeArray(data)
             return Variable(dims, data, attrs, encoding, fastpath=True)

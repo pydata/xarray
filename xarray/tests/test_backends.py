@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Callable, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -893,7 +893,7 @@ class CFEncodedBase(DatasetIOBase):
             (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
         ],
     )
-    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
+    def test_roundtrip_mask_and_scale(self, decoded_fn: Callable, encoded_fn: Callable, dtype: type[np.number]) -> None:
         if dtype == np.float32 and isinstance(
             self, (TestZarrDirectoryStore, TestZarrDictStore)
         ):
@@ -1557,7 +1557,7 @@ class NetCDF4Base(NetCDFBase):
             assert_equal(ds, actual)
 
     @pytest.mark.parametrize("dtype", [np.float32, np.float64])
-    def test_mask_and_scale(self, dtype) -> None:
+    def test_mask_and_scale(self, dtype: type[np.number]) -> None:
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 nc.createDimension("t", 5)
