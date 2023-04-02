@@ -1,11 +1,14 @@
 # Comment to be posted to on first time issues
 newIssueWelcomeComment: >
   Thanks for opening your first issue here at xarray! Be sure to follow the issue template!
+  ![coding gif](https://media.giphy.com/media/wv1RNuvWMjQ10bzExO/giphy.gif)
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
   Thank you for opening this pull request! Please check out our contributing guidelines at https://github.com/pydata/xarray/blob/main/CONTRIBUTING.md .
+  ![cat coding](https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif)
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >
   Congratulations on merging your first pull request! We here at xarray are proud of you!
+  ![celebration gif](https://media.giphy.com/media/umYMU8G2ixG5mJBDo5/giphy.gif)
