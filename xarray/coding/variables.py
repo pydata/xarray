@@ -100,14 +100,14 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array",)
 
-    def __init__(self, array):
+    def __init__(self, array) -> None:
         self.array = indexing.as_indexable(array)
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> np.ndarray:
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
@@ -132,14 +132,14 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
     __slots__ = ("array",)
 
-    def __init__(self, array):
+    def __init__(self, array) -> None:
         self.array = indexing.as_indexable(array)
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         return np.dtype("bool")
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> np.ndarray:
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
