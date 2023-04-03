@@ -519,8 +519,9 @@ difference between values, with a reference time of the first time value.
 Coordinates
 ...........
 
-You can control the ``coordinates`` attribute written to disk by specifying ``DataArray.encoding["coordinates"]``.
-If not specified, xarray automatically sets ``DataArray.encoding["coordinates"]`` to a space-delimited list
+You can control the ``coordinates`` attribute written to disk by specifying the ``coordinates`` key in the
+output encoding keyword argument to `to_netcdf` or `to_zarr`.  If not specified, xarray automatically sets
+the ``coordinates`` attribute for each variable to a space-delimited list
 of names of coordinate variables that share dimensions with the ``DataArray`` being written.
 This allows perfect roundtripping of xarray datasets but may not be desirable.
 When an xarray ``Dataset`` contains non-dimensional coordinates that do not share dimensions with any of

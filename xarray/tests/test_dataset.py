@@ -7034,7 +7034,7 @@ def test_setting_encoding_property_warns_deprecated():
         FutureWarning,
         match=r"Setting encoding directly using the encoding property is deprecated.*",
     ):
-        ds.encoding = {"unlimited_dims": {"set"}}
+        ds.encoding = {"unlimited_dims": {"x"}}
 
     with pytest.warns(
         FutureWarning,

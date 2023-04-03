@@ -657,7 +657,12 @@ class Dataset(
 
     @property
     def encoding(self) -> dict[Any, Any]:
-        """Dictionary of global encoding attributes on this dataset"""
+        """Dictionary of global encoding attributes on this dataset
+
+        .. warning::
+            Setting encoding directly using the encoding property is deprecated.
+            Use the encoding kwarg in to_netcdf/to_zarr to set output encoding.
+        """
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
