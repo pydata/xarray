@@ -304,20 +304,20 @@ def _choose_float_dtype(
     # see https://github.com/pydata/xarray/issues/5597#issuecomment-879561954
     scale_factor = mapping.get("scale_factor")
     add_offset = mapping.get("add_offset")
-    if scale_factor or add_offset:
+    if scale_factor is not None or add_offset is not None:
         # get the type from scale_factor/add_offset to determine
         # the needed floating point type
-        if scale_factor:
+        if scale_factor is not None:
             scale_type = type(scale_factor)
-        if add_offset:
+        if add_offset is not None:
             offset_type = type(add_offset)
         # CF conforming, both scale_factor and add-offset are given and
-        # of same floating point type
+        # of same floating point type (float32/64)
         if (
-            add_offset
-            and scale_factor
+            add_offset is not None
+            and scale_factor is not None
             and offset_type == scale_type
-            and np.issubdtype(scale_type, np.floating)
+            and scale_type in [np.float32, np.float64]
         ):
             return np.dtype(scale_type).type
         # Not CF conforming and add_offset given:
@@ -325,7 +325,7 @@ def _choose_float_dtype(
         # but a large integer offset could lead to loss of precision.
         # Sensitivity analysis can be tricky, so we just use a float64
         # if there's any offset at all - better unoptimised than wrong!
-        if add_offset:
+        if add_offset is not None:
             return np.float64
         # return float32 in other cases where only scale_factor is given
         return np.float32
