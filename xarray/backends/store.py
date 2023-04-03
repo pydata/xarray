@@ -58,7 +58,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         ds = Dataset(vars, attrs=attrs)
         ds = ds.set_coords(coord_names.intersection(vars))
         ds.set_close(filename_or_obj.close)
-        ds.encoding = encoding
+        ds._set_encoding_internal(encoding)
 
         return ds
 

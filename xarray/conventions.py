@@ -694,7 +694,7 @@ def decode_cf(
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds.set_close(close)
-    ds.encoding = encoding
+    ds._set_encoding_internal(encoding)
 
     return ds
 

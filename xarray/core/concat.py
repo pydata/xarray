@@ -643,7 +643,7 @@ def _dataset_concat(
             f"Variables {absent_coord_names!r} are coordinates in some datasets but not others."
         )
     result = result.set_coords(coord_names)
-    result.encoding = result_encoding
+    result._set_encoding_internal(result_encoding)
 
     result = result.drop_vars(unlabeled_dims, errors="ignore")
 

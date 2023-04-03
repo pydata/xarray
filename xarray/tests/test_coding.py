@@ -56,6 +56,7 @@ def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding) -> None
         assert_identical(roundtripped, original)
 
 
+@pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
 def test_CFMaskCoder_missing_value() -> None:
     expected = xr.DataArray(
         np.array([[26915, 27755, -9999, 27705], [25595, -9999, 28315, -9999]]),

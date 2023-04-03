@@ -154,6 +154,7 @@ class TestEncodeCFVariable:
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_do_not_overwrite_user_coordinates(self) -> None:
         orig = Dataset(
             coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},

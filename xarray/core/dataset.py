@@ -662,9 +662,22 @@ class Dataset(
             self._encoding = {}
         return self._encoding
 
+    def _set_encoding_internal(self, value):
+        """temporary method to set encoding without issuing a FutureWarning"""
+        try:
+            self._encoding = dict(value)
+        except ValueError:
+            raise ValueError("encoding must be castable to a dictionary")
+
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
-        self._encoding = dict(value)
+        warnings.warn(
+            "Setting encoding directly using the encoding property is "
+            "deprecated. Use the encoding kwarg in to_netcdf/to_zarr to "
+            "set output encoding.",
+            category=FutureWarning,
+        )
+        self._set_encoding_internal(value)
 
     def reset_encoding(self: T_Dataset) -> T_Dataset:
         """Return a new Dataset without encoding on the dataset or any of its
@@ -2821,7 +2834,7 @@ class Dataset(
             var = self._variables.get(name)
             if var is not None:
                 new_var.attrs = var.attrs
-                new_var.encoding = var.encoding
+                new_var._set_encoding_internal(var.encoding)
 
         # pass through indexes from excluded dimensions
         # no extra check needed for multi-coordinate indexes, potential conflicts

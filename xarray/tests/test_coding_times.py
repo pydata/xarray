@@ -712,6 +712,7 @@ def test_decode_cf_time_bounds() -> None:
 
 
 @requires_cftime
+@pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
 def test_encode_time_bounds() -> None:
     time = pd.date_range("2000-01-16", periods=1)
     time_bounds = pd.date_range("2000-01-01", periods=2, freq="MS")

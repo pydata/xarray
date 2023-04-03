@@ -269,6 +269,7 @@ class TestDataArray:
         with pytest.raises(TypeError):
             array.sizes["foo"] = 5  # type: ignore
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_encoding(self) -> None:
         expected = {"foo": "bar"}
         self.dv.encoding["foo"] = "bar"
@@ -278,6 +279,7 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_reset_encoding(self) -> None:
         array = self.mda
         encoding = {"scale_factor": 10}
@@ -3324,6 +3326,7 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(self, encoding) -> None:
         array = DataArray(
@@ -6735,3 +6738,12 @@ class TestStackEllipsis:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
             da.stack(flat=...)  # type: ignore
+
+
+def test_setting_encoding_property_warns_deprecated():
+    da = DataArray([0, 1, 2])
+    with pytest.warns(
+        FutureWarning,
+        match=r"Setting encoding directly using the encoding property is deprecated.*",
+    ):
+        da.encoding = {"dtype": "f4"}

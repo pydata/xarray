@@ -512,6 +512,7 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_roundtrip_string_encoded_characters(self) -> None:
         expected = Dataset({"x": ("t", ["ab", "cdef"])})
         expected["x"].encoding["dtype"] = "S1"
@@ -1504,6 +1505,7 @@ class NetCDF4Base(NetCDFBase):
 
         assert ds.x.encoding == {}
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_keep_chunksizes_if_no_original_shape(self) -> None:
         ds = Dataset({"x": [1, 2, 3]})
         chunksizes = (2,)
@@ -1515,6 +1517,7 @@ class NetCDF4Base(NetCDFBase):
                 ds["x"].encoding["chunksizes"], actual["x"].encoding["chunksizes"]
             )
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_encoding_chunksizes_unlimited(self) -> None:
         # regression test for GH1225
         ds = Dataset({"x": [1, 2, 3], "y": ("x", [2, 3, 4])})
@@ -1581,6 +1584,7 @@ class NetCDF4Base(NetCDFBase):
                 with open_dataset(tmp_file, **cast(dict, kwargs)) as actual:
                     assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_encoding_unlimited_dims(self) -> None:
         ds = Dataset({"x": ("y", np.arange(10.0))})
         with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
@@ -2855,6 +2859,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
                                 for k in data.variables
                             ]
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_encoding_unlimited_dims(self) -> None:
         ds = Dataset({"x": ("y", np.arange(10.0))})
         with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
@@ -2938,6 +2943,7 @@ class TestH5NetCDFData(NetCDF4Base):
                 expected = Dataset(attrs={"foo": "bar"})
                 assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_encoding_unlimited_dims(self) -> None:
         ds = Dataset({"x": ("y", np.arange(10.0))})
         with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
