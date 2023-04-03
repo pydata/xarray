@@ -6,13 +6,13 @@ newIssueWelcomeComment: >
 
   See the [Contributing Guide](https://docs.xarray.dev/en/latest/contributing.html) for more.
 
-  It may take us a while to respond here, but we really value your contribution. Contributors like you help make xarray better. 
-  
+  It may take us a while to respond here, but we really value your contribution. Contributors like you help make xarray better.
+
   Thank you!
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
-  Thank you for opening this pull request! It may take us a few days to respond here, so thank you for being patient. 
+  Thank you for opening this pull request! It may take us a few days to respond here, so thank you for being patient.
 
   If you have questions, some answers may be found in our [contributing guidelines](http://docs.xarray.dev/en/stable/contributing.html).
 
