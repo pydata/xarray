@@ -6,12 +6,19 @@ import itertools
 import sys
 import warnings
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
     import os
+    from importlib.metadata import EntryPoint
+
+    if sys.version_info >= (3, 10):
+        from importlib.metadata import EntryPoints
+    else:
+        EntryPoints = list[EntryPoint]
     from io import BufferedIOBase
 
     from xarray.backends.common import AbstractDataStore
@@ -19,15 +26,15 @@ if TYPE_CHECKING:
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
-def remove_duplicates(entrypoints):
+def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
     # sort and group entrypoints by name
-    entrypoints = sorted(entrypoints, key=lambda ep: ep.name)
-    entrypoints_grouped = itertools.groupby(entrypoints, key=lambda ep: ep.name)
+    entrypoints_sorted = sorted(entrypoints, key=lambda ep: ep.name)
+    entrypoints_grouped = itertools.groupby(entrypoints_sorted, key=lambda ep: ep.name)
     # check if there are multiple entrypoints for the same name
     unique_entrypoints = []
-    for name, matches in entrypoints_grouped:
+    for name, _matches in entrypoints_grouped:
         # remove equal entrypoints
-        matches = list(set(matches))
+        matches = list(set(_matches))
         unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
@@ -42,7 +49,7 @@ def remove_duplicates(entrypoints):
     return unique_entrypoints
 
 
-def detect_parameters(open_dataset):
+def detect_parameters(open_dataset: Callable) -> tuple[str, ...]:
     signature = inspect.signature(open_dataset)
     parameters = signature.parameters
     parameters_list = []
@@ -60,7 +67,9 @@ def detect_parameters(open_dataset):
     return tuple(parameters_list)
 
 
-def backends_dict_from_pkg(entrypoints):
+def backends_dict_from_pkg(
+    entrypoints: list[EntryPoint],
+) -> dict[str, type[BackendEntrypoint]]:
     backend_entrypoints = {}
     for entrypoint in entrypoints:
         name = entrypoint.name
@@ -72,14 +81,18 @@ def backends_dict_from_pkg(entrypoints):
     return backend_entrypoints
 
 
-def set_missing_parameters(backend_entrypoints):
-    for name, backend in backend_entrypoints.items():
+def set_missing_parameters(
+    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+) -> None:
+    for _, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-def sort_backends(backend_entrypoints):
+def sort_backends(
+    backend_entrypoints: dict[str, type[BackendEntrypoint]]
+) -> dict[str, type[BackendEntrypoint]]:
     ordered_backends_entrypoints = {}
     for be_name in STANDARD_BACKENDS_ORDER:
         if backend_entrypoints.get(be_name, None) is not None:
@@ -90,13 +103,13 @@ def sort_backends(backend_entrypoints):
     return ordered_backends_entrypoints
 
 
-def build_engines(entrypoints) -> dict[str, BackendEntrypoint]:
-    backend_entrypoints = {}
-    for backend_name, backend in BACKEND_ENTRYPOINTS.items():
-        if backend.available:
+def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
+    backend_entrypoints: dict[str, type[BackendEntrypoint]] = {}
+    for backend_name, (module_name, backend) in BACKEND_ENTRYPOINTS.items():
+        if module_name is None or module_available(module_name):
             backend_entrypoints[backend_name] = backend
-    entrypoints = remove_duplicates(entrypoints)
-    external_backend_entrypoints = backends_dict_from_pkg(entrypoints)
+    entrypoints_unique = remove_duplicates(entrypoints)
+    external_backend_entrypoints = backends_dict_from_pkg(entrypoints_unique)
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
@@ -122,8 +135,13 @@ def list_engines() -> dict[str, BackendEntrypoint]:
     if sys.version_info >= (3, 10):
         entrypoints = entry_points(group="xarray.backends")
     else:
-        entrypoints = entry_points().get("xarray.backends", ())
+        entrypoints = entry_points().get("xarray.backends", [])
     return build_engines(entrypoints)
+
+
+def refresh_engines() -> None:
+    """Refreshes the backend engines based on installed packages."""
+    list_engines.cache_clear()
 
 
 def guess_engine(
@@ -135,11 +153,13 @@ def guess_engine(
         try:
             if backend.guess_can_open(store_spec):
                 return engine
+        except PermissionError:
+            raise
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     compatible_engines = []
-    for engine, backend_cls in BACKEND_ENTRYPOINTS.items():
+    for engine, (_, backend_cls) in BACKEND_ENTRYPOINTS.items():
         try:
             backend = backend_cls()
             if backend.guess_can_open(store_spec):
