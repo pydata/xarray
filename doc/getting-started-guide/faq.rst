@@ -356,7 +356,7 @@ There may be situations where you need to specify the engine manually using the 
 
 Some packages may have additional functionality beyond what is shown here. You can refer to the documentation for each package for more information.
 
-How xarray handles missing values?
+How does xarray handle missing values?
 ----------------------------------
 
 **xarray can handle missing values using ``np.NaN``**
