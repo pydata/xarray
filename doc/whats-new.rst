@@ -25,7 +25,11 @@ New Features
 - New methods to reset an objects encoding (:py:meth:`Dataset.reset_encoding`, :py:meth:`DataArray.reset_encoding`).
   (:issue:`7686`, :pull:`7689`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
+- Allow refreshing backend engines with :py:meth:`xarray.backends.refresh_engines` (:issue:`7478`, :pull:`7523`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
+  (:issue:`7692`, :pull:`7693`) .
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -45,6 +49,12 @@ Bug fixes
   By `Thomas Coleman <https://github.com/ColemanTom>`_.
 - Proper plotting when passing :py:class:`~matplotlib.colors.BoundaryNorm` type argument in :py:meth:`DataArray.plot`. (:issue:`4061`, :issue:`7014`,:pull:`7553`)
   By `Jelmer Veenstra <https://github.com/veenstrajelmer>`_.
+- Ensure the formatting of time encoding reference dates outside the range of
+  nanosecond-precision datetimes remains the same under pandas version 2.0.0
+  (:issue:`7420`, :pull:`7441`).
+  By `Justus Magin <https://github.com/keewis>`_ and
+  `Spencer Clark  <https://github.com/spencerkclark>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -54,6 +64,11 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Don't assume that arrays read from disk will be Numpy arrays. This is a step toward
+  enabling reads from a Zarr store using the `Kvikio <https://docs.rapids.ai/api/kvikio/stable/api.html#zarr>`_
+  or `TensorStore <https://google.github.io/tensorstore/>`_ libraries.
+  (:pull:`6874`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 - Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
   backend interface, so no existing code should break.

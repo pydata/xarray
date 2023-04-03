@@ -139,13 +139,18 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
+    """Disallows any loading."""
+
     def __init__(self, array):
         self.array = array
 
-    def __getitem__(self, key):
-        raise UnexpectedDataAccess("Tried accessing data.")
+    def get_duck_array(self):
+        raise UnexpectedDataAccess("Tried accessing data")
 
-    def __array__(self):
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __getitem__(self, key):
         raise UnexpectedDataAccess("Tried accessing data.")
 
 
@@ -155,6 +160,23 @@ class FirstElementAccessibleArray(InaccessibleArray):
         if len(tuple_idxr) > 1:
             raise UnexpectedDataAccess("Tried accessing more than one element.")
         return self.array[tuple_idxr]
+
+
+class DuckArrayWrapper(utils.NDArrayMixin):
+    """Array-like that prevents casting to array.
+    Modeled after cupy."""
+
+    def __init__(self, array: np.ndarray):
+        self.array = array
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array_namespace__(self):
+        """Present to satisfy is_duck_array test."""
 
 
 class ReturnItem:

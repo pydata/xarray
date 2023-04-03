@@ -642,6 +642,7 @@ DataArray methods
    DataArray.to_numpy
    DataArray.to_pandas
    DataArray.to_series
+   DataArray.to_zarr
    DataArray.chunk
    DataArray.close
    DataArray.compute
@@ -1096,6 +1097,7 @@ Advanced API
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
+   backends.refresh_engines
 
 Default, pandas-backed indexes built-in Xarray:
 

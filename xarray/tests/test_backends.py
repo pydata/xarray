@@ -3237,6 +3237,21 @@ def chunks(request):
     return request.param
 
 
+@pytest.fixture(params=["tmp_path", "ZipStore", "Dict"])
+def tmp_store(request, tmp_path):
+    if request.param == "tmp_path":
+        return tmp_path
+    elif request.param == "ZipStore":
+        from zarr.storage import ZipStore
+
+        path = tmp_path / "store.zip"
+        return ZipStore(path)
+    elif request.param == "Dict":
+        return dict()
+    else:
+        raise ValueError("not supported")
+
+
 # using pytest.mark.skipif does not work so this a work around
 def skip_if_not_engine(engine):
     if engine == "netcdf4":
@@ -4591,6 +4606,56 @@ class TestDataArrayToNetCDF:
                 assert_identical(original_da, loaded_da)
 
 
+@requires_zarr
+class TestDataArrayToZarr:
+    def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        original_da.to_zarr(tmp_store)
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
+        original_da = DataArray(np.arange(12).reshape((3, 4)), name="test")
+
+        original_da.to_zarr(tmp_store)
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
+        original_da = DataArray(
+            np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
+        )
+
+        original_da.to_zarr(tmp_store)
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    def test_open_dataarray_options(self, tmp_store) -> None:
+        data = DataArray(np.arange(5), coords={"y": ("x", range(5))}, dims=["x"])
+
+        data.to_zarr(tmp_store)
+
+        expected = data.drop_vars("y")
+        with open_dataarray(tmp_store, engine="zarr", drop_variables=["y"]) as loaded:
+            assert_identical(expected, loaded)
+
+    @requires_dask
+    def test_dataarray_to_zarr_compute_false(self, tmp_store) -> None:
+        from dask.delayed import Delayed
+
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        output = original_da.to_zarr(tmp_store, compute=False)
+        assert isinstance(output, Delayed)
+        output.compute()
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+
 @requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get() -> None:
     with create_tmp_file() as tmpfile:
@@ -5023,7 +5088,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
-    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")  # type: ignore[arg-type]
 
 
 @requires_h5netcdf
