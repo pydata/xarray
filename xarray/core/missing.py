@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable, get_args
 import numpy as np
 import pandas as pd
 
+import xarray as xr
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
@@ -328,25 +329,28 @@ def interp_na(
         max_type = type(max_gap).__name__
         if not is_scalar(max_gap):
             raise ValueError("max_gap must be a scalar.")
-
         if (
-            dim in self._indexes
+            use_coordinate
+            and dim in self._indexes
             and isinstance(
                 self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
             )
-            and use_coordinate
         ):
             # Convert to float
             max_gap = timedelta_to_numeric(max_gap)
-
-        if not use_coordinate:
-            if not isinstance(max_gap, (Number, np.number)):
+        elif not use_coordinate:
+            if not isinstance(max_gap, (Number, np.number, type(None))):
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
                 )
 
-    # method
-    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
+    if use_coordinate:
+        index = self[dim]
+    else:
+        if xr.core.utils.is_monotonic_decreasing(self[dim]):
+            index = xr.IndexVariable(dim, np.sort(self[dim])[::-1])
+        else:
+            index = xr.IndexVariable(dim, np.sort(self[dim]))
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
@@ -360,7 +364,7 @@ def interp_na(
             interpolator,
             self,
             index,
-            input_core_dims=[[dim], [dim]],
+            input_core_dims=[[dim], []] if use_coordinate else [[dim], [dim]],
             output_core_dims=[[dim]],
             output_dtypes=[self.dtype],
             dask="parallelized",
