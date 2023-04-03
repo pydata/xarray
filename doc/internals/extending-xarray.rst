@@ -1,6 +1,6 @@
 
-Extending xarray
-================
+Extending xarray using accessors
+================================
 
 .. ipython:: python
     :suppress:
@@ -8,11 +8,11 @@ Extending xarray
     import xarray as xr
 
 
-Xarray is designed as a general purpose library, and hence tries to avoid
+Xarray is designed as a general purpose library and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
 domain specific logic arises.
 
-One standard solution to this problem is to subclass Dataset and/or DataArray to
+One potential solution to this problem is to subclass Dataset and/or DataArray to
 add domain specific functionality. However, inheritance is not very robust. It's
 easy to inadvertently use internal APIs when subclassing, which means that your
 code may break when xarray upgrades. Furthermore, many builtin methods will
@@ -29,7 +29,9 @@ from pandas) may suffice.
 To resolve this issue for more complex cases, xarray has the
 :py:func:`~xarray.register_dataset_accessor` and
 :py:func:`~xarray.register_dataarray_accessor` decorators for adding custom
-"accessors" on xarray objects. Here's how you might use these decorators to
+"accessors" on xarray objects, thereby "extending" the functionality of your xarray object. 
+
+Here's how you might use these decorators to
 write a custom "geo" accessor implementing a geography specific extension to
 xarray:
 
