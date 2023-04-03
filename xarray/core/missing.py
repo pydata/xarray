@@ -329,17 +329,19 @@ def interp_na(
         max_type = type(max_gap).__name__
         if not is_scalar(max_gap):
             raise ValueError("max_gap must be a scalar.")
+
         if (
-            use_coordinate
-            and dim in self._indexes
+            dim in self._indexes
             and isinstance(
                 self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
             )
+            and use_coordinate
         ):
             # Convert to float
             max_gap = timedelta_to_numeric(max_gap)
-        elif not use_coordinate:
-            if not isinstance(max_gap, (Number, np.number, type(None))):
+
+        if not use_coordinate:
+            if not isinstance(max_gap, (Number, np.number)):
                 raise TypeError(
                     f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
                 )
