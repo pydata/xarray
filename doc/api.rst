@@ -112,6 +112,7 @@ Dataset contents
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.reset_encoding
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
@@ -303,6 +304,7 @@ DataArray contents
    DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.reset_coords
+   DataArray.reset_encoding
    DataArray.copy
    DataArray.convert_calendar
    DataArray.interp_calendar
@@ -1095,6 +1097,7 @@ Advanced API
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
+   backends.refresh_engines
 
 Default, pandas-backed indexes built-in Xarray:
 
