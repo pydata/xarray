@@ -31,7 +31,7 @@ repos:
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==23.1.0"]
+        additional_dependencies: ["black==23.3.0"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.1.1
