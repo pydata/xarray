@@ -873,14 +873,14 @@ class DataArray(
         serialized."""
         return self.variable.encoding
 
-    def _set_encoding_internal(self, value: Mapping[Any, Any]) -> None:
-        """temporary method to set encoding without issuing a FutureWarning"""
-        self.variable._set_encoding_internal(value)
-
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
         # deprecated (variable setter will warn)
         self.variable.encoding = dict(value)
+
+    def _set_encoding_internal(self, value: Mapping[Any, Any]) -> None:
+        """temporary method to set encoding without issuing a FutureWarning"""
+        self.variable._set_encoding_internal(value)
 
     def reset_encoding(self: T_DataArray) -> T_DataArray:
         """Return a new DataArray without encoding on the array or any attached

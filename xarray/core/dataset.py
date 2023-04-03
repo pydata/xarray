@@ -662,13 +662,6 @@ class Dataset(
             self._encoding = {}
         return self._encoding
 
-    def _set_encoding_internal(self, value):
-        """temporary method to set encoding without issuing a FutureWarning"""
-        try:
-            self._encoding = dict(value)
-        except ValueError:
-            raise ValueError("encoding must be castable to a dictionary")
-
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
         warnings.warn(
@@ -678,6 +671,13 @@ class Dataset(
             category=FutureWarning,
         )
         self._set_encoding_internal(value)
+
+    def _set_encoding_internal(self, value: Mapping[Any, Any]) -> None:
+        """temporary method to set encoding without issuing a FutureWarning"""
+        try:
+            self._encoding = dict(value)
+        except ValueError:
+            raise ValueError("encoding must be castable to a dictionary")
 
     def reset_encoding(self: T_Dataset) -> T_Dataset:
         """Return a new Dataset without encoding on the dataset or any of its

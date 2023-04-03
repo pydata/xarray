@@ -974,15 +974,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             self._encoding = {}
         return self._encoding
 
-    def _set_encoding_internal(self, value):
-        """temporary method to set encoding without issuing a FutureWarning"""
-        try:
-            self._encoding = dict(value)
-        except ValueError:
-            raise ValueError("encoding must be castable to a dictionary")
-
     @encoding.setter
-    def encoding(self, value):
+    def encoding(self, value: Mapping[Any, Any]) -> None:
         warnings.warn(
             "Setting encoding directly using the encoding property is "
             "deprecated. Use the encoding kwarg in to_netcdf/to_zarr to "
@@ -990,6 +983,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             category=FutureWarning,
         )
         self._set_encoding_internal(value)
+
+    def _set_encoding_internal(self, value: Mapping[Any, Any]) -> None:
+        """temporary method to set encoding without issuing a FutureWarning"""
+        try:
+            self._encoding = dict(value)
+        except ValueError:
+            raise ValueError("encoding must be castable to a dictionary")
 
     def reset_encoding(self: T_Variable) -> T_Variable:
         """Return a new Variable without encoding."""
