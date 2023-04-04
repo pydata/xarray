@@ -51,9 +51,15 @@ def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding) -> None
     assert encoded.dtype == encoded.attrs["missing_value"].dtype
     assert encoded.dtype == encoded.attrs["_FillValue"].dtype
 
+
+def test_CFMaskCoder_multiple_missing_values_conflict():
+    data = np.array([0.0, -1.0, 1.0])
+    attrs = dict(_FillValue=np.float64(1e20), missing_value=np.float64(1e21))
+    original = xr.Variable(("x",), data, attrs=attrs)
     with pytest.warns(variables.SerializationWarning):
-        roundtripped = decode_cf_variable("foo", encoded)
-        assert_identical(roundtripped, original)
+        decoded = decode_cf_variable("foo", original)
+    with pytest.raises(ValueError):
+        encode_cf_variable(decoded)
 
 
 def test_CFMaskCoder_missing_value() -> None:

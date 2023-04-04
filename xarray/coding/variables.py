@@ -243,7 +243,8 @@ class CFMaskCoder(VariableCoder):
                     data = duck_array_ops.fillna(data, fill_value)
 
             if mv is not None:
-                # Only use mv if _FillValue isn't available
+                # Use _FillValue if available to align missing_value to prevent issues
+                # when decoding
                 # Ensure missing_value is cast to same dtype as data's
                 encoding["missing_value"] = attrs.get("_FillValue", dtype.type(mv))
                 fill_value = pop_to(encoding, attrs, "missing_value", name=name)
