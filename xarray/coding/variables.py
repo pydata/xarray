@@ -220,34 +220,38 @@ class CFMaskCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
+        # get dtype from encoding if available, otherwise use data.dtype
         dtype = np.dtype(encoding.get("dtype", data.dtype))
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
-        if (
-            fv is not None
-            and mv is not None
-            and not duck_array_ops.allclose_or_equiv(fv, mv)
-        ):
-            raise ValueError(
-                f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
-            )
+        if fv is not None or mv is not None:
+            if (
+                fv is not None
+                and mv is not None
+                and not duck_array_ops.allclose_or_equiv(fv, mv)
+            ):
+                raise ValueError(
+                    f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
+                )
 
-        if fv is not None:
-            # Ensure _FillValue is cast to same dtype as data's
-            encoding["_FillValue"] = dtype.type(fv)
-            fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
-            if not pd.isnull(fill_value):
-                data = duck_array_ops.fillna(data, fill_value)
+            if fv is not None:
+                # Ensure _FillValue is cast to same dtype as data's
+                encoding["_FillValue"] = dtype.type(fv)
+                fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
+                if not pd.isnull(fill_value):
+                    data = duck_array_ops.fillna(data, fill_value)
 
-        if mv is not None:
-            # Ensure missing_value is cast to same dtype as data's
-            encoding["missing_value"] = dtype.type(mv)
-            fill_value = pop_to(encoding, attrs, "missing_value", name=name)
-            if not pd.isnull(fill_value) and fv is None:
-                data = duck_array_ops.fillna(data, fill_value)
-
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+            if mv is not None:
+                # Only use mv if _FillValue isn't available
+                # Ensure missing_value is cast to same dtype as data's
+                encoding["missing_value"] = attrs.get("_FillValue", dtype.type(mv))
+                fill_value = pop_to(encoding, attrs, "missing_value", name=name)
+                if not pd.isnull(fill_value) and fv is None:
+                    data = duck_array_ops.fillna(data, fill_value)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
 
     def decode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
@@ -272,7 +276,13 @@ class CFMaskCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-            dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+            if "scale_factor" not in attrs and "add_offset" not in attrs:
+                dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+            else:
+                dtype, decoded_fill_value = (
+                    _choose_float_dtype(data.dtype, attrs),
+                    np.nan,
+                )
 
             if encoded_fill_values:
                 transform = partial(
@@ -319,6 +329,10 @@ def _choose_float_dtype(
             and offset_type == scale_type
             and scale_type in [np.float32, np.float64]
         ):
+            # in case of int32 -> we need upcast to float64
+            # due to precision issues
+            if dtype.itemsize == 4 and np.issubdtype(dtype, np.integer):
+                return np.float64
             return np.dtype(scale_type).type
         # Not CF conforming and add_offset given:
         # A scale factor is entirely safe (vanishing into the mantissa),
@@ -354,7 +368,12 @@ class CFScaleOffsetCoder(VariableCoder):
         scale_factor = pop_to(encoding, attrs, "scale_factor", name=name)
         add_offset = pop_to(encoding, attrs, "add_offset", name=name)
         if scale_factor or add_offset:
-            dtype = _choose_float_dtype(data.dtype, attrs)
+            # if we have a _FillValue/masked_value we do not want to cast now
+            # but leave that to CFMaskCoder
+            dtype = data.dtype
+            if "_FillValue" not in encoding and "missing_value" not in encoding:
+                dtype = _choose_float_dtype(data.dtype, attrs)
+            # but still we need a copy prevent changing original data
             data = data.astype(dtype=dtype, copy=True)
             if add_offset:
                 data -= add_offset
@@ -373,7 +392,13 @@ class CFScaleOffsetCoder(VariableCoder):
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
-            dtype = _choose_float_dtype(data.dtype, encoding)
+            # if we have a _FillValue/masked_value we already have the wanted
+            # floating point dtype here (via CFMaskCoder), so no check is necessary
+            # only check in other cases
+            dtype = data.dtype
+            if "_FillValue" not in encoding and "missing_value" not in encoding:
+                dtype = _choose_float_dtype(dtype, encoding)
+
             transform = partial(
                 _scale_offset_decoding,
                 scale_factor=scale_factor,
