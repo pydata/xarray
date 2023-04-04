@@ -6735,7 +6735,6 @@ class DataArray(
         13  -20  130     1             7
         14  -20  130     2            11
         15  -20  130     3            15
-
         """
 
         name = self.name if self.name is not None else _THIS_ARRAY
