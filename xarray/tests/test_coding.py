@@ -95,17 +95,71 @@ def test_coder_roundtrip() -> None:
     assert_identical(original, roundtripped)
 
 
-@pytest.mark.parametrize("unpacked_dtype", [np.float32, np.float64, np.int32])
+@pytest.mark.parametrize("ptype", "u1 u2 u4 i1 i2 i4".split())
+@pytest.mark.parametrize("utype", "f4 f8".split())
+def test_mask_scale_roundtrip(utype: str, ptype: str) -> None:
+    # this tests cf conforming packing/unpacking via
+    # encode_cf_variable/decode_cf_variable
+    # f4->i4 packing is skipped as non-conforming
+    if utype[1] == "4" and ptype[1] == "4":
+        pytest.skip("Can't pack float32 into int32/uint32")
+    # fillvalues according to netCDF4
+    filldict = {
+        "i1": -127,
+        "u1": 255,
+        "i2": -32767,
+        "u2": 65535,
+        "i4": -2147483647,
+        "u4": 4294967295,
+    }
+    fillvalue = filldict[ptype]
+    unpacked_dtype = np.dtype(utype).type
+    packed_dtype = np.dtype(ptype).type
+    info = np.iinfo(packed_dtype)
+
+    # create original "encoded" Variable
+    packed_data = np.array(
+        [info.min, fillvalue, info.max - 1, info.max], dtype=packed_dtype
+    )
+    attrs = dict(
+        scale_factor=unpacked_dtype(1),
+        add_offset=unpacked_dtype(0),
+        _FillValue=packed_dtype(fillvalue),
+    )
+    original = xr.Variable(("x",), packed_data, attrs=attrs)
+
+    # create wanted "decoded" Variable
+    unpacked_data = np.array(
+        [info.min, fillvalue, info.max - 1, info.max], dtype=unpacked_dtype
+    )
+    encoding = dict(
+        scale_factor=unpacked_dtype(1),
+        add_offset=unpacked_dtype(0),
+        _FillValue=packed_dtype(fillvalue),
+    )
+    wanted = xr.Variable(("x"), unpacked_data, encoding=encoding)
+    wanted = wanted.where(wanted != fillvalue)
+
+    # decode original and compare with wanted
+    decoded = decode_cf_variable("x", original)
+    assert wanted.dtype == decoded.dtype
+    xr.testing.assert_identical(wanted, decoded)
+
+    # encode again and compare with original
+    encoded = encode_cf_variable(decoded)
+    assert original.dtype == encoded.dtype
+    xr.testing.assert_identical(original, encoded)
+
+
+@pytest.mark.parametrize("unpacked_dtype", "f4 f8 i4".split())
 @pytest.mark.parametrize("packed_dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(
-    packed_dtype: str, unpacked_dtype: type[np.number]
-) -> None:
+def test_scaling_converts_to_float32(packed_dtype: str, unpacked_dtype: str) -> None:
     # if scale_factor but no add_offset is given transform to float32 in any case
     # this minimizes memory usage, see #1840, #1842
     original = xr.Variable(
         ("x",),
         np.arange(10, dtype=packed_dtype),
-        encoding=dict(scale_factor=unpacked_dtype(10)),
+        encoding=dict(scale_factor=np.dtype(unpacked_dtype).type(10)),
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)
@@ -115,7 +169,7 @@ def test_scaling_converts_to_float32(
     assert roundtripped.dtype == np.float32
 
 
-@pytest.mark.parametrize("unpacked_dtype", [np.float32, np.float64, np.int32])
+@pytest.mark.parametrize("unpacked_dtype", "f4 f8 i4".split())
 @pytest.mark.parametrize("packed_dtype", "u1 u2 i1 i2 f2 f4".split())
 def test_scaling_converts_to_float64(
     packed_dtype: str, unpacked_dtype: type[np.number]
@@ -125,7 +179,7 @@ def test_scaling_converts_to_float64(
     original = xr.Variable(
         ("x",),
         np.arange(10, dtype=packed_dtype),
-        encoding=dict(add_offset=unpacked_dtype(10)),
+        encoding=dict(add_offset=np.dtype(unpacked_dtype).type(10)),
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)
@@ -139,7 +193,7 @@ def test_scaling_converts_to_float64(
 @pytest.mark.parametrize("add_offset", (0.1, [0.1]))
 def test_scaling_offset_as_list(scale_factor, add_offset) -> None:
     # test for #4631
-    # att: scale_factor and add_offset are not conforming to cf specs here
+    # attention: scale_factor and add_offset are not conforming to cf specs here
     encoding = dict(scale_factor=scale_factor, add_offset=add_offset)
     original = xr.Variable(("x",), np.arange(10.0), encoding=encoding)
     coder = variables.CFScaleOffsetCoder()
