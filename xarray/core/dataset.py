@@ -281,7 +281,9 @@ def _maybe_chunk(
 ):
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+
     if var.ndim:
+        chunked_array_type = guess_chunkmanager_name(chunked_array_type)
         if chunked_array_type == "dask":
             from dask.base import tokenize
 
@@ -290,15 +292,16 @@ def _maybe_chunk(
             # subtle bugs result otherwise. see GH3350
             token2 = tokenize(name, token if token else var._data, chunks)
             name2 = f"{name_prefix}{name}-{token2}"
-        else:
-            # not used
-            name2 = None
+            from_array_kwargs["name"] = name2
+
+            from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
+                from_array_kwargs,
+                lock=lock,
+                inline_array=inline_array,
+            )
 
         var = var.chunk(
             chunks,
-            name=name2,
-            lock=lock,
-            inline_array=inline_array,
             chunked_array_type=chunked_array_type,
             from_array_kwargs=from_array_kwargs,
         )

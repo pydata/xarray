@@ -42,6 +42,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         if is_duck_dask_array(data):
             data = self.rechunk(data, chunks)
         else:
+            # TODO move this up to variable.chunk
             if isinstance(data, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
                 # that can't handle general array indexing. For example, in netCDF4 you

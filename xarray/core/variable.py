@@ -1148,8 +1148,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},
         name: str | None = None,
-        lock: bool = False,
-        inline_array: bool = False,
+        lock: bool | None = None,
+        inline_array: bool | None = None,
         chunked_array_type: str | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
@@ -1172,17 +1172,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name : str, optional
             Used to generate the name for this array in the internal dask
             graph. Does not need not be unique.
-        lock : optional
+        lock : bool, optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array.
-        inline_array: optional
+            already as dask array. Default is False.
+        inline_array : bool, optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array.
+            already as dask array. Default is False.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
-            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
             Experimental API that should not be relied upon.
-        from_array_kwargs: dict
+        from_array_kwargs: dict, optional
             Additional keyword arguments passed on to the `ChunkManagerEntryPoint.from_array` method used to create
             chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
             Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
@@ -1224,8 +1224,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         if from_array_kwargs is None:
             from_array_kwargs = {}
-        _from_array_kwargs = dict(
-            name=name, lock=lock, inline_array=inline_array, **from_array_kwargs
+
+        # TODO deprecate passing these dask-specific arguments explicitly. In future just pass everything via from_array_kwargs
+        _from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
+            from_array_kwargs,
+            name=name,
+            lock=lock,
+            inline_array=inline_array,
         )
 
         data = chunkmanager.from_array(self._data, chunks, **_from_array_kwargs)
