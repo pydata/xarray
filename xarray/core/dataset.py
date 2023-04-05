@@ -292,10 +292,10 @@ def _maybe_chunk(
             # subtle bugs result otherwise. see GH3350
             token2 = tokenize(name, token if token else var._data, chunks)
             name2 = f"{name_prefix}{name}-{token2}"
-            from_array_kwargs["name"] = name2
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
                 from_array_kwargs,
+                name=name2,
                 lock=lock,
                 inline_array=inline_array,
             )
