@@ -29,15 +29,12 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def chunks(self, data: "DaskArray") -> T_Chunks:
         return data.chunks
 
-    def from_array(self, data, chunks, **kwargs) -> "DaskArray":
+    def from_array(
+        self, data, chunks, name=None, lock=False, inline_array=False
+    ) -> "DaskArray":
         import dask.array as da
 
         from xarray.core import indexing
-
-        # dask-specific kwargs
-        name = kwargs.pop("name", None)
-        lock = kwargs.pop("lock", False)
-        inline_array = kwargs.pop("inline_array", False)
 
         if is_duck_dask_array(data):
             data = self.rechunk(data, chunks)
