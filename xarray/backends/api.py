@@ -32,6 +32,7 @@ from xarray.core.combine import (
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
+from xarray.core.parallelcompat import guess_chunkmanager_name
 from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
@@ -310,12 +311,13 @@ def _chunk_ds(
     from_array_kwargs,
     **extra_tokens,
 ):
+    chunked_array_type = guess_chunkmanager_name(chunked_array_type)
     if chunked_array_type == "dask":
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)
         token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = f"open_dataset-{token}"
+        name_prefix = "open_dataset-"
     else:
         # not used
         token = (None,)

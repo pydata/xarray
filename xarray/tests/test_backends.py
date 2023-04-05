@@ -3604,8 +3604,6 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
-                    print(original)
-                    print(actual)
                     assert_identical(original, actual)
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested", chunks={"x": 3}
