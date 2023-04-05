@@ -18,6 +18,8 @@ from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from xarray.core.dataset import Dataset
+
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
@@ -85,9 +87,9 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
-    def __array__(self, dtype=None):
+    def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        return np.asarray(self[key], dtype=dtype)
+        return self[key]  # type: ignore [index]
 
 
 class AbstractDataStore:
@@ -382,9 +384,6 @@ class BackendEntrypoint:
     Attributes
     ----------
 
-    available : bool, default: True
-        Indicate wether this backend is available given the installed packages.
-        The setting of this attribute is not mandatory.
     open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
@@ -395,8 +394,6 @@ class BackendEntrypoint:
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
     """
-
-    available: ClassVar[bool] = True
 
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
@@ -413,9 +410,10 @@ class BackendEntrypoint:
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
-    ):
+    ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -425,7 +423,7 @@ class BackendEntrypoint:
     def guess_can_open(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ):
+    ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -433,4 +431,5 @@ class BackendEntrypoint:
         return False
 
 
-BACKEND_ENTRYPOINTS: dict[str, type[BackendEntrypoint]] = {}
+# mapping of engine name to (module name, BackendEntrypoint Class)
+BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}

@@ -689,6 +689,12 @@ class Dataset(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
 
+    def reset_encoding(self: T_Dataset) -> T_Dataset:
+        """Return a new Dataset without encoding on the dataset or any of its
+        variables/coords."""
+        variables = {k: v.reset_encoding() for k, v in self.variables.items()}
+        return self._replace(variables=variables, encoding={})
+
     @property
     def dims(self) -> Frozen[Hashable, int]:
         """Mapping from dimension names to lengths.
@@ -1983,6 +1989,7 @@ class Dataset(
         region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
         store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed:
         ...
@@ -2043,7 +2050,7 @@ class Dataset(
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
-        compute : bool, optional
+        compute : bool, default: True
             If True write array data immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed to write
             array data later. Metadata is always updated eagerly.
@@ -2077,7 +2084,7 @@ class Dataset(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
-        safe_chunks : bool, optional
+        safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.
             Set False to override this restriction; however, data may become corrupted
@@ -2125,7 +2132,7 @@ class Dataset(
         """
         from xarray.backends.api import to_zarr
 
-        return to_zarr(  # type: ignore
+        return to_zarr(  # type: ignore[call-overload,misc]
             self,
             store=store,
             chunk_store=chunk_store,
@@ -2140,6 +2147,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            store_kwargs=store_kwargs,
         )
 
     def __repr__(self) -> str:
