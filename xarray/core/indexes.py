@@ -15,7 +15,13 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
 )
-from xarray.core.utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
+from xarray.core.utils import (
+    Frozen,
+    emit_user_level_warning,
+    get_valid_numpy_dtype,
+    is_dict_like,
+    is_scalar,
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import ErrorOptions, T_Index
@@ -167,8 +173,20 @@ def safe_cast_to_index(array: Any) -> pd.Index:
         index = array.array
     else:
         kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
+        if hasattr(array, "dtype"):
+            if array.dtype.kind == "O":
+                kwargs["dtype"] = object
+            elif array.dtype == "float16":
+                emit_user_level_warning(
+                    (
+                        "float16 indexes are not supported by pandas indexes."
+                        " Casting to `float64` for you, but in the future please"
+                        " manually cast to either `float32` and `float64`."
+                    ),
+                    category=DeprecationWarning,
+                )
+                kwargs["dtype"] = "float64"
+
         index = pd.Index(np.asarray(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
