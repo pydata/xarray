@@ -323,8 +323,6 @@ def _chunk_ds(
         token = (None,)
         name_prefix = None
 
-    print(f"inside _chunk_ds chunks={chunks}")
-
     variables = {}
     for name, var in backend_ds.variables.items():
         var_chunks = _get_chunk(var, chunks)
