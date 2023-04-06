@@ -76,7 +76,7 @@ class TestDatetimeAccessor:
         else:
             data = getattr(self.times, field)
 
-        if data.dtype.kind != "b" and field not in ("date", "time"):
+        if np.issubdtype(data.dtype, np.integer):
             # pandas 2.0 returns int32 for integer fields now
             data = data.astype("int64")
 
