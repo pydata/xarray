@@ -40,6 +40,7 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
+    has_pandas_version_two,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -1040,6 +1041,11 @@ class TestDataArray:
                 np.array([0.0, 0.111, 0.222, 0.333], dtype="float16"),
                 slice(1, 3),
                 id="float16",
+                marks=[
+                    pytest.mark.skipif(
+                        has_pandas_version_two, reason="not supported for pandas >= 2.0"
+                    )
+                ],
             ),
             pytest.param(
                 np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"), [2], id="scalar"
