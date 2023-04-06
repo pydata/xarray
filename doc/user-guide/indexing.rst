@@ -352,7 +352,6 @@ dimensions:
     ind_x = xr.DataArray([0, 1], dims=["x"])
     ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y]  # orthogonal indexing
-    da[ind_x, ind_x]  # vectorized indexing
 
 Slices or sequences/arrays without named-dimensions are treated as if they have
 the same dimension which is indexed along:
@@ -399,6 +398,10 @@ These methods may also be applied to ``Dataset`` objects
 Vectorized indexing may be used to extract information from the nearest
 grid cells of interest, for example, the nearest climate model grid cells
 to a collection specified weather station latitudes and longitudes.
+When selecting the nearest values across multiple dimensions, be sure
+to give the selection DataArrays a new (shared) dimension name; below
+the latitude and longitude dimensions of the original Dataset are being
+selected against and the output dimension is called "points":
 
 .. ipython:: python
 
