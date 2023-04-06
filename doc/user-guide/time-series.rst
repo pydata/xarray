@@ -225,8 +225,8 @@ resampling group:
 
     ds.resample(time="6H").reduce(np.mean)
 
-You can also resample on time while applying a reduction function on time
-and on other variables:
+You can also resample on the time dimension while applying reducing along other dimensions at the same time
+by specifying the `dim` keyword argument
 
 .. code-block:: python
 
