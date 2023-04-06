@@ -40,7 +40,6 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    has_pandas_version_two,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -1038,16 +1037,6 @@ class TestDataArray:
                 id="float32",
             ),
             pytest.param(
-                np.array([0.0, 0.111, 0.222, 0.333], dtype="float16"),
-                slice(1, 3),
-                id="float16",
-                marks=[
-                    pytest.mark.skipif(
-                        has_pandas_version_two, reason="not supported for pandas >= 2.0"
-                    )
-                ],
-            ),
-            pytest.param(
                 np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"), [2], id="scalar"
             ),
         ),
@@ -1061,6 +1050,26 @@ class TestDataArray:
         expected = DataArray(
             data_values[indices], coords={"x": coord_values[indices]}, dims="x"
         )
+
+        assert_equal(actual, expected)
+
+    def test_sel_float16(self) -> None:
+        data_values = np.arange(4)
+        coord_values = np.array([0.0, 0.111, 0.222, 0.333], dtype="float16")
+        indices = slice(1, 3)
+
+        with pytest.warns(
+            DeprecationWarning, match="float16 indexes are not supported by pandas.*"
+        ):
+            arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
+        with pytest.warns(
+            DeprecationWarning, match="float16 indexes are not supported by pandas.*"
+        ):
+            expected = DataArray(
+                data_values[indices], coords={"x": coord_values[indices]}, dims="x"
+            )
+
+        actual = arr.sel(x=coord_values[indices])
 
         assert_equal(actual, expected)
 
