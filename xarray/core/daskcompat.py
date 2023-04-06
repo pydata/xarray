@@ -393,6 +393,9 @@ def auto_chunks(chunks, shape, limit, dtype, previous_chunks=None):
             limit = config.get("array.chunk-size")
         except ImportError:
             limit = "128MiB"
+
+    print(f"array.chunk-size limit used = {limit}")
+
     if isinstance(limit, str):
         limit = parse_bytes(limit)
 
