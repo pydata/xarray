@@ -349,7 +349,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
 
-        values = _get_date_field(self._obj.data, "isocalendar", np.int32)
+        values = _get_date_field(self._obj.data, "isocalendar", np.int64)
 
         obj_type = type(self._obj)
         data_vars = {}
@@ -363,42 +363,42 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     @property
     def year(self) -> T_DataArray:
         """The year of the datetime"""
-        return self._date_field("year", np.int32)
+        return self._date_field("year", np.int64)
 
     @property
     def month(self) -> T_DataArray:
         """The month as January=1, December=12"""
-        return self._date_field("month", np.int32)
+        return self._date_field("month", np.int64)
 
     @property
     def day(self) -> T_DataArray:
         """The days of the datetime"""
-        return self._date_field("day", np.int32)
+        return self._date_field("day", np.int64)
 
     @property
     def hour(self) -> T_DataArray:
         """The hours of the datetime"""
-        return self._date_field("hour", np.int32)
+        return self._date_field("hour", np.int64)
 
     @property
     def minute(self) -> T_DataArray:
         """The minutes of the datetime"""
-        return self._date_field("minute", np.int32)
+        return self._date_field("minute", np.int64)
 
     @property
     def second(self) -> T_DataArray:
         """The seconds of the datetime"""
-        return self._date_field("second", np.int32)
+        return self._date_field("second", np.int64)
 
     @property
     def microsecond(self) -> T_DataArray:
         """The microseconds of the datetime"""
-        return self._date_field("microsecond", np.int32)
+        return self._date_field("microsecond", np.int64)
 
     @property
     def nanosecond(self) -> T_DataArray:
         """The nanoseconds of the datetime"""
-        return self._date_field("nanosecond", np.int32)
+        return self._date_field("nanosecond", np.int64)
 
     @property
     def weekofyear(self) -> DataArray:
@@ -419,7 +419,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     @property
     def dayofweek(self) -> T_DataArray:
         """The day of the week with Monday=0, Sunday=6"""
-        return self._date_field("dayofweek", np.int32)
+        return self._date_field("dayofweek", np.int64)
 
     weekday = dayofweek
 
@@ -431,17 +431,17 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     @property
     def dayofyear(self) -> T_DataArray:
         """The ordinal day of the year"""
-        return self._date_field("dayofyear", np.int32)
+        return self._date_field("dayofyear", np.int64)
 
     @property
     def quarter(self) -> T_DataArray:
         """The quarter of the date"""
-        return self._date_field("quarter", np.int32)
+        return self._date_field("quarter", np.int64)
 
     @property
     def days_in_month(self) -> T_DataArray:
         """The number of days in the month"""
-        return self._date_field("days_in_month", np.int32)
+        return self._date_field("days_in_month", np.int64)
 
     daysinmonth = days_in_month
 
@@ -548,22 +548,22 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
     @property
     def days(self) -> T_DataArray:
         """Number of days for each element"""
-        return self._date_field("days", np.int32)
+        return self._date_field("days", np.int64)
 
     @property
     def seconds(self) -> T_DataArray:
         """Number of seconds (>= 0 and less than 1 day) for each element"""
-        return self._date_field("seconds", np.int32)
+        return self._date_field("seconds", np.int64)
 
     @property
     def microseconds(self) -> T_DataArray:
         """Number of microseconds (>= 0 and less than 1 second) for each element"""
-        return self._date_field("microseconds", np.int32)
+        return self._date_field("microseconds", np.int64)
 
     @property
     def nanoseconds(self) -> T_DataArray:
         """Number of nanoseconds (>= 0 and less than 1 microsecond) for each element"""
-        return self._date_field("nanoseconds", np.int32)
+        return self._date_field("nanoseconds", np.int64)
 
 
 class CombinedDatetimelikeAccessor(
