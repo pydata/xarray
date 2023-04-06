@@ -224,34 +224,32 @@ class CFMaskCoder(VariableCoder):
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
-        if fv is not None or mv is not None:
-            if (
-                fv is not None
-                and mv is not None
-                and not duck_array_ops.allclose_or_equiv(fv, mv)
-            ):
-                raise ValueError(
-                    f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
-                )
+        fv_exists = fv is not None
+        mv_exists = mv is not None
 
-            if fv is not None:
-                # Ensure _FillValue is cast to same dtype as data's
-                encoding["_FillValue"] = dtype.type(fv)
-                fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
-                if not pd.isnull(fill_value):
-                    data = duck_array_ops.fillna(data, fill_value)
-
-            if mv is not None:
-                # Ensure missing_value is cast to same dtype as data's
-                encoding["missing_value"] = dtype.type(mv)
-                fill_value = pop_to(encoding, attrs, "missing_value", name=name)
-                if not pd.isnull(fill_value) and fv is None:
-                    data = duck_array_ops.fillna(data, fill_value)
-
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-
-        else:
+        if not fv_exists and not mv_exists:
             return variable
+
+        if fv_exists and mv_exists and not duck_array_ops.allclose_or_equiv(fv, mv):
+            raise ValueError(
+                f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
+            )
+
+        if fv_exists:
+            # Ensure _FillValue is cast to same dtype as data's
+            encoding["_FillValue"] = dtype.type(fv)
+            fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
+            if not pd.isnull(fill_value):
+                data = duck_array_ops.fillna(data, fill_value)
+
+        if mv_exists:
+            # Ensure missing_value is cast to same dtype as data's
+            encoding["missing_value"] = dtype.type(mv)
+            fill_value = pop_to(encoding, attrs, "missing_value", name=name)
+            if not pd.isnull(fill_value) and fv_exists:
+                data = duck_array_ops.fillna(data, fill_value)
+
+        return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
