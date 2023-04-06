@@ -93,6 +93,7 @@ class TestDatetimeAccessor:
         else:
             actual = getattr(self.data.time.dt, field)
 
+        assert expected.dtype == actual.dtype
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
