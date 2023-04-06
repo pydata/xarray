@@ -59,6 +59,8 @@ class TestDatetimeAccessor:
             "quarter",
             "date",
             "time",
+            "daysinmonth",
+            "days_in_month",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
