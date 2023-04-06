@@ -76,7 +76,14 @@ class TestDatetimeAccessor:
         else:
             data = getattr(self.times, field)
 
-        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
+        translations = {
+            "weekday": "dayofweek",
+            "daysinmonth": "days_in_month",
+            "weekofyear": "week",
+        }
+        name = translations.get(field, field)
+
+        expected = xr.DataArray(data, name=name, coords=[self.times], dims=["time"])
 
         if field in ["week", "weekofyear"]:
             with pytest.warns(
@@ -86,7 +93,7 @@ class TestDatetimeAccessor:
         else:
             actual = getattr(self.data.time.dt, field)
 
-        assert_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",
