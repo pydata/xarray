@@ -167,6 +167,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     def from_array(
         self, data: np.ndarray, chunks: T_Chunks, **kwargs
     ) -> T_ChunkedArray:
+        """Called when .chunk is called on an xarray object that is not already chunked."""
         ...
 
     def rechunk(

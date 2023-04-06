@@ -1241,7 +1241,31 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             inline_array=inline_array,
         )
 
-        data = chunkmanager.from_array(self._data, chunks, **_from_array_kwargs)
+        data = self._data
+        if chunkmanager.is_chunked_array(data):
+            data = chunkmanager.rechunk(data, chunks)
+        else:
+            if isinstance(data, indexing.ExplicitlyIndexed):
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                data = indexing.ImplicitToExplicitIndexingAdapter(
+                    data, indexing.OuterIndexer
+                )
+
+            if utils.is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(data.shape))
+
+            data = chunkmanager.from_array(
+                data,
+                chunks,
+                **_from_array_kwargs,
+            )
 
         return self._replace(data=data)
 

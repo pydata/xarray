@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import numpy as np
 
-from xarray.core import utils
 from xarray.core.duck_array_ops import dask_available
+from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray, T_Chunks
 from xarray.core.pycompat import is_duck_dask_array
 
@@ -32,48 +32,15 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def from_array(self, data, chunks, **kwargs) -> "DaskArray":
         import dask.array as da
 
-        from xarray.core import indexing
+        if isinstance(data, ImplicitToExplicitIndexingAdapter):
+            # lazily loaded backend array classes should use NumPy array operations.
+            kwargs["meta"] = np.ndarray
 
-        # dask-specific kwargs
-        name = kwargs.pop("name", None)
-        lock = kwargs.pop("lock", False)
-        inline_array = kwargs.pop("inline_array", False)
-
-        if is_duck_dask_array(data):
-            data = self.rechunk(data, chunks)
-        else:
-            # TODO move this up to variable.chunk
-            if isinstance(data, indexing.ExplicitlyIndexed):
-                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
-                # that can't handle general array indexing. For example, in netCDF4 you
-                # can do "outer" indexing along two dimensions independent, which works
-                # differently from how NumPy handles it.
-                # da.from_array works by using lazy indexing with a tuple of slices.
-                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
-                # different indexing types in an explicit way:
-                # https://github.com/dask/dask/issues/2883
-                data = indexing.ImplicitToExplicitIndexingAdapter(
-                    data, indexing.OuterIndexer
-                )
-
-                # All of our lazily loaded backend array classes should use NumPy
-                # array operations.
-                dask_kwargs = {"meta": np.ndarray}
-            else:
-                dask_kwargs = {}
-
-            if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(data.shape))
-
-            data = da.from_array(
-                data,
-                chunks,
-                name=name,
-                lock=lock,
-                inline_array=inline_array,
-                **dask_kwargs,
-            )
-        return data
+        return da.from_array(
+            data,
+            chunks,
+            **kwargs,
+        )
 
     def compute(self, *data: "DaskArray", **kwargs) -> np.ndarray:
         from dask.array import compute
