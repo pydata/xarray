@@ -386,7 +386,13 @@ def auto_chunks(chunks, shape, limit, dtype, previous_chunks=None):
         return tuple(chunks)
 
     if limit is None:
-        limit = "128MiB"  # config.get("array.chunk-size")
+        try:
+            from dask import config
+
+            # TODO plug this into configuration of other chunk managers
+            limit = config.get("array.chunk-size")
+        except ImportError:
+            limit = "128MiB"
     if isinstance(limit, str):
         limit = parse_bytes(limit)
 
