@@ -694,7 +694,7 @@ def open_dataarray(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
-   chunked_array_type: str, optional
+    chunked_array_type: str, optional
         Which chunked array type to coerce the underlying data array to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
         Experimental API that should not be relied upon.
