@@ -74,6 +74,9 @@ Internal Changes
   backend interface, so no existing code should break.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Added a config.yml file with messages for the welcome bot when a Github user creates their first ever issue or pull request or has their first PR merged. (:issue:`7685`, :pull:`7685`)
+  By `Nishtha P <https://github.com/nishthap981>`_.
+
 .. _whats-new.2023.03.0:
 
 v2023.03.0 (March 22, 2023)
