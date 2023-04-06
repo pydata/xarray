@@ -277,6 +277,8 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     labels
     """
     flat_labels = np.ravel(labels)
+    if flat_labels.dtype == "float16":
+        flat_labels = flat_labels.astype("float64")
     flat_indexer = index.get_indexer(flat_labels, method=method, tolerance=tolerance)
     indexer = flat_indexer.reshape(labels.shape)
     return indexer
