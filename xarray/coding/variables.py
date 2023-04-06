@@ -246,7 +246,7 @@ class CFMaskCoder(VariableCoder):
             # Ensure missing_value is cast to same dtype as data's
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
-            if not pd.isnull(fill_value) and fv_exists:
+            if not pd.isnull(fill_value) and not fv_exists:
                 data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
