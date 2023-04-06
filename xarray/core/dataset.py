@@ -282,6 +282,8 @@ def _maybe_chunk(
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
+    print(f"inside _maybe_chunk chunks={chunks}")
+
     if var.ndim:
         chunked_array_type = guess_chunkmanager_name(chunked_array_type)
         if chunked_array_type == "dask":

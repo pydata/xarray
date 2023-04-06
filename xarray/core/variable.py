@@ -1241,6 +1241,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             inline_array=inline_array,
         )
 
+        print(f"inside variable.chunk chunks={chunks}")
+
         data = chunkmanager.from_array(self._data, chunks, **_from_array_kwargs)
 
         return self._replace(data=data)
