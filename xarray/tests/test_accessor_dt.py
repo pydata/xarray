@@ -78,7 +78,7 @@ class TestDatetimeAccessor:
 
         if data.dtype.kind != "b" and field not in ("date", "time"):
             # pandas 2.0 always returns int32 now
-            data = data.astype("int32")
+            data = data.astype("int64")
 
         translations = {
             "weekday": "dayofweek",
