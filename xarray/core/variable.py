@@ -637,7 +637,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self, data: bool = True, encoding: bool = False, numpy_data: bool = False
     ) -> dict:
         """Dictionary representation of variable."""
-        item = {"dims": self.dims, "attrs": decode_numpy_dict_values(self.attrs)}
+        item: dict[str, Any] = {
+            "dims": self.dims,
+            "attrs": decode_numpy_dict_values(self.attrs),
+        }
         if data:
             item["data"] = ensure_us_time_resolution(self.values)
             if not numpy_data:
