@@ -179,7 +179,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
             elif array.dtype == "float16":
                 emit_user_level_warning(
                     (
-                        "float16 indexes are not supported by pandas indexes."
+                        "`pandas.Index` does not support the `float16` dtype."
                         " Casting to `float64` for you, but in the future please"
                         " manually cast to either `float32` and `float64`."
                     ),

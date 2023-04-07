@@ -1058,13 +1058,11 @@ class TestDataArray:
         coord_values = np.array([0.0, 0.111, 0.222, 0.333], dtype="float16")
         indices = slice(1, 3)
 
-        with pytest.warns(
-            DeprecationWarning, match="float16 indexes are not supported by pandas.*"
-        ):
+        message = "`pandas.Index` does not support the `float16` dtype.*"
+
+        with pytest.warns(DeprecationWarning, match=message):
             arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
-        with pytest.warns(
-            DeprecationWarning, match="float16 indexes are not supported by pandas.*"
-        ):
+        with pytest.warns(DeprecationWarning, match=message):
             expected = DataArray(
                 data_values[indices], coords={"x": coord_values[indices]}, dims="x"
             )
