@@ -8,10 +8,12 @@ ntime = 365 * 30
 nx = 50
 ny = 50
 
+rs = np.random.RandomState(0)
+
 
 class Align:
     def setup(self, *args, **kwargs):
-        data = np.random.RandomState(0).randn(ntime, nx, ny)
+        data = rs.randn(ntime, nx, ny)
         self.ds = xr.Dataset(
             {"temperature": (("time", "x", "y"), data)},
             coords={
@@ -21,6 +23,8 @@ class Align:
             },
         )
         self.year = self.ds.time.dt.year
+        self.idx = rs.randint(low=0, high=ntime, size=ntime // 2)
+        self.year_subset = self.year.isel(time=self.idx)
 
     @parameterized(["join"], [("outer", "inner", "left", "right", "exact", "override")])
     def time_already_aligned(self, join):
@@ -30,12 +34,17 @@ class Align:
     def time_not_aligned(self, join):
         xr.align(self.ds, self.year[-100:], join=join)
 
+    @parameterized(["join"], [("outer", "inner", "left", "right")])
+    def time_not_aligned_random_integers(self, join):
+        xr.align(self.ds, self.year_subset, join=join)
+
 
 class AlignCFTime(Align):
     def setup(self, *args, **kwargs):
         super().setup()
         self.ds["time"] = xr.date_range("2000", periods=ntime, calendar="noleap")
         self.year = self.ds.time.dt.year
+        self.year_subset = self.year.isel(time=self.idx)
 
 
 class AlignDask(Align):
