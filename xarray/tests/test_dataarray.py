@@ -3339,7 +3339,7 @@ class TestDataArray:
             data = data.tolist()
             coords_data = coords_data.tolist()
 
-        expected = {
+        expected: dict[str, Any] = {
             "name": "foo",
             "dims": ("x", "y"),
             "data": data,
