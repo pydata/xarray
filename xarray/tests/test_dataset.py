@@ -4589,7 +4589,8 @@ class TestDataset:
         expected = df.apply(np.asarray)
         assert roundtripped.equals(expected)
 
-    def test_to_and_from_dict(self) -> None:
+    @pytest.mark.parametrize("numpy_data", [True, False])
+    def test_to_and_from_dict(self, numpy_data) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -4611,10 +4612,10 @@ class TestDataset:
             },
         }
 
-        actual = ds.to_dict()
+        actual = ds.to_dict(numpy_data=numpy_data)
 
         # check that they are identical
-        assert expected == actual
+        np.testing.assert_equal(expected, actual)
 
         # check roundtrip
         assert_identical(ds, Dataset.from_dict(actual))
@@ -4633,7 +4634,7 @@ class TestDataset:
 
         # verify coords are included roundtrip
         expected_ds = ds.set_coords("b")
-        actual2 = Dataset.from_dict(expected_ds.to_dict())
+        actual2 = Dataset.from_dict(expected_ds.to_dict(numpy_data=numpy_data))
 
         assert_identical(expected_ds, actual2)
 
@@ -4683,7 +4684,8 @@ class TestDataset:
         roundtripped = Dataset.from_dict(ds.to_dict())
         assert_identical(ds, roundtripped)
 
-    def test_to_and_from_dict_with_nan_nat(self) -> None:
+    @pytest.mark.parametrize("numpy_data", [True, False])
+    def test_to_and_from_dict_with_nan_nat(self, numpy_data) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -4699,7 +4701,7 @@ class TestDataset:
                 "lat": ("lat", lat),
             }
         )
-        roundtripped = Dataset.from_dict(ds.to_dict())
+        roundtripped = Dataset.from_dict(ds.to_dict(numpy_data=numpy_data))
         assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:

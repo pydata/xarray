@@ -633,11 +633,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
+    def to_dict(
+        self, data: bool = True, encoding: bool = False, numpy_data: bool = False
+    ) -> dict:
         """Dictionary representation of variable."""
         item = {"dims": self.dims, "attrs": decode_numpy_dict_values(self.attrs)}
         if data:
-            item["data"] = ensure_us_time_resolution(self.values).tolist()
+            item["data"] = ensure_us_time_resolution(self.values)
+            if not numpy_data:
+                item["data"] = item["data"].tolist()
         else:
             item.update({"dtype": str(self.dtype), "shape": self.shape})
 

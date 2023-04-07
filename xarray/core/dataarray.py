@@ -4174,7 +4174,9 @@ class DataArray(
             zarr_version=zarr_version,
         )
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self, data: bool = True, encoding: bool = False, numpy_data: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -4190,6 +4192,9 @@ class DataArray(
             False, returns just the schema.
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
+        numpy_data : bool, default: False
+           Whether to return data as numpy objects rather than native Python (
+           when returning data).
 
         Returns
         -------
@@ -4200,10 +4205,10 @@ class DataArray(
         DataArray.from_dict
         Dataset.to_dict
         """
-        d = self.variable.to_dict(data=data)
+        d = self.variable.to_dict(data=data, numpy_data=numpy_data)
         d.update({"coords": {}, "name": self.name})
         for k, coord in self.coords.items():
-            d["coords"][k] = coord.variable.to_dict(data=data)
+            d["coords"][k] = coord.variable.to_dict(data=data, numpy_data=numpy_data)
         if encoding:
             d["encoding"] = dict(self.encoding)
         return d

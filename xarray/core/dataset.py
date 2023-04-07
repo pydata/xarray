@@ -6441,7 +6441,9 @@ class Dataset(
 
         return df
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self, data: bool = True, encoding: bool = False, numpy_data: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -6457,6 +6459,9 @@ class Dataset(
             False, returns just the schema.
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
+        numpy_data : bool, default: False
+           Whether to return data as numpy objects rather than native Python (
+           when returning data).
 
         Returns
         -------
@@ -6477,11 +6482,19 @@ class Dataset(
         }
         for k in self.coords:
             d["coords"].update(
-                {k: self[k].variable.to_dict(data=data, encoding=encoding)}
+                {
+                    k: self[k].variable.to_dict(
+                        data=data, encoding=encoding, numpy_data=numpy_data
+                    )
+                }
             )
         for k in self.data_vars:
             d["data_vars"].update(
-                {k: self[k].variable.to_dict(data=data, encoding=encoding)}
+                {
+                    k: self[k].variable.to_dict(
+                        data=data, encoding=encoding, numpy_data=numpy_data
+                    )
+                }
             )
         if encoding:
             d["encoding"] = dict(self.encoding)
