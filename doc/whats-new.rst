@@ -30,6 +30,10 @@ New Features
 - Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
   (:issue:`7692`, :pull:`7693`) .
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added `numpy_data` keyword argument to both :py:meth:`xarray.Dataset.to_dict` and
+  :py:meth:`xarray.DataArray.to_dict` to return data as numpy objects instead of native Python objects.
+  (:issue:`1599`, :pull:`7739`) .
+  By `James McCreight <https://github.com/jmccreight>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
