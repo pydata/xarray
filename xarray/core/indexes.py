@@ -172,10 +172,10 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     elif isinstance(array, PandasIndexingAdapter):
         index = array.array
     else:
-        kwargs = {}
+        kwargs: dict[str, str] = {}
         if hasattr(array, "dtype"):
             if array.dtype.kind == "O":
-                kwargs["dtype"] = object
+                kwargs["dtype"] = "object"
             elif array.dtype == "float16":
                 emit_user_level_warning(
                     (
