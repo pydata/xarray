@@ -278,6 +278,25 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
+    def test_reset_encoding(self) -> None:
+        array = self.mda
+        encoding = {"scale_factor": 10}
+        array.encoding = encoding
+        array["x"].encoding = encoding
+
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        actual = array.reset_encoding()
+
+        # did not modify in place
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        # variable and coord encoding is empty
+        assert actual.encoding == {}
+        assert actual["x"].encoding == {}
+
     def test_constructor(self) -> None:
         data = np.random.random((2, 3))
 
