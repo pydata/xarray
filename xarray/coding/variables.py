@@ -78,6 +78,71 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         )
 
 
+class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
+    """Decode arrays on the fly from non-native to native endianness
+
+    This is useful for decoding arrays from netCDF3 files (which are all
+    big endian) into native endianness, so they can be used with Cython
+    functions, such as those found in bottleneck and pandas.
+
+    >>> x = np.arange(5, dtype=">i2")
+
+    >>> x.dtype
+    dtype('>i2')
+
+    >>> NativeEndiannessArray(x).dtype
+    dtype('int16')
+
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> NativeEndiannessArray(x)[indexer].dtype
+    dtype('int16')
+    """
+
+    __slots__ = ("array",)
+
+    def __init__(self, array) -> None:
+        self.array = indexing.as_indexable(array)
+
+    @property
+    def dtype(self) -> np.dtype:
+        return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
+
+    def __getitem__(self, key) -> np.ndarray:
+        return np.asarray(self.array[key], dtype=self.dtype)
+
+
+class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
+    """Decode arrays on the fly from integer to boolean datatype
+
+    This is useful for decoding boolean arrays from integer typed netCDF
+    variables.
+
+    >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
+
+    >>> x.dtype
+    dtype('int8')
+
+    >>> BoolTypeArray(x).dtype
+    dtype('bool')
+
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> BoolTypeArray(x)[indexer].dtype
+    dtype('bool')
+    """
+
+    __slots__ = ("array",)
+
+    def __init__(self, array) -> None:
+        self.array = indexing.as_indexable(array)
+
+    @property
+    def dtype(self) -> np.dtype:
+        return np.dtype("bool")
+
+    def __getitem__(self, key) -> np.ndarray:
+        return np.asarray(self.array[key], dtype=self.dtype)
+
+
 def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
     """Lazily apply an element-wise function to an array.
     Parameters
@@ -159,27 +224,29 @@ class CFMaskCoder(VariableCoder):
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
-        if (
-            fv is not None
-            and mv is not None
-            and not duck_array_ops.allclose_or_equiv(fv, mv)
-        ):
+        fv_exists = fv is not None
+        mv_exists = mv is not None
+
+        if not fv_exists and not mv_exists:
+            return variable
+
+        if fv_exists and mv_exists and not duck_array_ops.allclose_or_equiv(fv, mv):
             raise ValueError(
                 f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
-        if fv is not None:
+        if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
-        if mv is not None:
+        if mv_exists:
             # Ensure missing_value is cast to same dtype as data's
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
-            if not pd.isnull(fill_value) and fv is None:
+            if not pd.isnull(fill_value) and not fv_exists:
                 data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
@@ -349,3 +416,99 @@ class UnsignedIntegerCoder(VariableCoder):
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
+
+
+class DefaultFillvalueCoder(VariableCoder):
+    """Encode default _FillValue if needed."""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        dims, data, attrs, encoding = unpack_for_encoding(variable)
+        # make NaN the fill value for float types
+        if (
+            "_FillValue" not in attrs
+            and "_FillValue" not in encoding
+            and np.issubdtype(variable.dtype, np.floating)
+        ):
+            attrs["_FillValue"] = variable.dtype.type(np.nan)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        raise NotImplementedError()
+
+
+class BooleanCoder(VariableCoder):
+    """Code boolean values."""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if (
+            (variable.dtype == bool)
+            and ("dtype" not in variable.encoding)
+            and ("dtype" not in variable.attrs)
+        ):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+            attrs["dtype"] = "bool"
+            data = duck_array_ops.astype(data, dtype="i1", copy=True)
+
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.attrs.get("dtype", False) == "bool":
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
+            del attrs["dtype"]
+            data = BoolTypeArray(data)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+
+class EndianCoder(VariableCoder):
+    """Decode Endianness to native."""
+
+    def encode(self):
+        raise NotImplementedError()
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        dims, data, attrs, encoding = unpack_for_decoding(variable)
+        if not data.dtype.isnative:
+            data = NativeEndiannessArray(data)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+
+class NonStringCoder(VariableCoder):
+    """Encode NonString variables if dtypes differ."""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if "dtype" in variable.encoding and variable.encoding["dtype"] not in (
+            "S1",
+            str,
+        ):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+            dtype = np.dtype(encoding.pop("dtype"))
+            if dtype != variable.dtype:
+                if np.issubdtype(dtype, np.integer):
+                    if (
+                        np.issubdtype(variable.dtype, np.floating)
+                        and "_FillValue" not in variable.attrs
+                        and "missing_value" not in variable.attrs
+                    ):
+                        warnings.warn(
+                            f"saving variable {name} with floating "
+                            "point data as an integer dtype without "
+                            "any _FillValue to use for NaNs",
+                            SerializationWarning,
+                            stacklevel=10,
+                        )
+                    data = np.around(data)
+                data = data.astype(dtype=dtype)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self):
+        raise NotImplementedError()
