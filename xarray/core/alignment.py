@@ -552,12 +552,15 @@ class Aligner(Generic[DataAlignable]):
         return new_obj
 
     def reindex_all(self) -> None:
-        self.results = tuple(
-            self._reindex_one(obj, matching_indexes)
-            for obj, matching_indexes in zip(
-                self.objects, self.objects_matching_indexes
+        if self.join != "exact":
+            self.results = tuple(
+                self._reindex_one(obj, matching_indexes)
+                for obj, matching_indexes in zip(
+                    self.objects, self.objects_matching_indexes
+                )
             )
-        )
+        else:
+            self.results = self.objects
 
     def align(self) -> None:
         if not self.indexes and len(self.objects) == 1:
