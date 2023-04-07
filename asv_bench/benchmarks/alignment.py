@@ -8,12 +8,12 @@ ntime = 365 * 30
 nx = 50
 ny = 50
 
-rs = np.random.RandomState(0)
+rng = np.random.default_rng(0)
 
 
 class Align:
     def setup(self, *args, **kwargs):
-        data = rs.randn(ntime, nx, ny)
+        data = rng.standard_normal((ntime, nx, ny))
         self.ds = xr.Dataset(
             {"temperature": (("time", "x", "y"), data)},
             coords={
@@ -23,7 +23,7 @@ class Align:
             },
         )
         self.year = self.ds.time.dt.year
-        self.idx = rs.randint(low=0, high=ntime, size=ntime // 2)
+        self.idx = np.unique(rng.integers(low=0, high=ntime, size=ntime // 2))
         self.year_subset = self.year.isel(time=self.idx)
 
     @parameterized(["join"], [("outer", "inner", "left", "right", "exact", "override")])
