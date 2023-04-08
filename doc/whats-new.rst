@@ -25,9 +25,11 @@ New Features
 - New methods to reset an objects encoding (:py:meth:`Dataset.reset_encoding`, :py:meth:`DataArray.reset_encoding`).
   (:issue:`7686`, :pull:`7689`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
 - Allow refreshing backend engines with :py:meth:`xarray.backends.refresh_engines` (:issue:`7478`, :pull:`7523`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
+  (:issue:`7692`, :pull:`7693`) .
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -71,6 +73,11 @@ Internal Changes
 - Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
   backend interface, so no existing code should break.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Implement CF coding functions in ``VariableCoders`` (:pull:`7719`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+
+- Added a config.yml file with messages for the welcome bot when a Github user creates their first ever issue or pull request or has their first PR merged. (:issue:`7685`, :pull:`7685`)
+  By `Nishtha P <https://github.com/nishthap981>`_.
 
 .. _whats-new.2023.03.0:
 
