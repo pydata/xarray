@@ -225,6 +225,13 @@ resampling group:
 
     ds.resample(time="6H").reduce(np.mean)
 
+You can also resample on the time dimension while applying reducing along other dimensions at the same time
+by specifying the `dim` keyword argument
+
+.. code-block:: python
+
+    ds.resample(time="6H").mean(dim=["time", "latitude", "longitude"])
+
 For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
 ``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
 and supports all of its schemes. All of these resampling operations work on both
