@@ -10,7 +10,7 @@ import pandas as pd
 
 from xarray.coding import strings, times, variables
 from xarray.coding.variables import SerializationWarning, pop_to
-from xarray.core import duck_array_ops, indexing
+from xarray.core import indexing
 from xarray.core.common import (
     _contains_datetime_like_objects,
     contains_cftime_datetimes,
@@ -48,121 +48,8 @@ if TYPE_CHECKING:
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
-class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from non-native to native endianness
-
-    This is useful for decoding arrays from netCDF3 files (which are all
-    big endian) into native endianness, so they can be used with Cython
-    functions, such as those found in bottleneck and pandas.
-
-    >>> x = np.arange(5, dtype=">i2")
-
-    >>> x.dtype
-    dtype('>i2')
-
-    >>> NativeEndiannessArray(x).dtype
-    dtype('int16')
-
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> NativeEndiannessArray(x)[indexer].dtype
-    dtype('int16')
-    """
-
-    __slots__ = ("array",)
-
-    def __init__(self, array):
-        self.array = indexing.as_indexable(array)
-
-    @property
-    def dtype(self):
-        return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
-
-    def __getitem__(self, key):
-        return np.asarray(self.array[key], dtype=self.dtype)
-
-
-class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to boolean datatype
-
-    This is useful for decoding boolean arrays from integer typed netCDF
-    variables.
-
-    >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
-
-    >>> x.dtype
-    dtype('int8')
-
-    >>> BoolTypeArray(x).dtype
-    dtype('bool')
-
-    >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> BoolTypeArray(x)[indexer].dtype
-    dtype('bool')
-    """
-
-    __slots__ = ("array",)
-
-    def __init__(self, array):
-        self.array = indexing.as_indexable(array)
-
-    @property
-    def dtype(self):
-        return np.dtype("bool")
-
-    def __getitem__(self, key):
-        return np.asarray(self.array[key], dtype=self.dtype)
-
-
 def _var_as_tuple(var: Variable) -> T_VarTuple:
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
-
-
-def maybe_encode_nonstring_dtype(var: Variable, name: T_Name = None) -> Variable:
-    if "dtype" in var.encoding and var.encoding["dtype"] not in ("S1", str):
-        dims, data, attrs, encoding = _var_as_tuple(var)
-        dtype = np.dtype(encoding.pop("dtype"))
-        if dtype != var.dtype:
-            if np.issubdtype(dtype, np.integer):
-                if (
-                    np.issubdtype(var.dtype, np.floating)
-                    and "_FillValue" not in var.attrs
-                    and "missing_value" not in var.attrs
-                ):
-                    warnings.warn(
-                        f"saving variable {name} with floating "
-                        "point data as an integer dtype without "
-                        "any _FillValue to use for NaNs",
-                        SerializationWarning,
-                        stacklevel=10,
-                    )
-                data = np.around(data)
-            data = duck_array_ops.astype(data, dtype=dtype)
-        var = Variable(dims, data, attrs, encoding, fastpath=True)
-    return var
-
-
-def maybe_default_fill_value(var: Variable) -> Variable:
-    # make NaN the fill value for float types:
-    if (
-        "_FillValue" not in var.attrs
-        and "_FillValue" not in var.encoding
-        and np.issubdtype(var.dtype, np.floating)
-    ):
-        var.attrs["_FillValue"] = var.dtype.type(np.nan)
-    return var
-
-
-def maybe_encode_bools(var: Variable) -> Variable:
-    if (
-        (var.dtype == bool)
-        and ("dtype" not in var.encoding)
-        and ("dtype" not in var.attrs)
-    ):
-        dims, data, attrs, encoding = _var_as_tuple(var)
-        attrs["dtype"] = "bool"
-        data = duck_array_ops.astype(data, dtype="i1", copy=True)
-        var = Variable(dims, data, attrs, encoding, fastpath=True)
-    return var
 
 
 def _infer_dtype(array, name: T_Name = None) -> np.dtype:
@@ -292,13 +179,13 @@ def encode_cf_variable(
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.UnsignedIntegerCoder(),
+        variables.NonStringCoder(),
+        variables.DefaultFillvalueCoder(),
+        variables.BooleanCoder(),
     ]:
         var = coder.encode(var, name=name)
 
-    # TODO(shoyer): convert all of these to use coders, too:
-    var = maybe_encode_nonstring_dtype(var, name=name)
-    var = maybe_default_fill_value(var)
-    var = maybe_encode_bools(var)
+    # TODO(kmuehlbauer): check if ensure_dtype_not_object can be moved to backends:
     var = ensure_dtype_not_object(var, name=name)
 
     for attr_name in CF_RELATED_DATA:
@@ -389,19 +276,15 @@ def decode_cf_variable(
     if decode_times:
         var = times.CFDatetimeCoder(use_cftime=use_cftime).decode(var, name=name)
 
-    dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
-    # TODO(shoyer): convert everything below to use coders
+    if decode_endianness and not var.dtype.isnative:
+        var = variables.EndianCoder().decode(var)
+        original_dtype = var.dtype
 
-    if decode_endianness and not data.dtype.isnative:
-        # do this last, so it's only done if we didn't already unmask/scale
-        data = NativeEndiannessArray(data)
-        original_dtype = data.dtype
+    var = variables.BooleanCoder().decode(var)
+
+    dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
 
     encoding.setdefault("dtype", original_dtype)
-
-    if "dtype" in attributes and attributes["dtype"] == "bool":
-        del attributes["dtype"]
-        data = BoolTypeArray(data)
 
     if not is_duck_dask_array(data):
         data = indexing.LazilyIndexedArray(data)
