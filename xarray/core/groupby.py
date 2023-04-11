@@ -892,7 +892,7 @@ class GroupBy(Generic[T_Xarray]):
                 * "nearest"
 
             See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
+            an asterisk require numpy version 1.22 or newer. The "method" argument was
             previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
         keep_attrs : bool or None, default: None

@@ -128,7 +128,7 @@ def _dsplot(plotfunc):
         If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     infer_intervals: bool | None
-        If True the intervals are infered.
+        If True the intervals are inferred.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
