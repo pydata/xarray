@@ -29,6 +29,25 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def chunks(self, data: "DaskArray") -> T_Chunks:
         return data.chunks
 
+    def normalize_chunks(
+        self,
+        chunks: Union[tuple, int, dict, str],
+        shape: Union[tuple[int], None] = None,
+        limit: Union[int, None] = None,
+        dtype: Union[np.dtype, None] = None,
+        previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
+    ) -> tuple[tuple[int, ...], ...]:
+        """Called by open_dataset"""
+        from dask.array.core import normalize_chunks
+
+        return normalize_chunks(
+            chunks,
+            shape=shape,
+            limit=limit,
+            dtype=dtype,
+            previous_chunks=previous_chunks,
+        )
+
     def from_array(self, data, chunks, **kwargs) -> "DaskArray":
         import dask.array as da
 

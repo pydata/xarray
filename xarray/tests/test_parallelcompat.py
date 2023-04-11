@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import pytest
@@ -60,6 +60,18 @@ class DummyChunkManager(ChunkManagerEntrypoint):
 
     def chunks(self, data: DummyChunkedArray) -> T_Chunks:
         return data.chunks
+
+    def normalize_chunks(
+        self,
+        chunks: Union[tuple, int, dict, str],
+        shape: Union[tuple[int], None] = None,
+        limit: Union[int, None] = None,
+        dtype: Union[np.dtype, None] = None,
+        previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
+    ) -> tuple[tuple[int, ...], ...]:
+        from dask.array import normalize_chunks
+
+        return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
         self, data: np.ndarray, chunks: T_Chunks, **kwargs

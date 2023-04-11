@@ -62,6 +62,7 @@ def load_chunkmanagers(
     return available_chunkmanagers
 
 
+# TODO refactor to remove this function in favour of allowing passing either a string or the ChunkManager instance
 def guess_chunkmanager_name(manager: Optional[str]) -> str:
     chunkmanagers = list_chunkmanagers()
 
@@ -161,6 +162,18 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def chunks(self, data: T_ChunkedArray) -> T_Chunks:
+        ...
+
+    @abstractmethod
+    def normalize_chunks(
+        self,
+        chunks: Union[tuple, int, dict, str],
+        shape: Union[tuple[int], None] = None,
+        limit: Union[int, None] = None,
+        dtype: Union[np.dtype, None] = None,
+        previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
+    ) -> tuple[tuple[int, ...], ...]:
+        """Called by open_dataset"""
         ...
 
     @abstractmethod

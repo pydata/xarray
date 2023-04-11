@@ -32,7 +32,7 @@ from xarray.core.combine import (
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
-from xarray.core.parallelcompat import guess_chunkmanager_name
+from xarray.core.parallelcompat import guess_chunkmanager, guess_chunkmanager_name
 from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
@@ -311,6 +311,7 @@ def _chunk_ds(
     from_array_kwargs,
     **extra_tokens,
 ):
+    # TODO refactor this so
     chunked_array_type = guess_chunkmanager_name(chunked_array_type)
     if chunked_array_type == "dask":
         from dask.base import tokenize
@@ -323,9 +324,11 @@ def _chunk_ds(
         token = (None,)
         name_prefix = None
 
+    chunkmanager = guess_chunkmanager(chunked_array_type)
+
     variables = {}
     for name, var in backend_ds.variables.items():
-        var_chunks = _get_chunk(var, chunks)
+        var_chunks = _get_chunk(var, chunks, chunkmanager)
         variables[name] = _maybe_chunk(
             name,
             var,

@@ -1221,6 +1221,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         if isinstance(chunks, (float, str, int, tuple, list)):
             # TODO we shouldn't assume here that other chunkmanagers can handle these types
+            # TODO should we call normalize_chunks here?
             pass  # dask.array.from_array can handle these directly
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")

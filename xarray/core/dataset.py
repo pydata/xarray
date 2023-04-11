@@ -51,7 +51,6 @@ from xarray.core.common import (
 )
 from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
-from xarray.core.daskcompat import normalize_chunks
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -209,7 +208,7 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _get_chunk(var, chunks):
+def _get_chunk(var, chunks, chunkmanager):
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
@@ -231,7 +230,7 @@ def _get_chunk(var, chunks):
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
     )
 
-    chunk_shape = normalize_chunks(
+    chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
 
