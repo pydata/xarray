@@ -54,7 +54,8 @@ Bug fixes
   (:issue:`7420`, :pull:`7441`).
   By `Justus Magin <https://github.com/keewis>`_ and
   `Spencer Clark  <https://github.com/spencerkclark>`_.
-
+- Preserve boolean dtype within encoding (:issue:`7652`, :pull:`7720`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -73,6 +74,8 @@ Internal Changes
 - Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
   backend interface, so no existing code should break.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Implement CF coding functions in ``VariableCoders`` (:pull:`7719`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 - Added a config.yml file with messages for the welcome bot when a Github user creates their first ever issue or pull request or has their first PR merged. (:issue:`7685`, :pull:`7685`)
   By `Nishtha P <https://github.com/nishthap981>`_.
