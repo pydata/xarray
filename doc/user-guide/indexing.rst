@@ -398,7 +398,7 @@ These methods may also be applied to ``Dataset`` objects
 Vectorized indexing may be used to extract information from the nearest
 grid cells of interest, for example, the nearest climate model grid cells
 to a collection specified weather station latitudes and longitudes.
-Note that to trigger vectorized indexing behavior (not orthogonal)
+To trigger vectorized indexing behavior
 you will need to provide the selection dimensions with a new
 shared output dimension name. In the example below, the selections
 of the closest latitude and longitude are renamed to an output
