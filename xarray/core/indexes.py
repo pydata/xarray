@@ -135,7 +135,7 @@ class Index:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == "O":
+    if len(index) > 0 and index.dtype == "O" and not isinstance(index, CFTimeIndex):
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
