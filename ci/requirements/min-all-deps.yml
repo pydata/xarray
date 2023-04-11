@@ -14,7 +14,7 @@ dependencies:
   - cdms2=3.1
   - cftime=1.5
   - coveralls
-  - dask-core=2022.9.2
+  - dask-core=2022.1
   - distributed=2022.1
   - flox=0.5
   - h5netcdf=0.13
