@@ -642,7 +642,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             "attrs": decode_numpy_dict_values(self.attrs),
         }
         if data:
-            item["data"] = ensure_us_time_resolution(self.values)
+            item["data"] = ensure_us_time_resolution(self.to_numpy())
             if not numpy_data:
                 item["data"] = item["data"].tolist()
         else:
