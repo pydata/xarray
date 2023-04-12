@@ -29,7 +29,7 @@ from pandas) may suffice.
 To resolve this issue for more complex cases, xarray has the
 :py:func:`~xarray.register_dataset_accessor` and
 :py:func:`~xarray.register_dataarray_accessor` decorators for adding custom
-"accessors" on xarray objects, thereby "extending" the functionality of your xarray object. 
+"accessors" on xarray objects, thereby "extending" the functionality of your xarray object.
 
 Here's how you might use these decorators to
 write a custom "geo" accessor implementing a geography specific extension to
