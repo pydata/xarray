@@ -537,7 +537,7 @@ class TestConcatDataset:
         actual = concat(objs, dim="x", data_vars="minimal")
         assert_identical(data, actual)
 
-    def test_concat_data_vars(self):
+    def test_concat_data_vars(self) -> None:
         # TODO: annotating this func fails
         data = Dataset({"foo": ("x", np.random.randn(10))})
         objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
