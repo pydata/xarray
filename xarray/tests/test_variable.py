@@ -4,6 +4,7 @@ import warnings
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -62,7 +63,7 @@ def var():
 
 
 class VariableSubclassobjects:
-    cls: staticmethod[Variable]
+    cls: ClassVar[staticmethod[Variable]]
 
     def test_properties(self):
         data = 0.5 * np.arange(10)
