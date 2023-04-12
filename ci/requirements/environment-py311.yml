@@ -27,7 +27,7 @@ dependencies:
   - numexpr
   - numpy
   - packaging
-  - pandas
+  - pandas<2
   - pint
   - pip
   - pooch
