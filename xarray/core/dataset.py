@@ -6573,7 +6573,8 @@ class Dataset(
             )
         try:
             variable_dict = {
-                k: (v["dims"], v["data"], v.get("attrs")) for k, v in variables
+                k: (v["dims"], v["data"], v.get("attrs"), v.get("encoding"))
+                for k, v in variables
             }
         except KeyError as e:
             raise ValueError(
