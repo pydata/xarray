@@ -553,7 +553,7 @@ def map_blocks(
 
     for index in result._indexes:
         result[index].attrs = template[index].attrs
-        result[index].encoding = template[index].encoding
+        result[index]._set_encoding_internal(template[index].encoding)
 
     for name, gname_l in var_key_map.items():
         dims = template[name].dims
@@ -571,7 +571,7 @@ def map_blocks(
             hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
         result[name] = (dims, data, template[name].attrs)
-        result[name].encoding = template[name].encoding
+        result[name]._set_encoding_internal(template[name].encoding)
 
     result = result.set_coords(template._coord_names)
 

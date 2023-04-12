@@ -594,7 +594,9 @@ class ZarrStore(AbstractWritableDataStore):
             vars_with_encoding = {}
             for vn in existing_variable_names:
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
-                vars_with_encoding[vn].encoding = existing_vars[vn].encoding
+                vars_with_encoding[vn]._set_encoding_internal(
+                    existing_vars[vn].encoding
+                )
             vars_with_encoding, _ = self.encode(vars_with_encoding, {})
             variables_encoded.update(vars_with_encoding)
 
@@ -650,7 +652,7 @@ class ZarrStore(AbstractWritableDataStore):
 
             fill_value = attrs.pop("_FillValue", None)
             if v.encoding == {"_FillValue": None} and fill_value is None:
-                v.encoding = {}
+                v._encoding = {}
 
             if name in self.zarr_group:
                 # existing variable

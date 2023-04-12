@@ -1015,6 +1015,7 @@ class TestConcatDataArray:
         with pytest.raises(ValueError, match=r"not a valid argument"):
             concat([foo, bar], dim="w", data_vars="minimal")
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_concat_encoding(self) -> None:
         # Regression test for GH1297
         ds = Dataset(

@@ -261,7 +261,7 @@ def create_test_data(seed: int | None = None, add_attrs: bool = True) -> Dataset
         "dim3",
         np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
     )
-    obj.encoding = {"foo": "bar"}
+    obj._encoding = {"foo": "bar"}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj
 

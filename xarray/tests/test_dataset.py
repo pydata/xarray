@@ -2873,6 +2873,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"contain all variables in original"):
             orig.copy(data={"var1": new_var1})
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_reset_encoding(self) -> None:
         orig = create_test_data()
         vencoding = {"scale_factor": 10}
@@ -3037,6 +3038,7 @@ class TestDataset:
             with pytest.warns(UserWarning, match="does not create an index anymore"):
                 original.rename({"a": "b"})
 
+    @pytest.mark.filterwarnings("ignore:Setting encoding directly.*:FutureWarning")
     def test_rename_perserve_attrs_encoding(self) -> None:
         # test propagate attrs/encoding to new variable(s) created from Index object
         original = Dataset(coords={"x": ("x", [0, 1, 2])})
@@ -7024,3 +7026,18 @@ def test_transpose_error() -> None:
         ),
     ):
         ds.transpose(["y", "x"])  # type: ignore
+
+
+def test_setting_encoding_property_warns_deprecated():
+    ds = xr.Dataset({"foo": (("x", "y"), [[21]]), "bar": (("x", "y"), [[12]])})
+    with pytest.warns(
+        FutureWarning,
+        match=r"Setting encoding directly using the encoding property is deprecated.*",
+    ):
+        ds.encoding = {"unlimited_dims": {"x"}}
+
+    with pytest.warns(
+        FutureWarning,
+        match=r"Setting encoding directly using the encoding property is deprecated.*",
+    ):
+        ds["foo"].encoding = {"dtype": "f4"}

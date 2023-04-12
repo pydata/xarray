@@ -871,12 +871,22 @@ class DataArray(
     @property
     def encoding(self) -> dict[Any, Any]:
         """Dictionary of format-specific settings for how this array should be
-        serialized."""
+        serialized.
+
+        .. warning::
+            Setting encoding directly using the encoding property is deprecated.
+            Use the encoding kwarg in to_netcdf/to_zarr to set output encoding.
+        """
         return self.variable.encoding
 
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
+        # deprecated (variable setter will warn)
         self.variable.encoding = dict(value)
+
+    def _set_encoding_internal(self, value: Mapping[Any, Any]) -> None:
+        """temporary method to set encoding without issuing a FutureWarning"""
+        self.variable._set_encoding_internal(value)
 
     def reset_encoding(self: T_DataArray) -> T_DataArray:
         """Return a new DataArray without encoding on the array or any attached

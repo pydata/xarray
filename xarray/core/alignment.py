@@ -548,7 +548,7 @@ class Aligner(Generic[DataAlignable]):
             self.exclude_dims,
             self.exclude_vars,
         )
-        new_obj.encoding = obj.encoding
+        new_obj._set_encoding_internal(obj.encoding)
         return new_obj
 
     def reindex_all(self) -> None:

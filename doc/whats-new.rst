@@ -40,7 +40,9 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Setting encoding on Xarray objects directly via the ``encoding`` attribute is deprecated in favor of using the
+  ``encoding`` kwarg in :py:meth:`Dataset.to_netcdf` / :py:meth:`Dataset.to_zarr`. (:issue:`6323`, :pull:`7708`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~

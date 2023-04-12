@@ -365,7 +365,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if attrs is not None:
             self.attrs = attrs
         if encoding is not None:
-            self.encoding = encoding
+            self._set_encoding_internal(encoding)
 
     @property
     def dtype(self):
@@ -969,13 +969,28 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def encoding(self) -> dict[Any, Any]:
-        """Dictionary of encodings on this variable."""
+        """Dictionary of encodings on this variable.
+
+        .. warning::
+            Setting encoding directly using the encoding property is deprecated.
+            Use the encoding kwarg in to_netcdf/to_zarr to set output encoding.
+        """
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
 
     @encoding.setter
-    def encoding(self, value):
+    def encoding(self, value: Mapping[Any, Any]) -> None:
+        warnings.warn(
+            "Setting encoding directly using the encoding property is "
+            "deprecated. Use the encoding kwarg in to_netcdf/to_zarr to "
+            "set output encoding.",
+            category=FutureWarning,
+        )
+        self._set_encoding_internal(value)
+
+    def _set_encoding_internal(self, value: Mapping[Any, Any]) -> None:
+        """temporary method to set encoding without issuing a FutureWarning"""
         try:
             self._encoding = dict(value)
         except ValueError:

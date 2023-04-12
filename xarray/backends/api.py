@@ -1254,7 +1254,7 @@ def dump_to_store(
     for k, enc in encoding.items():
         # no need to shallow copy the variable again; that already happened
         # in encode_dataset_coordinates
-        variables[k].encoding = enc
+        variables[k]._set_encoding_internal(enc)
         check_encoding.add(k)
 
     if encoder:

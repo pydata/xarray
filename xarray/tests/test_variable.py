@@ -2963,3 +2963,12 @@ def test_pandas_two_only_timedelta_conversion_warning() -> None:
         var = Variable(["time"], data)
 
     assert var.dtype == np.dtype("timedelta64[ns]")
+
+
+def test_setting_encoding_property_warns_deprecated():
+    v = Variable("x", [1, 2, 3])
+    with pytest.warns(
+        FutureWarning,
+        match=r"Setting encoding directly using the encoding property is deprecated.*",
+    ):
+        v.encoding = {"dtype": "f4"}
