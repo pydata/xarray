@@ -58,7 +58,8 @@ Bug fixes
   (:issue:`7420`, :pull:`7441`).
   By `Justus Magin <https://github.com/keewis>`_ and
   `Spencer Clark  <https://github.com/spencerkclark>`_.
-
+- Preserve boolean dtype within encoding (:issue:`7652`, :pull:`7720`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 Documentation
 ~~~~~~~~~~~~~
