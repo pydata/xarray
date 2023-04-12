@@ -115,7 +115,7 @@ def _get_date_field(values, name, dtype):
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
-        return access_method(values, name)
+        return access_method(values, name).astype(dtype)
 
 
 def _round_through_series_or_index(values, name, freq):

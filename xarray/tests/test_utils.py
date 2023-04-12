@@ -23,11 +23,13 @@ class TestAlias:
 
 
 @pytest.mark.parametrize(
-    "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
+    ["a", "b", "expected"],
+    [
+        [np.array(["a"]), np.array(["b"]), np.array(["a", "b"])],
+        [np.array([1], dtype="int64"), np.array([2], dtype="int64"), pd.Index([1, 2])],
+    ],
 )
 def test_maybe_coerce_to_str(a, b, expected):
-    a = np.array([a])
-    b = np.array([b])
     index = pd.Index(a).append(pd.Index(b))
 
     actual = utils.maybe_coerce_to_str(index, [a, b])
