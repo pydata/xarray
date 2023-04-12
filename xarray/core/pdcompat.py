@@ -94,7 +94,7 @@ def _convert_base_to_offset(base, freq, index):
         raise ValueError("Can only resample using a DatetimeIndex or CFTimeIndex.")
 
 
-def nanosecond_precision_timestamp(*args, **kwargs):
+def nanosecond_precision_timestamp(*args, **kwargs) -> pd.Timestamp:
     """Return a nanosecond-precision Timestamp object.
 
     Note this function should no longer be needed after addressing GitHub issue
