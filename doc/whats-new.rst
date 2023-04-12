@@ -34,6 +34,8 @@ New Features
   :py:meth:`xarray.DataArray.to_dict` to return data as numpy objects instead of native Python objects.
   (:issue:`1599`, :pull:`7739`) .
   By `James McCreight <https://github.com/jmccreight>`_.
+- Support `pandas>=2.0` (:pull:`7724`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
