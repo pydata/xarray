@@ -653,6 +653,8 @@ def encode_cf_datetime(
         delta_units = _netcdf_to_numpy_timeunit(delta)
         time_delta = np.timedelta64(1, delta_units).astype("timedelta64[ns]")
 
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
         ref_date = nanosecond_precision_timestamp(_ref_date)
 
         # If the ref_date Timestamp is timezone-aware, convert to UTC and
