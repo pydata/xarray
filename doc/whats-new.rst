@@ -30,6 +30,8 @@ New Features
 - Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
   (:issue:`7692`, :pull:`7693`) .
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Support `pandas>=2.0` (:pull:`7724`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
