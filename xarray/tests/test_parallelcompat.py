@@ -69,7 +69,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         dtype: Union[np.dtype, None] = None,
         previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
     ) -> tuple[tuple[int, ...], ...]:
-        from dask.array import normalize_chunks
+        from dask.array.core import normalize_chunks
 
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 

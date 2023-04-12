@@ -62,8 +62,16 @@ def load_chunkmanagers(
     return available_chunkmanagers
 
 
-# TODO refactor to remove this function in favour of allowing passing either a string or the ChunkManager instance
-def guess_chunkmanager_name(manager: Optional[str]) -> str:
+def guess_chunkmanager(
+    manager: Union[str, "ChunkManagerEntrypoint", None]
+) -> "ChunkManagerEntrypoint":
+    """
+    Get namespace of chunk-handling methods, guessing from what's available.
+
+    If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
+    Else use whatever is installed, defaulting to dask if there are multiple options.
+    """
+
     chunkmanagers = list_chunkmanagers()
 
     if manager is None:
@@ -74,20 +82,6 @@ def guess_chunkmanager_name(manager: Optional[str]) -> str:
             # default to trying to use dask
             manager = "dask"
 
-    return manager
-
-
-def guess_chunkmanager(manager: Optional[str]) -> "ChunkManagerEntrypoint":
-    """
-    Get namespace of chunk-handling methods, guessing from what's available.
-
-    If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
-    Else use whatever is installed, defaulting to dask if there are multiple options.
-    """
-
-    chunkmanagers = list_chunkmanagers()
-    manager = guess_chunkmanager_name(manager)
-
     if isinstance(manager, str):
         if manager not in chunkmanagers:
             raise ValueError(
@@ -95,9 +89,13 @@ def guess_chunkmanager(manager: Optional[str]) -> "ChunkManagerEntrypoint":
             )
 
         return chunkmanagers[manager]
+    elif isinstance(manager, ChunkManagerEntrypoint):
+        # already a valid ChunkManager so just pass through
+        return manager
     else:
-        # TODO should we accept type[ChunkManagerEntrypoint] too?
-        raise TypeError("manager must be a string")
+        raise TypeError(
+            f"manager must be a string or instance of ChunkManagerEntryPoint, but received type {type(manager)}"
+        )
 
 
 def get_chunked_array_type(*args) -> "ChunkManagerEntrypoint":

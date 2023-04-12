@@ -29,10 +29,11 @@ from xarray.core.combine import (
     _nested_combine,
     combine_by_coords,
 )
+from xarray.core.daskmanager import DaskManager
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
-from xarray.core.parallelcompat import guess_chunkmanager, guess_chunkmanager_name
+from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
@@ -311,9 +312,10 @@ def _chunk_ds(
     from_array_kwargs,
     **extra_tokens,
 ):
-    # TODO refactor this so
-    chunked_array_type = guess_chunkmanager_name(chunked_array_type)
-    if chunked_array_type == "dask":
+    chunkmanager = guess_chunkmanager(chunked_array_type)
+
+    # TODO refactor to move this dask-specific logic inside the DaskManager class
+    if isinstance(chunkmanager, DaskManager):
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)
@@ -323,8 +325,6 @@ def _chunk_ds(
         # not used
         token = (None,)
         name_prefix = None
-
-    chunkmanager = guess_chunkmanager(chunked_array_type)
 
     variables = {}
     for name, var in backend_ds.variables.items():
@@ -337,7 +337,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
-            chunked_array_type=chunked_array_type,
+            chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs.copy(),
         )
     return backend_ds._replace(variables)

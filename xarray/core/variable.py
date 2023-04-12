@@ -26,7 +26,10 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import guess_chunkmanager
+from xarray.core.parallelcompat import (  # noqa
+    ChunkManagerEntrypoint,
+    guess_chunkmanager,
+)
 from xarray.core.pycompat import (
     array_type,
     integer_types,
@@ -1158,7 +1161,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
-        chunked_array_type: str | None = None,
+        chunked_array_type: str
+        | ChunkManagerEntryPoint
+        | None = None,  # noqa: F821  # type: ignore[name-defined]
         from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> Variable:

@@ -51,6 +51,7 @@ from xarray.core.common import (
 )
 from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.daskmanager import DaskManager
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -73,7 +74,11 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager_name
+from xarray.core.parallelcompat import (  # noqa
+    ChunkManagerEntrypoint,
+    get_chunked_array_type,
+    guess_chunkmanager,
+)
 from xarray.core.pycompat import (
     array_type,
     is_chunked_array,
@@ -275,15 +280,16 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
-    chunked_array_type=None,
+    chunked_array_type: str
+    | ChunkManagerEntryPoint = None,  # noqa: F821  # type: ignore[name-defined]
     from_array_kwargs=None,
 ):
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
-        chunked_array_type = guess_chunkmanager_name(chunked_array_type)
-        if chunked_array_type == "dask":
+        guess_chunkmanager(chunked_array_type)
+        if isinstance(chunked_array_type, DaskManager):
             from dask.base import tokenize
 
             # when rechunking by different amounts, make sure dask names change
@@ -2235,7 +2241,9 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        chunked_array_type: str | None = None,
+        chunked_array_type: str
+        | ChunkManagerEntryPoint
+        | None = None,  # noqa: F821 # type: ignore[name-defined]
         from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
@@ -2307,7 +2315,7 @@ class Dataset(
                 f"some chunks keys are not dimensions on this object: {bad_dims}"
             )
 
-        chunked_array_type = guess_chunkmanager_name(chunked_array_type)
+        chunkmanager = guess_chunkmanager(chunked_array_type)
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
@@ -2320,7 +2328,7 @@ class Dataset(
                 lock,
                 name_prefix,
                 inline_array=inline_array,
-                chunked_array_type=chunked_array_type,
+                chunked_array_type=chunkmanager,
                 from_array_kwargs=from_array_kwargs.copy(),
             )
             for k, v in self.variables.items()
