@@ -41,6 +41,12 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+Performance
+~~~~~~~~~~~
+- Optimize alignment with ``join="exact", copy=False`` by avoiding copies. (:pull:`7736`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Avoid unnecessary copies of ``CFTimeIndex``. (:pull:`7735`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
