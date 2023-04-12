@@ -552,15 +552,12 @@ class Aligner(Generic[DataAlignable]):
         return new_obj
 
     def reindex_all(self) -> None:
-        if self.join == "exact" and not self.copy:
-            self.results = self.objects
-        else:
-            self.results = tuple(
-                self._reindex_one(obj, matching_indexes)
-                for obj, matching_indexes in zip(
-                    self.objects, self.objects_matching_indexes
-                )
+        self.results = tuple(
+            self._reindex_one(obj, matching_indexes)
+            for obj, matching_indexes in zip(
+                self.objects, self.objects_matching_indexes
             )
+        )
 
     def align(self) -> None:
         if not self.indexes and len(self.objects) == 1:
@@ -577,6 +574,8 @@ class Aligner(Generic[DataAlignable]):
 
         if self.join == "override":
             self.override_indexes()
+        elif self.join == "exact" and not self.copy:
+            self.results = self.objects
         else:
             self.reindex_all()
 
