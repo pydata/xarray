@@ -1,8 +1,6 @@
 name: Benchmark compare last release
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, labeled]
   push:
     branches:
       - main
