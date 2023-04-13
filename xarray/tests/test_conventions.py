@@ -168,6 +168,7 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -185,6 +186,7 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
