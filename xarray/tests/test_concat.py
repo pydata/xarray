@@ -297,6 +297,7 @@ def test_concat_multiple_datasets_with_multiple_missing_variables() -> None:
     assert_identical(actual, expected)
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_concat_type_of_missing_fill() -> None:
     datasets = create_typed_datasets(2, seed=123)
     expected1 = concat(datasets, dim="day", fill_value=dtypes.NA)
