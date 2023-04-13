@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, cast, overload, Union
 
 import pandas as pd
 
@@ -27,12 +27,14 @@ if TYPE_CHECKING:
         JoinOptions,
     )
 
+    T_DataVars = Union[ConcatOptions, Iterable[Hashable]]
+
 
 @overload
 def concat(
     objs: Iterable[T_Dataset],
     dim: Hashable | T_DataArray | pd.Index,
-    data_vars: ConcatOptions | list[Hashable] = "all",
+    data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
@@ -47,7 +49,7 @@ def concat(
 def concat(
     objs: Iterable[T_DataArray],
     dim: Hashable | T_DataArray | pd.Index,
-    data_vars: ConcatOptions | list[Hashable] = "all",
+    data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
@@ -61,7 +63,7 @@ def concat(
 def concat(
     objs,
     dim,
-    data_vars="all",
+    data_vars: T_DataVars = "all",
     coords="different",
     compat: CompatOptions = "equals",
     positions=None,
@@ -291,7 +293,7 @@ def _calc_concat_dim_index(
     return dim, index
 
 
-def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
+def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, compat):
     """
     Determine which dataset variables need to be concatenated in the result,
     """
@@ -445,7 +447,7 @@ def _parse_datasets(
 def _dataset_concat(
     datasets: list[T_Dataset],
     dim: str | T_DataArray | pd.Index,
-    data_vars: str | list[str],
+    data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
@@ -665,7 +667,7 @@ def _dataset_concat(
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
     dim: str | T_DataArray | pd.Index,
-    data_vars: str | list[str],
+    data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
