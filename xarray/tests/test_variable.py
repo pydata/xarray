@@ -216,6 +216,7 @@ class VariableSubclassobjects:
         x = self.cls(["x"], pd.DatetimeIndex([d]))
         self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[ns]")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
 
