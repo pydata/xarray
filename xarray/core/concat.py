@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
-from typing import TYPE_CHECKING, Any, cast, overload, Union
+from typing import TYPE_CHECKING, Any, Union, cast, overload
 
 import pandas as pd
 
