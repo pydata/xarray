@@ -375,10 +375,8 @@
    CFTimeIndex.is_floating
    CFTimeIndex.is_integer
    CFTimeIndex.is_interval
-   CFTimeIndex.is_mixed
    CFTimeIndex.is_numeric
    CFTimeIndex.is_object
-   CFTimeIndex.is_type_compatible
    CFTimeIndex.isin
    CFTimeIndex.isna
    CFTimeIndex.isnull
@@ -399,7 +397,6 @@
    CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
-   CFTimeIndex.set_value
    CFTimeIndex.shift
    CFTimeIndex.slice_indexer
    CFTimeIndex.slice_locs
@@ -413,7 +410,6 @@
    CFTimeIndex.to_flat_index
    CFTimeIndex.to_frame
    CFTimeIndex.to_list
-   CFTimeIndex.to_native_types
    CFTimeIndex.to_numpy
    CFTimeIndex.to_series
    CFTimeIndex.tolist
@@ -438,8 +434,6 @@
    CFTimeIndex.hasnans
    CFTimeIndex.hour
    CFTimeIndex.inferred_type
-   CFTimeIndex.is_all_dates
-   CFTimeIndex.is_monotonic
    CFTimeIndex.is_monotonic_increasing
    CFTimeIndex.is_monotonic_decreasing
    CFTimeIndex.is_unique
