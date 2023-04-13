@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
-from typing import ClassVar, Callable
-from abc import ABC, abstractmethod
-
 
 import numpy as np
 import pandas as pd
@@ -1052,6 +1050,7 @@ class VariableSubclassobjects(ABC):
                 window_dim=window_dim,
                 center=center,
             )
+
 
 class TestVariable(VariableSubclassobjects):
     def cls(self, *args, **kwargs) -> Variable:
@@ -2221,7 +2220,6 @@ class TestVariable(VariableSubclassobjects):
                 side="left",
             )
         assert new.attrs == _attrs
-
 
 
 @requires_dask
