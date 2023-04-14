@@ -30,8 +30,6 @@ New Features
 - Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
   (:issue:`7692`, :pull:`7693`) .
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Support `pandas>=2.0` (:pull:`7724`)
-  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -62,6 +60,8 @@ Bug fixes
   (:issue:`7420`, :pull:`7441`).
   By `Justus Magin <https://github.com/keewis>`_ and
   `Spencer Clark  <https://github.com/spencerkclark>`_.
+- Various `dtype` related fixes needed to support `pandas>=2.0` (:pull:`7724`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Preserve boolean dtype within encoding (:issue:`7652`, :pull:`7720`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
