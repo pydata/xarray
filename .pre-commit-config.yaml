@@ -24,7 +24,6 @@ repos:
   - repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
-      - id: black
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.8
