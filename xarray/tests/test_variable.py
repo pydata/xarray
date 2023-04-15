@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -61,8 +62,10 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
-class VariableSubclassobjects:
-    cls: staticmethod[Variable]
+class VariableSubclassobjects(ABC):
+    @abstractmethod
+    def cls(self, *args, **kwargs) -> Variable:
+        raise NotImplementedError
 
     def test_properties(self):
         data = 0.5 * np.arange(10)
@@ -204,6 +207,7 @@ class VariableSubclassobjects:
         x = self.cls(["x"], [value])
         self._assertIndexedLikeNDArray(x, value, dtype)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
         x = self.cls(["x"], [d])
@@ -215,6 +219,7 @@ class VariableSubclassobjects:
         x = self.cls(["x"], pd.DatetimeIndex([d]))
         self._assertIndexedLikeNDArray(x, np.datetime64(d), "datetime64[ns]")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_index_0d_timedelta64(self):
         td = timedelta(hours=1)
 
@@ -275,6 +280,7 @@ class VariableSubclassobjects:
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_conversion(self):
         times = pd.date_range("2000-01-01", periods=3)
         for values, preserve_source in [
@@ -290,6 +296,7 @@ class VariableSubclassobjects:
             same_source = source_ndarray(v.values) is source_ndarray(values)
             assert preserve_source == same_source
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_conversion(self):
         times = pd.timedelta_range(start=0, periods=3)
         for values, preserve_source in [
@@ -310,6 +317,7 @@ class VariableSubclassobjects:
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_valid_range(self):
         data = np.datetime64("1250-01-01", "us")
         pderror = pd.errors.OutOfBoundsDatetime
@@ -317,6 +325,7 @@ class VariableSubclassobjects:
             self.cls(["t"], [data])
 
     @pytest.mark.xfail(reason="pandas issue 36615")
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_valid_range(self):
         data = np.timedelta64("200000", "D")
         pderror = pd.errors.OutOfBoundsTimedelta
@@ -454,6 +463,23 @@ class VariableSubclassobjects:
         ]:
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
+
+    def test_reset_encoding(self) -> None:
+        encoding1 = {"scale_factor": 1}
+        # encoding set via cls constructor
+        v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
+        assert v1.encoding == encoding1
+        v2 = v1.reset_encoding()
+        assert v1.encoding == encoding1
+        assert v2.encoding == {}
+
+        # encoding set via setter
+        encoding3 = {"scale_factor": 10}
+        v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
+        assert v3.encoding == encoding3
+        v4 = v3.reset_encoding()
+        assert v3.encoding == encoding3
+        assert v4.encoding == {}
 
     def test_concat(self):
         x = np.arange(5)
@@ -1033,7 +1059,8 @@ class VariableSubclassobjects:
 
 
 class TestVariable(VariableSubclassobjects):
-    cls = staticmethod(Variable)
+    def cls(self, *args, **kwargs) -> Variable:
+        return Variable(*args, **kwargs)
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -1062,6 +1089,7 @@ class TestVariable(VariableSubclassobjects):
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime64_conversion_scalar(self):
         expected = np.datetime64("2000-01-01", "ns")
         for values in [
@@ -1074,6 +1102,7 @@ class TestVariable(VariableSubclassobjects):
             assert v.values == expected
             assert v.values.dtype == np.dtype("datetime64[ns]")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_timedelta64_conversion_scalar(self):
         expected = np.timedelta64(24 * 60 * 60 * 10**9, "ns")
         for values in [
@@ -1100,6 +1129,7 @@ class TestVariable(VariableSubclassobjects):
         assert v.dtype == np.dtype("datetime64[ns]")
         assert v.values == np.datetime64("2000-01-01", "ns")
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_0d_timedelta(self):
         for td in [pd.to_timedelta("1s"), np.timedelta64(1, "s")]:
             v = Variable([], td)
@@ -1538,6 +1568,7 @@ class TestVariable(VariableSubclassobjects):
             v.transpose(..., "not_a_dim", missing_dims="warn")
             assert_identical(expected_ell, actual)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_transpose_0d(self):
         for value in [
             3.5,
@@ -2203,7 +2234,8 @@ class TestVariable(VariableSubclassobjects):
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
-    cls = staticmethod(lambda *args: Variable(*args).chunk())
+    def cls(self, *args, **kwargs) -> Variable:
+        return Variable(*args, **kwargs).chunk()
 
     def test_chunk(self):
         unblocked = Variable(["dim_0", "dim_1"], np.ones((3, 4)))
@@ -2315,7 +2347,8 @@ class TestVariableWithSparse:
 
 
 class TestIndexVariable(VariableSubclassobjects):
-    cls = staticmethod(IndexVariable)
+    def cls(self, *args, **kwargs) -> IndexVariable:
+        return IndexVariable(*args, **kwargs)
 
     def test_init(self):
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):
@@ -2519,6 +2552,7 @@ class TestAsCompatibleData:
         assert_array_equal(expected, actual)
         assert np.dtype(float) == actual.dtype
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime(self):
         expected = np.datetime64("2000-01-01")
         actual = as_compatible_data(expected)

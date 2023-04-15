@@ -4,29 +4,46 @@
 Contributing to xarray
 **********************
 
-
 .. note::
 
   Large parts of this document came from the `Pandas Contributing
   Guide <http://pandas.pydata.org/pandas-docs/stable/contributing.html>`_.
 
+Overview
+========
+
+We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
+contribute beyond just writing code.
+All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
+and other ideas are welcome.
+
+If you have any questions on the process or how to fix something feel free to ask us!
+The recommended place to ask a question is  on `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
+, but we also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
+`mailing list <https://groups.google.com/g/xarray>`_. There is also a
+`"python-xarray" tag on Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`_ which we monitor for questions.
+
+We also have a biweekly community call, details of which are announced on the
+`Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_.
+You are very welcome to join! Though we would love to hear from you, there is no expectation to
+contribute during the meeting either - you are always welcome to just sit in and listen.
+
+This project is a community effort, and everyone is welcome to contribute. Everyone within the community
+is expected to abide by our `code of conduct <https://github.com/pydata/xarray/blob/main/CODE_OF_CONDUCT.md>`_.
+
 Where to start?
 ===============
 
-All contributions, bug reports, bug fixes, documentation improvements,
-enhancements, and ideas are welcome.
-
 If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
-to find issues that interest you. There are a number of issues listed under
-`Documentation <https://github.com/pydata/xarray/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation>`_
+to find issues that interest you.
+Some issues are particularly suited for new contributors by the label `Documentation <https://github.com/pydata/xarray/labels/topic-documentation>`_
 and `good first issue
-<https://github.com/pydata/xarray/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`_
-where you could start out. Once you've found an interesting issue, you can
-return here to get your development environment setup.
+<https://github.com/pydata/xarray/labels/contrib-good-first-issue>`_ where you could start out.
+These are well documented issues, that do not require a deep understanding of the internals of xarray.
 
-Feel free to ask questions on the `mailing list
-<https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!forum/xarray>`_.
+Once you've found an interesting issue, you can return here to get your development environment setup.
+The xarray project does not assign issues. Issues are "assigned" by opening a Pull Request(PR).
 
 .. _contributing.bug_reports:
 
@@ -34,15 +51,20 @@ Bug reports and enhancement requests
 ====================================
 
 Bug reports are an important part of making *xarray* more stable. Having a complete bug
-report will allow others to reproduce the bug and provide insight into fixing. See
-`this stackoverflow article <https://stackoverflow.com/help/mcve>`_ for tips on
-writing a good bug report.
+report will allow others to reproduce the bug and provide insight into fixing.
 
 Trying out the bug-producing code on the *main* branch is often a worthwhile exercise
 to confirm that the bug still exists. It is also worth searching existing bug reports and
 pull requests to see if the issue has already been reported and/or fixed.
 
-Bug reports must:
+Submitting a bug report
+-----------------------
+
+If you find a bug in the code or documentation, do not hesitate to submit a ticket to the
+`Issue Tracker <https://github.com/pydata/xarray/issues>`_.
+You are also welcome to post feature requests or pull requests.
+
+If you are reporting a bug, please use the provided template which includes the following:
 
 #. Include a short, self-contained Python snippet reproducing the problem.
    You can format the code nicely by using `GitHub Flavored Markdown
@@ -67,13 +89,12 @@ Bug reports must:
 
 #. Explain why the current behavior is wrong/not desired and what you expect instead.
 
-The issue will then show up to the *xarray* community and be open to comments/ideas
-from others.
+The issue will then show up to the *xarray* community and be open to comments/ideas from others.
+
+See this `stackoverflow article for tips on writing a good bug report <https://stackoverflow.com/help/mcve>`_ .
+
 
 .. _contributing.github:
-
-Working with the code
-=====================
 
 Now that you have an issue you want to fix, enhancement to add, or documentation
 to improve, you need to learn how to work with GitHub and the *xarray* code base.
@@ -81,12 +102,7 @@ to improve, you need to learn how to work with GitHub and the *xarray* code base
 .. _contributing.version_control:
 
 Version control, Git, and GitHub
---------------------------------
-
-To the new user, working with Git is one of the more daunting aspects of contributing
-to *xarray*.  It can very quickly become overwhelming, but sticking to the guidelines
-below will help keep the process straightforward and mostly trouble free.  As always,
-if you are having difficulties please feel free to ask for help.
+================================
 
 The code is hosted on `GitHub <https://www.github.com/pydata/xarray>`_. To
 contribute you will need to sign up for a `free GitHub account
@@ -102,40 +118,160 @@ Some great resources for learning Git:
 Getting started with Git
 ------------------------
 
-`GitHub has instructions <https://help.github.com/set-up-git-redirect>`__ for installing git,
+`GitHub has instructions for setting up Git <https://help.github.com/set-up-git-redirect>`__ including installing git,
 setting up your SSH key, and configuring git.  All these steps need to be completed before
 you can work seamlessly between your local repository and GitHub.
 
-.. _contributing.forking:
+.. note::
 
-Forking
--------
+    The following instructions assume you want to learn how to interact with github via the git command-line utility,
+    but contributors who are new to git may find it easier to use other tools instead such as
+    `Github Desktop <https://desktop.github.com/>`_.
 
-You will need your own fork to work on the code. Go to the `xarray project
-page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button. You will
-want to clone your fork to your machine::
+Development workflow
+====================
+
+To keep your work well organized, with readable history, and in turn make it easier for project
+maintainers to see what you've done, and why you did it, we recommend you to follow workflow:
+
+1. `Create an account <https://github.com/>`_ on GitHub if you do not already have one.
+
+2. You will need your own fork to work on the code. Go to the `xarray project
+   page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button near the top of the page.
+   This creates a copy of the code under your account on the GitHub server.
+
+3. Clone your fork to your machine::
 
     git clone https://github.com/your-user-name/xarray.git
     cd xarray
     git remote add upstream https://github.com/pydata/xarray.git
 
-This creates the directory `xarray` and connects your repository to
-the upstream (main project) *xarray* repository.
-
-.. _contributing.dev_env:
+   This creates the directory `xarray` and connects your repository to
+   the upstream (main project) *xarray* repository.
 
 Creating a development environment
 ----------------------------------
 
-To test out code changes, you'll need to build *xarray* from source, which
+To test out code changes locally, you'll need to build *xarray* from source, which requires you to
+`create a local development environment <https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_.
+
+Update the ``main`` branch
+--------------------------
+
+First make sure you have followed `Setting up xarray for development
+<https://docs.xarray.dev/en/stable/contributing.html#creating-a-development-environment>`_
+
+Before starting a new set of changes, fetch all changes from ``upstream/main``, and start a new
+feature branch from that. From time to time you should fetch the upstream changes from GitHub: ::
+
+    git fetch upstream
+    git merge upstream/main
+
+This will combine your commits with the latest *xarray* git ``main``.  If this
+leads to merge conflicts, you must resolve these before submitting your pull
+request.  If you have uncommitted changes, you will need to ``git stash`` them
+prior to updating.  This will effectively store your changes, which can be
+reapplied after updating.
+
+Create a new feature branch
+---------------------------
+
+Create a branch to save your changes, even before you start making changes. You want your
+``main branch`` to contain only production-ready code::
+
+    git checkout -b shiny-new-feature
+
+This changes your working directory to the ``shiny-new-feature`` branch.  Keep any changes in this
+branch specific to one bug or feature so it is clear what the branch brings to *xarray*. You can have
+many "shiny-new-features" and switch in between them using the ``git checkout`` command.
+
+Generally, you will want to keep your feature branches on your public GitHub fork of xarray. To do this,
+you ``git push`` this new branch up to your GitHub repo. Generally (if you followed the instructions in
+these pages, and by default), git will have a link to your fork of the GitHub repo, called ``origin``.
+You push up to your own fork with: ::
+
+    git push origin shiny-new-feature
+
+In git >= 1.7 you can ensure that the link is correctly set by using the ``--set-upstream`` option: ::
+
+    git push --set-upstream origin shiny-new-feature
+
+From now on git will know that ``shiny-new-feature`` is related to the ``shiny-new-feature branch`` in the GitHub repo.
+
+The editing workflow
+--------------------
+
+1. Make some changes
+
+2. See which files have changed with ``git status``. You'll see a listing like this one: ::
+
+    # On branch shiny-new-feature
+    # Changed but not updated:
+    #   (use "git add <file>..." to update what will be committed)
+    #   (use "git checkout -- <file>..." to discard changes in working directory)
+    #
+    #  modified:   README
+
+3. Check what the actual changes are with ``git diff``.
+
+4. Build the `documentation run <https://docs.xarray.dev/en/stable/contributing.html#building-the-documentation>`_
+for the documentation changes.
+
+`Run the test suite <https://docs.xarray.dev/en/stable/contributing.html#running-the-test-suite>`_ for code changes.
+
+Commit and push your changes
+----------------------------
+
+1. To commit all modified files into the local copy of your repo, do ``git commit -am 'A commit message'``.
+
+2. To push the changes up to your forked repo on GitHub, do a ``git push``.
+
+Open a pull request
+-------------------
+
+When you're ready or need feedback on your code, open a Pull Request (PR) so that the xarray developers can
+give feedback and eventually include your suggested code into the ``main`` branch.
+`Pull requests (PRs) on GitHub <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_
+are the mechanism for contributing to xarray's code and documentation.
+
+Enter a title for the set of changes with some explanation of what you've done.
+Follow the PR template, which looks like this. ::
+
+    [ ]Closes #xxxx
+    [ ]Tests added
+    [ ]User visible changes (including notable bug fixes) are documented in whats-new.rst
+    [ ]New functions/methods are listed in api.rst
+
+Mention anything you'd like particular attention for - such as a complicated change or some code you are not happy with.
+If you don't think your request is ready to be merged, just say so in your pull request message and use
+the "Draft PR" feature of GitHub. This is a good way of getting some preliminary code review.
+
+.. _contributing.dev_env:
+
+Creating a development environment
+==================================
+
+To test out code changes locally, you'll need to build *xarray* from source, which
 requires a Python environment. If you're making documentation changes, you can
 skip to :ref:`contributing.documentation` but you won't be able to build the
 documentation locally before pushing your changes.
 
-.. _contributiong.dev_python:
+.. note::
+
+    For small changes, such as fixing a typo, you don't necessarily need to build and test xarray locally.
+    If you make your changes then :ref:`commit and push them to a new branch <contributing.changes>`,
+    xarray's automated :ref:`continuous integration tests <contributing.ci>` will run and check your code in various ways.
+    You can then try to fix these problems by committing and pushing more commits to the same branch.
+
+    You can also avoid building the documentation locally by instead :ref:`viewing the updated documentation via the CI <contributing.pr>`.
+
+    To speed up this feedback loop or for more complex development tasks you should build and test xarray locally.
+
+
+.. _contributing.dev_python:
 
 Creating a Python Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 
 Before starting any development, you'll need to create an isolated xarray
 development environment:
@@ -191,36 +327,23 @@ To return to your root environment::
 
       conda deactivate
 
-See the full conda docs `here <http://conda.pydata.org/docs>`__.
+See the full `conda docs here <http://conda.pydata.org/docs>`__.
 
-Creating a branch
------------------
+Install pre-commit hooks
+------------------------
 
-You want your ``main`` branch to reflect only production-ready code, so create a
-feature branch before making your changes. For example::
+We highly recommend that you setup `pre-commit <https://pre-commit.com/>`_ hooks to automatically
+run all the above tools every time you make a git commit. To install the hooks::
 
-    git branch shiny-new-feature
-    git checkout shiny-new-feature
+    python -m pip install pre-commit
+    pre-commit install
 
-The above can be simplified to::
+This can be done by running: ::
 
-    git checkout -b shiny-new-feature
+    pre-commit run
 
-This changes your working directory to the shiny-new-feature branch.  Keep any
-changes in this branch specific to one bug or feature so it is clear
-what the branch brings to *xarray*. You can have many "shiny-new-features"
-and switch in between them using the ``git checkout`` command.
-
-To update this branch, you need to retrieve the changes from the ``main`` branch::
-
-    git fetch upstream
-    git merge upstream/main
-
-This will combine your commits with the latest *xarray* git ``main``.  If this
-leads to merge conflicts, you must resolve these before submitting your pull
-request.  If you have uncommitted changes, you will need to ``git stash`` them
-prior to updating.  This will effectively store your changes, which can be
-reapplied after updating.
+from the root of the xarray repository. You can skip the pre-commit checks with
+``git commit --no-verify``.
 
 .. _contributing.documentation:
 
@@ -259,7 +382,7 @@ Some other important things to know about the docs:
 
 - The docstrings follow the **NumPy Docstring Standard**, which is used widely
   in the Scientific Python community. This standard specifies the format of
-  the different sections of the docstring. See `this document
+  the different sections of the docstring. Refer to the `documentation for the Numpy docstring format
   <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_
   for a detailed explanation, or look at some of the existing functions to
   extend it in a similar manner.
@@ -302,6 +425,7 @@ Requirements
 ~~~~~~~~~~~~
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
+You should also use this environment and these steps if you want to view changes you've made to the docstrings.
 
 .. code-block:: sh
 
@@ -312,7 +436,7 @@ to build the docs you need to use the environment file ``ci/requirements/doc.yml
     # or with older versions of Anaconda:
     source activate xarray-docs
 
-    # Build and install xarray
+    # Build and install a local, editable version of xarray
     pip install -e .
 
 Building the documentation
@@ -323,7 +447,17 @@ To build the documentation run::
     cd doc/
     make html
 
-Then you can find the HTML output in the folder ``xarray/doc/_build/html/``.
+Then you can find the HTML output files in the folder ``xarray/doc/_build/html/``.
+
+To see what the documentation now looks like with your changes, you can view the HTML build locally by opening the files in your local browser.
+For example, if you normally use Google Chrome as your browser, you could enter::
+
+    google-chrome _build/html/quick-overview.html
+
+in the terminal, running from within the ``doc/`` folder.
+You should now see a new tab pop open in your local browser showing the ``quick-overview`` page of the documentation.
+The different pages of this local build of the documentation are linked together,
+so you can browse the whole documentation by following links the same way you would on the officially-hosted xarray docs site.
 
 The first time you build the docs, it will take quite a while because it has to run
 all the code examples and build all the generated docstring pages. In subsequent
@@ -333,6 +467,60 @@ If you want to do a full clean build, do::
 
     make clean
     make html
+
+Writing ReST pages
+------------------
+
+Most documentation is either in the docstrings of individual classes and methods, in explicit
+``.rst`` files, or in examples and tutorials. All of these use the
+`ReST <https://docutils.sourceforge.io/rst.html>`_ syntax and are processed by
+`Sphinx <https://www.sphinx-doc.org/en/master/>`_.
+
+This section contains additional information and conventions how ReST is used in the
+xarray documentation.
+
+Section formatting
+~~~~~~~~~~~~~~~~~~
+
+We aim to follow the recommendations from the
+`Python documentation <https://devguide.python.org/documentation/start-documenting/index.html#sections>`_
+and the `Sphinx reStructuredText documentation <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections>`_
+for section markup characters,
+
+- ``*`` with overline, for chapters
+
+- ``=``, for heading
+
+- ``-``, for sections
+
+- ``~``, for subsections
+
+- ``**`` text ``**``, for **bold** text
+
+Referring to other documents and sections
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`Sphinx  <https://www.sphinx-doc.org/en/master/>`_ allows internal
+`references <https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html>`_ between documents.
+
+Documents can be linked with the ``:doc:`` directive:
+
+::
+
+    See the :doc:`/getting-started-guide/installing`
+
+    See the :doc:`/getting-started-guide/quick-overview`
+
+will render as:
+
+See the `Installation <https://docs.xarray.dev/en/stable/getting-started-guide/installing.html>`_
+
+See the `Quick Overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_
+
+Including figures and files
+---------------------------
+
+Image files can be directly included in pages with the ``image::`` directive.
 
 .. _contributing.code:
 
@@ -362,14 +550,13 @@ Code Formatting
 xarray uses several tools to ensure a consistent code format throughout the project:
 
 - `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
-  code formatting
+  code formatting,
 - `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
-  standardized code formatting in documentation
-- `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
-- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
-  See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+  standardized code formatting in documentation,
+- `ruff <https://github.com/charliermarsh/ruff/>`_ for code quality checks and standardized order in imports
+- `absolufy-imports <https://github.com/MarcoGorelli/absolufy-imports>`_ for absolute instead of relative imports from different files,
 - `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
-  <https://docs.python.org/3/library/typing.html>`_
+  <https://docs.python.org/3/library/typing.html>`_.
 
 We highly recommend that you setup `pre-commit hooks <https://pre-commit.com/>`_
 to automatically run all the above tools every time you make a git commit. This
@@ -418,7 +605,7 @@ of xarray, and for developers of other libraries that depend on xarray.
 Testing With Continuous Integration
 -----------------------------------
 
-The *xarray* test suite runs automatically the
+The *xarray* test suite runs automatically via the
 `GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions>`__,
 continuous integration service, once your pull request is submitted.
 
@@ -462,9 +649,7 @@ Writing tests
 
 All tests should go into the ``tests`` subdirectory of the specific package.
 This folder contains many current examples of tests, and we suggest looking to these for
-inspiration.  If your test requires working with files or
-network connectivity, there is more information on the `testing page
-<https://github.com/pydata/xarray/wiki/Testing>`_ of the wiki.
+inspiration.
 
 The ``xarray.testing`` module has many special ``assert`` functions that
 make it easier to make statements about whether DataArray or Dataset objects are
@@ -480,7 +665,7 @@ the expected correct result::
 Transitioning to ``pytest``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*xarray* existing test structure is *mostly* classed based, meaning that you will
+*xarray* existing test structure is *mostly* class-based, meaning that you will
 typically find tests wrapped in a class.
 
 .. code-block:: python
@@ -516,8 +701,6 @@ features that we like to use.
 
 We would name this file ``test_cool_feature.py`` and put in an appropriate place in the
 ``xarray/tests/`` structure.
-
-.. TODO: confirm that this actually works
 
 .. code-block:: python
 
@@ -569,26 +752,27 @@ A test run of this yields
 
 .. code-block:: shell
 
-   ((xarray) $ pytest test_cool_feature.py -v
-    =============================== test session starts ================================
+    ((xarray) $ pytest test_cool_feature.py -v
+    ================================= test session starts ==================================
     platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
     cachedir: .pytest_cache
     plugins: hypothesis-6.56.3, cov-4.0.0
     collected 11 items
 
-    test_cool_feature.py::test_dtypes[int8] PASSED
-    test_cool_feature.py::test_dtypes[int16] PASSED
-    test_cool_feature.py::test_dtypes[int32] PASSED
-    test_cool_feature.py::test_dtypes[int64] PASSED
-    test_cool_feature.py::test_mark[float32] PASSED
-    test_cool_feature.py::test_mark[int16] SKIPPED
-    test_cool_feature.py::test_mark[int32] xfail
-    test_cool_feature.py::test_series[int8] PASSED
-    test_cool_feature.py::test_series[int16] PASSED
-    test_cool_feature.py::test_series[int32] PASSED
-    test_cool_feature.py::test_series[int64] PASSED
+    xarray/tests/test_cool_feature.py::test_dtypes[int8] PASSED                       [  9%]
+    xarray/tests/test_cool_feature.py::test_dtypes[int16] PASSED                      [ 18%]
+    xarray/tests/test_cool_feature.py::test_dtypes[int32] PASSED                      [ 27%]
+    xarray/tests/test_cool_feature.py::test_dtypes[int64] PASSED                      [ 36%]
+    xarray/tests/test_cool_feature.py::test_mark[float32] PASSED                      [ 45%]
+    xarray/tests/test_cool_feature.py::test_mark[int16] SKIPPED (unconditional skip)  [ 54%]
+    xarray/tests/test_cool_feature.py::test_mark[int32] XFAIL (to show how it works)  [ 63%]
+    xarray/tests/test_cool_feature.py::test_series[int8] PASSED                       [ 72%]
+    xarray/tests/test_cool_feature.py::test_series[int16] PASSED                      [ 81%]
+    xarray/tests/test_cool_feature.py::test_series[int32] PASSED                      [ 90%]
+    xarray/tests/test_cool_feature.py::test_series[int64] PASSED                      [100%]
 
-    ================== 9 passed, 1 skipped, 1 xfailed in 1.83 seconds ==================
+
+    ==================== 9 passed, 1 skipped, 1 xfailed in 1.83 seconds ====================
 
 Tests that we have ``parametrized`` are now accessible via the test name, for
 example we could run these with ``-k int8`` to sub-select *only* those tests
@@ -598,10 +782,10 @@ which match ``int8``.
 .. code-block:: shell
 
    ((xarray) bash-3.2$ pytest  test_cool_feature.py  -v -k int8
-   =========================== test session starts ===========================
-    platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
-    cachedir: .pytest_cache
-    plugins: hypothesis-6.56.3, cov-4.0.0
+   ================================== test session starts ==================================
+   platform darwin -- Python 3.10.6, pytest-7.2.0, pluggy-1.0.0 --
+   cachedir: .pytest_cache
+   plugins: hypothesis-6.56.3, cov-4.0.0
    collected 11 items
 
    test_cool_feature.py::test_dtypes[int8] PASSED
@@ -705,8 +889,8 @@ or, to use a specific Python interpreter,::
 This will display stderr from the benchmarks, and use your local
 ``python`` that comes from your ``$PATH``.
 
-Information on how to write a benchmark and how to use asv can be found in the
-`asv documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_.
+Learn `how to write a benchmark and how to use asv from the documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_ .
+
 
 ..
    TODO: uncomment once we have a working setup
@@ -725,11 +909,14 @@ GitHub issue number when adding your entry (using ``:issue:`1234```, where ``123
 issue/pull request number).
 
 If your code is an enhancement, it is most likely necessary to add usage
-examples to the existing documentation.  This can be done following the section
-regarding documentation :ref:`above <contributing.documentation>`.
+examples to the existing documentation.  This can be done by following the :ref:`guidelines for contributing to the documentation <contributing.documentation>`.
+
+.. _contributing.changes:
 
 Contributing your changes to *xarray*
 =====================================
+
+.. _contributing.committing:
 
 Committing your code
 --------------------
@@ -751,11 +938,11 @@ Doing 'git status' again should give something like::
     #       modified:   /relative/path/to/file-you-added.py
     #
 
-The following defines how a commit message should be structured:
+The following defines how a commit message should ideally be structured:
 
-    * A subject line with `< 72` chars.
-    * One blank line.
-    * Optionally, a commit message body.
+* A subject line with `< 72` chars.
+* One blank line.
+* Optionally, a commit message body.
 
 Please reference the relevant GitHub issues in your commit message using ``GH1234`` or
 ``#1234``.  Either style is fine, but the former is generally preferred.
@@ -763,6 +950,9 @@ Please reference the relevant GitHub issues in your commit message using ``GH123
 Now you can commit your changes in your local repository::
 
     git commit -m
+
+
+.. _contributing.pushing:
 
 Pushing your changes
 --------------------
@@ -788,6 +978,8 @@ like::
 Now your code is on GitHub, but it is not yet a part of the *xarray* project.  For that to
 happen, a pull request needs to be submitted on GitHub.
 
+.. _contributing.review:
+
 Review your code
 ----------------
 
@@ -801,6 +993,8 @@ double check your branch changes against the branch it was based on:
 #. Click on the ``Compare`` button for your feature branch
 #. Select the ``base`` and ``compare`` branches, if necessary. This will be ``main`` and
    ``shiny-new-feature``, respectively.
+
+.. _contributing.pr:
 
 Finally, make the pull request
 ------------------------------
@@ -819,7 +1013,16 @@ release.  To submit a pull request:
 #. Click ``Send Pull Request``.
 
 This request then goes to the repository maintainers, and they will review
-the code. If you need to make more changes, you can make them in
+the code.
+
+If you have made updates to the documentation, you can now see a preview of the updated docs by clicking on "Details" under
+the ``docs/readthedocs.org`` check near the bottom of the list of checks that run automatically when submitting a PR,
+then clicking on the "View Docs" button on the right (not the big green button, the small black one further down).
+
+.. image:: _static/view-docs.png
+
+
+If you need to make more changes, you can make them in
 your branch, add them to a new commit, push them to GitHub, and the pull request
 will automatically be updated.  Pushing them to GitHub again is done by::
 
@@ -828,6 +1031,8 @@ will automatically be updated.  Pushing them to GitHub again is done by::
 This will automatically update your pull request with the latest code and restart the
 :ref:`Continuous Integration <contributing.ci>` tests.
 
+
+.. _contributing.delete:
 
 Delete your merged branch (optional)
 ------------------------------------
@@ -853,6 +1058,8 @@ GitHub. To delete it there do::
     git push origin --delete shiny-new-feature
 
 
+.. _contributing.checklist:
+
 PR checklist
 ------------
 
@@ -860,13 +1067,13 @@ PR checklist
 - **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://docs.xarray.dev/en/stable/contributing.html#contributing-to-the-documentation>`_.
 - **Test your code**.
 
-    - Write new tests if needed. See `"Test-driven development/code writing" <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_.
-    - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
-    - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a <tt>[test-upstream]</tt> tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a "[skip-ci]" tag to the first line of the commit message.
+  - Write new tests if needed. See `"Test-driven development/code writing" <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_.
+  - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
+  - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a <tt>[test-upstream]</tt> tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a "[skip-ci]" tag to the first line of the commit message.
 
 - **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
-    - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
+  - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 
-- **Push your code and** `create a PR on GitHub <https://help.github.com/en/articles/creating-a-pull-request>`_.
+- **Push your code** and `create a PR on GitHub <https://help.github.com/en/articles/creating-a-pull-request>`_.
 - **Use a helpful title for your pull request** by summarizing the main contributions rather than using the latest commit message. If the PR addresses an `issue <https://github.com/pydata/xarray/issues>`_, please `reference it <https://help.github.com/en/articles/autolinked-references-and-urls>`_.

@@ -123,14 +123,15 @@ class TestVariable(DaskTestCase):
             (da.array([99, 99, 3, 99]), [0, -1, 1]),
             (da.array([99, 99, 99, 4]), np.arange(3)),
             (da.array([1, 99, 99, 99]), [False, True, True, True]),
-            (da.array([1, 99, 99, 99]), np.arange(4) > 0),
-            (da.array([99, 99, 99, 99]), Variable(("x"), da.array([1, 2, 3, 4])) > 0),
+            (da.array([1, 99, 99, 99]), np.array([False, True, True, True])),
+            (da.array([99, 99, 99, 99]), Variable(("x"), np.array([True] * 4))),
         ],
     )
     def test_setitem_dask_array(self, expected_data, index):
         arr = Variable(("x"), da.array([1, 2, 3, 4]))
         expected = Variable(("x"), expected_data)
-        arr[index] = 99
+        with raise_if_dask_computes():
+            arr[index] = 99
         assert_identical(arr, expected)
 
     def test_squeeze(self):
@@ -549,17 +550,22 @@ class TestDataArrayAndDataset(DaskTestCase):
             actual = v.rolling(x=2).mean()
         self.assertLazyAndAllClose(expected, actual)
 
-    def test_groupby_first(self):
+    @pytest.mark.parametrize("func", ["first", "last"])
+    def test_groupby_first_last(self, func):
+        method = operator.methodcaller(func)
         u = self.eager_array
         v = self.lazy_array
 
         for coords in [u.coords, v.coords]:
             coords["ab"] = ("x", ["a", "a", "b", "b"])
-        with pytest.raises(NotImplementedError, match=r"dask"):
-            v.groupby("ab").first()
-        expected = u.groupby("ab").first()
+        expected = method(u.groupby("ab"))
+
         with raise_if_dask_computes():
-            actual = v.groupby("ab").first(skipna=False)
+            actual = method(v.groupby("ab"))
+        self.assertLazyAndAllClose(expected, actual)
+
+        with raise_if_dask_computes():
+            actual = method(v.groupby("ab"))
         self.assertLazyAndAllClose(expected, actual)
 
     def test_reindex(self):
@@ -1695,3 +1701,10 @@ def test_graph_manipulation():
     # names if we were to use HighLevelGraph.cull() instead of
     # HighLevelGraph.cull_layers() in Dataset.__dask_postpersist__().
     assert_equal(ds2.d1 + ds2.d2, ds.d1 + ds.d2)
+
+
+def test_new_index_var_computes_once():
+    # regression test for GH1533
+    data = dask.array.from_array(np.array([100, 200]))
+    with raise_if_dask_computes(max_computes=1):
+        Dataset(coords={"z": ("z", data)})

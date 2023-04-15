@@ -278,6 +278,25 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
+    def test_reset_encoding(self) -> None:
+        array = self.mda
+        encoding = {"scale_factor": 10}
+        array.encoding = encoding
+        array["x"].encoding = encoding
+
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        actual = array.reset_encoding()
+
+        # did not modify in place
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        # variable and coord encoding is empty
+        assert actual.encoding == {}
+        assert actual["x"].encoding == {}
+
     def test_constructor(self) -> None:
         data = np.random.random((2, 3))
 
@@ -1004,32 +1023,53 @@ class TestDataArray:
         result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
         assert_equal(result, array)
 
-    def test_sel_float(self) -> None:
+    @pytest.mark.parametrize(
+        ["coord_values", "indices"],
+        (
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float64"),
+                slice(1, 3),
+                id="float64",
+            ),
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"),
+                slice(1, 3),
+                id="float32",
+            ),
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"), [2], id="scalar"
+            ),
+        ),
+    )
+    def test_sel_float(self, coord_values, indices) -> None:
         data_values = np.arange(4)
 
-        # case coords are float32 and label is list of floats
-        float_values = [0.0, 0.111, 0.222, 0.333]
-        coord_values = np.asarray(float_values, dtype="float32")
-        array = DataArray(data_values, [("float32_coord", coord_values)])
-        expected = DataArray(data_values[1:3], [("float32_coord", coord_values[1:3])])
-        actual = array.sel(float32_coord=float_values[1:3])
-        # case coords are float16 and label is list of floats
-        coord_values_16 = np.asarray(float_values, dtype="float16")
-        expected_16 = DataArray(
-            data_values[1:3], [("float16_coord", coord_values_16[1:3])]
-        )
-        array_16 = DataArray(data_values, [("float16_coord", coord_values_16)])
-        actual_16 = array_16.sel(float16_coord=float_values[1:3])
+        arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
 
-        # case coord, label are scalars
-        expected_scalar = DataArray(
-            data_values[2], coords={"float32_coord": coord_values[2]}
+        actual = arr.sel(x=coord_values[indices])
+        expected = DataArray(
+            data_values[indices], coords={"x": coord_values[indices]}, dims="x"
         )
-        actual_scalar = array.sel(float32_coord=float_values[2])
 
-        assert_equal(expected, actual)
-        assert_equal(expected_scalar, actual_scalar)
-        assert_equal(expected_16, actual_16)
+        assert_equal(actual, expected)
+
+    def test_sel_float16(self) -> None:
+        data_values = np.arange(4)
+        coord_values = np.array([0.0, 0.111, 0.222, 0.333], dtype="float16")
+        indices = slice(1, 3)
+
+        message = "`pandas.Index` does not support the `float16` dtype.*"
+
+        with pytest.warns(DeprecationWarning, match=message):
+            arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
+        with pytest.warns(DeprecationWarning, match=message):
+            expected = DataArray(
+                data_values[indices], coords={"x": coord_values[indices]}, dims="x"
+            )
+
+        actual = arr.sel(x=coord_values[indices])
+
+        assert_equal(actual, expected)
 
     def test_sel_float_multiindex(self) -> None:
         # regression test https://github.com/pydata/xarray/issues/5691
@@ -4216,37 +4256,40 @@ class TestDataArray:
         d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
             object
         )
-        if backend == "numpy":
-            aa = DataArray(data=a, dims=["x"], name="a")
-            bb = DataArray(data=b, dims=["x"], name="b")
-            cc = DataArray(data=c, dims=["y"], name="c")
-            dd = DataArray(data=d, dims=["z"], name="d")
+        aa = DataArray(data=a, dims=["x"], name="a", coords={"a2": ("x", a)})
+        bb = DataArray(data=b, dims=["x"], name="b", coords={"b2": ("x", b)})
+        cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
+        dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        elif backend == "dask":
+        if backend == "dask":
             import dask.array as da
 
-            aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
-            bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
-            cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
-            dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+            aa = aa.copy(data=da.from_array(a, chunks=3))
+            bb = bb.copy(data=da.from_array(b, chunks=3))
+            cc = cc.copy(data=da.from_array(c, chunks=7))
+            dd = dd.copy(data=da.from_array(d, chunks=12))
 
         # query single dim, single variable
-        actual = aa.query(x="a > 5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
         expect = aa.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
-        actual = aa.query(dict(x="a > 5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(dict(x="a2 > 5"), engine=engine, parser=parser)
         expect = aa.isel(dict(x=(a > 5)))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = bb.query(x="b > 50", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = bb.query(x="b2 > 50", engine=engine, parser=parser)
         expect = bb.isel(x=(b > 50))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = cc.query(y="c < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = cc.query(y="c2 < .5", engine=engine, parser=parser)
         expect = cc.isel(y=(c < 0.5))
         assert_identical(expect, actual)
 
@@ -4254,7 +4297,8 @@ class TestDataArray:
         if parser == "pandas":
             # N.B., this query currently only works with the pandas parser
             # xref https://github.com/pandas-dev/pandas/issues/40436
-            actual = dd.query(z='d == "bar"', engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = dd.query(z='d2 == "bar"', engine=engine, parser=parser)
             expect = dd.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 
@@ -6219,7 +6263,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims
@@ -6295,7 +6339,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims

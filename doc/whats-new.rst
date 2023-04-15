@@ -15,16 +15,15 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.03.0:
 
-v2023.03.0 (unreleased)
+.. _whats-new.2023.05.0:
+
+v2023.05.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
-- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -36,12 +35,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Require to explicitly defining optional dimensions such as hue
-  and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
-- Fix matplotlib raising a UserWarning when plotting a scatter plot
-  with an unfilled marker (:issue:`7313`, :pull:`7318`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -50,6 +44,158 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+.. _whats-new.2023.04.0:
+
+v2023.04.0 (April 14, 2023)
+---------------------------
+
+This release includes support for pandas v2, allows refreshing of backend engines in a session, and removes deprecated backends
+for ``rasterio`` and ``cfgrib``.
+
+Thanks to our 19 contributors:
+Chinemere, Tom Coleman, Deepak Cherian, Harshitha, Illviljan, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Kwonil-Kim, Mary Gathoni, Michael Niklas, Pierre, Scott Henderson, Shreyal Gupta, Spencer Clark,  mccloskey, nishtha981, veenstrajelmer
+
+We welcome the following new contributors to Xarray!:
+Mary Gathoni, Harshitha, veenstrajelmer, Chinemere, nishtha981, Shreyal Gupta, Kwonil-Kim, mccloskey.
+
+New Features
+~~~~~~~~~~~~
+- New methods to reset an objects encoding (:py:meth:`Dataset.reset_encoding`, :py:meth:`DataArray.reset_encoding`).
+  (:issue:`7686`, :pull:`7689`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Allow refreshing backend engines with :py:meth:`xarray.backends.refresh_engines` (:issue:`7478`, :pull:`7523`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
+  (:issue:`7692`, :pull:`7693`) .
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Remove deprecated rasterio backend in favor of rioxarray  (:pull:`7392`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+Performance
+~~~~~~~~~~~
+- Optimize alignment with ``join="exact", copy=False`` by avoiding copies. (:pull:`7736`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Avoid unnecessary copies of ``CFTimeIndex``. (:pull:`7735`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix :py:meth:`xr.polyval` with non-system standard integer coeffs (:pull:`7619`).
+  By `Shreyal Gupta <https://github.com/Ravenin7>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improve error message when trying to open a file which you do not have permission to read (:issue:`6523`, :pull:`7629`).
+  By `Thomas Coleman <https://github.com/ColemanTom>`_.
+- Proper plotting when passing :py:class:`~matplotlib.colors.BoundaryNorm` type argument in :py:meth:`DataArray.plot`. (:issue:`4061`, :issue:`7014`,:pull:`7553`)
+  By `Jelmer Veenstra <https://github.com/veenstrajelmer>`_.
+- Ensure the formatting of time encoding reference dates outside the range of
+  nanosecond-precision datetimes remains the same under pandas version 2.0.0
+  (:issue:`7420`, :pull:`7441`).
+  By `Justus Magin <https://github.com/keewis>`_ and
+  `Spencer Clark  <https://github.com/spencerkclark>`_.
+- Various `dtype` related fixes needed to support `pandas>=2.0` (:pull:`7724`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Preserve boolean dtype within encoding (:issue:`7652`, :pull:`7720`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+
+Documentation
+~~~~~~~~~~~~~
+
+- Update FAQ page on how do I open format X file as an xarray dataset? (:issue:`1285`, :pull:`7638`) using :py:func:`~xarray.open_dataset`
+  By `Harshitha <https://github.com/harshitha1201>`_ , `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Don't assume that arrays read from disk will be Numpy arrays. This is a step toward
+  enabling reads from a Zarr store using the `Kvikio <https://docs.rapids.ai/api/kvikio/stable/api.html#zarr>`_
+  or `TensorStore <https://google.github.io/tensorstore/>`_ libraries.
+  (:pull:`6874`). By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- Remove internal support for reading GRIB files through the ``cfgrib`` backend. ``cfgrib`` now uses the external
+  backend interface, so no existing code should break.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Implement CF coding functions in ``VariableCoders`` (:pull:`7719`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+
+- Added a config.yml file with messages for the welcome bot when a Github user creates their first ever issue or pull request or has their first PR merged. (:issue:`7685`, :pull:`7685`)
+  By `Nishtha P <https://github.com/nishthap981>`_.
+
+- Ensure that only nanosecond-precision :py:class:`pd.Timestamp` objects
+  continue to be used internally under pandas version 2.0.0.  This is mainly to
+  ease the transition to this latest version of pandas.  It should be relaxed
+  when addressing :issue:`7493`.  By `Spencer Clark
+  <https://github.com/spencerkclark>`_ (:issue:`7707`, :pull:`7731`).
+
+.. _whats-new.2023.03.0:
+
+v2023.03.0 (March 22, 2023)
+---------------------------
+
+This release brings many bug fixes, and some new features. The maximum pandas version is pinned to ``<2`` until we can support the new pandas datetime types.
+Thanks to our 19 contributors:
+Abel Aoun, Alex Goodman, Deepak Cherian, Illviljan, Jody Klymak, Joe Hamman, Justus Magin, Mary Gathoni, Mathias Hauser, Mattia Almansi, Mick, Oriol Abril-Pla, Patrick Hoefler, Paul Ockenfuß, Pierre, Shreyal Gupta, Spencer Clark, Tom Nicholas, Tom Vo
+
+New Features
+~~~~~~~~~~~~
+
+- Fix :py:meth:`xr.cov` and :py:meth:`xr.corr` now support complex valued arrays  (:issue:`7340`, :pull:`7392`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Allow indexing along unindexed dimensions with dask arrays
+  (:issue:`2511`, :issue:`4276`, :issue:`4663`, :pull:`5873`).
+  By `Abel Aoun <https://github.com/bzah>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+- Support dask arrays in ``first`` and ``last`` reductions.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Improved performance in ``open_dataset`` for datasets with large object arrays (:issue:`7484`, :pull:`7494`).
+  By `Alex Goodman <https://github.com/agoodm>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+- Following pandas, the ``base`` and ``loffset`` parameters of
+  :py:meth:`xr.DataArray.resample` and :py:meth:`xr.Dataset.resample` have been
+  deprecated and will be removed in a future version of xarray.  Using the
+  ``origin`` or ``offset`` parameters is recommended as a replacement for using
+  the ``base`` parameter and using time offset arithmetic is recommended as a
+  replacement for using the ``loffset`` parameter (:pull:`8459`).  By `Spencer
+  Clark <https://github.com/spencerkclark>`_.
+
+
+Bug fixes
+~~~~~~~~~
+
+- Improve error message when using in :py:meth:`Dataset.drop_vars` to state which variables can't be dropped. (:pull:`7518`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Require to explicitly defining optional dimensions such as hue
+  and markersize for scatter plots. (:issue:`7314`, :pull:`7277`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix matplotlib raising a UserWarning when plotting a scatter plot
+  with an unfilled marker (:issue:`7313`, :pull:`7318`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix issue with ``max_gap`` in ``interpolate_na``, when applied to
+  multidimensional arrays. (:issue:`7597`, :pull:`7598`).
+  By `Paul Ockenfuß <https://github.com/Ockenfuss>`_.
+- Fix :py:meth:`DataArray.plot.pcolormesh` which now works if one of the coordinates has str dtype  (:issue:`6775`, :pull:`7612`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Clarify language in contributor's guide (:issue:`7495`, :pull:`7595`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Pin pandas to ``<2``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2023.02.0:
 

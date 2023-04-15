@@ -38,6 +38,7 @@ except ImportError:
 # https://github.com/pydata/xarray/issues/7322
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
+warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -74,7 +75,6 @@ has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
-has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
@@ -139,11 +139,44 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
+    """Disallows any loading."""
+
     def __init__(self, array):
         self.array = array
 
-    def __getitem__(self, key):
+    def get_duck_array(self):
         raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data.")
+
+
+class FirstElementAccessibleArray(InaccessibleArray):
+    def __getitem__(self, key):
+        tuple_idxr = key.tuple
+        if len(tuple_idxr) > 1:
+            raise UnexpectedDataAccess("Tried accessing more than one element.")
+        return self.array[tuple_idxr]
+
+
+class DuckArrayWrapper(utils.NDArrayMixin):
+    """Array-like that prevents casting to array.
+    Modeled after cupy."""
+
+    def __init__(self, array: np.ndarray):
+        self.array = array
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array_namespace__(self):
+        """Present to satisfy is_duck_array test."""
 
 
 class ReturnItem:

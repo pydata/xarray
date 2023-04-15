@@ -427,6 +427,16 @@ class TestPlot(PlotTestCase):
             _, unique_counts = np.unique(v[:-1], axis=0, return_counts=True)
             assert np.all(unique_counts == 1)
 
+    def test_str_coordinates_pcolormesh(self) -> None:
+        # test for #6775
+        x = DataArray(
+            [[1, 2, 3], [4, 5, 6]],
+            dims=("a", "b"),
+            coords={"a": [1, 2], "b": ["a", "b", "c"]},
+        )
+        x.plot.pcolormesh()
+        x.T.plot.pcolormesh()
+
     def test_contourf_cmap_set(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
@@ -1193,6 +1203,13 @@ class TestDiscreteColorMap:
         norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
         primitive = self.darray.plot.contourf(norm=norm)
         np.testing.assert_allclose(primitive.levels, norm.boundaries)
+
+    def test_discrete_colormap_provided_boundary_norm_matching_cmap_levels(
+        self,
+    ) -> None:
+        norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
+        primitive = self.darray.plot.contourf(norm=norm)
+        assert primitive.colorbar.norm.Ncmap == primitive.colorbar.norm.N
 
 
 class Common2dMixin:
@@ -2025,7 +2042,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
     def test_convenient_facetgrid(self) -> None:
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=["y", "x", "z"])
-        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
+        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
 
         assert_array_equal(g.axs.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axs):
@@ -2034,7 +2051,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "x" == ax.get_xlabel()
 
         # Inferring labels
-        g = self.plotfunc(d, col="z", col_wrap=2)
+        g = self.plotfunc(d, col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
         assert_array_equal(g.axs.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
@@ -2109,6 +2126,14 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
         assert 1 == len(find_possible_colorbars())
+
+    def test_colorbar_scatter(self) -> None:
+        ds = Dataset({"a": (("x", "y"), np.arange(4).reshape(2, 2))})
+        fg: xplt.FacetGrid = ds.plot.scatter(x="a", y="a", row="x", hue="a")
+        cbar = fg.cbar
+        assert cbar is not None
+        assert cbar.vmin == 0
+        assert cbar.vmax == 3
 
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
@@ -2786,6 +2811,7 @@ class TestDatetimePlot(PlotTestCase):
         # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime_plot2d(self) -> None:
         # Test that matplotlib-native datetime works:
         da = DataArray(
