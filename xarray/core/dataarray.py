@@ -6731,8 +6731,12 @@ class DataArray(
                 15  -20  130     3            15
 
         """
-
-        name = self.name if self.name is not None else _THIS_ARRAY
+        if self.name is None:
+            raise ValueError(
+                "Cannot convert an unnamed DataArray to a "
+                "dask dataframe : use the ``name`` parameter ."
+            )
+        name=self.name
         ds = self._to_dataset_whole(name, shallow_copy=False)
         return ds.to_dask_dataframe(dim_order, set_index)
 
