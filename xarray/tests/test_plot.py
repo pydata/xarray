@@ -2042,7 +2042,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
     def test_convenient_facetgrid(self) -> None:
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=["y", "x", "z"])
-        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
+        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
 
         assert_array_equal(g.axs.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axs):
@@ -2051,7 +2051,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "x" == ax.get_xlabel()
 
         # Inferring labels
-        g = self.plotfunc(d, col="z", col_wrap=2)
+        g = self.plotfunc(d, col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
         assert_array_equal(g.axs.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
