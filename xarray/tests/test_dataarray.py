@@ -278,6 +278,25 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
+    def test_reset_encoding(self) -> None:
+        array = self.mda
+        encoding = {"scale_factor": 10}
+        array.encoding = encoding
+        array["x"].encoding = encoding
+
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        actual = array.reset_encoding()
+
+        # did not modify in place
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        # variable and coord encoding is empty
+        assert actual.encoding == {}
+        assert actual["x"].encoding == {}
+
     def test_constructor(self) -> None:
         data = np.random.random((2, 3))
 
@@ -1004,32 +1023,53 @@ class TestDataArray:
         result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
         assert_equal(result, array)
 
-    def test_sel_float(self) -> None:
+    @pytest.mark.parametrize(
+        ["coord_values", "indices"],
+        (
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float64"),
+                slice(1, 3),
+                id="float64",
+            ),
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"),
+                slice(1, 3),
+                id="float32",
+            ),
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"), [2], id="scalar"
+            ),
+        ),
+    )
+    def test_sel_float(self, coord_values, indices) -> None:
         data_values = np.arange(4)
 
-        # case coords are float32 and label is list of floats
-        float_values = [0.0, 0.111, 0.222, 0.333]
-        coord_values = np.asarray(float_values, dtype="float32")
-        array = DataArray(data_values, [("float32_coord", coord_values)])
-        expected = DataArray(data_values[1:3], [("float32_coord", coord_values[1:3])])
-        actual = array.sel(float32_coord=float_values[1:3])
-        # case coords are float16 and label is list of floats
-        coord_values_16 = np.asarray(float_values, dtype="float16")
-        expected_16 = DataArray(
-            data_values[1:3], [("float16_coord", coord_values_16[1:3])]
-        )
-        array_16 = DataArray(data_values, [("float16_coord", coord_values_16)])
-        actual_16 = array_16.sel(float16_coord=float_values[1:3])
+        arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
 
-        # case coord, label are scalars
-        expected_scalar = DataArray(
-            data_values[2], coords={"float32_coord": coord_values[2]}
+        actual = arr.sel(x=coord_values[indices])
+        expected = DataArray(
+            data_values[indices], coords={"x": coord_values[indices]}, dims="x"
         )
-        actual_scalar = array.sel(float32_coord=float_values[2])
 
-        assert_equal(expected, actual)
-        assert_equal(expected_scalar, actual_scalar)
-        assert_equal(expected_16, actual_16)
+        assert_equal(actual, expected)
+
+    def test_sel_float16(self) -> None:
+        data_values = np.arange(4)
+        coord_values = np.array([0.0, 0.111, 0.222, 0.333], dtype="float16")
+        indices = slice(1, 3)
+
+        message = "`pandas.Index` does not support the `float16` dtype.*"
+
+        with pytest.warns(DeprecationWarning, match=message):
+            arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
+        with pytest.warns(DeprecationWarning, match=message):
+            expected = DataArray(
+                data_values[indices], coords={"x": coord_values[indices]}, dims="x"
+            )
+
+        actual = arr.sel(x=coord_values[indices])
+
+        assert_equal(actual, expected)
 
     def test_sel_float_multiindex(self) -> None:
         # regression test https://github.com/pydata/xarray/issues/5691

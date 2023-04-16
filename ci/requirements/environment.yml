@@ -8,7 +8,6 @@ dependencies:
   - bottleneck
   - cartopy
   - cdms2
-  - cfgrib
   - cftime
   - dask-core
   - distributed
@@ -28,7 +27,7 @@ dependencies:
   - numexpr
   - numpy<1.24
   - packaging
-  - pandas<2
+  - pandas
   - pint
   - pip
   - pooch
