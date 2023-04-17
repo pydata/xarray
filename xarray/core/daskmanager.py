@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
-    array_cls: type["DaskArray"]
+    array_cls: type[DaskArray]
     available: bool = dask_available
 
     def __init__(self):
@@ -28,16 +28,16 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def is_chunked_array(self, data: Any) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: "DaskArray") -> T_Chunks:
+    def chunks(self, data: DaskArray) -> T_Chunks:
         return data.chunks
 
     def normalize_chunks(
         self,
-        chunks: Union[tuple, int, dict, str],
-        shape: Union[tuple[int], None] = None,
-        limit: Union[int, None] = None,
-        dtype: Union[np.dtype, None] = None,
-        previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
+        chunks: tuple | int | dict | str,
+        shape: tuple[int] | None = None,
+        limit: int | None = None,
+        dtype: np.dtype | None = None,
+        previous_chunks: tuple[tuple[int, ...], ...] | None = None,
     ) -> tuple[tuple[int, ...], ...]:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
@@ -50,7 +50,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             previous_chunks=previous_chunks,
         )
 
-    def from_array(self, data, chunks, **kwargs) -> "DaskArray":
+    def from_array(self, data, chunks, **kwargs) -> DaskArray:
         import dask.array as da
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
@@ -63,7 +63,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )
 
-    def compute(self, *data: "DaskArray", **kwargs) -> np.ndarray:
+    def compute(self, *data: DaskArray, **kwargs) -> np.ndarray:
         from dask.array import compute
 
         return compute(*data, **kwargs)
@@ -78,10 +78,10 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         self,
         arr: T_ChunkedArray,
         func: Callable,
-        combine_func: Optional[Callable] = None,
-        aggregate_func: Optional[Callable] = None,
-        axis: Optional[Union[int, Sequence[int]]] = None,
-        dtype: Optional[np.dtype] = None,
+        combine_func: Callable | None = None,
+        aggregate_func: Callable | None = None,
+        axis: int | Sequence[int] | None = None,
+        dtype: np.dtype | None = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         from dask.array import reduction
@@ -185,14 +185,14 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def unify_chunks(
         self, *args, **kwargs
-    ) -> tuple[dict[str, T_Chunks], list["DaskArray"]]:
+    ) -> tuple[dict[str, T_Chunks], list[DaskArray]]:
         from dask.array.core import unify_chunks
 
         return unify_chunks(*args, **kwargs)
 
     def store(
         self,
-        sources: Union["DaskArray", Sequence["DaskArray"]],
+        sources: DaskArray | Sequence[DaskArray],
         targets: Any,
         **kwargs,
     ):
