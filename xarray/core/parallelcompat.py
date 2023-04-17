@@ -14,9 +14,7 @@ from typing import (
     Any,
     Callable,
     Generic,
-    Optional,
     TypeVar,
-    Union,
 )
 
 import numpy as np
@@ -31,7 +29,7 @@ T_Chunks = Any
 
 
 @functools.lru_cache(maxsize=1)
-def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
+def list_chunkmanagers() -> dict[str, ChunkManagerEntrypoint]:
     """
     Return a dictionary of available chunk managers and their ChunkManagerEntrypoint objects.
 
@@ -49,7 +47,7 @@ def list_chunkmanagers() -> dict[str, "ChunkManagerEntrypoint"]:
 
 def load_chunkmanagers(
     entrypoints: Sequence[EntryPoint],
-) -> dict[str, "ChunkManagerEntrypoint"]:
+) -> dict[str, ChunkManagerEntrypoint]:
     """Load entrypoints and instantiate chunkmanagers only once."""
 
     loaded_entrypoints = {
@@ -65,8 +63,8 @@ def load_chunkmanagers(
 
 
 def guess_chunkmanager(
-    manager: Union[str, "ChunkManagerEntrypoint", None]
-) -> "ChunkManagerEntrypoint":
+    manager: str | ChunkManagerEntrypoint | None,
+) -> ChunkManagerEntrypoint:
     """
     Get namespace of chunk-handling methods, guessing from what's available.
 
@@ -100,7 +98,7 @@ def guess_chunkmanager(
         )
 
 
-def get_chunked_array_type(*args) -> "ChunkManagerEntrypoint":
+def get_chunked_array_type(*args) -> ChunkManagerEntrypoint:
     """
     Detects which parallel backend should be used for given set of arrays.
 
@@ -167,11 +165,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def normalize_chunks(
         self,
-        chunks: Union[tuple, int, dict, str],
-        shape: Union[tuple[int], None] = None,
-        limit: Union[int, None] = None,
-        dtype: Union[np.dtype, None] = None,
-        previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
+        chunks: tuple | int | dict | str,
+        shape: tuple[int] | None = None,
+        limit: int | None = None,
+        dtype: np.dtype | None = None,
+        previous_chunks: tuple[tuple[int, ...], ...] | None = None,
     ) -> tuple[tuple[int, ...], ...]:
         """Called by open_dataset"""
         ...
@@ -202,10 +200,10 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         self,
         arr: T_ChunkedArray,
         func: Callable,
-        combine_func: Optional[Callable] = None,
-        aggregate_func: Optional[Callable] = None,
-        axis: Optional[Union[int, Sequence[int]]] = None,
-        dtype: Optional[np.dtype] = None,
+        combine_func: Callable | None = None,
+        aggregate_func: Callable | None = None,
+        axis: int | Sequence[int] | None = None,
+        dtype: np.dtype | None = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         """Used in some reductions like nanfirst, which is used by groupby.first"""
@@ -262,7 +260,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     def store(
         self,
-        sources: Union[T_ChunkedArray, Sequence[T_ChunkedArray]],
+        sources: T_ChunkedArray | Sequence[T_ChunkedArray],
         targets: Any,
         **kwargs: dict[str, Any],
     ):
