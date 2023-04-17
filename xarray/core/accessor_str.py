@@ -1136,6 +1136,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Using an array of strings (the pattern will be broadcast against the array):
+
         >>> pat = xr.DataArray(["jj", "JJ"], dims="y")
         >>> counts = da.str.count(pat)
         >>> counts
@@ -1284,6 +1285,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Using an array-like width
+
         >>> width = xr.DataArray([8, 10], dims="y")
         >>> filled = da.str.pad(width, side="left", fillchar="0")
         >>> filled
@@ -1295,6 +1297,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x, y
 
         Using an array-like value for fillchar
+
         >>> fillchar = xr.DataArray(["0", "-"], dims="y")
         >>> filled = da.str.pad(8, side="left", fillchar=fillchar)
         >>> filled
