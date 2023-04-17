@@ -1373,7 +1373,7 @@ class TestDataArrayGroupBy:
 
     @pytest.mark.parametrize("use_flox", [True, False])
     @pytest.mark.parametrize("coords", [np.arange(4), np.arange(4)[::-1], [2, 0, 3, 1]])
-    def test_groupby_bins(self, coords, use_flox):
+    def test_groupby_bins(self, coords: np.typing.ArrayLike, use_flox: bool) -> None:
         array = DataArray(
             np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
         )
