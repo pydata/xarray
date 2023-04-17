@@ -3,6 +3,8 @@ The code in this module is an experiment in going from N=1 to N=2 parallel compu
 It could later be used as the basis for a public interface allowing any N frameworks to interoperate with xarray,
 but for now it is just a private experiment.
 """
+from __future__ import annotations
+
 import functools
 import sys
 from abc import ABC, abstractmethod
