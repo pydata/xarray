@@ -388,8 +388,8 @@ def _dataset_from_backend_dataset(
 def open_dataset(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
-    engine: T_Engine | None = None,
-    chunks: T_Chunks | None = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
