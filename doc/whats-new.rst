@@ -18,8 +18,8 @@ What's New
 
 .. _whats-new.2023.04.1:
 
-v2023.04.1 (unreleased)
------------------------
+v2023.04.1 (April 18, 2023)
+---------------------------
 
 This is a patch release to fix a bug with binning (:issue:`7759`)
 
