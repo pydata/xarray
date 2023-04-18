@@ -51,8 +51,9 @@ def test_consolidate_slices() -> None:
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices
 
+    # ignore type because we're checking for an error anyway
     with pytest.raises(ValueError):
-        _consolidate_slices([slice(3), 4])
+        _consolidate_slices([slice(3), 4])  # type: ignore[list-item]
 
 
 def test_groupby_dims_property(dataset) -> None:
