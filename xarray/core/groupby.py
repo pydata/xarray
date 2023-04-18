@@ -435,7 +435,7 @@ class ResolvedBinGrouper(ResolvedGrouper):
 
         full_index = binned.categories
 
-        unique_values = binned.unique().dropna()
+        unique_values = np.sort(binned.unique().dropna())
         group_indices = [g for g in _codes_to_groups(codes, len(full_index)) if g]
 
         if len(group_indices) == 0:
@@ -572,18 +572,32 @@ def _validate_groupby_squeeze(squeeze):
 def _resolve_group(obj: T_Xarray, group: T_Group | Hashable) -> T_Group:
     from xarray.core.dataarray import DataArray
 
-    if isinstance(group, (DataArray, IndexVariable)):
+    error_msg = (
+        "the group variable's length does not "
+        "match the length of this variable along its "
+        "dimensions"
+    )
+
+    newgroup: T_Group
+    if isinstance(group, DataArray):
         try:
             align(obj, group, join="exact", copy=False)
         except ValueError:
-            raise ValueError(
-                "the group variable's length does not "
-                "match the length of this variable along its "
-                "dimensions"
-            )
+            raise ValueError(error_msg)
 
         newgroup = group.copy()
         newgroup.name = group.name or "group"
+
+    elif isinstance(group, IndexVariable):
+        # This assumption is built in to _ensure_1d.
+        if group.ndim != 1:
+            raise ValueError(
+                "Grouping by multi-dimensional IndexVariables is not allowed."
+                "Convert to and pass a DataArray instead."
+            )
+        (group_dim,) = group.dims
+        if len(group) != obj.sizes[group_dim]:
+            raise ValueError(error_msg)
 
     else:
         if not hashable(group):
@@ -1069,7 +1083,7 @@ class GroupBy(Generic[T_Xarray]):
                 * "nearest"
 
             See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
+            an asterisk require numpy version 1.22 or newer. The "method" argument was
             previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
         keep_attrs : bool or None, default: None

@@ -36,6 +36,7 @@ from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
 from xarray.tests import (
+    DuckArrayWrapper,
     InaccessibleArray,
     UnexpectedDataAccess,
     assert_allclose,
@@ -101,57 +102,63 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     bool_var = np.array([True, False, True], dtype=bool)
     bool_var_to_append = np.array([False, True], dtype=bool)
 
-    ds = xr.Dataset(
-        data_vars={
-            "da": xr.DataArray(
-                rs.rand(3, 3, nt1),
-                coords=[lat, lon, time1],
-                dims=["lat", "lon", "time"],
-            ),
-            "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
-            "string_var_fixed_length": xr.DataArray(
-                string_var_fixed_length, coords=[time1], dims=["time"]
-            ),
-            "unicode_var": xr.DataArray(
-                unicode_var, coords=[time1], dims=["time"]
-            ).astype(np.unicode_),
-            "datetime_var": xr.DataArray(datetime_var, coords=[time1], dims=["time"]),
-            "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
-        }
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "Converting non-nanosecond")
+        ds = xr.Dataset(
+            data_vars={
+                "da": xr.DataArray(
+                    rs.rand(3, 3, nt1),
+                    coords=[lat, lon, time1],
+                    dims=["lat", "lon", "time"],
+                ),
+                "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
+                "string_var_fixed_length": xr.DataArray(
+                    string_var_fixed_length, coords=[time1], dims=["time"]
+                ),
+                "unicode_var": xr.DataArray(
+                    unicode_var, coords=[time1], dims=["time"]
+                ).astype(np.unicode_),
+                "datetime_var": xr.DataArray(
+                    datetime_var, coords=[time1], dims=["time"]
+                ),
+                "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
+            }
+        )
 
-    ds_to_append = xr.Dataset(
-        data_vars={
-            "da": xr.DataArray(
-                rs.rand(3, 3, nt2),
-                coords=[lat, lon, time2],
-                dims=["lat", "lon", "time"],
-            ),
-            "string_var": xr.DataArray(
-                string_var_to_append, coords=[time2], dims=["time"]
-            ),
-            "string_var_fixed_length": xr.DataArray(
-                string_var_fixed_length_to_append, coords=[time2], dims=["time"]
-            ),
-            "unicode_var": xr.DataArray(
-                unicode_var[:nt2], coords=[time2], dims=["time"]
-            ).astype(np.unicode_),
-            "datetime_var": xr.DataArray(
-                datetime_var_to_append, coords=[time2], dims=["time"]
-            ),
-            "bool_var": xr.DataArray(bool_var_to_append, coords=[time2], dims=["time"]),
-        }
-    )
+        ds_to_append = xr.Dataset(
+            data_vars={
+                "da": xr.DataArray(
+                    rs.rand(3, 3, nt2),
+                    coords=[lat, lon, time2],
+                    dims=["lat", "lon", "time"],
+                ),
+                "string_var": xr.DataArray(
+                    string_var_to_append, coords=[time2], dims=["time"]
+                ),
+                "string_var_fixed_length": xr.DataArray(
+                    string_var_fixed_length_to_append, coords=[time2], dims=["time"]
+                ),
+                "unicode_var": xr.DataArray(
+                    unicode_var[:nt2], coords=[time2], dims=["time"]
+                ).astype(np.unicode_),
+                "datetime_var": xr.DataArray(
+                    datetime_var_to_append, coords=[time2], dims=["time"]
+                ),
+                "bool_var": xr.DataArray(
+                    bool_var_to_append, coords=[time2], dims=["time"]
+                ),
+            }
+        )
 
-    ds_with_new_var = xr.Dataset(
-        data_vars={
-            "new_var": xr.DataArray(
-                rs.rand(3, 3, nt1 + nt2),
-                coords=[lat, lon, time1.append(time2)],
-                dims=["lat", "lon", "time"],
-            )
-        }
-    )
+        ds_with_new_var = xr.Dataset(
+            data_vars={
+                "new_var": xr.DataArray(
+                    rs.rand(3, 3, nt1 + nt2),
+                    coords=[lat, lon, time1.append(time2)],
+                    dims=["lat", "lon", "time"],
+                )
+            }
+        )
 
     assert all(objp.data.flags.writeable for objp in ds.variables.values())
     assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
@@ -203,6 +210,10 @@ def create_test_stacked_array() -> tuple[DataArray, DataArray]:
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+    """
+    Store that does not allow any data access.
+    """
+
     def __init__(self):
         super().__init__()
         self._indexvars = set()
@@ -221,6 +232,47 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
             return Variable(v.dims, data, v.attrs)
 
         return {k: lazy_inaccessible(k, v) for k, v in self._variables.items()}
+
+
+class DuckBackendArrayWrapper(backends.common.BackendArray):
+    """Mimic a BackendArray wrapper around DuckArrayWrapper"""
+
+    def __init__(self, array):
+        self.array = DuckArrayWrapper(array)
+        self.shape = array.shape
+        self.dtype = array.dtype
+
+    def get_array(self):
+        return self.array
+
+    def __getitem__(self, key):
+        return self.array[key.tuple]
+
+
+class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
+    """
+    Store that returns a duck array, not convertible to numpy array,
+    on read. Modeled after nVIDIA's kvikio.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._indexvars = set()
+
+    def store(self, variables, *args, **kwargs) -> None:
+        super().store(variables, *args, **kwargs)
+        for k, v in variables.items():
+            if isinstance(v, IndexVariable):
+                self._indexvars.add(k)
+
+    def get_variables(self) -> dict[Any, xr.Variable]:
+        def lazy_accessible(k, v) -> xr.Variable:
+            if k in self._indexvars:
+                return v
+            data = indexing.LazilyIndexedArray(DuckBackendArrayWrapper(v.values))
+            return Variable(v.dims, data, v.attrs)
+
+        return {k: lazy_accessible(k, v) for k, v in self._variables.items()}
 
 
 class TestDataset:
@@ -443,6 +495,7 @@ class TestDataset:
         actual = Dataset({"x": [5, 6, 7, 8, 9]})
         assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_constructor_0d(self) -> None:
         expected = Dataset({"x": ([], 1)})
         for arg in [1, np.array(1), expected["x"]]:
@@ -2827,6 +2880,21 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"contain all variables in original"):
             orig.copy(data={"var1": new_var1})
 
+    def test_reset_encoding(self) -> None:
+        orig = create_test_data()
+        vencoding = {"scale_factor": 10}
+        orig.encoding = {"foo": "bar"}
+
+        for k, v in orig.variables.items():
+            orig[k].encoding = vencoding
+
+        actual = orig.reset_encoding()
+        assert actual.encoding == {}
+        for k, v in actual.variables.items():
+            assert v.encoding == {}
+
+        assert_equal(actual, orig)
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
@@ -4684,6 +4752,29 @@ class TestDataset:
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
 
+    def test_lazy_load_duck_array(self) -> None:
+        store = AccessibleAsDuckArrayDataStore()
+        create_test_data().dump_to_store(store)
+
+        for decode_cf in [True, False]:
+            ds = open_dataset(store, decode_cf=decode_cf)
+            with pytest.raises(UnexpectedDataAccess):
+                ds["var1"].values
+
+            # these should not raise UnexpectedDataAccess:
+            ds.var1.data
+            ds.isel(time=10)
+            ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
+            repr(ds)
+
+            # preserve the duck array type and don't cast to array
+            assert isinstance(ds["var1"].load().data, DuckArrayWrapper)
+            assert isinstance(
+                ds["var1"].isel(dim2=0, dim1=0).load().data, DuckArrayWrapper
+            )
+
+            ds.close()
+
     def test_dropna(self) -> None:
         x = np.random.randn(4, 4)
         x[::2, 0] = np.nan
@@ -5495,6 +5586,7 @@ class TestDataset:
         expected = ds + other.reindex_like(ds)
         assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_dataset_math_errors(self) -> None:
         ds = self.make_example_math_dataset()
 
@@ -6494,6 +6586,7 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_datetime(dask) -> None:
     rs = np.random.RandomState(42)
@@ -6690,6 +6783,7 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapz_datetime(dask, which_datetime) -> None:
