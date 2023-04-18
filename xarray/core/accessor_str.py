@@ -1257,6 +1257,7 @@ class StringAccessor(Generic[T_DataArray]):
         Pad strings in the array with a single string on the left side.
 
         Define the string in the array.
+
         >>> da = xr.DataArray(["PAR184", "TKO65", "NBO9139", "NZ39"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)>
@@ -1264,6 +1265,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Pad the strings
+
         >>> filled = da.str.pad(8, side="left", fillchar="0")
         >>> filled
         <xarray.DataArray (x: 4)>
@@ -1271,6 +1273,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Pad strings on the right side
+
         >>> filled = da.str.pad(8, side="right", fillchar="0")
         >>> filled
         <xarray.DataArray (x: 4)>
@@ -1278,6 +1281,7 @@ class StringAccessor(Generic[T_DataArray]):
         Dimensions without coordinates: x
 
         Pad strings on both sides
+
         >>> filled = da.str.pad(8, side="both", fillchar="0")
         >>> filled
         <xarray.DataArray (x: 4)>
