@@ -16,33 +16,17 @@ What's New
 
 
 
-.. _whats-new.2023.05.0:
+.. _whats-new.2023.04.1:
 
-v2023.05.0 (unreleased)
+v2023.04.1 (unreleased)
 -----------------------
 
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
+This is a patch release to fix a bug with binning (:issue:`7759`)
 
 Bug fixes
 ~~~~~~~~~
 
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
+- Fix binning by unsorted arrays. (:issue:`7759`)
 
 
 .. _whats-new.2023.04.0:
