@@ -3272,7 +3272,11 @@ class TestDataArray:
             arr.to_dask_dataframe(dim_order=["B", "A", "C"])
 
         with pytest.raises(ValueError, match=r"cannot convert a scalar"):
-            arr.sel(A="c", B=2).to_dataframe()
+            arr.sel(A="c", B=2).to_dask_dataframe()
+
+        arr.name = None
+        with pytest.raises(ValueError,match="cannot convert an unnamed dataarray."):
+            arr.to_dask_dataframe()
 
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array

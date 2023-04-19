@@ -6944,7 +6944,7 @@ class DataArray(
         if self.name is None:
             raise ValueError(
                 "Cannot convert an unnamed DataArray to a "
-                "dask dataframe : use the ``name`` parameter ."
+                "dask dataframe : use the ``.rename`` method to assign a name."
             )
         name=self.name
         ds = self._to_dataset_whole(name, shallow_copy=False)
