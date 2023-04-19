@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -61,8 +62,10 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
-class VariableSubclassobjects:
-    cls: staticmethod[Variable]
+class VariableSubclassobjects(ABC):
+    @abstractmethod
+    def cls(self, *args, **kwargs) -> Variable:
+        raise NotImplementedError
 
     def test_properties(self):
         data = 0.5 * np.arange(10)
@@ -1056,7 +1059,8 @@ class VariableSubclassobjects:
 
 
 class TestVariable(VariableSubclassobjects):
-    cls = staticmethod(Variable)
+    def cls(self, *args, **kwargs) -> Variable:
+        return Variable(*args, **kwargs)
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -2228,13 +2232,10 @@ class TestVariable(VariableSubclassobjects):
         assert new.attrs == _attrs
 
 
-def _init_dask_variable(*args, **kwargs):
-    return Variable(*args, **kwargs).chunk()
-
-
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
-    cls = staticmethod(_init_dask_variable)
+    def cls(self, *args, **kwargs) -> Variable:
+        return Variable(*args, **kwargs).chunk()
 
     def test_chunk(self):
         unblocked = Variable(["dim_0", "dim_1"], np.ones((3, 4)))
@@ -2346,7 +2347,8 @@ class TestVariableWithSparse:
 
 
 class TestIndexVariable(VariableSubclassobjects):
-    cls = staticmethod(IndexVariable)
+    def cls(self, *args, **kwargs) -> IndexVariable:
+        return IndexVariable(*args, **kwargs)
 
     def test_init(self):
         with pytest.raises(ValueError, match=r"must be 1-dimensional"):

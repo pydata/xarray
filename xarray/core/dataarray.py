@@ -6946,7 +6946,7 @@ class DataArray(
                 "Cannot convert an unnamed DataArray to a "
                 "dask dataframe : use the ``.rename`` method to assign a name."
             )
-        name=self.name
+        name = self.name
         ds = self._to_dataset_whole(name, shallow_copy=False)
         return ds.to_dask_dataframe(dim_order, set_index)
 
