@@ -44,6 +44,18 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
+.. _whats-new.2023.04.2:
+
+v2023.04.1 (April 20, 2023)
+---------------------------
+
+This is another patch release to fix a bug with binning (:issue:`7766`)
+
+Bug fixes
+~~~~~~~~~
+
+- Fix binning when ``labels`` is specified. (:issue:`7766`)
+
 .. _whats-new.2023.04.1:
 
 v2023.04.1 (April 18, 2023)
