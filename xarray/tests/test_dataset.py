@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -4598,7 +4598,9 @@ class TestDataset:
 
     @pytest.mark.parametrize("encoding", [True, False])
     @pytest.mark.parametrize("data", [True, "list", "array"])
-    def test_to_and_from_dict(self, encoding: bool, data: bool | str) -> None:
+    def test_to_and_from_dict(
+        self, encoding: bool, data: bool | Literal["list", "array"]
+    ) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -4623,8 +4625,8 @@ class TestDataset:
             ds.t.encoding.update({"foo": "bar"})
             expected["encoding"] = {}
             expected["coords"]["t"]["encoding"] = ds.t.encoding
-            for vv in ["a", "b"]:
-                expected["data_vars"][vv]["encoding"] = {}
+            for vvs in ["a", "b"]:
+                expected["data_vars"][vvs]["encoding"] = {}
 
         actual = ds.to_dict(data=data, encoding=encoding)
 
@@ -4636,8 +4638,7 @@ class TestDataset:
         assert_identical(ds, ds_rt)
         if encoding:
             assert set(ds_rt.variables) == set(ds.variables)
-            for vvh in ds.variables:
-                vv = str(vvh)
+            for vv in ds.variables:
                 np.testing.assert_equal(ds_rt[vv].encoding, ds[vv].encoding)
 
         # check the data=False option
@@ -4659,8 +4660,7 @@ class TestDataset:
         assert_identical(expected_ds, actual2)
         if encoding:
             assert set(expected_ds.variables) == set(actual2.variables)
-            for vvh in ds.variables:
-                vv = str(vvh)
+            for vv in ds.variables:
                 np.testing.assert_equal(expected_ds[vv].encoding, actual2[vv].encoding)
 
         # test some incomplete dicts:
@@ -4710,7 +4710,9 @@ class TestDataset:
         assert_identical(ds, roundtripped)
 
     @pytest.mark.parametrize("data", [True, "list", "array"])
-    def test_to_and_from_dict_with_nan_nat(self, data: bool | str) -> None:
+    def test_to_and_from_dict_with_nan_nat(
+        self, data: bool | Literal["list", "array"]
+    ) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         y[2] = np.nan

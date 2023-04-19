@@ -6442,7 +6442,7 @@ class Dataset(
         return df
 
     def to_dict(
-        self, data: bool | str = "list", encoding: bool = False
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming
@@ -6454,11 +6454,11 @@ class Dataset(
 
         Parameters
         ----------
-        data : bool | str, default: 'list'
+        data : bool or {"list", "array"}, default: "list"
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema. If set to 'list' (or True for
-            backwards compatibility), returns a list of Python data types. If
-            set to 'array', returns a numpy.ndarray.
+            False, returns just the schema. If set to "list" (or True for
+            backwards compatibility), returns data in lists of Python data types.
+            If set to "array", returns data as in numpy.ndarrays.
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
