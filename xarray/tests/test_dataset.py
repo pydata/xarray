@@ -4591,7 +4591,7 @@ class TestDataset:
 
     @pytest.mark.parametrize("encoding", [True, False])
     @pytest.mark.parametrize("numpy_data", [True, False])
-    def test_to_and_from_dict(self, encoding, numpy_data) -> None:
+    def test_to_and_from_dict(self, encoding: bool, numpy_data: bool) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -4628,7 +4628,7 @@ class TestDataset:
         ds_rt = Dataset.from_dict(actual)
         assert_identical(ds, ds_rt)
         if encoding:
-            assert sorted(ds_rt.variables) == sorted(ds.variables)
+            assert set(ds_rt.variables) == set(ds.variables)
             for vv in ds.variables:
                 np.testing.assert_equal(ds_rt[vv].encoding, ds[vv].encoding)
 
@@ -4703,7 +4703,7 @@ class TestDataset:
         assert_identical(ds, roundtripped)
 
     @pytest.mark.parametrize("numpy_data", [True, False])
-    def test_to_and_from_dict_with_nan_nat(self, numpy_data) -> None:
+    def test_to_and_from_dict_with_nan_nat(self, numpy_data: bool) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         y[2] = np.nan

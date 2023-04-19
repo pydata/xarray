@@ -3347,7 +3347,7 @@ class TestDataArray:
 
     @pytest.mark.parametrize("numpy_data", [True, False])
     @pytest.mark.parametrize("encoding", [True, False])
-    def test_to_and_from_dict(self, encoding, numpy_data) -> None:
+    def test_to_and_from_dict(self, encoding: bool, numpy_data: bool) -> None:
         encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"

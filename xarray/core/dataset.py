@@ -6460,10 +6460,7 @@ class Dataset(
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
         numpy_data : bool, default: False
-           Whether to return data as numpy objects rather than native Python (
-           when returning data).
-
-        Returns
+           Whether to return data as numpy.ndarray rather than native Python.
         -------
         d : dict
             Dict with keys: "coords", "attrs", "dims", "data_vars" and optionally

@@ -4193,8 +4193,7 @@ class DataArray(
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
         numpy_data : bool, default: False
-           Whether to return data as numpy objects rather than native Python (
-           when returning data).
+           Whether to return data as numpy.ndarray rather than native Python.
 
         Returns
         -------

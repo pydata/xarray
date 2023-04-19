@@ -635,7 +635,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def to_dict(
         self, data: bool = True, encoding: bool = False, numpy_data: bool = False
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
             "dims": self.dims,
