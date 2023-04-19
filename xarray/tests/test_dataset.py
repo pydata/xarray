@@ -4636,7 +4636,8 @@ class TestDataset:
         assert_identical(ds, ds_rt)
         if encoding:
             assert set(ds_rt.variables) == set(ds.variables)
-            for vv in ds.variables:
+            for vvh in ds.variables:
+                vv = str(vvh)
                 np.testing.assert_equal(ds_rt[vv].encoding, ds[vv].encoding)
 
         # check the data=False option
@@ -4658,7 +4659,8 @@ class TestDataset:
         assert_identical(expected_ds, actual2)
         if encoding:
             assert set(expected_ds.variables) == set(actual2.variables)
-            for vv in ds.variables:
+            for vvh in ds.variables:
+                vv = str(vvh)
                 np.testing.assert_equal(expected_ds[vv].encoding, actual2[vv].encoding)
 
         # test some incomplete dicts:
