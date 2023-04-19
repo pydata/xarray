@@ -338,7 +338,7 @@ def _factorize_bins(
     if (codes == -1).all():
         raise ValueError(f"None of the data falls within bins with edges {bins!r}")
     full_index = binned.categories
-    unique_values = binned.unique().dropna()
+    unique_values = np.sort(binned.unique().dropna())
     group_indices = [g for g in _codes_to_groups(codes, len(full_index)) if g]
 
     if len(group_indices) == 0:

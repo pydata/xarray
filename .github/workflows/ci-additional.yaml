@@ -119,14 +119,14 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install 'mypy<0.990'
+          python -m pip install mypy --force-reinstall
 
       - name: Run mypy
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3.1.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
@@ -173,14 +173,14 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install 'mypy<0.990'
+          python -m pip install mypy --force-reinstall
 
       - name: Run mypy
         run: |
           python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3.1.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy39
