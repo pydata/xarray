@@ -3345,32 +3345,32 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
-    @pytest.mark.parametrize("numpy_data", [True, False])
+    @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
-    def test_to_and_from_dict(self, encoding: bool, numpy_data: bool) -> None:
+    def test_to_and_from_dict(self, encoding: bool, data: bool | str) -> None:
         encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
         array.encoding = encoding_data
 
-        data = array.values
+        return_data = array.values
         coords_data = np.array(["a", "b"])
-        if not numpy_data:
-            data = data.tolist()
+        if data == "list" or data is True:
+            return_data = return_data.tolist()
             coords_data = coords_data.tolist()
 
         expected: dict[str, Any] = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": data,
+            "data": return_data,
             "attrs": {},
             "coords": {"x": {"dims": ("x",), "data": coords_data, "attrs": {}}},
         }
         if encoding:
             expected["encoding"] = encoding_data
 
-        actual = array.to_dict(encoding=encoding, numpy_data=numpy_data)
+        actual = array.to_dict(encoding=encoding, data=data)
 
         # check that they are identical
         np.testing.assert_equal(expected, actual)

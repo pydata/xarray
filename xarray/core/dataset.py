@@ -6442,7 +6442,7 @@ class Dataset(
         return df
 
     def to_dict(
-        self, data: bool = True, encoding: bool = False, numpy_data: bool = False
+        self, data: bool | str = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming
@@ -6454,13 +6454,14 @@ class Dataset(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool | str, default: 'list'
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to 'list' (or True for
+            backwards compatibility), returns a list of Python data types. If
+            set to 'array', returns a numpy.ndarray.
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
-        numpy_data : bool, default: False
-           Whether to return data as numpy.ndarray rather than native Python.
+
         -------
         d : dict
             Dict with keys: "coords", "attrs", "dims", "data_vars" and optionally
@@ -6479,19 +6480,11 @@ class Dataset(
         }
         for k in self.coords:
             d["coords"].update(
-                {
-                    k: self[k].variable.to_dict(
-                        data=data, encoding=encoding, numpy_data=numpy_data
-                    )
-                }
+                {k: self[k].variable.to_dict(data=data, encoding=encoding)}
             )
         for k in self.data_vars:
             d["data_vars"].update(
-                {
-                    k: self[k].variable.to_dict(
-                        data=data, encoding=encoding, numpy_data=numpy_data
-                    )
-                }
+                {k: self[k].variable.to_dict(data=data, encoding=encoding)}
             )
         if encoding:
             d["encoding"] = dict(self.encoding)

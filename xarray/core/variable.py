@@ -634,16 +634,16 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self.to_index_variable().to_index()
 
     def to_dict(
-        self, data: bool = True, encoding: bool = False, numpy_data: bool = False
+        self, data: bool | str = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
             "dims": self.dims,
             "attrs": decode_numpy_dict_values(self.attrs),
         }
-        if data:
+        if data is not False:
             item["data"] = ensure_us_time_resolution(self.to_numpy())
-            if not numpy_data:
+            if data is True or data == "list":
                 item["data"] = item["data"].tolist()
         else:
             item.update({"dtype": str(self.dtype), "shape": self.shape})

@@ -4597,8 +4597,8 @@ class TestDataset:
         assert roundtripped.equals(expected)
 
     @pytest.mark.parametrize("encoding", [True, False])
-    @pytest.mark.parametrize("numpy_data", [True, False])
-    def test_to_and_from_dict(self, encoding: bool, numpy_data: bool) -> None:
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    def test_to_and_from_dict(self, encoding: bool, data: bool | str) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -4626,7 +4626,7 @@ class TestDataset:
             for vv in ["a", "b"]:
                 expected["data_vars"][vv]["encoding"] = {}
 
-        actual = ds.to_dict(numpy_data=numpy_data, encoding=encoding)
+        actual = ds.to_dict(data=data, encoding=encoding)
 
         # check that they are identical
         np.testing.assert_equal(expected, actual)
@@ -4653,13 +4653,11 @@ class TestDataset:
 
         # verify coords are included roundtrip
         expected_ds = ds.set_coords("b")
-        actual2 = Dataset.from_dict(
-            expected_ds.to_dict(numpy_data=numpy_data, encoding=encoding)
-        )
+        actual2 = Dataset.from_dict(expected_ds.to_dict(data=data, encoding=encoding))
 
         assert_identical(expected_ds, actual2)
         if encoding:
-            assert sorted(expected_ds.variables) == sorted(actual2.variables)
+            assert set(expected_ds.variables) == set(actual2.variables)
             for vv in ds.variables:
                 np.testing.assert_equal(expected_ds[vv].encoding, actual2[vv].encoding)
 
@@ -4709,8 +4707,8 @@ class TestDataset:
         roundtripped = Dataset.from_dict(ds.to_dict())
         assert_identical(ds, roundtripped)
 
-    @pytest.mark.parametrize("numpy_data", [True, False])
-    def test_to_and_from_dict_with_nan_nat(self, numpy_data: bool) -> None:
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    def test_to_and_from_dict_with_nan_nat(self, data: bool | str) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -4726,7 +4724,7 @@ class TestDataset:
                 "lat": ("lat", lat),
             }
         )
-        roundtripped = Dataset.from_dict(ds.to_dict(numpy_data=numpy_data))
+        roundtripped = Dataset.from_dict(ds.to_dict(data=data))
         assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:

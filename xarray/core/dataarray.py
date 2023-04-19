@@ -4175,7 +4175,7 @@ class DataArray(
         )
 
     def to_dict(
-        self, data: bool = True, encoding: bool = False, numpy_data: bool = False
+        self, data: bool | str = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray
@@ -4187,13 +4187,13 @@ class DataArray(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool | str, default: 'list'
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to 'list' (or True for
+            backwards compatibility), returns a list of Python data types. If
+            set to 'array', returns a numpy.ndarray.
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
-        numpy_data : bool, default: False
-           Whether to return data as numpy.ndarray rather than native Python.
 
         Returns
         -------
@@ -4204,10 +4204,10 @@ class DataArray(
         DataArray.from_dict
         Dataset.to_dict
         """
-        d = self.variable.to_dict(data=data, numpy_data=numpy_data)
+        d = self.variable.to_dict(data=data)
         d.update({"coords": {}, "name": self.name})
         for k, coord in self.coords.items():
-            d["coords"][k] = coord.variable.to_dict(data=data, numpy_data=numpy_data)
+            d["coords"][k] = coord.variable.to_dict(data=data)
         if encoding:
             d["encoding"] = dict(self.encoding)
         return d
