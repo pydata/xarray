@@ -38,7 +38,9 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Added examples to docstrings for :py:meth:`xarray.core.accessor_str.StringAccessor` methods.
+  (:pull:`7669`) .
+  By `Mary Gathoni <https://github.com/remigathoni>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
