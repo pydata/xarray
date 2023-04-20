@@ -25,6 +25,24 @@ This is a patch release to fix a bug with binning (:issue:`7766`)
 Bug fixes
 ~~~~~~~~~
 
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2023.04.2:
+
+v2023.04.2 (April 20, 2023)
+---------------------------
+
+This is a patch release to fix a bug with binning (:issue:`7766`)
+
+Bug fixes
+~~~~~~~~~
+
 - Fix binning when ``labels`` is specified. (:issue:`7766`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
