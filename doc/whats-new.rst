@@ -15,22 +15,12 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.05.0:
+.. _whats-new.2023.04.2:
 
-v2023.05.0 (unreleased)
------------------------
+v2023.04.2 (April 20, 2023)
+---------------------------
 
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
+This is a patch release to fix a bug with binning (:issue:`7766`)
 
 Bug fixes
 ~~~~~~~~~
@@ -44,9 +34,6 @@ Documentation
 - Added examples to docstrings for :py:meth:`xarray.core.accessor_str.StringAccessor` methods.
   (:pull:`7669`) .
   By `Mary Gathoni <https://github.com/remigathoni>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 
 .. _whats-new.2023.04.1:
