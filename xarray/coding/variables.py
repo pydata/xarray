@@ -318,6 +318,97 @@ def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[A
     return np.float64
 
 
+def _ensure_scale_offset_conformance(
+    mapping: MutableMapping, strict: bool = False
+) -> bool | None:
+    """Check conformance of scale_factor and add_offset for cf encoding/decoding.
+
+    scale_factor and/or add_offset as well as packed dtype are needed within mapping
+    """
+    conforms = True
+    # https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
+    scale_factor = mapping.get("scale_factor")
+    if np.ndim(scale_factor) > 0:
+        scale_factor = np.asarray(scale_factor).item()
+    add_offset = mapping.get("add_offset")
+    if np.ndim(add_offset) > 0:
+        add_offset = np.asarray(add_offset).item()
+    dtype = mapping.get("dtype")
+    ptype = np.dtype(dtype) if dtype is not None else None
+
+    # get the type from scale_factor/add_offset
+    scale_offset_dtype = list(
+        {np.dtype(type(att)) for att in [scale_factor, add_offset] if att is not None}
+    )
+
+    # raise early, aligns with netcdf4-python
+    if np.float16 in scale_offset_dtype:
+        raise ValueError(
+            f"scale_factor and/or add_offset dtype {scale_offset_dtype} mismatch. "
+            "float16 is not allowed."
+        )
+
+    ptype_exists = ptype is not None
+
+    # no packing information available, do nothing
+    if not scale_offset_dtype:
+        return None
+
+    # no packing information available, do nothing
+    if not scale_offset_dtype and not ptype_exists:
+        return None
+
+    # mandatory packing information missing
+    if scale_offset_dtype and not ptype_exists:
+        raise ValueError("Packed dtype information is missing!")
+
+    if len(scale_offset_dtype) == 1:
+        # OK, we have at least one of scale_factor or add_offset
+        # and if both are given, they are of the same dtype
+        scale_offset_dtype = scale_offset_dtype[0]
+
+        if scale_offset_dtype != ptype:
+            if scale_offset_dtype not in [np.float32, np.float64]:
+                msg = (
+                    f"scale_factor and/or add_offset dtype {scale_offset_dtype} "
+                    "mismatch. Must be either float32 or float64 dtype."
+                )
+                if strict:
+                    raise ValueError(msg)
+                else:
+                    warnings.warn(msg, SerializationWarning, stacklevel=3)
+                    conforms = False
+            if np.issubdtype(ptype, np.integer) and ptype not in [
+                np.int8,
+                np.int16,
+                np.int32,
+            ]:
+                msg = f"packed dtype {ptype} mismatch. Must be of type byte, short or int."
+                if strict:
+                    raise ValueError(msg)
+                else:
+                    warnings.warn(msg, SerializationWarning, stacklevel=3)
+                    conforms = False
+            if ptype == np.int32 and scale_offset_dtype == np.float32:
+                warnings.warn(
+                    "Trying to pack float32 into int32. This is not advised per CF Convention "
+                    "because of potential precision loss!",
+                    SerializationWarning,
+                    stacklevel=3,
+                )
+    else:
+        msg = (
+            f"scale_factor dtype {np.dtype(type(scale_factor))} and add_offset dtype "
+            f"{np.dtype(type(add_offset))} mismatch! Must be of same dtype."
+        )
+        if strict:
+            raise ValueError(msg)
+        else:
+            warnings.warn(msg, SerializationWarning, stacklevel=3)
+            conforms = False
+    return conforms
+
+
 class CFScaleOffsetCoder(VariableCoder):
     """Scale and offset variables according to CF conventions.
 
@@ -329,6 +420,9 @@ class CFScaleOffsetCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         if "scale_factor" in encoding or "add_offset" in encoding:
+            # strict checking, raise error on encoding
+            # we do not want to write non-conforming data
+            _ensure_scale_offset_conformance(encoding, strict=True)
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             data = data.astype(dtype=dtype, copy=True)
         if "add_offset" in encoding:
@@ -345,6 +439,14 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
+
+            # for decoding we need the original dtype
+            encoding.setdefault("dtype", data.dtype)
+
+            # only warn on decoding
+            # we try to decode non-conforming data
+            _ensure_scale_offset_conformance(encoding, strict=False)
+
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
