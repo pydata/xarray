@@ -643,8 +643,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         }
         if data is not False:
             if data is True or data == "list":
-                item["data"] = ensure_us_time_resolution(self.to_numpy())
-                item["data"] = item["data"].tolist()
+                item["data"] = ensure_us_time_resolution(self.to_numpy()).tolist()
             elif data == "array":
                 item["data"] = ensure_us_time_resolution(self.data)
             else:
