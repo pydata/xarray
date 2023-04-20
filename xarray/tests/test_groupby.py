@@ -1384,7 +1384,10 @@ class TestDataArrayGroupBy:
         ),
     )
     def test_groupby_bins(
-        self, coords: np.typing.ArrayLike, use_flox: bool, cut_kwargs: dict,
+        self,
+        coords: np.typing.ArrayLike,
+        use_flox: bool,
+        cut_kwargs: dict,
     ) -> None:
         array = DataArray(
             np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
@@ -1430,7 +1433,7 @@ class TestDataArrayGroupBy:
 
     @pytest.mark.parametrize("use_flox", [True, False])
     def test_groupby_bins_gives_correct_subset(self, use_flox: bool) -> None:
-    # GH7766
+        # GH7766
         rng = np.random.default_rng(42)
         coords = rng.normal(5, 5, 1000)
         bins = np.logspace(-4, 1, 10)
@@ -1457,7 +1460,6 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_flox=use_flox):
             actual = gb.count()
         assert_identical(actual, expected)
-
 
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
