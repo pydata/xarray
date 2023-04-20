@@ -18,7 +18,7 @@ from xarray.conventions import (
     decode_cf_variable,
     encode_cf_variable,
 )
-from xarray.tests import assert_allclose, assert_equal, assert_identical, requires_dask
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -123,12 +123,20 @@ def test_scaling_converts_to_float32(dtype) -> None:
 @pytest.mark.parametrize("add_offset", (0.1, [0.1]))
 def test_scaling_offset_as_list(scale_factor, add_offset) -> None:
     # test for #4631
-    encoding = dict(scale_factor=scale_factor, add_offset=add_offset, dtype="i2")
-    original = Variable(("x",), np.arange(10.0), encoding=encoding)
+    # start with encoded Variables
+    attrs = dict(scale_factor=scale_factor, add_offset=add_offset)
+    bad_original = Variable(("x",), np.arange(10, dtype="i2"), attrs=attrs)
+    if np.ndim(scale_factor) > 0:
+        scale_factor = np.asarray(scale_factor).item()
+    if np.ndim(add_offset) > 0:
+        add_offset = np.asarray(add_offset).item()
+    attrs = dict(scale_factor=scale_factor, add_offset=add_offset)
+    good_original = Variable(("x",), np.arange(10, dtype="i2"), attrs=attrs)
+
     coder = variables.CFScaleOffsetCoder()
-    encoded = coder.encode(original)
-    roundtripped = coder.decode(encoded)
-    assert_allclose(original, roundtripped)
+    decoded = coder.decode(bad_original)
+    roundtripped = coder.encode(decoded)
+    assert_identical(good_original, roundtripped)
 
 
 @pytest.mark.parametrize("bits", [1, 2, 4, 8])
