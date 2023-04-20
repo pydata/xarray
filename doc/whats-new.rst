@@ -19,10 +19,10 @@ What's New
 
 v2023.05.0 (unreleased)
 -----------------------
-- Added new method :py:meth:`DataArray.to_dask_dataframe`, convert a dataarray into a dask dataframe (:issue:`7409`).
 
 New Features
 ~~~~~~~~~~~~
+- Added new method :py:meth:`DataArray.to_dask_dataframe`, convert a dataarray into a dask dataframe (:issue:`7409`).
 
 
 Breaking changes
