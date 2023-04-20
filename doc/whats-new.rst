@@ -15,12 +15,22 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.04.2:
+.. _whats-new.2023.05.0:
 
-v2023.04.2 (April 20, 2023)
----------------------------
+v2023.05.0 (unreleased)
+-----------------------
 
-This is a patch release to fix a bug with binning (:issue:`7766`)
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
 
 Bug fixes
 ~~~~~~~~~
@@ -32,6 +42,7 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 
 .. _whats-new.2023.04.2:
 
