@@ -445,8 +445,8 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in _attrs or "add_offset" in _attrs:
             dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-            scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
-            add_offset = pop_to(attrs, encoding, "add_offset", name=name)
+            pop_to(attrs, encoding, "scale_factor", name=name)
+            pop_to(attrs, encoding, "add_offset", name=name)
 
             # for decoding we need the original dtype
             encoding.setdefault("dtype", data.dtype)
@@ -458,8 +458,8 @@ class CFScaleOffsetCoder(VariableCoder):
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             transform = partial(
                 _scale_offset_decoding,
-                scale_factor=scale_factor,
-                add_offset=add_offset,
+                scale_factor=encoding["scale_factor"],
+                add_offset=encoding["add_offset"],
                 dtype=dtype,
             )
             data = lazy_elemwise_func(data, transform, dtype)
