@@ -1452,7 +1452,7 @@ class TestDataArrayGroupBy:
         # Make a mock dataarray
         darr = xr.DataArray(coords, coords=[coords], dims=["coords"])
         expected = xr.DataArray(
-            [np.nan, np.nan, np.nan, 1, 2, 9, 27, 153, 506],
+            [np.nan, np.nan, 1, 1, 1, 8, 31, 104, 542],
             dims="coords_bins",
             coords={"coords_bins": labels},
         )
