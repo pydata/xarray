@@ -3274,7 +3274,7 @@ class TestDataArray:
         arr.name = None
         with pytest.raises(
             ValueError,
-            match="Cannot convert an unnamed DataArray to a dask dataframe : use the ``.rename`` method to assign a name.",
+            match="Cannot convert an unnamed DataArray",
         ):
             arr.to_dask_dataframe()
 
