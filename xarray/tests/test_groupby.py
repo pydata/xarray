@@ -1384,7 +1384,7 @@ class TestDataArrayGroupBy:
         ),
     )
     def test_groupby_bins(
-        self, coords: np.typing.ArrayLike, use_flox: bool, cut_kwargs
+        self, coords: np.typing.ArrayLike, use_flox: bool, cut_kwargs: dict,
     ) -> None:
         array = DataArray(
             np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
@@ -1428,9 +1428,11 @@ class TestDataArrayGroupBy:
             expected = da.groupby_bins("dim_0", bins).mean(...)
         assert_allclose(actual, expected)
 
-    def test_groupby_bins_regression(self):
-        np.random.seed(42)
-        coords = np.random.normal(5, 5, 1000)
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_bins_gives_correct_subset(self, use_flox: bool) -> None:
+    # GH7766
+        rng = np.random.default_rng(42)
+        coords = rng.normal(5, 5, 1000)
         bins = np.logspace(-4, 1, 10)
         labels = [
             "one",
@@ -1452,13 +1454,10 @@ class TestDataArrayGroupBy:
             coords={"coords_bins": labels},
         )
         gb = darr.groupby_bins("coords", bins, labels=labels)
-        with xr.set_options(use_flox=False):
+        with xr.set_options(use_flox=use_flox):
             actual = gb.count()
         assert_identical(actual, expected)
 
-        with xr.set_options(use_flox=True):
-            actual = gb.count()
-        assert_identical(actual, expected)
 
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
