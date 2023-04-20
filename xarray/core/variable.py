@@ -642,9 +642,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             "attrs": decode_numpy_dict_values(self.attrs),
         }
         if data is not False:
-            item["data"] = ensure_us_time_resolution(self.to_numpy())
             if data is True or data == "list":
+                item["data"] = ensure_us_time_resolution(self.to_numpy())
                 item["data"] = item["data"].tolist()
+            elif data == "array":
+                item["data"] = ensure_us_time_resolution(self.data)
+            else:
+                msg = 'data argument must be bool, "list", or "array"'
+                raise ValueError(msg)
+
         else:
             item.update({"dtype": str(self.dtype), "shape": self.shape})
 

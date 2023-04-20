@@ -6458,10 +6458,11 @@ class Dataset(
             Whether to include the actual data in the dictionary. When set to
             False, returns just the schema. If set to "list" (or True for
             backwards compatibility), returns data in lists of Python data types.
-            If set to "array", returns data as in numpy.ndarrays.
+            If set to "array", returns data as underlying array type.
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
+        Returns
         -------
         d : dict
             Dict with keys: "coords", "attrs", "dims", "data_vars" and optionally

@@ -3345,11 +3345,14 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
+    @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(
-        self, encoding: bool, data: bool | Literal["list", "array"]
+        self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
     ) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
         encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
@@ -3372,31 +3375,40 @@ class TestDataArray:
         if encoding:
             expected["encoding"] = encoding_data
 
-        actual = array.to_dict(encoding=encoding, data=data)
+        if has_dask:
+            da = array.chunk()
+        else:
+            da = array
+
+        if data == "array" or data is False:
+            with raise_if_dask_computes():
+                actual = da.to_dict(encoding=encoding, data=data)
+        else:
+            actual = da.to_dict(encoding=encoding, data=data)
 
         # check that they are identical
         np.testing.assert_equal(expected, actual)
 
         # check roundtrip
-        assert_identical(array, DataArray.from_dict(actual))
+        assert_identical(da, DataArray.from_dict(actual))
 
         # a more bare bones representation still roundtrips
         d = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": da.values.tolist(),
             "coords": {"x": {"dims": "x", "data": ["a", "b"]}},
         }
-        assert_identical(array, DataArray.from_dict(d))
+        assert_identical(da, DataArray.from_dict(d))
 
         # and the most bare bones representation still roundtrips
-        d = {"name": "foo", "dims": ("x", "y"), "data": array.values}
-        assert_identical(array.drop_vars("x"), DataArray.from_dict(d))
+        d = {"name": "foo", "dims": ("x", "y"), "data": da.values}
+        assert_identical(da.drop_vars("x"), DataArray.from_dict(d))
 
         # missing a dims in the coords
         d = {
             "dims": ("x", "y"),
-            "data": array.values,
+            "data": da.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
         with pytest.raises(
@@ -3419,7 +3431,7 @@ class TestDataArray:
         endiantype = "<U1" if sys.byteorder == "little" else ">U1"
         expected_no_data["coords"]["x"].update({"dtype": endiantype, "shape": (2,)})
         expected_no_data.update({"dtype": "float64", "shape": (2, 3)})
-        actual_no_data = array.to_dict(data=False, encoding=encoding)
+        actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
     def test_to_and_from_dict_with_time_dim(self) -> None:
