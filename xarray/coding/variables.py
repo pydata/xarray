@@ -319,7 +319,7 @@ def _choose_float_dtype(dtype: np.dtype, has_offset: bool) -> type[np.floating[A
 
 
 def _ensure_scale_offset_conformance(
-    mapping: MutableMapping, strict: bool = False
+    mapping: MutableMapping[str, Any], strict: bool = False
 ) -> bool | None:
     """Check conformance of scale_factor and add_offset for cf encoding/decoding.
 
@@ -365,12 +365,10 @@ def _ensure_scale_offset_conformance(
     if len(scale_offset_dtype) == 1:
         # OK, we have at least one of scale_factor or add_offset
         # and if both are given, they are of the same dtype
-        scale_offset_dtype = scale_offset_dtype[0]
-
-        if scale_offset_dtype != ptype:
-            if scale_offset_dtype not in [np.float32, np.float64]:
+        if scale_offset_dtype[0] != ptype:
+            if scale_offset_dtype[0] not in [np.float32, np.float64]:
                 msg = (
-                    f"scale_factor and/or add_offset dtype {scale_offset_dtype} "
+                    f"scale_factor and/or add_offset dtype {scale_offset_dtype[0]} "
                     "mismatch. Must be either float32 or float64 dtype."
                 )
                 if strict:
@@ -389,7 +387,7 @@ def _ensure_scale_offset_conformance(
                 else:
                     warnings.warn(msg, SerializationWarning, stacklevel=3)
                     conforms = False
-            if ptype == np.int32 and scale_offset_dtype == np.float32:
+            if ptype == np.int32 and scale_offset_dtype[0] == np.float32:
                 warnings.warn(
                     "Trying to pack float32 into int32. This is not advised per CF Convention "
                     "because of potential precision loss!",
