@@ -328,7 +328,7 @@ def _ensure_scale_offset_conformance(
     conforms = True
     # https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
     scale_factor = mapping.get("scale_factor")
-    if np.ndim(scale_factor) > 0:
+    if scale_factor is not None and np.ndim(scale_factor) > 0:
         if strict:
             raise ValueError(f"scale_factor {scale_factor} mismatch, scalar expected.")
         else:
@@ -336,7 +336,7 @@ def _ensure_scale_offset_conformance(
             mapping["scale_factor"] = scale_factor
 
     add_offset = mapping.get("add_offset")
-    if np.ndim(add_offset) > 0:
+    if add_offset is not None and np.ndim(add_offset) > 0:
         if strict:
             raise ValueError(f"add_offset {add_offset} mismatch, scalar expected.")
         else:
@@ -458,8 +458,8 @@ class CFScaleOffsetCoder(VariableCoder):
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             transform = partial(
                 _scale_offset_decoding,
-                scale_factor=encoding["scale_factor"],
-                add_offset=encoding["add_offset"],
+                scale_factor=encoding.get("scale_factor"),
+                add_offset=encoding.get("add_offset"),
                 dtype=dtype,
             )
             data = lazy_elemwise_func(data, transform, dtype)
