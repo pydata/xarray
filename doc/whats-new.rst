@@ -35,6 +35,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix binning when ``labels`` is specified. (:issue:`7766`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
