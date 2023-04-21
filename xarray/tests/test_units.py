@@ -5631,12 +5631,12 @@ class TestPintWrappingDask:
         import dask.array
 
         d = dask.array.array([1, 2, 3])
-        q = pint.Quantity(d, units="m")
+        q = unit_registry.Quantity(d, units="m")
         da = xr.DataArray(q, dims="x")
 
         actual = da.mean().compute()
         actual.name = None
-        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+        expected = xr.DataArray(unit_registry.Quantity(np.array(2.0), units="m"))
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
