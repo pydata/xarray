@@ -178,6 +178,18 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u + u, v + v)
         self.assertLazyAndIdentical(u[0] + u, v[0] + v)
 
+    def test_binary_op_bitshift(self):
+        # bit shifts only work on ints so we need to generate 
+        # new eager and lazy vars
+        values = np.random.default_rng(0).integers(0, high=1e10, size=(4, 6), dtype=np.int64)
+        data = da.from_array(values, chunks=(2, 2))
+        u = Variable(("x", "y"), values)
+        v = Variable(("x", "y"), data)
+        self.assertLazyAndIdentical(u << 2, v << 2)
+        self.assertLazyAndIdentical(u << 5, v << 5)
+        self.assertLazyAndIdentical(u >> 2, v >> 2)
+        self.assertLazyAndIdentical(u >> 5, v >> 5)
+
     def test_repr(self):
         expected = dedent(
             """\
