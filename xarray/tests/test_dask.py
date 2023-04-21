@@ -178,7 +178,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u + u, v + v)
         self.assertLazyAndIdentical(u[0] + u, v[0] + v)
 
-    def test_binary_op_bitshift(self):
+    def test_binary_op_bitshift(self) -> None:
         # bit shifts only work on ints so we need to generate
         # new eager and lazy vars
         values = np.random.default_rng(0).integers(

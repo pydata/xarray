@@ -345,7 +345,7 @@ class VariableSubclassobjects(ABC):
         assert "Period('2000-01-03', 'B')" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
-    def test_1d_math(self, dtype):
+    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
         x = np.arange(5, dtype=dtype)
         y = np.ones(5, dtype=dtype)
 
