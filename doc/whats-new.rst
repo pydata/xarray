@@ -15,10 +15,82 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.2023.05.0:
+
+v2023.05.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.04.2:
+
+v2023.04.2 (April 20, 2023)
+---------------------------
+
+This is a patch release to fix a bug with binning (:issue:`7766`)
+
+Bug fixes
+~~~~~~~~~
+
+- Fix binning when ``labels`` is specified. (:issue:`7766`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+- Added examples to docstrings for :py:meth:`xarray.core.accessor_str.StringAccessor` methods.
+  (:pull:`7669`) .
+  By `Mary Gathoni <https://github.com/remigathoni>`_.
+
+
+.. _whats-new.2023.04.1:
+
+v2023.04.1 (April 18, 2023)
+---------------------------
+
+This is a patch release to fix a bug with binning (:issue:`7759`)
+
+Bug fixes
+~~~~~~~~~
+
+- Fix binning by unsorted arrays. (:issue:`7759`)
+
+
 .. _whats-new.2023.04.0:
 
-v2023.04.0 (unreleased)
------------------------
+v2023.04.0 (April 14, 2023)
+---------------------------
+
+This release includes support for pandas v2, allows refreshing of backend engines in a session, and removes deprecated backends
+for ``rasterio`` and ``cfgrib``.
+
+Thanks to our 19 contributors:
+Chinemere, Tom Coleman, Deepak Cherian, Harshitha, Illviljan, Jessica Scheick, Joe Hamman, Justus Magin, Kai Mühlbauer, Kwonil-Kim, Mary Gathoni, Michael Niklas, Pierre, Scott Henderson, Shreyal Gupta, Spencer Clark,  mccloskey, nishtha981, veenstrajelmer
+
+We welcome the following new contributors to Xarray!:
+Mary Gathoni, Harshitha, veenstrajelmer, Chinemere, nishtha981, Shreyal Gupta, Kwonil-Kim, mccloskey.
 
 New Features
 ~~~~~~~~~~~~
@@ -39,6 +111,12 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+Performance
+~~~~~~~~~~~
+- Optimize alignment with ``join="exact", copy=False`` by avoiding copies. (:pull:`7736`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Avoid unnecessary copies of ``CFTimeIndex``. (:pull:`7735`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -54,7 +132,10 @@ Bug fixes
   (:issue:`7420`, :pull:`7441`).
   By `Justus Magin <https://github.com/keewis>`_ and
   `Spencer Clark  <https://github.com/spencerkclark>`_.
-
+- Various `dtype` related fixes needed to support `pandas>=2.0` (:pull:`7724`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Preserve boolean dtype within encoding (:issue:`7652`, :pull:`7720`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -78,6 +159,12 @@ Internal Changes
 
 - Added a config.yml file with messages for the welcome bot when a Github user creates their first ever issue or pull request or has their first PR merged. (:issue:`7685`, :pull:`7685`)
   By `Nishtha P <https://github.com/nishthap981>`_.
+
+- Ensure that only nanosecond-precision :py:class:`pd.Timestamp` objects
+  continue to be used internally under pandas version 2.0.0.  This is mainly to
+  ease the transition to this latest version of pandas.  It should be relaxed
+  when addressing :issue:`7493`.  By `Spencer Clark
+  <https://github.com/spencerkclark>`_ (:issue:`7707`, :pull:`7731`).
 
 .. _whats-new.2023.03.0:
 

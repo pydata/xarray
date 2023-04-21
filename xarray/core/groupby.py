@@ -338,7 +338,8 @@ def _factorize_bins(
     if (codes == -1).all():
         raise ValueError(f"None of the data falls within bins with edges {bins!r}")
     full_index = binned.categories
-    unique_values = binned.unique().dropna()
+    uniques = np.sort(pd.unique(codes))
+    unique_values = full_index[uniques[uniques != -1]]
     group_indices = [g for g in _codes_to_groups(codes, len(full_index)) if g]
 
     if len(group_indices) == 0:
@@ -892,7 +893,7 @@ class GroupBy(Generic[T_Xarray]):
                 * "nearest"
 
             See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
+            an asterisk require numpy version 1.22 or newer. The "method" argument was
             previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
         keep_attrs : bool or None, default: None

@@ -501,6 +501,7 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
@@ -1370,29 +1371,58 @@ class TestDataArrayGroupBy:
         )
         assert_identical(expected, actual)
 
-    def test_groupby_bins(self):
-        array = DataArray(np.arange(4), dims="dim_0")
+    @pytest.mark.parametrize("use_flox", [True, False])
+    @pytest.mark.parametrize("coords", [np.arange(4), np.arange(4)[::-1], [2, 0, 3, 1]])
+    @pytest.mark.parametrize(
+        "cut_kwargs",
+        (
+            {"labels": None, "include_lowest": True},
+            {"labels": None, "include_lowest": False},
+            {"labels": ["a", "b"]},
+            {"labels": [1.2, 3.5]},
+            {"labels": ["b", "a"]},
+        ),
+    )
+    def test_groupby_bins(
+        self,
+        coords: np.typing.ArrayLike,
+        use_flox: bool,
+        cut_kwargs: dict,
+    ) -> None:
+        array = DataArray(
+            np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
+        )
         # the first value should not be part of any group ("right" binning)
         array[0] = 99
         # bins follow conventions for pandas.cut
         # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         bins = [0, 1.5, 5]
-        bin_coords = pd.cut(array["dim_0"], bins).categories
-        expected = DataArray(
-            [1, 5], dims="dim_0_bins", coords={"dim_0_bins": bin_coords}
+
+        df = array.to_dataframe()
+        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
+
+        expected_df = df.groupby("dim_0_bins").sum()
+        # TODO: can't convert df with IntervalIndex to Xarray
+        expected = (
+            expected_df.reset_index(drop=True)
+            .to_xarray()
+            .assign_coords(index=np.array(expected_df.index))
+            .rename({"index": "dim_0_bins"})["a"]
         )
-        actual = array.groupby_bins("dim_0", bins=bins).sum()
-        assert_identical(expected, actual)
 
-        actual = array.groupby_bins("dim_0", bins=bins, labels=[1.2, 3.5]).sum()
-        assert_identical(expected.assign_coords(dim_0_bins=[1.2, 3.5]), actual)
+        with xr.set_options(use_flox=use_flox):
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).sum()
+            assert_identical(expected, actual)
 
-        actual = array.groupby_bins("dim_0", bins=bins).map(lambda x: x.sum())
-        assert_identical(expected, actual)
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).map(
+                lambda x: x.sum()
+            )
+            assert_identical(expected, actual)
 
-        # make sure original array dims are unchanged
-        assert len(array.dim_0) == 4
+            # make sure original array dims are unchanged
+            assert len(array.dim_0) == 4
 
+    def test_groupby_bins_ellipsis(self):
         da = xr.DataArray(np.ones((2, 3, 4)))
         bins = [-1, 0, 1, 2]
         with xr.set_options(use_flox=False):
@@ -1400,6 +1430,36 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_flox=True):
             expected = da.groupby_bins("dim_0", bins).mean(...)
         assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_bins_gives_correct_subset(self, use_flox: bool) -> None:
+        # GH7766
+        rng = np.random.default_rng(42)
+        coords = rng.normal(5, 5, 1000)
+        bins = np.logspace(-4, 1, 10)
+        labels = [
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+        ]
+        # xArray
+        # Make a mock dataarray
+        darr = xr.DataArray(coords, coords=[coords], dims=["coords"])
+        expected = xr.DataArray(
+            [np.nan, np.nan, 1, 1, 1, 8, 31, 104, 542],
+            dims="coords_bins",
+            coords={"coords_bins": labels},
+        )
+        gb = darr.groupby_bins("coords", bins, labels=labels)
+        with xr.set_options(use_flox=use_flox):
+            actual = gb.count()
+        assert_identical(actual, expected)
 
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
@@ -1805,6 +1865,7 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_upsample_interpolate_bug_2197(self):
         dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
