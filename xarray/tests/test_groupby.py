@@ -812,7 +812,7 @@ def test_groupby_math_bitshift() -> None:
     ds = Dataset(
         {
             "x": ("level", np.ones(4, dtype=int)),
-            "y": ("level", np.ones(4, dtype=int)*-1),
+            "y": ("level", np.ones(4, dtype=int) * -1),
             "level": [0, 1, 2, 3],
         }
     )
@@ -820,7 +820,7 @@ def test_groupby_math_bitshift() -> None:
         {
             "x": ("level", [1, 2, 4, 8]),
             "y": ("level", [-1, -2, -4, -8]),
-            "level": [0, 1, 2, 3]
+            "level": [0, 1, 2, 3],
         }
     )
 
