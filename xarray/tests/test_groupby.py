@@ -809,25 +809,30 @@ def test_groupby_math_more() -> None:
 
 
 def test_groupby_math_bitshift() -> None:
+    # create new dataset of int's only
     ds = Dataset(
         {
-            "x": ("level", np.ones(4, dtype=int)),
-            "y": ("level", np.ones(4, dtype=int) * -1),
-            "level": [0, 1, 2, 3],
+            "x": ("index", np.ones(4, dtype=int)),
+            "y": ("index", np.ones(4, dtype=int)*-1),
+            "level":("index", [1, 1, 2, 2]),
+            "index": [0, 1, 2, 3]
         }
     )
+    shift = DataArray([1, 2, 1], [("level", [1, 2, 8])])
+
     left_expected = Dataset(
         {
-            "x": ("level", [1, 2, 4, 8]),
-            "y": ("level", [-1, -2, -4, -8]),
-            "level": [0, 1, 2, 3],
+            "x": ("index", [2, 2, 4, 4]),
+            "y": ("index", [-2, -2, -4, -4]),
+            "level":("index", [2, 2, 8, 8]),
+            "index": [0, 1, 2, 3]
         }
     )
 
-    left_actual = ds.groupby("level") << ds.level
+    left_actual = (ds.groupby("level") << shift).reset_coords(names='level')
     assert_equal(left_expected, left_actual)
 
-    right_actual = left_expected.groupby("level") >> left_expected.level
+    right_actual = (left_expected.groupby("level") >> shift).reset_coords(names='level')
     assert_equal(ds, right_actual)
 
 
