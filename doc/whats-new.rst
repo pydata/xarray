@@ -22,6 +22,8 @@ v2023.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add support for lshift and rshift binary operators (`<<`, `>>`) on :py:class:`xr.DataArray` of type :py:class:`int` (:issue:`7727` , :pull:`7741`)
+By `Alan Brammer <https://github.com/abrammer>`_.
 
 
 Breaking changes
