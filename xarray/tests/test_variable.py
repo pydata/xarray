@@ -345,7 +345,7 @@ class VariableSubclassobjects(ABC):
         assert "Period('2000-01-03', 'B')" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
-    def test_1d_math(self, dtype):
+    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
         x = np.arange(5, dtype=dtype)
         y = np.ones(5, dtype=dtype)
 
@@ -367,7 +367,7 @@ class VariableSubclassobjects(ABC):
             assert_array_equal(v >> 2, x >> 2)
         # binary ops with numpy arrays
         assert_array_equal((v * x).values, x**2)
-        assert_array_equal((x * v).values, x**2)
+        assert_array_equal((x * v).values, x**2)  # type: ignore[attr-defined] # TODO: Fix mypy thinking numpy takes priority, GH7780
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
         if dtype is int:
