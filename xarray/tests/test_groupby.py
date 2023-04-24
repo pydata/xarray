@@ -808,6 +808,29 @@ def test_groupby_math_more() -> None:
         ds + ds.groupby("time.month")
 
 
+def test_groupby_math_bitshift() -> None:
+    ds = Dataset(
+        {
+            "x": ("level", np.ones(4, dtype=int)),
+            "y": ("level", np.ones(4, dtype=int)*-1),
+            "level": [0, 1, 2, 3],
+        }
+    )
+    left_expected = Dataset(
+        {
+            "x": ("level", [1, 2, 4, 8]),
+            "y": ("level", [-1, -2, -4, -8]),
+            "level": [0, 1, 2, 3]
+        }
+    )
+
+    left_actual = ds.groupby("level") << ds.level
+    assert_equal(left_expected, left_actual)
+
+    right_actual = left_expected.groupby("level") >> left_expected.level
+    assert_equal(ds, right_actual)
+
+
 @pytest.mark.parametrize("use_flox", [True, False])
 def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
     da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
