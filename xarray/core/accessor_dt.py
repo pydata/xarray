@@ -65,7 +65,7 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
-    values_as_series = pd.Series(values.ravel())
+    values_as_series = pd.Series(values.ravel(), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
@@ -115,7 +115,7 @@ def _get_date_field(values, name, dtype):
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
-        return access_method(values, name)
+        return access_method(values, name).astype(dtype)
 
 
 def _round_through_series_or_index(values, name, freq):
@@ -125,7 +125,7 @@ def _round_through_series_or_index(values, name, freq):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if is_np_datetime_like(values.dtype):
-        values_as_series = pd.Series(values.ravel())
+        values_as_series = pd.Series(values.ravel(), copy=False)
         method = getattr(values_as_series.dt, name)
     else:
         values_as_cftimeindex = CFTimeIndex(values.ravel())
@@ -182,7 +182,7 @@ def _strftime_through_series(values, date_format: str):
     """Coerce an array of datetime-like values to a pandas Series and
     apply string formatting
     """
-    values_as_series = pd.Series(values.ravel())
+    values_as_series = pd.Series(values.ravel(), copy=False)
     strs = values_as_series.dt.strftime(date_format)
     return strs.values.reshape(values.shape)
 
