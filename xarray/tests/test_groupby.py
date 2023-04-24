@@ -813,9 +813,9 @@ def test_groupby_math_bitshift() -> None:
     ds = Dataset(
         {
             "x": ("index", np.ones(4, dtype=int)),
-            "y": ("index", np.ones(4, dtype=int)*-1),
-            "level":("index", [1, 1, 2, 2]),
-            "index": [0, 1, 2, 3]
+            "y": ("index", np.ones(4, dtype=int) * -1),
+            "level": ("index", [1, 1, 2, 2]),
+            "index": [0, 1, 2, 3],
         }
     )
     shift = DataArray([1, 2, 1], [("level", [1, 2, 8])])
@@ -824,15 +824,15 @@ def test_groupby_math_bitshift() -> None:
         {
             "x": ("index", [2, 2, 4, 4]),
             "y": ("index", [-2, -2, -4, -4]),
-            "level":("index", [2, 2, 8, 8]),
-            "index": [0, 1, 2, 3]
+            "level": ("index", [2, 2, 8, 8]),
+            "index": [0, 1, 2, 3],
         }
     )
 
-    left_actual = (ds.groupby("level") << shift).reset_coords(names='level')
+    left_actual = (ds.groupby("level") << shift).reset_coords(names="level")
     assert_equal(left_expected, left_actual)
 
-    right_actual = (left_expected.groupby("level") >> shift).reset_coords(names='level')
+    right_actual = (left_expected.groupby("level") >> shift).reset_coords(names="level")
     assert_equal(ds, right_actual)
 
 
