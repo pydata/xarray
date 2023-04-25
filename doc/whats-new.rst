@@ -15,6 +15,55 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.2023.05.0:
+
+v2023.05.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.04.2:
+
+v2023.04.2 (April 20, 2023)
+---------------------------
+
+This is a patch release to fix a bug with binning (:issue:`7766`)
+
+Bug fixes
+~~~~~~~~~
+
+- Fix binning when ``labels`` is specified. (:issue:`7766`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+- Added examples to docstrings for :py:meth:`xarray.core.accessor_str.StringAccessor` methods.
+  (:pull:`7669`) .
+  By `Mary Gathoni <https://github.com/remigathoni>`_.
+
 
 .. _whats-new.2023.04.1:
 

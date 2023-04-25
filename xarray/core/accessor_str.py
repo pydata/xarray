@@ -672,6 +672,23 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         capitalized : same type as values
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     ["temperature", "PRESSURE", "PreCipiTation", "daily rainfall"], dims="x"
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4)>
+        array(['temperature', 'PRESSURE', 'PreCipiTation', 'daily rainfall'],
+              dtype='<U14')
+        Dimensions without coordinates: x
+        >>> capitalized = da.str.capitalize()
+        >>> capitalized
+        <xarray.DataArray (x: 4)>
+        array(['Temperature', 'Pressure', 'Precipitation', 'Daily rainfall'],
+              dtype='<U14')
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.capitalize())
 
@@ -681,7 +698,20 @@ class StringAccessor(Generic[T_DataArray]):
 
         Returns
         -------
-        lowerd : same type as values
+        lowered : same type as values
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["Temperature", "PRESSURE"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 2)>
+        array(['Temperature', 'PRESSURE'], dtype='<U11')
+        Dimensions without coordinates: x
+        >>> lowered = da.str.lower()
+        >>> lowered
+        <xarray.DataArray (x: 2)>
+        array(['temperature', 'pressure'], dtype='<U11')
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.lower())
 
@@ -692,6 +722,20 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         swapcased : same type as values
+
+        Examples
+        --------
+        >>> import xarray as xr
+        >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
+        Dimensions without coordinates: x
+        >>> swapcased = da.str.swapcase()
+        >>> swapcased
+        <xarray.DataArray (x: 3)>
+        array(['TEMPERATURE', 'pressure', 'hUmIdItY'], dtype='<U11')
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.swapcase())
 
@@ -702,6 +746,19 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         titled : same type as values
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["temperature", "PRESSURE", "HuMiDiTy"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['temperature', 'PRESSURE', 'HuMiDiTy'], dtype='<U11')
+        Dimensions without coordinates: x
+        >>> titled = da.str.title()
+        >>> titled
+        <xarray.DataArray (x: 3)>
+        array(['Temperature', 'Pressure', 'Humidity'], dtype='<U11')
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.title())
 
@@ -712,6 +769,19 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         uppered : same type as values
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["temperature", "HuMiDiTy"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 2)>
+        array(['temperature', 'HuMiDiTy'], dtype='<U11')
+        Dimensions without coordinates: x
+        >>> uppered = da.str.upper()
+        >>> uppered
+        <xarray.DataArray (x: 2)>
+        array(['TEMPERATURE', 'HUMIDITY'], dtype='<U11')
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.upper())
 
@@ -722,11 +792,37 @@ class StringAccessor(Generic[T_DataArray]):
         Casefolding is similar to converting to lowercase,
         but removes all case distinctions.
         This is important in some languages that have more complicated
-        cases and case conversions.
+        cases and case conversions. For example,
+        the 'ß' character in German is case-folded to 'ss', whereas it is lowercased
+        to 'ß'.
 
         Returns
         -------
         casefolded : same type as values
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["TEMPERATURE", "HuMiDiTy"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 2)>
+        array(['TEMPERATURE', 'HuMiDiTy'], dtype='<U11')
+        Dimensions without coordinates: x
+        >>> casefolded = da.str.casefold()
+        >>> casefolded
+        <xarray.DataArray (x: 2)>
+        array(['temperature', 'humidity'], dtype='<U11')
+        Dimensions without coordinates: x
+
+        >>> da = xr.DataArray(["ß", "İ"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 2)>
+        array(['ß', 'İ'], dtype='<U1')
+        Dimensions without coordinates: x
+        >>> casefolded = da.str.casefold()
+        >>> casefolded
+        <xarray.DataArray (x: 2)>
+        array(['ss', 'i̇'], dtype='<U2')
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.casefold())
 
@@ -760,6 +856,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isalnum : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["H2O", "NaCl-"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 2)>
+        array(['H2O', 'NaCl-'], dtype='<U5')
+        Dimensions without coordinates: x
+        >>> isalnum = da.str.isalnum()
+        >>> isalnum
+        <xarray.DataArray (x: 2)>
+        array([ True, False])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isalnum(), dtype=bool)
 
@@ -771,6 +880,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isalpha : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["Mn", "H2O", "NaCl-"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['Mn', 'H2O', 'NaCl-'], dtype='<U5')
+        Dimensions without coordinates: x
+        >>> isalpha = da.str.isalpha()
+        >>> isalpha
+        <xarray.DataArray (x: 3)>
+        array([ True, False, False])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isalpha(), dtype=bool)
 
@@ -782,6 +904,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isdecimal : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["2.3", "123", "0"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['2.3', '123', '0'], dtype='<U3')
+        Dimensions without coordinates: x
+        >>> isdecimal = da.str.isdecimal()
+        >>> isdecimal
+        <xarray.DataArray (x: 3)>
+        array([False,  True,  True])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isdecimal(), dtype=bool)
 
@@ -793,6 +928,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isdigit : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["123", "1.2", "0", "CO2", "NaCl"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 5)>
+        array(['123', '1.2', '0', 'CO2', 'NaCl'], dtype='<U4')
+        Dimensions without coordinates: x
+        >>> isdigit = da.str.isdigit()
+        >>> isdigit
+        <xarray.DataArray (x: 5)>
+        array([ True, False,  True, False, False])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isdigit(), dtype=bool)
 
@@ -803,7 +951,21 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         islower : array of bool
-            Array of boolean values with the same shape as the original array.
+            Array of boolean values with the same shape as the original array indicating whether all characters of each
+            element of the string array are lowercase (True) or not (False).
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["temperature", "HUMIDITY", "pREciPiTaTioN"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['temperature', 'HUMIDITY', 'pREciPiTaTioN'], dtype='<U13')
+        Dimensions without coordinates: x
+        >>> islower = da.str.islower()
+        >>> islower
+        <xarray.DataArray (x: 3)>
+        array([ True, False, False])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.islower(), dtype=bool)
 
@@ -815,6 +977,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isnumeric : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["123", "2.3", "H2O", "NaCl-", "Mn"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 5)>
+        array(['123', '2.3', 'H2O', 'NaCl-', 'Mn'], dtype='<U5')
+        Dimensions without coordinates: x
+        >>> isnumeric = da.str.isnumeric()
+        >>> isnumeric
+        <xarray.DataArray (x: 5)>
+        array([ True, False, False, False, False])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
@@ -826,6 +1001,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isspace : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 4)>
+        array(['', ' ', '\\t', '\\n'], dtype='<U1')
+        Dimensions without coordinates: x
+        >>> isspace = da.str.isspace()
+        >>> isspace
+        <xarray.DataArray (x: 4)>
+        array([False,  True,  True,  True])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isspace(), dtype=bool)
 
@@ -837,6 +1025,27 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         istitle : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [
+        ...         "The Evolution Of Species",
+        ...         "The Theory of relativity",
+        ...         "the quantum mechanics of atoms",
+        ...     ],
+        ...     dims="title",
+        ... )
+        >>> da
+        <xarray.DataArray (title: 3)>
+        array(['The Evolution Of Species', 'The Theory of relativity',
+               'the quantum mechanics of atoms'], dtype='<U30')
+        Dimensions without coordinates: title
+        >>> istitle = da.str.istitle()
+        >>> istitle
+        <xarray.DataArray (title: 3)>
+        array([ True, False, False])
+        Dimensions without coordinates: title
         """
         return self._apply(func=lambda x: x.istitle(), dtype=bool)
 
@@ -848,6 +1057,19 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         isupper : array of bool
             Array of boolean values with the same shape as the original array.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["TEMPERATURE", "humidity", "PreCIpiTAtioN"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['TEMPERATURE', 'humidity', 'PreCIpiTAtioN'], dtype='<U13')
+        Dimensions without coordinates: x
+        >>> isupper = da.str.isupper()
+        >>> isupper
+        <xarray.DataArray (x: 3)>
+        array([ True, False, False])
+        Dimensions without coordinates: x
         """
         return self._apply(func=lambda x: x.isupper(), dtype=bool)
 
@@ -883,6 +1105,46 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         counts : array of int
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["jjklmn", "opjjqrs", "t-JJ99vwx"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['jjklmn', 'opjjqrs', 't-JJ99vwx'], dtype='<U9')
+        Dimensions without coordinates: x
+
+        Using a string:
+        >>> da.str.count("jj")
+        <xarray.DataArray (x: 3)>
+        array([1, 1, 0])
+        Dimensions without coordinates: x
+
+        Enable case-insensitive matching by setting case to false:
+        >>> counts = da.str.count("jj", case=False)
+        >>> counts
+        <xarray.DataArray (x: 3)>
+        array([1, 1, 1])
+        Dimensions without coordinates: x
+
+        Using regex:
+        >>> pat = "JJ[0-9]{2}[a-z]{3}"
+        >>> counts = da.str.count(pat)
+        >>> counts
+        <xarray.DataArray (x: 3)>
+        array([0, 0, 1])
+        Dimensions without coordinates: x
+
+        Using an array of strings (the pattern will be broadcast against the array):
+
+        >>> pat = xr.DataArray(["jj", "JJ"], dims="y")
+        >>> counts = da.str.count(pat)
+        >>> counts
+        <xarray.DataArray (x: 3, y: 2)>
+        array([[1, 0],
+               [1, 0],
+               [0, 1]])
+        Dimensions without coordinates: x, y
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -907,6 +1169,19 @@ class StringAccessor(Generic[T_DataArray]):
         startswith : array of bool
             An array of booleans indicating whether the given pattern matches
             the start of each string element.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["$100", "£23", "100"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['$100', '£23', '100'], dtype='<U4')
+        Dimensions without coordinates: x
+        >>> startswith = da.str.startswith("$")
+        >>> startswith
+        <xarray.DataArray (x: 3)>
+        array([ True, False, False])
+        Dimensions without coordinates: x
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.startswith(y)
@@ -930,6 +1205,19 @@ class StringAccessor(Generic[T_DataArray]):
         endswith : array of bool
             A Series of booleans indicating whether the given pattern matches
             the end of each string element.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(["10C", "10c", "100F"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 3)>
+        array(['10C', '10c', '100F'], dtype='<U4')
+        Dimensions without coordinates: x
+        >>> endswith = da.str.endswith("C")
+        >>> endswith
+        <xarray.DataArray (x: 3)>
+        array([ True, False, False])
+        Dimensions without coordinates: x
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.endswith(y)
@@ -963,6 +1251,66 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
             Array with a minimum number of char in each element.
+
+        Examples
+        --------
+        Pad strings in the array with a single string on the left side.
+
+        Define the string in the array.
+
+        >>> da = xr.DataArray(["PAR184", "TKO65", "NBO9139", "NZ39"], dims="x")
+        >>> da
+        <xarray.DataArray (x: 4)>
+        array(['PAR184', 'TKO65', 'NBO9139', 'NZ39'], dtype='<U7')
+        Dimensions without coordinates: x
+
+        Pad the strings
+
+        >>> filled = da.str.pad(8, side="left", fillchar="0")
+        >>> filled
+        <xarray.DataArray (x: 4)>
+        array(['00PAR184', '000TKO65', '0NBO9139', '0000NZ39'], dtype='<U8')
+        Dimensions without coordinates: x
+
+        Pad strings on the right side
+
+        >>> filled = da.str.pad(8, side="right", fillchar="0")
+        >>> filled
+        <xarray.DataArray (x: 4)>
+        array(['PAR18400', 'TKO65000', 'NBO91390', 'NZ390000'], dtype='<U8')
+        Dimensions without coordinates: x
+
+        Pad strings on both sides
+
+        >>> filled = da.str.pad(8, side="both", fillchar="0")
+        >>> filled
+        <xarray.DataArray (x: 4)>
+        array(['0PAR1840', '0TKO6500', 'NBO91390', '00NZ3900'], dtype='<U8')
+        Dimensions without coordinates: x
+
+        Using an array-like width
+
+        >>> width = xr.DataArray([8, 10], dims="y")
+        >>> filled = da.str.pad(width, side="left", fillchar="0")
+        >>> filled
+        <xarray.DataArray (x: 4, y: 2)>
+        array([['00PAR184', '0000PAR184'],
+               ['000TKO65', '00000TKO65'],
+               ['0NBO9139', '000NBO9139'],
+               ['0000NZ39', '000000NZ39']], dtype='<U10')
+        Dimensions without coordinates: x, y
+
+        Using an array-like value for fillchar
+
+        >>> fillchar = xr.DataArray(["0", "-"], dims="y")
+        >>> filled = da.str.pad(8, side="left", fillchar=fillchar)
+        >>> filled
+        <xarray.DataArray (x: 4, y: 2)>
+        array([['00PAR184', '--PAR184'],
+               ['000TKO65', '---TKO65'],
+               ['0NBO9139', '-NBO9139'],
+               ['0000NZ39', '----NZ39']], dtype='<U8')
+        Dimensions without coordinates: x, y
         """
         if side == "left":
             func = self.rjust

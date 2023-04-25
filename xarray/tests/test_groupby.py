@@ -1374,7 +1374,22 @@ class TestDataArrayGroupBy:
 
     @pytest.mark.parametrize("use_flox", [True, False])
     @pytest.mark.parametrize("coords", [np.arange(4), np.arange(4)[::-1], [2, 0, 3, 1]])
-    def test_groupby_bins(self, coords: np.typing.ArrayLike, use_flox: bool) -> None:
+    @pytest.mark.parametrize(
+        "cut_kwargs",
+        (
+            {"labels": None, "include_lowest": True},
+            {"labels": None, "include_lowest": False},
+            {"labels": ["a", "b"]},
+            {"labels": [1.2, 3.5]},
+            {"labels": ["b", "a"]},
+        ),
+    )
+    def test_groupby_bins(
+        self,
+        coords: np.typing.ArrayLike,
+        use_flox: bool,
+        cut_kwargs: dict,
+    ) -> None:
         array = DataArray(
             np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
         )
@@ -1385,11 +1400,10 @@ class TestDataArrayGroupBy:
         bins = [0, 1.5, 5]
 
         df = array.to_dataframe()
-        df["dim_0_bins"] = pd.cut(array["dim_0"], bins)
+        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
 
         expected_df = df.groupby("dim_0_bins").sum()
         # TODO: can't convert df with IntervalIndex to Xarray
-
         expected = (
             expected_df.reset_index(drop=True)
             .to_xarray()
@@ -1398,25 +1412,55 @@ class TestDataArrayGroupBy:
         )
 
         with xr.set_options(use_flox=use_flox):
-            actual = array.groupby_bins("dim_0", bins=bins).sum()
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).sum()
             assert_identical(expected, actual)
 
-            actual = array.groupby_bins("dim_0", bins=bins, labels=[1.2, 3.5]).sum()
-            assert_identical(expected.assign_coords(dim_0_bins=[1.2, 3.5]), actual)
-
-            actual = array.groupby_bins("dim_0", bins=bins).map(lambda x: x.sum())
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).map(
+                lambda x: x.sum()
+            )
             assert_identical(expected, actual)
 
             # make sure original array dims are unchanged
             assert len(array.dim_0) == 4
 
-            da = xr.DataArray(np.ones((2, 3, 4)))
-            bins = [-1, 0, 1, 2]
-            with xr.set_options(use_flox=False):
-                actual = da.groupby_bins("dim_0", bins).mean(...)
-            with xr.set_options(use_flox=True):
-                expected = da.groupby_bins("dim_0", bins).mean(...)
-            assert_allclose(actual, expected)
+    def test_groupby_bins_ellipsis(self):
+        da = xr.DataArray(np.ones((2, 3, 4)))
+        bins = [-1, 0, 1, 2]
+        with xr.set_options(use_flox=False):
+            actual = da.groupby_bins("dim_0", bins).mean(...)
+        with xr.set_options(use_flox=True):
+            expected = da.groupby_bins("dim_0", bins).mean(...)
+        assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_bins_gives_correct_subset(self, use_flox: bool) -> None:
+        # GH7766
+        rng = np.random.default_rng(42)
+        coords = rng.normal(5, 5, 1000)
+        bins = np.logspace(-4, 1, 10)
+        labels = [
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+        ]
+        # xArray
+        # Make a mock dataarray
+        darr = xr.DataArray(coords, coords=[coords], dims=["coords"])
+        expected = xr.DataArray(
+            [np.nan, np.nan, 1, 1, 1, 8, 31, 104, 542],
+            dims="coords_bins",
+            coords={"coords_bins": labels},
+        )
+        gb = darr.groupby_bins("coords", bins, labels=labels)
+        with xr.set_options(use_flox=use_flox):
+            actual = gb.count()
+        assert_identical(actual, expected)
 
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
