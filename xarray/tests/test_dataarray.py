@@ -3359,7 +3359,7 @@ class TestDataArray:
         )
         array.encoding = encoding_data
 
-        return_data = array.values
+        return_data = array.to_numpy()
         coords_data = np.array(["a", "b"])
         if data == "list" or data is True:
             return_data = return_data.tolist()
