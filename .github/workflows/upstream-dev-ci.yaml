@@ -41,6 +41,7 @@ jobs:
         && (
             (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
             || needs.detect-ci-trigger.outputs.triggered == 'true'
+            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
         )
     defaults:
       run:
