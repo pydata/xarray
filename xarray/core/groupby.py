@@ -243,7 +243,6 @@ class _DummyGroup(Generic[T_Xarray]):
         )
 
 
-# T_Group = TypeVar("T_Group", bound=Union["DataArray", "IndexVariable", _DummyGroup])
 T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
 
 
@@ -316,7 +315,7 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
 
     _group_as_index: pd.Index | None = field(default=None, init=False)
 
-    # Not used here:?
+    # Defined by factorize:
     labels: Any | None = field(default=None, init=False)  # TODO: Typing?
     codes: DataArray = field(init=False)
     group_indices: T_GroupIndices = field(init=False)
@@ -543,7 +542,7 @@ class BinGrouper(Grouper):
     bins: Any  # TODO: What is the typing?
     cut_kwargs: Mapping = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if duck_array_ops.isnull(self.bins).all():
             raise ValueError("All bin edges are NaN.")
 
@@ -558,7 +557,7 @@ class TimeResampleGrouper(Grouper):
     loffset: datetime.timedelta | str | None
 
 
-def _validate_groupby_squeeze(squeeze):
+def _validate_groupby_squeeze(squeeze: bool) -> None:
     # While we don't generally check the type of every arg, passing
     # multiple dimensions as multiple arguments is common enough, and the
     # consequences hidden enough (strings evaluate as true) to warrant
