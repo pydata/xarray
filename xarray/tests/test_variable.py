@@ -2560,6 +2560,13 @@ class TestAsCompatibleData:
         assert_array_equal(expected, actual)
         assert np.dtype(float) == actual.dtype
 
+        original = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
+        original.flags.writeable = False
+        expected = [np.nan, 2.0]
+        actual = as_compatible_data(original)
+        assert_array_equal(expected, actual)
+        assert np.dtype(float) == actual.dtype
+
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime(self):
         expected = np.datetime64("2000-01-01")
