@@ -49,9 +49,9 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.resample_cftime import CFTimeGrouper
     from xarray.core.types import DatetimeLike, SideOptions
     from xarray.core.utils import Frozen
-    from xarray.core.resample_cftime import CFTimeGrouper
 
     GroupKey = Any
     GroupIndex = Union[int, slice, list[int]]
