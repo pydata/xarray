@@ -51,10 +51,14 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import DatetimeLike, SideOptions
     from xarray.core.utils import Frozen
+    from xarray.core.resample_cftime import CFTimeGrouper
 
     GroupKey = Any
     GroupIndex = Union[int, slice, list[int]]
     T_GroupIndices = list[GroupIndex]
+    T_FactorizeOut = tuple[
+        DataArray, T_GroupIndices, IndexVariable | "_DummyGroup", pd.Index
+    ]
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -316,7 +320,6 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
     _group_as_index: pd.Index | None = field(default=None, init=False)
 
     # Defined by factorize:
-    labels: Any | None = field(default=None, init=False)  # TODO: Typing?
     codes: DataArray = field(init=False)
     group_indices: T_GroupIndices = field(init=False)
     unique_coord: IndexVariable | _DummyGroup = field(init=False)
@@ -354,8 +357,16 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
         return self.group1d.dims
 
     @abstractmethod
-    def factorize(self, squeeze: bool) -> None:
+    def _factorize(self, squeeze: bool) -> T_FactorizeOut:
         raise NotImplementedError
+
+    def factorize(self, squeeze: bool) -> None:
+        (
+            self.codes,
+            self.group_indices,
+            self.unique_coord,
+            self.full_index,
+        ) = self._factorize(squeeze)
 
     @property
     def is_unique_and_monotonic(self) -> bool:
@@ -375,67 +386,73 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
 class ResolvedUniqueGrouper(ResolvedGrouper):
     grouper: UniqueGrouper
 
-    def factorize(self, squeeze) -> None:
+    def _factorize(self, squeeze) -> T_FactorizeOut:
         is_dimension = self.group.dims == (self.group.name,)
         if is_dimension and self.is_unique_and_monotonic:
-            self._factorize_dummy(squeeze)
+            return self._factorize_dummy(squeeze)
         else:
-            self._factorize_unique()
+            return self._factorize_unique()
 
-    def _factorize_unique(self) -> None:
+    def _factorize_unique(self) -> T_FactorizeOut:
         # look through group to find the unique values
         sort = not isinstance(self.group_as_index, pd.MultiIndex)
-        unique_values, group_indices, codes = unique_value_groups(
+        unique_values, group_indices, codes_ = unique_value_groups(
             self.group_as_index, sort=sort
         )
         if len(group_indices) == 0:
             raise ValueError(
                 "Failed to group data. Are you grouping by a variable that is all NaN?"
             )
-        self.unique_coord = IndexVariable(
+        codes = self.group1d.copy(data=codes_)
+        group_indices = group_indices
+        unique_coord = IndexVariable(
             self.group.name, unique_values, attrs=self.group.attrs
         )
-        self.codes = self.group1d.copy(data=codes)
-        self.group_indices = group_indices
-        self.full_index = self.unique_coord
+        full_index = unique_coord
 
-    def _factorize_dummy(self, squeeze) -> None:
+        return codes, group_indices, unique_coord, full_index
+
+    def _factorize_dummy(self, squeeze) -> T_FactorizeOut:
         size = self.group.size
         # no need to factorize
         if not squeeze:
             # use slices to do views instead of fancy indexing
             # equivalent to: group_indices = group_indices.reshape(-1, 1)
-            self.group_indices = [slice(i, i + 1) for i in range(size)]
+            group_indices: T_GroupIndices = [slice(i, i + 1) for i in range(size)]
         else:
-            self.group_indices = list(range(size))
-        codes = np.arange(size)
+            group_indices = list(range(size))
+        size_range = np.arange(size)
         if isinstance(self.group, _DummyGroup):
-            self.codes = self.group.to_dataarray().copy(data=codes)
+            codes = self.group.to_dataarray().copy(data=size_range)
         else:
-            self.codes = self.group.copy(data=codes)
-        self.unique_coord = self.group
-        self.full_index = IndexVariable(self.name, self.group.values, self.group.attrs)
+            codes = self.group.copy(data=size_range)
+        unique_coord = self.group
+        full_index = IndexVariable(self.name, unique_coord.values, self.group.attrs)
+
+        return codes, group_indices, unique_coord, full_index
 
 
 @dataclass
 class ResolvedBinGrouper(ResolvedGrouper):
     grouper: BinGrouper
 
-    def factorize(self, squeeze: bool) -> None:
+    def _factorize(self, squeeze: bool) -> T_FactorizeOut:
         from xarray.core.dataarray import DataArray
 
         data = self.group1d.values
         binned, bins = pd.cut(
             data, self.grouper.bins, **self.grouper.cut_kwargs, retbins=True
         )
-        codes = binned.codes
-        if (codes == -1).all():
+        binned_codes = binned.codes
+        if (binned_codes == -1).all():
             raise ValueError(f"None of the data falls within bins with edges {bins!r}")
 
         full_index = binned.categories
-        uniques = np.sort(pd.unique(codes))
+        uniques = np.sort(pd.unique(binned_codes))
         unique_values = full_index[uniques[uniques != -1]]
-        group_indices = [g for g in _codes_to_groups(codes, len(full_index)) if g]
+        group_indices = [
+            g for g in _codes_to_groups(binned_codes, len(full_index)) if g
+        ]
 
         if len(group_indices) == 0:
             raise ValueError(f"None of the data falls within bins with edges {bins!r}")
@@ -444,16 +461,17 @@ class ResolvedBinGrouper(ResolvedGrouper):
         self.group1d = DataArray(
             binned, getattr(self.group1d, "coords", None), name=new_dim_name
         )
-        self.unique_coord = IndexVariable(new_dim_name, unique_values, self.group.attrs)
-        self.codes = self.group1d.copy(data=codes)
+        unique_coord = IndexVariable(new_dim_name, unique_values, self.group.attrs)
+        codes = self.group1d.copy(data=binned_codes)
         # TODO: support IntervalIndex in IndexVariable
-        self.full_index = full_index
-        self.group_indices = group_indices
+
+        return codes, group_indices, unique_coord, full_index
 
 
 @dataclass
 class ResolvedTimeResampleGrouper(ResolvedGrouper):
     grouper: TimeResampleGrouper
+    index_grouper: CFTimeGrouper | pd.Grouper = field(init=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -487,7 +505,7 @@ class ResolvedTimeResampleGrouper(ResolvedGrouper):
                 origin=grouper.origin,
                 offset=grouper.offset,
             )
-        self.index_grouper: CFTimeGrouper | pd.Grouper = index_grouper
+        self.index_grouper = index_grouper
 
     def _get_index_and_items(self) -> tuple[pd.Index, pd.Series, np.ndarray]:
         first_items, codes = self.first_items()
@@ -516,16 +534,20 @@ class ResolvedTimeResampleGrouper(ResolvedGrouper):
                 _apply_loffset(self.grouper.loffset, first_items)
             return first_items, codes
 
-    def factorize(self, squeeze: bool) -> None:
-        self.full_index, first_items, codes = self._get_index_and_items()
+    def _factorize(self, squeeze: bool) -> T_FactorizeOut:
+        full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
-        self.group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])]
-        self.group_indices += [slice(sbins[-1], None)]
+        group_indices: T_GroupIndices = [
+            slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])
+        ]
+        group_indices += [slice(sbins[-1], None)]
 
-        self.unique_coord = IndexVariable(
+        unique_coord = IndexVariable(
             self.group.name, first_items.index, self.group.attrs
         )
-        self.codes = self.group.copy(data=codes)
+        codes = self.group.copy(data=codes_)
+
+        return codes, group_indices, unique_coord, full_index
 
 
 class Grouper(ABC):
