@@ -57,7 +57,7 @@ if TYPE_CHECKING:
     GroupIndex = Union[int, slice, list[int]]
     T_GroupIndices = list[GroupIndex]
     T_FactorizeOut = tuple[
-        DataArray, T_GroupIndices, IndexVariable | "_DummyGroup", pd.Index
+        DataArray, T_GroupIndices, Union[IndexVariable, "_DummyGroup"], pd.Index
     ]
 
 
