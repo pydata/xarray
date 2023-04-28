@@ -29,7 +29,7 @@ IGNORE_DEPS = {
     "pytest-timeout",
 }
 
-POLICY_MONTHS = {"python": 24, "numpy": 18}
+POLICY_MONTHS = {"python": 30, "numpy": 18}
 POLICY_MONTHS_DEFAULT = 12
 POLICY_OVERRIDE: dict[str, tuple[int, int]] = {}
 errors = []
