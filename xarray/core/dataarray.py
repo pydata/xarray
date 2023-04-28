@@ -58,6 +58,10 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     try:
+        from dask.dataframe import DataFrame as DaskDataFrame
+    except ImportError:
+        DaskDataFrame = None  # type: ignore
+    try:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
@@ -6887,6 +6891,71 @@ class DataArray(
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
         )
+
+    def to_dask_dataframe(
+        self,
+        dim_order: Sequence[Hashable] | None = None,
+        set_index: bool = False,
+    ) -> DaskDataFrame:
+        """Convert this array into a dask.dataframe.DataFrame.
+
+        Parameters
+        ----------
+        dim_order : Sequence of Hashable or None , optional
+            Hierarchical dimension order for the resulting dataframe.
+            Array content is transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major influence
+            on which operations are efficient on the resulting dask dataframe.
+        set_index : bool, default: False
+            If set_index=True, the dask DataFrame is indexed by this dataset's
+            coordinate. Since dask DataFrames do not support multi-indexes,
+            set_index only works if the dataset only contains one dimension.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(4 * 2 * 2).reshape(4, 2, 2),
+        ...     dims=("time", "lat", "lon"),
+        ...     coords={
+        ...         "time": np.arange(4),
+        ...         "lat": [-30, -20],
+        ...         "lon": [120, 130],
+        ...     },
+        ...     name="eg_dataarray",
+        ...     attrs={"units": "Celsius", "description": "Random temperature data"},
+        ... )
+        >>> da.to_dask_dataframe(["lat", "lon", "time"]).compute()
+            lat  lon  time  eg_dataarray
+        0   -30  120     0             0
+        1   -30  120     1             4
+        2   -30  120     2             8
+        3   -30  120     3            12
+        4   -30  130     0             1
+        5   -30  130     1             5
+        6   -30  130     2             9
+        7   -30  130     3            13
+        8   -20  120     0             2
+        9   -20  120     1             6
+        10  -20  120     2            10
+        11  -20  120     3            14
+        12  -20  130     0             3
+        13  -20  130     1             7
+        14  -20  130     2            11
+        15  -20  130     3            15
+        """
+        if self.name is None:
+            raise ValueError(
+                "Cannot convert an unnamed DataArray to a "
+                "dask dataframe : use the ``.rename`` method to assign a name."
+            )
+        name = self.name
+        ds = self._to_dataset_whole(name, shallow_copy=False)
+        return ds.to_dask_dataframe(dim_order, set_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
