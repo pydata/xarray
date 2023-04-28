@@ -361,6 +361,9 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
         raise NotImplementedError
 
     def factorize(self, squeeze: bool) -> None:
+    # This design makes it clear  to mypy that  
+    # codes, group_indices, unique_coord, and full_index
+    # are set by the factorize  method on the derived class.
         (
             self.codes,
             self.group_indices,
