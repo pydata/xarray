@@ -30,6 +30,8 @@ BINOPS_NUM = (
     ("__and__", "operator.and_"),
     ("__xor__", "operator.xor"),
     ("__or__", "operator.or_"),
+    ("__lshift__", "operator.lshift"),
+    ("__rshift__", "operator.rshift"),
 )
 BINOPS_REFLEXIVE = (
     ("__radd__", "operator.add"),
@@ -54,6 +56,8 @@ BINOPS_INPLACE = (
     ("__iand__", "operator.iand"),
     ("__ixor__", "operator.ixor"),
     ("__ior__", "operator.ior"),
+    ("__ilshift__", "operator.ilshift"),
+    ("__irshift__", "operator.irshift"),
 )
 UNARY_OPS = (
     ("__neg__", "operator.neg"),
