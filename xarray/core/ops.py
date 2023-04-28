@@ -33,6 +33,8 @@ NUM_BINARY_OPS = [
     "and",
     "xor",
     "or",
+    "lshift",
+    "rshift",
 ]
 
 # methods which pass on the numpy return value unchanged

@@ -63,6 +63,10 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
     arr.round(2)
     arr.T
 
+    intarr = xr.DataArray([0, 1, 2, 3, 4, 5])
+    intarr << 2  # only supported for int types
+    intarr >> 1
+
 .. _missing_values:
 
 Missing values
