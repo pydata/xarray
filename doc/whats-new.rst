@@ -26,7 +26,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- adjust the deprecation policy for python to once again align with NEP-29 (:issue:`7765`, :pull:`7793`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Deprecations
 ~~~~~~~~~~~~
