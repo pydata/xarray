@@ -22,7 +22,7 @@ v2023.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Added new method :py:meth:`DataArray.to_dask_dataframe`, convert a dataarray into a dask dataframe (:issue:`7409`). 
+- Added new method :py:meth:`DataArray.to_dask_dataframe`, convert a dataarray into a dask dataframe (:issue:`7409`).
   By `Deeksha <https://github.com/dsgreen2>`_.
 - Add support for lshift and rshift binary operators (`<<`, `>>`) on
   :py:class:`xr.DataArray` of type :py:class:`int` (:issue:`7727` , :pull:`7741`).
