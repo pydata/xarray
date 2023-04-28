@@ -3926,6 +3926,11 @@ class TestDataArray:
         actual = (self.dv > 10).xindexes["x"]
         assert expected is actual
 
+        # use mda for bitshift test as it's type int
+        actual = (self.mda << 2).xindexes["x"]
+        expected = self.mda.xindexes["x"]
+        assert expected is actual
+
     def test_binary_op_join_setting(self) -> None:
         dim = "x"
         align_type: Final = "outer"
