@@ -4426,6 +4426,44 @@ class TestDataArray:
         with pytest.raises(ValueError):
             xr.core.dataset._get_func_args(np.power, [])
 
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_guess(self, use_dask) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fitting to a sine curve produces a different result depending on the
+        # initial guess: either the phase is zero and the amplitude is positive
+        # or the phase is 0.5 * 2pi and the amplitude is negative.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        # Different initial guesses for different values of x
+        a_guess = DataArray([1, -1], coords=[da.x])
+        p_guess = DataArray([0, 0.5], coords=[da.x])
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"a": a_guess, "p": p_guess, "f": 2},
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)
