@@ -19,6 +19,8 @@ from xarray.tests import (
     requires_matplotlib,
 )
 from xarray.tests.test_plot import PlotTestCase
+from xarray.tests.test_units.params import parametrize_unit_compatibility
+from xarray.tests.test_units.pint import unit_registry
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
 try:
@@ -29,11 +31,6 @@ except ImportError:
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
-
-
-# make sure scalars are converted to 0d arrays so quantities can
-# always be treated like ndarrays
-unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
 
@@ -447,19 +444,7 @@ def test_apply_ufunc_dataset(variant, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -551,19 +536,7 @@ def test_align_dataarray(value, variant, unit, error, dtype):
     assert_allclose(expected_b, actual_b)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -713,19 +686,7 @@ def test_broadcast_dataset(dtype):
     assert_identical(expected_b, actual_b)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -790,19 +751,7 @@ def test_combine_by_coords(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -896,19 +845,7 @@ def test_combine_nested(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -964,19 +901,7 @@ def test_concat_dataarray(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -1030,19 +955,7 @@ def test_concat_dataset(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -1134,19 +1047,7 @@ def test_merge_dataarray(variant, unit, error, dtype):
     assert_allclose(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize(
     "variant",
     (
@@ -1398,19 +1299,7 @@ def test_replication_full_like_dataset(variant, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize("fill_value", (np.nan, 10.2))
 def test_where_dataarray(fill_value, unit, error, dtype):
     array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
@@ -1441,19 +1330,7 @@ def test_where_dataarray(fill_value, unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "unit,error",
-    (
-        pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
-    ),
-    ids=repr,
-)
+@parametrize_unit_compatibility(DimensionalityError)
 @pytest.mark.parametrize("fill_value", (np.nan, 10.2))
 def test_where_dataset(fill_value, unit, error, dtype):
     array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
@@ -1571,18 +1448,7 @@ class TestVariable:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_numpy_methods(self, func, unit, error, dtype):
         array = np.linspace(0, 1, 10).astype(dtype) * unit_registry.m
         variable = xr.Variable("x", array)
@@ -1622,18 +1488,7 @@ class TestVariable:
     @pytest.mark.parametrize(
         "func", (method("item", 5), method("searchsorted", 5)), ids=repr
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_raw_numpy_methods(self, func, unit, error, dtype):
         array = np.linspace(0, 1, 10).astype(dtype) * unit_registry.m
         variable = xr.Variable("x", array)
@@ -1702,18 +1557,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_missing_value_fillna(self, unit, error):
         value = 10
         array = (
@@ -1884,18 +1728,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "func",
         (
@@ -1942,18 +1775,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "func", (method("where"), method("_getitem_with_mask")), ids=repr
     )
@@ -2041,18 +1863,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_searchsorted(self, unit, error, dtype):
         base_unit = unit_registry.m
         array = np.linspace(0, 5, 10).astype(dtype) * base_unit
@@ -2099,18 +1910,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_concat(self, unit, error, dtype):
         array1 = (
             np.linspace(0, 5, 9 * 10).reshape(3, 6, 5).astype(dtype) * unit_registry.m
@@ -2233,18 +2033,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_equal(actual, expected)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_pad_unit_constant_value(self, unit, error, dtype):
         array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
         variable = xr.Variable(("x", "y"), array)
@@ -2536,23 +2325,7 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="without_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.mm,
-                None,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(reason="pint converts to the wrong units"),
-            ),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_bivariate_ufunc(self, unit, error, dtype):
         original_unit = unit_registry.m
         array = np.arange(10).astype(dtype) * original_unit
@@ -2625,18 +2398,7 @@ class TestDataArray:
 
         assert_duckarray_allclose(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "func",
         (
@@ -2696,18 +2458,7 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_numpy_methods_with_args(self, func, unit, error, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
@@ -2781,18 +2532,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "fill_value",
         (
@@ -2877,18 +2617,7 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_where(self, variant, unit, error, dtype):
         original_unit = unit_registry.m
         array = np.linspace(0, 1, 10).astype(dtype) * original_unit
@@ -2944,26 +2673,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                None,
-                id="compatible_unit",
-            ),
-            pytest.param(
-                unit_registry.m,
-                None,
-                id="identical_unit",
-            ),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_combine_first(self, unit, error, dtype):
         array = np.zeros(shape=(2, 2), dtype=dtype) * unit_registry.m
         other_array = np.ones_like(array) * unit
@@ -3294,16 +3004,7 @@ class TestDataArray:
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(KeyError)
     def test_sel(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.m
@@ -3339,16 +3040,7 @@ class TestDataArray:
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(KeyError)
     def test_loc(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.m
@@ -3384,16 +3076,7 @@ class TestDataArray:
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(KeyError)
     def test_drop_sel(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
         x = np.arange(len(array)) * unit_registry.m
@@ -3500,18 +3183,7 @@ class TestDataArray:
         assert_allclose(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "func",
         (method("interp"), method("reindex")),
@@ -3576,18 +3248,7 @@ class TestDataArray:
         assert_allclose(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "func",
         (method("interp_like"), method("reindex_like")),
@@ -3954,18 +3615,7 @@ class TestDataArray:
 
 
 class TestDataset:
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, xr.MergeError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
-            pytest.param(unit_registry.mm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="same_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(xr.MergeError)
     @pytest.mark.parametrize(
         "shared",
         (
@@ -4173,18 +3823,7 @@ class TestDataset:
         assert_equal(expected, actual)
 
     @pytest.mark.parametrize("func", (method("clip", min=3, max=8),), ids=repr)
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_numpy_methods_with_args(self, func, unit, error, dtype):
         data_unit = unit_registry.m
         a = np.linspace(0, 10, 15) * unit_registry.m
@@ -4270,22 +3909,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                None,
-                id="compatible_unit",
-            ),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "fill_value",
         (
@@ -4387,18 +4011,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="same_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     def test_where(self, variant, unit, error, dtype):
         original_unit = unit_registry.m
         array1 = np.linspace(0, 1, 10).astype(dtype) * original_unit
@@ -4458,18 +4071,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="same_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "variant",
         (
@@ -4863,16 +4465,7 @@ class TestDataset:
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(KeyError)
     def test_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -4916,16 +4509,7 @@ class TestDataset:
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(KeyError)
     def test_drop_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -4969,16 +4553,7 @@ class TestDataset:
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(KeyError)
     def test_loc(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -5142,18 +4717,7 @@ class TestDataset:
         assert_equal(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize("func", (method("interp"), method("reindex")), ids=repr)
     def test_interp_reindex_indexing(self, func, unit, error, dtype):
         array1 = np.linspace(-1, 0, 10).astype(dtype)
@@ -5217,18 +4781,7 @@ class TestDataset:
         assert_equal(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(DimensionalityError)
     @pytest.mark.parametrize(
         "func", (method("interp_like"), method("reindex_like")), ids=repr
     )
@@ -5553,18 +5106,7 @@ class TestDataset:
         else:
             assert_equal(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, xr.MergeError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, xr.MergeError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
+    @parametrize_unit_compatibility(xr.MergeError, allow_compatible_unit=False)
     @pytest.mark.parametrize(
         "variant",
         (
