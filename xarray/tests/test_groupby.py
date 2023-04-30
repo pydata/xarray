@@ -829,11 +829,33 @@ def test_groupby_math_bitshift() -> None:
         }
     )
 
+    left_manual = []
+    for lev, group in ds.groupby("level"):
+        shifter = shift.sel(level=lev)
+        left_manual.append(group << shifter)
+    left_actual = xr.concat(left_manual, dim="index").reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
     left_actual = (ds.groupby("level") << shift).reset_coords(names="level")
     assert_equal(left_expected, left_actual)
 
+    right_expected = Dataset(
+        {
+            "x": ("index", [0, 0, 2, 2]),
+            "y": ("index", [-1, -1, -2, -2]),
+            "level": ("index", [0, 0, 4, 4]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    right_manual = []
+    for lev, group in left_expected.groupby("level"):
+        shifter = shift.sel(level=lev)
+        right_manual.append(group >> shifter)
+    right_actual = xr.concat(right_manual, dim="index").reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
     right_actual = (left_expected.groupby("level") >> shift).reset_coords(names="level")
-    assert_equal(ds, right_actual)
+    assert_equal(right_expected, right_actual)
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
@@ -2298,7 +2320,7 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     assert_identical(expected.drop_vars(["time"]).foo, actual)
 
 
-def test_groupby_binary_op_regression():
+def test_groupby_binary_op_regression() -> None:
     # regression test for #7797
     # monthly timeseries that should return "zero anomalies" everywhere
     time = xr.date_range("2023-01-01", "2023-12-31", freq="MS")
