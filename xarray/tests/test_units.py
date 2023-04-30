@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import functools
 import operator
+from abc import ABC, abstractclassmethod
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -31,6 +34,28 @@ pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
 
+@dataclass
+class UnitInfo(ABC):
+    unit: Any
+    unit_type: type
+    quantity_type: type
+
+    @abstractclassmethod
+    def strip_units(quantity):
+        # Remove units from a quantity
+        pass
+
+    @abstractclassmethod
+    def get_unit(quantity):
+        # Get the unit of a given quantity
+        pass
+
+    @abstractclassmethod
+    def assert_equal(q1, q2):
+        # Assert that two quantities are equal
+        pass
+
+
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
@@ -40,6 +65,53 @@ Quantity = unit_registry.Quantity
 pytestmark = [
     pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
+
+
+class PintInfo(UnitInfo):
+    unit = unit_registry.m
+    unit_type = pint.Unit
+    quantity_type = pint.Quantity
+
+    @staticmethod
+    def strip_units(quantity):
+        return quantity.magnitude
+
+    @staticmethod
+    def get_unit(quantity):
+        return quantity.units
+
+    @staticmethod
+    def assert_equal(q1, q2):
+        assert (q1 == q2).all()
+
+
+"""
+class AstropyInfo(UnitInfo):
+    unit = astropy.units.m
+    unit_type = astropy.units.UnitBase
+    quantity_type = astropy.units.Quantity
+
+    def strip_units(quantity):
+        return quantity.value
+
+    @staticmethod
+    def get_unit(quantity):
+        return quantity.unit
+
+    def assert_equal(q1, q2):
+        astropy.units.assert_quantity_equal(q1, q2)
+"""
+
+unit_libs = [PintInfo]  # + [AstropyInfo]
+known_quantities = tuple(lib.quantity_type for lib in unit_libs)
+
+
+@pytest.fixture(params=unit_libs)
+def unit_lib(request):
+    """
+    A fixture to return a unit represented in different libraries.
+    """
+    return request.param
 
 
 def is_compatible(unit1, unit2):
@@ -78,17 +150,19 @@ def array_extract_units(obj):
     if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
         obj = obj.data
 
-    try:
-        return obj.units
-    except AttributeError:
-        return None
+    for unit_lib in unit_libs:
+        if isinstance(obj, unit_lib.quantity_type):
+            return unit_lib.get_unit(obj)
+
+    return None
 
 
 def array_strip_units(array):
-    try:
-        return array.magnitude
-    except AttributeError:
-        return array
+    for unit_lib in unit_libs:
+        if isinstance(array, unit_lib.quantity_type):
+            return unit_lib.strip_units(array)
+
+    return array
 
 
 def array_attach_units(data, unit):
@@ -125,16 +199,22 @@ def extract_units(obj):
         units = {**vars_units, **coords_units}
     elif isinstance(obj, xr.Variable):
         vars_units = {None: array_extract_units(obj.data)}
-
-        units = {**vars_units}
-    elif isinstance(obj, Quantity):
-        vars_units = {None: array_extract_units(obj)}
-
         units = {**vars_units}
     else:
         units = {}
+        for unit_lib in unit_libs:
+            if isinstance(obj, unit_lib.quantity_type):
+                vars_units = {None: array_extract_units(obj)}
+                units = {**vars_units}
+                break
 
     return units
+
+
+def test_extract_units(unit_lib):
+    unit = unit_lib.unit
+    quantity = np.arange(10) * unit
+    assert extract_units(quantity) == {None: unit}
 
 
 def strip_units(obj):
@@ -165,14 +245,27 @@ def strip_units(obj):
     elif isinstance(obj, xr.Variable):
         data = array_strip_units(obj.data)
         new_obj = obj.copy(data=data)
-    elif isinstance(obj, unit_registry.Quantity):
-        new_obj = obj.magnitude
+    elif isinstance(obj, known_quantities):
+        new_obj = array_strip_units(obj)
     elif isinstance(obj, (list, tuple)):
         return type(obj)(strip_units(elem) for elem in obj)
     else:
         new_obj = obj
 
     return new_obj
+
+
+def test_strip_units(unit_lib):
+    unit = unit_lib.unit
+    # Array
+    quantity = np.arange(10) * unit
+    np.testing.assert_equal(strip_units(quantity), np.arange(10))
+
+    # DataArray
+    array = np.linspace(0, 10, 20) * unit
+    x = np.arange(20)
+    da = xr.DataArray(data=array, dims="x", coords={"x": x})
+    assert type(strip_units(da).data) == np.ndarray
 
 
 def attach_units(obj, units):
@@ -217,6 +310,21 @@ def attach_units(obj, units):
         new_obj = obj.copy(data=data)
 
     return new_obj
+
+
+def test_attach_units(unit_lib):
+    unit = unit = unit_lib.unit
+    # Array
+    array = np.arange(10)
+    quantity = attach_units(array, units={"data": unit})
+    unit_lib.assert_equal(quantity, np.arange(10) * unit)
+
+    # DataArray
+    array = np.linspace(0, 10, 20)
+    x = np.arange(20)
+    da = xr.DataArray(data=array, dims="x", coords={"x": x})
+    da = attach_units(da, {None: unit})
+    assert isinstance(da.data, unit_lib.quantity_type)
 
 
 def convert_units(obj, to):
@@ -382,11 +490,12 @@ class function:
         "coords",
     ),
 )
-def test_apply_ufunc_dataarray(variant, dtype):
+def test_apply_ufunc_dataarray(variant, unit_lib, dtype):
+    unit = unit_lib.unit
     variants = {
-        "data": (unit_registry.m, 1, 1),
-        "dims": (1, unit_registry.m, 1),
-        "coords": (1, 1, unit_registry.m),
+        "data": (unit, 1, 1),
+        "dims": (1, unit, 1),
+        "coords": (1, 1, unit),
     }
     data_unit, dim_unit, coord_unit = variants.get(variant)
     func = functools.partial(
