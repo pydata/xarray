@@ -20,3 +20,15 @@ def parametrize_unit_compatibility(error, allow_compatible_unit=True):
         ),
         ids=repr,
     )
+
+
+parametrize_variant = pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
+)

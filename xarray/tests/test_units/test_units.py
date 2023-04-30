@@ -19,7 +19,10 @@ from xarray.tests import (
     requires_matplotlib,
 )
 from xarray.tests.test_plot import PlotTestCase
-from xarray.tests.test_units.params import parametrize_unit_compatibility
+from xarray.tests.test_units.params import (
+    parametrize_unit_compatibility,
+    parametrize_variant,
+)
 from xarray.tests.test_units.pint import unit_registry
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
@@ -369,16 +372,7 @@ class function:
         return f"function_{self.name}"
 
 
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_apply_ufunc_dataarray(variant, dtype):
     variants = {
         "data": (unit_registry.m, 1, 1),
@@ -402,16 +396,7 @@ def test_apply_ufunc_dataarray(variant, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_apply_ufunc_dataset(variant, dtype):
     variants = {
         "data": (unit_registry.m, 1, 1),
@@ -445,16 +430,7 @@ def test_apply_ufunc_dataset(variant, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 @pytest.mark.parametrize("value", (10, dtypes.NA))
 def test_align_dataarray(value, variant, unit, error, dtype):
     if variant == "coords" and (
@@ -537,16 +513,7 @@ def test_align_dataarray(value, variant, unit, error, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 @pytest.mark.parametrize("value", (10, dtypes.NA))
 def test_align_dataset(value, unit, variant, error, dtype):
     if variant == "coords" and (
@@ -687,16 +654,7 @@ def test_broadcast_dataset(dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -752,16 +710,7 @@ def test_combine_by_coords(variant, unit, error, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_combine_nested(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -846,16 +795,7 @@ def test_combine_nested(variant, unit, error, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_concat_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -902,16 +842,7 @@ def test_concat_dataarray(variant, unit, error, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_concat_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -956,16 +887,7 @@ def test_concat_dataset(variant, unit, error, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_merge_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -1048,16 +970,7 @@ def test_merge_dataarray(variant, unit, error, dtype):
 
 
 @parametrize_unit_compatibility(DimensionalityError)
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -1125,16 +1038,7 @@ def test_merge_dataset(variant, unit, error, dtype):
     assert_allclose(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
 def test_replication_dataarray(func, variant, dtype):
     unit = unit_registry.m
@@ -1161,16 +1065,7 @@ def test_replication_dataarray(func, variant, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize(
-    "variant",
-    (
-        "data",
-        pytest.param(
-            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-        ),
-        "coords",
-    ),
-)
+@parametrize_variant
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
 def test_replication_dataset(func, variant, dtype):
     unit = unit_registry.m
@@ -2790,16 +2685,7 @@ class TestDataArray:
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_broadcast_like(self, variant, unit, dtype):
         original_unit = unit_registry.m
 
@@ -2880,16 +2766,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     @pytest.mark.parametrize(
         "func",
         (
@@ -3429,16 +3306,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     @pytest.mark.parametrize(
         "func",
         (
@@ -3481,16 +3349,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     @pytest.mark.parametrize(
         "func",
         (
@@ -3556,16 +3415,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     @pytest.mark.parametrize(
         "func",
         (
@@ -3682,17 +3532,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims",
-                marks=pytest.mark.skip(reason="indexes don't support units"),
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_repr(self, func, variant, dtype):
         unit1, unit2 = (
             (unit_registry.Pa, unit_registry.degK) if variant == "data" else (1, 1)
@@ -4135,16 +3975,7 @@ class TestDataset:
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     @pytest.mark.parametrize(
         "func",
         (
@@ -4597,16 +4428,7 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_head_tail_thin(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -4821,16 +4643,7 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_computation(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -4880,16 +4693,7 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_computation_objects(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -4921,16 +4725,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_resample(self, variant, dtype):
         # TODO: move this to test_computation_objects
         variants = {
@@ -4974,16 +4769,7 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_grouped_operations(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -5044,16 +4830,7 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_content_manipulation(self, func, variant, dtype):
         variants = {
             "data": (
@@ -5107,16 +4884,7 @@ class TestDataset:
             assert_equal(expected, actual)
 
     @parametrize_unit_compatibility(xr.MergeError, allow_compatible_unit=False)
-    @pytest.mark.parametrize(
-        "variant",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
-            ),
-            "coords",
-        ),
-    )
+    @parametrize_variant
     def test_merge(self, variant, unit, error, dtype):
         left_variants = {
             "data": (unit_registry.m, 1, 1),
