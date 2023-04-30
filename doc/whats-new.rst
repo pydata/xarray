@@ -39,7 +39,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+Fix groupby binary ops when grouped array is subset relative to other. (:issue:`7797`).
+By `Deepak Cherian <https://github.com/dcherian`_.
 
 Documentation
 ~~~~~~~~~~~~~

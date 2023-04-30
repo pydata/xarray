@@ -1302,8 +1302,15 @@ class TestDataArrayGroupBy:
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         assert_identical(expected, actual)
 
+        # regression test for #7797
+        other = array.groupby("b").sum()
+        actual = array.sel(x=[0, 1]).groupby("b") - other
+        expected = DataArray([-1, 0], {"b": ("x", [0, 0]), "x": [0, 1]}, dims="x")
+        assert_identical(expected, actual)
+
         other = DataArray([10], coords={"c": 123, "b": [0]}, dims="b")
         actual = array.groupby("b") + other
+        expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         expected.coords["c"] = (["x"], [123] * 2 + [np.nan] * 2)
         assert_identical(expected, actual)
 
@@ -2289,3 +2296,20 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     actual = getattr(ds.foo.resample(time="3M"), method)(dim="time")
     expected.coords["time"] = ds.time
     assert_identical(expected.drop_vars(["time"]).foo, actual)
+
+
+def test_groupby_binary_op_regression():
+    # regression test for #7797
+    # monthly timeseries that should return "zero anomalies" everywhere
+    time = xr.date_range("2023-01-01", "2023-12-31", freq="MS")
+    data = np.linspace(-1, 1, 12)
+    x = xr.DataArray(data, coords={"time": time})
+    clim = xr.DataArray(data, coords={"month": np.arange(1, 13, 1)})
+
+    # seems to give the correct result if we use the full x, but not with a slice
+    x_slice = x.sel(time=["2023-04-01"])
+
+    # two typical ways of computing anomalies
+    anom_gb = x_slice.groupby("time.month") - clim
+
+    assert_identical(xr.zeros_like(anom_gb), anom_gb)
