@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib.metadata import EntryPoint, entry_points
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
@@ -23,9 +24,8 @@ from xarray.core.pycompat import is_chunked_array
 
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 
-# TODO importing TypeAlias is a pain on python 3.9 without typing_extensions in the CI
-# T_Chunks: TypeAlias = tuple[tuple[int, ...], ...]
-T_Chunks = Any
+if TYPE_CHECKING:
+    from xarray.core.types import T_Chunks, T_NormalizedChunks
 
 
 @functools.lru_cache(maxsize=1)
@@ -159,18 +159,18 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return isinstance(data, self.array_cls)
 
     @abstractmethod
-    def chunks(self, data: T_ChunkedArray) -> T_Chunks:
+    def chunks(self, data: T_ChunkedArray) -> T_NormalizedChunks:
         ...
 
     @abstractmethod
     def normalize_chunks(
         self,
-        chunks: tuple | int | dict | str,
+        chunks: T_Chunks,
         shape: tuple[int] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
-        previous_chunks: tuple[tuple[int, ...], ...] | None = None,
-    ) -> tuple[tuple[int, ...], ...]:
+        previous_chunks: T_NormalizedChunks | None = None,
+    ) -> T_NormalizedChunks:
         """Called by open_dataset"""
         ...
 
@@ -254,7 +254,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     def unify_chunks(
         self, *args, **kwargs
-    ) -> tuple[dict[str, T_Chunks], list[T_ChunkedArray]]:
+    ) -> tuple[dict[str, T_NormalizedChunks], list[T_ChunkedArray]]:
         """Called by xr.unify_chunks."""
         raise NotImplementedError()
 

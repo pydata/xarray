@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pytest
@@ -8,11 +8,11 @@ import pytest
 from xarray.core.daskmanager import DaskManager
 from xarray.core.parallelcompat import (
     ChunkManagerEntrypoint,
-    T_Chunks,
     get_chunked_array_type,
     guess_chunkmanager,
     list_chunkmanagers,
 )
+from xarray.core.types import T_Chunks, T_NormalizedChunks
 from xarray.tests import has_dask, requires_dask
 
 
@@ -24,7 +24,7 @@ class DummyChunkedArray(np.ndarray):
     https://numpy.org/doc/stable/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray
     """
 
-    chunks: Optional[T_Chunks]
+    chunks: T_NormalizedChunks
 
     def __new__(
         cls,
@@ -60,17 +60,17 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, DummyChunkedArray)
 
-    def chunks(self, data: DummyChunkedArray) -> T_Chunks:
+    def chunks(self, data: DummyChunkedArray) -> T_NormalizedChunks:
         return data.chunks
 
     def normalize_chunks(
         self,
-        chunks: Union[tuple, int, dict, str],
-        shape: Union[tuple[int], None] = None,
-        limit: Union[int, None] = None,
-        dtype: Union[np.dtype, None] = None,
-        previous_chunks: Union[tuple[tuple[int, ...], ...], None] = None,
-    ) -> tuple[tuple[int, ...], ...]:
+        chunks: T_Chunks,
+        shape: tuple[int] | None = None,
+        limit: int | None = None,
+        dtype: np.dtype | None = None,
+        previous_chunks: T_NormalizedChunks | None = None,
+    ) -> T_NormalizedChunks:
         from dask.array.core import normalize_chunks
 
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)

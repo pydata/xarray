@@ -49,6 +49,7 @@ if TYPE_CHECKING:
         CompatOptions,
         JoinOptions,
         NestedSequence,
+        T_Chunks,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
@@ -59,7 +60,6 @@ if TYPE_CHECKING:
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]

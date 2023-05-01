@@ -7,11 +7,11 @@ import numpy as np
 
 from xarray.core.duck_array_ops import dask_available
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
-from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray, T_Chunks
+from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.core.pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
-    from xarray.core.types import DaskArray
+    from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks
 
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
@@ -28,17 +28,17 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def is_chunked_array(self, data: Any) -> bool:
         return is_duck_dask_array(data)
 
-    def chunks(self, data: DaskArray) -> T_Chunks:
+    def chunks(self, data: DaskArray) -> T_NormalizedChunks:
         return data.chunks
 
     def normalize_chunks(
         self,
-        chunks: tuple | int | dict | str,
+        chunks: T_Chunks,
         shape: tuple[int] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
-        previous_chunks: tuple[tuple[int, ...], ...] | None = None,
-    ) -> tuple[tuple[int, ...], ...]:
+        previous_chunks: T_NormalizedChunks | None = None,
+    ) -> T_NormalizedChunks:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
 
@@ -185,7 +185,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def unify_chunks(
         self, *args, **kwargs
-    ) -> tuple[dict[str, T_Chunks], list[DaskArray]]:
+    ) -> tuple[dict[str, T_NormalizedChunks], list[DaskArray]]:
         from dask.array.core import unify_chunks
 
         return unify_chunks(*args, **kwargs)
