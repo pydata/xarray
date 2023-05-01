@@ -30,7 +30,6 @@ jobs:
           cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
           extra-specs: |
             asv
-            mamba
 
 
       - name: Run benchmarks
@@ -47,12 +46,12 @@ jobs:
           # ID this runner
           asv machine --yes
           export TMPDIR=$RUNNER_TEMP
-          printenv
+          export CONDA_VERBOSITY=3
           echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
           echo "Contender: ${GITHUB_SHA} (${{ github.event.pull_request.head.label }})"
           # Use mamba for env creation
-          export CONDA_EXE=$(which mamba)
-          # export CONDA_EXE=$(which conda)
+          # export CONDA_EXE=$(which mamba)
+          export CONDA_EXE=$(which conda)
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
           asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
