@@ -94,7 +94,7 @@ def guess_chunkmanager(
         return manager
     else:
         raise TypeError(
-            f"manager must be a string or instance of ChunkManagerEntryPoint, but received type {type(manager)}"
+            f"manager must be a string or instance of ChunkManagerEntrypoint, but received type {type(manager)}"
         )
 
 

@@ -1161,9 +1161,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
-        chunked_array_type: str
-        | ChunkManagerEntryPoint
-        | None = None,  # noqa: F821  # type: ignore[name-defined]
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> Variable:
@@ -1193,10 +1191,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             already as dask array. Default is False.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
-            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
             Experimental API that should not be relied upon.
         from_array_kwargs: dict, optional
-            Additional keyword arguments passed on to the `ChunkManagerEntryPoint.from_array` method used to create
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
             chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
             Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
             :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.

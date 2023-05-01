@@ -1262,7 +1262,7 @@ class DataArray(
         lock: bool = False,
         inline_array: bool = False,
         chunked_array_type: str
-        | ChunkManagerEntryPoint
+        | ChunkManagerEntrypoint
         | None = None,  # noqa: F821  # type: ignore[name-defined]
         from_array_kwargs=None,
         **chunks_kwargs: Any,
@@ -1297,7 +1297,7 @@ class DataArray(
             Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
             Experimental API that should not be relied upon.
         from_array_kwargs: dict
-            Additional keyword arguments passed on to the `ChunkManagerEntryPoint.from_array` method used to create
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
             chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
             Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
             :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
