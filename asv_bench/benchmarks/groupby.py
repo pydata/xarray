@@ -158,7 +158,7 @@ class GroupByCFTime:
         self.da = xr.DataArray(arr, dims=("y", "x", "time"), coords={"time": time})
         self.gb = self.da.groupby("time.year")
 
-    def time_init(self, ndim):
+    def time_init(self):
         self.da.groupby("time.year")
 
     def time_mean(self):
