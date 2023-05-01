@@ -29,7 +29,7 @@ IGNORE_DEPS = {
     "pytest-timeout",
 }
 
-POLICY_MONTHS = {"python": 24, "numpy": 18}
+POLICY_MONTHS = {"python": 30, "numpy": 18}
 POLICY_MONTHS_DEFAULT = 12
 POLICY_OVERRIDE: dict[str, tuple[int, int]] = {}
 errors = []
@@ -109,6 +109,9 @@ def query_conda(pkg: str) -> dict[tuple[int, int], datetime]:
                 (3, 6): datetime(2016, 12, 23),
                 (3, 7): datetime(2018, 6, 27),
                 (3, 8): datetime(2019, 10, 14),
+                (3, 9): datetime(2020, 10, 5),
+                (3, 10): datetime(2021, 10, 4),
+                (3, 11): datetime(2022, 10, 24),
             }
         )
 
