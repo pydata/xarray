@@ -36,7 +36,14 @@ DimensionalityError = pint.errors.DimensionalityError
 
 @dataclass
 class UnitInfo(ABC):
+    # A unit (e.g. m)
     unit: Any
+    # A scaled version of unit (e.g. mm)
+    scaled_unit: Any
+    # A unit that can't be converted to unit (e.g. s)
+    incompatible_unit: Any
+    # Dimensionless unit
+    dimensionless: Any
     unit_type: type
     quantity_type: type
 
@@ -69,6 +76,10 @@ pytestmark = [
 
 class PintInfo(UnitInfo):
     unit = unit_registry.m
+    scaled_unit = unit_registry.mm
+    incompatible_unit = unit_registry.s
+    dimensionless = unit_registry.dimensionless
+
     unit_type = pint.Unit
     quantity_type = pint.Quantity
 
@@ -88,6 +99,10 @@ class PintInfo(UnitInfo):
 """
 class AstropyInfo(UnitInfo):
     unit = astropy.units.m
+    scaled_unit = astropy.units.mm
+    incompatible_unit = astropy.units.s
+    dimensionless = astropy.units.dimensionless_unscaled
+
     unit_type = astropy.units.UnitBase
     quantity_type = astropy.units.Quantity
 
@@ -98,12 +113,14 @@ class AstropyInfo(UnitInfo):
     def get_unit(quantity):
         return quantity.unit
 
+    @staticmethod
     def assert_equal(q1, q2):
-        astropy.units.assert_quantity_equal(q1, q2)
+        (q1 == q2).all()
 """
 
 unit_libs = [PintInfo]  # + [AstropyInfo]
-known_quantities = tuple(lib.quantity_type for lib in unit_libs)
+known_quantity_types = tuple(lib.quantity_type for lib in unit_libs)
+known_unit_types = tuple(lib.unit_type for lib in unit_libs)
 
 
 @pytest.fixture(params=unit_libs)
@@ -233,7 +250,7 @@ def strip_units(obj):
         coords = {
             strip_units(name): (
                 (value.dims, array_strip_units(value.variable._data))
-                if isinstance(value.data, Quantity)
+                if isinstance(value.data, known_quantity_types)
                 else value  # to preserve multiindexes
             )
             for name, value in obj.coords.items()
@@ -245,7 +262,7 @@ def strip_units(obj):
     elif isinstance(obj, xr.Variable):
         data = array_strip_units(obj.data)
         new_obj = obj.copy(data=data)
-    elif isinstance(obj, known_quantities):
+    elif isinstance(obj, known_quantity_types):
         new_obj = array_strip_units(obj)
     elif isinstance(obj, (list, tuple)):
         return type(obj)(strip_units(elem) for elem in obj)
@@ -524,11 +541,12 @@ def test_apply_ufunc_dataarray(variant, unit_lib, dtype):
         "coords",
     ),
 )
-def test_apply_ufunc_dataset(variant, dtype):
+def test_apply_ufunc_dataset(variant, unit_lib, dtype):
+    unit = unit_lib.unit
     variants = {
-        "data": (unit_registry.m, 1, 1),
-        "dims": (1, unit_registry.m, 1),
-        "coords": (1, 1, unit_registry.s),
+        "data": (unit, 1, 1),
+        "dims": (1, unit, 1),
+        "coords": (1, 1, unit),
     }
     data_unit, dim_unit, coord_unit = variants.get(variant)
 
@@ -560,12 +578,10 @@ def test_apply_ufunc_dataset(variant, dtype):
     "unit,error",
     (
         pytest.param(1, DimensionalityError, id="no_unit"),
-        pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-        ),
-        pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.mm, None, id="compatible_unit"),
-        pytest.param(unit_registry.m, None, id="identical_unit"),
+        pytest.param("dimensionless", DimensionalityError, id="dimensionless"),
+        pytest.param("incompatible_unit", DimensionalityError, id="incompatible_unit"),
+        pytest.param("scaled_unit", None, id="compatible_unit"),
+        pytest.param("unit", None, id="identical_unit"),
     ),
     ids=repr,
 )
@@ -580,9 +596,12 @@ def test_apply_ufunc_dataset(variant, dtype):
     ),
 )
 @pytest.mark.parametrize("value", (10, dtypes.NA))
-def test_align_dataarray(value, variant, unit, error, dtype):
+def test_align_dataarray(value, variant, unit, error, dtype, unit_lib):
+    if isinstance(unit, str):
+        unit = getattr(unit_lib, unit)
+
     if variant == "coords" and (
-        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
+        value != dtypes.NA or isinstance(unit, known_unit_types)
     ):
         pytest.xfail(
             reason=(
@@ -593,7 +612,7 @@ def test_align_dataarray(value, variant, unit, error, dtype):
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
-    original_unit = unit_registry.m
+    original_unit = unit_lib.unit
 
     variants = {
         "data": ((original_unit, unit), (1, 1), (1, 1)),
@@ -686,7 +705,7 @@ def test_align_dataarray(value, variant, unit, error, dtype):
 @pytest.mark.parametrize("value", (10, dtypes.NA))
 def test_align_dataset(value, unit, variant, error, dtype):
     if variant == "coords" and (
-        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
+        value != dtypes.NA or isinstance(unit, known_unit_types)
     ):
         pytest.xfail(
             reason=(
@@ -764,10 +783,11 @@ def test_align_dataset(value, unit, variant, error, dtype):
     assert_allclose(expected_b, actual_b)
 
 
-def test_broadcast_dataarray(dtype):
+def test_broadcast_dataarray(dtype, unit_lib):
+    unit = unit_lib.unit
     # uses align internally so more thorough tests are not needed
-    array1 = np.linspace(0, 10, 2) * unit_registry.Pa
-    array2 = np.linspace(0, 10, 3) * unit_registry.Pa
+    array1 = np.linspace(0, 10, 2) * unit
+    array2 = np.linspace(0, 10, 3) * unit
 
     a = xr.DataArray(data=array1, dims="x")
     b = xr.DataArray(data=array2, dims="y")
@@ -786,10 +806,12 @@ def test_broadcast_dataarray(dtype):
     assert_identical(expected_b, actual_b)
 
 
-def test_broadcast_dataset(dtype):
+def test_broadcast_dataset(dtype, unit_lib):
+    unit = unit_lib.unit
+    scaled_unit = unit_lib.scaled_unit
     # uses align internally so more thorough tests are not needed
-    array1 = np.linspace(0, 10, 2) * unit_registry.Pa
-    array2 = np.linspace(0, 10, 3) * unit_registry.Pa
+    array1 = np.linspace(0, 10, 2) * unit
+    array2 = np.linspace(0, 10, 3) * unit
 
     x1 = np.arange(2)
     y1 = np.arange(3)
@@ -802,8 +824,8 @@ def test_broadcast_dataset(dtype):
     )
     other = xr.Dataset(
         data_vars={
-            "a": ("x", array1.to(unit_registry.hPa)),
-            "b": ("y", array2.to(unit_registry.hPa)),
+            "a": ("x", array1.to(scaled_unit)),
+            "b": ("y", array2.to(scaled_unit)),
         },
         coords={"x": x2, "y": y2},
     )
