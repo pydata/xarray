@@ -68,8 +68,7 @@
         "distributed": [""],
         "flox": [""],
         "numpy_groupies": [""],
-        "sparse": [""],
-        "cftime": [""]
+        "sparse": [""]
     },
 
 
