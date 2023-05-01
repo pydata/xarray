@@ -27,7 +27,6 @@ from xarray.core.indexing import (
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import (
-    ChunkManagerEntrypoint,
     guess_chunkmanager,
 )
 from xarray.core.pycompat import (
