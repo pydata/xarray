@@ -829,17 +829,17 @@ Running the performance test suite
 
 Performance matters and it is worth considering whether your code has introduced
 performance regressions.  *xarray* is starting to write a suite of benchmarking tests
-using `asv <https://github.com/spacetelescope/asv>`__
+using `asv <https://github.com/airspeed-velocity/asv>`__
 to enable easy monitoring of the performance of critical *xarray* operations.
 These benchmarks are all found in the ``xarray/asv_bench`` directory.
 
 To use all features of asv, you will need either ``conda`` or
 ``virtualenv``. For more details please check the `asv installation
-webpage <https://asv.readthedocs.io/en/latest/installing.html>`_.
+webpage <https://asv.readthedocs.io/en/stable/installing.html>`_.
 
 To install asv::
 
-    pip install git+https://github.com/spacetelescope/asv
+    python -m pip install asv
 
 If you need to run a benchmark, change your directory to ``asv_bench/`` and run::
 
