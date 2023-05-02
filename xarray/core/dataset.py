@@ -280,8 +280,7 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
-    chunked_array_type: str
-    | ChunkManagerEntrypoint = None,  # noqa: F821  # type: ignore[name-defined]
+    chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
 ):
     if chunks is not None:

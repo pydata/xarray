@@ -182,7 +182,10 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         ...
 
     def rechunk(
-        self, data: T_ChunkedArray, chunks: T_Chunks, **kwargs
+        self,
+        data: T_ChunkedArray,
+        chunks: T_NormalizedChunks | tuple[int, ...] | T_Chunks,
+        **kwargs,
     ) -> T_ChunkedArray:
         """Called when .chunk is called on an xarray object that is already chunked."""
         return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]

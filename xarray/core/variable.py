@@ -1259,7 +1259,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         data = self._data
         if chunkmanager.is_chunked_array(data):
-            data = chunkmanager.rechunk(data, chunks)
+            data = chunkmanager.rechunk(data, chunks)  # type: ignore[arg-type]
         else:
             if isinstance(data, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
@@ -1279,7 +1279,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
             data = chunkmanager.from_array(
                 data,
-                chunks,
+                chunks,  # type: ignore[arg-type]
                 **_from_array_kwargs,
             )
 
