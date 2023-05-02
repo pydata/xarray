@@ -287,7 +287,9 @@ def _maybe_chunk(
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
-        guess_chunkmanager(chunked_array_type)
+        chunked_array_type = guess_chunkmanager(
+            chunked_array_type
+        )  # coerce string to ChunkManagerEntrypoint type
         if isinstance(chunked_array_type, DaskManager):
             from dask.base import tokenize
 
