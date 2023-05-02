@@ -18,7 +18,7 @@ class GroupBy:
                 "c": xr.DataArray(np.arange(2 * self.n)),
             }
         )
-        self.ds2d = self.ds1d.expand_dims(z=10)
+        self.ds2d = self.ds1d.expand_dims(z=10).copy()
         self.ds1d_mean = self.ds1d.groupby("b").mean()
         self.ds2d_mean = self.ds2d.groupby("b").mean()
 
@@ -26,15 +26,21 @@ class GroupBy:
     def time_init(self, ndim):
         getattr(self, f"ds{ndim}d").groupby("b")
 
-    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
-    def time_agg_small_num_groups(self, method, ndim):
+    @parameterized(
+        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+    )
+    def time_agg_small_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
-        getattr(ds.groupby("a"), method)().compute()
+        with xr.set_options(use_flox=use_flox):
+            getattr(ds.groupby("a"), method)().compute()
 
-    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
-    def time_agg_large_num_groups(self, method, ndim):
+    @parameterized(
+        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+    )
+    def time_agg_large_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
-        getattr(ds.groupby("b"), method)().compute()
+        with xr.set_options(use_flox=use_flox):
+            getattr(ds.groupby("b"), method)().compute()
 
     def time_binary_op_1d(self):
         (self.ds1d.groupby("b") - self.ds1d_mean).compute()
@@ -115,10 +121,13 @@ class Resample:
     def time_init(self, ndim):
         getattr(self, f"ds{ndim}d").resample(time="D")
 
-    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
-    def time_agg_small_num_groups(self, method, ndim):
+    @parameterized(
+        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+    )
+    def time_agg_small_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
-        getattr(ds.resample(time="3M"), method)().compute()
+        with xr.set_options(use_flox=use_flox):
+            getattr(ds.resample(time="3M"), method)().compute()
 
     @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
     def time_agg_large_num_groups(self, method, ndim):
@@ -151,15 +160,23 @@ class ResampleCFTime:
         self.ds2d_mean = self.ds2d.resample(time="48H").mean()
 
 
-class GroupByCFTime:
-    def setup(self, *args, **kwargs):
+class GroupByLongTime:
+    params = [[True, False], [True, False]]
+    param_names = ["use_cftime", "use_flox"]
+
+    def setup(self, use_cftime, use_flox):
         arr = np.random.randn(10, 10, 365 * 30)
-        time = xr.date_range("2000", periods=30 * 365, calendar="noleap")
+        time = xr.date_range("2000", periods=30 * 365, use_cftime=use_cftime)
         self.da = xr.DataArray(arr, dims=("y", "x", "time"), coords={"time": time})
-        self.gb = self.da.groupby("time.year")
 
-    def time_init(self):
-        self.da.groupby("time.year")
+    def time_mean(self, use_cftime, use_flox):
+        with xr.set_options(use_flox=use_flox):
+            self.da.groupby("time.year").mean()
 
-    def time_mean(self):
-        self.gb.mean()
+
+# class GroupByLongCFTime(GroupByLongTime):
+#     def setup(self, *args, **kwargs):
+#         arr = np.random.randn(10, 10, 365 * 30)
+#         time = xr.date_range("2000", periods=30 * 365, calendar="noleap")
+#         self.da = xr.DataArray(arr, dims=("y", "x", "time"), coords={"time": time})
+#         self.gb = self.da.groupby("time.year")
