@@ -129,10 +129,13 @@ class Resample:
         with xr.set_options(use_flox=use_flox):
             getattr(ds.resample(time="3M"), method)().compute()
 
-    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
-    def time_agg_large_num_groups(self, method, ndim):
+    @parameterized(
+        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+    )
+    def time_agg_large_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
-        getattr(ds.resample(time="48H"), method)().compute()
+        with xr.set_options(use_flox=use_flox):
+            getattr(ds.resample(time="48H"), method)().compute()
 
 
 class ResampleDask(Resample):
