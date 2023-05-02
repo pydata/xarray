@@ -669,7 +669,9 @@ class GroupBy(Generic[T_Xarray]):
             obj = obj.where(~mask, drop=True)
             codes = codes.where(~mask, drop=True).astype(int)
 
-        other, _ = align(other, coord, join="outer")
+        # codes are defined for coord, so we align `other` with `coord`
+        # before indexing
+        other, _ = align(other, coord, join="right")
         expanded = other.isel({name: codes})
 
         result = g(obj, expanded)
