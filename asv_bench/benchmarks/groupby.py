@@ -172,11 +172,3 @@ class GroupByLongTime:
     def time_mean(self, use_cftime, use_flox):
         with xr.set_options(use_flox=use_flox):
             self.da.groupby("time.year").mean()
-
-
-# class GroupByLongCFTime(GroupByLongTime):
-#     def setup(self, *args, **kwargs):
-#         arr = np.random.randn(10, 10, 365 * 30)
-#         time = xr.date_range("2000", periods=30 * 365, calendar="noleap")
-#         self.da = xr.DataArray(arr, dims=("y", "x", "time"), coords={"time": time})
-#         self.gb = self.da.groupby("time.year")
