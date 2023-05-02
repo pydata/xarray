@@ -1024,13 +1024,14 @@ def open_mfdataset(
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
     if parallel:
-        import dask
+        chunked_array_type = kwargs.get("chunked_array_type")
+        chunkmanager = guess_chunkmanager(chunked_array_type)
 
         # wrap the open_dataset, getattr, and preprocess with delayed
-        open_ = dask.delayed(open_dataset)
-        getattr_ = dask.delayed(getattr)
+        open_ = chunkmanager.delayed(open_dataset)
+        getattr_ = chunkmanager.delayed(getattr)
         if preprocess is not None:
-            preprocess = dask.delayed(preprocess)
+            preprocess = chunkmanager.delayed(preprocess)
     else:
         open_ = open_dataset
         getattr_ = getattr
@@ -1043,7 +1044,7 @@ def open_mfdataset(
     if parallel:
         # calling compute here will return the datasets/file_objs lists,
         # the underlying datasets will still be stored as dask arrays
-        datasets, closers = dask.compute(datasets, closers)
+        datasets, closers = chunkmanager.compute(datasets, closers)
 
     # Combine all datasets, closing them in case of a ValueError
     try:

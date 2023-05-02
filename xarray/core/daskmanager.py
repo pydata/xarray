@@ -203,3 +203,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             targets=targets,
             **kwargs,
         )
+
+    def delayed(self, obj, **kwargs):
+        from dask import delayed
+
+        return delayed(obj, **kwargs)

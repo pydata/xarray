@@ -269,3 +269,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     ):
         """Used when writing to any backend."""
         raise NotImplementedError()
+
+    def delayed(self, obj, **kwargs):
+        """Creates a delayed object. Used in `open_mfdataset` when parallel=True."""
+        raise NotImplementedError()
