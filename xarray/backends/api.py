@@ -1546,7 +1546,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
-    store_kwargs: dict[str, Any] | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1569,7 +1569,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
-    store_kwargs: dict[str, Any] | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed:
     ...
 
@@ -1589,7 +1589,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
-    store_kwargs: dict[str, Any] | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1711,7 +1711,9 @@ def to_zarr(
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)
-    writes = writer.sync(compute=compute, store_kwargs=store_kwargs)
+    writes = writer.sync(
+        compute=compute, chunkmanager_store_kwargs=chunkmanager_store_kwargs
+    )
 
     if compute:
         _finalize_store(writes, zstore)

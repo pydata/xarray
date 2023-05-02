@@ -164,7 +164,7 @@ class ArrayWriter:
             else:
                 target[...] = source
 
-    def sync(self, compute=True, store_kwargs=None):
+    def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
             chunkmanager = get_chunked_array_type(*self.sources)
 
@@ -172,8 +172,8 @@ class ArrayWriter:
             # for any discernible difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
-            if store_kwargs is None:
-                store_kwargs = {}
+            if chunkmanager_store_kwargs is None:
+                chunkmanager_store_kwargs = {}
 
             delayed_store = chunkmanager.store(
                 self.sources,
@@ -182,7 +182,7 @@ class ArrayWriter:
                 compute=compute,
                 flush=True,
                 regions=self.regions,
-                **store_kwargs,
+                **chunkmanager_store_kwargs,
             )
             self.sources = []
             self.targets = []

@@ -198,8 +198,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     ):
         from dask.array import store
 
-        # TODO separate expected store kwargs from other compute kwargs?
-
         return store(
             sources=sources,
             targets=targets,
