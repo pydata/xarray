@@ -883,7 +883,9 @@ class GroupBy(Generic[T_Xarray]):
             group = group.where(~mask, drop=True)
             codes = codes.where(~mask, drop=True).astype(int)
 
-        other, _ = align(other, coord, join="outer", copy=False)
+        # codes are defined for coord, so we align `other` with `coord`
+        # before indexing
+        other, _ = align(other, coord, join="right", copy=False)
         expanded = other.isel({name: codes})
 
         result = g(obj, expanded)

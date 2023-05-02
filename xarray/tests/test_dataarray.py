@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Final, cast
+from typing import Any, Final, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -3245,6 +3245,39 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask
+    def test_to_dask_dataframe(self) -> None:
+        arr_np = np.arange(3 * 4).reshape(3, 4)
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+        expected = arr.to_series()
+        actual = arr.to_dask_dataframe()["foo"]
+
+        assert_array_equal(actual.values, expected.values)
+
+        actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
+
+        # regression test for coords with different dimensions
+
+        arr.coords["C"] = ("B", [-1, -2, -3])
+        expected = arr.to_series().to_frame()
+        expected["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected = expected[["C", "foo"]]
+        actual = arr.to_dask_dataframe()[["C", "foo"]]
+
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.columns.values, actual.columns.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dask_dataframe(dim_order=["B", "A", "C"])
+
+        arr.name = None
+        with pytest.raises(
+            ValueError,
+            match="Cannot convert an unnamed DataArray",
+        ):
+            arr.to_dask_dataframe()
+
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
@@ -3345,46 +3378,70 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
-    def test_to_and_from_dict(self, encoding) -> None:
+    def test_to_and_from_dict(
+        self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
+    ) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
-        array.encoding = {"bar": "spam"}
-        expected = {
+        array.encoding = encoding_data
+
+        return_data = array.to_numpy()
+        coords_data = np.array(["a", "b"])
+        if data == "list" or data is True:
+            return_data = return_data.tolist()
+            coords_data = coords_data.tolist()
+
+        expected: dict[str, Any] = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": return_data,
             "attrs": {},
-            "coords": {"x": {"dims": ("x",), "data": ["a", "b"], "attrs": {}}},
+            "coords": {"x": {"dims": ("x",), "data": coords_data, "attrs": {}}},
         }
         if encoding:
-            expected["encoding"] = {"bar": "spam"}
-        actual = array.to_dict(encoding=encoding)
+            expected["encoding"] = encoding_data
+
+        if has_dask:
+            da = array.chunk()
+        else:
+            da = array
+
+        if data == "array" or data is False:
+            with raise_if_dask_computes():
+                actual = da.to_dict(encoding=encoding, data=data)
+        else:
+            actual = da.to_dict(encoding=encoding, data=data)
 
         # check that they are identical
-        assert expected == actual
+        np.testing.assert_equal(expected, actual)
 
         # check roundtrip
-        assert_identical(array, DataArray.from_dict(actual))
+        assert_identical(da, DataArray.from_dict(actual))
 
         # a more bare bones representation still roundtrips
         d = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": da.values.tolist(),
             "coords": {"x": {"dims": "x", "data": ["a", "b"]}},
         }
-        assert_identical(array, DataArray.from_dict(d))
+        assert_identical(da, DataArray.from_dict(d))
 
         # and the most bare bones representation still roundtrips
-        d = {"name": "foo", "dims": ("x", "y"), "data": array.values}
-        assert_identical(array.drop_vars("x"), DataArray.from_dict(d))
+        d = {"name": "foo", "dims": ("x", "y"), "data": da.values}
+        assert_identical(da.drop_vars("x"), DataArray.from_dict(d))
 
         # missing a dims in the coords
         d = {
             "dims": ("x", "y"),
-            "data": array.values,
+            "data": da.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
         with pytest.raises(
@@ -3407,7 +3464,7 @@ class TestDataArray:
         endiantype = "<U1" if sys.byteorder == "little" else ">U1"
         expected_no_data["coords"]["x"].update({"dtype": endiantype, "shape": (2,)})
         expected_no_data.update({"dtype": "float64", "shape": (2, 3)})
-        actual_no_data = array.to_dict(data=False, encoding=encoding)
+        actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
     def test_to_and_from_dict_with_time_dim(self) -> None:
@@ -3924,6 +3981,11 @@ class TestDataArray:
         assert expected is actual
 
         actual = (self.dv > 10).xindexes["x"]
+        assert expected is actual
+
+        # use mda for bitshift test as it's type int
+        actual = (self.mda << 2).xindexes["x"]
+        expected = self.mda.xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self) -> None:

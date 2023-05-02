@@ -809,6 +809,56 @@ def test_groupby_math_more() -> None:
         ds + ds.groupby("time.month")
 
 
+def test_groupby_math_bitshift() -> None:
+    # create new dataset of int's only
+    ds = Dataset(
+        {
+            "x": ("index", np.ones(4, dtype=int)),
+            "y": ("index", np.ones(4, dtype=int) * -1),
+            "level": ("index", [1, 1, 2, 2]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    shift = DataArray([1, 2, 1], [("level", [1, 2, 8])])
+
+    left_expected = Dataset(
+        {
+            "x": ("index", [2, 2, 4, 4]),
+            "y": ("index", [-2, -2, -4, -4]),
+            "level": ("index", [2, 2, 8, 8]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+
+    left_manual = []
+    for lev, group in ds.groupby("level"):
+        shifter = shift.sel(level=lev)
+        left_manual.append(group << shifter)
+    left_actual = xr.concat(left_manual, dim="index").reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
+    left_actual = (ds.groupby("level") << shift).reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
+    right_expected = Dataset(
+        {
+            "x": ("index", [0, 0, 2, 2]),
+            "y": ("index", [-1, -1, -2, -2]),
+            "level": ("index", [0, 0, 4, 4]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    right_manual = []
+    for lev, group in left_expected.groupby("level"):
+        shifter = shift.sel(level=lev)
+        right_manual.append(group >> shifter)
+    right_actual = xr.concat(right_manual, dim="index").reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
+    right_actual = (left_expected.groupby("level") >> shift).reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
+
 @pytest.mark.parametrize("use_flox", [True, False])
 def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
     da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
@@ -1275,8 +1325,15 @@ class TestDataArrayGroupBy:
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         assert_identical(expected, actual)
 
+        # regression test for #7797
+        other = array.groupby("b").sum()
+        actual = array.sel(x=[0, 1]).groupby("b") - other
+        expected = DataArray([-1, 0], {"b": ("x", [0, 0]), "x": [0, 1]}, dims="x")
+        assert_identical(expected, actual)
+
         other = DataArray([10], coords={"c": 123, "b": [0]}, dims="b")
         actual = array.groupby("b") + other
+        expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         expected.coords["c"] = (["x"], [123] * 2 + [np.nan] * 2)
         assert_identical(expected, actual)
 
@@ -2262,3 +2319,20 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
     actual = getattr(ds.foo.resample(time="3M"), method)(dim="time")
     expected.coords["time"] = ds.time
     assert_identical(expected.drop_vars(["time"]).foo, actual)
+
+
+def test_groupby_binary_op_regression() -> None:
+    # regression test for #7797
+    # monthly timeseries that should return "zero anomalies" everywhere
+    time = xr.date_range("2023-01-01", "2023-12-31", freq="MS")
+    data = np.linspace(-1, 1, 12)
+    x = xr.DataArray(data, coords={"time": time})
+    clim = xr.DataArray(data, coords={"month": np.arange(1, 13, 1)})
+
+    # seems to give the correct result if we use the full x, but not with a slice
+    x_slice = x.sel(time=["2023-04-01"])
+
+    # two typical ways of computing anomalies
+    anom_gb = x_slice.groupby("time.month") - clim
+
+    assert_identical(xr.zeros_like(anom_gb), anom_gb)

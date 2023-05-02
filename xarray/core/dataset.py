@@ -6441,7 +6441,9 @@ class Dataset(
 
         return df
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -6452,9 +6454,14 @@ class Dataset(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool or {"list", "array"}, default: "list"
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            `ds.compute().to_dict(data="list")`.
+
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
@@ -6560,7 +6567,8 @@ class Dataset(
             )
         try:
             variable_dict = {
-                k: (v["dims"], v["data"], v.get("attrs")) for k, v in variables
+                k: (v["dims"], v["data"], v.get("attrs"), v.get("encoding"))
+                for k, v in variables
             }
         except KeyError as e:
             raise ValueError(
