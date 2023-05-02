@@ -143,7 +143,7 @@ class ResampleDask(Resample):
         self.ds2d = self.ds2d.chunk({"time": 50, "z": 4})
 
 
-class ResampleCFTime:
+class ResampleCFTime(Resample):
     def setup(self, *args, **kwargs):
         self.ds1d = xr.Dataset(
             {
@@ -160,10 +160,8 @@ class ResampleCFTime:
         self.ds2d_mean = self.ds2d.resample(time="48H").mean()
 
 
+@parameterized(["use_cftime", "use_flox"], [[True, False], [True, False]])
 class GroupByLongTime:
-    params = [[True, False], [True, False]]
-    param_names = ["use_cftime", "use_flox"]
-
     def setup(self, use_cftime, use_flox):
         arr = np.random.randn(10, 10, 365 * 30)
         time = xr.date_range("2000", periods=30 * 365, use_cftime=use_cftime)
