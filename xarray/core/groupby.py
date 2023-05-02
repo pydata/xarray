@@ -609,7 +609,7 @@ def _resolve_group(obj: T_Xarray, group: T_Group | Hashable) -> T_Group:
         except ValueError:
             raise ValueError(error_msg)
 
-        newgroup = group.copy()
+        newgroup = group.copy(deep=False)
         newgroup.name = group.name or "group"
 
     elif isinstance(group, IndexVariable):
