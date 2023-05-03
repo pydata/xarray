@@ -8720,13 +8720,13 @@ class Dataset(
         coords_ = [
             coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
         ]
+        n_coords = len(coords_)
 
         params, func_args = _get_func_args(func, param_names)
         param_defaults, bounds_defaults = _initialize_curvefit_params(
             params, p0, bounds, func_args
         )
         n_params = len(params)
-        kwargs.setdefault("p0", [param_defaults[p] for p in params])
         kwargs.setdefault(
             "bounds",
             [
@@ -8735,9 +8735,11 @@ class Dataset(
             ],
         )
 
-        def _wrapper(Y, *coords_, **kwargs):
+        def _wrapper(Y, *coords_and_p0, **kwargs):
             # Wrap curve_fit with raveled coordinates and pointwise NaN handling
-            x = np.vstack([c.ravel() for c in coords_])
+            coords__ = coords_and_p0[:n_coords]
+            p0_ = coords_and_p0[n_coords:]
+            x = np.vstack([c.ravel() for c in coords__])
             y = Y.ravel()
             if skipna:
                 mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
@@ -8748,7 +8750,7 @@ class Dataset(
                     pcov = np.full([n_params, n_params], np.nan)
                     return popt, pcov
             x = np.squeeze(x)
-            popt, pcov = curve_fit(func, x, y, **kwargs)
+            popt, pcov = curve_fit(func, x, y, p0=p0_, **kwargs)
             return popt, pcov
 
         result = type(self)()
@@ -8762,9 +8764,11 @@ class Dataset(
                 _wrapper,
                 da,
                 *coords_,
+                *param_defaults.values(),
                 vectorize=True,
                 dask="parallelized",
-                input_core_dims=[reduce_dims_ for d in range(len(coords_) + 1)],
+                input_core_dims=[reduce_dims_ for d in range(n_coords + 1)]
+                + [[] for _ in range(n_params)],
                 output_core_dims=[["param"], ["cov_i", "cov_j"]],
                 dask_gufunc_kwargs={
                     "output_sizes": {
