@@ -51,7 +51,6 @@ from unicodedata import normalize
 
 import numpy as np
 
-from xarray.core import duck_array_ops
 from xarray.core.computation import apply_ufunc
 from xarray.core.types import T_DataArray
 
@@ -2086,16 +2085,13 @@ class StringAccessor(Generic[T_DataArray]):
         else:
             # dtype MUST be object or strings can be truncated
             # See: https://github.com/numpy/numpy/issues/8352
-            return duck_array_ops.astype(
-                self._apply(
-                    func=_get_res_multi,
-                    func_args=(pat,),
-                    dtype=np.object_,
-                    output_core_dims=[[dim]],
-                    output_sizes={dim: maxgroups},
-                ),
-                self._obj.dtype.kind,
-            )
+            return self._apply(
+                func=_get_res_multi,
+                func_args=(pat,),
+                dtype=np.object_,
+                output_core_dims=[[dim]],
+                output_sizes={dim: maxgroups},
+            ).astype(self._obj.dtype.kind)
 
     def extractall(
         self,
@@ -2262,18 +2258,15 @@ class StringAccessor(Generic[T_DataArray]):
 
             return res
 
-        return duck_array_ops.astype(
-            self._apply(
-                # dtype MUST be object or strings can be truncated
-                # See: https://github.com/numpy/numpy/issues/8352
-                func=_get_res,
-                func_args=(pat,),
-                dtype=np.object_,
-                output_core_dims=[[group_dim, match_dim]],
-                output_sizes={group_dim: maxgroups, match_dim: maxcount},
-            ),
-            self._obj.dtype.kind,
-        )
+        return self._apply(
+            # dtype MUST be object or strings can be truncated
+            # See: https://github.com/numpy/numpy/issues/8352
+            func=_get_res,
+            func_args=(pat,),
+            dtype=np.object_,
+            output_core_dims=[[group_dim, match_dim]],
+            output_sizes={group_dim: maxgroups, match_dim: maxcount},
+        ).astype(self._obj.dtype.kind)
 
     def findall(
         self,
@@ -2392,16 +2385,13 @@ class StringAccessor(Generic[T_DataArray]):
 
         # dtype MUST be object or strings can be truncated
         # See: https://github.com/numpy/numpy/issues/8352
-        return duck_array_ops.astype(
-            self._apply(
-                func=arrfunc,
-                func_args=(sep,),
-                dtype=np.object_,
-                output_core_dims=[[dim]],
-                output_sizes={dim: 3},
-            ),
-            self._obj.dtype.kind,
-        )
+        return self._apply(
+            func=arrfunc,
+            func_args=(sep,),
+            dtype=np.object_,
+            output_core_dims=[[dim]],
+            output_sizes={dim: 3},
+        ).astype(self._obj.dtype.kind)
 
     def partition(
         self,
@@ -2520,16 +2510,13 @@ class StringAccessor(Generic[T_DataArray]):
 
         # dtype MUST be object or strings can be truncated
         # See: https://github.com/numpy/numpy/issues/8352
-        return duck_array_ops.astype(
-            self._apply(
-                func=_dosplit,
-                func_args=(sep,),
-                dtype=np.object_,
-                output_core_dims=[[dim]],
-                output_sizes={dim: maxsplit},
-            ),
-            self._obj.dtype.kind,
-        )
+        return self._apply(
+            func=_dosplit,
+            func_args=(sep,),
+            dtype=np.object_,
+            output_core_dims=[[dim]],
+            output_sizes={dim: maxsplit},
+        ).astype(self._obj.dtype.kind)
 
     def split(
         self,
