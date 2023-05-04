@@ -6441,7 +6441,9 @@ class Dataset(
 
         return df
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -6452,9 +6454,14 @@ class Dataset(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool or {"list", "array"}, default: "list"
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            `ds.compute().to_dict(data="list")`.
+
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
@@ -6560,7 +6567,8 @@ class Dataset(
             )
         try:
             variable_dict = {
-                k: (v["dims"], v["data"], v.get("attrs")) for k, v in variables
+                k: (v["dims"], v["data"], v.get("attrs"), v.get("encoding"))
+                for k, v in variables
             }
         except KeyError as e:
             raise ValueError(
@@ -8950,21 +8958,21 @@ class Dataset(
         Dataset.resample
         DataArray.resample
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import (
+            DatasetGroupBy,
+            ResolvedUniqueGrouper,
+            UniqueGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
+        _validate_groupby_squeeze(squeeze)
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
 
         return DatasetGroupBy(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def groupby_bins(
@@ -9035,20 +9043,30 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DatasetGroupBy,
+            ResolvedBinGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        return DatasetGroupBy(
-            self,
-            group,
-            squeeze=squeeze,
+        _validate_groupby_squeeze(squeeze)
+        grouper = BinGrouper(
             bins=bins,
-            restore_coord_dims=restore_coord_dims,
             cut_kwargs={
                 "right": right,
                 "labels": labels,
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
+
+        return DatasetGroupBy(
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def weighted(self, weights: DataArray) -> DatasetWeighted:

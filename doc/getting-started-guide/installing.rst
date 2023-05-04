@@ -86,7 +86,7 @@ Minimum dependency versions
 Xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
-- **Python:** 24 months
+- **Python:** 30 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
