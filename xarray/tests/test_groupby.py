@@ -51,8 +51,9 @@ def test_consolidate_slices() -> None:
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices
 
+    # ignore type because we're checking for an error anyway
     with pytest.raises(ValueError):
-        _consolidate_slices([slice(3), 4])
+        _consolidate_slices([slice(3), 4])  # type: ignore[list-item]
 
 
 def test_groupby_dims_property(dataset) -> None:
@@ -538,7 +539,7 @@ def test_groupby_drops_nans() -> None:
         .reset_index("id", drop=True)
         .assign(id=stacked.id.values)
         .dropna("id")
-        .transpose(*actual2.dims)
+        .transpose(*actual2.variable.dims)
     )
     assert_identical(actual2, expected2)
 
@@ -1801,7 +1802,7 @@ class TestDataArrayResample:
         # Nearest
         rs = array.resample(time="3H")
         actual = rs.nearest()
-        new_times = rs._full_index
+        new_times = rs.groupers[0].full_index
         expected = DataArray(array.reindex(time=new_times, method="nearest"))
         assert_identical(expected, actual)
 
