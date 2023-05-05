@@ -25,7 +25,7 @@ dependencies:
   - numpy
   - packaging
   - pandas
-  - pint
+  - pint<0.20
   - pip
   - pre-commit
   - pseudonetcdf
