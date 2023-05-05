@@ -8643,8 +8643,10 @@ class Dataset(
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
-            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
-            be assigned initial values following the default scipy behavior.
+            `curve_fit` `p0` arg. If the values are DataArrays, they will be appropriately
+            broadcast to the coordinates of the array. If none or only some parameters are
+            passed, the rest will be assigned initial values following the default scipy
+            behavior.
         bounds : dict-like, optional
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
