@@ -29,7 +29,7 @@ dependencies:
   - packaging
   - pandas
   - pint
-  - pip
+  - pip#
   - pooch
   - pre-commit
   - pseudonetcdf
