@@ -2343,7 +2343,7 @@ def test_groupby_binary_op_regression() -> None:
 @pytest.mark.parametrize("func", ["sum", "prod"])
 @pytest.mark.parametrize("skipna", [True, False])
 @pytest.mark.parametrize("min_count", [None, 1])
-def test_min_count_vs_flox(func, min_count, skipna):
+def test_min_count_vs_flox(func: str, min_count: int | None, skipna: bool) -> None:
     da = DataArray(
         data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
         dims="x",
@@ -2360,7 +2360,7 @@ def test_min_count_vs_flox(func, min_count, skipna):
 
 
 @pytest.mark.parametrize("use_flox", [True, False])
-def test_min_count_error(use_flox):
+def test_min_count_error(use_flox: bool) -> None:
     if use_flox and not has_flox:
         pytest.skip()
     da = DataArray(
