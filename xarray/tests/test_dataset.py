@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -4596,7 +4596,11 @@ class TestDataset:
         expected = df.apply(np.asarray)
         assert roundtripped.equals(expected)
 
-    def test_to_and_from_dict(self) -> None:
+    @pytest.mark.parametrize("encoding", [True, False])
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    def test_to_and_from_dict(
+        self, encoding: bool, data: bool | Literal["list", "array"]
+    ) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -4617,14 +4621,25 @@ class TestDataset:
                 "b": {"dims": ("t",), "data": y.tolist(), "attrs": {}},
             },
         }
+        if encoding:
+            ds.t.encoding.update({"foo": "bar"})
+            expected["encoding"] = {}
+            expected["coords"]["t"]["encoding"] = ds.t.encoding
+            for vvs in ["a", "b"]:
+                expected["data_vars"][vvs]["encoding"] = {}
 
-        actual = ds.to_dict()
+        actual = ds.to_dict(data=data, encoding=encoding)
 
         # check that they are identical
-        assert expected == actual
+        np.testing.assert_equal(expected, actual)
 
         # check roundtrip
-        assert_identical(ds, Dataset.from_dict(actual))
+        ds_rt = Dataset.from_dict(actual)
+        assert_identical(ds, ds_rt)
+        if encoding:
+            assert set(ds_rt.variables) == set(ds.variables)
+            for vv in ds.variables:
+                np.testing.assert_equal(ds_rt[vv].encoding, ds[vv].encoding)
 
         # check the data=False option
         expected_no_data = expected.copy()
@@ -4635,14 +4650,18 @@ class TestDataset:
         expected_no_data["coords"]["t"].update({"dtype": endiantype, "shape": (10,)})
         expected_no_data["data_vars"]["a"].update({"dtype": "float64", "shape": (10,)})
         expected_no_data["data_vars"]["b"].update({"dtype": "float64", "shape": (10,)})
-        actual_no_data = ds.to_dict(data=False)
+        actual_no_data = ds.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
         # verify coords are included roundtrip
         expected_ds = ds.set_coords("b")
-        actual2 = Dataset.from_dict(expected_ds.to_dict())
+        actual2 = Dataset.from_dict(expected_ds.to_dict(data=data, encoding=encoding))
 
         assert_identical(expected_ds, actual2)
+        if encoding:
+            assert set(expected_ds.variables) == set(actual2.variables)
+            for vv in ds.variables:
+                np.testing.assert_equal(expected_ds[vv].encoding, actual2[vv].encoding)
 
         # test some incomplete dicts:
         # this one has no attrs field, the dims are strings, and x, y are
@@ -4690,7 +4709,10 @@ class TestDataset:
         roundtripped = Dataset.from_dict(ds.to_dict())
         assert_identical(ds, roundtripped)
 
-    def test_to_and_from_dict_with_nan_nat(self) -> None:
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    def test_to_and_from_dict_with_nan_nat(
+        self, data: bool | Literal["list", "array"]
+    ) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -4706,7 +4728,7 @@ class TestDataset:
                 "lat": ("lat", lat),
             }
         )
-        roundtripped = Dataset.from_dict(ds.to_dict())
+        roundtripped = Dataset.from_dict(ds.to_dict(data=data))
         assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:

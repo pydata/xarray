@@ -515,15 +515,16 @@ def apply_groupby_func(func, *args):
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"
     first_groupby = groupbys[0]
-    if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
+    (grouper,) = first_groupby.groupers
+    if any(not grouper.group.equals(gb.groupers[0].group) for gb in groupbys[1:]):
         raise ValueError(
             "apply_ufunc can only perform operations over "
             "multiple GroupBy objects at once if they are all "
             "grouped the same way"
         )
 
-    grouped_dim = first_groupby._group.name
-    unique_values = first_groupby._unique_coord.values
+    grouped_dim = grouper.name
+    unique_values = grouper.unique_coord.values
 
     iterators = []
     for arg in args:
