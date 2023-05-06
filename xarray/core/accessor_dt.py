@@ -221,11 +221,13 @@ class TimeAccessor(Generic[T_DataArray]):
         if dtype is None:
             dtype = self._obj.dtype
         result = _get_date_field(_index_or_data(self._obj), name, dtype)
-        return self._obj.copy(data=result).rename(name)
+        newvar = self._obj.variable.copy(data=result)
+        return self._obj._replace(newvar, name=name)
 
     def _tslib_round_accessor(self, name: str, freq: str) -> T_DataArray:
         result = _round_field(_index_or_data(self._obj), name, freq)
-        return self._obj.copy(data=result).rename(name)
+        newvar = self._obj.variable.copy(data=result)
+        return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
         """
