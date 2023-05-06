@@ -167,7 +167,7 @@ def test_decode_signed_from_unsigned(bits) -> None:
     assert decoded.values == original_values
 
 
-def test_ensure_scale_offset_conformance():
+def test_ensure_scale_offset_conformance() -> None:
     # scale offset dtype mismatch
     mapping = dict(scale_factor=np.float16(10), add_offset=np.float64(-10), dtype="i2")
     with pytest.raises(ValueError, match="float16 is not allowed"):
