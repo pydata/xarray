@@ -8717,6 +8717,17 @@ class Dataset(
                 "in fitting on scalar data."
             )
 
+        # Check that initial guess only contains coordinates that are in preserved_dims
+        for param, guess in p0.items():
+            if isinstance(guess, DataArray):
+                unexpected = list(set(guess.dims) - set(preserved_dims))
+                if unexpected:
+                    raise ValueError(
+                        f"Initial guess for '{param}' has unexpected dimensions "
+                        f"{unexpected}. It should only have dimensions that are in data "
+                        f"dimensions {preserved_dims}."
+                    )
+
         # Broadcast all coords with each other
         coords_ = broadcast(*coords_)
         coords_ = [
