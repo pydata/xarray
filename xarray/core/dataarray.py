@@ -6229,7 +6229,7 @@ class DataArray(
         >>> fit_result = da.curvefit("time", exp_decay)
         >>> fit_result["curvefit_coefficients"].sel(param="time_constant")
         <xarray.DataArray 'curvefit_coefficients' (x: 3)>
-        array([1.05692036, 1.73549638, 2.94215771])
+        array([1.05692036, 1.73549639, 2.94215771])
         Coordinates:
           * x        (x) int64 0 1 2
             param    <U13 'time_constant'
