@@ -6240,7 +6240,7 @@ class DataArray(
           * x        (x) int64 0 1 2
             param    <U13 'amplitude'
 
-        An initial guess can also be given with the `p0` arg (although it does not make much
+        An initial guess can also be given with the ``p0`` arg (although it does not make much
         of a difference in this simple example). To have a different guess for different
         coordinate points, the guess can be a DataArray. Here we use the same initial guess
         for the amplitude but different guesses for the time constant:
