@@ -4464,6 +4464,18 @@ class TestDataArray:
         )
         assert_allclose(fit.curvefit_coefficients, expected)
 
+        with pytest.raises(
+            ValueError,
+            match=r"Initial guess for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # initial guess with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                p0={"a": DataArray([1, 2], coords={"foo": [1, 2]})},
+            )
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)
