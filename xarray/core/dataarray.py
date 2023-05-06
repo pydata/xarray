@@ -6478,21 +6478,20 @@ class DataArray(
         core.groupby.DataArrayGroupBy
         pandas.DataFrame.groupby
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            DataArrayGroupBy,
+            ResolvedUniqueGrouper,
+            UniqueGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
-
+        _validate_groupby_squeeze(squeeze)
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
         return DataArrayGroupBy(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def groupby_bins(
@@ -6563,20 +6562,30 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DataArrayGroupBy,
+            ResolvedBinGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        return DataArrayGroupBy(
-            self,
-            group,
-            squeeze=squeeze,
+        _validate_groupby_squeeze(squeeze)
+        grouper = BinGrouper(
             bins=bins,
-            restore_coord_dims=restore_coord_dims,
             cut_kwargs={
                 "right": right,
                 "labels": labels,
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
+
+        return DataArrayGroupBy(
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def weighted(self, weights: DataArray) -> DataArrayWeighted:
