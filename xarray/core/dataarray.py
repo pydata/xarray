@@ -5475,6 +5475,7 @@ class DataArray(
         numpy.polyfit
         numpy.polyval
         xarray.polyval
+        DataArray.curvefit
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
