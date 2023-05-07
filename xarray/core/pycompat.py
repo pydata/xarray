@@ -59,14 +59,26 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
+_cached_duck_array_modules: [dict[ModType, DuckArrayModule]] = {}
+
+
+def _get_cached_duck_array_module(mod: ModType) -> DuckArrayModule:
+    if mod not in _cached_duck_array_modules:
+        duckmod = DuckArrayModule(mod)
+        _cached_duck_array_modules[mod] = duckmod
+        return duckmod
+    else:
+        return _cached_duck_array_modules[mod]
+
+
 def array_type(mod: ModType) -> DuckArrayTypes:
     """Quick wrapper to get the array class of the module."""
-    return DuckArrayModule(mod).type
+    return _get_cached_duck_array_module(mod).type
 
 
 def mod_version(mod: ModType) -> Version:
     """Quick wrapper to get the version of the module."""
-    return DuckArrayModule(mod).version
+    return _get_cached_duck_array_module(mod).version
 
 
 def is_dask_collection(x):
