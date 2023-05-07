@@ -13,9 +13,7 @@ class Combine1d:
         t = np.arange(t_size)
         data = np.random.randn(t_size)
 
-        self.dsA0 = xr.Dataset(
-            {"A": xr.DataArray(data, coords={"T": t}, dims=("T"))}
-        )
+        self.dsA0 = xr.Dataset({"A": xr.DataArray(data, coords={"T": t}, dims=("T"))})
         self.dsA1 = xr.Dataset(
             {"A": xr.DataArray(data, coords={"T": t + t_size}, dims=("T"))}
         )
