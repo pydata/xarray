@@ -367,13 +367,18 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         # Mimics functionality of scipy.optimize.minpack._initialize_feasible
         lb_finite = np.isfinite(lb)
         ub_finite = np.isfinite(ub)
-        p0 = np.nansum(
-            [
-                0.5 * (lb + ub) * (lb_finite & ub_finite),
-                (lb + 1) * (lb_finite & ~ub_finite),
-                (ub - 1) * (~lb_finite & ub_finite),
-            ],
-            axis=0,
+        p0 = where(
+            lb_finite,
+            where(
+                ub_finite,
+                0.5 * (lb + ub),  # both bounds finite
+                lb + 1,  # lower bound finite, upper infinite
+            ),
+            where(
+                ub_finite,
+                ub - 1,  # lower bound infinite, upper finite
+                0,  # both bounds infinite
+            ),
         )
         return p0
 
