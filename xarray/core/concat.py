@@ -518,7 +518,7 @@ def _dataset_concat(
     if variables_to_merge:
         grouped = {
             k: v
-            for k, v in collect_variables_and_indexes(list(datasets)).items()
+            for k, v in collect_variables_and_indexes(datasets).items()
             if k in variables_to_merge
         }
         merged_vars, merged_indexes = merge_collected(
@@ -570,7 +570,7 @@ def _dataset_concat(
                     yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
-    concat_index = list(range(sum(concat_dim_lengths)))
+    concat_index = np.arange(sum(concat_dim_lengths))
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
