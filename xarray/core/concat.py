@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Union, cast, overload
 
+import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, utils
@@ -575,18 +576,23 @@ def _dataset_concat(
     for name in vars_order:
         if name in concat_over and name not in result_indexes:
             variables = []
-            variable_index = []
+            # variable_index = []
+            variable_index = np.array([], dtype=np.intp)
             var_concat_dim_length = []
             for i, ds in enumerate(datasets):
                 if name in ds.variables:
                     variables.append(ds[name].variable)
                     # add to variable index, needed for reindexing
-                    var_idx = [
-                        sum(concat_dim_lengths[:i]) + k
-                        for k in range(concat_dim_lengths[i])
-                    ]
-                    variable_index.extend(var_idx)
-                    var_concat_dim_length.append(len(var_idx))
+                    dim_len = concat_dim_lengths[i]
+                    var_idx = sum(concat_dim_lengths[:i]) + np.arange(dim_len)
+                    variable_index = np.append(variable_index, var_idx)
+                    var_concat_dim_length.append(dim_len)
+                    # var_idx = [
+                    #     sum(concat_dim_lengths[:i]) + k
+                    #     for k in range(concat_dim_lengths[i])
+                    # ]
+                    # variable_index.extend(var_idx)
+                    # var_concat_dim_length.append(len(var_idx))
                 else:
                     # raise if coordinate not in all datasets
                     if name in coord_names:
