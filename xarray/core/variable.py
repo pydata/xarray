@@ -2101,7 +2101,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var.dims)}"
                     )
 
-        return cls(dims, data, attrs, encoding)
+        return cls(dims, data, attrs, encoding, fastpath=True)
 
     def equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the same dimensions and values;
