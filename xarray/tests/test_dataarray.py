@@ -4543,6 +4543,18 @@ class TestDataArray:
         )
         assert_allclose(fit2.curvefit_coefficients, expected)
 
+        with pytest.raises(
+            ValueError,
+            match=r"Upper bound for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # bounds with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                bounds={"a": (0, DataArray([1], coords={"foo": [1]}))},
+            )
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)
