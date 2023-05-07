@@ -4476,6 +4476,56 @@ class TestDataArray:
                 p0={"a": DataArray([1, 2], coords={"foo": [1, 2]})},
             )
 
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_bounds(self, use_dask) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = xr.DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fit a sine with different bounds: positive amplitude should result in a fit with
+        # phase 0 and negative amplitude should result in phase 0.5 * 2pi.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (
+                    DataArray([0, -2], coords=[da.x]),
+                    DataArray([2, 0], coords=[da.x]),
+                ),
+            },
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        # Scalar lower bound with array upper bound
+        fit2 = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (-2, DataArray([2, 0], coords=[da.x])),
+            },
+        )
+        assert_allclose(fit2.curvefit_coefficients, expected)
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)
