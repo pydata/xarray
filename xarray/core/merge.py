@@ -306,7 +306,7 @@ def merge_collected(
 
 
 def collect_variables_and_indexes(
-    list_of_mappings: list[DatasetLike],
+    list_of_mappings: Iterable[DatasetLike],
     indexes: Mapping[Any, Any] | None = None,
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
