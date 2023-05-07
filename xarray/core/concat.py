@@ -545,7 +545,7 @@ def _dataset_concat(
         # dimensions and the same shape for all of them except along the
         # concat dimension
         # common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
-        common_dims = tuple(dict.from_keys(d for v in vars for d in v.dims))
+        common_dims = tuple(dict.fromkeys(d for v in vars for d in v.dims))
         if dim not in common_dims:
             common_dims = (dim,) + common_dims
         for var, dim_len in zip(vars, concat_dim_lengths):

@@ -59,7 +59,7 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
-_cached_duck_array_modules: [dict[ModType, DuckArrayModule]] = {}
+_cached_duck_array_modules: dict[ModType, DuckArrayModule] = {}
 
 
 def _get_cached_duck_array_module(mod: ModType) -> DuckArrayModule:
