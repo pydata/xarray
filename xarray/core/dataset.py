@@ -361,6 +361,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
+    from xarray.core.computation import where
 
     def _initialize_feasible(lb, ub):
         # Mimics functionality of scipy.optimize.minpack._initialize_feasible
@@ -368,10 +369,11 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         ub_finite = np.isfinite(ub)
         p0 = np.nansum(
             [
-                0.5 * (lb + ub) * int(lb_finite & ub_finite),
-                (lb + 1) * int(lb_finite & ~ub_finite),
-                (ub - 1) * int(~lb_finite & ub_finite),
-            ]
+                0.5 * (lb + ub) * (lb_finite & ub_finite),
+                (lb + 1) * (lb_finite & ~ub_finite),
+                (ub - 1) * (~lb_finite & ub_finite),
+            ],
+            axis=0,
         )
         return p0
 
@@ -381,9 +383,13 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         if p in func_args and func_args[p].default is not func_args[p].empty:
             param_defaults[p] = func_args[p].default
         if p in bounds:
-            bounds_defaults[p] = tuple(bounds[p])
-            if param_defaults[p] < bounds[p][0] or param_defaults[p] > bounds[p][1]:
-                param_defaults[p] = _initialize_feasible(bounds[p][0], bounds[p][1])
+            lb, ub = bounds[p]
+            bounds_defaults[p] = (lb, ub)
+            param_defaults[p] = where(
+                (param_defaults[p] < lb) | (param_defaults[p] > ub),
+                _initialize_feasible(lb, ub),
+                param_defaults[p],
+            )
         if p in p0:
             param_defaults[p] = p0[p]
     return param_defaults, bounds_defaults
