@@ -1538,6 +1538,7 @@ class TestDataArrayGroupBy:
         expected = DataArray([16, 40], dims="lat_bins", coords={"lat_bins": bin_coords})
         actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
+
         # modify the array coordinates to be non-monotonic after unstacking
         array["lat"].data = np.array([[10.0, 20.0], [20.0, 10.0]])
         expected = DataArray([28, 28], dims="lat_bins", coords={"lat_bins": bin_coords})
@@ -1545,7 +1546,8 @@ class TestDataArrayGroupBy:
         assert_identical(expected, actual)
 
         bins = [-2, -1, 0, 1, 2]
-        field = DataArray(np.ones((5, 3)), dims=("x", "y"))
+        coords = {"y": np.arange(1, 4)}
+        field = DataArray(np.ones((5, 3)), dims=("x", "y"), coords=coords)
         by = DataArray(
             np.array([[-1.5, -1.5, 0.5, 1.5, 1.5] * 3]).reshape(5, 3), dims=("x", "y")
         )
@@ -1562,6 +1564,20 @@ class TestDataArrayGroupBy:
             np.array([6, np.nan, 3, 6]),
             dims="group_bins",
             coords={"group_bins": bincoord},
+        )
+        assert_identical(actual, expected)
+
+        actual = field.groupby_bins(by, bins=bins).count(dim="x", method="map-reduce")
+        expected = DataArray(
+            np.array(
+                [
+                    [2.0, np.nan, 1.0, 2.0],
+                    [2.0, np.nan, 1.0, 2.0],
+                    [2.0, np.nan, 1.0, 2.0],
+                ]
+            ),
+            dims=("y", "group_bins"),
+            coords={"group_bins": bincoord, **coords},
         )
         assert_identical(actual, expected)
 

@@ -1017,7 +1017,7 @@ class GroupBy(Generic[T_Xarray]):
         # we did end up reducing over dimension(s) that are
         # in the grouped variable
         group_dims = grouper.group.dims
-        if set(group_dims).issubset(set(parsed_dim)):
+        if set(group_dims) & set(parsed_dim):
             result[grouper.name] = output_index
             result = result.drop_vars(unindexed_dims)
 
