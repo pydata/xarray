@@ -2336,3 +2336,11 @@ def test_groupby_binary_op_regression() -> None:
     anom_gb = x_slice.groupby("time.month") - clim
 
     assert_identical(xr.zeros_like(anom_gb), anom_gb)
+
+
+def test_groupby_multiindex_level():
+    # GH6836
+    midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
+    mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
+    groups = mda.groupby("one").groups
+    assert groups == {"a": [0, 1], "b": [2, 3], "c": [4, 5]}

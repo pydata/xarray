@@ -381,7 +381,7 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
     @property
     def group_as_index(self) -> pd.Index:
         if self._group_as_index is None:
-            self._group_as_index = safe_cast_to_index(self.group1d)
+            self._group_as_index = self.group1d.to_index()
         return self._group_as_index
 
 
