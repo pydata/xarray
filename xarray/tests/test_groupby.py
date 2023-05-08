@@ -1567,7 +1567,7 @@ class TestDataArrayGroupBy:
         )
         assert_identical(actual, expected)
 
-        actual = field.groupby_bins(by, bins=bins).count(dim="x", method="map-reduce")
+        actual = field.groupby_bins(by, bins=bins).count(dim="x")
         expected = DataArray(
             np.array(
                 [
