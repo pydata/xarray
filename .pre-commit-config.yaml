@@ -16,7 +16,7 @@ repos:
         files: ^xarray/
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.263'
+    rev: 'v0.0.265'
     hooks:
       - id: ruff
         args: ["--fix"]
