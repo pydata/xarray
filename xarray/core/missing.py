@@ -639,7 +639,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
             var.transpose(*original_dims).data, x, destination, method, kwargs
         )
 
-        result = Variable(new_dims, interped, attrs=var.attrs)
+        result = Variable(new_dims, interped, attrs=var.attrs, fastpath=True)
 
         # dimension of the output array
         out_dims: OrderedSet = OrderedSet()
@@ -648,7 +648,8 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
                 out_dims.update(indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
-        result = result.transpose(*out_dims)
+        if len(out_dims) > 1:
+            result = result.transpose(*out_dims)
     return result
 
 
