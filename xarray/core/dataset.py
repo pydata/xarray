@@ -6403,6 +6403,12 @@ class Dataset(
         columns.extend(k for k in self.coords if k not in self.dims)
         columns.extend(self.data_vars)
 
+        has_many_dims = len(dim_order) > 1
+        if has_many_dims:
+            ds_chunks = self.chunks
+        else:
+            ds_chunks = {}
+
         series_list = []
         for name in columns:
             try:
@@ -6422,8 +6428,13 @@ class Dataset(
             if not is_duck_dask_array(var._data):
                 var = var.chunk()
 
-            dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
-            series = dd.from_array(dask_array.reshape(-1), columns=[name])
+            if has_many_dims:
+                # Broadcast then flatten the array:
+                var_new_dims = var.set_dims(ordered_dims).chunk(ds_chunks)
+                dask_array = var_new_dims._data.reshape(-1)
+            else:
+                dask_array = var._data
+            series = dd.from_array(dask_array, columns=[name])
             series_list.append(series)
 
         df = dd.concat(series_list, axis=1)
