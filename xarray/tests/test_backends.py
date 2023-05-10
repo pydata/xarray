@@ -2584,10 +2584,10 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(initial_store, mode="w", **self.version_kwargs)
             ds1 = xr.open_zarr(initial_store, **self.version_kwargs)
 
-        # Combination of where+squeeze triggers error on write.
-        ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
-        with self.create_zarr_target() as final_store:
-            ds_sel.to_zarr(final_store, mode="w", **self.version_kwargs)
+            # Combination of where+squeeze triggers error on write.
+            ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
+            with self.create_zarr_target() as final_store:
+                ds_sel.to_zarr(final_store, mode="w", **self.version_kwargs)
 
     @pytest.mark.parametrize("obj", [Dataset(), DataArray(name="foo")])
     def test_attributes(self, obj) -> None:
