@@ -6410,6 +6410,7 @@ class Dataset(
             ds_chunks = {}
 
         series_list = []
+        df_meta = pd.Dataframe()
         for name in columns:
             try:
                 var = self.variables[name]
@@ -6434,7 +6435,7 @@ class Dataset(
                 dask_array = var_new_dims._data.reshape(-1)
             else:
                 dask_array = var._data
-            series = dd.from_array(dask_array, columns=[name])
+            series = dd.from_dask_array(dask_array, columns=name, meta=df_meta)
             series_list.append(series)
 
         df = dd.concat(series_list, axis=1)
