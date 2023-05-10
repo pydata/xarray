@@ -6403,7 +6403,7 @@ class Dataset(
         columns.extend(k for k in self.coords if k not in self.dims)
         columns.extend(self.data_vars)
 
-        has_many_dims = len(dim_order) > 1
+        has_many_dims = len(ordered_dims) > 1
         if has_many_dims:
             ds_chunks = self.chunks
         else:
