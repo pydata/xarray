@@ -42,6 +42,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix groupby binary ops when grouped array is subset relative to other. (:issue:`7797`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix groupby sum, prod for all-NaN groups with ``flox``. (:issue:`7808`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
