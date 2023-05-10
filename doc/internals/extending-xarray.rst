@@ -35,7 +35,28 @@ Here's how you might use these decorators to
 write a custom "geo" accessor implementing a geography specific extension to
 xarray:
 
-.. literalinclude:: ../examples/_code/accessor_example.py
+.. ipython:: python
+
+    @xr.register_dataset_accessor("geo")
+    class GeoAccessor:
+        def __init__(self, xarray_obj):
+            self._obj = xarray_obj
+            self._center = None
+
+        @property
+        def center(self):
+            """Return the geographic center point of this dataset."""
+            if self._center is None:
+                # we can use a cache on our accessor objects, because accessors
+                # themselves are cached on instances that access them.
+                lon = self._obj.latitude
+                lat = self._obj.longitude
+                self._center = (float(lon.mean()), float(lat.mean()))
+            return self._center
+
+        def plot(self):
+            """Plot data on a map."""
+            return "plotting!"
 
 In general, the only restriction on the accessor class is that the ``__init__`` method
 must have a single parameter: the ``Dataset`` or ``DataArray`` object it is supposed
@@ -44,7 +65,7 @@ to work on.
 This achieves the same result as if the ``Dataset`` class had a cached property
 defined that returns an instance of your class:
 
-.. code-block:: python
+.. ipython:: python
 
     class Dataset:
         ...
@@ -74,11 +95,6 @@ reasons:
    accessors created.
 
 Back in an interactive IPython session, we can use these properties:
-
-.. ipython:: python
-    :suppress:
-
-    exec(open("examples/_code/accessor_example.py").read())
 
 .. ipython:: python
 
