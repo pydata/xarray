@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 import warnings
 
 import numpy as np
@@ -17,6 +18,7 @@ from xarray.tests import (
     assert_identical,
     create_test_data,
     has_cftime,
+    has_flox,
     has_pandas_version_two,
     requires_dask,
     requires_flox,
@@ -2336,3 +2338,37 @@ def test_groupby_binary_op_regression() -> None:
     anom_gb = x_slice.groupby("time.month") - clim
 
     assert_identical(xr.zeros_like(anom_gb), anom_gb)
+
+
+@requires_flox
+@pytest.mark.parametrize("func", ["sum", "prod"])
+@pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.parametrize("min_count", [None, 1])
+def test_min_count_vs_flox(func: str, min_count: int | None, skipna: bool) -> None:
+    da = DataArray(
+        data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
+        dims="x",
+        coords={"labels": ("x", np.array([1, 2, 3, 1, 2, 3]))},
+    )
+
+    gb = da.groupby("labels")
+    method = operator.methodcaller(func, min_count=min_count, skipna=skipna)
+    with xr.set_options(use_flox=True):
+        actual = method(gb)
+    with xr.set_options(use_flox=False):
+        expected = method(gb)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_min_count_error(use_flox: bool) -> None:
+    if use_flox and not has_flox:
+        pytest.skip()
+    da = DataArray(
+        data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
+        dims="x",
+        coords={"labels": ("x", np.array([1, 2, 3, 1, 2, 3]))},
+    )
+    with xr.set_options(use_flox=use_flox):
+        with pytest.raises(TypeError):
+            da.groupby("labels").mean(min_count=1)
