@@ -2,6 +2,8 @@ import numpy as np
 
 import xarray as xr
 
+from . import parameterized, randn, requires_dask
+
 
 class Combine1d:
     """Benchmark concatenating and merging large datasets"""
@@ -23,6 +25,24 @@ class Combine1d:
         datasets = [self.dsA0, self.dsA1]
 
         xr.combine_by_coords(datasets)
+
+
+class Combine1dDask:
+    """Benchmark concatenating and merging large datasets"""
+
+    def setup(self):
+        """Create 2 datasets with two different variables"""
+        requires_dask()
+
+        t_size = 8000
+        var = xr.Variable(dims=("time",), data=np.random.randn(t_size)).chunk()
+        coord = xr.Variable(dims=("time",), data=np.random.randn(t_size))
+
+        data_vars = {f"long_name_{v}": ("time", var) for v in range(500)}
+        coords = {"time": ("time", coord)}
+
+        self.dsA0 = xr.Dataset(data_vars, coords=coords)
+        self.dsA1 = xr.Dataset(data_vars)
 
 
 class Combine3d:
