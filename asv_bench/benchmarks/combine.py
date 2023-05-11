@@ -35,14 +35,13 @@ class Combine1dDask(Combine1d):
         requires_dask()
 
         t_size = 8000
-        var = xr.Variable(dims=("time",), data=np.random.randn(t_size)).chunk()
-        coord = xr.Variable(dims=("time",), data=np.random.randn(t_size))
+        t = np.arange(t_size)
+        var = xr.Variable(dims=("T",), data=np.random.randn(t_size)).chunk()
 
-        data_vars = {f"long_name_{v}": ("time", var) for v in range(500)}
-        coords = {"time": ("time", coord)}
+        data_vars = {f"long_name_{v}": ("T", var) for v in range(500)}
 
-        self.dsA0 = xr.Dataset(data_vars, coords=coords)
-        self.dsA1 = xr.Dataset(data_vars, coords=coords)
+        self.dsA0 = xr.Dataset(data_vars, coords={"T": t})
+        self.dsA1 = xr.Dataset(data_vars, coords={"T": t + t_size})
 
 
 class Combine3d:
