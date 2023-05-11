@@ -6410,7 +6410,7 @@ class Dataset(
             ds_chunks = {}
 
         series_list = []
-        df_meta = pd.Dataframe()
+        df_meta = pd.DataFrame()
         for name in columns:
             try:
                 var = self.variables[name]
