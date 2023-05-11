@@ -2,7 +2,7 @@ import numpy as np
 
 import xarray as xr
 
-from . import parameterized, randn, requires_dask
+from . import requires_dask
 
 
 class Combine1d:
