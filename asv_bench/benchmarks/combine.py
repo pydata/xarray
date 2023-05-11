@@ -27,7 +27,7 @@ class Combine1d:
         xr.combine_by_coords(datasets)
 
 
-class Combine1dDask:
+class Combine1dDask(Combine1d):
     """Benchmark concatenating and merging large datasets"""
 
     def setup(self):
