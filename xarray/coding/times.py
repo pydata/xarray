@@ -615,7 +615,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
 
 
 def cast_to_int_if_safe(num) -> np.ndarray:
-    if np.can_cast(num, to=np.int64, casting='safe'):
+    if np.can_cast(num, to=np.int64, casting="safe"):
         return np.asarray(num, dtype=np.int64)
     return num
 
