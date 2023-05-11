@@ -42,7 +42,7 @@ class Combine1dDask:
         coords = {"time": ("time", coord)}
 
         self.dsA0 = xr.Dataset(data_vars, coords=coords)
-        self.dsA1 = xr.Dataset(data_vars)
+        self.dsA1 = xr.Dataset(data_vars, coords=coords)
 
 
 class Combine3d:
