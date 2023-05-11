@@ -44,6 +44,7 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix groupby sum, prod for all-NaN groups with ``flox``. (:issue:`7808`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use `numpy.can_cast` to avoid a RuntimeWarning from numpy. (:pull:`7834`).
 
 Documentation
 ~~~~~~~~~~~~~
