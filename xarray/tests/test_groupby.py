@@ -2340,7 +2340,7 @@ def test_groupby_binary_op_regression() -> None:
     assert_identical(xr.zeros_like(anom_gb), anom_gb)
 
 
-def test_groupby_multiindex_level():
+def test_groupby_multiindex_level() -> None:
     # GH6836
     midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
     mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
