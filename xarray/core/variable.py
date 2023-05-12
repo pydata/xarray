@@ -27,6 +27,7 @@ from xarray.core.indexing import (
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import (
+    get_chunked_array_type,
     guess_chunkmanager,
 )
 from xarray.core.pycompat import (
@@ -539,7 +540,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dask.array.compute
         """
         if is_chunked_array(self._data):
-            self._data = as_compatible_data(self._data.compute(**kwargs))
+            chunkmanager = get_chunked_array_type(self._data)
+            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
+            self._data = as_compatible_data(loaded_data)
         elif isinstance(self._data, indexing.ExplicitlyIndexed):
             self._data = self._data.get_duck_array()
         elif not is_duck_array(self._data):
@@ -1291,10 +1294,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data = self.data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
-        # cubed has to be imported dynamically as cubed imports rechunker which imports xarray
-        # cubed_array_type = DuckArrayModule("cubed").type
         if hasattr(data, "chunks"):
-            data = data.compute()
+            chunkmanager = get_chunked_array_type(data)
+            data, *_ = chunkmanager.compute(data)
         if isinstance(data, array_type("cupy")):
             data = data.get()
         # pint has to be imported dynamically as pint imports xarray

@@ -63,7 +63,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )
 
-    def compute(self, *data: DaskArray, **kwargs) -> np.ndarray:
+    def compute(self, *data: DaskArray, **kwargs) -> tuple[np.ndarray, ...]:
         from dask.array import compute
 
         return compute(*data, **kwargs)

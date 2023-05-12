@@ -191,7 +191,8 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
 
     @abstractmethod
-    def compute(self, data: T_ChunkedArray, **kwargs) -> np.ndarray:
+    def compute(self, *data: T_ChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
+        """Used anytime something needs to computed, including multiple arrays at once."""
         ...
 
     @property
