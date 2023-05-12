@@ -126,13 +126,19 @@ def get_chunked_array_type(*args) -> ChunkManagerEntrypoint:
     # iterate over defined chunk managers, seeing if each recognises this array type
     chunked_arr = chunked_arrays[0]
     chunkmanagers = list_chunkmanagers()
-    for chunkmanager in chunkmanagers.values():
-        if chunkmanager.is_chunked_array(chunked_arr):
-            return chunkmanager
-
-    raise TypeError(
-        f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
-    )
+    selected = [
+        chunkmanager
+        for chunkmanager in chunkmanagers.values()
+        if chunkmanager.is_chunked_array(chunked_arr)
+    ]
+    if not selected:
+        raise TypeError(
+            f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
+        )
+    elif len(selected) >= 2:
+        raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
+    else:
+        return selected[0]
 
 
 class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
