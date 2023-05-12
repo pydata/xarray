@@ -164,7 +164,9 @@ class TestGetChunkManager:
             guess_chunkmanager("dask")
 
     @requires_dask
-    def test_choose_dask_over_other_chunkmanagers(self, register_dummy_chunkmanager) -> None:
+    def test_choose_dask_over_other_chunkmanagers(
+        self, register_dummy_chunkmanager
+    ) -> None:
         chunk_manager = guess_chunkmanager(None)
         assert isinstance(chunk_manager, DaskManager)
 
