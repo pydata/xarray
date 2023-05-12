@@ -42,6 +42,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix groupby binary ops when grouped array is subset relative to other. (:issue:`7797`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix groupby sum, prod for all-NaN groups with ``flox``. (:issue:`7808`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -158,7 +160,7 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Experimental support for wrapping chunked array libraries other than dask.
-  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntryPoint` - which can be overridden and then
+  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntryPoint` - which can be subclassed and then
   registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Don't assume that arrays read from disk will be Numpy arrays. This is a step toward

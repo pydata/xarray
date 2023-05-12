@@ -145,38 +145,40 @@ def register_dummy_chunkmanager(monkeypatch):
 
 
 class TestGetChunkManager:
-    def test_get_chunkmanger(self, register_dummy_chunkmanager):
+    def test_get_chunkmanger(self, register_dummy_chunkmanager) -> None:
         chunkmanager = guess_chunkmanager("dummy")
         assert isinstance(chunkmanager, DummyChunkManager)
 
-    def test_fail_on_nonexistent_chunkmanager(self):
+    def test_fail_on_nonexistent_chunkmanager(self) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager foo"):
             guess_chunkmanager("foo")
 
     @requires_dask
-    def test_get_dask_if_installed(self):
+    def test_get_dask_if_installed(self) -> None:
         chunkmanager = guess_chunkmanager(None)
         assert isinstance(chunkmanager, DaskManager)
 
     @pytest.mark.skipif(has_dask, reason="requires dask not to be installed")
-    def test_dont_get_dask_if_not_installed(self):
+    def test_dont_get_dask_if_not_installed(self) -> None:
         with pytest.raises(ValueError, match="unrecognized chunk manager dask"):
             guess_chunkmanager("dask")
 
     @requires_dask
-    def test_choose_dask_over_other_chunkmanagers(self, register_dummy_chunkmanager):
+    def test_choose_dask_over_other_chunkmanagers(
+        self, register_dummy_chunkmanager
+    ) -> None:
         chunk_manager = guess_chunkmanager(None)
         assert isinstance(chunk_manager, DaskManager)
 
 
 class TestGetChunkedArrayType:
-    def test_detect_chunked_arrays(self, register_dummy_chunkmanager):
+    def test_detect_chunked_arrays(self, register_dummy_chunkmanager) -> None:
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         chunk_manager = get_chunked_array_type(dummy_arr)
         assert isinstance(chunk_manager, DummyChunkManager)
 
-    def test_ignore_inmemory_arrays(self, register_dummy_chunkmanager):
+    def test_ignore_inmemory_arrays(self, register_dummy_chunkmanager) -> None:
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         chunk_manager = get_chunked_array_type(*[dummy_arr, 1.0, np.array([5, 6])])
@@ -185,11 +187,11 @@ class TestGetChunkedArrayType:
         with pytest.raises(TypeError, match="Expected a chunked array"):
             get_chunked_array_type(5.0)
 
-    def test_raise_if_no_arrays_chunked(self, register_dummy_chunkmanager):
+    def test_raise_if_no_arrays_chunked(self, register_dummy_chunkmanager) -> None:
         with pytest.raises(TypeError, match="Expected a chunked array "):
             get_chunked_array_type(*[1.0, np.array([5, 6])])
 
-    def test_raise_if_no_matching_chunkmanagers(self):
+    def test_raise_if_no_matching_chunkmanagers(self) -> None:
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         with pytest.raises(
@@ -198,7 +200,7 @@ class TestGetChunkedArrayType:
             get_chunked_array_type(dummy_arr)
 
     @requires_dask
-    def test_detect_dask_if_installed(self):
+    def test_detect_dask_if_installed(self) -> None:
         import dask.array as da
 
         dask_arr = da.from_array([1, 2, 3], chunks=(1,))
@@ -207,7 +209,7 @@ class TestGetChunkedArrayType:
         assert isinstance(chunk_manager, DaskManager)
 
     @requires_dask
-    def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager):
+    def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager) -> None:
         import dask.array as da
 
         dummy_arr = DummyChunkedArray([1, 2, 3])
