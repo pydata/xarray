@@ -236,6 +236,10 @@ class _DummyGroup(Generic[T_Xarray]):
             key = key[0]
         return self.values[key]
 
+    def to_index(self) -> pd.Index:
+        # could be pd.RangeIndex?
+        return pd.Index(np.arange(self.size))
+
     def copy(self, deep: bool = True, data: Any = None):
         raise NotImplementedError
 
