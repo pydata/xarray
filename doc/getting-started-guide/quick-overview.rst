@@ -78,7 +78,7 @@ While you're setting up your DataArray, it's often a good idea to set metadata a
     data.attrs["description"] = "A random variable created as an example."
     data.attrs["random_attribute"] = 123
     data.attrs
-    # you can add metadata to coordinates too
+    # you can add metadata to dimensions too
     data.x.attrs["units"] = "x units"
 
 
