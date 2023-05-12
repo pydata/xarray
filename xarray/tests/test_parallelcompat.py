@@ -207,7 +207,7 @@ class TestGetChunkedArrayType:
         assert isinstance(chunk_manager, DaskManager)
 
     @requires_dask
-    def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager):
+    def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager) -> None:
         import dask.array as da
 
         dummy_arr = DummyChunkedArray([1, 2, 3])
