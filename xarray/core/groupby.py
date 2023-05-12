@@ -231,6 +231,10 @@ class _DummyGroup(Generic[T_Xarray]):
     def attrs(self) -> dict:
         return {}
 
+    def to_index(self) -> pd.Index:
+        # silence mypy
+        raise NotImplementedError
+
     def __getitem__(self, key):
         if isinstance(key, tuple):
             key = key[0]
