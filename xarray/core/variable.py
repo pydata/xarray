@@ -1198,12 +1198,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name : str, optional
             Used to generate the name for this array in the internal dask
             graph. Does not need not be unique.
-        lock : bool, optional
+        lock : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array. Default is False.
-        inline_array : bool, optional
+            already as dask array.
+        inline_array : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
-            already as dask array. Default is False.
+            already as dask array.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
             Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
@@ -1211,8 +1211,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         from_array_kwargs: dict, optional
             Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
             chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.

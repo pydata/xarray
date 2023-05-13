@@ -2277,11 +2277,11 @@ class Dataset(
             Which chunked array type to coerce this datasets' arrays to.
             Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
             Experimental API that should not be relied upon.
-        from_array_kwargs: dict
+        from_array_kwargs: dict, optional
             Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
             chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided
