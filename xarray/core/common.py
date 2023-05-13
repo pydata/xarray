@@ -1486,7 +1486,7 @@ def full_like(
         Which chunked array type to coerce the underlying data array to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
         Experimental API that should not be relied upon.
-    from_array_kwargs: dict
+    from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
@@ -1758,7 +1758,7 @@ def zeros_like(
         Which chunked array type to coerce the underlying data array to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
         Experimental API that should not be relied upon.
-    from_array_kwargs: dict
+    from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
@@ -1887,7 +1887,7 @@ def ones_like(
         Which chunked array type to coerce the underlying data array to.
         Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
         Experimental API that should not be relied upon.
-    from_array_kwargs: dict
+    from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to

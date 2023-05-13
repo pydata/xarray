@@ -2104,7 +2104,7 @@ class Dataset(
             The desired zarr spec version to target (currently 2 or 3). The
             default of None will attempt to determine the zarr version from
             ``store`` when possible, otherwise defaulting to 2.
-        chunkmanager_store_kwargs : dict
+        chunkmanager_store_kwargs : dict, optional
             Additional keyword arguments passed on to the `ChunkManager.store` method used to store
             chunked arrays. For example for a dask array additional kwargs will be passed eventually to
             :py:func:`dask.array.store()`. Experimental API that should not be relied upon.
