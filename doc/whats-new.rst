@@ -52,6 +52,11 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Experimental support for wrapping chunked array libraries other than dask.
+  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
+  registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 .. _whats-new.2023.04.2:
 
@@ -159,10 +164,6 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Experimental support for wrapping chunked array libraries other than dask.
-  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntryPoint` - which can be subclassed and then
-  registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Don't assume that arrays read from disk will be Numpy arrays. This is a step toward
   enabling reads from a Zarr store using the `Kvikio <https://docs.rapids.ai/api/kvikio/stable/api.html#zarr>`_
   or `TensorStore <https://google.github.io/tensorstore/>`_ libraries.
