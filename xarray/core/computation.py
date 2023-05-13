@@ -747,7 +747,6 @@ def apply_variable_ufunc(
                 return res
 
         elif dask == "allowed":
-            # TODO Check chunked array types here too?
             pass
         else:
             raise ValueError(
