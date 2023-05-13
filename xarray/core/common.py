@@ -1489,7 +1489,7 @@ def full_like(
     from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
         to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
@@ -1761,8 +1761,8 @@ def zeros_like(
     from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1890,8 +1890,8 @@ def ones_like(
     from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
-        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
