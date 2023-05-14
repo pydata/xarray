@@ -232,7 +232,7 @@ def _possibly_convert_datetime_or_timedelta_index(data):
         return data
 
 
-def as_compatible_data(data, fastpath=False):
+def as_compatible_data(data, fastpath: bool = False):
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
@@ -250,7 +250,7 @@ def as_compatible_data(data, fastpath=False):
     from xarray.core.dataarray import DataArray
 
     if isinstance(data, (Variable, DataArray)):
-        return data.data
+        return data._data
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
@@ -670,7 +670,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
         if isinstance(dims, str):
             dims = (dims,)
-        dims = tuple(dims)
+        else:
+            dims = tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
                 f"dimensions {dims} must have the same length as the "
