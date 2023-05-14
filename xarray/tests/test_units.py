@@ -682,9 +682,9 @@ def test_align_dataarray(value, variant, unit, error, dtype, unit_lib):
     actual_a, actual_b = func(data_array1, data_array2)
 
     assert_units_equal(expected_a, actual_a)
-    assert_allclose(expected_a, actual_a)
+    assert_allclose(expected_a, actual_a, atol=0)
     assert_units_equal(expected_b, actual_b)
-    assert_allclose(expected_b, actual_b)
+    assert_allclose(expected_b, actual_b, atol=0)
 
 
 @pytest.mark.parametrize(
@@ -786,9 +786,9 @@ def test_align_dataset(value, unit, variant, error, dtype):
     actual_a, actual_b = func(ds1, ds2)
 
     assert_units_equal(expected_a, actual_a)
-    assert_allclose(expected_a, actual_a)
+    assert_allclose(expected_a, actual_a, atol=0)
     assert_units_equal(expected_b, actual_b)
-    assert_allclose(expected_b, actual_b)
+    assert_allclose(expected_b, actual_b, atol=0)
 
 
 def test_broadcast_dataarray(dtype, unit_lib):
@@ -1270,7 +1270,7 @@ def test_merge_dataarray(variant, unit, error, dtype):
     actual = xr.merge([arr1, arr2, arr3])
 
     assert_units_equal(expected, actual)
-    assert_allclose(expected, actual)
+    assert_allclose(expected, actual, atol=0)
 
 
 @pytest.mark.parametrize(
@@ -1360,7 +1360,7 @@ def test_merge_dataset(variant, unit, error, dtype):
     actual = func([ds1, ds2, ds3])
 
     assert_units_equal(expected, actual)
-    assert_allclose(expected, actual)
+    assert_allclose(expected, actual, atol=0)
 
 
 @pytest.mark.parametrize(
@@ -1690,7 +1690,7 @@ class TestVariable:
         actual = func(variable)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     def test_aggregate_complex(self):
         variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
@@ -1698,7 +1698,7 @@ class TestVariable:
         actual = variable.mean()
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.parametrize(
         "func",
@@ -1756,7 +1756,7 @@ class TestVariable:
         actual = func(variable, *args, **kwargs)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.parametrize(
         "func", (method("item", 5), method("searchsorted", 5)), ids=repr
@@ -2079,7 +2079,7 @@ class TestVariable:
         actual = func(variable, y)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -2553,7 +2553,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.parametrize(
         "func",
@@ -3636,7 +3636,7 @@ class TestDataArray:
         actual = func(data_array, x=new_x)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3712,7 +3712,7 @@ class TestDataArray:
         actual = func(data_array, other)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -4017,7 +4017,7 @@ class TestDataArray:
         actual = func(data_array).mean()
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
@@ -4270,7 +4270,7 @@ class TestDataset:
         expected = attach_units(func(strip_units(ds)), units)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):
@@ -5505,7 +5505,7 @@ class TestDataset:
         actual = func(ds).mean(*args, **kwargs)
 
         assert_units_equal(expected, actual)
-        assert_allclose(expected, actual)
+        assert_allclose(expected, actual, atol=0)
 
     @pytest.mark.parametrize(
         "variant",
