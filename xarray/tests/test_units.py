@@ -122,6 +122,7 @@ unit_libs = [PintInfo]  # + [AstropyInfo]
 known_quantity_types = tuple(lib.quantity_type for lib in unit_libs)
 known_unit_types = tuple(lib.unit_type for lib in unit_libs)
 
+
 def get_unit_lib(obj):
     for unit_lib in unit_libs:
         if isinstance(obj, unit_lib.quantity_type):
