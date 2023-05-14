@@ -93,7 +93,7 @@ class PintInfo(UnitInfo):
 
     @staticmethod
     def assert_equal(q1, q2):
-        assert (q1 == q2).all()
+        assert np.all(q1 == q2)
 
 
 """
