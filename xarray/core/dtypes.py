@@ -37,11 +37,11 @@ NINF = AlwaysLessThan()
 # instead of following NumPy's own type-promotion rules. These type promotion
 # rules match pandas instead. For reference, see the NumPy type hierarchy:
 # https://numpy.org/doc/stable/reference/arrays.scalars.html
-PROMOTE_TO_OBJECT = [
-    {np.number, np.character},  # numpy promotes to character
-    {np.bool_, np.character},  # numpy promotes to character
-    {np.bytes_, np.unicode_},  # numpy promotes to unicode
-]
+PROMOTE_TO_OBJECT: tuple[tuple[np.generic, np.generic]] = (
+    (np.number, np.character),  # numpy promotes to character
+    (np.bool_, np.character),  # numpy promotes to character
+    (np.bytes_, np.unicode_),  # numpy promotes to unicode
+)
 
 
 def maybe_promote(dtype):
