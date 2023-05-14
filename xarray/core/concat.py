@@ -571,6 +571,8 @@ def _dataset_concat(
 
     # create concatenation index, needed for later reindexing
     concat_index = np.arange(sum(concat_dim_lengths))
+    concat_index_size = concat_index.size
+    variable_index_mask = np.ones(concat_index_size, dtype=bool)
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
@@ -578,15 +580,15 @@ def _dataset_concat(
         if name in concat_over and name not in result_indexes:
             variables = []
             # variable_index = []
-            variable_index = np.array([], dtype=np.intp)
+            mask = variable_index_mask.copy()
             var_concat_dim_length = []
             for i, ds in enumerate(datasets):
                 if name in ds.variables:
                     variables.append(ds[name].variable)
                     # add to variable index, needed for reindexing
                     dim_len = concat_dim_lengths[i]
-                    var_idx = sum(concat_dim_lengths[:i]) + np.arange(dim_len)
-                    variable_index = np.append(variable_index, var_idx)
+                    # var_idx = sum(concat_dim_lengths[:i]) + np.arange(dim_len)
+                    # variable_index = np.append(variable_index, var_idx)
                     var_concat_dim_length.append(dim_len)
                     # var_idx = [
                     #     sum(concat_dim_lengths[:i]) + k
@@ -600,6 +602,11 @@ def _dataset_concat(
                         raise ValueError(
                             f"coordinate {name!r} not present in all datasets."
                         )
+                    start = sum(concat_dim_lengths[:i])
+                    end = start + concat_dim_lengths[i]
+                    mask[slice(start, end)] = False
+
+            variable_index = concat_index[mask]
             vars = ensure_common_dims(variables, var_concat_dim_length)
 
             # Try to concatenate the indexes, concatenate the variables when no index
@@ -630,7 +637,7 @@ def _dataset_concat(
                     vars, dim, positions, combine_attrs=combine_attrs
                 )
                 # reindex if variable is not present in all datasets
-                if len(variable_index) < len(concat_index):
+                if len(variable_index) < concat_index_size:
                     combined_var = reindex_variables(
                         variables={name: combined_var},
                         dim_pos_indexers={
