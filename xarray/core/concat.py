@@ -581,17 +581,17 @@ def _dataset_concat(
         if name in concat_over and name not in result_indexes:
             variables = []
             mask = variable_index_mask.copy()
-            var_concat_dim_length = concat_dim_lengths.copy()
+            var_concat_dim_length = []
             for i, ds in enumerate(datasets):
                 if name in ds.variables:
                     variables.append(ds[name].variable)
+                    var_concat_dim_length.append(concat_dim_lengths[i])
                 else:
                     # raise if coordinate not in all datasets
                     if name in coord_names:
                         raise ValueError(
                             f"coordinate {name!r} not present in all datasets."
                         )
-                    del var_concat_dim_length[i]
                     start = sum(concat_dim_lengths[:i])
                     end = start + concat_dim_lengths[i]
                     mask[slice(start, end)] = False
