@@ -195,12 +195,12 @@ def _assert_prioritized_valid(
 
 
 def merge_collected(
-    grouped: dict[Hashable, list[MergeElement]],
+    grouped: dict[Any, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement] | None = None,
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
-    equals: dict[Hashable, bool] | None = None,
-) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
+    equals: dict[Any, bool] | None = None,
+) -> tuple[dict[Any, Variable], dict[Any, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters
@@ -612,7 +612,11 @@ def _create_indexes_from_coords(
     return indexes, updated_coords
 
 
-def assert_valid_explicit_coords(variables, dims, explicit_coords):
+def assert_valid_explicit_coords(
+    variables: Mapping[Any, Any],
+    dims: Mapping[Any, int],
+    explicit_coords: Iterable[Hashable],
+) -> None:
     """Validate explicit coordinate names/dims.
 
     Raise a MergeError if an explicit coord shares a name with a dimension
@@ -695,7 +699,7 @@ def merge_core(
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
-    explicit_coords: Sequence | None = None,
+    explicit_coords: Iterable[Hashable] | None = None,
     indexes: Mapping[Any, Any] | None = None,
     fill_value: object = dtypes.NA,
 ) -> _MergeResult:

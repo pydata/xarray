@@ -3226,7 +3226,7 @@ def concat(
         return Variable.concat(variables, dim, positions, shortcut, combine_attrs)
 
 
-def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, int]:
+def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Any, int]:
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
