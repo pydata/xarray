@@ -1356,11 +1356,14 @@ class Dataset(
 
         needed_dims = set(variable.dims)
 
+        coord_name = self._coord_names
         coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
-                coords[k] = self.variables[k]
+            if k in coord_name:
+                var = self._variables[k]
+                if set(var.dims) <= needed_dims:
+                    coords[k] = var
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
