@@ -38,8 +38,8 @@ DimensionalityError = pint.errors.DimensionalityError
 class UnitInfo(ABC):
     # A unit (e.g. m)
     unit: Any
-    # A scaled version of unit (e.g. mm)
-    scaled_unit: Any
+    # A different unit that previous unit can be transformed to (e.g. mm)
+    compatible_unit: Any
     # A unit that can't be converted to unit (e.g. s)
     incompatible_unit: Any
     # Dimensionless unit
@@ -76,7 +76,7 @@ pytestmark = [
 
 class PintInfo(UnitInfo):
     unit = unit_registry.m
-    scaled_unit = unit_registry.mm
+    compatible_unit = unit_registry.mm
     incompatible_unit = unit_registry.s
     dimensionless = unit_registry.dimensionless
 
@@ -99,7 +99,7 @@ class PintInfo(UnitInfo):
 """
 class AstropyInfo(UnitInfo):
     unit = astropy.units.m
-    scaled_unit = astropy.units.mm
+    compatible_unit = astropy.units.mm
     incompatible_unit = astropy.units.s
     dimensionless = astropy.units.dimensionless_unscaled
 
@@ -580,7 +580,7 @@ def test_apply_ufunc_dataset(variant, unit_lib, dtype):
         pytest.param(1, DimensionalityError, id="no_unit"),
         pytest.param("dimensionless", DimensionalityError, id="dimensionless"),
         pytest.param("incompatible_unit", DimensionalityError, id="incompatible_unit"),
-        pytest.param("scaled_unit", None, id="compatible_unit"),
+        pytest.param("compatible_unit", None, id="compatible_unit"),
         pytest.param("unit", None, id="identical_unit"),
     ),
     ids=repr,
@@ -808,7 +808,7 @@ def test_broadcast_dataarray(dtype, unit_lib):
 
 def test_broadcast_dataset(dtype, unit_lib):
     unit = unit_lib.unit
-    scaled_unit = unit_lib.scaled_unit
+    compatible_unit = unit_lib.compatible_unit
     # uses align internally so more thorough tests are not needed
     array1 = np.linspace(0, 10, 2) * unit
     array2 = np.linspace(0, 10, 3) * unit
@@ -824,8 +824,8 @@ def test_broadcast_dataset(dtype, unit_lib):
     )
     other = xr.Dataset(
         data_vars={
-            "a": ("x", array1.to(scaled_unit)),
-            "b": ("y", array2.to(scaled_unit)),
+            "a": ("x", array1.to(compatible_unit)),
+            "b": ("y", array2.to(compatible_unit)),
         },
         coords={"x": x2, "y": y2},
     )
@@ -4109,21 +4109,21 @@ class TestDataset:
     )
     def test_init(self, shared, unit, error, dtype):
         original_unit = unit_registry.m
-        scaled_unit = unit_registry.mm
+        compatible_unit = unit_registry.mm
 
         a = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
         b = np.linspace(-1, 0, 10).astype(dtype) * unit_registry.degK
 
         values_a = np.arange(a.shape[0])
         dim_a = values_a * original_unit
-        coord_a = dim_a.to(scaled_unit)
+        coord_a = dim_a.to(compatible_unit)
 
         values_b = np.arange(b.shape[0])
         dim_b = values_b * unit
         coord_b = (
-            dim_b.to(scaled_unit)
-            if unit_registry.is_compatible_with(dim_b, scaled_unit)
-            and unit != scaled_unit
+            dim_b.to(compatible_unit)
+            if unit_registry.is_compatible_with(dim_b, compatible_unit)
+            and unit != compatible_unit
             else dim_b * 1000
         )
 
