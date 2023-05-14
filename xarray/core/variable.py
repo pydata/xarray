@@ -247,13 +247,10 @@ def as_compatible_data(data, fastpath: bool = False):
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
-    if isinstance(data, Variable):
-        return data._data
-
     from xarray.core.dataarray import DataArray
 
-    if isinstance(data, DataArray):
-        return data.variable._data
+    if isinstance(data, (Variable, DataArray)):
+        return data.data
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
