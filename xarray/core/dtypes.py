@@ -156,7 +156,7 @@ def is_datetime_like(dtype):
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def result_type(*arrays_and_dtypes):
+def result_type(*arrays_and_dtypes) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:
@@ -172,7 +172,7 @@ def result_type(*arrays_and_dtypes):
     -------
     numpy.dtype for the result.
     """
-    types = {np.result_type(t).type for t in arrays_and_dtypes}
+    types = {t.dtype.type for t in arrays_and_dtypes}
 
     for left, right in PROMOTE_TO_OBJECT:
         if any(issubclass(t, left) for t in types) and any(
