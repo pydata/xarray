@@ -556,7 +556,12 @@ def merge_coords(
     return variables, out_indexes
 
 
-def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="outer"):
+def merge_data_and_coords(
+    data_vars: Mapping[Any, Any],
+    coords: Mapping[Any, Any],
+    compat: CompatOptions = "broadcast_equals",
+    join: JoinOptions = "outer",
+) -> _MergeResult:
     """Used in Dataset.__init__."""
     indexes, coords = _create_indexes_from_coords(coords, data_vars)
     objects = [data_vars, coords]
@@ -570,7 +575,9 @@ def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="ou
     )
 
 
-def _create_indexes_from_coords(coords, data_vars=None):
+def _create_indexes_from_coords(
+    coords: Mapping[Any, Any], data_vars: Mapping[Any, Any] | None = None
+) -> tuple[dict, dict]:
     """Maybe create default indexes from a mapping of coordinates.
 
     Return those indexes and updated coordinates.
@@ -1035,7 +1042,7 @@ def dataset_merge_method(
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, Iterable) and not isinstance(overwrite_vars, str):
+    if not isinstance(overwrite_vars, str) and isinstance(overwrite_vars, Iterable):
         overwrite_vars = set(overwrite_vars)
     else:
         overwrite_vars = {overwrite_vars}
