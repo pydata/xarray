@@ -209,7 +209,7 @@ class AbstractArray:
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, Iterable) and not isinstance(dim, str):
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
             return tuple(self._get_axis_num(d) for d in dim)
         else:
             return self._get_axis_num(dim)
