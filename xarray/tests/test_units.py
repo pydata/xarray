@@ -122,6 +122,13 @@ unit_libs = [PintInfo]  # + [AstropyInfo]
 known_quantity_types = tuple(lib.quantity_type for lib in unit_libs)
 known_unit_types = tuple(lib.unit_type for lib in unit_libs)
 
+def get_unit_lib(obj):
+    for unit_lib in unit_libs:
+        if isinstance(obj, unit_lib.quantity_type):
+            return unit_lib
+
+    return None
+
 
 @pytest.fixture(params=unit_libs)
 def unit_lib(request):
@@ -167,19 +174,19 @@ def array_extract_units(obj):
     if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
         obj = obj.data
 
-    for unit_lib in unit_libs:
-        if isinstance(obj, unit_lib.quantity_type):
-            return unit_lib.get_unit(obj)
-
-    return None
+    lib = get_unit_lib(obj)
+    if lib is not None:
+        return lib.get_unit(obj)
+    else:
+        return None
 
 
 def array_strip_units(array):
-    for unit_lib in unit_libs:
-        if isinstance(array, unit_lib.quantity_type):
-            return unit_lib.strip_units(array)
-
-    return array
+    lib = get_unit_lib(array)
+    if lib is not None:
+        return lib.strip_units(array)
+    else:
+        return array
 
 
 def array_attach_units(data, unit):
