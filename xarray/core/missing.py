@@ -639,7 +639,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
             var.transpose(*original_dims).data, x, destination, method, kwargs
         )
 
-        result = Variable(new_dims, interped, attrs=var.attrs)
+        result = Variable(new_dims, interped, attrs=var.attrs, fastpath=True)
 
         # dimension of the output array
         out_dims: OrderedSet = OrderedSet()
@@ -648,7 +648,8 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
                 out_dims.update(indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
-        result = result.transpose(*out_dims)
+        if len(out_dims) > 1:
+            result = result.transpose(*out_dims)
     return result
 
 
@@ -709,12 +710,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
-        args = (
-            var,
-            range(ndim),
-            *x_arginds,
-            *new_x_arginds,
-        )
+        args = (var, range(ndim), *x_arginds, *new_x_arginds)
 
         _, rechunked = da.unify_chunks(*args)
 
@@ -722,15 +718,16 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
+        new_x0_chunks = new_x[0].chunks
+        new_x0_shape = new_x[0].shape
+        new_x0_chunks_is_not_none = new_x0_chunks is not None
         new_axes = {
-            ndim + i: new_x[0].chunks[i]
-            if new_x[0].chunks is not None
-            else new_x[0].shape[i]
+            ndim + i: new_x0_chunks[i] if new_x0_chunks_is_not_none else new_x0_shape[i]
             for i in range(new_x[0].ndim)
         }
 
         # if useful, re-use localize for each chunk of new_x
-        localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
+        localize = (method in ["linear", "nearest"]) and new_x0_chunks_is_not_none
 
         # scipy.interpolate.interp1d always forces to float.
         # Use the same check for blockwise as well:
