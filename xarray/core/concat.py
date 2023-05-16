@@ -569,7 +569,8 @@ def _dataset_concat(
                     yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
-    concat_index = np.arange(sum(concat_dim_lengths))
+    file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
+    concat_index = np.arange(file_start_indexes[-1])
     concat_index_size = concat_index.size
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
 
@@ -579,7 +580,7 @@ def _dataset_concat(
     for name in vars_order:
         if name in concat_over and name not in result_indexes:
             variables = []
-            mask = variable_index_mask.copy()
+            variable_index_mask.fill(True)
             var_concat_dim_length = []
             for i, ds in enumerate(datasets):
                 if name in ds.variables:
@@ -591,11 +592,13 @@ def _dataset_concat(
                         raise ValueError(
                             f"coordinate {name!r} not present in all datasets."
                         )
-                    start = sum(concat_dim_lengths[:i])
-                    end = start + concat_dim_lengths[i]
-                    mask[slice(start, end)] = False
 
-            variable_index = concat_index[mask]
+                    # Mask out the indexes without the name::
+                    start = file_start_indexes[i]
+                    end = file_start_indexes[i + 1]
+                    variable_index_mask[slice(start, end)] = False
+
+            variable_index = concat_index[variable_index_mask]
             vars = ensure_common_dims(variables, var_concat_dim_length)
 
             # Try to concatenate the indexes, concatenate the variables when no index
