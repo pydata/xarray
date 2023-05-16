@@ -1861,7 +1861,7 @@ def ones_like(
 def ones_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
-    *, 
+    *,
     chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
