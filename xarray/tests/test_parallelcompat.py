@@ -65,8 +65,8 @@ class DummyChunkManager(ChunkManagerEntrypoint):
 
     def normalize_chunks(
         self,
-        chunks: T_Chunks,
-        shape: tuple[int] | None = None,
+        chunks: T_Chunks | T_NormalizedChunks,
+        shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
         previous_chunks: T_NormalizedChunks | None = None,

@@ -1205,8 +1205,11 @@ def emit_user_level_warning(message, category=None):
 
 
 def consolidate_dask_from_array_kwargs(
-    from_array_kwargs, name=None, lock=None, inline_array=None
-):
+    from_array_kwargs: dict,
+    name: str | None = None,
+    lock: bool | None = None,
+    inline_array: bool | None = None,
+) -> dict:
     """
     Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
 
@@ -1239,12 +1242,12 @@ def consolidate_dask_from_array_kwargs(
 
 
 def _resolve_doubly_passed_kwarg(
-    kwargs_dict,
-    kwarg_name,
-    passed_kwarg_value,
-    default,
-    err_msg_dict_name,
-):
+    kwargs_dict: dict,
+    kwarg_name: str,
+    passed_kwarg_value: str | bool | None,
+    default: bool | None,
+    err_msg_dict_name: str,
+) -> dict:
     # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
     if kwarg_name in kwargs_dict and passed_kwarg_value is None:
         pass

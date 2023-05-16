@@ -158,7 +158,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     available: bool = True
 
     @abstractmethod
-    def __init__(self):
+    def __init__(self) -> None:
         raise NotImplementedError()
 
     def is_chunked_array(self, data: Any) -> bool:
@@ -171,8 +171,8 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def normalize_chunks(
         self,
-        chunks: T_Chunks,
-        shape: tuple[int] | None = None,
+        chunks: T_Chunks | T_NormalizedChunks,
+        shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
         previous_chunks: T_NormalizedChunks | None = None,

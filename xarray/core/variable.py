@@ -374,7 +374,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             self.encoding = encoding
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         """
         Data-type of the array’s elements.
 
@@ -386,7 +386,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._data.dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         """
         Tuple of array dimensions.
 

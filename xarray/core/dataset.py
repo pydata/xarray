@@ -213,7 +213,7 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _get_chunk(var, chunks, chunkmanager):
+def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
@@ -252,7 +252,7 @@ def _get_chunk(var, chunks, chunkmanager):
             # expresses the preferred chunks, the sequence sums to the size.
             preferred_stops = (
                 range(preferred_chunk_sizes, size, preferred_chunk_sizes)
-                if isinstance(preferred_chunk_sizes, Number)
+                if isinstance(preferred_chunk_sizes, int)
                 else itertools.accumulate(preferred_chunk_sizes[:-1])
             )
             # Gather any stop indices of the specified chunks that are not a stop index
@@ -263,7 +263,7 @@ def _get_chunk(var, chunks, chunkmanager):
             )
             if breaks:
                 warnings.warn(
-                    "The specified Dask chunks separate the stored chunks along "
+                    "The specified chunks separate the stored chunks along "
                     f'dimension "{dim}" starting at index {min(breaks)}. This could '
                     "degrade performance. Instead, consider rechunking after loading."
                 )

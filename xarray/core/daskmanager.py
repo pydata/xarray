@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
@@ -18,7 +18,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     array_cls: type[DaskArray]
     available: bool = dask_available
 
-    def __init__(self):
+    def __init__(self) -> None:
         # TODO can we replace this with a class attribute instead?
 
         from dask.array import Array
@@ -33,8 +33,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def normalize_chunks(
         self,
-        chunks: T_Chunks,
-        shape: tuple[int] | None = None,
+        chunks: T_Chunks | T_NormalizedChunks,
+        shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
         previous_chunks: T_NormalizedChunks | None = None,
@@ -50,7 +50,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             previous_chunks=previous_chunks,
         )
 
-    def from_array(self, data, chunks, **kwargs) -> DaskArray:
+    def from_array(self, data: Any, chunks, **kwargs) -> DaskArray:
         import dask.array as da
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
@@ -98,17 +98,17 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def apply_gufunc(
         self,
-        func,
-        signature,
-        *args,
-        axes=None,
-        axis=None,
-        keepdims=False,
-        output_dtypes=None,
-        output_sizes=None,
-        vectorize=None,
-        allow_rechunk=False,
-        meta=None,
+        func: Callable,
+        signature: str,
+        *args: Any,
+        axes: Sequence[tuple[int, ...]] | None = None,
+        axis: int | None = None,
+        keepdims: bool = False,
+        output_dtypes: Sequence[np.typing.DTypeLike] | None = None,
+        output_sizes: dict[str, int] | None = None,
+        vectorize: bool | None = None,
+        allow_rechunk: bool = False,
+        meta: tuple[np.ndarray, ...] | None = None,
         **kwargs,
     ):
         from dask.array.gufunc import apply_gufunc
@@ -130,12 +130,12 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def map_blocks(
         self,
-        func,
-        *args,
-        dtype=None,
-        chunks=None,
-        drop_axis=[],
-        new_axis=None,
+        func: Callable,
+        *args: Any,
+        dtype: np.typing.DTypeLike | None = None,
+        chunks: tuple[int, ...] | None = None,
+        drop_axis: int | Sequence[int] | None = None,
+        new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
         from dask.array import map_blocks
@@ -153,16 +153,17 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def blockwise(
         self,
-        func,
-        out_ind,
-        *args,
-        name=None,
+        func: Callable,
+        out_ind: Iterable,
+        *args: Any,
+        # can't type this as mypy assumes args are all same type, but dask blockwise args alternate types
+        name: str | None = None,
         token=None,
-        dtype=None,
-        adjust_chunks=None,
-        new_axes=None,
-        align_arrays=True,
-        concatenate=None,
+        dtype: np.dtype | None = None,
+        adjust_chunks: dict[Any, Callable] | None = None,
+        new_axes: dict[Any, int] | None = None,
+        align_arrays: bool = True,
+        concatenate: bool | None = None,
         meta=None,
         **kwargs,
     ):
@@ -184,7 +185,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         )
 
     def unify_chunks(
-        self, *args, **kwargs
+        self,
+        *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
+        **kwargs,
     ) -> tuple[dict[str, T_NormalizedChunks], list[DaskArray]]:
         from dask.array.core import unify_chunks
 
