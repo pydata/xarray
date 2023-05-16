@@ -1400,7 +1400,8 @@ def full_like(
     other: DataArray,
     fill_value: Any,
     dtype: DTypeLikeSave | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
@@ -1412,7 +1413,8 @@ def full_like(
     other: Dataset,
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
@@ -1424,7 +1426,8 @@ def full_like(
     other: Variable,
     fill_value: Any,
     dtype: DTypeLikeSave | None = None,
-    chunks={},
+    *.
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
@@ -1436,7 +1439,8 @@ def full_like(
     other: Dataset | DataArray,
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks:T_Chunks={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
@@ -1448,7 +1452,8 @@ def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1459,7 +1464,8 @@ def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1645,7 +1651,7 @@ def _full_like_variable(
     other: Variable,
     fill_value: Any,
     dtype: DTypeLike | None = None,
-    chunks={},
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
@@ -1684,7 +1690,8 @@ def _full_like_variable(
 def zeros_like(
     other: DataArray,
     dtype: DTypeLikeSave | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
@@ -1695,7 +1702,8 @@ def zeros_like(
 def zeros_like(
     other: Dataset,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
@@ -1706,7 +1714,8 @@ def zeros_like(
 def zeros_like(
     other: Variable,
     dtype: DTypeLikeSave | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
@@ -1717,7 +1726,8 @@ def zeros_like(
 def zeros_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
@@ -1728,7 +1738,8 @@ def zeros_like(
 def zeros_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1738,7 +1749,8 @@ def zeros_like(
 def zeros_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1813,7 +1825,8 @@ def zeros_like(
 def ones_like(
     other: DataArray,
     dtype: DTypeLikeSave | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
@@ -1824,7 +1837,8 @@ def ones_like(
 def ones_like(
     other: Dataset,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
@@ -1835,7 +1849,8 @@ def ones_like(
 def ones_like(
     other: Variable,
     dtype: DTypeLikeSave | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
@@ -1846,7 +1861,8 @@ def ones_like(
 def ones_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *, 
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
@@ -1857,7 +1873,8 @@ def ones_like(
 def ones_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1867,7 +1884,8 @@ def ones_like(
 def ones_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
-    chunks={},
+    *,
+    chunks: T_Chunks ={},
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
