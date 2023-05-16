@@ -159,14 +159,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def __init__(self):
-        ...
+        raise NotImplementedError()
 
     def is_chunked_array(self, data: Any) -> bool:
         return isinstance(data, self.array_cls)
 
     @abstractmethod
     def chunks(self, data: T_ChunkedArray) -> T_NormalizedChunks:
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def normalize_chunks(
@@ -178,14 +178,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         previous_chunks: T_NormalizedChunks | None = None,
     ) -> T_NormalizedChunks:
         """Called by open_dataset"""
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def from_array(
         self, data: np.ndarray, chunks: T_Chunks, **kwargs
     ) -> T_ChunkedArray:
         """Called when .chunk is called on an xarray object that is not already chunked."""
-        ...
+        raise NotImplementedError()
 
     def rechunk(
         self,
@@ -199,7 +199,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def compute(self, *data: T_ChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
         """Used anytime something needs to computed, including multiple arrays at once."""
-        ...
+        raise NotImplementedError()
 
     @property
     def array_api(self) -> Any:
