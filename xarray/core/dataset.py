@@ -2242,9 +2242,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        chunked_array_type: str
-        | ChunkManagerEntrypoint
-        | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
