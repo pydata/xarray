@@ -8,7 +8,7 @@ from __future__ import annotations
 import functools
 import sys
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
 from typing import (
     TYPE_CHECKING,
@@ -222,13 +222,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def apply_gufunc(
         self,
-        func,
-        signature,
-        *args,
-        axes=None,
-        keepdims=False,
-        output_dtypes=None,
-        vectorize=None,
+        func: Callable,
+        signature: str,
+        *args: Any,
+        axes: Sequence[tuple[int, ...]] | None = None,
+        keepdims: bool = False,
+        output_dtypes: Sequence[np.typing.DTypeLike] | None = None,
+        vectorize: bool | None = None,
         **kwargs,
     ):
         """
@@ -238,12 +238,12 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     def map_blocks(
         self,
-        func,
-        *args,
-        dtype=None,
-        chunks=None,
-        drop_axis=[],
-        new_axis=None,
+        func: Callable,
+        *args: Any,
+        dtype: np.typing.DTypeLike | None = None,
+        chunks: tuple[int, ...] | None = None,
+        drop_axis: int | Sequence[int] | None = None,
+        new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
         """Currently only called in a couple of really niche places in xarray. Not even called in xarray.map_blocks."""
@@ -251,19 +251,21 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     def blockwise(
         self,
-        func,
-        out_ind,
-        *args,
-        adjust_chunks=None,
-        new_axes=None,
-        align_arrays=True,
+        func: Callable,
+        out_ind: Iterable,
+        *args: Any,  # can't type this as mypy assumes args are all same type, but dask blockwise args alternate types
+        adjust_chunks: dict[Any, Callable] | None = None,
+        new_axes: dict[Any, int] | None = None,
+        align_arrays: bool = True,
         **kwargs,
     ):
         """Called by some niche functions in xarray."""
         raise NotImplementedError()
 
     def unify_chunks(
-        self, *args, **kwargs
+        self,
+        *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
+        **kwargs,
     ) -> tuple[dict[str, T_NormalizedChunks], list[T_ChunkedArray]]:
         """Called by xr.unify_chunks."""
         raise NotImplementedError()
