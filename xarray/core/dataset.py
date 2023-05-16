@@ -74,8 +74,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import (  # noqa
-    ChunkManagerEntrypoint,
+from xarray.core.parallelcompat import (
     get_chunked_array_type,
     guess_chunkmanager,
 )
@@ -118,6 +117,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping
+    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
@@ -2242,9 +2242,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        chunked_array_type: str
-        | ChunkManagerEntrypoint
-        | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:

@@ -36,7 +36,6 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import ChunkManagerEntrypoint  # noqa
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -78,6 +77,7 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
+    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -1265,9 +1265,7 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        chunked_array_type: str
-        | ChunkManagerEntrypoint
-        | None = None,  # noqa: F821  # type: ignore[name-defined]
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
