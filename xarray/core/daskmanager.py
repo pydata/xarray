@@ -134,7 +134,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         *args: Any,
         dtype: np.typing.DTypeLike | None = None,
         chunks: tuple[int, ...] | None = None,
-        drop_axis: int | Sequence[int] | None = None,
+        drop_axis: int | Sequence[int] = [],
         new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
