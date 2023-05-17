@@ -36,6 +36,7 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.parallelcompat import ChunkManagerEntrypoint  # noqa
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -1264,6 +1265,10 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunked_array_type: str
+        | ChunkManagerEntrypoint
+        | None = None,  # noqa: F821  # type: ignore[name-defined]
+        from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
@@ -1291,6 +1296,15 @@ class DataArray(
         inline_array: optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce the underlying data array to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1328,6 +1342,8 @@ class DataArray(
             token=token,
             lock=lock,
             inline_array=inline_array,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=from_array_kwargs,
         )
         return self._from_temp_dataset(ds)
 

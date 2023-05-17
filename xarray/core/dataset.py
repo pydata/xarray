@@ -51,6 +51,7 @@ from xarray.core.common import (
 )
 from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.daskmanager import DaskManager
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -73,7 +74,17 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import array_type, is_duck_array, is_duck_dask_array
+from xarray.core.parallelcompat import (  # noqa
+    ChunkManagerEntrypoint,
+    get_chunked_array_type,
+    guess_chunkmanager,
+)
+from xarray.core.pycompat import (
+    array_type,
+    is_chunked_array,
+    is_duck_array,
+    is_duck_dask_array,
+)
 from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
     Default,
@@ -202,12 +213,10 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _get_chunk(var, chunks):
+def _get_chunk(var, chunks, chunkmanager):
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
-
-    import dask.array as da
 
     if isinstance(var, IndexVariable):
         return {}
@@ -225,7 +234,8 @@ def _get_chunk(var, chunks):
         chunks.get(dim, None) or preferred_chunk_sizes
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
     )
-    chunk_shape = da.core.normalize_chunks(
+
+    chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
 
@@ -270,18 +280,37 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
+    chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+    from_array_kwargs=None,
 ):
-    from dask.base import tokenize
-
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+
     if var.ndim:
-        # when rechunking by different amounts, make sure dask names change
-        # by provinding chunks as an input to tokenize.
-        # subtle bugs result otherwise. see GH3350
-        token2 = tokenize(name, token if token else var._data, chunks)
-        name2 = f"{name_prefix}{name}-{token2}"
-        var = var.chunk(chunks, name=name2, lock=lock, inline_array=inline_array)
+        chunked_array_type = guess_chunkmanager(
+            chunked_array_type
+        )  # coerce string to ChunkManagerEntrypoint type
+        if isinstance(chunked_array_type, DaskManager):
+            from dask.base import tokenize
+
+            # when rechunking by different amounts, make sure dask names change
+            # by providing chunks as an input to tokenize.
+            # subtle bugs result otherwise. see GH3350
+            token2 = tokenize(name, token if token else var._data, chunks)
+            name2 = f"{name_prefix}{name}-{token2}"
+
+            from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
+                from_array_kwargs,
+                name=name2,
+                lock=lock,
+                inline_array=inline_array,
+            )
+
+        var = var.chunk(
+            chunks,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=from_array_kwargs,
+        )
 
         if overwrite_encoded_chunks and var.chunks is not None:
             var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
@@ -743,13 +772,13 @@ class Dataset(
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
         if lazy_data:
-            import dask.array as da
+            chunkmanager = get_chunked_array_type(*lazy_data.values())
 
-            # evaluate all the dask arrays simultaneously
-            evaluated_data = da.compute(*lazy_data.values(), **kwargs)
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data = chunkmanager.compute(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
@@ -1575,7 +1604,7 @@ class Dataset(
                 val = np.array(val)
 
             # type conversion
-            new_value[name] = val.astype(var_k.dtype, copy=False)
+            new_value[name] = duck_array_ops.astype(val, dtype=var_k.dtype, copy=False)
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
@@ -1945,6 +1974,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore:
         ...
 
@@ -1966,6 +1996,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed:
         ...
 
@@ -1984,6 +2015,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
@@ -2072,6 +2104,10 @@ class Dataset(
             The desired zarr spec version to target (currently 2 or 3). The
             default of None will attempt to determine the zarr version from
             ``store`` when possible, otherwise defaulting to 2.
+        chunkmanager_store_kwargs : dict
+            Additional keyword arguments passed on to the `ChunkManager.store` method used to store
+            chunked arrays. For example for a dask array additional kwargs will be passed eventually to
+            :py:func:`dask.array.store()`. Experimental API that should not be relied upon.
 
         Returns
         -------
@@ -2117,6 +2153,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )
 
     def __repr__(self) -> str:
@@ -2205,6 +2242,10 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunked_array_type: str
+        | ChunkManagerEntrypoint
+        | None = None,  # noqa: F821 # type: ignore[name-defined]
+        from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
@@ -2232,6 +2273,15 @@ class Dataset(
         inline_array: bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+            :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided
@@ -2266,8 +2316,22 @@ class Dataset(
                 f"some chunks keys are not dimensions on this object: {bad_dims}"
             )
 
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
         variables = {
-            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)
+            k: _maybe_chunk(
+                k,
+                v,
+                chunks,
+                token,
+                lock,
+                name_prefix,
+                inline_array=inline_array,
+                chunked_array_type=chunkmanager,
+                from_array_kwargs=from_array_kwargs.copy(),
+            )
             for k, v in self.variables.items()
         }
         return self._replace(variables)
@@ -2305,7 +2369,7 @@ class Dataset(
                 if v.dtype.kind in "US":
                     index = self._indexes[k].to_pandas_index()
                     if isinstance(index, pd.DatetimeIndex):
-                        v = v.astype("datetime64[ns]")
+                        v = duck_array_ops.astype(v, dtype="datetime64[ns]")
                     elif isinstance(index, CFTimeIndex):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 

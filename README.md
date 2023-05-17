@@ -122,12 +122,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Xarray bundles portions of pandas, NumPy and Seaborn, all of which are
+Xarray bundles portions of pandas, NumPy, Seaborn and dask, all of which are
 available under a "3-clause BSD" license:
 
 - pandas: setup.py, xarray/util/print_versions.py
 - NumPy: xarray/core/npcompat.py
 - Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
+- Dask: xarray/core/daskcompat.py
 
 Xarray also bundles portions of CPython, which is available under the
 "Python Software Foundation License" in xarray/core/pycompat.py.
