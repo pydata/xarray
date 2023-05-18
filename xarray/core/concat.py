@@ -593,7 +593,7 @@ def _dataset_concat(
                             f"coordinate {name!r} not present in all datasets."
                         )
 
-                    # Mask out the indexes without the name::
+                    # Mask out the indexes without the name:
                     start = file_start_indexes[i]
                     end = file_start_indexes[i + 1]
                     variable_index_mask[slice(start, end)] = False
