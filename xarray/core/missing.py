@@ -15,7 +15,7 @@ from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
@@ -694,8 +694,8 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if is_duck_dask_array(var):
-        import dask.array as da
+    if is_chunked_array(var):
+        chunkmanager = get_chunked_array_type(var)
 
         ndim = var.ndim
         nconst = ndim - len(x)
@@ -712,7 +712,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         args = (var, range(ndim), *x_arginds, *new_x_arginds)
 
-        _, rechunked = da.unify_chunks(*args)
+        _, rechunked = chunkmanager.unify_chunks(*args)
 
         args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
@@ -738,8 +738,8 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
         meta = var._meta
 
-        return da.blockwise(
-            _dask_aware_interpnd,
+        return chunkmanager.blockwise(
+            _chunked_aware_interpnd,
             out_ind,
             *args,
             interp_func=func,
@@ -782,8 +782,8 @@ def _interpnd(var, x, new_x, func, kwargs):
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 
-def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
-    """Wrapper for `_interpnd` through `blockwise`
+def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
+    """Wrapper for `_interpnd` through `blockwise` for chunked arrays.
 
     The first half arrays in `coords` are original coordinates,
     the other half are destination coordinates

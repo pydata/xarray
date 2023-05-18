@@ -9,6 +9,7 @@ import contextlib
 import datetime
 import inspect
 import warnings
+from functools import partial
 from importlib import import_module
 
 import numpy as np
@@ -29,10 +30,11 @@ from numpy import (  # noqa
     zeros_like,  # noqa
 )
 from numpy import concatenate as _concatenate
+from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
-from xarray.core.nputils import nanfirst, nanlast
+from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
 from xarray.core.utils import is_duck_array, module_available
 
@@ -641,10 +643,10 @@ def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        if is_duck_dask_array(values):
-            return dask_array_ops.nanfirst(values, axis)
+        if is_chunked_array(values):
+            return chunked_nanfirst(values, axis)
         else:
-            return nanfirst(values, axis)
+            return nputils.nanfirst(values, axis)
     return take(values, 0, axis=axis)
 
 
@@ -652,10 +654,10 @@ def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        if is_duck_dask_array(values):
-            return dask_array_ops.nanlast(values, axis)
+        if is_chunked_array(values):
+            return chunked_nanlast(values, axis)
         else:
-            return nanlast(values, axis)
+            return nputils.nanlast(values, axis)
     return take(values, -1, axis=axis)
 
 
@@ -674,3 +676,32 @@ def push(array, n, axis):
         return dask_array_ops.push(array, n, axis)
     else:
         return push(array, n, axis)
+
+
+def _first_last_wrapper(array, *, axis, op, keepdims):
+    return op(array, axis, keepdims=keepdims)
+
+
+def _chunked_first_or_last(darray, axis, op):
+    chunkmanager = get_chunked_array_type(darray)
+
+    # This will raise the same error message seen for numpy
+    axis = normalize_axis_index(axis, darray.ndim)
+
+    wrapped_op = partial(_first_last_wrapper, op=op)
+    return chunkmanager.reduction(
+        darray,
+        func=wrapped_op,
+        aggregate_func=wrapped_op,
+        axis=axis,
+        dtype=darray.dtype,
+        keepdims=False,  # match numpy version
+    )
+
+
+def chunked_nanfirst(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanfirst)
+
+
+def chunked_nanlast(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanlast)

@@ -27,6 +27,8 @@ New Features
 - Add support for lshift and rshift binary operators (``<<``, ``>>``) on
   :py:class:`xr.DataArray` of type :py:class:`int` (:issue:`7727` , :pull:`7741`).
   By `Alan Brammer <https://github.com/abrammer>`_.
+- Fix `as_compatible_data` for masked float arrays, now always creates a copy when mask is present (:issue:`2377`, :pull:`7788`).
+  By `Max Hollmann <https://github.com/maxhollmann>`_.
 
 
 Breaking changes
@@ -55,6 +57,11 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Experimental support for wrapping chunked array libraries other than dask.
+  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
+  registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2023.04.2:

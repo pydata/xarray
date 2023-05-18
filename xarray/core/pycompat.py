@@ -12,7 +12,7 @@ from xarray.core.utils import is_duck_array, is_scalar, module_available
 integer_types = (int, np.integer)
 
 if TYPE_CHECKING:
-    ModType = Literal["dask", "pint", "cupy", "sparse"]
+    ModType = Literal["dask", "pint", "cupy", "sparse", "cubed"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
 
 
@@ -30,7 +30,7 @@ class DuckArrayModule:
     available: bool
 
     def __init__(self, mod: ModType) -> None:
-        duck_array_module: ModuleType | None = None
+        duck_array_module: ModuleType | None
         duck_array_version: Version
         duck_array_type: DuckArrayTypes
         try:
@@ -45,6 +45,8 @@ class DuckArrayModule:
                 duck_array_type = (duck_array_module.ndarray,)
             elif mod == "sparse":
                 duck_array_type = (duck_array_module.SparseArray,)
+            elif mod == "cubed":
+                duck_array_type = (duck_array_module.Array,)
             else:
                 raise NotImplementedError
 
@@ -91,6 +93,10 @@ def is_dask_collection(x):
 
 def is_duck_dask_array(x):
     return is_duck_array(x) and is_dask_collection(x)
+
+
+def is_chunked_array(x) -> bool:
+    return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
 
 
 def is_0d_dask_array(x):

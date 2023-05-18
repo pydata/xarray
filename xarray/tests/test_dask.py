@@ -904,13 +904,12 @@ class TestToDaskDataFrame:
 
 @pytest.mark.parametrize("method", ["load", "compute"])
 def test_dask_kwargs_variable(method):
-    x = Variable("y", da.from_array(np.arange(3), chunks=(2,)))
-    # args should be passed on to da.Array.compute()
-    with mock.patch.object(
-        da.Array, "compute", return_value=np.arange(3)
-    ) as mock_compute:
+    chunked_array = da.from_array(np.arange(3), chunks=(2,))
+    x = Variable("y", chunked_array)
+    # args should be passed on to dask.compute() (via DaskManager.compute())
+    with mock.patch.object(da, "compute", return_value=(np.arange(3),)) as mock_compute:
         getattr(x, method)(foo="bar")
-    mock_compute.assert_called_with(foo="bar")
+    mock_compute.assert_called_with(chunked_array, foo="bar")
 
 
 @pytest.mark.parametrize("method", ["load", "compute", "persist"])

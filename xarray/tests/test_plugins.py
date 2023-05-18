@@ -236,6 +236,7 @@ def test_lazy_import() -> None:
         "sparse",
         "cupy",
         "pint",
+        "cubed",
     ]
     # ensure that none of the above modules has been imported before
     modules_backup = {}
