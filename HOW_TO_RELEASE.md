@@ -18,14 +18,19 @@ upstream        https://github.com/pydata/xarray (push)
      git switch main
      git pull upstream main
      ```
- 2. Add a list of contributors with:
+ 2. Add a list of contributors.
+    First fetch all previous release tags so we can see the version number of the last release was:
+    ```sh
+    git fetch upstream --tags
+    ```
+    This will return a list of all the contributors since the last release:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
-    This will return the number of contributors:
+    This will return the total number of contributors:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | wc -l
-    ```
+    ```    
  3. Write a release summary: ~50 words describing the high level features. This
     will be used in the release emails, tweets, GitHub release notes, etc.
  4. Look over whats-new.rst and the docs. Make sure "What's New" is complete
