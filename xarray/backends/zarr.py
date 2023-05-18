@@ -19,6 +19,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import (
     FrozenDict,
@@ -716,6 +717,8 @@ def open_zarr(
     decode_timedelta=None,
     use_cftime=None,
     zarr_version=None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -800,6 +803,15 @@ def open_zarr(
         The desired zarr spec version to target (currently 2 or 3). The default
         of None will attempt to determine the zarr version from ``store`` when
         possible, otherwise defaulting to 2.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce this datasets' arrays to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -817,12 +829,17 @@ def open_zarr(
     """
     from xarray.backends.api import open_dataset
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     if chunks == "auto":
         try:
-            import dask.array  # noqa
+            guess_chunkmanager(
+                chunked_array_type
+            )  # attempt to import that parallel backend
 
             chunks = {}
-        except ImportError:
+        except ValueError:
             chunks = None
 
     if kwargs:
@@ -851,6 +868,8 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
