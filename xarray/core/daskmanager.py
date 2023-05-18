@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
+import dask
 import numpy as np
+from packaging.version import Version
 
 from xarray.core.duck_array_ops import dask_available
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
@@ -134,11 +136,16 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         *args: Any,
         dtype: np.typing.DTypeLike | None = None,
         chunks: tuple[int, ...] | None = None,
-        drop_axis: int | Sequence[int] = [],
+        drop_axis: int | Sequence[int] | None = None,
         new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
         from dask.array import map_blocks
+
+        if drop_axis is None and Version(dask.__version__) >= Version("2022.9.1"):
+            # See https://github.com/pydata/xarray/pull/7019#discussion_r1196729489
+            # TODO remove once dask minimum version >= 2022.9.1
+            drop_axis = []
 
         # pass through name, meta, token as kwargs
         return map_blocks(
