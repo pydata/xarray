@@ -15,10 +15,50 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.2023.05.1:
+
+v2023.05.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+Performance
+~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2023.05.0:
 
-v2023.05.0 (unreleased)
------------------------
+v2023.05.0 (May 18, 2023)
+-------------------------
+
+This release adds some new methods and operators, updates our deprecation policy for python versions, fixes some bugs with groupby,
+and introduces experimental support for alternative chunked parallel array computation backends via a new plugin system!
+
+Thanks to our 14 contributors:
+Alan Brammer, crusaderky, David Stansby, dcherian, Deeksha, Deepak Cherian, Illviljan, James McCreight,
+Joe Hamman, Justus Magin, Kyle Sunden, Max Hollmann, mgunyho, and Tom Nicholas
+
 
 New Features
 ~~~~~~~~~~~~
@@ -28,20 +68,15 @@ New Features
   :py:class:`xr.DataArray` of type :py:class:`int` (:issue:`7727` , :pull:`7741`).
   By `Alan Brammer <https://github.com/abrammer>`_.
 - Keyword argument `data='array'` to both :py:meth:`xarray.Dataset.to_dict` and
-  :py:meth:`xarray.DataArray.to_dict` will now return data as the underlying array type. Python lists are returned for `data='list'` or `data=True`. Supplying `data=False` only returns the schema without data. ``encoding=True`` returns the encoding dictionary for the underlying variable also.
-  (:issue:`1599`, :pull:`7739`) .
+  :py:meth:`xarray.DataArray.to_dict` will now return data as the underlying array type.
+  Python lists are returned for `data='list'` or `data=True`. Supplying `data=False` only returns the schema without data.
+  ``encoding=True`` returns the encoding dictionary for the underlying variable also. (:issue:`1599`, :pull:`7739`) .
   By `James McCreight <https://github.com/jmccreight>`_.
-- Fix `as_compatible_data` for masked float arrays, now always creates a copy when mask is present (:issue:`2377`, :pull:`7788`).
-  By `Max Hollmann <https://github.com/maxhollmann>`_.
-
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - adjust the deprecation policy for python to once again align with NEP-29 (:issue:`7765`, :pull:`7793`)
   By `Justus Magin <https://github.com/keewis>`_.
-
-Deprecations
-~~~~~~~~~~~~
 
 Performance
 ~~~~~~~~~~~
@@ -50,18 +85,15 @@ Performance
 
 Bug fixes
 ~~~~~~~~~
+- Fix `as_compatible_data` for masked float arrays, now always creates a copy when mask is present (:issue:`2377`, :pull:`7788`).
+  By `Max Hollmann <https://github.com/maxhollmann>`_.
 - Fix groupby binary ops when grouped array is subset relative to other. (:issue:`7797`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix groupby sum, prod for all-NaN groups with ``flox``. (:issue:`7808`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
 - Experimental support for wrapping chunked array libraries other than dask.
   A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
   registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
