@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
-import dask
 import numpy as np
 from packaging.version import Version
 
@@ -140,9 +139,10 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
+        import dask
         from dask.array import map_blocks
 
-        if drop_axis is None and Version(dask.__version__) >= Version("2022.9.1"):
+        if drop_axis is None and Version(dask.__version__) < Version("2022.9.1"):
             # See https://github.com/pydata/xarray/pull/7019#discussion_r1196729489
             # TODO remove once dask minimum version >= 2022.9.1
             drop_axis = []

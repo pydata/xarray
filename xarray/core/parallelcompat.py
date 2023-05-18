@@ -234,7 +234,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
         Called inside xarray.apply_ufunc, so must be supplied for vast majority of xarray computations to be supported.
         """
-        ...
+        raise NotImplementedError()
 
     def map_blocks(
         self,
@@ -246,7 +246,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
-        """Currently only called in a couple of really niche places in xarray. Not even called in xarray.map_blocks."""
+        """Called in elementwise operations, but notably not called in xarray.map_blocks."""
         raise NotImplementedError()
 
     def blockwise(
