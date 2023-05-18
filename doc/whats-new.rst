@@ -27,6 +27,10 @@ New Features
 - Add support for lshift and rshift binary operators (``<<``, ``>>``) on
   :py:class:`xr.DataArray` of type :py:class:`int` (:issue:`7727` , :pull:`7741`).
   By `Alan Brammer <https://github.com/abrammer>`_.
+- Keyword argument `data='array'` to both :py:meth:`xarray.Dataset.to_dict` and
+  :py:meth:`xarray.DataArray.to_dict` will now return data as the underlying array type. Python lists are returned for `data='list'` or `data=True`. Supplying `data=False` only returns the schema without data. ``encoding=True`` returns the encoding dictionary for the underlying variable also.
+  (:issue:`1599`, :pull:`7739`) .
+  By `James McCreight <https://github.com/jmccreight>`_.
 - Fix `as_compatible_data` for masked float arrays, now always creates a copy when mask is present (:issue:`2377`, :pull:`7788`).
   By `Max Hollmann <https://github.com/maxhollmann>`_.
 
@@ -122,10 +126,6 @@ New Features
 - Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
   (:issue:`7692`, :pull:`7693`) .
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Keyword argument `data='array'` to both :py:meth:`xarray.Dataset.to_dict` and
-  :py:meth:`xarray.DataArray.to_dict` will now return data as the underlying array type. Python lists are returned for `data='list'` or `data=True`. Supplying `data=False` only returns the schema without data. ``encoding=True`` returns the encoding dictionary for the underlying variable also.
-  (:issue:`1599`, :pull:`7739`) .
-  By `James McCreight <https://github.com/jmccreight>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
