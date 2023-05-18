@@ -33,6 +33,16 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
 
+    try:
+        from cubed import Array as CubedArray
+    except ImportError:
+        CubedArray = np.ndarray
+
+    try:
+        from zarr.core import Array as ZarrArray
+    except ImportError:
+        ZarrArray = np.ndarray
+
     # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
     # Can be uncommented if using pyright though.
     # import sys
@@ -104,6 +114,9 @@ GroupByIncompatible = Union["Variable", "GroupBy"]
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
+
+T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]

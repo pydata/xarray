@@ -146,7 +146,7 @@ def refresh_engines() -> None:
 
 def guess_engine(
     store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-):
+) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
     for engine, backend in engines.items():

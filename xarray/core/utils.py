@@ -1202,3 +1202,66 @@ def emit_user_level_warning(message, category=None):
     """Emit a warning at the user level by inspecting the stack trace."""
     stacklevel = find_stack_level()
     warnings.warn(message, category=category, stacklevel=stacklevel)
+
+
+def consolidate_dask_from_array_kwargs(
+    from_array_kwargs: dict,
+    name: str | None = None,
+    lock: bool | None = None,
+    inline_array: bool | None = None,
+) -> dict:
+    """
+    Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
+
+    Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
+    """
+
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="name",
+        passed_kwarg_value=name,
+        default=None,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="lock",
+        passed_kwarg_value=lock,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="inline_array",
+        passed_kwarg_value=inline_array,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+
+    return from_array_kwargs
+
+
+def _resolve_doubly_passed_kwarg(
+    kwargs_dict: dict,
+    kwarg_name: str,
+    passed_kwarg_value: str | bool | None,
+    default: bool | None,
+    err_msg_dict_name: str,
+) -> dict:
+    # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
+    if kwarg_name in kwargs_dict and passed_kwarg_value is None:
+        pass
+    # if passed explicitly but not in kwargs_dict then use that
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is not None:
+        kwargs_dict[kwarg_name] = passed_kwarg_value
+    # if in neither then use default
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is None:
+        kwargs_dict[kwarg_name] = default
+    # if in both then raise
+    else:
+        raise ValueError(
+            f"argument {kwarg_name} cannot be passed both as a keyword argument and within "
+            f"the {err_msg_dict_name} dictionary"
+        )
+
+    return kwargs_dict

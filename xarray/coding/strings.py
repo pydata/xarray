@@ -14,7 +14,7 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.variable import Variable
 
 
@@ -134,10 +134,10 @@ def bytes_to_char(arr):
     if arr.dtype.kind != "S":
         raise ValueError("argument must have a fixed-width bytes dtype")
 
-    if is_duck_dask_array(arr):
-        import dask.array as da
+    if is_chunked_array(arr):
+        chunkmanager = get_chunked_array_type(arr)
 
-        return da.map_blocks(
+        return chunkmanager.map_blocks(
             _numpy_bytes_to_char,
             arr,
             dtype="S1",
@@ -169,8 +169,8 @@ def char_to_bytes(arr):
         # can't make an S0 dtype
         return np.zeros(arr.shape[:-1], dtype=np.string_)
 
-    if is_duck_dask_array(arr):
-        import dask.array as da
+    if is_chunked_array(arr):
+        chunkmanager = get_chunked_array_type(arr)
 
         if len(arr.chunks[-1]) > 1:
             raise ValueError(
@@ -179,7 +179,7 @@ def char_to_bytes(arr):
             )
 
         dtype = np.dtype("S" + str(arr.shape[-1]))
-        return da.map_blocks(
+        return chunkmanager.map_blocks(
             _numpy_char_to_bytes,
             arr,
             dtype=dtype,

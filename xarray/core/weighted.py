@@ -238,7 +238,10 @@ class Weighted(Generic[T_Xarray]):
         # (and not 2); GH4074
         if self.weights.dtype == bool:
             sum_of_weights = self._reduce(
-                mask, self.weights.astype(int), dim=dim, skipna=False
+                mask,
+                duck_array_ops.astype(self.weights, dtype=int),
+                dim=dim,
+                skipna=False,
             )
         else:
             sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)

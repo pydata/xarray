@@ -158,9 +158,9 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / self.count(
-            keep_attrs=False
-        ).astype(self.obj.dtype, copy=False)
+        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=self.obj.dtype, copy=False
+        )
         if keep_attrs:
             result.attrs = self.obj.attrs
         return result

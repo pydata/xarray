@@ -11,7 +11,8 @@ import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type
+from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
@@ -153,7 +154,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if is_duck_dask_array(source):
+        if is_chunked_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
@@ -163,21 +164,25 @@ class ArrayWriter:
             else:
                 target[...] = source
 
-    def sync(self, compute=True):
+    def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
-            import dask.array as da
+            chunkmanager = get_chunked_array_type(*self.sources)
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
             # for any discernible difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
-            delayed_store = da.store(
+            if chunkmanager_store_kwargs is None:
+                chunkmanager_store_kwargs = {}
+
+            delayed_store = chunkmanager.store(
                 self.sources,
                 self.targets,
                 lock=self.lock,
                 compute=compute,
                 flush=True,
                 regions=self.regions,
+                **chunkmanager_store_kwargs,
             )
             self.sources = []
             self.targets = []
