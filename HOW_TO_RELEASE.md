@@ -30,7 +30,7 @@ upstream        https://github.com/pydata/xarray (push)
     This will return the total number of contributors:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | wc -l
-    ```    
+    ```
  3. Write a release summary: ~50 words describing the high level features. This
     will be used in the release emails, tweets, GitHub release notes, etc.
  4. Look over whats-new.rst and the docs. Make sure "What's New" is complete
