@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_allclose, assert_array_equal, mock
+from xarray.tests import assert_array_equal, mock
 from xarray.tests import assert_identical as assert_identical_
 
 
@@ -25,7 +25,12 @@ def assert_identical(a, b):
     ],
 )
 def test_unary(a):
-    assert_allclose(a + 1, np.cos(a))
+    fill_value = np.cos(0)
+
+    expected = xr.full_like(a, fill_value=fill_value, dtype=fill_value.dtype)
+    actual = np.cos(a)
+
+    assert_identical(actual, expected)
 
 
 def test_binary():
