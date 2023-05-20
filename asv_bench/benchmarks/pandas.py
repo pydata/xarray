@@ -29,6 +29,7 @@ class MultiIndexSeries:
 class ToDataFrame:
     def setup(self, *args, **kwargs):
         xp = kwargs.get("xp", np)
+        nvars = kwargs.get("nvars", 1)
         random_kws = kwargs.get("random_kws", {})
         method = kwargs.get("method", "to_dataframe")
 
@@ -36,11 +37,12 @@ class ToDataFrame:
         dim2 = 10_000
         ds = xr.Dataset(
             {
-                "x": xr.DataArray(
+                f"x_{i}": xr.DataArray(
                     data=xp.random.random((dim1, dim2), **random_kws),
                     dims=["dim1", "dim2"],
                     coords={"dim1": np.arange(0, dim1), "dim2": np.arange(0, dim2)},
                 )
+                for i in range(nvars)
             }
         )
         self.to_frame = getattr(ds, method)
@@ -58,4 +60,6 @@ class ToDataFrameDask(ToDataFrame):
 
         import dask.array as da
 
-        super().setup(xp=da, random_kws=dict(chunks=5000), method="to_dask_dataframe")
+        super().setup(
+            xp=da, random_kws=dict(chunks=5000), method="to_dask_dataframe", nvars=500
+        )
