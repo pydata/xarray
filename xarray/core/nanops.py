@@ -6,6 +6,7 @@ import numpy as np
 
 from xarray.core import dtypes, nputils, utils
 from xarray.core.duck_array_ops import (
+    astype,
     count,
     fillna,
     isnull,
@@ -22,7 +23,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     if axis is not None and getattr(result, "ndim", False):
         null_mask = (np.take(mask.shape, axis).prod() - mask.sum(axis) - min_count) < 0
         dtype, fill_value = dtypes.maybe_promote(result.dtype)
-        result = where(null_mask, fill_value, result.astype(dtype))
+        result = where(null_mask, fill_value, astype(result, dtype))
 
     elif getattr(result, "dtype", None) not in dtypes.NAT_TYPES:
         null_mask = mask.size - mask.sum()
@@ -140,7 +141,7 @@ def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):
     value_mean = _nanmean_ddof_object(
         ddof=0, value=value, axis=axis, keepdims=True, **kwargs
     )
-    squared = (value.astype(value_mean.dtype) - value_mean) ** 2
+    squared = (astype(value, value_mean.dtype) - value_mean) ** 2
     return _nanmean_ddof_object(ddof, squared, axis=axis, keepdims=keepdims, **kwargs)
 
 
