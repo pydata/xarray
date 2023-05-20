@@ -26,10 +26,15 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.parallelcompat import (
+    get_chunked_array_type,
+    guess_chunkmanager,
+)
 from xarray.core.pycompat import (
     array_type,
     integer_types,
     is_0d_dask_array,
+    is_chunked_array,
     is_duck_dask_array,
 )
 from xarray.core.utils import (
@@ -54,6 +59,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
+    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.types import (
         Dims,
         ErrorOptionsWithWarn,
@@ -194,10 +200,10 @@ def _as_nanosecond_precision(data):
             nanosecond_precision_dtype = pd.DatetimeTZDtype("ns", dtype.tz)
         else:
             nanosecond_precision_dtype = "datetime64[ns]"
-        return data.astype(nanosecond_precision_dtype)
+        return duck_array_ops.astype(data, nanosecond_precision_dtype)
     elif dtype.kind == "m" and dtype != np.dtype("timedelta64[ns]"):
         utils.emit_user_level_warning(NON_NANOSECOND_WARNING.format(case="timedelta"))
-        return data.astype("timedelta64[ns]")
+        return duck_array_ops.astype(data, "timedelta64[ns]")
     else:
         return data
 
@@ -274,8 +280,7 @@ def as_compatible_data(data, fastpath=False):
         mask = np.ma.getmaskarray(data)
         if mask.any():
             dtype, fill_value = dtypes.maybe_promote(data.dtype)
-            data = np.asarray(data, dtype=dtype)
-            data[mask] = fill_value
+            data = duck_array_ops.where_method(data, ~mask, fill_value)
         else:
             data = np.asarray(data)
 
@@ -368,7 +373,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             self.encoding = encoding
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         """
         Data-type of the array’s elements.
 
@@ -380,7 +385,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._data.dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         """
         Tuple of array dimensions.
 
@@ -533,8 +538,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         dask.array.compute
         """
-        if is_duck_dask_array(self._data):
-            self._data = as_compatible_data(self._data.compute(**kwargs))
+        if is_chunked_array(self._data):
+            chunkmanager = get_chunked_array_type(self._data)
+            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
+            self._data = as_compatible_data(loaded_data)
         elif isinstance(self._data, indexing.ExplicitlyIndexed):
             self._data = self._data.get_duck_array()
         elif not is_duck_array(self._data):
@@ -633,11 +640,23 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
+    def to_dict(
+        self, data: bool | str = "list", encoding: bool = False
+    ) -> dict[str, Any]:
         """Dictionary representation of variable."""
-        item = {"dims": self.dims, "attrs": decode_numpy_dict_values(self.attrs)}
-        if data:
-            item["data"] = ensure_us_time_resolution(self.values).tolist()
+        item: dict[str, Any] = {
+            "dims": self.dims,
+            "attrs": decode_numpy_dict_values(self.attrs),
+        }
+        if data is not False:
+            if data in [True, "list"]:
+                item["data"] = ensure_us_time_resolution(self.to_numpy()).tolist()
+            elif data == "array":
+                item["data"] = ensure_us_time_resolution(self.data)
+            else:
+                msg = 'data argument must be bool, "list", or "array"'
+                raise ValueError(msg)
+
         else:
             item.update({"dtype": str(self.dtype), "shape": self.shape})
 
@@ -1154,8 +1173,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},
         name: str | None = None,
-        lock: bool = False,
-        inline_array: bool = False,
+        lock: bool | None = None,
+        inline_array: bool | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> Variable:
         """Coerce this array's data into a dask array with the given chunks.
@@ -1176,12 +1197,21 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         name : str, optional
             Used to generate the name for this array in the internal dask
             graph. Does not need not be unique.
-        lock : optional
+        lock : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
-        inline_array: optional
+        inline_array : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1197,7 +1227,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         xarray.unify_chunks
         dask.array.from_array
         """
-        import dask.array as da
 
         if chunks is None:
             warnings.warn(
@@ -1208,6 +1237,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             chunks = {}
 
         if isinstance(chunks, (float, str, int, tuple, list)):
+            # TODO we shouldn't assume here that other chunkmanagers can handle these types
+            # TODO should we call normalize_chunks here?
             pass  # dask.array.from_array can handle these directly
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -1215,9 +1246,22 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
 
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        # TODO deprecate passing these dask-specific arguments explicitly. In future just pass everything via from_array_kwargs
+        _from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
+            from_array_kwargs,
+            name=name,
+            lock=lock,
+            inline_array=inline_array,
+        )
+
         data = self._data
-        if is_duck_dask_array(data):
-            data = data.rechunk(chunks)
+        if chunkmanager.is_chunked_array(data):
+            data = chunkmanager.rechunk(data, chunks)  # type: ignore[arg-type]
         else:
             if isinstance(data, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
@@ -1232,17 +1276,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     data, indexing.OuterIndexer
                 )
 
-                # All of our lazily loaded backend array classes should use NumPy
-                # array operations.
-                kwargs = {"meta": np.ndarray}
-            else:
-                kwargs = {}
-
             if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(data.shape))
 
-            data = da.from_array(
-                data, chunks, name=name, lock=lock, inline_array=inline_array, **kwargs
+            data = chunkmanager.from_array(
+                data,
+                chunks,  # type: ignore[arg-type]
+                **_from_array_kwargs,
             )
 
         return self._replace(data=data)
@@ -1254,7 +1294,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
-            data = data.compute()
+            chunkmanager = get_chunked_array_type(data)
+            data, *_ = chunkmanager.compute(data)
         if isinstance(data, array_type("cupy")):
             data = data.get()
         # pint has to be imported dynamically as pint imports xarray
@@ -1380,7 +1421,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
         data = np.pad(
-            trimmed_data.astype(dtype),
+            duck_array_ops.astype(trimmed_data, dtype),
             pads,
             mode="constant",
             constant_values=fill_value,
@@ -1529,7 +1570,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             pad_option_kwargs["reflect_type"] = reflect_type
 
         array = np.pad(
-            self.data.astype(dtype, copy=False),
+            duck_array_ops.astype(self.data, dtype, copy=False),
             pad_width_by_index,
             mode=mode,
             **pad_option_kwargs,
@@ -2397,7 +2438,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            var = self.astype(dtype, copy=False)
+            var = duck_array_ops.astype(self, dtype, copy=False)
         else:
             dtype = self.dtype
             var = self
@@ -2891,7 +2932,15 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks={}, name=None, lock=False, inline_array=False):
+    def chunk(
+        self,
+        chunks={},
+        name=None,
+        lock=False,
+        inline_array=False,
+        chunked_array_type=None,
+        from_array_kwargs=None,
+    ):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 

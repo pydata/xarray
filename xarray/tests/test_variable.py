@@ -344,9 +344,10 @@ class VariableSubclassobjects(ABC):
         assert v[0] == pd.Period("2000", freq="B")
         assert "Period('2000-01-03', 'B')" in repr(v)
 
-    def test_1d_math(self):
-        x = 1.0 * np.arange(5)
-        y = np.ones(5)
+    @pytest.mark.parametrize("dtype", [float, int])
+    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
+        x = np.arange(5, dtype=dtype)
+        y = np.ones(5, dtype=dtype)
 
         # should we need `.to_base_variable()`?
         # probably a break that `+v` changes type?
@@ -360,11 +361,18 @@ class VariableSubclassobjects(ABC):
         assert_identical(base_v, v + 0)
         assert_identical(base_v, 0 + v)
         assert_identical(base_v, v * 1)
+        if dtype is int:
+            assert_identical(base_v, v << 0)
+            assert_array_equal(v << 3, x << 3)
+            assert_array_equal(v >> 2, x >> 2)
         # binary ops with numpy arrays
         assert_array_equal((v * x).values, x**2)
-        assert_array_equal((x * v).values, x**2)
+        assert_array_equal((x * v).values, x**2)  # type: ignore[attr-defined] # TODO: Fix mypy thinking numpy takes priority, GH7780
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
+        if dtype is int:
+            assert_array_equal(v << x, x << x)
+            assert_array_equal(v >> x, x >> x)
         # verify attributes are dropped
         v2 = self.cls(["x"], x, {"units": "meters"})
         with set_options(keep_attrs=False):
@@ -378,10 +386,10 @@ class VariableSubclassobjects(ABC):
         # something complicated
         assert_array_equal((v**2 * w - 1 + x).values, x**2 * y - 1 + x)
         # make sure dtype is preserved (for Index objects)
-        assert float == (+v).dtype
-        assert float == (+v).values.dtype
-        assert float == (0 + v).dtype
-        assert float == (0 + v).values.dtype
+        assert dtype == (+v).dtype
+        assert dtype == (+v).values.dtype
+        assert dtype == (0 + v).dtype
+        assert dtype == (0 + v).values.dtype
         # check types of returned data
         assert isinstance(+v, Variable)
         assert not isinstance(+v, IndexVariable)
@@ -2551,6 +2559,19 @@ class TestAsCompatibleData:
         actual = as_compatible_data(original)
         assert_array_equal(expected, actual)
         assert np.dtype(float) == actual.dtype
+
+        original = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
+        original.flags.writeable = False
+        expected = [np.nan, 2.0]
+        actual = as_compatible_data(original)
+        assert_array_equal(expected, actual)
+        assert np.dtype(float) == actual.dtype
+
+        # GH2377
+        actual = Variable(dims=tuple(), data=np.ma.masked)
+        expected = Variable(dims=tuple(), data=np.nan)
+        assert_array_equal(expected, actual)
+        assert actual.dtype == expected.dtype
 
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime(self):

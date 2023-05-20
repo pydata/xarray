@@ -58,6 +58,10 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     try:
+        from dask.dataframe import DataFrame as DaskDataFrame
+    except ImportError:
+        DaskDataFrame = None  # type: ignore
+    try:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
@@ -73,6 +77,7 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
+    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -1260,6 +1265,8 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
@@ -1281,12 +1288,21 @@ class DataArray(
             Prefix for the name of the new dask array.
         token : str, optional
             Token uniquely identifying this array.
-        lock : optional
+        lock : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
-        inline_array: optional
+        inline_array: bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce the underlying data array to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1324,6 +1340,8 @@ class DataArray(
             token=token,
             lock=lock,
             inline_array=inline_array,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=from_array_kwargs,
         )
         return self._from_temp_dataset(ds)
 
@@ -4174,7 +4192,9 @@ class DataArray(
             zarr_version=zarr_version,
         )
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -4185,9 +4205,14 @@ class DataArray(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool or {"list", "array"}, default: "list"
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            `da.compute().to_dict(data="list")`.
+
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
@@ -6467,21 +6492,20 @@ class DataArray(
         core.groupby.DataArrayGroupBy
         pandas.DataFrame.groupby
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            DataArrayGroupBy,
+            ResolvedUniqueGrouper,
+            UniqueGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
-
+        _validate_groupby_squeeze(squeeze)
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
         return DataArrayGroupBy(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def groupby_bins(
@@ -6552,20 +6576,30 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DataArrayGroupBy,
+            ResolvedBinGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        return DataArrayGroupBy(
-            self,
-            group,
-            squeeze=squeeze,
+        _validate_groupby_squeeze(squeeze)
+        grouper = BinGrouper(
             bins=bins,
-            restore_coord_dims=restore_coord_dims,
             cut_kwargs={
                 "right": right,
                 "labels": labels,
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
+
+        return DataArrayGroupBy(
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def weighted(self, weights: DataArray) -> DataArrayWeighted:
@@ -6880,6 +6914,71 @@ class DataArray(
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
         )
+
+    def to_dask_dataframe(
+        self,
+        dim_order: Sequence[Hashable] | None = None,
+        set_index: bool = False,
+    ) -> DaskDataFrame:
+        """Convert this array into a dask.dataframe.DataFrame.
+
+        Parameters
+        ----------
+        dim_order : Sequence of Hashable or None , optional
+            Hierarchical dimension order for the resulting dataframe.
+            Array content is transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major influence
+            on which operations are efficient on the resulting dask dataframe.
+        set_index : bool, default: False
+            If set_index=True, the dask DataFrame is indexed by this dataset's
+            coordinate. Since dask DataFrames do not support multi-indexes,
+            set_index only works if the dataset only contains one dimension.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(4 * 2 * 2).reshape(4, 2, 2),
+        ...     dims=("time", "lat", "lon"),
+        ...     coords={
+        ...         "time": np.arange(4),
+        ...         "lat": [-30, -20],
+        ...         "lon": [120, 130],
+        ...     },
+        ...     name="eg_dataarray",
+        ...     attrs={"units": "Celsius", "description": "Random temperature data"},
+        ... )
+        >>> da.to_dask_dataframe(["lat", "lon", "time"]).compute()
+            lat  lon  time  eg_dataarray
+        0   -30  120     0             0
+        1   -30  120     1             4
+        2   -30  120     2             8
+        3   -30  120     3            12
+        4   -30  130     0             1
+        5   -30  130     1             5
+        6   -30  130     2             9
+        7   -30  130     3            13
+        8   -20  120     0             2
+        9   -20  120     1             6
+        10  -20  120     2            10
+        11  -20  120     3            14
+        12  -20  130     0             3
+        13  -20  130     1             7
+        14  -20  130     2            11
+        15  -20  130     3            15
+        """
+        if self.name is None:
+            raise ValueError(
+                "Cannot convert an unnamed DataArray to a "
+                "dask dataframe : use the ``.rename`` method to assign a name."
+            )
+        name = self.name
+        ds = self._to_dataset_whole(name, shallow_copy=False)
+        return ds.to_dask_dataframe(dim_order, set_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
