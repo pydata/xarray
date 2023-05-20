@@ -5627,6 +5627,10 @@ class TestDataset:
 
 @requires_dask
 class TestPintWrappingDask:
+    @pytest.mark.skipif(
+        version.parse(pint.__version__) <= "0.21",
+        reason="pint didn't support dask properly before 0.21",
+    )
     def test_duck_array_ops(self):
         import dask.array
 
