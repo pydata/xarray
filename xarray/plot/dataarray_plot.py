@@ -36,7 +36,7 @@ from xarray.plot.utils import (
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.collections import PathCollection, QuadMesh
+    from matplotlib.collections import LineCollection, PathCollection, QuadMesh
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
@@ -1103,7 +1103,13 @@ def _add_labels(
                 labels.set_horizontalalignment("right")
 
 
-def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def _line_(
+    xplt: DataArray | None,
+    yplt: DataArray | None,
+    ax: Axes,
+    add_labels: bool | Iterable[bool] = True,
+    **kwargs,
+) -> LineCollection:
     plt = import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
@@ -1126,42 +1132,18 @@ def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     z_suffix = ""  # TODO: to _resolve_intervals?
     _ensure_plottable(xplt_val, yplt_val)
 
-    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-        # Plot the data. 3d plots has the z value in upward direction
-        # instead of y. To make jumping between 2d and 3d easy and intuitive
-        # switch the order so that z is shown in the depthwise direction:
-        # axis_order = dict(x="x", y="z", z="y")
-        axis_order = ["x", "y", "z"]
-        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-        for arr, arr_val, suffix in zip(
-            [xplt, zplt, yplt],
-            [xplt_val, zplt_val, yplt_val],
-            (x_suffix, z_suffix, y_suffix),
-        ):
-            if arr is not None:
-                to_plot[axis_order[i]] = arr_val
-                to_labels[axis_order[i]] = arr
-                to_suffix[axis_order[i]] = suffix
-                i += 1
-        # to_plot = dict(x=xplt_val, y=zplt_val, z=yplt_val)
-        # to_labels = dict(x=xplt, y=zplt, z=yplt)
-    else:
-        # Switching axis order not needed in 3.5.0, can also simplify the code
-        # that uses axis_order:
-        # https://github.com/matplotlib/matplotlib/pull/19873
-        # axis_order = dict(x="x", y="y", z="z")
-        axis_order = ["x", "y", "z"]
-        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-        for arr, arr_val, suffix in zip(
-            [xplt, yplt, zplt],
-            [xplt_val, yplt_val, zplt_val],
-            (x_suffix, z_suffix, y_suffix),
-        ):
-            if arr is not None:
-                to_plot[axis_order[i]] = arr_val
-                to_labels[axis_order[i]] = arr
-                to_suffix[axis_order[i]] = suffix
-                i += 1
+    axis_order = ["x", "y", "z"]
+    to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
+    for arr, arr_val, suffix in zip(
+        [xplt, yplt, zplt],
+        [xplt_val, yplt_val, zplt_val],
+        (x_suffix, z_suffix, y_suffix),
+    ):
+        if arr is not None:
+            to_plot[axis_order[i]] = arr_val
+            to_labels[axis_order[i]] = arr
+            to_suffix[axis_order[i]] = suffix
+            i += 1
 
     primitive = _line(
         ax,
@@ -1183,13 +1165,145 @@ def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     return primitive
 
 
+@overload
+def lines(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> LineCollection:
+    ...
+
+
+@overload
+def lines(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> FacetGrid[DataArray]:
+    ...
+
+
+@overload
+def lines(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> FacetGrid[DataArray]:
+    ...
+
+
 @_plot1d
-def lines(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def lines(
+    xplt: DataArray | None,
+    yplt: DataArray | None,
+    ax: Axes,
+    add_labels: bool | Iterable[bool] = True,
+    **kwargs,
+) -> LineCollection:
     """
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
     """
-    return _line_(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
+    return _line_(xplt, yplt, ax=ax, add_labels=add_labels, **kwargs)
 
 
 @overload
