@@ -18,17 +18,17 @@ from xarray.core import dtypes
         ([np.bytes_, np.unicode_], np.object_),
     ],
 )
-def test_result_type(args, expected):
+def test_result_type(args, expected) -> None:
     actual = dtypes.result_type(*args)
     assert actual == expected
 
 
-def test_result_type_scalar():
+def test_result_type_scalar() -> None:
     actual = dtypes.result_type(np.arange(3, dtype=np.float32), np.nan)
     assert actual == np.float32
 
 
-def test_result_type_dask_array():
+def test_result_type_dask_array() -> None:
     # verify it works without evaluating dask arrays
     da = pytest.importorskip("dask.array")
     dask = pytest.importorskip("dask")
@@ -50,7 +50,7 @@ def test_result_type_dask_array():
 
 
 @pytest.mark.parametrize("obj", [1.0, np.inf, "ab", 1.0 + 1.0j, True])
-def test_inf(obj):
+def test_inf(obj) -> None:
     assert dtypes.INF > obj
     assert dtypes.NINF < obj
 
@@ -85,7 +85,7 @@ def test_inf(obj):
         ("V", (np.dtype("O"), "nan")),  # dtype('V')
     ],
 )
-def test_maybe_promote(kind, expected):
+def test_maybe_promote(kind, expected) -> None:
     # 'g': np.float128 is not tested : not available on all platforms
     # 'G': np.complex256 is not tested : not available on all platforms
 
@@ -94,7 +94,7 @@ def test_maybe_promote(kind, expected):
     assert str(actual[1]) == expected[1]
 
 
-def test_nat_types_membership():
+def test_nat_types_membership() -> None:
     assert np.datetime64("NaT").dtype in dtypes.NAT_TYPES
     assert np.timedelta64("NaT").dtype in dtypes.NAT_TYPES
     assert np.float64 not in dtypes.NAT_TYPES
