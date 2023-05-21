@@ -3,36 +3,18 @@ from __future__ import annotations
 import collections
 import itertools
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    DefaultDict,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
-from .alignment import align
-from .dataarray import DataArray
-from .dataset import Dataset
-from .pycompat import is_dask_collection
-
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
-
+from xarray.core.alignment import align
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.pycompat import is_dask_collection
 
 if TYPE_CHECKING:
-    from .types import T_Xarray
+    from xarray.core.types import T_Xarray
 
 
 def unzip(iterable):
@@ -51,7 +33,6 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 def check_result_variables(
     result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
-
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":
@@ -109,6 +90,8 @@ def make_meta(obj):
     else:
         return obj
 
+    from dask.array.utils import meta_from_array
+
     meta = Dataset()
     for name, variable in obj.variables.items():
         meta_obj = meta_from_array(variable.data, ndim=variable.ndim)
@@ -165,7 +148,7 @@ def map_blocks(
     func: Callable[..., T_Xarray],
     obj: DataArray | Dataset,
     args: Sequence[Any] = (),
-    kwargs: Mapping[str, Any] = None,
+    kwargs: Mapping[str, Any] | None = None,
     template: DataArray | Dataset | None = None,
 ) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.
@@ -334,6 +317,14 @@ def map_blocks(
     if not is_dask_collection(obj):
         return func(obj, *args, **kwargs)
 
+    try:
+        import dask
+        import dask.array
+        from dask.highlevelgraph import HighLevelGraph
+
+    except ImportError:
+        pass
+
     all_args = [obj] + list(args)
     is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in all_args]
     is_array = [isinstance(arg, DataArray) for arg in all_args]
@@ -412,7 +403,9 @@ def map_blocks(
     # func applied to the values.
 
     graph: dict[Any, Any] = {}
-    new_layers: DefaultDict[str, dict[Any, Any]] = collections.defaultdict(dict)
+    new_layers: collections.defaultdict[str, dict[Any, Any]] = collections.defaultdict(
+        dict
+    )
     gname = "{}-{}".format(
         dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
     )

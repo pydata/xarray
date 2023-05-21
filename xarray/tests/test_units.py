@@ -10,8 +10,7 @@ from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_duckarray_allclose,
     assert_equal,
@@ -19,8 +18,8 @@ from . import (
     requires_dask,
     requires_matplotlib,
 )
-from .test_plot import PlotTestCase
-from .test_variable import _PAD_XR_NP_ARGS
+from xarray.tests.test_plot import PlotTestCase
+from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
 try:
     import matplotlib.pyplot as plt
@@ -5734,7 +5733,7 @@ class TestPlots(PlotTestCase):
         fig, (ax, cax) = plt.subplots(1, 2)
         fgrid = da.plot.line(x="x", col="y")
 
-        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+        assert fgrid.axs[0, 0].get_ylabel() == "pressure [pascal]"
 
     def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
         arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa

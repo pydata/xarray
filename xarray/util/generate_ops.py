@@ -30,6 +30,8 @@ BINOPS_NUM = (
     ("__and__", "operator.and_"),
     ("__xor__", "operator.xor"),
     ("__or__", "operator.or_"),
+    ("__lshift__", "operator.lshift"),
+    ("__rshift__", "operator.rshift"),
 )
 BINOPS_REFLEXIVE = (
     ("__radd__", "operator.add"),
@@ -54,6 +56,8 @@ BINOPS_INPLACE = (
     ("__iand__", "operator.iand"),
     ("__ixor__", "operator.ixor"),
     ("__ior__", "operator.ior"),
+    ("__ilshift__", "operator.ilshift"),
+    ("__irshift__", "operator.irshift"),
 )
 UNARY_OPS = (
     ("__neg__", "operator.neg"),
@@ -110,7 +114,7 @@ stub_da = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...
     @overload
     def {method}(self: T_DataArray, other: DaCompatible) -> T_DataArray: ..."""
 stub_var = """\
@@ -124,7 +128,7 @@ stub_dsgb = """\
     @overload{override}
     def {method}(self, other: T_Dataset) -> T_Dataset: ...
     @overload
-    def {method}(self, other: "DataArray") -> "Dataset": ...  # type: ignore[misc]
+    def {method}(self, other: "DataArray") -> "Dataset": ...
     @overload
     def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
 stub_dagb = """\
@@ -254,7 +258,6 @@ def _render_classbody(method_blocks, is_module):
 
 
 if __name__ == "__main__":
-
     option = sys.argv[1].lower() if len(sys.argv) == 2 else None
     if option not in {"--module", "--stubs"}:
         raise SystemExit(f"Usage: {sys.argv[0]} --module | --stubs")

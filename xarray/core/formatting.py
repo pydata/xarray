@@ -6,20 +6,20 @@ import contextlib
 import functools
 import math
 from collections import defaultdict
+from collections.abc import Collection, Hashable
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
-from typing import Collection, Hashable
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from .duck_array_ops import array_equiv
-from .indexing import MemoryCachedArray
-from .options import OPTIONS, _get_boolean_with_default
-from .pycompat import dask_array_type, sparse_array_type
-from .utils import is_duck_array
+from xarray.core.duck_array_ops import array_equiv
+from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
+from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.pycompat import array_type
+from xarray.core.utils import is_duck_array
 
 
 def pretty_print(x, numchars: int):
@@ -114,9 +114,9 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    # Timestamp is only valid for 1678 to 2262
     try:
-        datetime_str = str(pd.Timestamp(t))
+        timestamp = pd.Timestamp(t)
+        datetime_str = timestamp.isoformat(sep=" ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
@@ -230,11 +230,11 @@ def format_array_flat(array, max_width: int):
     return pprint_str
 
 
-_KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}
-with contextlib.suppress(ImportError):
-    import sparse
-
-    _KNOWN_TYPE_REPRS[sparse.COO] = "sparse.COO"
+# mapping of tuple[modulename, classname] to repr
+_KNOWN_TYPE_REPRS = {
+    ("numpy", "ndarray"): "np.ndarray",
+    ("sparse._coo.core", "COO"): "sparse.COO",
+}
 
 
 def inline_dask_repr(array):
@@ -242,16 +242,14 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert isinstance(array, dask_array_type), array
+    assert isinstance(array, array_type("dask")), array
 
     chunksize = tuple(c[0] for c in array.chunks)
 
     if hasattr(array, "_meta"):
         meta = array._meta
-        if type(meta) in _KNOWN_TYPE_REPRS:
-            meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
-        else:
-            meta_repr = type(meta).__name__
+        identifier = (type(meta).__module__, type(meta).__name__)
+        meta_repr = _KNOWN_TYPE_REPRS.get(identifier, ".".join(identifier))
         meta_string = f", meta={meta_repr}"
     else:
         meta_string = ""
@@ -261,6 +259,7 @@ def inline_dask_repr(array):
 
 def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
+    sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
     return "<{}: nnz={:d}, fill_value={!s}>".format(
         type(array).__name__, array.nnz, array.fill_value
@@ -271,21 +270,26 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    elif var._in_memory:
+    if var._in_memory:
         return format_array_flat(var, max_width)
-    elif isinstance(var._data, dask_array_type):
+    dask_array_type = array_type("dask")
+    if isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
-    elif isinstance(var._data, sparse_array_type):
+    sparse_array_type = array_type("sparse")
+    if isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "__array_function__"):
+    if hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
-    else:
-        # internal xarray array type
-        return "..."
+    # internal xarray array type
+    return "..."
 
 
 def summarize_variable(
-    name: Hashable, var, col_width: int, max_width: int = None, is_index: bool = False
+    name: Hashable,
+    var,
+    col_width: int,
+    max_width: int | None = None,
+    is_index: bool = False,
 ):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     variable = getattr(var, "variable", var)
@@ -419,7 +423,9 @@ def inline_index_repr(index, max_width=None):
     return repr_
 
 
-def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+def summarize_index(
+    name: Hashable, index, col_width: int, max_width: int | None = None
+):
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
@@ -431,7 +437,7 @@ def summarize_index(name: Hashable, index, col_width: int, max_width: int = None
 
 
 def nondefault_indexes(indexes):
-    from .indexes import PandasIndex, PandasMultiIndex
+    from xarray.core.indexes import PandasIndex, PandasMultiIndex
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -551,8 +557,15 @@ def limit_lines(string: str, *, limit: int):
     return string
 
 
-def short_numpy_repr(array):
-    array = np.asarray(array)
+def short_array_repr(array):
+    from xarray.core.common import AbstractArray
+
+    if isinstance(array, ExplicitlyIndexed):
+        array = array.get_duck_array()
+    elif isinstance(array, AbstractArray):
+        array = array.data
+    if not is_duck_array(array):
+        array = np.asarray(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -576,11 +589,11 @@ def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
-    elif array._in_memory or array.size < 1e5:
-        return short_numpy_repr(array)
+    elif array._in_memory:
+        return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
@@ -588,7 +601,7 @@ def short_data_repr(array):
 
 @recursive_repr("<recursive array>")
 def array_repr(arr):
-    from .variable import Variable
+    from xarray.core.variable import Variable
 
     max_rows = OPTIONS["display_max_rows"]
 
@@ -825,7 +838,7 @@ def diff_array_repr(a, b, compat):
         equiv = array_equiv
 
     if not equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)

@@ -5,12 +5,13 @@ import io
 import threading
 import uuid
 import warnings
-from typing import Any, Hashable
+from collections.abc import Hashable
+from typing import Any
 
-from ..core import utils
-from ..core.options import OPTIONS
-from .locks import acquire
-from .lru_cache import LRUCache
+from xarray.backends.locks import acquire
+from xarray.backends.lru_cache import LRUCache
+from xarray.core import utils
+from xarray.core.options import OPTIONS
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(

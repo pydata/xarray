@@ -3,21 +3,14 @@ from __future__ import annotations
 import functools
 import operator
 import os
+from collections.abc import Iterable
 from contextlib import suppress
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .. import coding
-from ..coding.variables import pop_to
-from ..core import indexing
-from ..core.utils import (
-    FrozenDict,
-    close_on_error,
-    is_remote_uri,
-    try_read_magic_number_from_path,
-)
-from ..core.variable import Variable
-from .common import (
+from xarray import coding
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
@@ -26,21 +19,31 @@ from .common import (
     find_root_and_group,
     robust_getitem,
 )
-from .file_manager import CachingFileManager, DummyFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
-from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
-from .store import StoreBackendEntrypoint
+from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.locks import (
+    HDF5_LOCK,
+    NETCDFC_LOCK,
+    combine_locks,
+    ensure_lock,
+    get_write_lock,
+)
+from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.variables import pop_to
+from xarray.core import indexing
+from xarray.core.utils import (
+    FrozenDict,
+    close_on_error,
+    is_remote_uri,
+    try_read_magic_number_from_path,
+)
+from xarray.core.variable import Variable
 
-try:
-    import netCDF4
+if TYPE_CHECKING:
+    from io import BufferedIOBase
 
-    has_netcdf4 = True
-except ImportError:
-    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
-    # where errors have mismatched versions of c-dependencies. This can happen
-    # when developers are making changes them.
-    has_netcdf4 = False
-
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -242,11 +245,11 @@ def _extract_nc4_variable_encoding(
         "shuffle",
         "_FillValue",
         "dtype",
+        "compression",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
     if h5py_okay:
-        valid_encodings.add("compression")
         valid_encodings.add("compression_opts")
 
     if not raise_on_invalid and encoding.get("chunksizes") is not None:
@@ -313,6 +316,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
+        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -349,6 +353,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
+        import netCDF4
 
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
@@ -537,33 +542,37 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     backends.ScipyBackendEntrypoint
     """
 
-    available = has_netcdf4
     description = (
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
         magic_number = try_read_magic_number_from_path(filename_or_obj)
         if magic_number is not None:
             # netcdf 3 or HDF5
             return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
-        try:
-            _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".nc", ".nc4", ".cdf"}
 
-    def open_dataset(
+        if isinstance(filename_or_obj, (str, os.PathLike)):
+            _, ext = os.path.splitext(filename_or_obj)
+            return ext in {".nc", ".nc4", ".cdf"}
+
+        return False
+
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
@@ -574,8 +583,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
-    ):
-
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
@@ -604,4 +612,4 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint
+BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)

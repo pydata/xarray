@@ -95,7 +95,7 @@ In this example, the selected is a subpart of the array
 in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
 and with 'IA' value from the second coordinate `space`.
 
-You can perform any of the label indexing operations `supported by pandas`__,
+You can perform any of the `label indexing operations supported by pandas`__,
 including indexing with individual, slices and lists/arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
@@ -140,14 +140,14 @@ use them explicitly to slice data. There are two ways to do this:
 
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
-Python :py:class:`slice` objects or 1-dimensional arrays.
+:py:class:`Python slice` objects or 1-dimensional arrays.
 
 
 .. note::
 
     We would love to be able to do indexing with labeled dimension names inside
-    brackets, but unfortunately, Python `does yet not support`__ indexing with
-    keyword arguments like ``da[space=0]``
+    brackets, but unfortunately, `Python does not yet support indexing with
+    keyword arguments`__ like ``da[space=0]``
 
 __ https://legacy.python.org/dev/peps/pep-0472/
 
@@ -352,7 +352,6 @@ dimensions:
     ind_x = xr.DataArray([0, 1], dims=["x"])
     ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y]  # orthogonal indexing
-    da[ind_x, ind_x]  # vectorized indexing
 
 Slices or sequences/arrays without named-dimensions are treated as if they have
 the same dimension which is indexed along:
@@ -372,12 +371,12 @@ indexers' dimension:
     ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da[ind]
 
-Similar to how NumPy's `advanced indexing`_ works, vectorized
+Similar to how `NumPy's advanced indexing`_ works, vectorized
 indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
+.. _NumPy's advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
@@ -399,6 +398,12 @@ These methods may also be applied to ``Dataset`` objects
 Vectorized indexing may be used to extract information from the nearest
 grid cells of interest, for example, the nearest climate model grid cells
 to a collection specified weather station latitudes and longitudes.
+To trigger vectorized indexing behavior
+you will need to provide the selection dimensions with a new
+shared output dimension name. In the example below, the selections
+of the closest latitude and longitude are renamed to an output
+dimension named "points":
+
 
 .. ipython:: python
 

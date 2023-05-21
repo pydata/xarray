@@ -6,10 +6,10 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.8 or later)
-- `numpy <https://www.numpy.org/>`__ (1.20 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.0 or later)
-- `pandas <https://pandas.pydata.org/>`__ (1.3 or later)
+- Python (3.9 or later)
+- `numpy <https://www.numpy.org/>`__ (1.21 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.3 or later)
+- `pandas <https://pandas.pydata.org/>`__ (1.4 or later)
 
 .. _optional-dependencies:
 
@@ -41,12 +41,8 @@ For netCDF and IO
 - `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
-- `rasterio <https://github.com/rasterio/rasterio>`__: for reading GeoTiffs and
-  other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
-- `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
-  *ECMWF ecCodes* library.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,7 +86,7 @@ Minimum dependency versions
 Xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
-- **Python:** 24 months
+- **Python:** 30 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)

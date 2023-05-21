@@ -4,7 +4,12 @@
 Reshaping and reorganizing data
 ###############################
 
-These methods allow you to reorganize your data by changing dimensions, array shape, order of values, or indexes.
+Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks.
+
+These methods are particularly useful for reshaping xarray objects for use in machine learning packages, such as scikit-learn, that usually require two-dimensional numpy arrays as inputs. Reshaping can also be required before passing data to external visualization tools, for example geospatial data might expect input organized into a particular format corresponding to stacks of satellite images.
+
+Importing the library
+---------------------
 
 .. ipython:: python
     :suppress:
@@ -20,7 +25,7 @@ Reordering dimensions
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
 on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An
-ellipsis (`...`) can be use to represent all other dimensions:
+ellipsis (`...`) can be used to represent all other dimensions:
 
 .. ipython:: python
 

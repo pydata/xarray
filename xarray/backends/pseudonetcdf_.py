@@ -1,28 +1,29 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
 
-from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
-from ..core.variable import Variable
-from .common import (
+from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
     _normalize_path,
 )
-from .file_manager import CachingFileManager
-from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
-from .store import StoreBackendEntrypoint
+from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
+from xarray.backends.store import StoreBackendEntrypoint
+from xarray.core import indexing
+from xarray.core.utils import Frozen, FrozenDict, close_on_error
+from xarray.core.variable import Variable
 
-try:
-    from PseudoNetCDF import pncopen
+if TYPE_CHECKING:
+    import os
+    from io import BufferedIOBase
 
-    has_pseudonetcdf = True
-except ModuleNotFoundError:
-    has_pseudonetcdf = False
-
+    from xarray.core.dataset import Dataset
 
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
@@ -56,6 +57,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):
+        from PseudoNetCDF import pncopen
 
         keywords = {"kwargs": format_kwargs}
         # only include mode if explicitly passed
@@ -128,7 +130,6 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
     backends.PseudoNetCDFDataStore
     """
 
-    available = has_pseudonetcdf
     description = (
         "Open many atmospheric science data formats using PseudoNetCDF in Xarray"
     )
@@ -151,19 +152,18 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         mask_and_scale=False,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         mode=None,
         lock=None,
         **format_kwargs,
-    ):
-
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs
@@ -184,4 +184,4 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint
+BACKEND_ENTRYPOINTS["pseudonetcdf"] = ("PseudoNetCDF", PseudoNetCDFBackendEntrypoint)

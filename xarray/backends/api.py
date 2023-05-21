@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
 from glob import glob
 from io import BytesIO
@@ -10,13 +11,7 @@ from typing import (
     Any,
     Callable,
     Final,
-    Hashable,
-    Iterable,
     Literal,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Type,
     Union,
     cast,
     overload,
@@ -24,20 +19,22 @@ from typing import (
 
 import numpy as np
 
-from .. import backends, conventions
-from ..core import indexing
-from ..core.combine import (
+from xarray import backends, conventions
+from xarray.backends import plugins
+from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
+from xarray.backends.locks import _get_scheduler
+from xarray.core import indexing
+from xarray.core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
 )
-from ..core.dataarray import DataArray
-from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.indexes import Index
-from ..core.utils import is_remote_uri
-from . import plugins
-from .common import AbstractDataStore, ArrayWriter, _normalize_path
-from .locks import _get_scheduler
+from xarray.core.daskmanager import DaskManager
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
+from xarray.core.indexes import Index
+from xarray.core.parallelcompat import guess_chunkmanager
+from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
     try:
@@ -46,23 +43,23 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from io import BufferedIOBase
 
-    from ..core.types import (
+    from xarray.backends.common import BackendEntrypoint
+    from xarray.core.types import (
         CombineAttrsOptions,
         CompatOptions,
         JoinOptions,
         NestedSequence,
+        T_Chunks,
     )
-    from .common import BackendEntrypoint
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
         T_NetcdfEngine,
-        Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
-        Type[BackendEntrypoint],
+        Literal["pydap", "pynio", "pseudonetcdf", "zarr"],
+        type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
@@ -78,7 +75,6 @@ ENGINES = {
     "h5netcdf": backends.H5NetCDFStore.open,
     "pynio": backends.NioDataStore,
     "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
-    "cfgrib": backends.CfGribDataStore,
     "zarr": backends.ZarrStore.open_group,
 }
 
@@ -312,17 +308,27 @@ def _chunk_ds(
     chunks,
     overwrite_encoded_chunks,
     inline_array,
+    chunked_array_type,
+    from_array_kwargs,
     **extra_tokens,
 ):
-    from dask.base import tokenize
+    chunkmanager = guess_chunkmanager(chunked_array_type)
 
-    mtime = _get_mtime(filename_or_obj)
-    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-    name_prefix = f"open_dataset-{token}"
+    # TODO refactor to move this dask-specific logic inside the DaskManager class
+    if isinstance(chunkmanager, DaskManager):
+        from dask.base import tokenize
+
+        mtime = _get_mtime(filename_or_obj)
+        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+        name_prefix = "open_dataset-"
+    else:
+        # not used
+        token = (None,)
+        name_prefix = None
 
     variables = {}
     for name, var in backend_ds.variables.items():
-        var_chunks = _get_chunk(var, chunks)
+        var_chunks = _get_chunk(var, chunks, chunkmanager)
         variables[name] = _maybe_chunk(
             name,
             var,
@@ -331,6 +337,8 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
+            chunked_array_type=chunkmanager,
+            from_array_kwargs=from_array_kwargs.copy(),
         )
     return backend_ds._replace(variables)
 
@@ -343,6 +351,8 @@ def _dataset_from_backend_dataset(
     cache,
     overwrite_encoded_chunks,
     inline_array,
+    chunked_array_type,
+    from_array_kwargs,
     **extra_tokens,
 ):
     if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
@@ -361,6 +371,8 @@ def _dataset_from_backend_dataset(
             chunks,
             overwrite_encoded_chunks,
             inline_array,
+            chunked_array_type,
+            from_array_kwargs,
             **extra_tokens,
         )
 
@@ -388,6 +400,8 @@ def open_dataset(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> Dataset:
@@ -401,7 +415,7 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -413,7 +427,8 @@ def open_dataset(
         arrays. ``chunks=-1`` loads the dataset with dask using a single
         chunk for all arrays. ``chunks={}`` loads the dataset with dask using
         engine preferred chunks if exposed by the backend, otherwise with
-        a single chunk for all arrays.
+        a single chunk for all arrays. In order to reproduce the default behavior
+        of ``xr.open_zarr(...)`` use ``xr.open_dataset(..., engine='zarr', chunks={})``.
         ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
         engine preferred chunks. See dask chunking for more details.
     cache : bool, optional
@@ -479,6 +494,15 @@ def open_dataset(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce this datasets' arrays to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -492,7 +516,7 @@ def open_dataset(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -522,6 +546,9 @@ def open_dataset(
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     backend = plugins.get_backend(engine)
 
     decoders = _resolve_decoders_kwargs(
@@ -550,6 +577,8 @@ def open_dataset(
         cache,
         overwrite_encoded_chunks,
         inline_array,
+        chunked_array_type,
+        from_array_kwargs,
         drop_variables=drop_variables,
         **decoders,
         **kwargs,
@@ -560,8 +589,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
-    engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    engine: T_Engine | None = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -572,6 +601,8 @@ def open_dataarray(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
@@ -589,7 +620,7 @@ def open_dataarray(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -666,6 +697,15 @@ def open_dataarray(
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
         in the values of the task graph. See :py:func:`dask.array.from_array`.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -679,7 +719,7 @@ def open_dataarray(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "scipy", "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -709,6 +749,8 @@ def open_dataarray(
         cache=cache,
         drop_variables=drop_variables,
         inline_array=inline_array,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
@@ -740,7 +782,7 @@ def open_dataarray(
 
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     concat_dim: str
     | DataArray
     | Index
@@ -750,7 +792,7 @@ def open_mfdataset(
     | None = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine = None,
+    engine: T_Engine | None = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -816,7 +858,7 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "pseudonetcdf", "zarr", None}, installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -916,7 +958,7 @@ def open_mfdataset(
     >>> lon_bnds, lat_bnds = (-110, -105), (40, 45)
     >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
     >>> ds = xr.open_mfdataset(
-    ...     "file_*.nc", concat_dim="time", preprocess=_preprocess
+    ...     "file_*.nc", concat_dim="time", preprocess=partial_func
     ... )  # doctest: +SKIP
 
     References
@@ -1503,6 +1545,8 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1524,6 +1568,8 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed:
     ...
 
@@ -1542,6 +1588,8 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
+    chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1608,6 +1656,13 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
+    if zarr_version is None:
+        # default to 2 if store doesn't specify it's version (e.g. a path)
+        zarr_version = int(getattr(store, "_store_version", 2))
+
+    if consolidated is None and zarr_version > 2:
+        consolidated = False
+
     if mode == "r+":
         already_consolidated = consolidated
         consolidate_on_close = False
@@ -1626,6 +1681,7 @@ def to_zarr(
         write_region=region,
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
+        zarr_version=zarr_version,
     )
 
     if mode in ["a", "r+"]:
@@ -1655,7 +1711,9 @@ def to_zarr(
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)
-    writes = writer.sync(compute=compute)
+    writes = writer.sync(
+        compute=compute, chunkmanager_store_kwargs=chunkmanager_store_kwargs
+    )
 
     if compute:
         _finalize_store(writes, zstore)

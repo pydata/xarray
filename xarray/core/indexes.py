@@ -3,32 +3,31 @@ from __future__ import annotations
 import collections.abc
 import copy
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    TypeVar,
-    cast,
-)
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd
 
-from . import formatting, nputils, utils
-from .indexing import IndexSelResult, PandasIndexingAdapter, PandasMultiIndexingAdapter
-from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
+from xarray.core import formatting, nputils, utils
+from xarray.core.indexing import (
+    IndexSelResult,
+    PandasIndexingAdapter,
+    PandasMultiIndexingAdapter,
+)
+from xarray.core.utils import (
+    Frozen,
+    emit_user_level_warning,
+    get_valid_numpy_dtype,
+    is_dict_like,
+    is_scalar,
+)
 
 if TYPE_CHECKING:
-    from .types import ErrorOptions, T_Index
-    from .variable import Variable
+    from xarray.core.types import ErrorOptions, T_Index
+    from xarray.core.variable import Variable
 
-IndexVars = Dict[Any, "Variable"]
+IndexVars = dict[Any, "Variable"]
 
 
 class Index:
@@ -52,7 +51,7 @@ class Index:
         cls: type[T_Index],
         indexes: Sequence[T_Index],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> T_Index:
         raise NotImplementedError()
 
@@ -117,10 +116,12 @@ class Index:
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Index:
         return self._copy(deep=True, memo=memo)
 
-    def copy(self, deep: bool = True) -> Index:
+    def copy(self: T_Index, deep: bool = True) -> T_Index:
         return self._copy(deep=deep)
 
-    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Index:
+    def _copy(
+        self: T_Index, deep: bool = True, memo: dict[int, Any] | None = None
+    ) -> T_Index:
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:
@@ -138,9 +139,9 @@ class Index:
 
 
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == "O":
+    if len(index) > 0 and index.dtype == "O" and not isinstance(index, CFTimeIndex):
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -158,8 +159,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     this function will not attempt to do automatic type conversion but will
     always return an index with dtype=object.
     """
-    from .dataarray import DataArray
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if isinstance(array, pd.Index):
         index = array
@@ -171,17 +172,29 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     elif isinstance(array, PandasIndexingAdapter):
         index = array.array
     else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
+        kwargs: dict[str, str] = {}
+        if hasattr(array, "dtype"):
+            if array.dtype.kind == "O":
+                kwargs["dtype"] = "object"
+            elif array.dtype == "float16":
+                emit_user_level_warning(
+                    (
+                        "`pandas.Index` does not support the `float16` dtype."
+                        " Casting to `float64` for you, but in the future please"
+                        " manually cast to either `float32` and `float64`."
+                    ),
+                    category=DeprecationWarning,
+                )
+                kwargs["dtype"] = "float64"
+
         index = pd.Index(np.asarray(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
 
 def _sanitize_slice_element(x):
-    from .dataarray import DataArray
-    from .variable import Variable
+    from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if not isinstance(x, tuple) and len(np.shape(x)) != 0:
         raise ValueError(
@@ -264,9 +277,14 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     labels
     """
     flat_labels = np.ravel(labels)
+    if flat_labels.dtype == "float16":
+        flat_labels = flat_labels.astype("float64")
     flat_indexer = index.get_indexer(flat_labels, method=method, tolerance=tolerance)
     indexer = flat_indexer.reshape(labels.shape)
     return indexer
+
+
+T_PandasIndex = TypeVar("T_PandasIndex", bound="PandasIndex")
 
 
 class PandasIndex(Index):
@@ -368,7 +386,7 @@ class PandasIndex(Index):
         cls,
         indexes: Sequence[PandasIndex],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> PandasIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -382,7 +400,7 @@ class PandasIndex(Index):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-        from .variable import IndexVariable
+        from xarray.core.variable import IndexVariable
 
         name = self.index.name
         attrs: Mapping[Hashable, Any] | None
@@ -406,7 +424,7 @@ class PandasIndex(Index):
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> PandasIndex | None:
-        from .variable import Variable
+        from xarray.core.variable import Variable
 
         indxr = indexers[self.dim]
         if isinstance(indxr, Variable):
@@ -424,8 +442,8 @@ class PandasIndex(Index):
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
-        from .dataarray import DataArray
-        from .variable import Variable
+        from xarray.core.dataarray import DataArray
+        from xarray.core.variable import Variable
 
         if method is not None and not isinstance(method, str):
             raise TypeError("``method`` must be a string")
@@ -532,8 +550,11 @@ class PandasIndex(Index):
         new_dim = dims_dict.get(self.dim, self.dim)
         return self._replace(index, dim=new_dim)
 
-    def copy(self, deep=True):
+    def _copy(
+        self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
+    ) -> T_PandasIndex:
         if deep:
+            # pandas is not using the memo
             index = self.index.copy(deep=True)
         else:
             # index will be copied in constructor
@@ -656,7 +677,7 @@ class PandasMultiIndex(PandasIndex):
         cls,
         indexes: Sequence[PandasMultiIndex],
         dim: Hashable,
-        positions: Iterable[Iterable[int]] = None,
+        positions: Iterable[Iterable[int]] | None = None,
     ) -> PandasMultiIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -806,7 +827,7 @@ class PandasMultiIndex(PandasIndex):
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-        from .variable import IndexVariable
+        from xarray.core.variable import IndexVariable
 
         if variables is None:
             variables = {}
@@ -840,8 +861,8 @@ class PandasMultiIndex(PandasIndex):
         return index_vars
 
     def sel(self, labels, method=None, tolerance=None) -> IndexSelResult:
-        from .dataarray import DataArray
-        from .variable import Variable
+        from xarray.core.dataarray import DataArray
+        from xarray.core.variable import Variable
 
         if method is not None or tolerance is not None:
             raise ValueError(
@@ -967,7 +988,7 @@ class PandasMultiIndex(PandasIndex):
             # variable(s) attrs and encoding metadata are propagated
             # when replacing the indexes in the resulting xarray object
             new_vars = new_index.create_variables()
-            indexes = cast(Dict[Any, Index], {k: new_index for k in new_vars})
+            indexes = cast(dict[Any, Index], {k: new_index for k in new_vars})
 
             # add scalar variable for each dropped level
             variables = new_vars
@@ -1149,7 +1170,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     @property
     def dims(self) -> Mapping[Hashable, int]:
-        from .variable import calculate_dimensions
+        from xarray.core.variable import calculate_dimensions
 
         if self._dims is None:
             self._dims = calculate_dimensions(self._variables)
@@ -1229,7 +1250,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             A dictionary of all dimensions shared by an index.
 
         """
-        from .variable import calculate_dimensions
+        from xarray.core.variable import calculate_dimensions
 
         return calculate_dimensions(self.get_all_coords(key, errors=errors))
 
@@ -1265,10 +1286,18 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return Indexes(indexes, self._variables)
 
     def copy_indexes(
-        self, deep: bool = True
+        self, deep: bool = True, memo: dict[int, Any] | None = None
     ) -> tuple[dict[Hashable, T_PandasOrXarrayIndex], dict[Hashable, Variable]]:
         """Return a new dictionary with copies of indexes, preserving
         unique indexes.
+
+        Parameters
+        ----------
+        deep : bool, default: True
+            Whether the indexes are deep or shallow copied onto the new object.
+        memo : dict if object id to copied objects or None, optional
+            To prevent infinite recursion deepcopy stores all copied elements
+            in this dict.
 
         """
         new_indexes = {}
@@ -1285,7 +1314,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             else:
                 convert_new_idx = False
 
-            new_idx = idx.copy(deep=deep)
+            new_idx = idx._copy(deep=deep, memo=memo)
             idx_vars = idx.create_variables(coords)
 
             if convert_new_idx:
@@ -1346,7 +1375,7 @@ def indexes_equal(
     other_index: Index,
     variable: Variable,
     other_variable: Variable,
-    cache: dict[tuple[int, int], bool | None] = None,
+    cache: dict[tuple[int, int], bool | None] | None = None,
 ) -> bool:
     """Check if two indexes are equal, possibly with cached results.
 
@@ -1399,6 +1428,11 @@ def indexes_all_equal(
         )
 
     indexes = [e[0] for e in elements]
+
+    same_objects = all(indexes[0] is other_idx for other_idx in indexes[1:])
+    if same_objects:
+        return True
+
     same_type = all(type(indexes[0]) is type(other_idx) for other_idx in indexes[1:])
     if same_type:
         try:
