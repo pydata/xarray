@@ -1422,7 +1422,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
         data = np.pad(
-            trimmed_data.astype(dtype),
+            duck_array_ops.astype(trimmed_data, dtype),
             pads,
             mode="constant",
             constant_values=fill_value,
@@ -1571,7 +1571,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             pad_option_kwargs["reflect_type"] = reflect_type
 
         array = np.pad(
-            self.data.astype(dtype, copy=False),
+            duck_array_ops.astype(self.data, dtype, copy=False),
             pad_width_by_index,
             mode=mode,
             **pad_option_kwargs,
@@ -2440,7 +2440,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            var = self.astype(dtype, copy=False)
+            var = duck_array_ops.astype(self, dtype, copy=False)
         else:
             dtype = self.dtype
             var = self
