@@ -1130,15 +1130,15 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
     plt = import_matplotlib_pyplot()
 
-    zplt = kwargs.pop("zplt", None)
-    hueplt = kwargs.pop("hueplt", None)
-    sizeplt = kwargs.pop("sizeplt", None)
+    kwargs.pop("zplt", None)
+    kwargs.pop("hueplt", None)
+    kwargs.pop("sizeplt", None)
 
-    cmap = kwargs.pop("cmap", None)
+    kwargs.pop("cmap", None)
     vmin = kwargs.pop("vmin", None)
     vmax = kwargs.pop("vmax", None)
-    clim = kwargs.pop("clim", [vmin, vmax])
-    norm = kwargs.pop("norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
+    kwargs.pop("clim", [vmin, vmax])
+    kwargs.pop("norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
 
     # if hueplt is not None:
     #     ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
