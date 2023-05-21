@@ -22,6 +22,7 @@ from xarray.plot.utils import (
     _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
+    _line,
     _Normalize,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
@@ -1266,7 +1267,7 @@ def lines(
     plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
     plts_or_none = [plts_dict[v] for v in axis_order]
     plts = [p for p in plts_or_none if p is not None]
-    primitive = ax.scatter(*[p.to_numpy().ravel() for p in plts], **kwargs)
+    primitive = _line(*[p.to_numpy().ravel() for p in plts], **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive
