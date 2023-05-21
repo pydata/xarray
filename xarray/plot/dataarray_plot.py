@@ -1110,7 +1110,7 @@ def _line_(
     add_labels: bool | Iterable[bool] = True,
     **kwargs,
 ) -> LineCollection:
-    plt = import_matplotlib_pyplot()
+    import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
