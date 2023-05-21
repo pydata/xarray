@@ -35,15 +35,14 @@ class ToDataFrame:
 
         dim1 = 10_000
         dim2 = 10_000
+
+        var = xr.Variable(
+            dims=("dim1", "dim2"), data=xp.random.random((dim1, dim2), **random_kws)
+        )
+        data_vars = {f"long_name_{v}": (("dim1", "dim2"), var) for v in range(nvars)}
+
         ds = xr.Dataset(
-            {
-                f"x_{i}": xr.DataArray(
-                    data=xp.random.random((dim1, dim2), **random_kws),
-                    dims=["dim1", "dim2"],
-                    coords={"dim1": np.arange(0, dim1), "dim2": np.arange(0, dim2)},
-                )
-                for i in range(nvars)
-            }
+            data_vars, coords={"dim1": np.arange(0, dim1), "dim2": np.arange(0, dim2)}
         )
         self.to_frame = getattr(ds, method)
 
