@@ -1103,68 +1103,6 @@ def _add_labels(
                 labels.set_horizontalalignment("right")
 
 
-def _line_(
-    xplt: DataArray | None,
-    yplt: DataArray | None,
-    ax: Axes,
-    add_labels: bool | Iterable[bool] = True,
-    **kwargs,
-) -> LineCollection:
-    import_matplotlib_pyplot()
-
-    zplt = kwargs.pop("zplt", None)
-    hueplt = kwargs.pop("hueplt", None)
-    sizeplt = kwargs.pop("sizeplt", None)
-
-    cmap = kwargs.pop("cmap", None)
-    vmin = kwargs.pop("vmin", None)
-    vmax = kwargs.pop("vmax", None)
-    norm = kwargs.pop("norm", None)
-
-    c = hueplt.to_numpy() if hueplt is not None else None
-    s = sizeplt.to_numpy() if sizeplt is not None else None
-    zplt_val = zplt.to_numpy() if zplt is not None else None
-
-    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.to_numpy(), yplt.to_numpy(), kwargs
-    )
-    z_suffix = ""  # TODO: to _resolve_intervals?
-    _ensure_plottable(xplt_val, yplt_val)
-
-    axis_order = ["x", "y", "z"]
-    to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-    for arr, arr_val, suffix in zip(
-        [xplt, yplt, zplt],
-        [xplt_val, yplt_val, zplt_val],
-        (x_suffix, z_suffix, y_suffix),
-    ):
-        if arr is not None:
-            to_plot[axis_order[i]] = arr_val
-            to_labels[axis_order[i]] = arr
-            to_suffix[axis_order[i]] = suffix
-            i += 1
-
-    primitive = _line(
-        ax,
-        **to_plot,
-        s=s,
-        c=c,
-        cmap=cmap,
-        norm=norm,
-        vmin=vmin,
-        vmax=vmax,
-        **kwargs,
-    )
-
-    # Set x, y, z labels:
-    _add_labels(
-        add_labels, to_labels.values(), to_suffix.values(), (True, False, False), ax
-    )
-
-    return primitive
-
-
 @overload
 def lines(
     darray: DataArray,
@@ -1303,7 +1241,36 @@ def lines(
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
     """
-    return _line_(xplt, yplt, ax=ax, add_labels=add_labels, **kwargs)
+    if "u" in kwargs or "v" in kwargs:
+        raise ValueError("u, v are not allowed in scatter plots.")
+
+    zplt: DataArray | None = kwargs.pop("zplt", None)
+    hueplt: DataArray | None = kwargs.pop("hueplt", None)
+    sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
+
+    if hueplt is not None:
+        kwargs.update(c=hueplt.to_numpy().ravel())
+
+    if sizeplt is not None:
+        kwargs.update(s=sizeplt.to_numpy().ravel())
+
+    # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+    #     xplt.to_numpy(), yplt.to_numpy(), kwargs
+    # )
+    # zplt_val = zplt.to_numpy() if zplt is not None else None
+    # z_suffix = ""  # TODO: to _resolve_intervals?
+    # _ensure_plottable(xplt_val, yplt_val)
+
+    axis_order = ["x", "y", "z"]
+
+    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
+    plts_or_none = [plts_dict[v] for v in axis_order]
+    plts = [p for p in plts_or_none if p is not None]
+    primitive = ax.scatter(*[p.to_numpy().ravel() for p in plts], **kwargs)
+    _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
+
+    return primitive
 
 
 @overload
