@@ -22,6 +22,13 @@ over a multi-dimensional variable has recently been implemented. Note that for
 one-dimensional data, it is usually faster to rely on pandas' implementation of
 the same pipeline.
 
+.. tip::
+
+   To substantially improve the performance of GroupBy operations, particularly
+   with dask `install the flox package <https://flox.readthedocs.io>`_. flox
+   `extends Xarray's in-built GroupBy capabilities <https://flox.readthedocs.io/en/latest/xarray.html>`_
+   by allowing grouping by multiple variables, and lazy grouping by dask arrays. If installed, Xarray will automatically use flox by default.
+
 Split
 ~~~~~
 

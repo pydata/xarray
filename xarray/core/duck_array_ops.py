@@ -16,10 +16,8 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import zeros_like  # noqa
-from numpy import around, broadcast_to  # noqa
-from numpy import concatenate as _concatenate
 from numpy import (  # noqa
+    around,  # noqa
     einsum,
     gradient,
     isclose,
@@ -29,13 +27,16 @@ from numpy import (  # noqa
     tensordot,
     transpose,
     unravel_index,
+    zeros_like,  # noqa
 )
+from numpy import concatenate as _concatenate
+from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
-from . import dask_array_ops, dtypes, nputils
-from .nputils import nanfirst, nanlast
-from .pycompat import array_type, is_duck_dask_array
-from .utils import is_duck_array, module_available
+from xarray.core import dask_array_ops, dtypes, nputils
+from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.utils import is_duck_array, module_available
 
 dask_available = module_available("dask")
 
@@ -207,6 +208,11 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
     return [astype(x, out_type, copy=False) for x in arrays]
 
 
+def broadcast_to(array, shape):
+    xp = get_array_namespace(array)
+    return xp.broadcast_to(array, shape)
+
+
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
     Returns True when arr1, arr2 identical or their dask tokens are equal.
@@ -311,6 +317,9 @@ def fillna(data, other):
 
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
+    if hasattr(arrays[0], "__array_namespace__"):
+        xp = get_array_namespace(arrays[0])
+        return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
     return _concatenate(as_shared_dtype(arrays), axis=axis)
 
 
@@ -336,7 +345,7 @@ def _ignore_warnings_if(condition):
 
 
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
-    from . import nanops
+    from xarray.core import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
@@ -484,7 +493,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     # Convert np.NaT to np.nan
     elif array.dtype.kind in "mM":
-
         # Convert to specified timedelta units.
         if datetime_unit:
             array = array / np.timedelta64(1, datetime_unit)
@@ -581,7 +589,7 @@ def py_timedelta_to_float(array, datetime_unit):
 def mean(array, axis=None, skipna=None, **kwargs):
     """inhouse mean that can handle np.datetime64 or cftime.datetime
     dtypes"""
-    from .common import _contains_cftime_datetimes
+    from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
     if array.dtype.kind in "Mm":
@@ -630,18 +638,14 @@ def cumsum(array, axis=None, **kwargs):
     return _nd_cum_func(cumsum_1d, array, axis, **kwargs)
 
 
-_fail_on_dask_array_input_skipna = partial(
-    fail_on_dask_array_input,
-    msg="%r with skipna=True is not yet implemented on dask arrays",
-)
-
-
 def first(values, axis, skipna=None):
     """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        _fail_on_dask_array_input_skipna(values)
-        return nanfirst(values, axis)
+        if is_chunked_array(values):
+            return chunked_nanfirst(values, axis)
+        else:
+            return nputils.nanfirst(values, axis)
     return take(values, 0, axis=axis)
 
 
@@ -649,8 +653,10 @@ def last(values, axis, skipna=None):
     """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
-        _fail_on_dask_array_input_skipna(values)
-        return nanlast(values, axis)
+        if is_chunked_array(values):
+            return chunked_nanlast(values, axis)
+        else:
+            return nputils.nanlast(values, axis)
     return take(values, -1, axis=axis)
 
 
@@ -669,3 +675,32 @@ def push(array, n, axis):
         return dask_array_ops.push(array, n, axis)
     else:
         return push(array, n, axis)
+
+
+def _first_last_wrapper(array, *, axis, op, keepdims):
+    return op(array, axis, keepdims=keepdims)
+
+
+def _chunked_first_or_last(darray, axis, op):
+    chunkmanager = get_chunked_array_type(darray)
+
+    # This will raise the same error message seen for numpy
+    axis = normalize_axis_index(axis, darray.ndim)
+
+    wrapped_op = partial(_first_last_wrapper, op=op)
+    return chunkmanager.reduction(
+        darray,
+        func=wrapped_op,
+        aggregate_func=wrapped_op,
+        axis=axis,
+        dtype=darray.dtype,
+        keepdims=False,  # match numpy version
+    )
+
+
+def chunked_nanfirst(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanfirst)
+
+
+def chunked_nanlast(darray, axis):
+    return _chunked_first_or_last(darray, axis, op=nputils.nanlast)

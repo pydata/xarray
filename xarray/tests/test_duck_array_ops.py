@@ -29,8 +29,7 @@ from xarray.core.duck_array_ops import (
 )
 from xarray.core.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_array_equal,
     has_dask,
@@ -49,7 +48,11 @@ class TestOps:
     def setUp(self):
         self.x = array(
             [
-                [[nan, nan, 2.0, nan], [nan, 5.0, 6.0, nan], [8.0, 9.0, 10.0, nan]],
+                [
+                    [nan, nan, 2.0, nan],
+                    [nan, 5.0, 6.0, nan],
+                    [8.0, 9.0, 10.0, nan],
+                ],
                 [
                     [nan, 13.0, 14.0, 15.0],
                     [nan, 17.0, 18.0, nan],
@@ -127,6 +130,29 @@ class TestOps:
     @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
+
+
+@requires_dask
+class TestDaskOps(TestOps):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        import dask.array
+
+        self.x = dask.array.from_array(
+            [
+                [
+                    [nan, nan, 2.0, nan],
+                    [nan, 5.0, 6.0, nan],
+                    [8.0, 9.0, 10.0, nan],
+                ],
+                [
+                    [nan, 13.0, 14.0, 15.0],
+                    [nan, 17.0, 18.0, nan],
+                    [nan, 21.0, nan, nan],
+                ],
+            ],
+            chunks=(2, 1, 2),
+        )
 
 
 def test_cumsum_1d():
@@ -426,7 +452,6 @@ def test_empty_axis_dtype():
 @pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("aggdim", [None, "x"])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
-
     if aggdim == "y" and dim_num < 2:
         pytest.skip("dim not in this test")
 

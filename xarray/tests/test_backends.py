@@ -13,10 +13,11 @@ import sys
 import tempfile
 import uuid
 import warnings
+from collections.abc import Iterator
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Iterator, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -50,9 +51,7 @@ from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import array_type
-from xarray.tests import mock
-
-from . import (
+from xarray.tests import (
     arm_xfail,
     assert_allclose,
     assert_array_equal,
@@ -60,32 +59,29 @@ from . import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
+    mock,
     network,
-    requires_cfgrib,
     requires_cftime,
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_0_12,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
     requires_pydap,
     requires_pynio,
-    requires_rasterio,
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
 )
-from .test_coding_times import (
+from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import (
+from xarray.tests.test_dataset import (
     create_append_string_length_mismatch_test_data,
     create_append_test_data,
     create_test_data,
@@ -101,6 +97,24 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+have_zarr_kvstore = False
+try:
+    from zarr.storage import KVStore
+
+    have_zarr_kvstore = True
+except ImportError:
+    KVStore = None
+
+have_zarr_v3 = False
+try:
+    # as of Zarr v2.13 these imports require environment variable
+    # ZARR_V3_EXPERIMENTAL_API=1
+    from zarr import DirectoryStoreV3, KVStoreV3
+
+    have_zarr_v3 = True
+except ImportError:
+    KVStoreV3 = None
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
@@ -521,7 +535,7 @@ class DatasetIOBase:
 
     @requires_cftime
     def test_roundtrip_cftime_datetime_data(self) -> None:
-        from .test_coding_times import _all_cftime_date_types
+        from xarray.tests.test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():
@@ -616,6 +630,11 @@ class DatasetIOBase:
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
             assert actual["x"].dtype == "bool"
+            # this checks for preserving dtype during second roundtrip
+            # see https://github.com/pydata/xarray/issues/7652#issuecomment-1476956975
+            with self.roundtrip(actual) as actual2:
+                assert_identical(original, actual2)
+                assert actual2["x"].dtype == "bool"
 
     def test_orthogonal_indexing(self) -> None:
         in_memory = create_test_data()
@@ -736,6 +755,16 @@ class DatasetIOBase:
             }
         ]
         multiple_indexing(indexers)
+
+    def test_outer_indexing_reversed(self) -> None:
+        # regression test for GH6560
+        ds = xr.Dataset(
+            {"z": (("t", "p", "y", "x"), np.ones((1, 1, 31, 40)))},
+        )
+
+        with self.roundtrip(ds) as on_disk:
+            subset = on_disk.isel(t=[0], p=0).z[:, ::10, ::10][:, ::-1, :]
+            assert subset.sizes == subset.load().sizes
 
     def test_isel_dataarray(self) -> None:
         # Make sure isel works lazily. GH:issue:1688
@@ -1218,7 +1247,6 @@ class NetCDFBase(CFEncodedBase):
 
         with create_tmp_file() as example_1_path:
             with create_tmp_file() as example_1_modified_path:
-
                 with open_example_dataset("example_1.nc") as example_1:
                     self.save(example_1, example_1_path)
 
@@ -1733,8 +1761,9 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
-
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+    zarr_version = 2
+    version_kwargs: dict[str, Any] = {}
 
     def create_zarr_target(self):
         raise NotImplementedError
@@ -1742,14 +1771,18 @@ class ZarrBase(CFEncodedBase):
     @contextlib.contextmanager
     def create_store(self):
         with self.create_zarr_target() as store_target:
-            yield backends.ZarrStore.open_group(store_target, mode="w")
+            yield backends.ZarrStore.open_group(
+                store_target, mode="w", **self.version_kwargs
+            )
 
     def save(self, dataset, store_target, **kwargs):
-        return dataset.to_zarr(store=store_target, **kwargs)
+        return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
-        with xr.open_dataset(store_target, engine="zarr", **kwargs) as ds:
+        with xr.open_dataset(
+            store_target, engine="zarr", **kwargs, **self.version_kwargs
+        ) as ds:
             yield ds
 
     @contextlib.contextmanager
@@ -1767,24 +1800,29 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated) -> None:
+        if consolidated and self.zarr_version > 2:
+            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
         expected = create_test_data()
         with self.roundtrip(
             expected,
-            save_kwargs={"consolidated": True},
-            open_kwargs={"backend_kwargs": {"consolidated": True}},
+            save_kwargs={"consolidated": consolidated},
+            open_kwargs={"backend_kwargs": {"consolidated": consolidated}},
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
     def test_read_non_consolidated_warning(self) -> None:
+        if self.zarr_version > 2:
+            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
+
         expected = create_test_data()
         with self.create_zarr_target() as store:
-            expected.to_zarr(store, consolidated=False)
+            expected.to_zarr(store, consolidated=False, **self.version_kwargs)
             with pytest.warns(
                 RuntimeWarning,
                 match="Failed to open Zarr store with consolidated",
             ):
-                with xr.open_zarr(store) as ds:
+                with xr.open_zarr(store, **self.version_kwargs) as ds:
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self) -> None:
@@ -2011,6 +2049,12 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+    def test_drop_encoding(self):
+        ds = open_example_dataset("example_1.nc")
+        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+        with self.create_zarr_target() as store:
+            ds.to_zarr(store, encoding=encodings)
+
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
         with self.create_store() as store:
@@ -2076,10 +2120,14 @@ class ZarrBase(CFEncodedBase):
         # check append mode for append write
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w", group=group)
-            ds_to_append.to_zarr(store_target, append_dim="time", group=group)
+            ds.to_zarr(store_target, mode="w", group=group, **self.version_kwargs)
+            ds_to_append.to_zarr(
+                store_target, append_dim="time", group=group, **self.version_kwargs
+            )
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_dataset(store_target, group=group, engine="zarr")
+            actual = xr.open_dataset(
+                store_target, group=group, engine="zarr", **self.version_kwargs
+            )
             assert_identical(original, actual)
 
     def test_compressor_encoding(self) -> None:
@@ -2119,8 +2167,8 @@ class ZarrBase(CFEncodedBase):
         original = Dataset({"foo": ("x", [1])})
         modified = Dataset({"foo": ("x", [2])})
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
-            modified.to_zarr(store, mode="r+")
+            original.to_zarr(store, **self.version_kwargs)
+            modified.to_zarr(store, mode="r+", **self.version_kwargs)
             with self.open(store) as actual:
                 assert_identical(actual, modified)
 
@@ -2128,65 +2176,72 @@ class ZarrBase(CFEncodedBase):
         original = Dataset({"foo": ("x", [1])})
         modified = Dataset({"bar": ("x", [2])})
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
+            original.to_zarr(store, **self.version_kwargs)
             with pytest.raises(
                 ValueError, match="dataset contains non-pre-existing variables"
             ):
-                modified.to_zarr(store, mode="r+")
+                modified.to_zarr(store, mode="r+", **self.version_kwargs)
 
     def test_append_with_invalid_dim_raises(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(
                 ValueError, match="does not match any existing dataset dimensions"
             ):
-                ds_to_append.to_zarr(store_target, append_dim="notvalid")
+                ds_to_append.to_zarr(
+                    store_target, append_dim="notvalid", **self.version_kwargs
+                )
 
     def test_append_with_no_dims_raises(self) -> None:
         with self.create_zarr_target() as store_target:
-            Dataset({"foo": ("x", [1])}).to_zarr(store_target, mode="w")
+            Dataset({"foo": ("x", [1])}).to_zarr(
+                store_target, mode="w", **self.version_kwargs
+            )
             with pytest.raises(ValueError, match="different dimension names"):
-                Dataset({"foo": ("y", [2])}).to_zarr(store_target, mode="a")
+                Dataset({"foo": ("y", [2])}).to_zarr(
+                    store_target, mode="a", **self.version_kwargs
+                )
 
     def test_append_with_append_dim_not_set_raises(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="different dimension sizes"):
-                ds_to_append.to_zarr(store_target, mode="a")
+                ds_to_append.to_zarr(store_target, mode="a", **self.version_kwargs)
 
     def test_append_with_mode_not_a_raises(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="cannot set append_dim unless"):
-                ds_to_append.to_zarr(store_target, mode="w", append_dim="time")
+                ds_to_append.to_zarr(
+                    store_target, mode="w", append_dim="time", **self.version_kwargs
+                )
 
     def test_append_with_existing_encoding_raises(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="but encoding was provided"):
                 ds_to_append.to_zarr(
                     store_target,
                     append_dim="time",
                     encoding={"da": {"compressor": None}},
+                    **self.version_kwargs,
                 )
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="Mismatched dtypes for variable"):
                 ds_to_append.to_zarr(
-                    store_target,
-                    append_dim="time",
+                    store_target, append_dim="time", **self.version_kwargs
                 )
 
     def test_check_encoding_is_consistent_after_append(self) -> None:
-
         ds, ds_to_append, _ = create_append_test_data()
 
         # check encoding consistency
@@ -2195,27 +2250,35 @@ class ZarrBase(CFEncodedBase):
 
             compressor = zarr.Blosc()
             encoding = {"da": {"compressor": compressor}}
-            ds.to_zarr(store_target, mode="w", encoding=encoding)
-            ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_dataset(store_target, engine="zarr")
+            ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
+            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            actual_ds = xr.open_dataset(
+                store_target, engine="zarr", **self.version_kwargs
+            )
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_dataset(store_target, engine="zarr").compute(),
+                xr.open_dataset(
+                    store_target, engine="zarr", **self.version_kwargs
+                ).compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
     def test_append_with_new_variable(self) -> None:
-
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
 
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
-            xr.concat([ds, ds_to_append], dim="time").to_zarr(store_target, mode="w")
-            ds_with_new_var.to_zarr(store_target, mode="a")
+            xr.concat([ds, ds_to_append], dim="time").to_zarr(
+                store_target, mode="w", **self.version_kwargs
+            )
+            ds_with_new_var.to_zarr(store_target, mode="a", **self.version_kwargs)
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
-            assert_identical(combined, xr.open_dataset(store_target, engine="zarr"))
+            assert_identical(
+                combined,
+                xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
+            )
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:
@@ -2291,12 +2354,14 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
                 assert_identical(ds, ds_reload)
 
-    @pytest.mark.parametrize("consolidated", [False, True])
+    @pytest.mark.parametrize("consolidated", [False, True, None])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
     def test_write_region(self, consolidated, compute, use_dask) -> None:
         if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
+        if consolidated and self.zarr_version > 2:
+            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
 
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
@@ -2311,16 +2376,24 @@ class ZarrBase(CFEncodedBase):
                 consolidated=consolidated,
                 compute=compute,
                 encoding={"u": dict(chunks=2)},
+                **self.version_kwargs,
             )
             if compute:
-                with xr.open_zarr(store, consolidated=consolidated) as actual:
+                with xr.open_zarr(
+                    store, consolidated=consolidated, **self.version_kwargs
+                ) as actual:
                     assert_identical(actual, zeros)
             for i in range(0, 10, 2):
                 region = {"x": slice(i, i + 2)}
                 nonzeros.isel(region).to_zarr(
-                    store, region=region, consolidated=consolidated
+                    store,
+                    region=region,
+                    consolidated=consolidated,
+                    **self.version_kwargs,
                 )
-            with xr.open_zarr(store, consolidated=consolidated) as actual:
+            with xr.open_zarr(
+                store, consolidated=consolidated, **self.version_kwargs
+            ) as actual:
                 assert_identical(actual, nonzeros)
 
     @pytest.mark.parametrize("mode", [None, "r+", "a"])
@@ -2328,10 +2401,12 @@ class ZarrBase(CFEncodedBase):
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
         with self.create_zarr_target() as store:
-            zeros.to_zarr(store)
+            zeros.to_zarr(store, **self.version_kwargs)
             for region in [{"x": slice(5)}, {"x": slice(5, 10)}]:
-                nonzeros.isel(region).to_zarr(store, region=region, mode=mode)
-            with xr.open_zarr(store) as actual:
+                nonzeros.isel(region).to_zarr(
+                    store, region=region, mode=mode, **self.version_kwargs
+                )
+            with xr.open_zarr(store, **self.version_kwargs) as actual:
                 assert_identical(actual, nonzeros)
 
     @requires_dask
@@ -2355,8 +2430,8 @@ class ZarrBase(CFEncodedBase):
         )
 
         with self.create_zarr_target() as store:
-            original.to_zarr(store, compute=False)
-            both_modified.to_zarr(store, mode="a")
+            original.to_zarr(store, compute=False, **self.version_kwargs)
+            both_modified.to_zarr(store, mode="a", **self.version_kwargs)
             with self.open(store) as actual:
                 # NOTE: this arguably incorrect -- we should probably be
                 # overriding the variable metadata, too. See the TODO note in
@@ -2364,15 +2439,17 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, global_modified)
 
         with self.create_zarr_target() as store:
-            original.to_zarr(store, compute=False)
-            both_modified.to_zarr(store, mode="r+")
+            original.to_zarr(store, compute=False, **self.version_kwargs)
+            both_modified.to_zarr(store, mode="r+", **self.version_kwargs)
             with self.open(store) as actual:
                 assert_identical(actual, only_new_data)
 
         with self.create_zarr_target() as store:
-            original.to_zarr(store, compute=False)
+            original.to_zarr(store, compute=False, **self.version_kwargs)
             # with region, the default mode becomes r+
-            both_modified.to_zarr(store, region={"x": slice(None)})
+            both_modified.to_zarr(
+                store, region={"x": slice(None)}, **self.version_kwargs
+            )
             with self.open(store) as actual:
                 assert_identical(actual, only_new_data)
 
@@ -2383,7 +2460,7 @@ class ZarrBase(CFEncodedBase):
         @contextlib.contextmanager
         def setup_and_verify_store(expected=data):
             with self.create_zarr_target() as store:
-                data.to_zarr(store)
+                data.to_zarr(store, **self.version_kwargs)
                 yield store
                 with self.open(store) as actual:
                     assert_identical(actual, expected)
@@ -2391,7 +2468,7 @@ class ZarrBase(CFEncodedBase):
         # verify the base case works
         expected = Dataset({"u": (("x",), np.array([10, 11, 2, 3, 4]))})
         with setup_and_verify_store(expected) as store:
-            data2.to_zarr(store, region={"x": slice(2)})
+            data2.to_zarr(store, region={"x": slice(2)}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
@@ -2400,46 +2477,57 @@ class ZarrBase(CFEncodedBase):
                     "cannot set region unless mode='a', mode='r+' or mode=None"
                 ),
             ):
-                data.to_zarr(store, region={"x": slice(None)}, mode="w")
+                data.to_zarr(
+                    store, region={"x": slice(None)}, mode="w", **self.version_kwargs
+                )
 
         with setup_and_verify_store() as store:
             with pytest.raises(TypeError, match=r"must be a dict"):
-                data.to_zarr(store, region=slice(None))  # type: ignore[call-overload]
+                data.to_zarr(store, region=slice(None), **self.version_kwargs)  # type: ignore[call-overload]
 
         with setup_and_verify_store() as store:
             with pytest.raises(TypeError, match=r"must be slice objects"):
-                data2.to_zarr(store, region={"x": [0, 1]})  # type: ignore[dict-item]
+                data2.to_zarr(store, region={"x": [0, 1]}, **self.version_kwargs)  # type: ignore[dict-item]
 
         with setup_and_verify_store() as store:
             with pytest.raises(ValueError, match=r"step on all slices"):
-                data2.to_zarr(store, region={"x": slice(None, None, 2)})
+                data2.to_zarr(
+                    store, region={"x": slice(None, None, 2)}, **self.version_kwargs
+                )
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError,
                 match=r"all keys in ``region`` are not in Dataset dimensions",
             ):
-                data.to_zarr(store, region={"y": slice(None)})
+                data.to_zarr(store, region={"y": slice(None)}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError,
                 match=r"all variables in the dataset to write must have at least one dimension in common",
             ):
-                data2.assign(v=2).to_zarr(store, region={"x": slice(2)})
+                data2.assign(v=2).to_zarr(
+                    store, region={"x": slice(2)}, **self.version_kwargs
+                )
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError, match=r"cannot list the same dimension in both"
             ):
-                data.to_zarr(store, region={"x": slice(None)}, append_dim="x")
+                data.to_zarr(
+                    store,
+                    region={"x": slice(None)},
+                    append_dim="x",
+                    **self.version_kwargs,
+                )
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError,
                 match=r"variable 'u' already exists with different dimension sizes",
             ):
-                data2.to_zarr(store, region={"x": slice(3)})
+                data2.to_zarr(store, region={"x": slice(3)}, **self.version_kwargs)
 
     @requires_dask
     def test_encoding_chunksizes(self) -> None:
@@ -2481,11 +2569,11 @@ class ZarrBase(CFEncodedBase):
     def test_open_zarr_use_cftime(self) -> None:
         ds = create_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target)
-            ds_a = xr.open_zarr(store_target)
+            ds.to_zarr(store_target, **self.version_kwargs)
+            ds_a = xr.open_zarr(store_target, **self.version_kwargs)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, use_cftime=True)
-            assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+            ds_b = xr.open_zarr(store_target, use_cftime=True, **self.version_kwargs)
+            assert xr.coding.times.contains_cftime_datetimes(ds_b.time.variable)
 
     def test_write_read_select_write(self) -> None:
         # Test for https://github.com/pydata/xarray/issues/4084
@@ -2493,13 +2581,13 @@ class ZarrBase(CFEncodedBase):
 
         # NOTE: using self.roundtrip, which uses open_dataset, will not trigger the bug.
         with self.create_zarr_target() as initial_store:
-            ds.to_zarr(initial_store, mode="w")
-            ds1 = xr.open_zarr(initial_store)
+            ds.to_zarr(initial_store, mode="w", **self.version_kwargs)
+            ds1 = xr.open_zarr(initial_store, **self.version_kwargs)
 
-        # Combination of where+squeeze triggers error on write.
-        ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
-        with self.create_zarr_target() as final_store:
-            ds_sel.to_zarr(final_store, mode="w")
+            # Combination of where+squeeze triggers error on write.
+            ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
+            with self.create_zarr_target() as final_store:
+                ds_sel.to_zarr(final_store, mode="w", **self.version_kwargs)
 
     @pytest.mark.parametrize("obj", [Dataset(), DataArray(name="foo")])
     def test_attributes(self, obj) -> None:
@@ -2508,21 +2596,24 @@ class ZarrBase(CFEncodedBase):
         obj.attrs["good"] = {"key": "value"}
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target)
-            assert_identical(ds, xr.open_zarr(store_target))
+            ds.to_zarr(store_target, **self.version_kwargs)
+            assert_identical(ds, xr.open_zarr(store_target, **self.version_kwargs))
 
         obj.attrs["bad"] = DataArray()
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
         with self.create_zarr_target() as store_target:
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
-                ds.to_zarr(store_target)
+                ds.to_zarr(store_target, **self.version_kwargs)
 
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        yield {}
+        if have_zarr_kvstore:
+            yield KVStore({})
+        else:
+            yield {}
 
 
 @requires_zarr
@@ -2530,6 +2621,55 @@ class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zarr") as tmp:
+            yield tmp
+
+    @contextlib.contextmanager
+    def create_store(self):
+        with self.create_zarr_target() as store_target:
+            group = backends.ZarrStore.open_group(store_target, mode="w")
+            # older Zarr versions do not have the _store_version attribute
+            if have_zarr_v3:
+                # verify that a v2 store was created
+                assert group.zarr_group.store._store_version == 2
+            yield group
+
+
+class ZarrBaseV3(ZarrBase):
+    zarr_version = 3
+
+    def test_roundtrip_coordinates_with_space(self):
+        original = Dataset(coords={"x": 0, "y z": 1})
+        with pytest.warns(SerializationWarning):
+            # v3 stores do not allow spaces in the key name
+            with pytest.raises(ValueError):
+                with self.roundtrip(original):
+                    pass
+
+
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
+class TestZarrKVStoreV3(ZarrBaseV3):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        yield KVStoreV3({})
+
+
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
+class TestZarrDirectoryStoreV3(ZarrBaseV3):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        with create_tmp_file(suffix=".zr3") as tmp:
+            yield DirectoryStoreV3(tmp)
+
+
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
+class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
+    # Must specify zarr_version=3 to get a v3 store because create_zarr_target
+    # is a string path.
+    version_kwargs = {"zarr_version": 3}
+
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
 
 
@@ -2754,45 +2894,14 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
-    @pytest.mark.parametrize(
-        "invalid_netcdf, warntype, num_warns",
-        [
-            pytest.param(
-                None,
-                FutureWarning,
-                1,
-                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
-            ),
-            pytest.param(
-                False,
-                FutureWarning,
-                1,
-                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
-            ),
-            (True, None, 0),
-        ],
-    )
-    def test_complex(self, invalid_netcdf, warntype, num_warns) -> None:
+    def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with warnings.catch_warnings(record=True) as record:
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
+        save_kwargs = {"invalid_netcdf": True}
+        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+            assert_equal(expected, actual)
 
-        recorded_num_warns = 0
-        if warntype:
-            for warning in record:
-                if issubclass(warning.category, warntype) and (
-                    "complex dtypes" in str(warning.message)
-                ):
-                    recorded_num_warns += 1
-
-        assert recorded_num_warns == num_warns
-
-    @requires_h5netcdf_0_12
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
-
         import h5netcdf
 
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -2965,11 +3074,7 @@ class TestH5NetCDFAlreadyOpen:
                 v = group.createVariable("x", "int")
                 v[...] = 42
 
-            kwargs = {}
-            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-                h5netcdf.core.h5py.__version__
-            ) >= Version("3.0.0"):
-                kwargs = dict(decode_vlen_strings=True)
+            kwargs = {"decode_vlen_strings": True}
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5["g"])
@@ -2992,11 +3097,7 @@ class TestH5NetCDFAlreadyOpen:
                 v = nc.createVariable("y", np.int32, ("x",))
                 v[:] = np.arange(10)
 
-            kwargs = {}
-            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
-                h5netcdf.core.h5py.__version__
-            ) >= Version("3.0.0"):
-                kwargs = dict(decode_vlen_strings=True)
+            kwargs = {"decode_vlen_strings": True}
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5)
@@ -3025,19 +3126,18 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
-            with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):  # type: ignore[arg-type]
+            with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 
     def test_open_twice(self) -> None:
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with pytest.raises(ValueError, match=r"read/write pointer not at the start"):
-            with create_tmp_file() as tmp_file:
-                expected.to_netcdf(tmp_file, engine="h5netcdf")
-                with open(tmp_file, "rb") as f:
+        with create_tmp_file() as tmp_file:
+            expected.to_netcdf(tmp_file, engine="h5netcdf")
+            with open(tmp_file, "rb") as f:
+                with open_dataset(f, engine="h5netcdf"):
                     with open_dataset(f, engine="h5netcdf"):
-                        with open_dataset(f, engine="h5netcdf"):
-                            pass
+                        pass
 
     @requires_scipy
     def test_open_fileobj(self) -> None:
@@ -3069,15 +3169,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(
-                    ValueError,
-                    match="match in any of xarray's currently installed IO",
-                ):
-                    with pytest.warns(
-                        RuntimeWarning,
-                        match=re.escape("'h5netcdf' fails while guessing"),
-                    ):
-                        open_dataset(f)
+                open_dataset(f)
 
 
 @requires_h5netcdf
@@ -3150,6 +3242,21 @@ def chunks(request):
     return request.param
 
 
+@pytest.fixture(params=["tmp_path", "ZipStore", "Dict"])
+def tmp_store(request, tmp_path):
+    if request.param == "tmp_path":
+        return tmp_path
+    elif request.param == "ZipStore":
+        from zarr.storage import ZipStore
+
+        path = tmp_path / "store.zip"
+        return ZipStore(path)
+    elif request.param == "Dict":
+        return dict()
+    else:
+        raise ValueError("not supported")
+
+
 # using pytest.mark.skipif does not work so this a work around
 def skip_if_not_engine(engine):
     if engine == "netcdf4":
@@ -3165,7 +3272,6 @@ def skip_if_not_engine(engine):
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
-
     # skip certain combinations
     skip_if_not_engine(readengine)
 
@@ -3194,7 +3300,6 @@ def test_open_mfdataset_manyfiles(
             parallel=parallel,
             chunks=chunks if (not chunks and readengine != "zarr") else "auto",
         ) as actual:
-
             # check that using open_mfdataset returns dask arrays for variables
             assert isinstance(actual["foo"].data, dask_array_type)
 
@@ -3250,7 +3355,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
-
                 # save data to the temporary files
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
@@ -3410,7 +3514,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
             ) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -3429,7 +3532,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
             ) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -3441,7 +3543,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 assert coord_shape2 == coord_shape
 
     def test_invalid_data_vars_value_should_fail(self) -> None:
-
         with self.setup_files_and_datasets() as (files, _):
             with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars="minimum", combine="by_coords"):  # type: ignore[arg-type]
@@ -3485,7 +3586,7 @@ class TestDask(DatasetIOBase):
     def test_roundtrip_cftime_datetime_data(self) -> None:
         # Override method in DatasetIOBase - remove not applicable
         # save_kwargs
-        from .test_coding_times import _all_cftime_date_types
+        from xarray.tests.test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():
@@ -4103,51 +4204,6 @@ class TestPyNio(CFEncodedBase, NetCDF3Only):
             assert_identical(actual, expected)
 
 
-@requires_cfgrib
-class TestCfGrib:
-    def test_read(self) -> None:
-        expected = {
-            "number": 2,
-            "time": 3,
-            "isobaricInhPa": 2,
-            "latitude": 3,
-            "longitude": 4,
-        }
-        with open_example_dataset("example.grib", engine="cfgrib") as ds:
-            assert ds.dims == expected
-            assert list(ds.data_vars) == ["z", "t"]
-            assert ds["z"].min() == 12660.0
-
-    def test_read_filter_by_keys(self) -> None:
-        kwargs = {"filter_by_keys": {"shortName": "t"}}
-        expected = {
-            "number": 2,
-            "time": 3,
-            "isobaricInhPa": 2,
-            "latitude": 3,
-            "longitude": 4,
-        }
-        with open_example_dataset(
-            "example.grib", engine="cfgrib", backend_kwargs=kwargs
-        ) as ds:
-            assert ds.dims == expected
-            assert list(ds.data_vars) == ["t"]
-            assert ds["t"].min() == 231.0
-
-    def test_read_outer(self) -> None:
-        expected = {
-            "number": 2,
-            "time": 3,
-            "isobaricInhPa": 2,
-            "latitude": 2,
-            "longitude": 3,
-        }
-        with open_example_dataset("example.grib", engine="cfgrib") as ds:
-            res = ds.isel(latitude=[0, 2], longitude=[0, 1, 2])
-            assert res.dims == expected
-            assert res["t"].min() == 231.0
-
-
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings("ignore:IOAPI_ISPH is assumed to be 6370000")
 class TestPseudoNetCDFFormat:
@@ -4368,567 +4424,6 @@ class TestPseudoNetCDFFormat:
         pnc.pncwrite(pncf, path, **save_kwargs)
 
 
-@requires_rasterio
-@contextlib.contextmanager
-def create_tmp_geotiff(
-    nx=4,
-    ny=3,
-    nz=3,
-    transform=None,
-    transform_args=default_value,
-    crs=default_value,
-    open_kwargs=None,
-    additional_attrs=None,
-):
-    if transform_args is default_value:
-        transform_args = [5000, 80000, 1000, 2000.0]
-    if crs is default_value:
-        crs = {
-            "units": "m",
-            "no_defs": True,
-            "ellps": "WGS84",
-            "proj": "utm",
-            "zone": 18,
-        }
-    # yields a temporary geotiff file and a corresponding expected DataArray
-    import rasterio
-    from rasterio.transform import from_origin
-
-    if open_kwargs is None:
-        open_kwargs = {}
-
-    with create_tmp_file(suffix=".tif", allow_cleanup_failure=ON_WINDOWS) as tmp_file:
-        # allow 2d or 3d shapes
-        if nz == 1:
-            data_shape = ny, nx
-            write_kwargs = {"indexes": 1}
-        else:
-            data_shape = nz, ny, nx
-            write_kwargs = {}
-        data = np.arange(nz * ny * nx, dtype=rasterio.float32).reshape(*data_shape)
-        if transform is None:
-            transform = from_origin(*transform_args)
-        if additional_attrs is None:
-            additional_attrs = {
-                "descriptions": tuple(f"d{n + 1}" for n in range(nz)),
-                "units": tuple(f"u{n + 1}" for n in range(nz)),
-            }
-        with rasterio.open(
-            tmp_file,
-            "w",
-            driver="GTiff",
-            height=ny,
-            width=nx,
-            count=nz,
-            crs=crs,
-            transform=transform,
-            dtype=rasterio.float32,
-            **open_kwargs,
-        ) as s:
-            for attr, val in additional_attrs.items():
-                setattr(s, attr, val)
-            s.write(data, **write_kwargs)
-            dx, dy = s.res[0], -s.res[1]
-
-        a, b, c, d = transform_args
-        data = data[np.newaxis, ...] if nz == 1 else data
-        expected = DataArray(
-            data,
-            dims=("band", "y", "x"),
-            coords={
-                "band": np.arange(nz) + 1,
-                "y": -np.arange(ny) * d + b + dy / 2,
-                "x": np.arange(nx) * c + a + dx / 2,
-            },
-        )
-        yield tmp_file, expected
-
-
-@requires_rasterio
-class TestRasterio:
-    @requires_scipy_or_netCDF4
-    def test_serialization(self) -> None:
-        with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
-            # Write it to a netcdf and read again (roundtrip)
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                with create_tmp_file(suffix=".nc") as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
-
-    def test_utm(self) -> None:
-        with create_tmp_geotiff() as (tmp_file, expected):
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                assert_allclose(rioda, expected)
-                assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
-                assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
-                assert rioda.attrs["descriptions"] == ("d1", "d2", "d3")
-                assert rioda.attrs["units"] == ("u1", "u2", "u3")
-                assert isinstance(rioda.attrs["crs"], str)
-                assert isinstance(rioda.attrs["res"], tuple)
-                assert isinstance(rioda.attrs["is_tiled"], np.uint8)
-                assert isinstance(rioda.attrs["transform"], tuple)
-                assert len(rioda.attrs["transform"]) == 6
-                np.testing.assert_array_equal(
-                    rioda.attrs["nodatavals"], [np.NaN, np.NaN, np.NaN]
-                )
-
-            # Check no parse coords
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(
-                tmp_file, parse_coordinates=False
-            ) as rioda:
-                assert "x" not in rioda.coords
-                assert "y" not in rioda.coords
-
-    def test_non_rectilinear(self) -> None:
-        from rasterio.transform import from_origin
-
-        # Create a geotiff file with 2d coordinates
-        with create_tmp_geotiff(
-            transform=from_origin(0, 3, 1, 1).rotation(45), crs=None
-        ) as (tmp_file, _):
-            # Default is to not parse coords
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                assert "x" not in rioda.coords
-                assert "y" not in rioda.coords
-                assert "crs" not in rioda.attrs
-                assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
-                assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
-                assert rioda.attrs["descriptions"] == ("d1", "d2", "d3")
-                assert rioda.attrs["units"] == ("u1", "u2", "u3")
-                assert isinstance(rioda.attrs["res"], tuple)
-                assert isinstance(rioda.attrs["is_tiled"], np.uint8)
-                assert isinstance(rioda.attrs["transform"], tuple)
-                assert len(rioda.attrs["transform"]) == 6
-
-            # See if a warning is raised if we force it
-            with pytest.warns(Warning, match="transformation isn't rectilinear"):
-                with xr.open_rasterio(tmp_file, parse_coordinates=True) as rioda:
-                    assert "x" not in rioda.coords
-                    assert "y" not in rioda.coords
-
-    def test_platecarree(self) -> None:
-        with create_tmp_geotiff(
-            8,
-            10,
-            1,
-            transform_args=[1, 2, 0.5, 2.0],
-            crs="+proj=latlong",
-            open_kwargs={"nodata": -9765},
-        ) as (tmp_file, expected):
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                assert_allclose(rioda, expected)
-                assert rioda.attrs["scales"] == (1.0,)
-                assert rioda.attrs["offsets"] == (0.0,)
-                assert isinstance(rioda.attrs["descriptions"], tuple)
-                assert isinstance(rioda.attrs["units"], tuple)
-                assert isinstance(rioda.attrs["crs"], str)
-                assert isinstance(rioda.attrs["res"], tuple)
-                assert isinstance(rioda.attrs["is_tiled"], np.uint8)
-                assert isinstance(rioda.attrs["transform"], tuple)
-                assert len(rioda.attrs["transform"]) == 6
-                np.testing.assert_array_equal(rioda.attrs["nodatavals"], [-9765.0])
-
-    # rasterio throws a Warning, which is expected since we test rasterio's defaults
-    @pytest.mark.filterwarnings("ignore:Dataset has no geotransform")
-    def test_notransform(self) -> None:
-        # regression test for https://github.com/pydata/xarray/issues/1686
-
-        import rasterio
-
-        # Create a geotiff file
-        with create_tmp_file(suffix=".tif") as tmp_file:
-            # data
-            nx, ny, nz = 4, 3, 3
-            data = np.arange(nx * ny * nz, dtype=rasterio.float32).reshape(nz, ny, nx)
-            with rasterio.open(
-                tmp_file,
-                "w",
-                driver="GTiff",
-                height=ny,
-                width=nx,
-                count=nz,
-                dtype=rasterio.float32,
-            ) as s:
-                s.descriptions = ("nx", "ny", "nz")
-                s.units = ("cm", "m", "km")
-                s.write(data)
-
-            # Tests
-            expected = DataArray(
-                data,
-                dims=("band", "y", "x"),
-                coords={
-                    "band": [1, 2, 3],
-                    "y": [0.5, 1.5, 2.5],
-                    "x": [0.5, 1.5, 2.5, 3.5],
-                },
-            )
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                assert_allclose(rioda, expected)
-                assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
-                assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
-                assert rioda.attrs["descriptions"] == ("nx", "ny", "nz")
-                assert rioda.attrs["units"] == ("cm", "m", "km")
-                assert isinstance(rioda.attrs["res"], tuple)
-                assert isinstance(rioda.attrs["is_tiled"], np.uint8)
-                assert isinstance(rioda.attrs["transform"], tuple)
-                assert len(rioda.attrs["transform"]) == 6
-
-    def test_indexing(self) -> None:
-        with create_tmp_geotiff(
-            8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
-        ) as (tmp_file, expected):
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(
-                tmp_file, cache=False
-            ) as actual:
-
-                # tests
-                # assert_allclose checks all data + coordinates
-                assert_allclose(actual, expected)
-                assert not actual.variable._in_memory
-
-                # Basic indexer
-                ind = {"x": slice(2, 5), "y": slice(5, 7)}
-                assert_allclose(expected.isel(**ind), actual.isel(**ind))
-                assert not actual.variable._in_memory
-
-                ind2 = {"band": slice(1, 2), "x": slice(2, 5), "y": slice(5, 7)}
-                assert_allclose(expected.isel(**ind2), actual.isel(**ind2))
-                assert not actual.variable._in_memory
-
-                ind3 = {"band": slice(1, 2), "x": slice(2, 5), "y": 0}
-                assert_allclose(expected.isel(**ind3), actual.isel(**ind3))
-                assert not actual.variable._in_memory
-
-                # orthogonal indexer
-                ind4 = {
-                    "band": np.array([2, 1, 0]),
-                    "x": np.array([1, 0]),
-                    "y": np.array([0, 2]),
-                }
-                assert_allclose(expected.isel(**ind4), actual.isel(**ind4))
-                assert not actual.variable._in_memory
-
-                ind5 = {"band": np.array([2, 1, 0]), "x": np.array([1, 0]), "y": 0}
-                assert_allclose(expected.isel(**ind5), actual.isel(**ind5))
-                assert not actual.variable._in_memory
-
-                ind6 = {"band": 0, "x": np.array([0, 0]), "y": np.array([1, 1, 1])}
-                assert_allclose(expected.isel(**ind6), actual.isel(**ind6))
-                assert not actual.variable._in_memory
-
-                # minus-stepped slice
-                ind7 = {"band": np.array([2, 1, 0]), "x": slice(-1, None, -1), "y": 0}
-                assert_allclose(expected.isel(**ind7), actual.isel(**ind7))
-                assert not actual.variable._in_memory
-
-                ind8 = {"band": np.array([2, 1, 0]), "x": 1, "y": slice(-1, 1, -2)}
-                assert_allclose(expected.isel(**ind8), actual.isel(**ind8))
-                assert not actual.variable._in_memory
-
-                # empty selection
-                ind9 = {"band": np.array([2, 1, 0]), "x": 1, "y": slice(2, 2, 1)}
-                assert_allclose(expected.isel(**ind9), actual.isel(**ind9))
-                assert not actual.variable._in_memory
-
-                ind10 = {"band": slice(0, 0), "x": 1, "y": 2}
-                assert_allclose(expected.isel(**ind10), actual.isel(**ind10))
-                assert not actual.variable._in_memory
-
-                # vectorized indexer
-                ind11 = {
-                    "band": DataArray([2, 1, 0], dims="a"),
-                    "x": DataArray([1, 0, 0], dims="a"),
-                    "y": np.array([0, 2]),
-                }
-                assert_allclose(expected.isel(**ind11), actual.isel(**ind11))
-                assert not actual.variable._in_memory
-
-                ind12 = {
-                    "band": DataArray([[2, 1, 0], [1, 0, 2]], dims=["a", "b"]),
-                    "x": DataArray([[1, 0, 0], [0, 1, 0]], dims=["a", "b"]),
-                    "y": 0,
-                }
-                assert_allclose(expected.isel(**ind12), actual.isel(**ind12))
-                assert not actual.variable._in_memory
-
-                # Selecting lists of bands is fine
-                ex = expected.isel(band=[1, 2])
-                ac = actual.isel(band=[1, 2])
-                assert_allclose(ac, ex)
-                ex = expected.isel(band=[0, 2])
-                ac = actual.isel(band=[0, 2])
-                assert_allclose(ac, ex)
-
-                # Integer indexing
-                ex = expected.isel(band=1)
-                ac = actual.isel(band=1)
-                assert_allclose(ac, ex)
-
-                ex = expected.isel(x=1, y=2)
-                ac = actual.isel(x=1, y=2)
-                assert_allclose(ac, ex)
-
-                ex = expected.isel(band=0, x=1, y=2)
-                ac = actual.isel(band=0, x=1, y=2)
-                assert_allclose(ac, ex)
-
-                # Mixed
-                ex = actual.isel(x=slice(2), y=slice(2))
-                ac = actual.isel(x=[0, 1], y=[0, 1])
-                assert_allclose(ac, ex)
-
-                ex = expected.isel(band=0, x=1, y=slice(5, 7))
-                ac = actual.isel(band=0, x=1, y=slice(5, 7))
-                assert_allclose(ac, ex)
-
-                ex = expected.isel(band=0, x=slice(2, 5), y=2)
-                ac = actual.isel(band=0, x=slice(2, 5), y=2)
-                assert_allclose(ac, ex)
-
-                # One-element lists
-                ex = expected.isel(band=[0], x=slice(2, 5), y=[2])
-                ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
-                assert_allclose(ac, ex)
-
-    def test_caching(self) -> None:
-        with create_tmp_geotiff(
-            8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
-        ) as (tmp_file, expected):
-            # Cache is the default
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as actual:
-
-                # This should cache everything
-                assert_allclose(actual, expected)
-
-                # once cached, non-windowed indexing should become possible
-                ac = actual.isel(x=[2, 4])
-                ex = expected.isel(x=[2, 4])
-                assert_allclose(ac, ex)
-
-    @requires_dask
-    def test_chunks(self) -> None:
-        with create_tmp_geotiff(
-            8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
-        ) as (tmp_file, expected):
-            # Chunk at open time
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(
-                tmp_file, chunks=(1, 2, 2)
-            ) as actual:
-
-                import dask.array as da
-
-                assert isinstance(actual.data, da.Array)
-                assert "open_rasterio" in actual.data.name
-
-                # do some arithmetic
-                ac = actual.mean()
-                ex = expected.mean()
-                assert_allclose(ac, ex)
-
-                ac = actual.sel(band=1).mean(dim="x")
-                ex = expected.sel(band=1).mean(dim="x")
-                assert_allclose(ac, ex)
-
-    @pytest.mark.xfail(
-        not has_dask, reason="without dask, a non-serializable lock is used"
-    )
-    def test_pickle_rasterio(self) -> None:
-        # regression test for https://github.com/pydata/xarray/issues/2121
-        with create_tmp_geotiff() as (tmp_file, expected):
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                temp = pickle.dumps(rioda)
-                with pickle.loads(temp) as actual:
-                    assert_equal(actual, rioda)
-
-    def test_ENVI_tags(self) -> None:
-        rasterio = pytest.importorskip("rasterio", minversion="1.0a")
-        from rasterio.transform import from_origin
-
-        # Create an ENVI file with some tags in the ENVI namespace
-        # this test uses a custom driver, so we can't use create_tmp_geotiff
-        with create_tmp_file(suffix=".dat") as tmp_file:
-            # data
-            nx, ny, nz = 4, 3, 3
-            data = np.arange(nx * ny * nz, dtype=rasterio.float32).reshape(nz, ny, nx)
-            transform = from_origin(5000, 80000, 1000, 2000.0)
-            with rasterio.open(
-                tmp_file,
-                "w",
-                driver="ENVI",
-                height=ny,
-                width=nx,
-                count=nz,
-                crs={
-                    "units": "m",
-                    "no_defs": True,
-                    "ellps": "WGS84",
-                    "proj": "utm",
-                    "zone": 18,
-                },
-                transform=transform,
-                dtype=rasterio.float32,
-            ) as s:
-                s.update_tags(
-                    ns="ENVI",
-                    description="{Tagged file}",
-                    wavelength="{123.000000, 234.234000, 345.345678}",
-                    fwhm="{1.000000, 0.234000, 0.000345}",
-                )
-                s.write(data)
-                dx, dy = s.res[0], -s.res[1]
-
-            # Tests
-            coords = {
-                "band": [1, 2, 3],
-                "y": -np.arange(ny) * 2000 + 80000 + dy / 2,
-                "x": np.arange(nx) * 1000 + 5000 + dx / 2,
-                "wavelength": ("band", np.array([123, 234.234, 345.345678])),
-                "fwhm": ("band", np.array([1, 0.234, 0.000345])),
-            }
-            expected = DataArray(data, dims=("band", "y", "x"), coords=coords)
-
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs["crs"], str)
-                assert isinstance(rioda.attrs["res"], tuple)
-                assert isinstance(rioda.attrs["is_tiled"], np.uint8)
-                assert isinstance(rioda.attrs["transform"], tuple)
-                assert len(rioda.attrs["transform"]) == 6
-                # from ENVI tags
-                assert isinstance(rioda.attrs["description"], str)
-                assert isinstance(rioda.attrs["map_info"], str)
-                assert isinstance(rioda.attrs["samples"], str)
-
-    def test_geotiff_tags(self) -> None:
-        # Create a geotiff file with some tags
-        with create_tmp_geotiff() as (tmp_file, _):
-            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
-                assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
-
-    @requires_dask
-    def test_no_mftime(self) -> None:
-        # rasterio can accept "filename" urguments that are actually urls,
-        # including paths to remote files.
-        # In issue #1816, we found that these caused dask to break, because
-        # the modification time was used to determine the dask token. This
-        # tests ensure we can still chunk such files when reading with
-        # rasterio.
-        with create_tmp_geotiff(
-            8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
-        ) as (tmp_file, expected):
-            with mock.patch("os.path.getmtime", side_effect=OSError):
-                with pytest.warns(DeprecationWarning), xr.open_rasterio(
-                    tmp_file, chunks=(1, 2, 2)
-                ) as actual:
-                    import dask.array as da
-
-                    assert isinstance(actual.data, da.Array)
-                    assert_allclose(actual, expected)
-
-    @network
-    def test_http_url(self) -> None:
-        # more examples urls here
-        # http://download.osgeo.org/geotiff/samples/
-        url = "http://download.osgeo.org/geotiff/samples/made_up/ntf_nord.tif"
-        with pytest.warns(DeprecationWarning), xr.open_rasterio(url) as actual:
-            assert actual.shape == (1, 512, 512)
-        # make sure chunking works
-        with pytest.warns(DeprecationWarning), xr.open_rasterio(
-            url, chunks=(1, 256, 256)
-        ) as actual:
-            import dask.array as da
-
-            assert isinstance(actual.data, da.Array)
-
-    def test_rasterio_environment(self) -> None:
-        import rasterio
-
-        with create_tmp_geotiff() as (tmp_file, expected):
-            # Should fail with error since suffix not allowed
-            with pytest.raises(Exception):
-                with rasterio.Env(GDAL_SKIP="GTiff"):
-                    with pytest.warns(DeprecationWarning), xr.open_rasterio(
-                        tmp_file
-                    ) as actual:
-                        assert_allclose(actual, expected)
-
-    @pytest.mark.xfail(reason="rasterio 1.1.1 is broken. GH3573")
-    def test_rasterio_vrt(self) -> None:
-        import rasterio
-
-        # tmp_file default crs is UTM: CRS({'init': 'epsg:32618'}
-        with create_tmp_geotiff() as (tmp_file, expected):
-            with rasterio.open(tmp_file) as src:
-                with rasterio.vrt.WarpedVRT(src, crs="epsg:4326") as vrt:
-                    expected_shape = (vrt.width, vrt.height)
-                    expected_crs = vrt.crs
-                    expected_res = vrt.res
-                    # Value of single pixel in center of image
-                    lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
-                    expected_val = next(vrt.sample([(lon, lat)]))
-                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
-                        actual_shape = (da.sizes["x"], da.sizes["y"])
-                        actual_crs = da.crs
-                        actual_res = da.res
-                        actual_val = da.sel(dict(x=lon, y=lat), method="nearest").data
-
-                        assert actual_crs == expected_crs
-                        assert actual_res == expected_res
-                        assert actual_shape == expected_shape
-                        assert expected_val.all() == actual_val.all()
-
-    @pytest.mark.filterwarnings(
-        "ignore:open_rasterio is Deprecated in favor of rioxarray."
-    )
-    def test_rasterio_vrt_with_transform_and_size(self) -> None:
-        # Test open_rasterio() support of WarpedVRT with transform, width and
-        # height (issue #2864)
-
-        # https://github.com/rasterio/rasterio/1768
-        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
-        from affine import Affine
-        from rasterio.warp import calculate_default_transform
-
-        with create_tmp_geotiff() as (tmp_file, expected):
-            with rasterio.open(tmp_file) as src:
-                # Estimate the transform, width and height
-                # for a change of resolution
-                # tmp_file initial res is (1000,2000) (default values)
-                trans, w, h = calculate_default_transform(
-                    src.crs, src.crs, src.width, src.height, resolution=500, *src.bounds
-                )
-                with rasterio.vrt.WarpedVRT(
-                    src, transform=trans, width=w, height=h
-                ) as vrt:
-                    expected_shape = (vrt.width, vrt.height)
-                    expected_res = vrt.res
-                    expected_transform = vrt.transform
-                    with xr.open_rasterio(vrt) as da:
-                        actual_shape = (da.sizes["x"], da.sizes["y"])
-                        actual_res = da.res
-                        actual_transform = Affine(*da.transform)
-                        assert actual_res == expected_res
-                        assert actual_shape == expected_shape
-                        assert actual_transform == expected_transform
-
-    def test_rasterio_vrt_with_src_crs(self) -> None:
-        # Test open_rasterio() support of WarpedVRT with specified src_crs
-
-        # https://github.com/rasterio/rasterio/1768
-        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
-
-        # create geotiff with no CRS and specify it manually
-        with create_tmp_geotiff(crs=None) as (tmp_file, expected):
-            src_crs = rasterio.crs.CRS({"init": "epsg:32618"})
-            with rasterio.open(tmp_file) as src:
-                assert src.crs is None
-                with rasterio.vrt.WarpedVRT(src, src_crs=src_crs) as vrt:
-                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
-                        assert da.crs == src_crs
-
-
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
@@ -4948,6 +4443,12 @@ class TestEncodingInvalid:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"contiguous": True})
         encoding = _extract_nc4_variable_encoding(var, unlimited_dims=("x",))
         assert {} == encoding
+
+    @requires_netCDF4
+    def test_extract_nc4_variable_encoding_netcdf4(self, monkeypatch):
+        # New netCDF4 1.6.0 compression argument.
+        var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
+        _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
 
     def test_extract_h5nc_encoding(self) -> None:
         # not supported with h5netcdf (yet)
@@ -5108,6 +4609,56 @@ class TestDataArrayToNetCDF:
 
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
+
+
+@requires_zarr
+class TestDataArrayToZarr:
+    def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        original_da.to_zarr(tmp_store)
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
+        original_da = DataArray(np.arange(12).reshape((3, 4)), name="test")
+
+        original_da.to_zarr(tmp_store)
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
+        original_da = DataArray(
+            np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
+        )
+
+        original_da.to_zarr(tmp_store)
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
+
+    def test_open_dataarray_options(self, tmp_store) -> None:
+        data = DataArray(np.arange(5), coords={"y": ("x", range(5))}, dims=["x"])
+
+        data.to_zarr(tmp_store)
+
+        expected = data.drop_vars("y")
+        with open_dataarray(tmp_store, engine="zarr", drop_variables=["y"]) as loaded:
+            assert_identical(expected, loaded)
+
+    @requires_dask
+    def test_dataarray_to_zarr_compute_false(self, tmp_store) -> None:
+        from dask.delayed import Delayed
+
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        output = original_da.to_zarr(tmp_store, compute=False)
+        assert isinstance(output, Delayed)
+        output.compute()
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert_identical(original_da, loaded_da)
 
 
 @requires_scipy_or_netCDF4
@@ -5333,7 +4884,6 @@ def test_encode_zarr_attr_value() -> None:
 
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
-
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var)
     assert "chunks" in actual
@@ -5543,7 +5093,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
-    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")  # type: ignore[arg-type]
 
 
 @requires_h5netcdf
@@ -5590,12 +5140,14 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 @requires_zarr
 @requires_netCDF4
 class TestNCZarr:
-    @staticmethod
-    def _create_nczarr(filename):
-        netcdfc_version = Version(nc4.getlibversion().split()[0])
-        if netcdfc_version < Version("4.8.1"):
+    @property
+    def netcdfc_version(self):
+        return Version(nc4.getlibversion().split()[0])
+
+    def _create_nczarr(self, filename):
+        if self.netcdfc_version < Version("4.8.1"):
             pytest.skip("requires netcdf-c>=4.8.1")
-        if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
+        if platform.system() == "Windows" and self.netcdfc_version == Version("4.8.1"):
             # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
             # https://github.com/Unidata/netcdf-c/issues/2265
             pytest.skip("netcdf-c==4.8.1 has issues on Windows")
@@ -5605,9 +5157,7 @@ class TestNCZarr:
         # https://github.com/Unidata/netcdf-c/issues/2259
         ds = ds.drop_vars("dim3")
 
-        # netcdf-c>4.8.1 will add _ARRAY_DIMENSIONS by default
-        mode = "nczarr" if netcdfc_version == Version("4.8.1") else "nczarr,noxarray"
-        ds.to_netcdf(f"file://{filename}#mode={mode}")
+        ds.to_netcdf(f"file://{filename}#mode=nczarr")
         return ds
 
     def test_open_nczarr(self) -> None:
@@ -5627,6 +5177,9 @@ class TestNCZarr:
     @pytest.mark.parametrize("mode", ["a", "r+"])
     @pytest.mark.filterwarnings("ignore:.*non-consolidated metadata.*")
     def test_raise_writing_to_nczarr(self, mode) -> None:
+        if self.netcdfc_version > Version("4.8.1"):
+            pytest.skip("netcdf-c>4.8.1 adds the _ARRAY_DIMENSIONS attribute")
+
         with create_tmp_file(suffix=".zarr") as tmp:
             ds = self._create_nczarr(tmp)
             with pytest.raises(

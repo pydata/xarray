@@ -4,17 +4,21 @@ import logging
 import os
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 
-from ..conventions import cf_encoder
-from ..core import indexing
-from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.conventions import cf_encoder
+from xarray.core import indexing
+from xarray.core.parallelcompat import get_chunked_array_type
+from xarray.core.pycompat import is_chunked_array
+from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    from xarray.core.dataset import Dataset
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -83,9 +87,9 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
-    def __array__(self, dtype=None):
+    def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
-        return np.asarray(self[key], dtype=dtype)
+        return self[key]  # type: ignore [index]
 
 
 class AbstractDataStore:
@@ -150,7 +154,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if is_duck_dask_array(source):
+        if is_chunked_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
@@ -160,21 +164,25 @@ class ArrayWriter:
             else:
                 target[...] = source
 
-    def sync(self, compute=True):
+    def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
-            import dask.array as da
+            chunkmanager = get_chunked_array_type(*self.sources)
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
             # for any discernible difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
-            delayed_store = da.store(
+            if chunkmanager_store_kwargs is None:
+                chunkmanager_store_kwargs = {}
+
+            delayed_store = chunkmanager.store(
                 self.sources,
                 self.targets,
                 lock=self.lock,
                 compute=compute,
                 flush=True,
                 regions=self.regions,
+                **chunkmanager_store_kwargs,
             )
             self.sources = []
             self.targets = []
@@ -376,9 +384,6 @@ class BackendEntrypoint:
     Attributes
     ----------
 
-    available : bool, default: True
-        Indicate wether this backend is available given the installed packages.
-        The setting of this attribute is not mandatory.
     open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
@@ -389,8 +394,6 @@ class BackendEntrypoint:
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
     """
-
-    available: ClassVar[bool] = True
 
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
@@ -407,9 +410,10 @@ class BackendEntrypoint:
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
-    ):
+    ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -419,7 +423,7 @@ class BackendEntrypoint:
     def guess_can_open(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ):
+    ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -427,4 +431,5 @@ class BackendEntrypoint:
         return False
 
 
-BACKEND_ENTRYPOINTS: dict[str, type[BackendEntrypoint]] = {}
+# mapping of engine name to (module name, BackendEntrypoint Class)
+BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}

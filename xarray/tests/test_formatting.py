@@ -10,8 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-
-from . import requires_dask, requires_netCDF4
+from xarray.tests import requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -543,7 +542,7 @@ def test_set_numpy_options() -> None:
     assert np.get_printoptions() == original_options
 
 
-def test_short_numpy_repr() -> None:
+def test_short_array_repr() -> None:
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -553,20 +552,19 @@ def test_short_numpy_repr() -> None:
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248, 599
-    # for short_numpy_repr: 1, 7, 24, 19, 25
+    # for short_array_repr: 1, 7, 24, 19, 25
     for array in cases:
-        num_lines = formatting.short_numpy_repr(array).count("\n") + 1
+        num_lines = formatting.short_array_repr(array).count("\n") + 1
         assert num_lines < 30
 
     # threshold option (default: 200)
     array2 = np.arange(100)
-    assert "..." not in formatting.short_numpy_repr(array2)
+    assert "..." not in formatting.short_array_repr(array2)
     with xr.set_options(display_values_threshold=10):
-        assert "..." in formatting.short_numpy_repr(array2)
+        assert "..." in formatting.short_array_repr(array2)
 
 
 def test_large_array_repr_length() -> None:
-
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
     result = repr(da).splitlines()
@@ -615,7 +613,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for (v, _c) in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
@@ -626,7 +624,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     ds.attrs = attrs
 
     with xr.set_options(display_max_rows=display_max_rows):
-
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]

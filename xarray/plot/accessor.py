@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, NoReturn, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
 import numpy as np
 
 # Accessor methods have the same name as plotting methods, so we need a different namespace
-from . import dataarray_plot, dataset_plot
+from xarray.plot import dataarray_plot, dataset_plot
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -19,10 +20,10 @@ if TYPE_CHECKING:
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
     from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
-    from ..core.dataset import Dataset
-    from ..core.types import AspectOptions, HueStyleOptions, ScaleOptions
-    from .facetgrid import FacetGrid
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import AspectOptions, HueStyleOptions, ScaleOptions
+    from xarray.plot.facetgrid import FacetGrid
 
 
 class DataArrayPlotAccessor:

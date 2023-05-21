@@ -3,12 +3,13 @@ from __future__ import annotations
 import functools
 import inspect
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, TypeVar, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
-from ..core.alignment import broadcast
-from . import dataarray_plot
-from .facetgrid import _easy_facetgrid
-from .utils import (
+from xarray.core.alignment import broadcast
+from xarray.plot import dataarray_plot
+from xarray.plot.facetgrid import _easy_facetgrid
+from xarray.plot.utils import (
     _add_colorbar,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
@@ -23,10 +24,15 @@ if TYPE_CHECKING:
     from matplotlib.quiver import Quiver
     from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
-    from ..core.dataset import Dataset
-    from ..core.types import AspectOptions, ExtendOptions, HueStyleOptions, ScaleOptions
-    from .facetgrid import FacetGrid
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import (
+        AspectOptions,
+        ExtendOptions,
+        HueStyleOptions,
+        ScaleOptions,
+    )
+    from xarray.plot.facetgrid import FacetGrid
 
 
 def _dsplot(plotfunc):
@@ -122,7 +128,7 @@ def _dsplot(plotfunc):
         If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     infer_intervals: bool | None
-        If True the intervals are infered.
+        If True the intervals are inferred.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
@@ -186,7 +192,6 @@ def _dsplot(plotfunc):
         levels: ArrayLike | None = None,
         **kwargs: Any,
     ) -> Any:
-
         if args:
             # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
@@ -703,7 +708,7 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
 def _normalize_args(
     plotmethod: str, args: tuple[Any, ...], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # Determine positional arguments keyword by inspecting the
     # signature of the plotmethod:
@@ -719,7 +724,7 @@ def _normalize_args(
 
 def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataArray:
     """Create a temporary datarray with extra coords."""
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     # Base coords:
     coords = dict(ds.coords)

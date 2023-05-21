@@ -8,19 +8,19 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.coding.cftimeindex import _parse_array_of_cftime_strings
 from xarray.core.types import InterpOptions
 from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
+    has_dask,
+    has_scipy,
     requires_cftime,
     requires_dask,
     requires_scipy,
 )
-
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
-from . import has_dask, has_scipy
-from .test_dataset import create_test_data
+from xarray.tests.test_dataset import create_test_data
 
 try:
     import scipy
@@ -29,7 +29,6 @@ except ImportError:
 
 
 def get_example_data(case: int) -> xr.DataArray:
-
     if case == 0:
         # 2D
         x = np.linspace(0, 1, 100)
@@ -606,6 +605,7 @@ def test_interp_like() -> None:
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
@@ -809,7 +809,6 @@ def test_interpolate_chunk_1d(
 
     # choose the data dimensions
     for data_dims in permutations(da.dims, data_ndim):
-
         # select only data_ndim dim
         da = da.isel(  # take the middle line
             {dim: len(da.coords[dim]) // 2 for dim in da.dims if dim not in data_dims}

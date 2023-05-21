@@ -6,8 +6,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
@@ -253,7 +252,6 @@ def test_coarsen_da_reduce(da, window, name) -> None:
 class TestCoarsenConstruct:
     @pytest.mark.parametrize("dask", [True, False])
     def test_coarsen_construct(self, dask: bool) -> None:
-
         ds = Dataset(
             {
                 "vart": ("time", np.arange(48), {"a": "b"}),
