@@ -490,7 +490,9 @@ def test_decode_cf_error_includes_variable_name():
 
 
 def test_encode_cf_variable_with_vlen_dtype() -> None:
-    v = Variable(["x"], np.array(["a", "b"], dtype=coding.strings.create_vlen_dtype(str)))
+    v = Variable(
+        ["x"], np.array(["a", "b"], dtype=coding.strings.create_vlen_dtype(str))
+    )
     encoded_v = conventions.encode_cf_variable(v)
     assert encoded_v.data.dtype.kind == "O"
     assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str
