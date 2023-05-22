@@ -108,6 +108,10 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
     if var.dtype.kind == "O":
         dims, data, attrs, encoding = _var_as_tuple(var)
 
+        # leave vlen dtypes unchanged
+        if strings.check_vlen_dtype(data.dtype) is not None:
+            return var
+
         if is_duck_dask_array(data):
             warnings.warn(
                 "variable {} has data in the form of a dask array with "
