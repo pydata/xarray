@@ -49,6 +49,7 @@ Internal Changes
 - Minor improvements to support of the python `array api standard <https://data-apis.org/array-api/latest/>`_,
   internally using the function ``xp.astype()`` instead of the method ``arr.astype()``, as the latter is not in the standard.
   (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/.
 
 .. _whats-new.2023.05.0:
 
