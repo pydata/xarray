@@ -50,6 +50,7 @@ Internal Changes
   internally using the function ``xp.astype()`` instead of the method ``arr.astype()``, as the latter is not in the standard.
   (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/.
+  By `Martin Fleischmann <https://github.com/martinfleis>`_.
 
 .. _whats-new.2023.05.0:
 
