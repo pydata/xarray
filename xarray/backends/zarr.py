@@ -70,7 +70,14 @@ class ZarrArrayWrapper(BackendArray):
         array = self.get_array()
         self.shape = array.shape
 
-        dtype = array.dtype
+        # preserve vlen string object dtype (GH 7328)
+        if array.filters is not None and any(
+            [filt["id"] == "vlen-utf8" for filt in array._meta["filters"]]
+        ):
+            dtype = coding.strings.create_vlen_dtype(str)
+        else:
+            dtype = array.dtype
+
         self.dtype = dtype
 
     def get_array(self):
