@@ -60,6 +60,9 @@ v2023.05.0 (May 18, 2023)
 This release adds some new methods and operators, updates our deprecation policy for python versions, fixes some bugs with groupby,
 and introduces experimental support for alternative chunked parallel array computation backends via a new plugin system!
 
+**Note:** If you are using a locally-installed development version of xarray then pulling the changes from this release may require you to re-install.
+This avoids an error where xarray cannot detect dask via the new entrypoints system introduced in :pull:`7019`. See :issue:`7856` for details.
+
 Thanks to our 14 contributors:
 Alan Brammer, crusaderky, David Stansby, dcherian, Deeksha, Deepak Cherian, Illviljan, James McCreight,
 Joe Hamman, Justus Magin, Kyle Sunden, Max Hollmann, mgunyho, and Tom Nicholas
