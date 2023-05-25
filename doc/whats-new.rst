@@ -49,6 +49,8 @@ Internal Changes
 - Minor improvements to support of the python `array api standard <https://data-apis.org/array-api/latest/>`_,
   internally using the function ``xp.astype()`` instead of the method ``arr.astype()``, as the latter is not in the standard.
   (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/.
+  By `Martin Fleischmann <https://github.com/martinfleis>`_.
 
 .. _whats-new.2023.05.0:
 
@@ -57,6 +59,9 @@ v2023.05.0 (May 18, 2023)
 
 This release adds some new methods and operators, updates our deprecation policy for python versions, fixes some bugs with groupby,
 and introduces experimental support for alternative chunked parallel array computation backends via a new plugin system!
+
+**Note:** If you are using a locally-installed development version of xarray then pulling the changes from this release may require you to re-install.
+This avoids an error where xarray cannot detect dask via the new entrypoints system introduced in :pull:`7019`. See :issue:`7856` for details.
 
 Thanks to our 14 contributors:
 Alan Brammer, crusaderky, David Stansby, dcherian, Deeksha, Deepak Cherian, Illviljan, James McCreight,
