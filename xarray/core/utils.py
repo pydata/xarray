@@ -536,8 +536,7 @@ class OrderedSet(MutableSet[T]):
     # Additional methods
 
     def update(self, values: Iterable[T]) -> None:
-        for v in values:
-            self._d[v] = None
+        self._d.update(dict.fromkeys(values))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({list(self)!r})"
