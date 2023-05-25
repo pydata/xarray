@@ -200,7 +200,7 @@ def merge_collected(
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Any, bool] | None = None,
-) -> tuple[dict[Any, Variable], dict[Any, Index]]:
+) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters

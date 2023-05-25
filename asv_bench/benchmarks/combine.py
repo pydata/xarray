@@ -8,7 +8,7 @@ from . import requires_dask
 class Combine1d:
     """Benchmark concatenating and merging large datasets"""
 
-    def setup(self):
+    def setup(self) -> None:
         """Create 2 datasets with two different variables"""
 
         t_size = 8000
@@ -20,7 +20,7 @@ class Combine1d:
             {"A": xr.DataArray(data, coords={"T": t + t_size}, dims=("T"))}
         )
 
-    def time_combine_by_coords(self):
+    def time_combine_by_coords(self) -> None:
         """Also has to load and arrange t coordinate"""
         datasets = [self.dsA0, self.dsA1]
 
@@ -30,7 +30,7 @@ class Combine1d:
 class Combine1dDask(Combine1d):
     """Benchmark concatenating and merging large datasets"""
 
-    def setup(self):
+    def setup(self) -> None:
         """Create 2 datasets with two different variables"""
         requires_dask()
 
