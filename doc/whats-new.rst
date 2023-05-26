@@ -109,7 +109,7 @@ Internal Changes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
-..https://help.aei.mpg.de/ _whats-new.2023.04.2:
+.. _whats-new.2023.04.2:
 
 v2023.04.2 (April 20, 2023)
 ---------------------------
