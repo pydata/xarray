@@ -4445,7 +4445,7 @@ class TestDataArray:
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_curvefit_multidimensional_guess(self, use_dask) -> None:
+    def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
 
@@ -4495,7 +4495,7 @@ class TestDataArray:
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_curvefit_multidimensional_bounds(self, use_dask) -> None:
+    def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
 
