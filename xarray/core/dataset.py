@@ -8733,21 +8733,21 @@ class Dataset(
         # Check that initial guess and bounds only contain coordinates that are in preserved_dims
         for param, guess in p0.items():
             if isinstance(guess, DataArray):
-                unexpected = list(set(guess.dims) - set(preserved_dims))
+                unexpected = set(guess.dims) - set(preserved_dims)
                 if unexpected:
                     raise ValueError(
                         f"Initial guess for '{param}' has unexpected dimensions "
-                        f"{unexpected}. It should only have dimensions that are in data "
+                        f"{tuple(unexpected)}. It should only have dimensions that are in data "
                         f"dimensions {preserved_dims}."
                     )
         for param, (lb, ub) in bounds.items():
-            for label, bound in zip(["Lower", "Upper"], [lb, ub]):
+            for label, bound in zip(("Lower", "Upper"), (lb, ub)):
                 if isinstance(bound, DataArray):
-                    unexpected = list(set(bound.dims) - set(preserved_dims))
+                    unexpected = set(bound.dims) - set(preserved_dims)
                     if unexpected:
                         raise ValueError(
                             f"{label} bound for '{param}' has unexpected dimensions "
-                            f"{unexpected}. It should only have dimensions that are in data "
+                            f"{tuple(unexpected)}. It should only have dimensions that are in data "
                             f"dimensions {preserved_dims}."
                         )
 
