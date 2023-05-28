@@ -3548,6 +3548,10 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
+    @pytest.mark.skipif(
+        Version(np.__version__) >= Version("1.25") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_classic(self) -> None:
         """Classic with 1D axes"""
         pytest.importorskip("cdms2")
@@ -3589,6 +3593,10 @@ class TestDataArray:
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name], back.coords[coord_name])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) >= Version("1.25") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_sgrid(self) -> None:
         """Curvilinear (structured) grid
 
@@ -3619,6 +3627,10 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) >= Version("1.25") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_ugrid(self) -> None:
         """Unstructured grid"""
         pytest.importorskip("cdms2")
