@@ -4332,7 +4332,13 @@ class DataArray(
         return result
 
     def to_cdms2(self) -> cdms2_Variable:
-        """Convert this array into a cdms2.Variable"""
+        """Convert this array into a cdms2.Variable
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been put into maintenance mode.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        """
         from xarray.convert import to_cdms2
 
         emit_user_level_warning(
@@ -4345,7 +4351,13 @@ class DataArray(
 
     @classmethod
     def from_cdms2(cls, variable: cdms2_Variable) -> DataArray:
-        """Convert a cdms2.Variable into an xarray.DataArray"""
+        """Convert a cdms2.Variable into an xarray.DataArray
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been put into maintenance mode.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        """
         from xarray.convert import from_cdms2
 
         emit_user_level_warning(
