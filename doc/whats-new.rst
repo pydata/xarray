@@ -30,6 +30,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Deprecate the `cdms2 <https://github.com/CDAT/cdms>`_ conversion functions (:pull:`7876`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Performance
 ~~~~~~~~~~~
