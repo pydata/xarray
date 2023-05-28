@@ -3565,7 +3565,8 @@ class TestDataArray:
             IndexVariable("distance", [-2, 2]),
             IndexVariable("time", [0, 1, 2]),
         ]
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
         assert tuple(actual.getAxisIds()) == original.dims
@@ -3578,7 +3579,8 @@ class TestDataArray:
         assert len(component_times) == 3
         assert str(component_times[0]) == "2000-1-1 0:0:0.0"
 
-        roundtripped = DataArray.from_cdms2(actual)
+        with pytest.deprecated_call():
+            roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
 
         back = from_cdms2(actual)
@@ -3605,7 +3607,8 @@ class TestDataArray:
             coords=dict(x=x, y=y, lon=lon, lat=lat),
             name="sst",
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
         assert_array_equal(original.coords["lat"], actual.getLatitude().asma())
@@ -3626,7 +3629,8 @@ class TestDataArray:
         original = DataArray(
             np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
         assert_array_equal(original.coords["lat"], actual.getLatitude().getValue())
