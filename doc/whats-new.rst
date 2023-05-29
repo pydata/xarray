@@ -39,7 +39,7 @@ Bug fixes
 ~~~~~~~~~
 - Avoid garbage collecting a function before it can be used in ``CachingFileManager.__del__``
   (:issue:`7814`, :pull:`7880`).
-  By `Justus Magin <https://github.com/keewis`_.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
