@@ -174,7 +174,7 @@ class CachingFileManager(FileManager):
         else:
             yield
 
-    lock_acquire = lock_acquire
+    lock_acquire = staticmethod(lock_acquire)
 
     def acquire(self, needs_lock=True):
         """Acquire a file object from the manager.
