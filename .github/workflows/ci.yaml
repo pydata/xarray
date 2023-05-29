@@ -92,13 +92,13 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@v15
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
-          cache-env: true
-          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-          extra-specs: |
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+          create-args: >-
             python=${{matrix.python-version}}
             conda
 
