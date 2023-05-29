@@ -3548,6 +3548,10 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_classic(self) -> None:
         """Classic with 1D axes"""
         pytest.importorskip("cdms2")
@@ -3565,7 +3569,8 @@ class TestDataArray:
             IndexVariable("distance", [-2, 2]),
             IndexVariable("time", [0, 1, 2]),
         ]
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
         assert tuple(actual.getAxisIds()) == original.dims
@@ -3578,7 +3583,8 @@ class TestDataArray:
         assert len(component_times) == 3
         assert str(component_times[0]) == "2000-1-1 0:0:0.0"
 
-        roundtripped = DataArray.from_cdms2(actual)
+        with pytest.deprecated_call(match=".*cdms2"):
+            roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
 
         back = from_cdms2(actual)
@@ -3587,6 +3593,10 @@ class TestDataArray:
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name], back.coords[coord_name])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_sgrid(self) -> None:
         """Curvilinear (structured) grid
 
@@ -3605,7 +3615,8 @@ class TestDataArray:
             coords=dict(x=x, y=y, lon=lon, lat=lat),
             name="sst",
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
         assert_array_equal(original.coords["lat"], actual.getLatitude().asma())
@@ -3616,6 +3627,10 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_ugrid(self) -> None:
         """Unstructured grid"""
         pytest.importorskip("cdms2")
@@ -3626,7 +3641,8 @@ class TestDataArray:
         original = DataArray(
             np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
         assert_array_equal(original.coords["lat"], actual.getLatitude().getValue())
