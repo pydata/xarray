@@ -2486,6 +2486,35 @@ class Dataset(
             in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
 
+        Example
+        -------
+
+        import xarray as xr
+
+        dataset = xr.Dataset(
+            {
+                'math_scores': (
+                    ['student', 'test'],
+                    [[90, 85, 92],
+                    [78, 80, 85],
+                    [95, 92, 98]]
+                ),
+                'english_scores': (
+                    ['student', 'test'],
+                    [[88, 90, 92],
+                    [75, 82, 79],
+                    [93, 96, 91]]
+                )
+            },
+            coords={
+                'student': ['Alice', 'Bob', 'Charlie'],
+                'test': ['Test 1', 'Test 2', 'Test 3']
+            }
+        )
+
+        second_student_first_test = dataset.isel(student=1, test=0)
+        print(second_student_first_test)
+
         See Also
         --------
         Dataset.sel
@@ -5911,6 +5940,38 @@ class Dataset(
         reduced : Dataset
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
+
+        Example
+        -------
+
+        import xarray as xr
+        import numpy as np
+
+        dataset = xr.Dataset(
+            {
+                'math_scores': (
+                    ['student', 'test'],
+                    [[90, 85, 92],
+                    [78, 80, 85],
+                    [95, 92, 98]]
+                ),
+                'english_scores': (
+                    ['student', 'test'],
+                    [[88, 90, 92],
+                    [75, 82, 79],
+                    [93, 96, 91]]
+                )
+            },
+            coords={
+                'student': ['Alice', 'Bob', 'Charlie'],
+                'test': ['Test 1', 'Test 2', 'Test 3']
+            }
+        )
+
+        mean_scores = dataset.reduce(func=np.mean, dim='test')
+
+        print(mean_scores)
+
         """
         if kwargs.get("axis", None) is not None:
             raise ValueError(
@@ -8424,6 +8485,36 @@ class Dataset(
         -------
         result : Dataset
 
+        Example
+        -------
+
+        import xarray as xr
+
+        dataset = xr.Dataset(
+            {
+                'math_scores': (
+                    ['student', 'test'],
+                    [[90, 85, 79],
+                    [78, 80, 85],
+                    [95, 92, 98]]
+                ),
+                'english_scores': (
+                    ['student', 'test'],
+                    [[88, 80, 92],
+                    [75, 95, 79],
+                    [93, 96, 78]]
+                )
+            },
+            coords={
+                'student': ['Alice', 'Bob', 'Charlie'],
+                'test': ['Test 1', 'Test 2', 'Test 3']
+            }
+        )
+
+        argmin_indices = dataset.argmin(dim='student')
+
+        print(argmin_indices)
+
         See Also
         --------
         DataArray.argmin
@@ -8482,6 +8573,33 @@ class Dataset(
         Returns
         -------
         result : Dataset
+
+        Example
+        -------
+
+        dataset = xr.Dataset(
+            {
+                'math_scores': (
+                    ['student', 'test'],
+                    [[90, 85, 92],
+                    [78, 80, 85],
+                    [95, 92, 98]]
+                ),
+                'english_scores': (
+                    ['student', 'test'],
+                    [[88, 90, 92],
+                    [75, 82, 79],
+                    [93, 96, 91]]
+                )
+            },
+            coords={
+                'student': ['Alice', 'Bob', 'Charlie'],
+                'test': ['Test 1', 'Test 2', 'Test 3']
+            }
+        )
+        argmax_indices = dataset.argmax(dim='test')
+
+        print(argmax_indices)
 
         See Also
         --------
