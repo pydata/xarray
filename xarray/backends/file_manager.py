@@ -174,6 +174,8 @@ class CachingFileManager(FileManager):
         else:
             yield
 
+    # increase the refcount for `xarray.backends.locks.acquire` by one to ensure
+    # it still exists when calling `__del__` on interpreter shutdown.
     lock_acquire = staticmethod(lock_acquire)
 
     def acquire(self, needs_lock=True):
