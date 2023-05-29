@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable
 from typing import Any
 
-from xarray.backends.locks import acquire
+from xarray.backends.locks import acquire as lock_acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
@@ -174,6 +174,8 @@ class CachingFileManager(FileManager):
         else:
             yield
 
+    lock_acquire = lock_acquire
+
     def acquire(self, needs_lock=True):
         """Acquire a file object from the manager.
 
@@ -243,7 +245,7 @@ class CachingFileManager(FileManager):
         ref_count = self._ref_counter.decrement(self._key)
 
         if not ref_count and self._key in self._cache:
-            if acquire(self._lock, blocking=False):
+            if self.lock_acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
                 try:
                     self.close(needs_lock=False)
