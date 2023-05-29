@@ -213,7 +213,6 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-name: xarray-tests
-          environment-file: false
           create-args: >-
             python=3.10
             pyyaml
