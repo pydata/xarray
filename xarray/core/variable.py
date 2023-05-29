@@ -396,6 +396,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._data.shape
 
     @property
+    def ndim(self) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
+        return self._data.ndim
+
+    @property
     def nbytes(self) -> int:
         """
         Total bytes consumed by the elements of the data array.
