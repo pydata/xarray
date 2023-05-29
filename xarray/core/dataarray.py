@@ -4335,8 +4335,8 @@ class DataArray(
         """Convert this array into a cdms2.Variable
 
         .. deprecated:: 2023.06.0
-            The `cdms2`_ library has been put into maintenance mode. Please consider
-            using the `xcdat`_ library instead.
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
 
         .. _cdms2: https://github.com/CDAT/cdms
         .. _xcdat: https://github.com/xCDAT/xcdat
@@ -4344,8 +4344,8 @@ class DataArray(
         from xarray.convert import to_cdms2
 
         emit_user_level_warning(
-            "The cdms2 library has been put into maintenance mode and will be"
-            " discontinued in the future. Please consider using the xcdat library instead.",
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
             DeprecationWarning,
         )
 
@@ -4356,8 +4356,8 @@ class DataArray(
         """Convert a cdms2.Variable into an xarray.DataArray
 
         .. deprecated:: 2023.06.0
-            The `cdms2`_ library has been put into maintenance mode. Please consider
-            using the `xcdat`_ library instead.
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
 
         .. _cdms2: https://github.com/CDAT/cdms
         .. _xcdat: https://github.com/xCDAT/xcdat
@@ -4365,8 +4365,8 @@ class DataArray(
         from xarray.convert import from_cdms2
 
         emit_user_level_warning(
-            "The cdms2 library has been put into maintenance mode and will be"
-            " discontinued in the future. Please consider using the xcdat library instead.",
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
             DeprecationWarning,
         )
 
