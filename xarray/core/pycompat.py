@@ -50,7 +50,7 @@ class DuckArrayModule:
             else:
                 raise NotImplementedError
 
-        except ImportError:  # pragma: no cover
+        except (ImportError, AttributeError):  # pragma: no cover
             duck_array_module = None
             duck_array_version = Version("0.0.0")
             duck_array_type = ()

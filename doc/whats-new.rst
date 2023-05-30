@@ -30,6 +30,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Deprecate the `cdms2 <https://github.com/CDAT/cdms>`_ conversion methods (:pull:`7876`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Performance
 ~~~~~~~~~~~
@@ -51,6 +53,7 @@ Internal Changes
   (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/.
   By `Martin Fleischmann <https://github.com/martinfleis>`_.
+- Added an exception catch for ``AttributeError`` along with ``ImportError`` when duck typing the dynamic imports in pycompat.py. This catches some name collisions between packages. (:issue:`7870`, :pull:`7874`)
 
 .. _whats-new.2023.05.0:
 
