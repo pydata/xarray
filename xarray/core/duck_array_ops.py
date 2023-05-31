@@ -195,7 +195,9 @@ def asarray(data, xp=np):
 def as_shared_dtype(scalars_or_arrays, xp=np):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
     array_type_cupy = array_type("cupy")
-    if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
+    if array_type_cupy and any(
+        isinstance(x, array_type_cupy) for x in scalars_or_arrays
+    ):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
