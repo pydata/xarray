@@ -1499,7 +1499,7 @@ def filter_indexes_from_coords(
 
     index_coord_names: dict[Hashable, set[Hashable]] = defaultdict(set)
     for name, idx in indexes.items():
-        index_coord_names[idx].add(name)
+        index_coord_names[id(idx)].add(name)
 
     for idx_coord_names in index_coord_names.values():
         if not idx_coord_names <= filtered_coord_names:
