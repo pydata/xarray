@@ -56,11 +56,11 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set up conda environment
-        uses: mamba-org/provision-with-micromamba@v15
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
-          extra-specs: |
+          create-args: >-
             python=${{ matrix.python-version }}
             pytest-reportlog
             conda
