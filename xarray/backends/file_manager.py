@@ -177,6 +177,8 @@ class CachingFileManager(FileManager):
     # increase the refcount for `xarray.backends.locks.acquire` by one to ensure
     # it still exists when calling `__del__` on interpreter shutdown.
     lock_acquire = staticmethod(lock_acquire)
+    # similarly, we need `OPTIONS` for `__del__`
+    options = OPTIONS
 
     def acquire(self, needs_lock=True):
         """Acquire a file object from the manager.
@@ -254,7 +256,7 @@ class CachingFileManager(FileManager):
                 finally:
                     self._lock.release()
 
-            if OPTIONS["warn_for_unclosed_files"]:
+            if self.options["warn_for_unclosed_files"]:
                 warnings.warn(
                     f"deallocating {self}, but file is not already closed. "
                     "This may indicate a bug.",
