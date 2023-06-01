@@ -28,8 +28,7 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- Improve concatenation performance (:issue:`7833`, :pull:`7824`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -38,7 +37,8 @@ Deprecations
 
 Performance
 ~~~~~~~~~~~
-
+- Improve concatenation performance (:issue:`7833`, :pull:`7824`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
