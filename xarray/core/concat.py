@@ -580,6 +580,8 @@ def _dataset_concat(
     for name in vars_order:
         if name in concat_over and name not in result_indexes:
             variables = []
+            # Initialize the mask to all True then set False if any name is missing in
+            # the datasets:
             variable_index_mask.fill(True)
             var_concat_dim_length = []
             for i, ds in enumerate(datasets):
