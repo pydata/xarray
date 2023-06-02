@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable
 from typing import Any
 
-from xarray.backends.locks import acquire as lock_acquire
+from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
@@ -174,12 +174,6 @@ class CachingFileManager(FileManager):
         else:
             yield
 
-    # increase the refcount for `xarray.backends.locks.acquire` by one to ensure
-    # it still exists when calling `__del__` on interpreter shutdown.
-    lock_acquire = staticmethod(lock_acquire)
-    # similarly, we need `OPTIONS` for `__del__`
-    options = OPTIONS
-
     def acquire(self, needs_lock=True):
         """Acquire a file object from the manager.
 
@@ -249,14 +243,14 @@ class CachingFileManager(FileManager):
         ref_count = self._ref_counter.decrement(self._key)
 
         if not ref_count and self._key in self._cache:
-            if self.lock_acquire(self._lock, blocking=False):
+            if acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
                 try:
                     self.close(needs_lock=False)
                 finally:
                     self._lock.release()
 
-            if self.options["warn_for_unclosed_files"]:
+            if OPTIONS["warn_for_unclosed_files"]:
                 warnings.warn(
                     f"deallocating {self}, but file is not already closed. "
                     "This may indicate a bug.",
