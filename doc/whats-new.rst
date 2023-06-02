@@ -23,6 +23,8 @@ v2023.05.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added support for multidimensional initial guess and bounds in :py:meth:`DataArray.curvefit` (:issue:`7768`, :pull:`7821`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -30,6 +32,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Deprecate the `cdms2 <https://github.com/CDAT/cdms>`_ conversion methods (:pull:`7876`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Performance
 ~~~~~~~~~~~

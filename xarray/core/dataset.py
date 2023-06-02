@@ -361,17 +361,24 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
+    from xarray.core.computation import where
 
     def _initialize_feasible(lb, ub):
         # Mimics functionality of scipy.optimize.minpack._initialize_feasible
         lb_finite = np.isfinite(lb)
         ub_finite = np.isfinite(ub)
-        p0 = np.nansum(
-            [
-                0.5 * (lb + ub) * int(lb_finite & ub_finite),
-                (lb + 1) * int(lb_finite & ~ub_finite),
-                (ub - 1) * int(~lb_finite & ub_finite),
-            ]
+        p0 = where(
+            lb_finite,
+            where(
+                ub_finite,
+                0.5 * (lb + ub),  # both bounds finite
+                lb + 1,  # lower bound finite, upper infinite
+            ),
+            where(
+                ub_finite,
+                ub - 1,  # lower bound infinite, upper finite
+                0,  # both bounds infinite
+            ),
         )
         return p0
 
@@ -381,9 +388,13 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         if p in func_args and func_args[p].default is not func_args[p].empty:
             param_defaults[p] = func_args[p].default
         if p in bounds:
-            bounds_defaults[p] = tuple(bounds[p])
-            if param_defaults[p] < bounds[p][0] or param_defaults[p] > bounds[p][1]:
-                param_defaults[p] = _initialize_feasible(bounds[p][0], bounds[p][1])
+            lb, ub = bounds[p]
+            bounds_defaults[p] = (lb, ub)
+            param_defaults[p] = where(
+                (param_defaults[p] < lb) | (param_defaults[p] > ub),
+                _initialize_feasible(lb, ub),
+                param_defaults[p],
+            )
         if p in p0:
             param_defaults[p] = p0[p]
     return param_defaults, bounds_defaults
@@ -8617,8 +8628,8 @@ class Dataset(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, Any] | None = None,
-        bounds: dict[str, Any] | None = None,
+        p0: dict[str, float | DataArray] | None = None,
+        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> T_Dataset:
@@ -8649,12 +8660,16 @@ class Dataset(
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
-            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
-            be assigned initial values following the default scipy behavior.
+            `curve_fit` `p0` arg. If the values are DataArrays, they will be appropriately
+            broadcast to the coordinates of the array. If none or only some parameters are
+            passed, the rest will be assigned initial values following the default scipy
+            behavior.
         bounds : dict-like, optional
-            Optional dictionary of parameter names to bounding values passed to the
-            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
-            will be unbounded following the default scipy behavior.
+            Optional dictionary of parameter names to tuples of bounding values passed to the
+            `curve_fit` `bounds` arg. If any of the bounds are DataArrays, they will be
+            appropriately broadcast to the coordinates of the array. If none or only some
+            parameters are passed, the rest will be unbounded following the default scipy
+            behavior.
         param_names : sequence of hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
@@ -8721,29 +8736,53 @@ class Dataset(
                 "in fitting on scalar data."
             )
 
+        # Check that initial guess and bounds only contain coordinates that are in preserved_dims
+        for param, guess in p0.items():
+            if isinstance(guess, DataArray):
+                unexpected = set(guess.dims) - set(preserved_dims)
+                if unexpected:
+                    raise ValueError(
+                        f"Initial guess for '{param}' has unexpected dimensions "
+                        f"{tuple(unexpected)}. It should only have dimensions that are in data "
+                        f"dimensions {preserved_dims}."
+                    )
+        for param, (lb, ub) in bounds.items():
+            for label, bound in zip(("Lower", "Upper"), (lb, ub)):
+                if isinstance(bound, DataArray):
+                    unexpected = set(bound.dims) - set(preserved_dims)
+                    if unexpected:
+                        raise ValueError(
+                            f"{label} bound for '{param}' has unexpected dimensions "
+                            f"{tuple(unexpected)}. It should only have dimensions that are in data "
+                            f"dimensions {preserved_dims}."
+                        )
+
         # Broadcast all coords with each other
         coords_ = broadcast(*coords_)
         coords_ = [
             coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
         ]
+        n_coords = len(coords_)
 
         params, func_args = _get_func_args(func, param_names)
         param_defaults, bounds_defaults = _initialize_curvefit_params(
             params, p0, bounds, func_args
         )
         n_params = len(params)
-        kwargs.setdefault("p0", [param_defaults[p] for p in params])
-        kwargs.setdefault(
-            "bounds",
-            [
-                [bounds_defaults[p][0] for p in params],
-                [bounds_defaults[p][1] for p in params],
-            ],
-        )
 
-        def _wrapper(Y, *coords_, **kwargs):
+        def _wrapper(Y, *args, **kwargs):
             # Wrap curve_fit with raveled coordinates and pointwise NaN handling
-            x = np.vstack([c.ravel() for c in coords_])
+            # *args contains:
+            #   - the coordinates
+            #   - initial guess
+            #   - lower bounds
+            #   - upper bounds
+            coords__ = args[:n_coords]
+            p0_ = args[n_coords + 0 * n_params : n_coords + 1 * n_params]
+            lb = args[n_coords + 1 * n_params : n_coords + 2 * n_params]
+            ub = args[n_coords + 2 * n_params :]
+
+            x = np.vstack([c.ravel() for c in coords__])
             y = Y.ravel()
             if skipna:
                 mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
@@ -8754,7 +8793,7 @@ class Dataset(
                     pcov = np.full([n_params, n_params], np.nan)
                     return popt, pcov
             x = np.squeeze(x)
-            popt, pcov = curve_fit(func, x, y, **kwargs)
+            popt, pcov = curve_fit(func, x, y, p0=p0_, bounds=(lb, ub), **kwargs)
             return popt, pcov
 
         result = type(self)()
@@ -8764,13 +8803,21 @@ class Dataset(
             else:
                 name = f"{str(name)}_"
 
+            input_core_dims = [reduce_dims_ for _ in range(n_coords + 1)]
+            input_core_dims.extend(
+                [[] for _ in range(3 * n_params)]
+            )  # core_dims for p0 and bounds
+
             popt, pcov = apply_ufunc(
                 _wrapper,
                 da,
                 *coords_,
+                *param_defaults.values(),
+                *[b[0] for b in bounds_defaults.values()],
+                *[b[1] for b in bounds_defaults.values()],
                 vectorize=True,
                 dask="parallelized",
-                input_core_dims=[reduce_dims_ for d in range(len(coords_) + 1)],
+                input_core_dims=input_core_dims,
                 output_core_dims=[["param"], ["cov_i", "cov_j"]],
                 dask_gufunc_kwargs={
                     "output_sizes": {

@@ -3548,6 +3548,10 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_classic(self) -> None:
         """Classic with 1D axes"""
         pytest.importorskip("cdms2")
@@ -3565,7 +3569,8 @@ class TestDataArray:
             IndexVariable("distance", [-2, 2]),
             IndexVariable("time", [0, 1, 2]),
         ]
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
         assert tuple(actual.getAxisIds()) == original.dims
@@ -3578,7 +3583,8 @@ class TestDataArray:
         assert len(component_times) == 3
         assert str(component_times[0]) == "2000-1-1 0:0:0.0"
 
-        roundtripped = DataArray.from_cdms2(actual)
+        with pytest.deprecated_call(match=".*cdms2"):
+            roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
 
         back = from_cdms2(actual)
@@ -3587,6 +3593,10 @@ class TestDataArray:
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name], back.coords[coord_name])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_sgrid(self) -> None:
         """Curvilinear (structured) grid
 
@@ -3605,7 +3615,8 @@ class TestDataArray:
             coords=dict(x=x, y=y, lon=lon, lat=lat),
             name="sst",
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
         assert_array_equal(original.coords["lat"], actual.getLatitude().asma())
@@ -3616,6 +3627,10 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_ugrid(self) -> None:
         """Unstructured grid"""
         pytest.importorskip("cdms2")
@@ -3626,7 +3641,8 @@ class TestDataArray:
         original = DataArray(
             np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
         assert_array_equal(original.coords["lat"], actual.getLatitude().getValue())
@@ -4399,7 +4415,7 @@ class TestDataArray:
             da = da.chunk({"x": 1})
 
         fit = da.curvefit(
-            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": [2, 6]}
+            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": (2, 6)}
         )
         assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
 
@@ -4420,11 +4436,140 @@ class TestDataArray:
         assert param_defaults == {"n0": 4, "tau": 6}
         assert bounds_defaults == {"n0": (-np.inf, np.inf), "tau": (5, np.inf)}
 
+        # DataArray as bound
+        param_defaults, bounds_defaults = xr.core.dataset._initialize_curvefit_params(
+            params=params,
+            p0={"n0": 4},
+            bounds={"tau": [DataArray([3, 4], coords=[("x", [1, 2])]), np.inf]},
+            func_args=func_args,
+        )
+        assert param_defaults["n0"] == 4
+        assert (
+            param_defaults["tau"] == xr.DataArray([4, 5], coords=[("x", [1, 2])])
+        ).all()
+        assert bounds_defaults["n0"] == (-np.inf, np.inf)
+        assert (
+            bounds_defaults["tau"][0] == DataArray([3, 4], coords=[("x", [1, 2])])
+        ).all()
+        assert bounds_defaults["tau"][1] == np.inf
+
         param_names = ["a"]
         params, func_args = xr.core.dataset._get_func_args(np.power, param_names)
         assert params == param_names
         with pytest.raises(ValueError):
             xr.core.dataset._get_func_args(np.power, [])
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fitting to a sine curve produces a different result depending on the
+        # initial guess: either the phase is zero and the amplitude is positive
+        # or the phase is 0.5 * 2pi and the amplitude is negative.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        # Different initial guesses for different values of x
+        a_guess = DataArray([1, -1], coords=[da.x])
+        p_guess = DataArray([0, 0.5], coords=[da.x])
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"a": a_guess, "p": p_guess, "f": 2},
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Initial guess for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # initial guess with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                p0={"a": DataArray([1, 2], coords={"foo": [1, 2]})},
+            )
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = xr.DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fit a sine with different bounds: positive amplitude should result in a fit with
+        # phase 0 and negative amplitude should result in phase 0.5 * 2pi.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (
+                    DataArray([0, -2], coords=[da.x]),
+                    DataArray([2, 0], coords=[da.x]),
+                ),
+            },
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        # Scalar lower bound with array upper bound
+        fit2 = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (-2, DataArray([2, 0], coords=[da.x])),
+            },
+        )
+        assert_allclose(fit2.curvefit_coefficients, expected)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Upper bound for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # bounds with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                bounds={"a": (0, DataArray([1], coords={"foo": [1]}))},
+            )
 
 
 class TestReduce:
