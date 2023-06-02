@@ -647,7 +647,7 @@ class Dataset(
             )
 
         if isinstance(coords, Dataset):
-            coords = coords.variables
+            coords = coords._variables
 
         variables, coord_names, dims, indexes, _ = merge_data_and_coords(
             data_vars, coords, compat="broadcast_equals"
@@ -1399,8 +1399,8 @@ class Dataset(
         coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
-                coords[k] = self.variables[k]
+            if k in self._coord_names and set(self._variables[k].dims) <= needed_dims:
+                coords[k] = self._variables[k]
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
