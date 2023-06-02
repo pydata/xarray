@@ -1495,7 +1495,7 @@ def filter_indexes_from_coords(
     of coordinate names.
 
     """
-    filtered_indexes: dict[Any, Index] = dict(**indexes)
+    filtered_indexes: dict[Any, Index] = dict(indexes)
 
     index_coord_names: dict[Hashable, set[Hashable]] = defaultdict(set)
     for name, idx in indexes.items():
