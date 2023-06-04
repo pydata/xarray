@@ -4601,7 +4601,7 @@ class TestDataArray:
                 func=line,
                 # limit maximum number of calls so the optimization fails
                 kwargs=dict(maxfev=5),
-            )
+            ).compute()  # have to compute to raise the error
 
         fit = da.curvefit(
             coords="x",
@@ -4609,7 +4609,7 @@ class TestDataArray:
             errors="ignore",
             # limit maximum number of calls so the optimization fails
             kwargs=dict(maxfev=5),
-        )
+        ).compute()
 
         assert_allclose(fit.curvefit_coefficients, expected)
 
