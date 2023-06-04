@@ -54,8 +54,10 @@ Internal Changes
 - Minor improvements to support of the python `array api standard <https://data-apis.org/array-api/latest/>`_,
   internally using the function ``xp.astype()`` instead of the method ``arr.astype()``, as the latter is not in the standard.
   (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/.
+- Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/ (:issue:`7863`, :pull:`7865`).
   By `Martin Fleischmann <https://github.com/martinfleis>`_.
+- Stop uploading development wheels to TestPyPI (:pull:`7889`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Added an exception catch for ``AttributeError`` along with ``ImportError`` when duck typing the dynamic imports in pycompat.py. This catches some name collisions between packages. (:issue:`7870`, :pull:`7874`)
 
 .. _whats-new.2023.05.0:
