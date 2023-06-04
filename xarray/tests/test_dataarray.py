@@ -4595,7 +4595,7 @@ class TestDataArray:
             [[2, 1], [np.nan, np.nan]], coords={"i": [1, 2], "param": ["a", "b"]}
         )
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="calls to function has reached maxfev"):
             da.curvefit(
                 coords="x",
                 func=line,
