@@ -6162,6 +6162,7 @@ class DataArray(
         p0: dict[str, float | DataArray] | None = None,
         bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
+        allow_failures: bool = False,
         kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         """
@@ -6206,6 +6207,11 @@ class DataArray(
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
+        allow_failures: bool, default: False
+            If True and the underlying `scipy.optimize_curve_fit` optimization fails for
+            any of the fits, return NaN in coefficients and covariances for those
+            coordinates. Helpful when fitting multiple curves and some of the data just
+            doesn't fit your model.
         **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -6310,6 +6316,7 @@ class DataArray(
             p0=p0,
             bounds=bounds,
             param_names=param_names,
+            allow_failures=allow_failures,
             kwargs=kwargs,
         )
 
