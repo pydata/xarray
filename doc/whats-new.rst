@@ -25,6 +25,10 @@ New Features
 
 - Added support for multidimensional initial guess and bounds in :py:meth:`DataArray.curvefit` (:issue:`7768`, :pull:`7821`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Add a ``allow_failures`` flag to :py:meth:`Dataset.curve_fit` that allows
+  returning NaN for the parameters and covariances of failed fits, rather than
+  failing the whole series of fits (:issue:`6317`).
+  By `Dominik Stańczak <https://github.com/StanczakDominik>`_ and `András Gunyhó <https://github.com/mgunyho>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
