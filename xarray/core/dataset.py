@@ -8631,7 +8631,7 @@ class Dataset(
         p0: dict[str, float | DataArray] | None = None,
         bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
-        allow_failures: bool = False,
+        errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> T_Dataset:
         """
@@ -8676,10 +8676,10 @@ class Dataset(
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        allow_failures: bool, default: False
-            If True and the underlying `scipy.optimize_curve_fit` optimization fails for
-            any of the fits, return NaN in coefficients and covariances for those
-            coordinates.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
+            raise an exception. If 'ignore', the coefficients and covariances for the
+            coordinates where the fitting failed will be NaN.
         **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -8762,6 +8762,9 @@ class Dataset(
                             f"dimensions {preserved_dims}."
                         )
 
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
         # Broadcast all coords with each other
         coords_ = broadcast(*coords_)
         coords_ = [
@@ -8802,7 +8805,7 @@ class Dataset(
             try:
                 popt, pcov = curve_fit(func, x, y, p0=p0_, bounds=(lb, ub), **kwargs)
             except RuntimeError:
-                if not allow_failures:
+                if errors == "raise":
                     raise
                 popt = np.full([n_params], np.nan)
                 pcov = np.full([n_params, n_params], np.nan)

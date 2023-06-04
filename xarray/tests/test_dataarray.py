@@ -4573,7 +4573,7 @@ class TestDataArray:
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_curvefit_allow_failures(self, use_dask: bool) -> None:
+    def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
 
@@ -4606,7 +4606,7 @@ class TestDataArray:
         fit = da.curvefit(
             coords="x",
             func=line,
-            allow_failures=True,
+            errors="ignore",
             # limit maximum number of calls so the optimization fails
             kwargs=dict(maxfev=5),
         )
