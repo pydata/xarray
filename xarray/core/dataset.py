@@ -2489,31 +2489,68 @@ class Dataset(
         Example
         -------
 
-        import xarray as xr
+            # Defined the dataset
+            >>> dataset = xr.Dataset(
+            ...     {
+            ...         "math_scores": (
+            ...             ["student", "test"],
+            ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
+            ...         ),
+            ...         "english_scores": (
+            ...             ["student", "test"],
+            ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
+            ...         ),
+            ...     },
+            ...     coords={
+            ...         "student": ["Alice", "Bob", "Charlie"],
+            ...         "test": ["Test 1", "Test 2", "Test 3"],
+            ...     },
+            ... )
 
-        dataset = xr.Dataset(
-            {
-                'math_scores': (
-                    ['student', 'test'],
-                    [[90, 85, 92],
-                    [78, 80, 85],
-                    [95, 92, 98]]
-                ),
-                'english_scores': (
-                    ['student', 'test'],
-                    [[88, 90, 92],
-                    [75, 82, 79],
-                    [93, 96, 91]]
-                )
-            },
-            coords={
-                'student': ['Alice', 'Bob', 'Charlie'],
-                'test': ['Test 1', 'Test 2', 'Test 3']
-            }
-        )
+            # A specific element from the dataset is selected
+            >>> second_student_first_test = dataset.isel(student=1, test=0)
 
-        second_student_first_test = dataset.isel(student=1, test=0)
-        print(second_student_first_test)
+            # Print the selected element
+            >>> second_student_first_test
+            <xarray.Dataset>
+            Dimensions:         ()
+            Coordinates:
+                student         <U7 'Bob'
+                test            <U6 'Test 1'
+            Data variables:
+                math_scores     int64 78
+                english_scores  int64 75
+
+            # Indexing with a slice using isel
+            >>> slice_of_data = dataset.isel(student=slice(0, 2), test=slice(0, 2))
+
+            # Print the sliced data
+            >>> slice_of_data
+            <xarray.Dataset>
+            Dimensions:         (student: 2, test: 2)
+            Coordinates:
+            * student         (student) <U7 'Alice' 'Bob'
+            * test            (test) <U6 'Test 1' 'Test 2'
+            Data variables:
+                math_scores     (student, test) int64 90 85 78 80
+                english_scores  (student, test) int64 88 90 75 82
+
+            # Create a DataArray for indexing
+            >>> index_array = xr.DataArray([0, 2], dims="student")
+
+            # Use isel with the DataArray for indexing
+            >>> indexed_data = dataset.isel(student=index_array)
+
+            # Print the indexed data
+            >>> indexed_data
+            <xarray.Dataset>
+            Dimensions:         (student: 2, test: 3)
+            Coordinates:
+            * student         (student) <U7 'Alice' 'Charlie'
+            * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
+            Data variables:
+                math_scores     (student, test) int64 90 85 92 95 92 98
+                english_scores  (student, test) int64 88 90 92 93 96 91
 
         See Also
         --------
@@ -5944,33 +5981,36 @@ class Dataset(
         Example
         -------
 
-        import xarray as xr
-        import numpy as np
+        # Defined the dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "math_scores": (
+        ...             ["student", "test"],
+        ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
+        ...         ),
+        ...         "english_scores": (
+        ...             ["student", "test"],
+        ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "student": ["Alice", "Bob", "Charlie"],
+        ...         "test": ["Test 1", "Test 2", "Test 3"],
+        ...     },
+        ... )
 
-        dataset = xr.Dataset(
-            {
-                'math_scores': (
-                    ['student', 'test'],
-                    [[90, 85, 92],
-                    [78, 80, 85],
-                    [95, 92, 98]]
-                ),
-                'english_scores': (
-                    ['student', 'test'],
-                    [[88, 90, 92],
-                    [75, 82, 79],
-                    [93, 96, 91]]
-                )
-            },
-            coords={
-                'student': ['Alice', 'Bob', 'Charlie'],
-                'test': ['Test 1', 'Test 2', 'Test 3']
-            }
-        )
+        # Mean scores across the 'test' dimension are calculated
+        >>> mean_scores = dataset.reduce(func=np.mean, dim="test")
 
-        mean_scores = dataset.reduce(func=np.mean, dim='test')
-
-        print(mean_scores)
+        # Print the mean scores
+        >>> mean_scores
+        <xarray.Dataset>
+        Dimensions:         (student: 3)
+        Coordinates:
+        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
+        Data variables:
+            math_scores     (student) float64 89.0 81.0 95.0
+            english_scores  (student) float64 90.0 78.67 93.33
 
         """
         if kwargs.get("axis", None) is not None:
@@ -8488,32 +8528,36 @@ class Dataset(
         Example
         -------
 
-        import xarray as xr
+        # Defined the dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "math_scores": (
+        ...             ["student", "test"],
+        ...             [[90, 85, 79], [78, 80, 85], [95, 92, 98]],
+        ...         ),
+        ...         "english_scores": (
+        ...             ["student", "test"],
+        ...             [[88, 80, 92], [75, 95, 79], [93, 96, 78]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "student": ["Alice", "Bob", "Charlie"],
+        ...         "test": ["Test 1", "Test 2", "Test 3"],
+        ...     },
+        ... )
 
-        dataset = xr.Dataset(
-            {
-                'math_scores': (
-                    ['student', 'test'],
-                    [[90, 85, 79],
-                    [78, 80, 85],
-                    [95, 92, 98]]
-                ),
-                'english_scores': (
-                    ['student', 'test'],
-                    [[88, 80, 92],
-                    [75, 95, 79],
-                    [93, 96, 78]]
-                )
-            },
-            coords={
-                'student': ['Alice', 'Bob', 'Charlie'],
-                'test': ['Test 1', 'Test 2', 'Test 3']
-            }
-        )
+        # Indices of the minimum values along the 'student' dimension are calculated
+        >>> argmin_indices = dataset.argmin(dim="student")
 
-        argmin_indices = dataset.argmin(dim='student')
-
-        print(argmin_indices)
+        # Print the indices of the minimum values
+        >>> argmin_indices
+        <xarray.Dataset>
+        Dimensions:         (test: 3)
+        Coordinates:
+        * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
+        Data variables:
+            math_scores     (test) int64 1 1 0
+            english_scores  (test) int64 1 0 2
 
         See Also
         --------
@@ -8577,29 +8621,36 @@ class Dataset(
         Example
         -------
 
-        dataset = xr.Dataset(
-            {
-                'math_scores': (
-                    ['student', 'test'],
-                    [[90, 85, 92],
-                    [78, 80, 85],
-                    [95, 92, 98]]
-                ),
-                'english_scores': (
-                    ['student', 'test'],
-                    [[88, 90, 92],
-                    [75, 82, 79],
-                    [93, 96, 91]]
-                )
-            },
-            coords={
-                'student': ['Alice', 'Bob', 'Charlie'],
-                'test': ['Test 1', 'Test 2', 'Test 3']
-            }
-        )
-        argmax_indices = dataset.argmax(dim='test')
+        #Defined the dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "math_scores": (
+        ...             ["student", "test"],
+        ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
+        ...         ),
+        ...         "english_scores": (
+        ...             ["student", "test"],
+        ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "student": ["Alice", "Bob", "Charlie"],
+        ...         "test": ["Test 1", "Test 2", "Test 3"],
+        ...     },
+        ... )
 
-        print(argmax_indices)
+        # Indices of the minimum values along the 'student' dimension are calculated
+        >>> argmax_indices = dataset.argmax(dim="test")
+
+        # Print the indices of the minimum values
+        >>> argmax_indices
+        <xarray.Dataset>
+        Dimensions:         (student: 3)
+        Coordinates:
+        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
+        Data variables:
+            math_scores     (student) int64 2 2 2
+            english_scores  (student) int64 2 1 1
 
         See Also
         --------
