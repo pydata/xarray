@@ -42,7 +42,8 @@ Performance
 
 Bug fixes
 ~~~~~~~~~
-
+- Don't call ``CachingFileManager.__del__`` on interpreter shutdown (:issue:`7814`, :pull:`7880`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
