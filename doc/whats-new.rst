@@ -23,6 +23,8 @@ v2023.05.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added support for multidimensional initial guess and bounds in :py:meth:`DataArray.curvefit` (:issue:`7768`, :pull:`7821`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -30,10 +32,13 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Deprecate the `cdms2 <https://github.com/CDAT/cdms>`_ conversion methods (:pull:`7876`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Performance
 ~~~~~~~~~~~
-
+- Improve concatenation performance (:issue:`7833`, :pull:`7824`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -49,6 +54,11 @@ Internal Changes
 - Minor improvements to support of the python `array api standard <https://data-apis.org/array-api/latest/>`_,
   internally using the function ``xp.astype()`` instead of the method ``arr.astype()``, as the latter is not in the standard.
   (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/ (:issue:`7863`, :pull:`7865`).
+  By `Martin Fleischmann <https://github.com/martinfleis>`_.
+- Stop uploading development wheels to TestPyPI (:pull:`7889`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Added an exception catch for ``AttributeError`` along with ``ImportError`` when duck typing the dynamic imports in pycompat.py. This catches some name collisions between packages. (:issue:`7870`, :pull:`7874`)
 
 .. _whats-new.2023.05.0:
 
@@ -57,6 +67,9 @@ v2023.05.0 (May 18, 2023)
 
 This release adds some new methods and operators, updates our deprecation policy for python versions, fixes some bugs with groupby,
 and introduces experimental support for alternative chunked parallel array computation backends via a new plugin system!
+
+**Note:** If you are using a locally-installed development version of xarray then pulling the changes from this release may require you to re-install.
+This avoids an error where xarray cannot detect dask via the new entrypoints system introduced in :pull:`7019`. See :issue:`7856` for details.
 
 Thanks to our 14 contributors:
 Alan Brammer, crusaderky, David Stansby, dcherian, Deeksha, Deepak Cherian, Illviljan, James McCreight,
