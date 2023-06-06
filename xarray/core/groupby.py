@@ -236,6 +236,10 @@ class _DummyGroup(Generic[T_Xarray]):
             key = key[0]
         return self.values[key]
 
+    def to_index(self) -> pd.Index:
+        # could be pd.RangeIndex?
+        return pd.Index(np.arange(self.size))
+
     def copy(self, deep: bool = True, data: Any = None):
         raise NotImplementedError
 
@@ -381,7 +385,7 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
     @property
     def group_as_index(self) -> pd.Index:
         if self._group_as_index is None:
-            self._group_as_index = safe_cast_to_index(self.group1d)
+            self._group_as_index = self.group1d.to_index()
         return self._group_as_index
 
 
