@@ -25,7 +25,6 @@ dependencies:
   - pip
   - pre-commit
   - pyproj
-  - rasterio>=1.1
   - scipy!=1.10.0
   - seaborn
   - setuptools
