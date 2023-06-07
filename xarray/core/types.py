@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from numpy._typing import _SupportsDType
     from numpy.typing import ArrayLike
 
+    from xarray._array_api._types import array
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.dataarray import DataArray
@@ -92,6 +93,7 @@ else:
     Self: Any = None
     DTypeLikeSave: Any = None
 
+T_DuckArray = TypeVar("T_DuckArray", bound="array")
 
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
