@@ -7,21 +7,20 @@ library, e.g., for NumPy TypeVar('array') would be replaced with ndarray.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     List,
     Literal,
     Optional,
-    Sequence,
+    Protocol,
     Tuple,
     TypeVar,
     Union,
-    Protocol,
 )
-from enum import Enum
-
 
 if TYPE_CHECKING:
     from xarray._array_api.array_object import Array
@@ -62,7 +61,7 @@ _T_co = TypeVar("_T_co", covariant=True)
 
 
 class NestedSequence(Protocol[_T_co]):
-    def __getitem__(self, key: int, /) -> Union[_T_co, NestedSequence[_T_co]]:
+    def __getitem__(self, key: int, /) -> _T_co | NestedSequence[_T_co]:
         ...
 
     def __len__(self, /) -> int:
