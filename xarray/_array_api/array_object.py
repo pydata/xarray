@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING, Protocol, TypeVar
 
 if TYPE_CHECKING:
     from xarray._array_api._types import (
-        device as Device,
         Any,
-        PyCapsule,
         Enum,
+        PyCapsule,
         ellipsis,
+    )
+    from xarray._array_api._types import (
+        device as Device,
     )
     from xarray._array_api.data_types import DType
 
