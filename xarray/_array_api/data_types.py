@@ -1,4 +1,6 @@
 # Vendored from https://github.com/data-apis/array-api/pull/589
+from __future__ import annotations
+
 from typing import Protocol
 
 
