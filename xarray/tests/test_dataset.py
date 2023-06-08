@@ -6218,6 +6218,7 @@ class TestDataset:
         assert len(out.data_vars) == 0
 
     def test_polyfit_weighted(self) -> None:
+        # Make sure weighted polyfit does not change the original object (issue #5644)
         ds = create_test_data(seed=1)
         ds_copy = ds.copy(deep=True)
 
