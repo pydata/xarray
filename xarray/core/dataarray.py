@@ -127,9 +127,7 @@ def _infer_coords_and_dims(
         dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
-            if utils.is_dict_like(coords):
-                dims = list(coords.keys())
-            else:
+            if not utils.is_dict_like(coords):
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
                     coord = as_variable(coord, name=dims[n]).to_index_variable()
                     dims[n] = coord.name
