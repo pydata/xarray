@@ -7972,7 +7972,7 @@ class Dataset(
                 scale_da = scale
 
             if w is not None:
-                rhs *= w[:, np.newaxis]
+                rhs = rhs * w[:, np.newaxis]
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior

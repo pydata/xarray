@@ -42,6 +42,8 @@ Performance
 
 Bug fixes
 ~~~~~~~~~
+- Fix bug where weighted ``polyfit`` were changing the original object (:issue:`5644`, :pull:`7900`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Don't call ``CachingFileManager.__del__`` on interpreter shutdown (:issue:`7814`, :pull:`7880`).
   By `Justus Magin <https://github.com/keewis>`_.
 

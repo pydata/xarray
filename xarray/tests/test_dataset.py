@@ -6217,6 +6217,14 @@ class TestDataset:
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
 
+    def test_polyfit_weighted(self) -> None:
+        # Make sure weighted polyfit does not change the original object (issue #5644)
+        ds = create_test_data(seed=1)
+        ds_copy = ds.copy(deep=True)
+
+        ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
+        xr.testing.assert_identical(ds, ds_copy)
+
     def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
 
