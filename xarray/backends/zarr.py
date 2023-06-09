@@ -72,7 +72,7 @@ class ZarrArrayWrapper(BackendArray):
 
         # preserve vlen string object dtype (GH 7328)
         if array.filters is not None and any(
-            [filt["id"] == "vlen-utf8" for filt in array._meta["filters"]]
+            [filt.codec_id == "vlen-utf8" for filt in array.filters]
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
