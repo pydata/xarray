@@ -4,7 +4,7 @@ import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
-from importlib.resources import read_binary
+from importlib.resources import files
 
 from xarray.core.formatting import (
     inline_index_repr,
@@ -23,7 +23,7 @@ STATIC_FILES = (
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        read_binary(package, resource).decode("utf-8")
+        files(package).joinpath(resource).read_text(encoding="utf-8")
         for package, resource in STATIC_FILES
     ]
 

@@ -51,6 +51,7 @@ from xarray.core.common import (
 )
 from xarray.core.computation import unify_chunks
 from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.daskmanager import DaskManager
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -73,7 +74,16 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.parallelcompat import (
+    get_chunked_array_type,
+    guess_chunkmanager,
+)
+from xarray.core.pycompat import (
+    array_type,
+    is_chunked_array,
+    is_duck_array,
+    is_duck_dask_array,
+)
 from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
     Default,
@@ -107,6 +117,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping
+    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
@@ -202,12 +213,10 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _get_chunk(var, chunks):
+def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
     """
     Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
     """
-
-    import dask.array as da
 
     if isinstance(var, IndexVariable):
         return {}
@@ -225,7 +234,8 @@ def _get_chunk(var, chunks):
         chunks.get(dim, None) or preferred_chunk_sizes
         for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
     )
-    chunk_shape = da.core.normalize_chunks(
+
+    chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
 
@@ -242,7 +252,7 @@ def _get_chunk(var, chunks):
             # expresses the preferred chunks, the sequence sums to the size.
             preferred_stops = (
                 range(preferred_chunk_sizes, size, preferred_chunk_sizes)
-                if isinstance(preferred_chunk_sizes, Number)
+                if isinstance(preferred_chunk_sizes, int)
                 else itertools.accumulate(preferred_chunk_sizes[:-1])
             )
             # Gather any stop indices of the specified chunks that are not a stop index
@@ -253,7 +263,7 @@ def _get_chunk(var, chunks):
             )
             if breaks:
                 warnings.warn(
-                    "The specified Dask chunks separate the stored chunks along "
+                    "The specified chunks separate the stored chunks along "
                     f'dimension "{dim}" starting at index {min(breaks)}. This could '
                     "degrade performance. Instead, consider rechunking after loading."
                 )
@@ -270,18 +280,37 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
+    chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+    from_array_kwargs=None,
 ):
-    from dask.base import tokenize
-
     if chunks is not None:
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+
     if var.ndim:
-        # when rechunking by different amounts, make sure dask names change
-        # by provinding chunks as an input to tokenize.
-        # subtle bugs result otherwise. see GH3350
-        token2 = tokenize(name, token if token else var._data, chunks)
-        name2 = f"{name_prefix}{name}-{token2}"
-        var = var.chunk(chunks, name=name2, lock=lock, inline_array=inline_array)
+        chunked_array_type = guess_chunkmanager(
+            chunked_array_type
+        )  # coerce string to ChunkManagerEntrypoint type
+        if isinstance(chunked_array_type, DaskManager):
+            from dask.base import tokenize
+
+            # when rechunking by different amounts, make sure dask names change
+            # by providing chunks as an input to tokenize.
+            # subtle bugs result otherwise. see GH3350
+            token2 = tokenize(name, token if token else var._data, chunks)
+            name2 = f"{name_prefix}{name}-{token2}"
+
+            from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
+                from_array_kwargs,
+                name=name2,
+                lock=lock,
+                inline_array=inline_array,
+            )
+
+        var = var.chunk(
+            chunks,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=from_array_kwargs,
+        )
 
         if overwrite_encoded_chunks and var.chunks is not None:
             var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
@@ -332,17 +361,24 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
+    from xarray.core.computation import where
 
     def _initialize_feasible(lb, ub):
         # Mimics functionality of scipy.optimize.minpack._initialize_feasible
         lb_finite = np.isfinite(lb)
         ub_finite = np.isfinite(ub)
-        p0 = np.nansum(
-            [
-                0.5 * (lb + ub) * int(lb_finite & ub_finite),
-                (lb + 1) * int(lb_finite & ~ub_finite),
-                (ub - 1) * int(~lb_finite & ub_finite),
-            ]
+        p0 = where(
+            lb_finite,
+            where(
+                ub_finite,
+                0.5 * (lb + ub),  # both bounds finite
+                lb + 1,  # lower bound finite, upper infinite
+            ),
+            where(
+                ub_finite,
+                ub - 1,  # lower bound infinite, upper finite
+                0,  # both bounds infinite
+            ),
         )
         return p0
 
@@ -352,9 +388,13 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
         if p in func_args and func_args[p].default is not func_args[p].empty:
             param_defaults[p] = func_args[p].default
         if p in bounds:
-            bounds_defaults[p] = tuple(bounds[p])
-            if param_defaults[p] < bounds[p][0] or param_defaults[p] > bounds[p][1]:
-                param_defaults[p] = _initialize_feasible(bounds[p][0], bounds[p][1])
+            lb, ub = bounds[p]
+            bounds_defaults[p] = (lb, ub)
+            param_defaults[p] = where(
+                (param_defaults[p] < lb) | (param_defaults[p] > ub),
+                _initialize_feasible(lb, ub),
+                param_defaults[p],
+            )
         if p in p0:
             param_defaults[p] = p0[p]
     return param_defaults, bounds_defaults
@@ -607,7 +647,7 @@ class Dataset(
             )
 
         if isinstance(coords, Dataset):
-            coords = coords.variables
+            coords = coords._variables
 
         variables, coord_names, dims, indexes, _ = merge_data_and_coords(
             data_vars, coords, compat="broadcast_equals"
@@ -665,6 +705,12 @@ class Dataset(
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
+
+    def reset_encoding(self: T_Dataset) -> T_Dataset:
+        """Return a new Dataset without encoding on the dataset or any of its
+        variables/coords."""
+        variables = {k: v.reset_encoding() for k, v in self.variables.items()}
+        return self._replace(variables=variables, encoding={})
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
@@ -737,13 +783,13 @@ class Dataset(
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
         }
         if lazy_data:
-            import dask.array as da
+            chunkmanager = get_chunked_array_type(*lazy_data.values())
 
-            # evaluate all the dask arrays simultaneously
-            evaluated_data = da.compute(*lazy_data.values(), **kwargs)
+            # evaluate all the chunked arrays simultaneously
+            evaluated_data = chunkmanager.compute(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
@@ -1353,8 +1399,8 @@ class Dataset(
         coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
-            if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
-                coords[k] = self.variables[k]
+            if k in self._coord_names and set(self._variables[k].dims) <= needed_dims:
+                coords[k] = self._variables[k]
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
@@ -1569,7 +1615,7 @@ class Dataset(
                 val = np.array(val)
 
             # type conversion
-            new_value[name] = val.astype(var_k.dtype, copy=False)
+            new_value[name] = duck_array_ops.astype(val, dtype=var_k.dtype, copy=False)
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
@@ -1939,6 +1985,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore:
         ...
 
@@ -1959,6 +2006,8 @@ class Dataset(
         region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed:
         ...
 
@@ -1977,6 +2026,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
@@ -2017,7 +2067,7 @@ class Dataset(
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
-        compute : bool, optional
+        compute : bool, default: True
             If True write array data immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed to write
             array data later. Metadata is always updated eagerly.
@@ -2051,7 +2101,7 @@ class Dataset(
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
-        safe_chunks : bool, optional
+        safe_chunks : bool, default: True
             If True, only allow writes to when there is a many-to-one relationship
             between Zarr chunks (specified in encoding) and Dask chunks.
             Set False to override this restriction; however, data may become corrupted
@@ -2065,6 +2115,10 @@ class Dataset(
             The desired zarr spec version to target (currently 2 or 3). The
             default of None will attempt to determine the zarr version from
             ``store`` when possible, otherwise defaulting to 2.
+        chunkmanager_store_kwargs : dict, optional
+            Additional keyword arguments passed on to the `ChunkManager.store` method used to store
+            chunked arrays. For example for a dask array additional kwargs will be passed eventually to
+            :py:func:`dask.array.store()`. Experimental API that should not be relied upon.
 
         Returns
         -------
@@ -2095,7 +2149,7 @@ class Dataset(
         """
         from xarray.backends.api import to_zarr
 
-        return to_zarr(  # type: ignore
+        return to_zarr(  # type: ignore[call-overload,misc]
             self,
             store=store,
             chunk_store=chunk_store,
@@ -2110,6 +2164,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )
 
     def __repr__(self) -> str:
@@ -2198,6 +2253,8 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
         **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
@@ -2225,6 +2282,15 @@ class Dataset(
         inline_array: bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided
@@ -2259,8 +2325,22 @@ class Dataset(
                 f"some chunks keys are not dimensions on this object: {bad_dims}"
             )
 
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
         variables = {
-            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)
+            k: _maybe_chunk(
+                k,
+                v,
+                chunks,
+                token,
+                lock,
+                name_prefix,
+                inline_array=inline_array,
+                chunked_array_type=chunkmanager,
+                from_array_kwargs=from_array_kwargs.copy(),
+            )
             for k, v in self.variables.items()
         }
         return self._replace(variables)
@@ -2292,12 +2372,13 @@ class Dataset(
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                v = np.asarray(v)
+                if not is_duck_array(v):
+                    v = np.asarray(v)
 
                 if v.dtype.kind in "US":
                     index = self._indexes[k].to_pandas_index()
                     if isinstance(index, pd.DatetimeIndex):
-                        v = v.astype("datetime64[ns]")
+                        v = duck_array_ops.astype(v, dtype="datetime64[ns]")
                     elif isinstance(index, CFTimeIndex):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
@@ -5051,9 +5132,9 @@ class Dataset(
         if virtual_okay:
             bad_names -= self.virtual_variables
         if bad_names:
+            ordered_bad_names = [name for name in names if name in bad_names]
             raise ValueError(
-                "One or more of the specified variables "
-                "cannot be found in this dataset"
+                f"These variables cannot be found in this dataset: {ordered_bad_names}"
             )
 
     def drop_vars(
@@ -5474,7 +5555,7 @@ class Dataset(
             - all : if all values are NA, drop that label
 
         thresh : int or None, optional
-            If supplied, require this many non-NA values.
+            If supplied, require this many non-NA values (summed over all the subset variables).
         subset : iterable of hashable or None, optional
             Which variables to check for missing values. By default, all
             variables in the dataset are checked.
@@ -5629,9 +5710,9 @@ class Dataset(
         use_coordinate : bool or Hashable, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
-            eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
+            equally-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
-            coordinate variariable to use as the index.
+            coordinate variable to use as the index.
         limit : int, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
@@ -6395,7 +6476,10 @@ class Dataset(
         columns.extend(k for k in self.coords if k not in self.dims)
         columns.extend(self.data_vars)
 
+        ds_chunks = self.chunks
+
         series_list = []
+        df_meta = pd.DataFrame()
         for name in columns:
             try:
                 var = self.variables[name]
@@ -6414,8 +6498,11 @@ class Dataset(
             if not is_duck_dask_array(var._data):
                 var = var.chunk()
 
-            dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
-            series = dd.from_array(dask_array.reshape(-1), columns=[name])
+            # Broadcast then flatten the array:
+            var_new_dims = var.set_dims(ordered_dims).chunk(ds_chunks)
+            dask_array = var_new_dims._data.reshape(-1)
+
+            series = dd.from_dask_array(dask_array, columns=name, meta=df_meta)
             series_list.append(series)
 
         df = dd.concat(series_list, axis=1)
@@ -6433,7 +6520,9 @@ class Dataset(
 
         return df
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    def to_dict(
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -6444,9 +6533,14 @@ class Dataset(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool or {"list", "array"}, default: "list"
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            `ds.compute().to_dict(data="list")`.
+
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
@@ -6552,7 +6646,8 @@ class Dataset(
             )
         try:
             variable_dict = {
-                k: (v["dims"], v["data"], v.get("attrs")) for k, v in variables
+                k: (v["dims"], v["data"], v.get("attrs"), v.get("encoding"))
+                for k, v in variables
             }
         except KeyError as e:
             raise ValueError(
@@ -6768,7 +6863,6 @@ class Dataset(
         fill_value: Any = xrdtypes.NA,
         **shifts_kwargs: int,
     ) -> T_Dataset:
-
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -7878,7 +7972,7 @@ class Dataset(
                 scale_da = scale
 
             if w is not None:
-                rhs *= w[:, np.newaxis]
+                rhs = rhs * w[:, np.newaxis]
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
@@ -8534,8 +8628,8 @@ class Dataset(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, Any] | None = None,
-        bounds: dict[str, Any] | None = None,
+        p0: dict[str, float | DataArray] | None = None,
+        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> T_Dataset:
@@ -8566,12 +8660,16 @@ class Dataset(
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
-            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
-            be assigned initial values following the default scipy behavior.
+            `curve_fit` `p0` arg. If the values are DataArrays, they will be appropriately
+            broadcast to the coordinates of the array. If none or only some parameters are
+            passed, the rest will be assigned initial values following the default scipy
+            behavior.
         bounds : dict-like, optional
-            Optional dictionary of parameter names to bounding values passed to the
-            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
-            will be unbounded following the default scipy behavior.
+            Optional dictionary of parameter names to tuples of bounding values passed to the
+            `curve_fit` `bounds` arg. If any of the bounds are DataArrays, they will be
+            appropriately broadcast to the coordinates of the array. If none or only some
+            parameters are passed, the rest will be unbounded following the default scipy
+            behavior.
         param_names : sequence of hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
@@ -8638,29 +8736,53 @@ class Dataset(
                 "in fitting on scalar data."
             )
 
+        # Check that initial guess and bounds only contain coordinates that are in preserved_dims
+        for param, guess in p0.items():
+            if isinstance(guess, DataArray):
+                unexpected = set(guess.dims) - set(preserved_dims)
+                if unexpected:
+                    raise ValueError(
+                        f"Initial guess for '{param}' has unexpected dimensions "
+                        f"{tuple(unexpected)}. It should only have dimensions that are in data "
+                        f"dimensions {preserved_dims}."
+                    )
+        for param, (lb, ub) in bounds.items():
+            for label, bound in zip(("Lower", "Upper"), (lb, ub)):
+                if isinstance(bound, DataArray):
+                    unexpected = set(bound.dims) - set(preserved_dims)
+                    if unexpected:
+                        raise ValueError(
+                            f"{label} bound for '{param}' has unexpected dimensions "
+                            f"{tuple(unexpected)}. It should only have dimensions that are in data "
+                            f"dimensions {preserved_dims}."
+                        )
+
         # Broadcast all coords with each other
         coords_ = broadcast(*coords_)
         coords_ = [
             coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
         ]
+        n_coords = len(coords_)
 
         params, func_args = _get_func_args(func, param_names)
         param_defaults, bounds_defaults = _initialize_curvefit_params(
             params, p0, bounds, func_args
         )
         n_params = len(params)
-        kwargs.setdefault("p0", [param_defaults[p] for p in params])
-        kwargs.setdefault(
-            "bounds",
-            [
-                [bounds_defaults[p][0] for p in params],
-                [bounds_defaults[p][1] for p in params],
-            ],
-        )
 
-        def _wrapper(Y, *coords_, **kwargs):
+        def _wrapper(Y, *args, **kwargs):
             # Wrap curve_fit with raveled coordinates and pointwise NaN handling
-            x = np.vstack([c.ravel() for c in coords_])
+            # *args contains:
+            #   - the coordinates
+            #   - initial guess
+            #   - lower bounds
+            #   - upper bounds
+            coords__ = args[:n_coords]
+            p0_ = args[n_coords + 0 * n_params : n_coords + 1 * n_params]
+            lb = args[n_coords + 1 * n_params : n_coords + 2 * n_params]
+            ub = args[n_coords + 2 * n_params :]
+
+            x = np.vstack([c.ravel() for c in coords__])
             y = Y.ravel()
             if skipna:
                 mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
@@ -8671,7 +8793,7 @@ class Dataset(
                     pcov = np.full([n_params, n_params], np.nan)
                     return popt, pcov
             x = np.squeeze(x)
-            popt, pcov = curve_fit(func, x, y, **kwargs)
+            popt, pcov = curve_fit(func, x, y, p0=p0_, bounds=(lb, ub), **kwargs)
             return popt, pcov
 
         result = type(self)()
@@ -8681,13 +8803,21 @@ class Dataset(
             else:
                 name = f"{str(name)}_"
 
+            input_core_dims = [reduce_dims_ for _ in range(n_coords + 1)]
+            input_core_dims.extend(
+                [[] for _ in range(3 * n_params)]
+            )  # core_dims for p0 and bounds
+
             popt, pcov = apply_ufunc(
                 _wrapper,
                 da,
                 *coords_,
+                *param_defaults.values(),
+                *[b[0] for b in bounds_defaults.values()],
+                *[b[1] for b in bounds_defaults.values()],
                 vectorize=True,
                 dask="parallelized",
-                input_core_dims=[reduce_dims_ for d in range(len(coords_) + 1)],
+                input_core_dims=input_core_dims,
                 output_core_dims=[["param"], ["cov_i", "cov_j"]],
                 dask_gufunc_kwargs={
                     "output_sizes": {
@@ -8934,6 +9064,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
@@ -8941,21 +9073,21 @@ class Dataset(
         Dataset.resample
         DataArray.resample
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import (
+            DatasetGroupBy,
+            ResolvedUniqueGrouper,
+            UniqueGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
+        _validate_groupby_squeeze(squeeze)
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
 
         return DatasetGroupBy(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def groupby_bins(
@@ -9015,6 +9147,8 @@ class Dataset(
 
         See Also
         --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
         Dataset.groupby
         DataArray.groupby_bins
         core.groupby.DatasetGroupBy
@@ -9024,20 +9158,30 @@ class Dataset(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DatasetGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DatasetGroupBy,
+            ResolvedBinGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        return DatasetGroupBy(
-            self,
-            group,
-            squeeze=squeeze,
+        _validate_groupby_squeeze(squeeze)
+        grouper = BinGrouper(
             bins=bins,
-            restore_coord_dims=restore_coord_dims,
             cut_kwargs={
                 "right": right,
                 "labels": labels,
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
+
+        return DatasetGroupBy(
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def weighted(self, weights: DataArray) -> DatasetWeighted:

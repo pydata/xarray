@@ -132,7 +132,8 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
+        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        """
         if rolling_agg_func:
             array_agg_func = None
         else:
@@ -141,7 +142,6 @@ class Rolling(Generic[T_Xarray]):
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, keep_attrs=None, **kwargs):
-
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
@@ -158,9 +158,9 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / self.count(
-            keep_attrs=False
-        ).astype(self.obj.dtype, copy=False)
+        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=self.obj.dtype, copy=False
+        )
         if keep_attrs:
             result.attrs = self.obj.attrs
         return result
@@ -272,7 +272,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         starts = stops - window0
         starts[: window0 - offset] = 0
 
-        for (label, start, stop) in zip(self.window_labels, starts, stops):
+        for label, start, stop in zip(self.window_labels, starts, stops):
             window = self.obj.isel({dim0: slice(start, stop)})
 
             counts = window.count(dim=[dim0])
@@ -376,7 +376,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             window_dim = {d: window_dim_kwargs[str(d)] for d in self.dim}
 
         window_dims = self._mapping_to_list(
-            window_dim, allow_default=False, allow_allsame=False  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/12506
+            window_dim, allow_default=False, allow_allsame=False
         )
         strides = self._mapping_to_list(stride, default=1)
 
@@ -753,7 +753,7 @@ class DatasetRolling(Rolling["Dataset"]):
             window_dim = {d: window_dim_kwargs[str(d)] for d in self.dim}
 
         window_dims = self._mapping_to_list(
-            window_dim, allow_default=False, allow_allsame=False  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/12506
+            window_dim, allow_default=False, allow_allsame=False
         )
         strides = self._mapping_to_list(stride, default=1)
 

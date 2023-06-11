@@ -7,7 +7,6 @@ from xarray.backends.api import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.rasterio_ import open_rasterio
 from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -85,7 +84,6 @@ __all__ = (
     "open_dataarray",
     "open_dataset",
     "open_mfdataset",
-    "open_rasterio",
     "open_zarr",
     "polyval",
     "register_dataarray_accessor",

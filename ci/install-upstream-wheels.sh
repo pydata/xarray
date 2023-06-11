@@ -14,7 +14,6 @@ conda uninstall -y --force \
     fsspec \
     zarr \
     cftime \
-    rasterio \
     packaging \
     pint \
     bottleneck \
@@ -39,7 +38,6 @@ python -m pip install \
     git+https://github.com/dask/distributed \
     git+https://github.com/zarr-developers/zarr \
     git+https://github.com/Unidata/cftime \
-    git+https://github.com/rasterio/rasterio \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/pydata/bottleneck \
@@ -48,4 +46,3 @@ python -m pip install \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
     git+https://github.com/h5netcdf/h5netcdf
-python -m pip install pytest-timeout

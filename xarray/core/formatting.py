@@ -16,7 +16,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.duck_array_ops import array_equiv
-from xarray.core.indexing import MemoryCachedArray
+from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.pycompat import array_type
 from xarray.core.utils import is_duck_array
@@ -114,9 +114,9 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    # Timestamp is only valid for 1678 to 2262
     try:
-        datetime_str = str(pd.Timestamp(t))
+        timestamp = pd.Timestamp(t)
+        datetime_str = timestamp.isoformat(sep=" ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
@@ -557,8 +557,15 @@ def limit_lines(string: str, *, limit: int):
     return string
 
 
-def short_numpy_repr(array):
-    array = np.asarray(array)
+def short_array_repr(array):
+    from xarray.core.common import AbstractArray
+
+    if isinstance(array, ExplicitlyIndexed):
+        array = array.get_duck_array()
+    elif isinstance(array, AbstractArray):
+        array = array.data
+    if not is_duck_array(array):
+        array = np.asarray(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -582,11 +589,11 @@ def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory:
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
@@ -831,7 +838,7 @@ def diff_array_repr(a, b, compat):
         equiv = array_equiv
 
     if not equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)

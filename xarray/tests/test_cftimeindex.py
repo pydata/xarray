@@ -1310,7 +1310,6 @@ def test_infer_freq(freq, calendar):
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_pickle_cftimeindex(calendar):
-
     idx = xr.cftime_range("2000-01-01", periods=3, freq="D", calendar=calendar)
     idx_pkl = pickle.loads(pickle.dumps(idx))
     assert (idx == idx_pkl).all()

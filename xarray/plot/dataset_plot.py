@@ -128,7 +128,7 @@ def _dsplot(plotfunc):
         If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     infer_intervals: bool | None
-        If True the intervals are infered.
+        If True the intervals are inferred.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
@@ -192,7 +192,6 @@ def _dsplot(plotfunc):
         levels: ArrayLike | None = None,
         **kwargs: Any,
     ) -> Any:
-
         if args:
             # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."

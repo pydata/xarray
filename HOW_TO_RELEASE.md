@@ -18,11 +18,16 @@ upstream        https://github.com/pydata/xarray (push)
      git switch main
      git pull upstream main
      ```
- 2. Add a list of contributors with:
+ 2. Add a list of contributors.
+    First fetch all previous release tags so we can see the version number of the last release was:
+    ```sh
+    git fetch upstream --tags
+    ```
+    This will return a list of all the contributors since the last release:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
-    This will return the number of contributors:
+    This will return the total number of contributors:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | wc -l
     ```
@@ -59,7 +64,7 @@ upstream        https://github.com/pydata/xarray (push)
      .. _whats-new.YYYY.MM.X+1:
 
      vYYYY.MM.X+1 (unreleased)
-     ---------------------
+     -----------------------
 
      New Features
      ~~~~~~~~~~~~
@@ -94,8 +99,8 @@ upstream        https://github.com/pydata/xarray (push)
 
 13. Update the version available on pyodide:
     - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
-    - Clone the [pyodide repository](https://github.com/pyodide/pyodide).
-    - Edit `packages/xarray/meta.yaml` to update the
+    - Edit [`pyodide/packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide/blob/main/packages/xarray/meta.yaml) to update the
+        - version number
         - link to the wheel (under "Built Distribution" on the PyPI page)
         - SHA256 hash (Click "Show Hashes" next to the link to the wheel)
     - Open a pull request to pyodide

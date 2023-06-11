@@ -4,7 +4,7 @@ import collections
 import itertools
 import operator
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, DefaultDict
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
@@ -33,7 +33,6 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 def check_result_variables(
     result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
-
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":
@@ -404,7 +403,9 @@ def map_blocks(
     # func applied to the values.
 
     graph: dict[Any, Any] = {}
-    new_layers: DefaultDict[str, dict[Any, Any]] = collections.defaultdict(dict)
+    new_layers: collections.defaultdict[str, dict[Any, Any]] = collections.defaultdict(
+        dict
+    )
     gname = "{}-{}".format(
         dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
     )

@@ -30,6 +30,8 @@ BINOPS_NUM = (
     ("__and__", "operator.and_"),
     ("__xor__", "operator.xor"),
     ("__or__", "operator.or_"),
+    ("__lshift__", "operator.lshift"),
+    ("__rshift__", "operator.rshift"),
 )
 BINOPS_REFLEXIVE = (
     ("__radd__", "operator.add"),
@@ -54,6 +56,8 @@ BINOPS_INPLACE = (
     ("__iand__", "operator.iand"),
     ("__ixor__", "operator.ixor"),
     ("__ior__", "operator.ior"),
+    ("__ilshift__", "operator.ilshift"),
+    ("__irshift__", "operator.irshift"),
 )
 UNARY_OPS = (
     ("__neg__", "operator.neg"),
@@ -254,7 +258,6 @@ def _render_classbody(method_blocks, is_module):
 
 
 if __name__ == "__main__":
-
     option = sys.argv[1].lower() if len(sys.argv) == 2 else None
     if option not in {"--module", "--stubs"}:
         raise SystemExit(f"Usage: {sys.argv[0]} --module | --stubs")

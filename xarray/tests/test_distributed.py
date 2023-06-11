@@ -35,17 +35,13 @@ from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
     has_scipy,
-    requires_cfgrib,
     requires_cftime,
     requires_netCDF4,
-    requires_rasterio,
     requires_zarr,
 )
 from xarray.tests.test_backends import (
     ON_WINDOWS,
     create_tmp_file,
-    create_tmp_geotiff,
-    open_example_dataset,
 )
 from xarray.tests.test_dataset import create_test_data
 
@@ -90,7 +86,6 @@ ENGINES_AND_FORMATS = [
 def test_dask_distributed_netcdf_roundtrip(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -98,7 +93,6 @@ def test_dask_distributed_netcdf_roundtrip(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data().chunk(chunks)
 
             if engine == "scipy":
@@ -122,10 +116,8 @@ def test_dask_distributed_netcdf_roundtrip(
 def test_dask_distributed_write_netcdf_with_dimensionless_variables(
     loop, tmp_netcdf_filename
 ):
-
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = xr.Dataset({"x": da.zeros(())})
             original.to_netcdf(tmp_netcdf_filename)
 
@@ -200,7 +192,6 @@ def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
 def test_dask_distributed_read_netcdf_integration_test(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -208,7 +199,6 @@ def test_dask_distributed_read_netcdf_integration_test(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
 
@@ -249,32 +239,6 @@ def test_dask_distributed_zarr_integration_test(
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
-
-
-@requires_rasterio
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_rasterio_integration_test(loop) -> None:
-    with create_tmp_geotiff() as (tmp_file, expected):
-        with cluster() as (s, [a, b]):
-            with pytest.warns(DeprecationWarning), Client(s["address"], loop=loop):
-                da_tiff = xr.open_rasterio(tmp_file, chunks={"band": 1})
-                assert isinstance(da_tiff.data, da.Array)
-                actual = da_tiff.compute()
-                assert_allclose(actual, expected)
-
-
-@requires_cfgrib
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_cfgrib_integration_test(loop) -> None:
-    with cluster() as (s, [a, b]):
-        with Client(s["address"], loop=loop):
-            with open_example_dataset(
-                "example.grib", engine="cfgrib", chunks={"time": 1}
-            ) as ds:
-                with open_example_dataset("example.grib", engine="cfgrib") as expected:
-                    assert isinstance(ds["t"].data, da.Array)
-                    actual = ds.compute()
-                    assert_allclose(actual, expected)
 
 
 @pytest.mark.xfail(
@@ -331,7 +295,6 @@ async def test_serializable_locks(c, s, a, b) -> None:
         CombinedLock([HDF5_LOCK]),
         CombinedLock([HDF5_LOCK, Lock("filename.nc")]),
     ]:
-
         futures = c.map(f, list(range(10)), lock=lock)
         await c.gather(futures)
 

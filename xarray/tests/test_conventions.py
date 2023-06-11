@@ -32,7 +32,7 @@ from xarray.tests.test_backends import CFEncodedBase
 class TestBoolTypeArray:
     def test_booltype_array(self) -> None:
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
-        bx = conventions.BoolTypeArray(x)
+        bx = coding.variables.BoolTypeArray(x)
         assert bx.dtype == bool
         assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
@@ -41,7 +41,7 @@ class TestNativeEndiannessArray:
     def test(self) -> None:
         x = np.arange(5, dtype=">i8")
         expected = np.arange(5, dtype="int64")
-        a = conventions.NativeEndiannessArray(x)
+        a = coding.variables.NativeEndiannessArray(x)
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
@@ -168,6 +168,7 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -185,6 +186,7 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -247,7 +249,7 @@ class TestDecodeCF:
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
         expected = Variable((), np.int64(0))
-        actual = conventions.maybe_encode_nonstring_dtype(original)
+        actual = coding.variables.NonStringCoder().encode(original)
         assert_identical(expected, actual)
 
     def test_decode_cf_with_multiple_missing_values(self) -> None:

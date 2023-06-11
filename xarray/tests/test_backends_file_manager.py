@@ -137,7 +137,6 @@ def test_file_manager_cache_repeated_open() -> None:
 
 
 def test_file_manager_cache_with_pickle(tmpdir) -> None:
-
     path = str(tmpdir.join("testing.txt"))
     with open(path, "w") as f:
         f.write("data")

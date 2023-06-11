@@ -7,6 +7,7 @@ import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 
 from xarray.core.options import OPTIONS
+from xarray.core.pycompat import is_duck_array
 
 try:
     import bottleneck as bn
@@ -24,26 +25,40 @@ def _select_along_axis(values, idx, axis):
     return values[sl]
 
 
-def nanfirst(values, axis):
+def nanfirst(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     idx_first = np.argmax(~pd.isnull(values), axis=axis)
-    return _select_along_axis(values, idx_first, axis)
+    result = _select_along_axis(values, idx_first, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
-def nanlast(values, axis):
+def nanlast(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     rev = (slice(None),) * axis + (slice(None, None, -1),)
     idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
-    return _select_along_axis(values, idx_last, axis)
+    result = _select_along_axis(values, idx_last, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
-def inverse_permutation(indices):
+def inverse_permutation(indices: np.ndarray, N: int | None = None) -> np.ndarray:
     """Return indices for an inverse permutation.
 
     Parameters
     ----------
     indices : 1D np.ndarray with dtype=int
         Integer positions to assign elements to.
+    N : int, optional
+        Size of the array
 
     Returns
     -------
@@ -51,8 +66,10 @@ def inverse_permutation(indices):
         Integer indices to take from the original array to create the
         permutation.
     """
+    if N is None:
+        N = len(indices)
     # use intp instead of int64 because of windows :(
-    inverse_permutation = np.empty(len(indices), dtype=np.intp)
+    inverse_permutation = np.full(N, -1, dtype=np.intp)
     inverse_permutation[indices] = np.arange(len(indices), dtype=np.intp)
     return inverse_permutation
 
@@ -109,7 +126,10 @@ def _advanced_indexer_subspaces(key):
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
-    ndim = len(np.broadcast(*non_slices).shape)
+    broadcasted_shape = np.broadcast_shapes(
+        *[item.shape if is_duck_array(item) else (0,) for item in non_slices]
+    )
+    ndim = len(broadcasted_shape)
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)
     vindex_positions = np.arange(ndim)
     return mixed_positions, vindex_positions

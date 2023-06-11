@@ -613,7 +613,7 @@ class CFTimeIndex(pd.Index):
         ------
         ValueError
             If the CFTimeIndex contains dates that are not possible in the
-            standard calendar or outside the pandas.Timestamp-valid range.
+            standard calendar or outside the nanosecond-precision range.
 
         Warns
         -----

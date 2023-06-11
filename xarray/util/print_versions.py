@@ -108,8 +108,6 @@ def show_versions(file=sys.stdout):
         ("cftime", lambda mod: mod.__version__),
         ("nc_time_axis", lambda mod: mod.__version__),
         ("PseudoNetCDF", lambda mod: mod.__version__),
-        ("rasterio", lambda mod: mod.__version__),
-        ("cfgrib", lambda mod: mod.__version__),
         ("iris", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
@@ -136,7 +134,7 @@ def show_versions(file=sys.stdout):
     ]
 
     deps_blob = []
-    for (modname, ver_f) in deps:
+    for modname, ver_f in deps:
         try:
             if modname in sys.modules:
                 mod = sys.modules[modname]

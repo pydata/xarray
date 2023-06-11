@@ -8,7 +8,6 @@ dependencies:
   - bottleneck
   - cartopy
   - cdms2
-  - cfgrib
   - cftime
   - dask-core
   - distributed
@@ -29,7 +28,7 @@ dependencies:
   - numpy<1.24
   - packaging
   - pandas
-  - pint
+  - pint<0.21
   - pip
   - pooch
   - pre-commit
@@ -39,6 +38,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import warnings
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -17,14 +19,21 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
     close_on_error,
-    module_available,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from xarray.backends.common import AbstractDataStore
+    from xarray.core.dataset import Dataset
+
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -67,6 +76,9 @@ class ZarrArrayWrapper(BackendArray):
     def get_array(self):
         return self.datastore.zarr_group[self.variable_name]
 
+    def _oindex(self, key):
+        return self.get_array().oindex[key]
+
     def __getitem__(self, key):
         array = self.get_array()
         if isinstance(key, indexing.BasicIndexer):
@@ -77,7 +89,10 @@ class ZarrArrayWrapper(BackendArray):
             ]
         else:
             assert isinstance(key, indexing.OuterIndexer)
-            return array.oindex[key.tuple]
+            return indexing.explicit_indexing_adapter(
+                key, array.shape, indexing.IndexingSupport.VECTORIZED, self._oindex
+            )
+
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
@@ -207,7 +222,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
                 "which are required for xarray to determine variable dimensions."
             ) from e
 
-    nc_attrs = [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
+    nc_attrs = [attr for attr in zarr_obj.attrs if attr.lower().startswith("_nc")]
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
     return dimensions, attributes
 
@@ -230,6 +245,7 @@ def extract_zarr_variable_encoding(
     """
     encoding = variable.encoding.copy()
 
+    safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "chunks",
         "compressor",
@@ -237,6 +253,10 @@ def extract_zarr_variable_encoding(
         "cache_metadata",
         "write_empty_chunks",
     }
+
+    for k in safe_to_drop:
+        if k in encoding:
+            del encoding[k]
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -490,7 +510,7 @@ class ZarrStore(AbstractWritableDataStore):
         return {
             k: v
             for k, v in self.zarr_group.attrs.asdict().items()
-            if not k.startswith("_NC")
+            if not k.lower().startswith("_nc")
         }
 
     def get_dimensions(self):
@@ -697,6 +717,8 @@ def open_zarr(
     decode_timedelta=None,
     use_cftime=None,
     zarr_version=None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -781,6 +803,15 @@ def open_zarr(
         The desired zarr spec version to target (currently 2 or 3). The default
         of None will attempt to determine the zarr version from ``store`` when
         possible, otherwise defaulting to 2.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce this datasets' arrays to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
+        :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -798,12 +829,17 @@ def open_zarr(
     """
     from xarray.backends.api import open_dataset
 
+    if from_array_kwargs is None:
+        from_array_kwargs = {}
+
     if chunks == "auto":
         try:
-            import dask.array  # noqa
+            guess_chunkmanager(
+                chunked_array_type
+            )  # attempt to import that parallel backend
 
             chunks = {}
-        except ImportError:
+        except ValueError:
             chunks = None
 
     if kwargs:
@@ -832,6 +868,8 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
@@ -852,25 +890,28 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     backends.ZarrStore
     """
 
-    available = module_available("zarr")
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
-        try:
-            _, ext = os.path.splitext(filename_or_obj)
-        except TypeError:
-            return False
-        return ext in {".zarr"}
-
-    def open_dataset(
+    def guess_can_open(
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
+        if isinstance(filename_or_obj, (str, os.PathLike)):
+            _, ext = os.path.splitext(filename_or_obj)
+            return ext in {".zarr"}
+
+        return False
+
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
@@ -881,8 +922,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         stacklevel=3,
         zarr_version=None,
-    ):
-
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
@@ -912,4 +952,4 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint
+BACKEND_ENTRYPOINTS["zarr"] = ("zarr", ZarrBackendEntrypoint)
