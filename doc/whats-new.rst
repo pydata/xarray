@@ -45,6 +45,10 @@ Bug fixes
 - Preserve vlen dtype for empty string arrays (:issue:`7328`, :pull:`7862`).
   By `Tom White <https://github.com/tomwhite>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
+- Fix bug where weighted ``polyfit`` were changing the original object (:issue:`5644`, :pull:`7900`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+- Don't call ``CachingFileManager.__del__`` on interpreter shutdown (:issue:`7814`, :pull:`7880`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
