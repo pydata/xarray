@@ -6,18 +6,38 @@ Integrating with duck arrays
 
 .. warning::
 
-    This is a experimental feature.
+    This is a experimental feature. Please report any bugs or other difficulties on xarray's issue tracker.
 
-Xarray can wrap custom :term:`duck array` objects as long as they define numpy's
-``shape``, ``dtype`` and ``ndim`` properties and the ``__array__``,
-``__array_ufunc__`` and ``__array_function__`` methods.
+Xarray can wrap custom numpy-like arrays (":term:`duck array`s") - see the user guide documentation.
+
+Duck array requirements
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray does not explicitly check that that required methods are defined by the underlying duck array object before
+attempting to wrap the given array. However, a wrapped array type should at a minimum support numpy's ``shape``,
+``dtype`` and ``ndim`` properties, as well as the ``__array__``, ``__array_ufunc__`` and ``__array_function__`` methods.
+The array ``shape`` property needs to obey numpy's broadcasting rules.
+
+Python Array API standard support
+=================================
+
+As an integration library xarray benefits greatly from the standardization of duck-array libraries' APIs, and so is a
+big supporter of the python Array API Standard (link). In fact the crystallization of different array libraries' APIs towards
+the standard has already helped xarray remove a lot of internal adapter code.
+
+As such, we aim to support any array librarie that follows the standard out-of-the-box. However, xarray does occasionally
+call some numpy functions which are not (yet) part of the standard (e.g. :py:class:`DataArray.pad` calls `np.pad`,
+). (link to issue)
+
+Custom inline reprs
+~~~~~~~~~~~~~~~~~~~
 
 In certain situations (e.g. when printing the collapsed preview of
 variables of a ``Dataset``), xarray will display the repr of a :term:`duck array`
 in a single line, truncating it to a certain number of characters. If that
 would drop too much information, the :term:`duck array` may define a
 ``_repr_inline_`` method that takes ``max_width`` (number of characters) as an
-argument:
+argument
 
 .. code:: python
 
