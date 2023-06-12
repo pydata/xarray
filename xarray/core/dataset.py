@@ -5950,67 +5950,82 @@ class Dataset(
     ) -> T_Dataset:
         """Reduce this dataset by applying `func` along some dimension(s).
 
-        Parameters
-        ----------
-        func : callable
-            Function which can be called in the form
-            `f(x, axis=axis, **kwargs)` to return the result of reducing an
-            np.ndarray over an integer valued axis.
-        dim : str, Iterable of Hashable or None, optional
-            Dimension(s) over which to apply `func`. By default `func` is
-            applied over all dimensions.
-        keep_attrs : bool or None, optional
-            If True, the dataset's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
-        keepdims : bool, default: False
-            If True, the dimensions which are reduced are left in the result
-            as dimensions of size one. Coordinates that use these dimensions
-            are removed.
-        numeric_only : bool, default: False
-            If True, only apply ``func`` to variables with a numeric dtype.
-        **kwargs : Any
-            Additional keyword arguments passed on to ``func``.
+                Parameters
+                ----------
+                func : callable
+                    Function which can be called in the form
+                    `f(x, axis=axis, **kwargs)` to return the result of reducing an
+                    np.ndarray over an integer valued axis.
+                dim : str, Iterable of Hashable or None, optional
+                    Dimension(s) over which to apply `func`. By default `func` is
+                    applied over all dimensions.
+                keep_attrs : bool or None, optional
+                    If True, the dataset's attributes (`attrs`) will be copied from
+                    the original object to the new one.  If False (default), the new
+                    object will be returned without attributes.
+                keepdims : bool, default: False
+                    If True, the dimensions which are reduced are left in the result
+                    as dimensions of size one. Coordinates that use these dimensions
+                    are removed.
+                numeric_only : bool, default: False
+                    If True, only apply ``func`` to variables with a numeric dtype.
+                **kwargs : Any
+                    Additional keyword arguments passed on to ``func``.
 
-        Returns
-        -------
-        reduced : Dataset
-            Dataset with this object's DataArrays replaced with new DataArrays
-            of summarized data and the indicated dimension(s) removed.
+                Returns
+                -------
+                reduced : Dataset
+                    Dataset with this object's DataArrays replaced with new DataArrays
+                    of summarized data and the indicated dimension(s) removed.
 
-        Example
-        -------
+                Example
+                -------
 
-        # Defined the dataset
-        >>> dataset = xr.Dataset(
-        ...     {
-        ...         "math_scores": (
-        ...             ["student", "test"],
-        ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
-        ...         ),
-        ...         "english_scores": (
-        ...             ["student", "test"],
-        ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
-        ...         ),
-        ...     },
-        ...     coords={
-        ...         "student": ["Alice", "Bob", "Charlie"],
-        ...         "test": ["Test 1", "Test 2", "Test 3"],
-        ...     },
-        ... )
+                # Defined the dataset
+                >>> dataset = xr.Dataset(
+                ...     {
+                ...         "math_scores": (
+                ...             ["student", "test"],
+                ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
+                ...         ),
+                ...         "english_scores": (
+                ...             ["student", "test"],
+                ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
+                ...         ),
+                ...     },
+                ...     coords={
+                ...         "student": ["Alice", "Bob", "Charlie"],
+                ...         "test": ["Test 1", "Test 2", "Test 3"],
+                ...     },
+                ... )
 
-        # Mean scores across the 'test' dimension are calculated
-        >>> mean_scores = dataset.reduce(func=np.mean, dim="test")
+                # Calculate the 75th percentile of math scores for each student using np.percentile
+                >>> percentile_math_scores = dataset["math_scores"].reduce(
+                ...     np.percentile, q=75, dim="test"
+                ... )
 
-        # Print the mean scores
-        >>> mean_scores
-        <xarray.Dataset>
-        Dimensions:         (student: 3)
-        Coordinates:
-        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
-        Data variables:
-            math_scores     (student) float64 89.0 81.0 95.0
-            english_scores  (student) float64 90.0 78.67 93.33
+                # Print 75th percentile of math scores
+                >>> percentile_math_scores
+                <xarray.DataArray 'math_scores' (student: 3)>
+                array([91. , 82.5, 96.5])
+                Coordinates:
+                * student  (student) <U7 'Alice' 'Bob' 'Charlie'
+
+        Calculating skewness of math scores for each student using the ``scipy.stats.skew`` function using the above mentioned dataset
+
+                # To use the `skew` function, you need to import it from the `scipy.stats` module
+                >>> from scipy.stats import skew
+
+                # Calculate the skewness of math scores for each student using scipy.stats.skew
+                >>> skewness_math_scores = dataset["math_scores"].reduce(
+                ...     skew, dim="test"
+                ... )
+
+                >>> skewness_math_scores
+                <xarray.DataArray 'math_scores' (student: 3)>
+                array([-0.47033046,  0.47033046,  0.        ])
+                Coordinates:
+                * student  (student) <U7 'Alice' 'Bob' 'Charlie'
 
         """
         if kwargs.get("axis", None) is not None:
