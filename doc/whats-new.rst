@@ -42,6 +42,8 @@ Performance
 
 Bug fixes
 ~~~~~~~~~
+- Preserve vlen dtype for empty string arrays (:issue:`7328`, :pull:`7862`).
+  By `Tom White <https://github.com/tomwhite>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 
 
 Documentation
