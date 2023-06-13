@@ -30,9 +30,9 @@ in a memory-efficient manner. We can create a sparse array object (of the ``spar
 
 .. ipython:: python
 
-    import sparse
+    from sparse import COO
 
-    x = np.eye(4, dtype=np.uint8)
+    x = np.eye(4, dtype=np.uint8)  # create diagonal identity matrix
     s = COO.from_numpy(x)
     s
 
@@ -49,17 +49,18 @@ Just like `numpy.ndarray` objects, `sparse.COO` arrays support indexing
 
 .. ipython:: python
 
-    s[2, 3] = 5
-    s
+    s[1, 1]  # diagonal elements should be ones
+    s[2, 3]  # off-diagonal elements should be zero
 
 broadcasting,
 
 .. ipython:: python
 
-    x3 = np.zeros((4, 1), dtype=np.uint8)
-    x3[2, 0] = 1
-    s3 = COO.from_numpy(x3)
-    (s * s3).todense()
+    x2 = np.zeros(
+        (4, 1), dtype=np.uint8
+    )  # create second sparse array of different shape
+    s2 = COO.from_numpy(x2)
+    (s * s2).todense()  # multiplication requires broadcasting
 
 and various computation methods
 
@@ -105,7 +106,7 @@ For example, we can wrap the sparse array we created earlier inside a new DataAr
 
 .. ipython:: python
 
-    s_da = xr.DataArray(s2, dims=["x", "y"])
+    s_da = xr.DataArray(s, dims=["i", "j"])
     s_da
 
 We can see what's inside - the printable representation of our xarray object (the repr) automatically uses the printable
@@ -124,7 +125,7 @@ We saw above that numpy-like arrays provide numpy methods. Xarray automatically 
 
 .. ipython:: python
 
-    s_da.sum(dim="y")
+    s_da.sum(dim="j")
 
 Numpy ufuncs
 ~~~~~~~~~~~~
