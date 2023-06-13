@@ -252,6 +252,7 @@ def extract_zarr_variable_encoding(
         "filters",
         "cache_metadata",
         "write_empty_chunks",
+        "storage_transformers",
     }
 
     for k in safe_to_drop:

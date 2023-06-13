@@ -17,7 +17,7 @@ except ImportError:
 # Neither HDF5 nor the netCDF-C library are thread-safe.
 HDF5_LOCK = SerializableLock()
 NETCDFC_LOCK = SerializableLock()
-
+ZARR_SHARDING_LOCK = SerializableLock()
 
 _FILE_LOCKS: MutableMapping[Any, threading.Lock] = weakref.WeakValueDictionary()
 
