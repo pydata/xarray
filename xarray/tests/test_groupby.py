@@ -137,6 +137,15 @@ def test_groupby_input_mutation() -> None:
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+def test_groupby_indexvariable() -> None:
+    # regression test for GH7919
+    array = xr.DataArray([1, 2, 3], [("x", [2, 2, 1])])
+    iv = xr.IndexVariable(dims="x", data=pd.Index(array.x))
+    actual = array.groupby(iv).sum()
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize(
     "obj",
     [

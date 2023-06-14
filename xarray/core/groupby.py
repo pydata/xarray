@@ -626,6 +626,7 @@ def _resolve_group(obj: T_Xarray, group: T_Group | Hashable) -> T_Group:
         (group_dim,) = group.dims
         if len(group) != obj.sizes[group_dim]:
             raise ValueError(error_msg)
+        newgroup = group
 
     else:
         if not hashable(group):
