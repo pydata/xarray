@@ -6,7 +6,7 @@ Integrating with duck arrays
 
 .. warning::
 
-    This is a experimental feature. Please report any bugs or other difficulties on xarray's issue tracker.
+    This is an experimental feature. Please report any bugs or other difficulties on `xarray's issue tracker <https://github.com/pydata/xarray/issues>`_.
 
 Xarray can wrap custom numpy-like arrays (":term:`duck array`s") - see the user guide documentation.
 
@@ -25,7 +25,7 @@ As an integration library xarray benefits greatly from the standardization of du
 big supporter of the python Array API Standard (link). In fact the crystallization of different array libraries' APIs towards
 the standard has already helped xarray remove a lot of internal adapter code.
 
-As such, we aim to support any array librarie that follows the standard out-of-the-box. However, xarray does occasionally
+We aim to support any array libraries that follows the standard out-of-the-box. However, xarray does occasionally
 call some numpy functions which are not (yet) part of the standard (e.g. :py:class:`DataArray.pad` calls `np.pad`,
 ). (link to issue)
 

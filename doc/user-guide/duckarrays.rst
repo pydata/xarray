@@ -16,7 +16,7 @@ additional features of these array libraries.
 .. note::
 
     For information on wrapping dask arrays see :ref:`dask`. Whilst xarray wraps dask arrays in a similar way to that
-    described on this page, chunked array types like `dask.array.Array` implement additional methods that require
+    described on this page, chunked array types like :py:class:`dask.array.Array` implement additional methods that require
     slightly different user code (e.g. calling ``.chunk`` or ``.compute``).
 
 What is a numpy-like array?
@@ -25,7 +25,7 @@ What is a numpy-like array?
 A "numpy-like array" (also known as a "duck array") is a class that contains array-like data, and implements key
 numpy-like functionality such as indexing, broadcasting, and computation methods.
 
-For example, the ``sparse`` library provides a sparse array type which is useful for representing ``sparse matrices``
+For example, the `sparse <https://sparse.pydata.org/en/stable/>`_ library provides a sparse array type which is useful for representing nD array objects like sparse matrices
 in a memory-efficient manner. We can create a sparse array object (of the ``sparse.COO`` type) from a numpy array like this:
 
 .. ipython:: python
@@ -205,7 +205,7 @@ Extensions using duck arrays
 Whilst the features above allow many numpy-like array libraries to be used pretty seamlessly with xarray, it often also
 makes sense to use an interfacing package to make certain tasks easier.
 
-For example the ``pint-xarray`` package offers a custom `.pint` accessor (link to accessors docs) which provides
+For example the ``pint-xarray`` package offers a custom ``.pint`` accessor (link to accessors docs) which provides
 convenient access to information stored within the wrapped array (e.g. `.units` and `.magnitude`), and makes makes
 creating wrapped pint arrays (and especially xarray-wrapping-pint-wrapping-dask arrays) simpler for the user.
 
