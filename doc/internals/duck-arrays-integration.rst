@@ -15,9 +15,19 @@ Duck array requirements
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray does not explicitly check that that required methods are defined by the underlying duck array object before
-attempting to wrap the given array. However, a wrapped array type should at a minimum support numpy's ``shape``,
-``dtype`` and ``ndim`` properties, as well as the ``__array__``, ``__array_ufunc__`` and ``__array_function__`` methods.
-The array ``shape`` property needs to obey numpy's broadcasting rules.
+attempting to wrap the given array. However, a wrapped array type should at a minimum define these attributes:
+
+* ``shape`` property,
+* ``dtype`` property,
+* ``ndim`` property,
+* ``__array__`` method,
+* ``__array_ufunc__`` method,
+* ``__array_function__`` method.
+
+These need to be defined consistently with numpy :py:class:`numpy.ndarray`, for example the array ``shape``
+property needs to obey `numpy's broadcasting rules <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
+(see also the `Python Array API standard's explanation <https://data-apis.org/array-api/latest/API_specification/broadcasting.html>`_
+of these same rules).
 
 Python Array API standard support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
