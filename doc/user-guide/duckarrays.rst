@@ -5,7 +5,7 @@
 Working with numpy-like arrays
 ==============================
 
-NumPy-like arrays (often known as :term:`duck array`s) are drop-in replacements for the :py:class:`numpy.ndarray`
+NumPy-like arrays (often known as :term:`duck array`\s) are drop-in replacements for the :py:class:`numpy.ndarray`
 class but with different features, such as propagating physical units or a different layout in memory.
 Xarray can often wrap these array types, allowing you to use labelled dimensions and indexes whilst benefiting from the
 additional features of these array libraries.
@@ -90,7 +90,7 @@ objects and classes from different libraries to work together more easily.
 
 .. note::
 
-    For discussion on exactly which methods a class needs to implement to be considered "numpy-like", see :ref:`internals.duck_arrays`.
+    For discussion on exactly which methods a class needs to implement to be considered "numpy-like", see :ref:`internals.duckarrays`.
 
 Wrapping numpy-like arrays in xarray
 ------------------------------------
@@ -101,7 +101,7 @@ Constructing xarray objects which wrap numpy-like arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The primary way to create an xarray object which wraps a numpy-like array is to pass that numpy-like array instance directly
-to the constructor of the xarray class. The page on xarray data structures shows how :py:class:`DataArray` and :py:class:`Dataset`
+to the constructor of the xarray class. The :ref:`page on xarray data structures <data structures>` shows how :py:class:`DataArray` and :py:class:`Dataset`
 both accept data in various forms through their ``data`` argument, but in fact this data can also be any wrappable numpy-like array.
 
 For example, we can wrap the sparse array we created earlier inside a new DataArray object:
@@ -207,8 +207,8 @@ Extensions using duck arrays
 Whilst the features above allow many numpy-like array libraries to be used pretty seamlessly with xarray, it often also
 makes sense to use an interfacing package to make certain tasks easier.
 
-For example the ``pint-xarray`` package offers a custom ``.pint`` accessor (link to accessors docs) which provides
-convenient access to information stored within the wrapped array (e.g. `.units` and `.magnitude`), and makes makes
+For example the `pint-xarray package <https://pint-xarray.readthedocs.io>`_ offers a custom ``.pint`` accessor (see :ref:`internals.accessors`) which provides
+convenient access to information stored within the wrapped array (e.g. ``.units`` and ``.magnitude``), and makes makes
 creating wrapped pint arrays (and especially xarray-wrapping-pint-wrapping-dask arrays) simpler for the user.
 
 We maintain a list of libraries extending ``xarray`` to make working with particular wrapped duck arrays
