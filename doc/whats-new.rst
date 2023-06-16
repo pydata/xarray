@@ -25,6 +25,10 @@ New Features
 
 - Added support for multidimensional initial guess and bounds in :py:meth:`DataArray.curvefit` (:issue:`7768`, :pull:`7821`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Add an ``errors`` option to :py:meth:`Dataset.curve_fit` that allows
+  returning NaN for the parameters and covariances of failed fits, rather than
+  failing the whole series of fits (:issue:`6317`, :pull:`7891`).
+  By `Dominik Stańczak <https://github.com/StanczakDominik>`_ and `András Gunyhó <https://github.com/mgunyho>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -46,6 +50,8 @@ Bug fixes
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Don't call ``CachingFileManager.__del__`` on interpreter shutdown (:issue:`7814`, :pull:`7880`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Ensure dtype of reindex result matches dtype of the original DataArray (:issue:`7299`, :pull:`7917`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Documentation
 ~~~~~~~~~~~~~
