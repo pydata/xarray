@@ -50,6 +50,8 @@ Bug fixes
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Don't call ``CachingFileManager.__del__`` on interpreter shutdown (:issue:`7814`, :pull:`7880`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Preserve vlen dtype for empty string arrays (:issue:`7328`, :pull:`7862`).
+  By `Tom White <https://github.com/tomwhite>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Ensure dtype of reindex result matches dtype of the original DataArray (:issue:`7299`, :pull:`7917`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 

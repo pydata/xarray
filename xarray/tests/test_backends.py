@@ -46,6 +46,7 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
@@ -858,6 +859,20 @@ class CFEncodedBase(DatasetIOBase):
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
+
+    def test_roundtrip_empty_vlen_string_array(self) -> None:
+        # checks preserving vlen dtype for empty arrays GH7862
+        dtype = create_vlen_dtype(str)
+        original = Dataset({"a": np.array([], dtype=dtype)})
+        assert check_vlen_dtype(original["a"].dtype) == str
+        with self.roundtrip(original) as actual:
+            assert_identical(original, actual)
+            assert object == actual["a"].dtype
+            assert actual["a"].dtype == original["a"].dtype
+            # only check metadata for capable backends
+            # eg. NETCDF3 based backends do not roundtrip metadata
+            if actual["a"].dtype.metadata is not None:
+                assert check_vlen_dtype(actual["a"].dtype) == str
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",

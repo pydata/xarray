@@ -29,7 +29,8 @@ def check_vlen_dtype(dtype):
     if dtype.kind != "O" or dtype.metadata is None:
         return None
     else:
-        return dtype.metadata.get("element_type")
+        # check xarray (element_type) as well as h5py (vlen)
+        return dtype.metadata.get("element_type", dtype.metadata.get("vlen"))
 
 
 def is_unicode_dtype(dtype):
