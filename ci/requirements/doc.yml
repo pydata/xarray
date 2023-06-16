@@ -11,6 +11,7 @@ dependencies:
   - dask-core>=2022.1
   - h5netcdf>=0.13
   - ipykernel
+  - ipywidgets  # silence nbsphinx warning
   - ipython
   - iris>=2.3
   - jupyter_client
