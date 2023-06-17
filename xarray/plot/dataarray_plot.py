@@ -733,15 +733,6 @@ def _plot1d(plotfunc):
         If specified plot 3D and use this coordinate for *z* axis.
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
-    hue_style: {'discrete', 'continuous'} or None, optional
-        How to use the ``hue`` variable:
-
-        - ``'continuous'`` -- continuous color scale
-          (default for numeric ``hue`` variables)
-        - ``'discrete'`` -- a color for each unique value,
-          using the default color cycle
-          (default for non-numeric ``hue`` variables)
-
     markersize: Hashable or None, optional
         scatter only. Variable by which to vary size of scattered points.
     linewidth: Hashable or None, optional
