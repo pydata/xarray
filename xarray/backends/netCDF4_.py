@@ -65,10 +65,12 @@ class BaseNetCDF4Array(BackendArray):
 
         dtype = array.dtype
         if dtype is str:
-            # use object dtype because that's the only way in numpy to
-            # represent variable length strings; it also prevents automatic
-            # string concatenation via conventions.decode_cf_variable
-            dtype = np.dtype("O")
+            # use object dtype (with additional vlen string metadata) because that's
+            # the only way in numpy to represent variable length strings and to
+            # check vlen string dtype in further steps
+            # it also prevents automatic string concatenation via
+            # conventions.decode_cf_variable
+            dtype = coding.strings.create_vlen_dtype(str)
         self.dtype = dtype
 
     def __setitem__(self, key, value):

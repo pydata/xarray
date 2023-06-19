@@ -195,11 +195,11 @@ def _assert_prioritized_valid(
 
 
 def merge_collected(
-    grouped: dict[Hashable, list[MergeElement]],
+    grouped: dict[Any, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement] | None = None,
     compat: CompatOptions = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
-    equals: dict[Hashable, bool] | None = None,
+    equals: dict[Any, bool] | None = None,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -306,7 +306,7 @@ def merge_collected(
 
 
 def collect_variables_and_indexes(
-    list_of_mappings: list[DatasetLike],
+    list_of_mappings: Iterable[DatasetLike],
     indexes: Mapping[Any, Any] | None = None,
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
@@ -556,7 +556,12 @@ def merge_coords(
     return variables, out_indexes
 
 
-def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="outer"):
+def merge_data_and_coords(
+    data_vars: Mapping[Any, Any],
+    coords: Mapping[Any, Any],
+    compat: CompatOptions = "broadcast_equals",
+    join: JoinOptions = "outer",
+) -> _MergeResult:
     """Used in Dataset.__init__."""
     indexes, coords = _create_indexes_from_coords(coords, data_vars)
     objects = [data_vars, coords]
@@ -570,7 +575,9 @@ def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="ou
     )
 
 
-def _create_indexes_from_coords(coords, data_vars=None):
+def _create_indexes_from_coords(
+    coords: Mapping[Any, Any], data_vars: Mapping[Any, Any] | None = None
+) -> tuple[dict, dict]:
     """Maybe create default indexes from a mapping of coordinates.
 
     Return those indexes and updated coordinates.
@@ -605,7 +612,11 @@ def _create_indexes_from_coords(coords, data_vars=None):
     return indexes, updated_coords
 
 
-def assert_valid_explicit_coords(variables, dims, explicit_coords):
+def assert_valid_explicit_coords(
+    variables: Mapping[Any, Any],
+    dims: Mapping[Any, int],
+    explicit_coords: Iterable[Hashable],
+) -> None:
     """Validate explicit coordinate names/dims.
 
     Raise a MergeError if an explicit coord shares a name with a dimension
@@ -688,7 +699,7 @@ def merge_core(
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
-    explicit_coords: Sequence | None = None,
+    explicit_coords: Iterable[Hashable] | None = None,
     indexes: Mapping[Any, Any] | None = None,
     fill_value: object = dtypes.NA,
 ) -> _MergeResult:
@@ -1035,7 +1046,7 @@ def dataset_merge_method(
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, Iterable) and not isinstance(overwrite_vars, str):
+    if not isinstance(overwrite_vars, str) and isinstance(overwrite_vars, Iterable):
         overwrite_vars = set(overwrite_vars)
     else:
         overwrite_vars = {overwrite_vars}
