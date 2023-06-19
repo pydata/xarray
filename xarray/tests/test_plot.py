@@ -2371,7 +2371,7 @@ class TestFacetedLinePlotsLegend(PlotTestCase):
     def setUp(self) -> None:
         self.darray = xr.tutorial.scatter_example_dataset()
 
-    def test_legend_labels(self):
+    def test_legend_labels(self) -> None:
         fg = self.darray.A.plot.line(col="x", row="w", hue="z")  # , linewidth="z"
         all_legend_labels = [t.get_text() for t in fg.figlegend.texts]
         # labels in legend should be ['0', '1', '2', '3']

@@ -202,8 +202,8 @@ def _prepare_plot1d_data(
         darray = darray.transpose(..., *dims_T)
 
         # Array is now ready to be stacked:
-        _stacked_dims = (
-            set(darray.dims) - {dims_plot["hue"]}
+        _stacked_dims = tuple(
+            set(darray.dims) - {coords_to_plot["hue"]}
             if plotfunc_name == "line"  # plt.plot allows hue's only in matrix form.
             else darray.dims
         )
@@ -832,6 +832,9 @@ def _plot1d(plotfunc):
                 hueplt_norm_values: list[np.ndarray | None]
                 if hueplt_norm.data is not None:
                     hueplt_norm_values = list(hueplt_norm._data_unique)
+                    # hueplt_norm_values = list(
+                    #     cast("DataArray", hueplt_norm.data).to_numpy()
+                    # )
                 else:
                     hueplt_norm_values = [hueplt_norm.data]
 
