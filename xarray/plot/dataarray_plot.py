@@ -1140,7 +1140,7 @@ def line(
 
     plt = import_matplotlib_pyplot()
 
-    kwargs.pop("zplt", None)
+    zplt = kwargs.pop("zplt", None)
     kwargs.pop("hueplt", None)
     kwargs.pop("sizeplt", None)
 
@@ -1158,15 +1158,30 @@ def line(
     # if sizeplt is not None:
     #     kwargs.update(linewidths=sizeplt.to_numpy().ravel())
 
-    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.to_numpy(), yplt.to_numpy(), kwargs
-    )
-    _ensure_plottable(xplt_val, yplt_val)
+    # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+    #     xplt.to_numpy(), yplt.to_numpy(), kwargs
+    # )
+    # _ensure_plottable(xplt_val, yplt_val)
 
-    primitive = ax.plot(xplt_val.T, yplt_val.T, *args, **kwargs)
+    # primitive = ax.plot(xplt_val.T, yplt_val.T, *args, **kwargs)
 
-    _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
+    # _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
+
+    axis_order = ["x", "y", "z"]
+
+    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
+    plts_or_none = [plts_dict[v] for v in axis_order]
+    plts = [p for p in plts_or_none if p is not None]
+
+    plts_resolved = _resolve_intervals_1dplot(*[p.to_numpy() for p in plts], kwargs)
+    plts_val = plts_resolved[: len(plts)]
+    plts_suffix = plts_resolved[len(plts) : -1]
+    kwargs = plts_resolved[-1]
+
+    # primitive = ax.scatter(*[p.to_numpy().ravel() for p in plts_val], **kwargs)
+    primitive = ax.plot(*[p.T for p in plts_val], *args, **kwargs)
+    _add_labels(add_labels, plts, plts_suffix, (True, False, False), ax)
 
     return primitive
 
