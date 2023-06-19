@@ -2372,10 +2372,20 @@ class TestFacetedLinePlotsLegend(PlotTestCase):
         self.darray = xr.tutorial.scatter_example_dataset()
 
     def test_legend_labels(self) -> None:
-        fg = self.darray.A.plot.line(col="x", row="w", hue="z")
+        fg = self.darray.A.plot.line(col="x", row="w", hue="z")  # , linewidth="z"
         all_legend_labels = [t.get_text() for t in fg.figlegend.texts]
         # labels in legend should be ['0', '1', '2', '3']
         assert sorted(all_legend_labels) == ["0", "1", "2", "3"]
+
+        # With legend elements:
+        # actual = [
+        #     "z [zunits]",
+        #     "$\\mathdefault{0}$",
+        #     "$\\mathdefault{1}$",
+        #     "$\\mathdefault{2}$",
+        #     "$\\mathdefault{3}$",
+        # ]
+        # assert all_legend_labels == actual
 
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
@@ -2451,10 +2461,12 @@ class TestFacetedLinePlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.darray.plot.line(row="row", col="col", x="x", size=3, figsize=(4, 3))
 
-    def test_wrong_num_of_dimensions(self) -> None:
-        with pytest.raises(ValueError):
-            self.darray.plot(row="row", hue="hue")
-            self.darray.plot.line(row="row", hue="hue")
+    # Don't like this one. Now all dims besides hue are stacked to together. Sure the
+    # plot will be messy but that's ok.
+    # def test_wrong_num_of_dimensions(self) -> None:
+    #     with pytest.raises(ValueError):
+    #         self.darray.plot(row="row", hue="hue")
+    #         self.darray.plot.line(row="row", hue="hue")
 
 
 @requires_matplotlib
