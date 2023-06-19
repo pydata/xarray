@@ -1124,7 +1124,14 @@ def line(
 
 
 @_plot1d
-def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def line(
+    xplt: DataArray | None,
+    yplt: DataArray | None,
+    *args,  # TODO: Remove to align with scatter?
+    ax: Axes,
+    add_labels: bool | Iterable[bool] = True,
+    **kwargs,
+):
     """
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
