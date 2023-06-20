@@ -178,6 +178,19 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u + u, v + v)
         self.assertLazyAndIdentical(u[0] + u, v[0] + v)
 
+    def test_binary_op_bitshift(self) -> None:
+        # bit shifts only work on ints so we need to generate
+        # new eager and lazy vars
+        rng = np.random.default_rng(0)
+        values = rng.integers(low=-10000, high=10000, size=(4, 6))
+        data = da.from_array(values, chunks=(2, 2))
+        u = Variable(("x", "y"), values)
+        v = Variable(("x", "y"), data)
+        self.assertLazyAndIdentical(u << 2, v << 2)
+        self.assertLazyAndIdentical(u << 5, v << 5)
+        self.assertLazyAndIdentical(u >> 2, v >> 2)
+        self.assertLazyAndIdentical(u >> 5, v >> 5)
+
     def test_repr(self):
         expected = dedent(
             """\
@@ -891,13 +904,12 @@ class TestToDaskDataFrame:
 
 @pytest.mark.parametrize("method", ["load", "compute"])
 def test_dask_kwargs_variable(method):
-    x = Variable("y", da.from_array(np.arange(3), chunks=(2,)))
-    # args should be passed on to da.Array.compute()
-    with mock.patch.object(
-        da.Array, "compute", return_value=np.arange(3)
-    ) as mock_compute:
+    chunked_array = da.from_array(np.arange(3), chunks=(2,))
+    x = Variable("y", chunked_array)
+    # args should be passed on to dask.compute() (via DaskManager.compute())
+    with mock.patch.object(da, "compute", return_value=(np.arange(3),)) as mock_compute:
         getattr(x, method)(foo="bar")
-    mock_compute.assert_called_with(foo="bar")
+    mock_compute.assert_called_with(chunked_array, foo="bar")
 
 
 @pytest.mark.parametrize("method", ["load", "compute", "persist"])

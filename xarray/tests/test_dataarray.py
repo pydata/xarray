@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Final, cast
+from typing import Any, Final, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -1698,6 +1698,19 @@ class TestDataArray:
         assert_identical(expected, actual)
         assert actual.dtype == expected.dtype
 
+    def test_reindex_empty_array_dtype(self) -> None:
+        # Dtype of reindex result should match dtype of the original DataArray.
+        # See GH issue #7299
+        x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
+        y = x.reindex(x=[1.0, 2.0])
+
+        assert (
+            x.dtype == y.dtype
+        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        assert (
+            y.dtype == np.float32
+        ), "Dtype of reindexed DataArray should remain float32"
+
     def test_rename(self) -> None:
         da = xr.DataArray(
             [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
@@ -3245,6 +3258,39 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask
+    def test_to_dask_dataframe(self) -> None:
+        arr_np = np.arange(3 * 4).reshape(3, 4)
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+        expected = arr.to_series()
+        actual = arr.to_dask_dataframe()["foo"]
+
+        assert_array_equal(actual.values, expected.values)
+
+        actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
+
+        # regression test for coords with different dimensions
+
+        arr.coords["C"] = ("B", [-1, -2, -3])
+        expected = arr.to_series().to_frame()
+        expected["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected = expected[["C", "foo"]]
+        actual = arr.to_dask_dataframe()[["C", "foo"]]
+
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.columns.values, actual.columns.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dask_dataframe(dim_order=["B", "A", "C"])
+
+        arr.name = None
+        with pytest.raises(
+            ValueError,
+            match="Cannot convert an unnamed DataArray",
+        ):
+            arr.to_dask_dataframe()
+
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
@@ -3345,46 +3391,70 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
-    def test_to_and_from_dict(self, encoding) -> None:
+    def test_to_and_from_dict(
+        self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
+    ) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
-        array.encoding = {"bar": "spam"}
-        expected = {
+        array.encoding = encoding_data
+
+        return_data = array.to_numpy()
+        coords_data = np.array(["a", "b"])
+        if data == "list" or data is True:
+            return_data = return_data.tolist()
+            coords_data = coords_data.tolist()
+
+        expected: dict[str, Any] = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": return_data,
             "attrs": {},
-            "coords": {"x": {"dims": ("x",), "data": ["a", "b"], "attrs": {}}},
+            "coords": {"x": {"dims": ("x",), "data": coords_data, "attrs": {}}},
         }
         if encoding:
-            expected["encoding"] = {"bar": "spam"}
-        actual = array.to_dict(encoding=encoding)
+            expected["encoding"] = encoding_data
+
+        if has_dask:
+            da = array.chunk()
+        else:
+            da = array
+
+        if data == "array" or data is False:
+            with raise_if_dask_computes():
+                actual = da.to_dict(encoding=encoding, data=data)
+        else:
+            actual = da.to_dict(encoding=encoding, data=data)
 
         # check that they are identical
-        assert expected == actual
+        np.testing.assert_equal(expected, actual)
 
         # check roundtrip
-        assert_identical(array, DataArray.from_dict(actual))
+        assert_identical(da, DataArray.from_dict(actual))
 
         # a more bare bones representation still roundtrips
         d = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": da.values.tolist(),
             "coords": {"x": {"dims": "x", "data": ["a", "b"]}},
         }
-        assert_identical(array, DataArray.from_dict(d))
+        assert_identical(da, DataArray.from_dict(d))
 
         # and the most bare bones representation still roundtrips
-        d = {"name": "foo", "dims": ("x", "y"), "data": array.values}
-        assert_identical(array.drop_vars("x"), DataArray.from_dict(d))
+        d = {"name": "foo", "dims": ("x", "y"), "data": da.values}
+        assert_identical(da.drop_vars("x"), DataArray.from_dict(d))
 
         # missing a dims in the coords
         d = {
             "dims": ("x", "y"),
-            "data": array.values,
+            "data": da.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
         with pytest.raises(
@@ -3407,7 +3477,7 @@ class TestDataArray:
         endiantype = "<U1" if sys.byteorder == "little" else ">U1"
         expected_no_data["coords"]["x"].update({"dtype": endiantype, "shape": (2,)})
         expected_no_data.update({"dtype": "float64", "shape": (2, 3)})
-        actual_no_data = array.to_dict(data=False, encoding=encoding)
+        actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
     def test_to_and_from_dict_with_time_dim(self) -> None:
@@ -3491,6 +3561,10 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_classic(self) -> None:
         """Classic with 1D axes"""
         pytest.importorskip("cdms2")
@@ -3508,7 +3582,8 @@ class TestDataArray:
             IndexVariable("distance", [-2, 2]),
             IndexVariable("time", [0, 1, 2]),
         ]
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
         assert tuple(actual.getAxisIds()) == original.dims
@@ -3521,7 +3596,8 @@ class TestDataArray:
         assert len(component_times) == 3
         assert str(component_times[0]) == "2000-1-1 0:0:0.0"
 
-        roundtripped = DataArray.from_cdms2(actual)
+        with pytest.deprecated_call(match=".*cdms2"):
+            roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
 
         back = from_cdms2(actual)
@@ -3530,6 +3606,10 @@ class TestDataArray:
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name], back.coords[coord_name])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_sgrid(self) -> None:
         """Curvilinear (structured) grid
 
@@ -3548,7 +3628,8 @@ class TestDataArray:
             coords=dict(x=x, y=y, lon=lon, lat=lat),
             name="sst",
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
         assert_array_equal(original.coords["lat"], actual.getLatitude().asma())
@@ -3559,6 +3640,10 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_ugrid(self) -> None:
         """Unstructured grid"""
         pytest.importorskip("cdms2")
@@ -3569,7 +3654,8 @@ class TestDataArray:
         original = DataArray(
             np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
         assert_array_equal(original.coords["lat"], actual.getLatitude().getValue())
@@ -3924,6 +4010,11 @@ class TestDataArray:
         assert expected is actual
 
         actual = (self.dv > 10).xindexes["x"]
+        assert expected is actual
+
+        # use mda for bitshift test as it's type int
+        actual = (self.mda << 2).xindexes["x"]
+        expected = self.mda.xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self) -> None:
@@ -4337,7 +4428,7 @@ class TestDataArray:
             da = da.chunk({"x": 1})
 
         fit = da.curvefit(
-            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": [2, 6]}
+            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": (2, 6)}
         )
         assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
 
@@ -4358,11 +4449,182 @@ class TestDataArray:
         assert param_defaults == {"n0": 4, "tau": 6}
         assert bounds_defaults == {"n0": (-np.inf, np.inf), "tau": (5, np.inf)}
 
+        # DataArray as bound
+        param_defaults, bounds_defaults = xr.core.dataset._initialize_curvefit_params(
+            params=params,
+            p0={"n0": 4},
+            bounds={"tau": [DataArray([3, 4], coords=[("x", [1, 2])]), np.inf]},
+            func_args=func_args,
+        )
+        assert param_defaults["n0"] == 4
+        assert (
+            param_defaults["tau"] == xr.DataArray([4, 5], coords=[("x", [1, 2])])
+        ).all()
+        assert bounds_defaults["n0"] == (-np.inf, np.inf)
+        assert (
+            bounds_defaults["tau"][0] == DataArray([3, 4], coords=[("x", [1, 2])])
+        ).all()
+        assert bounds_defaults["tau"][1] == np.inf
+
         param_names = ["a"]
         params, func_args = xr.core.dataset._get_func_args(np.power, param_names)
         assert params == param_names
         with pytest.raises(ValueError):
             xr.core.dataset._get_func_args(np.power, [])
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fitting to a sine curve produces a different result depending on the
+        # initial guess: either the phase is zero and the amplitude is positive
+        # or the phase is 0.5 * 2pi and the amplitude is negative.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        # Different initial guesses for different values of x
+        a_guess = DataArray([1, -1], coords=[da.x])
+        p_guess = DataArray([0, 0.5], coords=[da.x])
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"a": a_guess, "p": p_guess, "f": 2},
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Initial guess for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # initial guess with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                p0={"a": DataArray([1, 2], coords={"foo": [1, 2]})},
+            )
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = xr.DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fit a sine with different bounds: positive amplitude should result in a fit with
+        # phase 0 and negative amplitude should result in phase 0.5 * 2pi.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (
+                    DataArray([0, -2], coords=[da.x]),
+                    DataArray([2, 0], coords=[da.x]),
+                ),
+            },
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        # Scalar lower bound with array upper bound
+        fit2 = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (-2, DataArray([2, 0], coords=[da.x])),
+            },
+        )
+        assert_allclose(fit2.curvefit_coefficients, expected)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Upper bound for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # bounds with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                bounds={"a": (0, DataArray([1], coords={"foo": [1]}))},
+            )
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        # nonsense function to make the optimization fail
+        def line(x, a, b):
+            if a > 10:
+                return 0
+            return a * x + b
+
+        da = DataArray(
+            [[1, 3, 5], [0, 20, 40]],
+            coords={"i": [1, 2], "x": [0.0, 1.0, 2.0]},
+        )
+
+        if use_dask:
+            da = da.chunk({"i": 1})
+
+        expected = DataArray(
+            [[2, 1], [np.nan, np.nan]], coords={"i": [1, 2], "param": ["a", "b"]}
+        )
+
+        with pytest.raises(RuntimeError, match="calls to function has reached maxfev"):
+            da.curvefit(
+                coords="x",
+                func=line,
+                # limit maximum number of calls so the optimization fails
+                kwargs=dict(maxfev=5),
+            ).compute()  # have to compute to raise the error
+
+        fit = da.curvefit(
+            coords="x",
+            func=line,
+            errors="ignore",
+            # limit maximum number of calls so the optimization fails
+            kwargs=dict(maxfev=5),
+        ).compute()
+
+        assert_allclose(fit.curvefit_coefficients, expected)
 
 
 class TestReduce:

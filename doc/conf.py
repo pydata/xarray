@@ -58,7 +58,7 @@ except ImportError:
         ]
     )
 
-nbsphinx_allow_errors = True
+nbsphinx_allow_errors = False
 
 # -- General configuration ------------------------------------------------
 
@@ -238,7 +238,7 @@ html_theme_options = dict(
     extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
-    twitter_url="https://twitter.com/xarray_devs",
+    twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
 )
 

@@ -530,7 +530,7 @@ def line(
     if np.issubdtype(xplt.dtype, np.datetime64):
         for xlabels in ax.get_xticklabels():
             xlabels.set_rotation(30)
-            xlabels.set_ha("right")
+            xlabels.set_horizontalalignment("right")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
@@ -1099,7 +1099,7 @@ def _add_labels(
             # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
             for labels in getattr(ax, f"get_{axis}ticklabels")():
                 labels.set_rotation(30)
-                labels.set_ha("right")
+                labels.set_horizontalalignment("right")
 
 
 @overload
@@ -1639,7 +1639,7 @@ def _plot2d(plotfunc):
         if np.issubdtype(xplt.dtype, np.datetime64):
             for xlabels in ax.get_xticklabels():
                 xlabels.set_rotation(30)
-                xlabels.set_ha("right")
+                xlabels.set_horizontalalignment("right")
 
         return primitive
 
