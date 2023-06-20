@@ -6079,6 +6079,36 @@ class Dataset(
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
 
+        Example
+        -------
+        # Create a sample dataset
+        >>> data = np.array([[1, 2, np.nan], [4, np.nan, 6], [np.nan, 8, 9]])
+        >>> coords = {"x": [0, 1, 2], "y": [0, 1, 2]}
+        >>> dataset = xr.Dataset({"data": (["x", "y"], data)}, coords=coords)
+
+        # Print the original dataset
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:  (x: 3, y: 3)
+        Coordinates:
+        * x        (x) int64 0 1 2
+        * y        (y) int64 0 1 2
+        Data variables:
+            data     (x, y) float64 1.0 2.0 nan 4.0 nan 6.0 nan 8.0 9.0
+
+        # Apply backward fill (bfill) along the 'y' dimension
+        >>> dataset_bfill = dataset.bfill(dim="y")
+
+        # Print the dataset after backward fill
+        >>> dataset_bfill
+        <xarray.Dataset>
+        Dimensions:  (x: 3, y: 3)
+        Coordinates:
+        * x        (x) int64 0 1 2
+        * y        (y) int64 0 1 2
+        Data variables:
+            data     (x, y) float64 1.0 2.0 nan 4.0 6.0 6.0 8.0 8.0 9.0
+
         Returns
         -------
         Dataset
