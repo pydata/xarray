@@ -1808,6 +1808,58 @@ class Dataset(
             If True, remove coordinates instead of converting them into
             variables.
 
+        Example
+        -------
+
+        # Sample dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "temperature": (
+        ...             ["time", "lat", "lon"],
+        ...             [[[25, 26], [27, 28]], [[29, 30], [31, 32]]],
+        ...         ),
+        ...         "precipitation": (
+        ...             ["time", "lat", "lon"],
+        ...             [[[0.5, 0.8], [0.2, 0.4]], [[0.3, 0.6], [0.7, 0.9]]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "time": pd.date_range(start="2023-01-01", periods=2),
+        ...         "lat": [40, 41],
+        ...         "lon": [-80, -79],
+        ...         "altitude": 1000,
+        ...     },
+        ... )
+
+        # Print the dataset before resetting coordinates
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:        (time: 2, lat: 2, lon: 2)
+        Coordinates:
+        * time           (time) datetime64[ns] 2023-01-01 2023-01-02
+        * lat            (lat) int64 40 41
+        * lon            (lon) int64 -80 -79
+            altitude       int64 1000
+        Data variables:
+            temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
+            precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
+
+        # Reset the 'altitude' coordinate
+        >>> dataset_reset = dataset.reset_coords("altitude")
+
+        # Print the dataset after resetting coordinates
+        >>> dataset_reset
+        <xarray.Dataset>
+        Dimensions:        (time: 2, lat: 2, lon: 2)
+        Coordinates:
+        * time           (time) datetime64[ns] 2023-01-01 2023-01-02
+        * lat            (lat) int64 40 41
+        * lon            (lon) int64 -80 -79
+        Data variables:
+            temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
+            precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
+            altitude       int64 1000
+
         Returns
         -------
         Dataset
