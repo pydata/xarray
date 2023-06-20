@@ -2740,6 +2740,43 @@ class Dataset(
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
+        Example
+        -------
+
+        # Sample Dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "temperature": [25.1, 28.3, 30.5, 27.2, 26.8],
+        ...         "humidity": [60.2, 55.6, 50.3, 58.8, 61.7],
+        ...     },
+        ...     coords={"time": [1, 2, 3, 4, 5]},
+        ... )
+
+        # Originial Dataset
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 5, humidity: 5, time: 5)
+        Coordinates:
+        * temperature  (temperature) float64 25.1 28.3 30.5 27.2 26.8
+        * humidity     (humidity) float64 60.2 55.6 50.3 58.8 61.7
+        * time         (time) int64 1 2 3 4 5
+        Data variables:
+            *empty*
+
+        # Use head() function to retrieve the first three elements
+        >>> head_dataset = dataset.head(2)
+
+        # Print the head dataset
+        >>> head_dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 2, humidity: 2, time: 2)
+        Coordinates:
+        * temperature  (temperature) float64 25.1 28.3
+        * humidity     (humidity) float64 60.2 55.6
+        * time         (time) int64 1 2
+        Data variables:
+            *empty*
+
         See Also
         --------
         Dataset.tail
