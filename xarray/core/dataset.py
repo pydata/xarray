@@ -5959,6 +5959,34 @@ class Dataset(
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
 
+        Example
+        -------
+        # Create a sample dataset with missing values
+        >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
+        >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
+        >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
+
+        # Perform forward fill (ffill) on the dataset
+        >>> filled_dataset = dataset.ffill(dim="time")
+
+        # Print the original dataset
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:  (time: 10)
+        Coordinates:
+        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+        Data variables:
+            data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
+
+        # Print the filled dataset, fills NaN values by propagating values forward
+        >>> filled_dataset
+        <xarray.Dataset>
+        Dimensions:  (time: 10)
+        Coordinates:
+        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+        Data variables:
+            data     (time) float64 1.0 1.0 3.0 3.0 5.0 6.0 6.0 8.0 8.0 10.0
+
         Returns
         -------
         Dataset
