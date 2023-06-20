@@ -1726,19 +1726,58 @@ class Dataset(
     def set_coords(self: T_Dataset, names: Hashable | Iterable[Hashable]) -> T_Dataset:
         """Given names of one or more variables, set them as coordinates
 
-        Parameters
-        ----------
-        names : hashable or iterable of hashable
-            Name(s) of variables in this dataset to convert into coordinates.
+                Parameters
+                ----------
+                names : hashable or iterable of hashable
+                    Name(s) of variables in this dataset to convert into coordinates.
 
-        Returns
-        -------
-        Dataset
+                Example
+                -------
 
-        See Also
-        --------
-        Dataset.swap_dims
-        Dataset.assign_coords
+                # Sample dataset
+                >>> data = xr.DataArray(
+                ...     [[1, 2], [3, 4]],
+                ...     dims=("x", "y"),
+                ...     coords={"x": [0, 1], "y": [0, 1]},
+                ...     name="data",
+                ... )
+                >>> dataset = xr.Dataset(data_vars={"data": data})
+
+                # Print the dataset before setting coordinates
+                >>> dataset
+                <xarray.Dataset>
+                Dimensions:  (x: 2, y: 2)
+                Coordinates:
+                * x        (x) int64 0 1
+                * y        (y) int64 0 1
+                Data variables:
+                    data     (x, y) int64 1 2 3 4
+
+
+                # Set "x" and "y" variables as coordinates
+                >>> dataset_coords = dataset.set_coords(["x", "y"])
+
+                # Print the dataset after setting coordinates
+                >>> dataset_coords
+                <xarray.Dataset>
+                Dimensions:  (x: 2, y: 2)
+                Coordinates:
+                    x        (x) int64 0 1
+                    y        (y) int64 0 1
+                Data variables:
+                    data     (x, y) int64 1 2 3 4
+
+        In the initial dataset, the "x" and "y" variables are present as dimensions. After calling ``set_coords`` (["x", "y"]), these
+        variables are converted to coordinates, as shown in the final dataset.
+
+                Returns
+                -------
+                Dataset
+
+                See Also
+                --------
+                Dataset.swap_dims
+                Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
