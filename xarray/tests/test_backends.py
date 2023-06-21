@@ -1673,7 +1673,17 @@ class TestNetCDF4Data(NetCDF4Base):
 
     def test_compression_encoding(self) -> None:
         data = create_test_data(dim_sizes=(20, 40, 10))
-        compression_vals = (None, "zlib", "szip", "zstd", "blosc_lz", "blosc_lz4", "blosc_lz4hc", "blosc_zlib", "blosc_zstd")
+        compression_vals = (
+            None,
+            "zlib",
+            "szip",
+            "zstd",
+            "blosc_lz",
+            "blosc_lz4",
+            "blosc_lz4hc",
+            "blosc_zlib",
+            "blosc_zstd",
+        )
         for compression in compression_vals:
             encoding_params = dict(compression=compression, blosc_shuffle=1)
             data["var2"].encoding.update(encoding_params)
@@ -1694,11 +1704,16 @@ class TestNetCDF4Data(NetCDF4Base):
                 blosc_shuffle = expected_encoding.pop("blosc_shuffle")
                 if compression is not None:
                     if "blosc" in compression and blosc_shuffle:
-                        expected_encoding["blosc"] = {"compressor": compression, "shuffle": blosc_shuffle}
+                        expected_encoding["blosc"] = {
+                            "compressor": compression,
+                            "shuffle": blosc_shuffle,
+                        }
                         expected_encoding["shuffle"] = False
                     elif compression == "szip":
-                        expected_encoding["szip"] = {'coding': 'nn',
-                                                     'pixels_per_block': 8}
+                        expected_encoding["szip"] = {
+                            "coding": "nn",
+                            "pixels_per_block": 8,
+                        }
                         expected_encoding["shuffle"] = False
                     else:
                         # This will set a key like zlib=true which is what appears in
@@ -1712,7 +1727,10 @@ class TestNetCDF4Data(NetCDF4Base):
                 actual_encoding = actual["var2"].encoding
                 for k, v in expected_encoding.items():
                     assert v == actual_encoding[k]
-            if encoding_params["compression"] is not None and "blosc" not in encoding_params["compression"]:
+            if (
+                encoding_params["compression"] is not None
+                and "blosc" not in encoding_params["compression"]
+            ):
                 # regression test for #156
                 expected = data.isel(dim1=0)
                 with self.roundtrip(expected) as actual:
