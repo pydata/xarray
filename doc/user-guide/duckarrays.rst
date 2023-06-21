@@ -10,10 +10,16 @@ class but with different features, such as propagating physical units or a diffe
 Xarray can often wrap these array types, allowing you to use labelled dimensions and indexes whilst benefiting from the
 additional features of these array libraries.
 
+Some numpy-like array types that xarray already has some support for:
+
+* `Cupy <https://cupy.dev/>`_ - GPU support,
+* `Sparse <https://sparse.pydata.org/en/stable/>`_ - for performant arrays with many zero elements,
+* `Pint <https://pint.readthedocs.io/en/latest/>`_ - for tracking the physical units of your data.
+
 .. warning::
 
    This feature should be considered somewhat experimental. Please report any bugs you find on
-   xarray’s github repository.
+   `xarray’s issue tracker <https://github.com/pydata/xarray/issues>`_.
 
 .. note::
 
