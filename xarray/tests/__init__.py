@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib
 import platform
+import string
 import warnings
 from contextlib import contextmanager, nullcontext
+from typing import Tuple
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -239,18 +241,24 @@ def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def create_test_data(seed: int | None = None, add_attrs: bool = True) -> Dataset:
+def create_test_data(
+    seed: int | None = None,
+    add_attrs: bool = True,
+    dim_sizes: Tuple[int, int, int] = (8, 9, 10)
+) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
         "var2": ["dim1", "dim2"],
         "var3": ["dim3", "dim1"],
     }
-    _dims = {"dim1": 8, "dim2": 9, "dim3": 10}
+    _dims = {"dim1": dim_sizes[0], "dim2": dim_sizes[1], "dim3": dim_sizes[2]}
 
     obj = Dataset()
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
-    obj["dim3"] = ("dim3", list("abcdefghij"))
+    if _dims["dim3"] > 26:
+        raise RuntimeError(f'Not enough letters for filling this dimension size ({_dims["dim3"]})')
+    obj["dim3"] = ("dim3", list(string.ascii_lowercase[0:_dims["dim3"]]))
     obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
@@ -259,7 +267,7 @@ def create_test_data(seed: int | None = None, add_attrs: bool = True) -> Dataset
             obj[v].attrs = {"foo": "variable"}
     obj.coords["numbers"] = (
         "dim3",
-        np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
+        np.random.randint(0, 3, _dims["dim3"], dtype="int64"),
     )
     obj.encoding = {"foo": "bar"}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
