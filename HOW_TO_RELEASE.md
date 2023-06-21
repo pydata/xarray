@@ -59,7 +59,7 @@ upstream        https://github.com/pydata/xarray (push)
  10. This should automatically trigger an upload of the new build to PyPI via GitHub Actions.
     Check this has run [here](https://github.com/pydata/xarray/actions/workflows/pypi-release.yaml),
     and that the version number you expect is displayed [on PyPI](https://pypi.org/project/xarray/)
-11. Add a section for the next release {YYYY.MM.X+1} to doc/whats-new.rst:
+11. Add a section for the next release {YYYY.MM.X+1} to doc/whats-new.rst (we avoid doing this earlier so that it doesn't show up in the RTD build):
      ```rst
      .. _whats-new.YYYY.MM.X+1:
 
