@@ -2862,37 +2862,6 @@ class Dataset(
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
-        Example
-        -------
-
-        # Sample dataset
-        >>> data = xr.DataArray([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dims=("x", "y"))
-        >>> dataset = xr.Dataset({"data": data})
-
-        # Print the original dataset
-        >>> "Original Dataset:"
-        >>> dataset
-
-        # Get the last 2 elements using tail()
-        >>> tail_dataset = dataset.tail(2)
-
-        # Print the tail dataset
-        >>> "Tail Dataset:"
-        >>> tail_dataset
-        'Original Dataset:'
-        <xarray.Dataset>
-        Dimensions:  (x: 3, y: 3)
-        Dimensions without coordinates: x, y
-        Data variables:
-            data     (x, y) int64 1 2 3 4 5 6 7 8 9
-
-        'Tail Dataset:'
-        <xarray.Dataset>
-        Dimensions:  (x: 2, y: 2)
-        Dimensions without coordinates: x, y
-        Data variables:
-            data     (x, y) int64 5 6 8 9
-
         See Also
         --------
         Dataset.head
@@ -8753,109 +8722,68 @@ class Dataset(
     def argmin(self: T_Dataset, dim: Hashable | None = None, **kwargs) -> T_Dataset:
         """Indices of the minima of the member variables.
 
-                If there are multiple minima, the indices of the first one found will be
-                returned.
+        If there are multiple minima, the indices of the first one found will be
+        returned.
 
-                Parameters
-                ----------
-                dim : Hashable, optional
-                    The dimension over which to find the minimum. By default, finds minimum over
-                    all dimensions - for now returning an int for backward compatibility, but
-                    this is deprecated, in future will be an error, since DataArray.argmin will
-                    return a dict with indices for all dimensions, which does not make sense for
-                    a Dataset.
-                keep_attrs : bool, optional
-                    If True, the attributes (`attrs`) will be copied from the original
-                    object to the new one.  If False (default), the new object will be
-                    returned without attributes.
-                skipna : bool, optional
-                    If True, skip missing values (as marked by NaN). By default, only
-                    skips missing values for float dtypes; other dtypes either do not
-                    have a sentinel missing value (int) or skipna=True has not been
-                    implemented (object, datetime64 or timedelta64).
+        Parameters
+        ----------
+        dim : Hashable, optional
+            The dimension over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmin will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
-                Returns
-                -------
-                result : Dataset
+        Returns
+        -------
+        result : Dataset
 
-                Example
-                -------
+        Example
+        -------
 
-                # Defined the dataset
-                >>> dataset = xr.Dataset(
-                ...     {
-                ...         "math_scores": (
-                ...             ["student", "test"],
-                ...             [[90, 85, 79], [78, 80, 85], [95, 92, 98]],
-                ...         ),
-                ...         "english_scores": (
-                ...             ["student", "test"],
-                ...             [[88, 80, 92], [75, 95, 79], [93, 96, 78]],
-                ...         ),
-                ...     },
-                ...     coords={
-                ...         "student": ["Alice", "Bob", "Charlie"],
-                ...         "test": ["Test 1", "Test 2", "Test 3"],
-                ...     },
-                ... )
+        # Defined the dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "math_scores": (
+        ...             ["student", "test"],
+        ...             [[90, 85, 79], [78, 80, 85], [95, 92, 98]],
+        ...         ),
+        ...         "english_scores": (
+        ...             ["student", "test"],
+        ...             [[88, 80, 92], [75, 95, 79], [93, 96, 78]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "student": ["Alice", "Bob", "Charlie"],
+        ...         "test": ["Test 1", "Test 2", "Test 3"],
+        ...     },
+        ... )
 
-                # Indices of the minimum values along the 'student' dimension are calculated
-                >>> argmin_indices = dataset.argmin(dim="student")
+        # Indices of the minimum values along the 'student' dimension are calculated
+        >>> argmin_indices = dataset.argmin(dim="student")
 
-                # Print the indices of the minimum values
-                >>> argmin_indices
-                <xarray.Dataset>
-                Dimensions:         (test: 3)
-                Coordinates:
-                * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
-                Data variables:
-                    math_scores     (test) int64 1 1 0
-                    english_scores  (test) int64 1 0 2
+        # Print the indices of the minimum values
+        >>> argmin_indices
+        <xarray.Dataset>
+        Dimensions:         (test: 3)
+        Coordinates:
+        * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
+        Data variables:
+            math_scores     (test) int64 1 1 0
+            english_scores  (test) int64 1 0 2
 
-        Another example
-
-                # Example precipitation dataset
-                >>> precipitation_data = xr.Dataset(
-                ...     {
-                ...         "precipitation": (
-                ...             ["time", "location"],
-                ...             [
-                ...                 [5.3, 3.8, 2.1],
-                ...                 [2.7, 4.2, 1.5],
-                ...                 [3.9, 2.6, 1.9],
-                ...                 [2.1, 1.4, 3.2],
-                ...             ],
-                ...         )
-                ...     },
-                ...     coords={
-                ...         "time": pd.date_range(start="2023-06-01", periods=4),
-                ...         "location": ["A", "B", "C"],
-                ...     },
-                ... )
-
-                # Index of the day with the minimum precipitation
-                >>> min_precipitation_index = precipitation_data[
-                ...     "precipitation"
-                ... ].argmin(dim="time")
-
-                # Using isel to extract the corresponding data
-                >>> min_precipitation_data = precipitation_data.isel(
-                ...     time=min_precipitation_index
-                ... )
-
-                # Print the minimum precipitation data
-                >>> min_precipitation_data
-                <xarray.Dataset>
-                Dimensions:        (location: 3)
-                Coordinates:
-                    time           (location) datetime64[ns] 2023-06-04 2023-06-04 2023-06-02
-                * location       (location) <U1 'A' 'B' 'C'
-                Data variables:
-                    precipitation  (location) float64 2.1 1.4 1.5
-
-                See Also
-                --------
-                DataArray.argmin
+        See Also
+        --------
+        DataArray.argmin
         """
         if dim is None:
             warnings.warn(
@@ -8933,10 +8861,10 @@ class Dataset(
         ...     },
         ... )
 
-        # Indices of the maximum values along the 'student' dimension are calculated
+        # Indices of the minimum values along the 'student' dimension are calculated
         >>> argmax_indices = dataset.argmax(dim="test")
 
-        # Print the indices of the maximum values
+        # Print the indices of the minimum values
         >>> argmax_indices
         <xarray.Dataset>
         Dimensions:         (student: 3)
