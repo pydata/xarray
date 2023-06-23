@@ -1657,6 +1657,45 @@ class Dataset(
         the other dataset can still be broadcast equal if the the non-scalar
         variable is a constant.
 
+        Example
+        -------
+
+        # Create two datasets
+        >>> dataset1 = xr.Dataset({"temperature": xr.DataArray([20, 25, 30])})
+        >>> dataset2 = xr.Dataset({"temperature": xr.DataArray([20, 25, 30])})
+
+        # Check if the datasets are equal after broadcasting
+        >>> is_equal = (dataset1 == dataset2).all()
+        >>> is_equal
+        <xarray.Dataset>
+        Dimensions:      ()
+        Data variables:
+            temperature  bool True
+
+        # Create two datasets
+        >>> dataset1 = xr.Dataset(
+        ...     {
+        ...         "temperature": xr.DataArray([[20, 25], [30, 35]]),
+        ...         "precipitation": xr.DataArray([[0.5, 0.2], [0.8, 0.4]]),
+        ...     }
+        ... )
+
+        >>> dataset2 = xr.Dataset(
+        ...     {
+        ...         "temperature": xr.DataArray([25, 30]),
+        ...         "precipitation": xr.DataArray([0.2, 0.4]),
+        ...     }
+        ... )
+
+        # Check if the datasets are equal after broadcasting
+        >>> is_equal = (dataset1 == dataset2).all()
+        >>> is_equal
+        <xarray.Dataset>
+        Dimensions:        ()
+        Data variables:
+            temperature    bool False
+            precipitation  bool False
+
         See Also
         --------
         Dataset.equals
