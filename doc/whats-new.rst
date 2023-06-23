@@ -22,9 +22,9 @@ v2023.06.0 (June 21, 2023)
 
 This release adds features to ``curvefit``, improves the performance of concatenation, and fixes various bugs.
 
-Thank to our 12 contributors to this release:
-Anderson Banihirwe, Deepak Cherian, dependabot[bot], Illviljan, Justus Magin, Martin Fleischmann, Mattia Almansi,
-mgunyho, Rutger van Haasteren, Thomas Nicholas, Tom Nicholas, Tom White.
+Thank to our 13 contributors to this release:
+Anderson Banihirwe, Deepak Cherian, dependabot[bot], Illviljan, Juniper Tyree, Justus Magin, Martin Fleischmann,
+Mattia Almansi, mgunyho, Rutger van Haasteren, Thomas Nicholas, Tom Nicholas, Tom White.
 
 
 New Features
