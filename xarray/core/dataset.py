@@ -1732,6 +1732,64 @@ class Dataset(
         """Like equals, but also checks all dataset attributes and the
         attributes on all variables and coordinates.
 
+        Example
+        -------
+
+        # Create two datasets
+        >>> ds1 = xr.Dataset({"data": [1, 2, 3]}, attrs={"name": "Dataset 1"})
+        >>> ds2 = xr.Dataset({"data": [1, 2, 3]}, attrs={"name": "Dataset 2"})
+
+        # Compare the datasets
+        >>> is_identical = ds1.identical(ds2)
+        >>> is_identical
+        False
+
+        # Create two datasets
+        >>> ds1 = xr.Dataset(
+        ...     {"temperature": ([], 25)},
+        ...     attrs={"description": "Temperature dataset"},
+        ... )
+        >>> ds2 = xr.Dataset(
+        ...     {"temperature": ([], 25)},
+        ...     attrs={"description": "Temperature dataset"},
+        ... )
+
+        # Compare the datasets
+        >>> is_identical = ds1.identical(ds2)
+        >>> is_identical
+        True
+
+        # Create the first dataset
+        >>> ds1 = xr.Dataset(
+        ...     {
+        ...         "temperature": (["latitude", "longitude"], [[25, 26], [27, 28]]),
+        ...         "humidity": (["latitude", "longitude"], [[50, 55], [60, 65]]),
+        ...     },
+        ...     coords={
+        ...         "latitude": [40, 45],
+        ...         "longitude": [100, 105],
+        ...     },
+        ...     attrs={"description": "Weather dataset"},
+        ... )
+
+        # Create the second dataset
+        >>> ds2 = xr.Dataset(
+        ...     {
+        ...         "temperature": (["latitude", "longitude"], [[25, 26], [27, 28]]),
+        ...         "humidity": (["latitude", "longitude"], [[50, 55], [60, 65]]),
+        ...     },
+        ...     coords={
+        ...         "latitude": [40, 45],
+        ...         "longitude": [100, 105],
+        ...     },
+        ...     attrs={"description": "Weather dataset"},
+        ... )
+
+        # Compare the datasets
+        ... is_identical = ds1.identical(ds2)
+        ... is_identical
+        True
+
         See Also
         --------
         Dataset.broadcast_equals
