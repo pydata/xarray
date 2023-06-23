@@ -417,7 +417,7 @@ class ZarrStore(AbstractWritableDataStore):
             if consolidated is None:
                 consolidated = False
 
-        if chunk_store:
+        if chunk_store is not None:
             open_kwargs["chunk_store"] = chunk_store
             if consolidated is None:
                 consolidated = False

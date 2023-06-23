@@ -61,6 +61,8 @@ Bug fixes
   By `Tom White <https://github.com/tomwhite>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Ensure dtype of reindex result matches dtype of the original DataArray (:issue:`7299`, :pull:`7917`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Fix bug where a zero-length zarr ``chunk_store`` was ignored as if it was ``None`` (:pull:`7923`)
+  By `Juniper Tyree <https://github.com/juntyr>`_.
 
 Documentation
 ~~~~~~~~~~~~~
