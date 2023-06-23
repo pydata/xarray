@@ -1748,8 +1748,8 @@ class Dataset(
                 <xarray.Dataset>
                 Dimensions:  (x: 2, y: 2)
                 Coordinates:
-                * x        (x) int64 0 1
-                * y        (y) int64 0 1
+                    * x        (x) int64 0 1
+                    * y        (y) int64 0 1
                 Data variables:
                     data     (x, y) int64 1 2 3 4
 
@@ -1836,9 +1836,9 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
-        * time           (time) datetime64[ns] 2023-01-01 2023-01-02
-        * lat            (lat) int64 40 41
-        * lon            (lon) int64 -80 -79
+            * time           (time) datetime64[ns] 2023-01-01 2023-01-02
+            * lat            (lat) int64 40 41
+            * lon            (lon) int64 -80 -79
             altitude       int64 1000
         Data variables:
             temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
@@ -1852,9 +1852,9 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
-        * time           (time) datetime64[ns] 2023-01-01 2023-01-02
-        * lat            (lat) int64 40 41
-        * lon            (lon) int64 -80 -79
+            * time           (time) datetime64[ns] 2023-01-01 2023-01-02
+            * lat            (lat) int64 40 41
+            * lon            (lon) int64 -80 -79
         Data variables:
             temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
             precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
@@ -2782,9 +2782,9 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:      (temperature: 5, humidity: 5, time: 5)
         Coordinates:
-        * temperature  (temperature) float64 25.1 28.3 30.5 27.2 26.8
-        * humidity     (humidity) float64 60.2 55.6 50.3 58.8 61.7
-        * time         (time) int64 1 2 3 4 5
+            * temperature  (temperature) float64 25.1 28.3 30.5 27.2 26.8
+            * humidity     (humidity) float64 60.2 55.6 50.3 58.8 61.7
+            * time         (time) int64 1 2 3 4 5
         Data variables:
             *empty*
 
@@ -2796,9 +2796,9 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:      (temperature: 2, humidity: 2, time: 2)
         Coordinates:
-        * temperature  (temperature) float64 25.1 28.3
-        * humidity     (humidity) float64 60.2 55.6
-        * time         (time) int64 1 2
+            * temperature  (temperature) float64 25.1 28.3
+            * humidity     (humidity) float64 60.2 55.6
+            * time         (time) int64 1 2
         Data variables:
             *empty*
 
@@ -2856,23 +2856,18 @@ class Dataset(
         >>> dataset = xr.Dataset({"data": data})
 
         # Print the original dataset
-        >>> "Original Dataset:"
         >>> dataset
-
-        # Get the last 2 elements using tail()
-        >>> tail_dataset = dataset.tail(2)
-
-        # Print the tail dataset
-        >>> "Tail Dataset:"
-        >>> tail_dataset
-        'Original Dataset:'
         <xarray.Dataset>
         Dimensions:  (x: 3, y: 3)
         Dimensions without coordinates: x, y
         Data variables:
             data     (x, y) int64 1 2 3 4 5 6 7 8 9
 
-        'Tail Dataset:'
+        # Get the last 2 elements using tail()
+        >>> tail_dataset = dataset.tail(2)
+
+        # Print the tail dataset
+        >>> tail_dataset
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Dimensions without coordinates: x, y
@@ -6065,7 +6060,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
-        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+            * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
 
@@ -6074,7 +6069,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
-        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+            * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 1.0 3.0 3.0 5.0 6.0 6.0 8.0 8.0 10.0
 
@@ -6116,8 +6111,8 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (x: 3, y: 3)
         Coordinates:
-        * x        (x) int64 0 1 2
-        * y        (y) int64 0 1 2
+            * x        (x) int64 0 1 2
+            * y        (y) int64 0 1 2
         Data variables:
             data     (x, y) float64 1.0 2.0 nan 4.0 nan 6.0 nan 8.0 9.0
 
@@ -6129,8 +6124,8 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (x: 3, y: 3)
         Coordinates:
-        * x        (x) int64 0 1 2
-        * y        (y) int64 0 1 2
+            * x        (x) int64 0 1 2
+            * y        (y) int64 0 1 2
         Data variables:
             data     (x, y) float64 1.0 2.0 nan 4.0 6.0 6.0 8.0 8.0 9.0
 
@@ -8689,30 +8684,30 @@ class Dataset(
     def argmin(self: T_Dataset, dim: Hashable | None = None, **kwargs) -> T_Dataset:
         """Indices of the minima of the member variables.
 
-                If there are multiple minima, the indices of the first one found will be
-                returned.
+        If there are multiple minima, the indices of the first one found will be
+        returned.
 
-                Parameters
-                ----------
-                dim : Hashable, optional
-                    The dimension over which to find the minimum. By default, finds minimum over
-                    all dimensions - for now returning an int for backward compatibility, but
-                    this is deprecated, in future will be an error, since DataArray.argmin will
-                    return a dict with indices for all dimensions, which does not make sense for
-                    a Dataset.
-                keep_attrs : bool, optional
-                    If True, the attributes (`attrs`) will be copied from the original
-                    object to the new one.  If False (default), the new object will be
-                    returned without attributes.
-                skipna : bool, optional
-                    If True, skip missing values (as marked by NaN). By default, only
-                    skips missing values for float dtypes; other dtypes either do not
-                    have a sentinel missing value (int) or skipna=True has not been
-                    implemented (object, datetime64 or timedelta64).
+        Parameters
+        ----------
+        dim : Hashable, optional
+            The dimension over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmin will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
-                Returns
-                -------
-                result : Dataset
+        Returns
+        -------
+        result : Dataset
 
         Example
         -------
@@ -8743,7 +8738,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:         (test: 3)
         Coordinates:
-        * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
+            * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
         Data variables:
             math_scores     (test) int64 1 1 0
             english_scores  (test) int64 1 0 2
@@ -8836,7 +8831,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:         (student: 3)
         Coordinates:
-        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
+            * student         (student) <U7 'Alice' 'Bob' 'Charlie'
         Data variables:
             math_scores     (student) int64 2 2 2
             english_scores  (student) int64 2 1 1
