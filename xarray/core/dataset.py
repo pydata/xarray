@@ -1677,6 +1677,47 @@ class Dataset(
         This method is necessary because `v1 == v2` for ``Dataset``
         does element-wise comparisons (like numpy.ndarrays).
 
+        Example
+        -------
+
+        # Example datasets
+        >>> ds1 = xr.Dataset(
+        ...     {
+        ...         "temperature": (["x", "y"], [[1, 2], [3, 4]]),
+        ...     },
+        ...     coords={"x": [0, 1], "y": [0, 1]},
+        ... )
+
+        >>> ds2 = xr.Dataset(
+        ...     {
+        ...         "temperature": (["x", "y"], [[1, 2], [3, 4]]),
+        ...     },
+        ...     coords={"x": [0, 1], "y": [0, 1]},
+        ... )
+
+        # Check if the datasets are equal
+        >>> ds1.equals(ds2)
+        True
+
+        # Example datasets with NaN values
+        >>> ds1 = xr.Dataset(
+        ...     {
+        ...         "temperature": (["x", "y"], [[1, np.nan], [3, 4]]),
+        ...     },
+        ...     coords={"x": [0, 1], "y": [0, 1]},
+        ... )
+
+        >>> ds2 = xr.Dataset(
+        ...     {
+        ...         "temperature": (["x", "y"], [[1, np.nan], [3, 4]]),
+        ...     },
+        ...     coords={"x": [0, 1], "y": [0, 1]},
+        ... )
+
+        # Check if the datasets are equal
+        >>> ds1.equals(ds2)
+        True
+
         See Also
         --------
         Dataset.broadcast_equals
