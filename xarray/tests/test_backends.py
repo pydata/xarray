@@ -1849,6 +1849,8 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
             save_kwargs = {"chunk_store": chunk_store}
             self.save(expected, store_target, **save_kwargs)
+            # the chunk store must have been populated with some entries
+            assert len(chunk_store) > 0
             open_kwargs = {"backend_kwargs": {"chunk_store": chunk_store}}
             with self.open(store_target, **open_kwargs) as ds:
                 assert_equal(ds, expected)
