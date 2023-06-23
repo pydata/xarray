@@ -2484,7 +2484,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 pads[d] = (win - 1, 0)
 
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
-        axis = [self.get_axis_num(d) for d in dim]
+        axis = tuple(self.get_axis_num(d) for d in dim)
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
