@@ -15,10 +15,17 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.05.1:
+.. _whats-new.2023.06.0:
 
-v2023.05.1 (unreleased)
------------------------
+v2023.06.0 (June 21, 2023)
+--------------------------
+
+This release adds features to ``curvefit``, improves the performance of concatenation, and fixes various bugs.
+
+Thank to our 12 contributors to this release:
+Anderson Banihirwe, Deepak Cherian, dependabot[bot], Illviljan, Justus Magin, Martin Fleischmann, Mattia Almansi,
+mgunyho, Rutger van Haasteren, Thomas Nicholas, Tom Nicholas, Tom White.
+
 
 New Features
 ~~~~~~~~~~~~
