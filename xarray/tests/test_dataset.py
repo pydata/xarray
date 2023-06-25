@@ -411,6 +411,10 @@ class TestDataset:
             def __repr__(self):
                 return "Custom\nArray"
 
+            @property
+            def ndim(self):
+                return len(self.shape)
+
         dataset = Dataset({"foo": ("x", Array())})
         expected = dedent(
             """\
