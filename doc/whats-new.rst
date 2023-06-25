@@ -42,6 +42,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Allow chunked non-dask arrays (i.e. Cubed arrays) in groupby operations. (:pull:`7941`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 .. _whats-new.2023.06.0:
 
