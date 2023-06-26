@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims
-from xarray.core.utils import contains_only_dask_or_numpy, module_available
+from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -2413,7 +2413,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -2511,7 +2511,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -2609,7 +2609,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -2723,7 +2723,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -2839,7 +2839,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -2957,7 +2957,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -3092,7 +3092,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -3229,7 +3229,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -3363,7 +3363,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -3497,7 +3497,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -3927,7 +3927,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -4025,7 +4025,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -4123,7 +4123,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -4237,7 +4237,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -4353,7 +4353,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -4471,7 +4471,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -4606,7 +4606,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -4743,7 +4743,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -4877,7 +4877,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -5011,7 +5011,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -5436,7 +5436,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -5527,7 +5527,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -5618,7 +5618,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -5723,7 +5723,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -5830,7 +5830,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -5939,7 +5939,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -6063,7 +6063,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -6189,7 +6189,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -6312,7 +6312,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -6435,7 +6435,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -6842,7 +6842,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -6933,7 +6933,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -7024,7 +7024,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -7129,7 +7129,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -7236,7 +7236,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -7345,7 +7345,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -7469,7 +7469,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -7595,7 +7595,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -7718,7 +7718,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -7841,7 +7841,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
