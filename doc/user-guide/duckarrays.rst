@@ -27,6 +27,17 @@ Some numpy-like array types that xarray already has some support for:
     described on this page, chunked array types like :py:class:`dask.array.Array` implement additional methods that require
     slightly different user code (e.g. calling ``.chunk`` or ``.compute``).
 
+Why "duck"?
+-----------
+
+Why is it also called a "duck" array? This comes from a common statement of object-oriented programming -
+"If it walks like a duck, and quacks like a duck, treat it like a duck". In other words, a library like xarray that
+is capable of using multiple different types of arrays does not have to explicitly check that each one it encounters is
+permitted (e.g. ``if dask``, ``if numpy``, ``if sparse`` etc.). Instead xarray can take the more permissive approach of simply
+treating the wrapped array as valid, attempting to call the relevant methods (e.g. ``.mean()``) and only raising an
+error if a problem occurs (e.g. the method is not found on the wrapped class). This is much more flexible, and allows
+objects and classes from different libraries to work together more easily.
+
 What is a numpy-like array?
 ---------------------------
 
@@ -85,14 +96,6 @@ This numpy-like array also supports calling so-called numpy ufuncs (link to nump
 
 Notice that in each case the API for calling the operation on the sparse array is identical to that of calling it on the
 equivalent numpy array - this is the sense in which the sparse array is "numpy-like".
-
-Why is it also called a "duck" array, you might ask? This comes from a common statement in object-oriented programming -
-"If it walks like a duck, and quacks like a duck, treat it like a duck". In other words, a library like xarray that
-is capable of using multiple different types of arrays does not have to explicitly check that each one it encounters is
-permitted (e.g. `if dask`, `if numpy`, `if sparse` etc.). Instead xarray can take the more permissive approach of simply
-treating the wrapped array as valid, attempting to call the relevant methods (e.g. `.mean()`) and only raising an
-error if a problem occurs (e.g. the method is not found on the wrapped class). This is much more flexible, and allows
-objects and classes from different libraries to work together more easily.
 
 .. note::
 
