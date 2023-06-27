@@ -6159,33 +6159,35 @@ variables are converted to coordinates, as shown in the final dataset.
 
         Example
         -------
-        # Create a sample dataset
-        >>> data = np.array([[1, 2, np.nan], [4, np.nan, 6], [np.nan, 8, 9]])
-        >>> coords = {"x": [0, 1, 2], "y": [0, 1, 2]}
-        >>> dataset = xr.Dataset({"data": (["x", "y"], data)}, coords=coords)
+        # Define the time range
+        >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
+
+        # Define the data array with missing values
+        >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
+
+        # Create the dataset with the data array
+        >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
 
         # Print the original dataset
         >>> dataset
         <xarray.Dataset>
-        Dimensions:  (x: 3, y: 3)
+        Dimensions:  (time: 10)
         Coordinates:
-            * x        (x) int64 0 1 2
-            * y        (y) int64 0 1 2
+        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
-            data     (x, y) float64 1.0 2.0 nan 4.0 nan 6.0 nan 8.0 9.0
+            data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
 
-        # Apply backward fill (bfill) along the 'y' dimension
-        >>> dataset_bfill = dataset.bfill(dim="y")
+        # Perform backward fill (bfill) on the dataset
+        >>> filled_dataset = dataset.bfill(dim="time")
 
-        # Print the dataset after backward fill
-        >>> dataset_bfill
+        # Print the filled dataset, fills NaN values by propagating values backward
+        >>> filled_dataset
         <xarray.Dataset>
-        Dimensions:  (x: 3, y: 3)
+        Dimensions:  (time: 10)
         Coordinates:
-            * x        (x) int64 0 1 2
-            * y        (y) int64 0 1 2
+        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
-            data     (x, y) float64 1.0 2.0 nan 4.0 6.0 6.0 8.0 8.0 9.0
+            data     (time) float64 1.0 3.0 3.0 5.0 5.0 6.0 8.0 8.0 10.0 10.0
 
         Returns
         -------
