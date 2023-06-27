@@ -2838,7 +2838,7 @@ variables are converted to coordinates, as shown in the final dataset.
         ...     coords={"time": [1, 2, 3, 4, 5]},
         ... )
 
-        # Originial Dataset
+        # Original Dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:      (temperature: 5, humidity: 5, time: 5)
@@ -2925,10 +2925,7 @@ variables are converted to coordinates, as shown in the final dataset.
             data     (x, y) int64 1 2 3 4 5 6 7 8 9
 
         # Get the last 2 elements using tail()
-        >>> tail_dataset = dataset.tail(2)
-
-        # Print the tail dataset
-        >>> tail_dataset
+        dataset.tail(2)
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Dimensions without coordinates: x, y
