@@ -2486,8 +2486,8 @@ class Dataset(
             in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
 
-        Example
-        -------
+        Examples
+        --------
 
             # Defined the dataset
             >>> dataset = xr.Dataset(
