@@ -137,6 +137,18 @@ def test_groupby_input_mutation() -> None:
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_indexvariable(use_flox: bool) -> None:
+    # regression test for GH7919
+    array = xr.DataArray([1, 2, 3], [("x", [2, 2, 1])])
+    iv = xr.IndexVariable(dims="x", data=pd.Index(array.x.values))
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby(iv).sum()
+    actual = array.groupby(iv).sum()
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize(
     "obj",
     [
@@ -2338,6 +2350,14 @@ def test_groupby_binary_op_regression() -> None:
     anom_gb = x_slice.groupby("time.month") - clim
 
     assert_identical(xr.zeros_like(anom_gb), anom_gb)
+
+
+def test_groupby_multiindex_level() -> None:
+    # GH6836
+    midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
+    mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
+    groups = mda.groupby("one").groups
+    assert groups == {"a": [0, 1], "b": [2, 3], "c": [4, 5]}
 
 
 @requires_flox
