@@ -1921,7 +1921,7 @@ class Dataset(
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,
             "zlib": True}, ...}``.
             If encoding is specified the original encoding of the variables of
-            the dataset is ingnored
+            the dataset is ignored.
 
             The `h5netcdf` engine supports both the NetCDF4-style compression
             encoding parameters ``{"zlib": True, "complevel": 9}`` and the h5py
