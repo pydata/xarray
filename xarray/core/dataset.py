@@ -1825,8 +1825,8 @@ class Dataset(
         ... )
 
         # Compare the datasets
-        ... is_identical = ds1.identical(ds2)
-        ... is_identical
+        >>> is_identical = ds1.identical(ds2)
+        >>> is_identical
         True
 
         See Also
