@@ -138,16 +138,6 @@ We saw above that numpy-like arrays provide numpy methods. Xarray automatically 
 
     s_da.sum(dim="j")
 
-Numpy ufuncs
-~~~~~~~~~~~~
-
-Xarray objects support calling numpy functions direction on the xarray objects, e.g. ``np.func(da)``.
-This also works when wrapping numpy-like arrays:
-
-.. ipython:: python
-
-    np.sum(s_da, axis=1)
-
 Converting wrapped types
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
