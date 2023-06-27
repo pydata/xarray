@@ -1734,40 +1734,25 @@ class Dataset(
         Example
         -------
 
-        # Sample dataset
-        >>> data = xr.DataArray(
-        ...     [[1, 2], [3, 4]],
-        ...     dims=("x", "y"),
-        ...     coords={"x": [0, 1], "y": [0, 1]},
-        ...     name="data",
-        ... )
-        >>> dataset = xr.Dataset(data_vars={"data": data})
-
-        # Print the dataset before setting coordinates
+        >>> dataset = xr.Dataset({'temperature': ('time', [25, 30, 27]), 'time': pd.date_range('2023-01-01', periods=3)})
         >>> dataset
         <xarray.Dataset>
-        Dimensions:  (x: 2, y: 2)
+        Dimensions:      (time: 3)
         Coordinates:
-            * x        (x) int64 0 1
-            * y        (y) int64 0 1
+        * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
-             data     (x, y) int64 1 2 3 4
+            temperature  (time) int64 25 30 27
 
-        # Set "x" and "y" variables as coordinates
-        >>> dataset_coords = dataset.set_coords(["x", "y"])
-
-        # Print the dataset after setting coordinates
-        >>> dataset_coords
+        >>> ds.set_coords('temperature')
         <xarray.Dataset>
-        Dimensions:  (x: 2, y: 2)
+        Dimensions:      (time: 3)
         Coordinates:
-            x        (x) int64 0 1
-            y        (y) int64 0 1
+            temperature  (time) int64 25 30 27
+        * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
-            data     (x, y) int64 1 2 3 4
+            *empty*
 
-In the initial dataset, the "x" and "y" variables are present as dimensions. After calling ``set_coords`` (["x", "y"]), these
-variables are converted to coordinates, as shown in the final dataset.
+On calling ``set_coords`` , these variables are converted to coordinates, as shown in the final dataset.
 
         Returns
         -------
@@ -5767,70 +5752,75 @@ variables are converted to coordinates, as shown in the final dataset.
         # Sample dataset with missing values
         >>> data = {
         ...     "time": [0, 1, 2, 3],
-        ...     "temperature": [25.0, None, 27.5, 28.0],
-        ...     "humidity": [60.0, 65.0, None, 70.0],
+        ...     "temperature": [25.0, np.nan, 27.5, 28.0],
+        ...     "humidity": [60.0, 65.0, np.nan, 70.0],
         ... }
         >>> dataset = xr.Dataset(data)
+
         # Print the original dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
         Coordinates:
         * time         (time) int64 0 1 2 3
-        * temperature  (temperature) object 25.0 None 27.5 28.0
-        * humidity     (humidity) object 60.0 65.0 None 70.0
+        * temperature  (temperature) float64 25.0 nan 27.5 28.0
+        * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
 
         # Drop rows with any missing values
         >>> dataset_dropped_any = dataset.dropna(dim="time", how="any")
+
         # Print the dataset after dropping rows with any missing values
         >>> dataset_dropped_any
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
         Coordinates:
         * time         (time) int64 0 1 2 3
-        * temperature  (temperature) object 25.0 None 27.5 28.0
-        * humidity     (humidity) object 60.0 65.0 None 70.0
+        * temperature  (temperature) float64 25.0 nan 27.5 28.0
+        * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
 
         # Drop rows with all missing values
         >>> dataset_dropped_all = dataset.dropna(dim="time", how="all")
+
         # Print the dataset after dropping rows with all missing values
         >>> dataset_dropped_all
         <xarray.Dataset>
         Dimensions:      (time: 0, temperature: 4, humidity: 4)
         Coordinates:
         * time         (time) int64
-        * temperature  (temperature) object 25.0 None 27.5 28.0
-        * humidity     (humidity) object 60.0 65.0 None 70.0
+        * temperature  (temperature) float64 25.0 nan 27.5 28.0
+        * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
 
         # Drop rows with a threshold of non-missing values
         >>> dataset_dropped_thresh = dataset.dropna(dim="time", thresh=2)
+
         # Print the dataset after dropping rows with a threshold of non-missing values
         >>> dataset_dropped_thresh
         <xarray.Dataset>
         Dimensions:      (time: 0, temperature: 4, humidity: 4)
         Coordinates:
         * time         (time) int64
-        * temperature  (temperature) object 25.0 None 27.5 28.0
-        * humidity     (humidity) object 60.0 65.0 None 70.0
+        * temperature  (temperature) float64 25.0 nan 27.5 28.0
+        * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
 
         # Drop rows for a subset of variables
         >>> dataset_dropped_subset = dataset.dropna(dim="time", subset=["temperature"])
+
         # Print the dataset after dropping rows for a subset of variables
         >>> dataset_dropped_subset
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
         Coordinates:
         * time         (time) int64 0 1 2 3
-        * temperature  (temperature) object 25.0 None 27.5 28.0
-        * humidity     (humidity) object 60.0 65.0 None 70.0
+        * temperature  (temperature) float64 25.0 nan 27.5 28.0
+        * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
 
