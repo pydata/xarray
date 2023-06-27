@@ -166,9 +166,6 @@ If a wrapped array does not implement the corresponding array method then xarray
 underlying array to a numpy array so that the operation can be performed. You may want to watch out for this behavior,
 and report any instances in which it causes problems.
 
-Missing features
-----------------
-
 Most of xarray's API does support using :term:`duck array` objects, but there are a few areas where
 the code will still convert to ``numpy`` arrays:
 
@@ -201,7 +198,7 @@ the code will still convert to ``numpy`` arrays:
 
   * :py:meth:`Dataset.chunk` and :py:meth:`DataArray.chunk`: this fails if the data was
     not already chunked and the :term:`duck array` (e.g. a ``pint`` quantity) should
-    wrap the new ``dask`` array; changing the chunk sizes works.
+    wrap the new ``dask`` array; changing the chunk sizes works however.
 
 Extensions using duck arrays
 ----------------------------
