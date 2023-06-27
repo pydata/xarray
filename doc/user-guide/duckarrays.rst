@@ -154,9 +154,10 @@ If instead you want to convert to numpy and return that numpy array you can use 
 always uses `np.asarray` which will fail for some array types (e.g. ``cupy``, whereas `to_numpy` uses the correct method
 depending on the array type.)
 
-This illustrates the difference between `.values` and `.data`, which is sometimes a point of confusion for new xarray users.
+This illustrates the difference between ``.data`` and ``.values``, which is sometimes a point of confusion for new xarray users.
 Explicitly: :py:meth:`DataArray.data` returns the underlying numpy-like array, regardless of type, whereas
-:py:meth:`DataArray.to_numpy` converts the underlying array to a numpy array before returning it.
+:py:meth:`DataArray.values` converts the underlying array to a numpy array before returning it.
+(This is another reason to use ``.to_numpy`` over ``.values`` - the intention is clearer.)
 
 Conversion to numpy as a fallback
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
