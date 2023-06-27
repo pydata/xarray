@@ -57,12 +57,7 @@ in a memory-efficient manner. We can create a sparse array object (of the ``spar
 
 This sparse object does not attempt to explicitly store every element in the array, only the non-zero elements.
 This approach is much more efficient for large arrays with only a few non-zero elements (such as tri-diagonal matrices).
-It does mean that in order to clearly see what is stored in our sparse array object we have to convert it back to a
-"dense" array using ``.todense``:
-
-.. ipython:: python
-
-    s.todense()
+Sparse array objects can be converted back to a "dense" numpy array by calling ``.todense``.
 
 Just like `numpy.ndarray` objects, `sparse.COO` arrays support indexing
 
@@ -79,19 +74,19 @@ broadcasting,
         (4, 1), dtype=np.uint8
     )  # create second sparse array of different shape
     s2 = COO.from_numpy(x2)
-    (s * s2).todense()  # multiplication requires broadcasting
+    (s * s2)  # multiplication requires broadcasting
 
 and various computation methods
 
 .. ipython:: python
 
-    s.sum(axis=1).todense()
+    s.sum(axis=1)
 
 This numpy-like array also supports calling so-called numpy ufuncs (link to numpy docs) on it directly:
 
 .. ipython:: python
 
-    np.sum(s, axis=1).todense()
+    np.sum(s, axis=1)
 
 
 Notice that in each case the API for calling the operation on the sparse array is identical to that of calling it on the
