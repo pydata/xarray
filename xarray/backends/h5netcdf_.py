@@ -199,6 +199,8 @@ class H5NetCDFStore(WritableCFDataStore):
             "fletcher32": var.fletcher32,
             "shuffle": var.shuffle,
         }
+        if var.chunks:
+            encoding["preferred_chunks"] = dict(zip(var.dimensions, var.chunks))
         # Convert h5py-style compression options to NetCDF4-Python
         # style, if possible
         if var.compression == "gzip":
