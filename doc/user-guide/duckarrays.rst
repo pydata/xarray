@@ -84,7 +84,8 @@ and various computation methods
 
     s.sum(axis=1)
 
-This numpy-like array also supports calling so-called numpy ufuncs (link to numpy docs) on it directly:
+This numpy-like array also supports calling so-called `numpy ufuncs <https://numpy.org/doc/stable/reference/ufuncs.html#available-ufuncs>`_
+("universal functions") on it directly:
 
 .. ipython:: python
 
