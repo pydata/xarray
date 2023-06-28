@@ -24,7 +24,7 @@ attempting to wrap the given array. However, a wrapped array type should at a mi
 * ``__array_ufunc__`` method,
 * ``__array_function__`` method.
 
-These need to be defined consistently with numpy :py:class:`numpy.ndarray`, for example the array ``shape``
+These need to be defined consistently with :py:class:`numpy.ndarray`, for example the array ``shape``
 property needs to obey `numpy's broadcasting rules <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
 (see also the `Python Array API standard's explanation <https://data-apis.org/array-api/latest/API_specification/broadcasting.html>`_
 of these same rules).
