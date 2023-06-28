@@ -75,13 +75,15 @@ pytestmark = [
 
 
 class PintInfo(UnitInfo):
-    unit = unit_registry.m
-    compatible_unit = unit_registry.mm
-    incompatible_unit = unit_registry.s
-    dimensionless = unit_registry.dimensionless
+    ureg = unit_registry
 
-    unit_type = unit_registry.Unit
-    quantity_type = unit_registry.Quantity
+    unit = ureg.m
+    compatible_unit = ureg.mm
+    incompatible_unit = ureg.s
+    dimensionless = ureg.dimensionless
+
+    unit_type = ureg.Unit
+    quantity_type = ureg.Quantity
 
     @staticmethod
     def strip_units(quantity):
