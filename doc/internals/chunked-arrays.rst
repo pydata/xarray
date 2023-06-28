@@ -35,7 +35,7 @@ These primitives are generalizations of functions first implemented in :py:class
 The implementation of these functions is specific to the type of arrays passed to them: :py:class:`dask.array.Array` objects
 must be processed by :py:func:`dask.array.map_blocks`, whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
 
-In order to use the correct function primitive for the array type encountered, xarray dispatches to the corresponding subclass of :py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint``,
+In order to use the correct function primitive for the array type encountered, xarray dispatches to the corresponding subclass of :py:class:``~xarray.core.parallelcompat.ChunkManagerEntrypoint``,
 also known as a "Chunk Manager". Therefore a full list of the primitive functions that need to be defined is set by the API of the
 :py:class:``~xarray.core.parallelcompat.ChunkManagerEntrypoint`` abstract base class.
 
