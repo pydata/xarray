@@ -45,7 +45,7 @@ A "numpy-like array" (also known as a "duck array") is a class that contains arr
 numpy-like functionality such as indexing, broadcasting, and computation methods.
 
 For example, the `sparse <https://sparse.pydata.org/en/stable/>`_ library provides a sparse array type which is useful for representing nD array objects like sparse matrices
-in a memory-efficient manner. We can create a sparse array object (of the ``sparse.COO`` type) from a numpy array like this:
+in a memory-efficient manner. We can create a sparse array object (of the :py:class:`sparse.COO` type) from a numpy array like this:
 
 .. ipython:: python
 
