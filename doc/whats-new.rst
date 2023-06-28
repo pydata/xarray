@@ -38,6 +38,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
+  (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
