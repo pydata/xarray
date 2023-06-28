@@ -52,12 +52,21 @@ Rather than hard-coding various chunk managers to deal with specific chunked arr
 entrypoint system to allow developers of new chunked array implementations to register their corresponding subclass of
 :py:class:``~xarray.core.parallelcompat.ChunkManagerEntrypoint``.
 
+The key internal API is:
+
 .. autosummary::
    :toctree: generated/
 
    xarray.core.parallelcompat.list_chunkmanagers
    xarray.core.parallelcompat.ChunkManagerEntrypoint
 
+To register a new entrypoint you need to add an entry to the ``setup.cfg`` like this::
+
+    [options.entry_points]
+    xarray.chunkmanagers =
+        dask = xarray.core.daskmanager:DaskManager
+
+See also `cubed-xarray <https://github.com/xarray-contrib/cubed-xarray>`_ for another example.
 
 User interface
 ~~~~~~~~~~~~~~
