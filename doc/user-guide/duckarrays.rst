@@ -148,14 +148,21 @@ If you want to change the type inside your xarray object you can use :py:meth:`D
 This returns a new :py:class:`DataArray` object, but now wrapping a normal numpy array.
 
 If instead you want to convert to numpy and return that numpy array you can use either :py:meth:`DataArray.to_numpy` or
-:py:meth:`DataArray.values`, where the former is strongly preferred. The difference is in the way they coerce to numpy - `.values`
-always uses `np.asarray` which will fail for some array types (e.g. ``cupy``), whereas `to_numpy` uses the correct method
-depending on the array type.
+:py:meth:`DataArray.values`, where the former is strongly preferred. The difference is in the way they coerce to numpy - :py:meth:`~DataArray.values`
+always uses :py:func:`numpy.asarray` which will fail for some array types (e.g. ``cupy``), whereas :py:meth:`~DataArray.to_numpy`
+uses the correct method depending on the array type.
 
-This illustrates the difference between ``.data`` and ``.values``, which is sometimes a point of confusion for new xarray users.
+.. ipython:: python
+
+    s_da.to_numpy()
+
+    s_da.values
+
+This illustrates the difference between :py:meth:`~DataArray.data` and :py:meth:`~DataArray.values`,
+which is sometimes a point of confusion for new xarray users.
 Explicitly: :py:meth:`DataArray.data` returns the underlying numpy-like array, regardless of type, whereas
 :py:meth:`DataArray.values` converts the underlying array to a numpy array before returning it.
-(This is another reason to use ``.to_numpy`` over ``.values`` - the intention is clearer.)
+(This is another reason to use :py:meth:`~DataArray.to_numpy` over :py:meth:`~DataArray.values` - the intention is clearer.)
 
 Conversion to numpy as a fallback
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
