@@ -99,7 +99,7 @@ equivalent numpy array - this is the sense in which the sparse array is "numpy-l
 Wrapping numpy-like arrays in xarray
 ------------------------------------
 
-:py:class:`DataArray` and :py:class:`Dataset` (and :py:class:`Variable`) objects can wrap these numpy-like arrays.
+:py:class:`DataArray`, :py:class:`Dataset`, and :py:class:`Variable` objects can wrap these numpy-like arrays.
 
 Constructing xarray objects which wrap numpy-like arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
