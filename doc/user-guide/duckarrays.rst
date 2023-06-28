@@ -47,7 +47,7 @@ A "numpy-like array" (also known as a "duck array") is a class that contains arr
 numpy-like functionality such as indexing, broadcasting, and computation methods.
 
 For example, the `sparse <https://sparse.pydata.org/en/stable/>`_ library provides a sparse array type which is useful for representing nD array objects like sparse matrices
-in a memory-efficient manner. We can create a sparse array object (of the ``sparse.COO`` type) from a numpy array like this:
+in a memory-efficient manner. We can create a sparse array object (of the :py:class:`sparse.COO` type) from a numpy array like this:
 
 .. ipython:: python
 
@@ -61,7 +61,7 @@ This sparse object does not attempt to explicitly store every element in the arr
 This approach is much more efficient for large arrays with only a few non-zero elements (such as tri-diagonal matrices).
 Sparse array objects can be converted back to a "dense" numpy array by calling ``.todense``.
 
-Just like `numpy.ndarray` objects, `sparse.COO` arrays support indexing
+Just like :py:class:`numpy.ndarray` objects, :py:class:`sparse.COO` arrays support indexing
 
 .. ipython:: python
 
@@ -101,7 +101,7 @@ equivalent numpy array - this is the sense in which the sparse array is "numpy-l
 Wrapping numpy-like arrays in xarray
 ------------------------------------
 
-:py:class:`DataArray` and :py:class:`Dataset` (and :py:class:`Variable`) objects can wrap these numpy-like arrays.
+:py:class:`DataArray`, :py:class:`Dataset`, and :py:class:`Variable` objects can wrap these numpy-like arrays.
 
 Constructing xarray objects which wrap numpy-like arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,7 +120,7 @@ For example, we can wrap the sparse array we created earlier inside a new DataAr
 We can see what's inside - the printable representation of our xarray object (the repr) automatically uses the printable
 representation of the underlying wrapped array.
 
-Of course our sparse array object is still there underneath - it's stored under the `.data` attribute of the dataarray:
+Of course our sparse array object is still there underneath - it's stored under the ``.data`` attribute of the dataarray:
 
 .. ipython:: python
 
@@ -147,9 +147,9 @@ If you want to change the type inside your xarray object you can use :py:meth:`D
 This returns a new :py:class:`DataArray` object, but now wrapping a normal numpy array.
 
 If instead you want to convert to numpy and return that numpy array you can use either :py:meth:`DataArray.to_numpy` or
-:py:meth:`DataArray.values`, where the former is strongly preferred. (The difference is in the way they coerce to numpy - `.values`
-always uses `np.asarray` which will fail for some array types (e.g. ``cupy``, whereas `to_numpy` uses the correct method
-depending on the array type.)
+:py:meth:`DataArray.values`, where the former is strongly preferred. The difference is in the way they coerce to numpy - `.values`
+always uses `np.asarray` which will fail for some array types (e.g. ``cupy``), whereas `to_numpy` uses the correct method
+depending on the array type.
 
 This illustrates the difference between ``.data`` and ``.values``, which is sometimes a point of confusion for new xarray users.
 Explicitly: :py:meth:`DataArray.data` returns the underlying numpy-like array, regardless of type, whereas

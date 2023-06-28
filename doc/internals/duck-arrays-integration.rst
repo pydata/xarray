@@ -14,7 +14,7 @@ This page is intended for developers who are interested in wrapping a new custom
 Duck array requirements
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Xarray does not explicitly check that that required methods are defined by the underlying duck array object before
+Xarray does not explicitly check that required methods are defined by the underlying duck array object before
 attempting to wrap the given array. However, a wrapped array type should at a minimum define these attributes:
 
 * ``shape`` property,
@@ -24,7 +24,7 @@ attempting to wrap the given array. However, a wrapped array type should at a mi
 * ``__array_ufunc__`` method,
 * ``__array_function__`` method.
 
-These need to be defined consistently with numpy :py:class:`numpy.ndarray`, for example the array ``shape``
+These need to be defined consistently with :py:class:`numpy.ndarray`, for example the array ``shape``
 property needs to obey `numpy's broadcasting rules <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
 (see also the `Python Array API standard's explanation <https://data-apis.org/array-api/latest/API_specification/broadcasting.html>`_
 of these same rules).
@@ -33,10 +33,9 @@ Python Array API standard support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As an integration library xarray benefits greatly from the standardization of duck-array libraries' APIs, and so is a
-big supporter of the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_. In fact the crystallization of different array libraries' APIs towards
-the standard has already helped xarray remove a lot of internal adapter code.
+big supporter of the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_. .
 
-We aim to support any array libraries that follow the standard out-of-the-box. However, xarray does occasionally
+We aim to support any array libraries that follow the Array API standard out-of-the-box. However, xarray does occasionally
 call some numpy functions which are not (yet) part of the standard (e.g. :py:meth:`xarray.DataArray.pad` calls :py:func:`numpy.pad`).
 See `xarray issue #7848 <https://github.com/pydata/xarray/issues/7848>`_ for a list of such functions. We can still support dispatching on these functions through
 the array protocols above, it just means that if you exclusively implement the methods in the Python Array API standard
