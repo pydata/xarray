@@ -14,7 +14,7 @@ This page is intended for developers who are interested in wrapping a new custom
 Duck array requirements
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Xarray does not explicitly check that that required methods are defined by the underlying duck array object before
+Xarray does not explicitly check that required methods are defined by the underlying duck array object before
 attempting to wrap the given array. However, a wrapped array type should at a minimum define these attributes:
 
 * ``shape`` property,
