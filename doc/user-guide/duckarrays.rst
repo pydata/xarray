@@ -118,7 +118,7 @@ For example, we can wrap the sparse array we created earlier inside a new DataAr
 We can see what's inside - the printable representation of our xarray object (the repr) automatically uses the printable
 representation of the underlying wrapped array.
 
-Of course our sparse array object is still there underneath - it's stored under the `.data` attribute of the dataarray:
+Of course our sparse array object is still there underneath - it's stored under the ``.data`` attribute of the dataarray:
 
 .. ipython:: python
 
