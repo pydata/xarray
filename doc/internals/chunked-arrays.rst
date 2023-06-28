@@ -62,9 +62,17 @@ entrypoint system to allow developers of new chunked array implementations to re
 User interface
 ~~~~~~~~~~~~~~
 
-``chunked_array_type`` kwarg
-``from_array_kwargs`` dict
+Once the chunkmanager subclass has been registered, xarray objects wrapping the desired array type can be created in 3 ways:
 
+#. By manually passing the array type to the :py:class:`~DataArray` constructor, see the examples for `numpy-like arrays <userguide.duckarrays>`,
+
+#. Calling :py:meth:`DataArray.chunk`, passing the keyword arguments ``chunked_array_type`` and ``from_array_kwargs``,
+
+#. Calling :py:func:`open_dataset`, passing the keyword arguments ``chunked_array_type`` and ``from_array_kwargs``.
+
+The latter two methods ultimately call the chunkmanager's implementation of ``.from_array``, to which they pass the ``from_array_kwargs`` dict.
+The ``chunked_array_type`` kwarg selects which registered chunkmanager subclass to dispatch to. It defaults to `'dask'` if found,
+otherwise to whichever chunkmanager is registered if only one is registered, else it will raise an error.
 
 Parallel processing without chunks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
