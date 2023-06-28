@@ -1698,6 +1698,19 @@ class TestDataArray:
         assert_identical(expected, actual)
         assert actual.dtype == expected.dtype
 
+    def test_reindex_empty_array_dtype(self) -> None:
+        # Dtype of reindex result should match dtype of the original DataArray.
+        # See GH issue #7299
+        x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
+        y = x.reindex(x=[1.0, 2.0])
+
+        assert (
+            x.dtype == y.dtype
+        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        assert (
+            y.dtype == np.float32
+        ), "Dtype of reindexed DataArray should remain float32"
+
     def test_rename(self) -> None:
         da = xr.DataArray(
             [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
@@ -4570,6 +4583,48 @@ class TestDataArray:
                 func=sine,
                 bounds={"a": (0, DataArray([1], coords={"foo": [1]}))},
             )
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        # nonsense function to make the optimization fail
+        def line(x, a, b):
+            if a > 10:
+                return 0
+            return a * x + b
+
+        da = DataArray(
+            [[1, 3, 5], [0, 20, 40]],
+            coords={"i": [1, 2], "x": [0.0, 1.0, 2.0]},
+        )
+
+        if use_dask:
+            da = da.chunk({"i": 1})
+
+        expected = DataArray(
+            [[2, 1], [np.nan, np.nan]], coords={"i": [1, 2], "param": ["a", "b"]}
+        )
+
+        with pytest.raises(RuntimeError, match="calls to function has reached maxfev"):
+            da.curvefit(
+                coords="x",
+                func=line,
+                # limit maximum number of calls so the optimization fails
+                kwargs=dict(maxfev=5),
+            ).compute()  # have to compute to raise the error
+
+        fit = da.curvefit(
+            coords="x",
+            func=line,
+            errors="ignore",
+            # limit maximum number of calls so the optimization fails
+            kwargs=dict(maxfev=5),
+        ).compute()
+
+        assert_allclose(fit.curvefit_coefficients, expected)
 
 
 class TestReduce:

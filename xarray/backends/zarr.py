@@ -70,7 +70,14 @@ class ZarrArrayWrapper(BackendArray):
         array = self.get_array()
         self.shape = array.shape
 
-        dtype = array.dtype
+        # preserve vlen string object dtype (GH 7328)
+        if array.filters is not None and any(
+            [filt.codec_id == "vlen-utf8" for filt in array.filters]
+        ):
+            dtype = coding.strings.create_vlen_dtype(str)
+        else:
+            dtype = array.dtype
+
         self.dtype = dtype
 
     def get_array(self):
@@ -410,7 +417,7 @@ class ZarrStore(AbstractWritableDataStore):
             if consolidated is None:
                 consolidated = False
 
-        if chunk_store:
+        if chunk_store is not None:
             open_kwargs["chunk_store"] = chunk_store
             if consolidated is None:
                 consolidated = False
