@@ -98,7 +98,7 @@ Bug fixes
   By `Juniper Tyree <https://github.com/juntyr>`_.
 
 Documentation
-~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
