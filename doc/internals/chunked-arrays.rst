@@ -37,15 +37,20 @@ must be processed by :py:func:`dask.array.map_blocks`, whereas :py:class:`cubed.
 
 In order to use the correct function primitive for the array type encountered, xarray dispatches to the corresponding subclass of :py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint``,
 also known as a "Chunk Manager". Therefore a full list of the primitive functions that need to be defined is set by the API of the
-:py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint`` abstract base class.
+:py:class:``~xarray.core.parallelcompat.ChunkManagerEntrypoint`` abstract base class.
+
+:: note:
+
+    The :py:class:``~xarray.core.parallelcompat.ChunkManagerEntrypoint`` abstract base class is mostly just acting as a
+    namespace for containing the chunked-aware function primitives. Ideally in the future we would have an API standard
+    for chunked array types which codified this structure, making the entrypoint system unnecessary.
 
 ChunkManagerEntrypoint subclassing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Rather than hard-coding various chunk managers to deal with specific chunked array implementations, xarray uses an entrypoint
-system to allow developers of new chunked array implementations to register a subclass of
-:py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint``
-
+Rather than hard-coding various chunk managers to deal with specific chunked array implementations, xarray uses an
+entrypoint system to allow developers of new chunked array implementations to register their corresponding subclass of
+:py:class:``~xarray.core.parallelcompat.ChunkManagerEntrypoint``.
 
 .. autosummary::
    :toctree: generated/
