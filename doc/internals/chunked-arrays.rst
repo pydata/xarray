@@ -69,4 +69,6 @@ User interface
 Parallel processing without chunks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Don't necessarily need all this
+To use a parallel array type that does not expose a concept of chunks explicitly, none of the information on this page
+is theoretically required. Such an array type could be wrapped using xarray's existing
+support for `numpy-like "duck" arrays <userguide.duckarrays>`.
