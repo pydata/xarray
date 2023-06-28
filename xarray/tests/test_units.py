@@ -80,8 +80,8 @@ class PintInfo(UnitInfo):
     incompatible_unit = unit_registry.s
     dimensionless = unit_registry.dimensionless
 
-    unit_type = pint.Unit
-    quantity_type = pint.Quantity
+    unit_type = unit_registry.Unit
+    quantity_type = unit_registry.Quantity
 
     @staticmethod
     def strip_units(quantity):
