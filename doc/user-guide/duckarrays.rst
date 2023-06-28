@@ -59,7 +59,7 @@ in a memory-efficient manner. We can create a sparse array object (of the :py:cl
 
 This sparse object does not attempt to explicitly store every element in the array, only the non-zero elements.
 This approach is much more efficient for large arrays with only a few non-zero elements (such as tri-diagonal matrices).
-Sparse array objects can be converted back to a "dense" numpy array by calling ``.todense``.
+Sparse array objects can be converted back to a "dense" numpy array by calling :py:meth:`sparse.COO.todense`.
 
 Just like :py:class:`numpy.ndarray` objects, :py:class:`sparse.COO` arrays support indexing
 
