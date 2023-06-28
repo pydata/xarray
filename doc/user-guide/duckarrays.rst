@@ -156,6 +156,9 @@ uses the correct method depending on the array type.
 
     s_da.to_numpy()
 
+.. ipython:: python
+    :okexcept:
+
     s_da.values
 
 This illustrates the difference between :py:meth:`~DataArray.data` and :py:meth:`~DataArray.values`,
