@@ -59,7 +59,7 @@ This sparse object does not attempt to explicitly store every element in the arr
 This approach is much more efficient for large arrays with only a few non-zero elements (such as tri-diagonal matrices).
 Sparse array objects can be converted back to a "dense" numpy array by calling ``.todense``.
 
-Just like `numpy.ndarray` objects, `sparse.COO` arrays support indexing
+Just like :py:class:`numpy.ndarray` objects, :py:class:`sparse.COO` arrays support indexing
 
 .. ipython:: python
 
