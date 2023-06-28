@@ -20,21 +20,32 @@ implements the handling of processing all of the chunks.
 Chunked array requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A chunked array Needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays>`, but should also
+A chunked array needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays>`, but should also implement these methods:
 
 - ``.chunk``
 - ``.rechunk``
 - ``.compute``
 
-
 Chunked operations as function primitives
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Actual full list is defined in the :py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint`` class (link to that API documentation)
+Xarray dispatches chunk-aware computations across arrays using function "primitives" that accept one or more arrays.
+Examples include ``map_blocks``, ``blockwise``, and ``apply_gufunc``.
+These primitives are generalizations of functions first implemented in :py:class:`dask.array`.
+The implementation of these functions is specific to the type of arrays passed to them: :py:class:`dask.array.Array` objects
+must be processed by :py:func:`dask.array.map_blocks`, whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
 
+In order to use the correct function primitive for the array type encountered, xarray dispatches to the corresponding subclass of :py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint``,
+also known as a "Chunk Manager". Therefore a full list of the primitive functions that need to be defined is set by the API of the
+:py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint`` abstract base class.
 
 ChunkManagerEntrypoint subclassing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Rather than hard-coding various chunk managers to deal with specific chunked array implementations, xarray uses an entrypoint
+system to allow developers of new chunked array implementations to register a subclass of
+:py:class:``~xarray.core.parallelcompat.ChunkManagerEntryPoint``
+
 
 .. autosummary::
    :toctree: generated/
