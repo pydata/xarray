@@ -226,12 +226,8 @@ def extract_units(obj):
         vars_units = {None: array_extract_units(obj.data)}
         units = {**vars_units}
     else:
-        units = {}
-        for unit_lib in unit_libs:
-            if isinstance(obj, unit_lib.quantity_type):
-                vars_units = {None: array_extract_units(obj)}
-                units = {**vars_units}
-                break
+        vars_units = {None: array_extract_units(obj)}
+        units = {**vars_units}
 
     return units
 
