@@ -1543,6 +1543,55 @@ class NetCDF4Base(NetCDFBase):
         with self.roundtrip(ds) as actual:
             assert actual["x"].encoding["preferred_chunks"] == {"x": 2}
 
+    def test_auto_chunking_is_based_on_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
+
+            with dask.config.set({"array.chunk-size": "100KiB"}):
+                with open_dataset(tmp_file, chunks="auto", engine=self.engine) as ds:
+                    t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
+                    assert all(np.asanyarray(y_chunks) == y_chunksize)
+                    # Check that the chunk size is a multiple of the file chunk size
+                    assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
+
+    def test_base_chunking_uses_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
+            with open_dataset(tmp_file, chunks={}, engine=self.engine) as ds:
+                for chunksizes, expected in zip(ds["image"].data.chunks, (1, y_chunksize, x_chunksize)):
+                    assert all(np.asanyarray(chunksizes) == expected)
+
+    @contextlib.contextmanager
+    def create_chunked_file(self, array_shape, chunk_sizes) -> None:
+        t_size, y_size, x_size = array_shape
+        t_chunksize, y_chunksize, x_chunksize = chunk_sizes
+
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("t", t_size)
+                nc.createDimension("x", x_size)
+                nc.createDimension("y", y_size)
+                nc.createVariable("image", "int16", ("t", "y", "x"), fill_value=-1,
+                                  chunksizes=(t_chunksize, y_chunksize, x_chunksize))
+                v = nc.variables["image"]
+                v[:] = np.arange(t_size * x_size * y_size).reshape((t_size, y_size, x_size))
+            yield tmp_file
+
+    def test_preferred_chunks_are_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
+
+            with open_dataset(tmp_file, engine=self.engine) as ds:
+                assert ds["image"].encoding["preferred_chunks"] == {"t": 1,
+                                                                    "y": y_chunksize,
+                                                                    "x": x_chunksize}
+
     def test_encoding_chunksizes_unlimited(self) -> None:
         # regression test for GH1225
         ds = Dataset({"x": [1, 2, 3], "y": ("x", [2, 3, 4])})
