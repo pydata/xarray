@@ -38,6 +38,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Expanded the page on wrapping numpy-like "duck" arrays.
+  (:pull:`7911`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -97,7 +99,6 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
