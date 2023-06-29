@@ -1543,6 +1543,7 @@ class NetCDF4Base(NetCDFBase):
         with self.roundtrip(ds) as actual:
             assert actual["x"].encoding["preferred_chunks"] == {"x": 2}
 
+    @requires_dask
     def test_auto_chunking_is_based_on_disk_chunk_sizes(self) -> None:
         x_size = y_size = 1000
         y_chunksize = y_size
@@ -1556,6 +1557,7 @@ class NetCDF4Base(NetCDFBase):
                     # Check that the chunk size is a multiple of the file chunk size
                     assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
 
+    @requires_dask
     def test_base_chunking_uses_disk_chunk_sizes(self) -> None:
         x_size = y_size = 1000
         y_chunksize = y_size
