@@ -1547,8 +1547,8 @@ class NetCDF4Base(NetCDFBase):
         x_size = y_size = 1000
         y_chunksize = y_size
         x_chunksize = 10
-        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
 
+        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
             with dask.config.set({"array.chunk-size": "100KiB"}):
                 with open_dataset(tmp_file, chunks="auto", engine=self.engine) as ds:
                     t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
@@ -1560,6 +1560,7 @@ class NetCDF4Base(NetCDFBase):
         x_size = y_size = 1000
         y_chunksize = y_size
         x_chunksize = 10
+
         with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
             with open_dataset(tmp_file, chunks={}, engine=self.engine) as ds:
                 for chunksizes, expected in zip(ds["image"].data.chunks, (1, y_chunksize, x_chunksize)):
@@ -1585,8 +1586,8 @@ class NetCDF4Base(NetCDFBase):
         x_size = y_size = 1000
         y_chunksize = y_size
         x_chunksize = 10
-        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
 
+        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
             with open_dataset(tmp_file, engine=self.engine) as ds:
                 assert ds["image"].encoding["preferred_chunks"] == {"t": 1,
                                                                     "y": y_chunksize,
