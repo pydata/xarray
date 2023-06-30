@@ -2541,8 +2541,8 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:         (student: 2, test: 3)
         Coordinates:
-            * student         (student) <U7 'Alice' 'Charlie'
-            * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
+          * student         (student) <U7 'Alice' 'Charlie'
+          * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
         Data variables:
             math_scores     (student, test) int64 90 85 92 95 92 98
             english_scores  (student, test) int64 88 90 92 93 96 91
@@ -5994,7 +5994,7 @@ class Dataset(
 
         # Calculate the 75th percentile of math scores for each student using np.percentile
         >>> percentile_scores = dataset.reduce(np.percentile, q=75, dim="test")
-        >>> percentile_cores
+        >>> percentile_scores
         <xarray.Dataset>
         Dimensions:         (student: 3)
         Coordinates:
@@ -8545,7 +8545,7 @@ Conversely, a negative skewed value implies that many students scored high with 
         ...         ),
         ...         "english_scores": (
         ...             ["student", "test"],
-        ...             [[88, 80, 92], [75, 95, 79], [93, 96, 78]],
+        ...             [[88, 90, 92], [75, 82, 79], [39, 96, 78]],
         ...         ),
         ...     },
         ...     coords={
@@ -8556,17 +8556,19 @@ Conversely, a negative skewed value implies that many students scored high with 
 
         # Indices of the minimum values along the 'student' dimension are calculated
         >>> argmin_indices = dataset.argmin(dim="student")
-        >>> argmin_indices
-        <xarray.Dataset>
-        Dimensions:         (test: 3)
-        Coordinates:
-        * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
-        Data variables:
-            math_scores     (test) int64 1 1 0
-            english_scores  (test) int64 1 0 2
+
+        # Prints student names with minimum scores for each test
+        >>> min_score_in_math = dataset["student"].values[argmin_indices["math_scores"].values]
+        >>> min_score_in_math
+        array(['Bob', 'Bob', 'Alice'], dtype='<U7')
+
+        >>> min_score_in_english = dataset["student"].values[argmin_indices["english_scores"].values]
+        >>> min_score_in_english
+        array(['Charlie', 'Bob', 'Charlie'], dtype='<U7')
 
         See Also
         --------
+        Dataset.idxmin
         DataArray.argmin
         """
         if dim is None:
@@ -8649,7 +8651,7 @@ Conversely, a negative skewed value implies that many students scored high with 
         <xarray.Dataset>
         Dimensions:         (student: 3)
         Coordinates:
-        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
+          * student         (student) <U7 'Alice' 'Bob' 'Charlie'
         Data variables:
             math_scores     (student) int64 2 2 2
             english_scores  (student) int64 2 1 1
