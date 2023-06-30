@@ -2537,8 +2537,8 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:         (student: 2, test: 2)
         Coordinates:
-            * student         (student) <U7 'Alice' 'Bob'
-            * test            (test) <U6 'Test 1' 'Test 2'
+          * student         (student) <U7 'Alice' 'Bob'
+          * test            (test) <U6 'Test 1' 'Test 2'
         Data variables:
             math_scores     (student, test) int64 90 85 78 80
             english_scores  (student, test) int64 88 90 75 82
@@ -6009,7 +6009,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:         (student: 3)
         Coordinates:
-        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
+          * student         (student) <U7 'Alice' 'Bob' 'Charlie'
         Data variables:
             math_scores     (student) float64 91.0 82.5 96.5
             english_scores  (student) float64 91.0 80.5 94.5
