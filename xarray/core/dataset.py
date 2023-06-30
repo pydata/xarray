@@ -8639,6 +8639,7 @@ Conversely, a negative skewed value implies that many students scored high with 
 
         Examples
         --------
+        
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -8658,6 +8659,7 @@ Conversely, a negative skewed value implies that many students scored high with 
 
         # Indices of the maximum values along the 'student' dimension are calculated
         >>> argmax_indices = dataset.argmax(dim="test")
+        
         >>> argmax_indices
         <xarray.Dataset>
         Dimensions:         (student: 3)
