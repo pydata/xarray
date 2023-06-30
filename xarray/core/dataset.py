@@ -1742,9 +1742,8 @@ class Dataset(
         names : hashable or iterable of hashable
             Name(s) of variables in this dataset to convert into coordinates.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> dataset = xr.Dataset({'temperature': ('time', [25, 30, 27]), 'time': pd.date_range('2023-01-01', periods=3)})
         >>> dataset
         <xarray.Dataset>
@@ -1803,10 +1802,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             If True, remove coordinates instead of converting them into
             variables.
 
-        Example
-        -------
-
-        # Sample dataset
+        Examples
+        --------
         >>> dataset = xr.Dataset(
         ...     {
         ...         "temperature": (
@@ -1825,8 +1822,7 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...         "altitude": 1000,
         ...     },
         ... )
-
-        # Print the dataset before resetting coordinates
+        # Dataset before resetting coordinates
         >>> dataset
         <xarray.Dataset>
         Dimensions:        (time: 2, lat: 2, lon: 2)
@@ -1838,11 +1834,9 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         Data variables:
             temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
             precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
-
         # Reset the 'altitude' coordinate
         >>> dataset_reset = dataset.reset_coords("altitude")
-
-        # Print the dataset after resetting coordinates
+        # Dataset after resetting coordinates
         >>> dataset_reset
         <xarray.Dataset>
         Dimensions:        (time: 2, lat: 2, lon: 2)
@@ -1855,10 +1849,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
             altitude       int64 1000
 
-        # Sample data
         >>> cities = ["New York", "London", "Tokyo"]
         >>> time = pd.date_range(start="2022-01-01", periods=12, freq="M")
-
         >>> temperature_data = [
         ...     # Temperature values for New York
         ...     [32, 34, 36, 40, 45, 50, 55, 60, 55, 45, 38, 35],
@@ -1867,7 +1859,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...     # Temperature values for Tokyo
         ...     [45, 47, 50, 58, 65, 72, 79, 82, 77, 68, 58, 50]
         ... ]
-
         >>> precipitation_data = [
         ...     # Precipitation values for New York
         ...     [1.2, 1.5, 1.8, 2.5, 3.0, 2.8, 2.3, 2.0, 2.4, 2.8, 2.3, 1.8],
@@ -1876,8 +1867,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...     # Precipitation values for Tokyo
         ...     [0.8, 0.9, 1.2, 1.5, 1.8, 2.0, 2.2, 2.1, 2.0, 1.7, 1.4, 1.2]
         ... ]
-
-        # Create the dataset
         >>> dataset = xr.Dataset(
         ...     {
         ...         "temperature": (["city", "time"], temperature_data),
@@ -1889,7 +1878,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...         "altitude": 1000,
         ...     }
         ... )
-
         # Dataset before resetting coordinates
         >>> dataset
         <xarray.Dataset>
@@ -1901,10 +1889,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         Data variables:
             temperature    (city, time) int64 32 34 36 40 45 50 55 ... 79 82 77 68 58 50
             precipitation  (city, time) float64 1.2 1.5 1.8 2.5 3.0 ... 2.0 1.7 1.4 1.2
-
         # Reset the 'altitude' coordinate
         >>> dataset_reset = dataset.reset_coords("altitude")
-
         # Dataset after resetting coordinates
         >>> dataset_reset
         <xarray.Dataset>
@@ -2822,10 +2808,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
-        Example
-        -------
-
-        # Sample Dataset
+        Examples
+        --------
         >>> dataset = xr.Dataset(
         ...     {
         ...         "temperature": [25.1, 28.3, 30.5, 27.2, 26.8],
@@ -2833,8 +2817,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...     },
         ...     coords={"time": [1, 2, 3, 4, 5]},
         ... )
-
-        # Original Dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:      (temperature: 5, humidity: 5, time: 5)
@@ -2844,12 +2826,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             * time         (time) int64 1 2 3 4 5
         Data variables:
             *empty*
-
         # Use head() function to retrieve the first three elements
-        >>> head_dataset = dataset.head(2)
-
-        # Print the head dataset
-        >>> head_dataset
+        >>> dataset.head(2)
         <xarray.Dataset>
         Dimensions:      (temperature: 2, humidity: 2, time: 2)
         Coordinates:
@@ -2905,23 +2883,18 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
-        Example
-        -------
-
-        # Sample dataset
+        Examples
+        --------
         >>> data = xr.DataArray([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dims=("x", "y"))
         >>> dataset = xr.Dataset({"data": data})
-
-        # Print the original dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:  (x: 3, y: 3)
         Dimensions without coordinates: x, y
         Data variables:
             data     (x, y) int64 1 2 3 4 5 6 7 8 9
-
         # Get the last 2 elements using tail()
-        dataset.tail(2)
+        >>> dataset.tail(2)
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Dimensions without coordinates: x, y
@@ -5757,10 +5730,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             Which variables to check for missing values. By default, all
             variables in the dataset are checked.
 
-        Example
-        -------
-
-        # Sample dataset with missing values
+        Examples
+        --------
         >>> data = {
         ...     "time": [0, 1, 2, 3],
         ...     "temperature": [25.0, np.nan, 27.5, 28.0],
@@ -5768,7 +5739,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ... }
         >>> dataset = xr.Dataset(data)
 
-        # Print the original dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
@@ -6104,17 +6074,14 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
 
-        Example
+        Examples
         -------
-        # Create a sample dataset with missing values
+        # Sample dataset with missing values
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
-
         # Perform forward fill (ffill) on the dataset
         >>> filled_dataset = dataset.ffill(dim="time")
-
-        # Print the original dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:  (time: 10)
@@ -6158,18 +6125,13 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
 
-        Example
-        -------
+        Examples
+        --------
         # Define the time range
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
-
         # Define the data array with missing values
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
-
-        # Create the dataset with the data array
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
-
-        # Print the original dataset
         >>> dataset
         <xarray.Dataset>
         Dimensions:  (time: 10)
@@ -6178,11 +6140,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         Data variables:
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
 
-        # Perform backward fill (bfill) on the dataset
-        >>> filled_dataset = dataset.bfill(dim="time")
-
-        # Print the filled dataset, fills NaN values by propagating values backward
-        >>> filled_dataset
+        # filled dataset, fills NaN values by propagating values backward
+        >>> dataset.bfill(dim="time")
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
@@ -8770,40 +8729,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         -------
         result : Dataset
 
-        Example
-        -------
-
-        # Defined the dataset
-        >>> dataset = xr.Dataset(
-        ...     {
-        ...         "math_scores": (
-        ...             ["student", "test"],
-        ...             [[90, 85, 79], [78, 80, 85], [95, 92, 98]],
-        ...         ),
-        ...         "english_scores": (
-        ...             ["student", "test"],
-        ...             [[88, 80, 92], [75, 95, 79], [93, 96, 78]],
-        ...         ),
-        ...     },
-        ...     coords={
-        ...         "student": ["Alice", "Bob", "Charlie"],
-        ...         "test": ["Test 1", "Test 2", "Test 3"],
-        ...     },
-        ... )
-
-        # Indices of the minimum values along the 'student' dimension are calculated
-        >>> argmin_indices = dataset.argmin(dim="student")
-
-        # Print the indices of the minimum values
-        >>> argmin_indices
-        <xarray.Dataset>
-        Dimensions:         (test: 3)
-        Coordinates:
-            * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
-        Data variables:
-            math_scores     (test) int64 1 1 0
-            english_scores  (test) int64 1 0 2
-
         See Also
         --------
         DataArray.argmin
@@ -8862,40 +8787,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         Returns
         -------
         result : Dataset
-
-        Example
-        -------
-
-        #Defined the dataset
-        >>> dataset = xr.Dataset(
-        ...     {
-        ...         "math_scores": (
-        ...             ["student", "test"],
-        ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
-        ...         ),
-        ...         "english_scores": (
-        ...             ["student", "test"],
-        ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
-        ...         ),
-        ...     },
-        ...     coords={
-        ...         "student": ["Alice", "Bob", "Charlie"],
-        ...         "test": ["Test 1", "Test 2", "Test 3"],
-        ...     },
-        ... )
-
-        # Indices of the minimum values along the 'student' dimension are calculated
-        >>> argmax_indices = dataset.argmax(dim="test")
-
-        # Print the indices of the minimum values
-        >>> argmax_indices
-        <xarray.Dataset>
-        Dimensions:         (student: 3)
-        Coordinates:
-            * student         (student) <U7 'Alice' 'Bob' 'Charlie'
-        Data variables:
-            math_scores     (student) int64 2 2 2
-            english_scores  (student) int64 2 1 1
 
         See Also
         --------
