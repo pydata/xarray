@@ -2488,69 +2488,64 @@ class Dataset(
 
         Examples
         --------
+        # Defined the dataset
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "math_scores": (
+        ...             ["student", "test"],
+        ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
+        ...         ),
+        ...         "english_scores": (
+        ...             ["student", "test"],
+        ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "student": ["Alice", "Bob", "Charlie"],
+        ...         "test": ["Test 1", "Test 2", "Test 3"],
+        ...     },
+        ... )
 
-            # Defined the dataset
-            >>> dataset = xr.Dataset(
-            ...     {
-            ...         "math_scores": (
-            ...             ["student", "test"],
-            ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
-            ...         ),
-            ...         "english_scores": (
-            ...             ["student", "test"],
-            ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
-            ...         ),
-            ...     },
-            ...     coords={
-            ...         "student": ["Alice", "Bob", "Charlie"],
-            ...         "test": ["Test 1", "Test 2", "Test 3"],
-            ...     },
-            ... )
+        # A specific element from the dataset is selected
+        >>> second_student_first_test = dataset.isel(student=1, test=0)
 
-            # A specific element from the dataset is selected
-            >>> second_student_first_test = dataset.isel(student=1, test=0)
+        # Print the selected element
+        >>> second_student_first_test
+        <xarray.Dataset>
+        Dimensions:         ()
+        Coordinates:
+            student         <U7 'Bob'
+            test            <U6 'Test 1'
+        Data variables:
+            math_scores     int64 78
+            english_scores  int64 75
 
-            # Print the selected element
-            >>> second_student_first_test
-            <xarray.Dataset>
-            Dimensions:         ()
-            Coordinates:
-                student         <U7 'Bob'
-                test            <U6 'Test 1'
-            Data variables:
-                math_scores     int64 78
-                english_scores  int64 75
-
-            # Indexing with a slice using isel
-            >>> slice_of_data = dataset.isel(student=slice(0, 2), test=slice(0, 2))
-
-            # Print the sliced data
-            >>> slice_of_data
-            <xarray.Dataset>
-            Dimensions:         (student: 2, test: 2)
-            Coordinates:
+        # Indexing with a slice using isel
+        >>> slice_of_data = dataset.isel(student=slice(0, 2), test=slice(0, 2))
+        >>> slice_of_data
+        <xarray.Dataset>
+        Dimensions:         (student: 2, test: 2)
+        Coordinates:
             * student         (student) <U7 'Alice' 'Bob'
             * test            (test) <U6 'Test 1' 'Test 2'
-            Data variables:
-                math_scores     (student, test) int64 90 85 78 80
-                english_scores  (student, test) int64 88 90 75 82
+        Data variables:
+            math_scores     (student, test) int64 90 85 78 80
+            english_scores  (student, test) int64 88 90 75 82
 
-            # Create a DataArray for indexing
-            >>> index_array = xr.DataArray([0, 2], dims="student")
+        # Create a DataArray for indexing
+        >>> index_array = xr.DataArray([0, 2], dims="student")
 
-            # Use isel with the DataArray for indexing
-            >>> indexed_data = dataset.isel(student=index_array)
-
-            # Print the indexed data
-            >>> indexed_data
-            <xarray.Dataset>
-            Dimensions:         (student: 2, test: 3)
-            Coordinates:
+        # Use isel with the DataArray for indexing
+        >>> indexed_data = dataset.isel(student=index_array)
+        >>> indexed_data
+        <xarray.Dataset>
+        Dimensions:         (student: 2, test: 3)
+        Coordinates:
             * student         (student) <U7 'Alice' 'Charlie'
             * test            (test) <U6 'Test 1' 'Test 2' 'Test 3'
-            Data variables:
-                math_scores     (student, test) int64 90 85 92 95 92 98
-                english_scores  (student, test) int64 88 90 92 93 96 91
+        Data variables:
+            math_scores     (student, test) int64 90 85 92 95 92 98
+            english_scores  (student, test) int64 88 90 92 93 96 91
 
         See Also
         --------
@@ -5950,82 +5945,82 @@ class Dataset(
     ) -> T_Dataset:
         """Reduce this dataset by applying `func` along some dimension(s).
 
-                Parameters
-                ----------
-                func : callable
-                    Function which can be called in the form
-                    `f(x, axis=axis, **kwargs)` to return the result of reducing an
-                    np.ndarray over an integer valued axis.
-                dim : str, Iterable of Hashable or None, optional
-                    Dimension(s) over which to apply `func`. By default `func` is
-                    applied over all dimensions.
-                keep_attrs : bool or None, optional
-                    If True, the dataset's attributes (`attrs`) will be copied from
-                    the original object to the new one.  If False (default), the new
-                    object will be returned without attributes.
-                keepdims : bool, default: False
-                    If True, the dimensions which are reduced are left in the result
-                    as dimensions of size one. Coordinates that use these dimensions
-                    are removed.
-                numeric_only : bool, default: False
-                    If True, only apply ``func`` to variables with a numeric dtype.
-                **kwargs : Any
-                    Additional keyword arguments passed on to ``func``.
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `f(x, axis=axis, **kwargs)` to return the result of reducing an
+            np.ndarray over an integer valued axis.
+        dim : str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
+        keep_attrs : bool or None, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        keepdims : bool, default: False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one. Coordinates that use these dimensions
+            are removed.
+        numeric_only : bool, default: False
+            If True, only apply ``func`` to variables with a numeric dtype.
+        **kwargs : Any
+            Additional keyword arguments passed on to ``func``.
 
-                Returns
-                -------
-                reduced : Dataset
-                    Dataset with this object's DataArrays replaced with new DataArrays
-                    of summarized data and the indicated dimension(s) removed.
+        Returns
+        -------
+        reduced : Dataset
+            Dataset with this object's DataArrays replaced with new DataArrays
+            of summarized data and the indicated dimension(s) removed.
 
-                Example
-                -------
+        Examples
+        --------
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "math_scores": (
+        ...             ["student", "test"],
+        ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
+        ...         ),
+        ...         "english_scores": (
+        ...             ["student", "test"],
+        ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "student": ["Alice", "Bob", "Charlie"],
+        ...         "test": ["Test 1", "Test 2", "Test 3"],
+        ...     },
+        ... )
 
-                # Defined the dataset
-                >>> dataset = xr.Dataset(
-                ...     {
-                ...         "math_scores": (
-                ...             ["student", "test"],
-                ...             [[90, 85, 92], [78, 80, 85], [95, 92, 98]],
-                ...         ),
-                ...         "english_scores": (
-                ...             ["student", "test"],
-                ...             [[88, 90, 92], [75, 82, 79], [93, 96, 91]],
-                ...         ),
-                ...     },
-                ...     coords={
-                ...         "student": ["Alice", "Bob", "Charlie"],
-                ...         "test": ["Test 1", "Test 2", "Test 3"],
-                ...     },
-                ... )
+        # Calculate the 75th percentile of math scores for each student using np.percentile
+        >>> percentile_scores = dataset.reduce(np.percentile, q=75, dim="test")
+        >>> percentile_cores
+        <xarray.Dataset>
+        Dimensions:         (student: 3)
+        Coordinates:
+        * student         (student) <U7 'Alice' 'Bob' 'Charlie'
+        Data variables:
+            math_scores     (student) float64 91.0 82.5 96.5
+            english_scores  (student) float64 91.0 80.5 94.5
 
-                # Calculate the 75th percentile of math scores for each student using np.percentile
-                >>> percentile_math_scores = dataset["math_scores"].reduce(
-                ...     np.percentile, q=75, dim="test"
-                ... )
+Calculating skewness of math scores for each student using the ``scipy.stats.skew`` function using the above mentioned dataset
 
-                # Print 75th percentile of math scores
-                >>> percentile_math_scores
-                <xarray.DataArray 'math_scores' (student: 3)>
-                array([91. , 82.5, 96.5])
-                Coordinates:
-                * student  (student) <U7 'Alice' 'Bob' 'Charlie'
+        # To use the `skew` function, you need to import it from the `scipy.stats` module
+        >>> from scipy.stats import skew
 
-        Calculating skewness of math scores for each student using the ``scipy.stats.skew`` function using the above mentioned dataset
+        # Combine the scores of both subjects into a single variable
+        >>> combined_scores = xr.concat([dataset["math_scores"], dataset["english_scores"]], dim="subject")
 
-                # To use the `skew` function, you need to import it from the `scipy.stats` module
-                >>> from scipy.stats import skew
+        # Calculate the skewness of scores for all students
+        >>> skewness_scores = combined_scores.reduce(skew, dim=("test", "student"))
 
-                # Calculate the skewness of math scores for each student using scipy.stats.skew
-                >>> skewness_math_scores = dataset["math_scores"].reduce(
-                ...     skew, dim="test"
-                ... )
+        >>> skewness_scores
+        <xarray.DataArray 'math_scores' (subject: 2)>
+        array([-0.19423043, -0.60125   ])
+        Dimensions without coordinates: subject
 
-                >>> skewness_math_scores
-                <xarray.DataArray 'math_scores' (student: 3)>
-                array([-0.47033046,  0.47033046,  0.        ])
-                Coordinates:
-                * student  (student) <U7 'Alice' 'Bob' 'Charlie'
+Positive skewed value implies that many students scored low with only a few scoring high ( difficult test).
+Conversely, a negative skewed value implies that many students scored high with only a few scoring low (an easier test).
 
         """
         if kwargs.get("axis", None) is not None:
@@ -8540,10 +8535,8 @@ class Dataset(
         -------
         result : Dataset
 
-        Example
-        -------
-
-        # Defined the dataset
+        Examples
+        --------
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -8563,8 +8556,6 @@ class Dataset(
 
         # Indices of the minimum values along the 'student' dimension are calculated
         >>> argmin_indices = dataset.argmin(dim="student")
-
-        # Print the indices of the minimum values
         >>> argmin_indices
         <xarray.Dataset>
         Dimensions:         (test: 3)
@@ -8633,10 +8624,8 @@ class Dataset(
         -------
         result : Dataset
 
-        Example
-        -------
-
-        #Defined the dataset
+        Examples
+        --------
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -8654,10 +8643,8 @@ class Dataset(
         ...     },
         ... )
 
-        # Indices of the minimum values along the 'student' dimension are calculated
+        # Indices of the maximum values along the 'student' dimension are calculated
         >>> argmax_indices = dataset.argmax(dim="test")
-
-        # Print the indices of the minimum values
         >>> argmax_indices
         <xarray.Dataset>
         Dimensions:         (student: 3)
