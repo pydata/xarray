@@ -2499,7 +2499,7 @@ class Dataset(
 
         Examples
         --------
-        # Defined the dataset
+
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -2516,12 +2516,9 @@ class Dataset(
         ...         "test": ["Test 1", "Test 2", "Test 3"],
         ...     },
         ... )
-
         # A specific element from the dataset is selected
-        >>> second_student_first_test = dataset.isel(student=1, test=0)
 
-        # Print the selected element
-        >>> second_student_first_test
+        >>> dataset.isel(student=1, test=0)
         <xarray.Dataset>
         Dimensions:         ()
         Coordinates:
@@ -2532,6 +2529,7 @@ class Dataset(
             english_scores  int64 75
 
         # Indexing with a slice using isel
+
         >>> slice_of_data = dataset.isel(student=slice(0, 2), test=slice(0, 2))
         >>> slice_of_data
         <xarray.Dataset>
@@ -2543,10 +2541,7 @@ class Dataset(
             math_scores     (student, test) int64 90 85 78 80
             english_scores  (student, test) int64 88 90 75 82
 
-        # Create a DataArray for indexing
         >>> index_array = xr.DataArray([0, 2], dims="student")
-
-        # Use isel with the DataArray for indexing
         >>> indexed_data = dataset.isel(student=index_array)
         >>> indexed_data
         <xarray.Dataset>
@@ -5986,6 +5981,7 @@ class Dataset(
 
         Examples
         --------
+
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -6002,8 +5998,8 @@ class Dataset(
         ...         "test": ["Test 1", "Test 2", "Test 3"],
         ...     },
         ... )
-
         # Calculate the 75th percentile of math scores for each student using np.percentile
+
         >>> percentile_scores = dataset.reduce(np.percentile, q=75, dim="test")
         >>> percentile_scores
         <xarray.Dataset>
@@ -6014,17 +6010,17 @@ class Dataset(
             math_scores     (student) float64 91.0 82.5 96.5
             english_scores  (student) float64 91.0 80.5 94.5
 
-Calculating skewness of math scores for each student using the ``scipy.stats.skew`` function using the above mentioned dataset
-
         # To use the `skew` function, you need to import it from the `scipy.stats` module
+
         >>> from scipy.stats import skew
 
         # Combine the scores of both subjects into a single variable
+
         >>> combined_scores = xr.concat([dataset["math_scores"], dataset["english_scores"]], dim="subject")
 
         # Calculate the skewness of scores for all students
-        >>> skewness_scores = combined_scores.reduce(skew, dim=("test", "student"))
 
+        >>> skewness_scores = combined_scores.reduce(skew, dim=("test", "student"))
         >>> skewness_scores
         <xarray.DataArray 'math_scores' (subject: 2)>
         array([-0.19423043, -0.60125   ])
@@ -8639,7 +8635,7 @@ Conversely, a negative skewed value implies that many students scored high with 
 
         Examples
         --------
-        
+
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -8659,7 +8655,7 @@ Conversely, a negative skewed value implies that many students scored high with 
 
         # Indices of the maximum values along the 'student' dimension are calculated
         >>> argmax_indices = dataset.argmax(dim="test")
-        
+
         >>> argmax_indices
         <xarray.Dataset>
         Dimensions:         (student: 3)
