@@ -238,7 +238,7 @@ def _possibly_convert_datetime_or_timedelta_index(data):
         return data
 
 
-def as_compatible_data(data, fastpath=False):
+def as_compatible_data(data, fastpath: bool = False):
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
@@ -677,7 +677,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
         if isinstance(dims, str):
             dims = (dims,)
-        dims = tuple(dims)
+        else:
+            dims = tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
                 f"dimensions {dims} must have the same length as the "
@@ -2102,12 +2103,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # twice
         variables = list(variables)
         first_var = variables[0]
+        first_var_dims = first_var.dims
 
-        arrays = [v.data for v in variables]
+        arrays = [v._data for v in variables]
 
-        if dim in first_var.dims:
+        if dim in first_var_dims:
             axis = first_var.get_axis_num(dim)
-            dims = first_var.dims
+            dims = first_var_dims
             data = duck_array_ops.concatenate(arrays, axis=axis)
             if positions is not None:
                 # TODO: deprecate this option -- we don't need it for groupby
@@ -2116,7 +2118,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = duck_array_ops.take(data, indices, axis=axis)
         else:
             axis = 0
-            dims = (dim,) + first_var.dims
+            dims = (dim,) + first_var_dims
             data = duck_array_ops.stack(arrays, axis=axis)
 
         attrs = merge_attrs(
@@ -2125,12 +2127,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         encoding = dict(first_var.encoding)
         if not shortcut:
             for var in variables:
-                if var.dims != first_var.dims:
+                if var.dims != first_var_dims:
                     raise ValueError(
-                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var.dims)}"
+                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var_dims)}"
                     )
 
-        return cls(dims, data, attrs, encoding)
+        return cls(dims, data, attrs, encoding, fastpath=True)
 
     def equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the same dimensions and values;
@@ -2482,7 +2484,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 pads[d] = (win - 1, 0)
 
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
-        axis = [self.get_axis_num(d) for d in dim]
+        axis = tuple(self.get_axis_num(d) for d in dim)
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,

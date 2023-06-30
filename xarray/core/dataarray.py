@@ -42,6 +42,7 @@ from xarray.core.utils import (
     ReprObject,
     _default,
     either_dict_or_kwargs,
+    emit_user_level_warning,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -4331,15 +4332,43 @@ class DataArray(
         return result
 
     def to_cdms2(self) -> cdms2_Variable:
-        """Convert this array into a cdms2.Variable"""
+        """Convert this array into a cdms2.Variable
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        .. _xcdat: https://github.com/xCDAT/xcdat
+        """
         from xarray.convert import to_cdms2
+
+        emit_user_level_warning(
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
+            DeprecationWarning,
+        )
 
         return to_cdms2(self)
 
     @classmethod
     def from_cdms2(cls, variable: cdms2_Variable) -> DataArray:
-        """Convert a cdms2.Variable into an xarray.DataArray"""
+        """Convert a cdms2.Variable into an xarray.DataArray
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        .. _xcdat: https://github.com/xCDAT/xcdat
+        """
         from xarray.convert import from_cdms2
+
+        emit_user_level_warning(
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
+            DeprecationWarning,
+        )
 
         return from_cdms2(variable)
 
@@ -5475,6 +5504,7 @@ class DataArray(
         numpy.polyfit
         numpy.polyval
         xarray.polyval
+        DataArray.curvefit
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
@@ -6129,9 +6159,10 @@ class DataArray(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, Any] | None = None,
-        bounds: dict[str, Any] | None = None,
+        p0: dict[str, float | DataArray] | None = None,
+        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
+        errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         """
@@ -6161,17 +6192,25 @@ class DataArray(
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like or None, optional
             Optional dictionary of parameter names to initial guesses passed to the
-            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
-            be assigned initial values following the default scipy behavior.
-        bounds : dict-like or None, optional
-            Optional dictionary of parameter names to bounding values passed to the
-            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
-            will be unbounded following the default scipy behavior.
+            `curve_fit` `p0` arg. If the values are DataArrays, they will be appropriately
+            broadcast to the coordinates of the array. If none or only some parameters are
+            passed, the rest will be assigned initial values following the default scipy
+            behavior.
+        bounds : dict-like, optional
+            Optional dictionary of parameter names to tuples of bounding values passed to the
+            `curve_fit` `bounds` arg. If any of the bounds are DataArrays, they will be
+            appropriately broadcast to the coordinates of the array. If none or only some
+            parameters are passed, the rest will be unbounded following the default scipy
+            behavior.
         param_names : sequence of Hashable or None, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
+            raise an exception. If 'ignore', the coefficients and covariances for the
+            coordinates where the fitting failed will be NaN.
         **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -6184,6 +6223,86 @@ class DataArray(
                 The coefficients of the best fit.
             [var]_curvefit_covariance
                 The covariance matrix of the coefficient estimates.
+
+        Examples
+        --------
+        Generate some exponentially decaying data, where the decay constant and amplitude are
+        different for different values of the coordinate ``x``:
+
+        >>> rng = np.random.default_rng(seed=0)
+        >>> def exp_decay(t, time_constant, amplitude):
+        ...     return np.exp(-t / time_constant) * amplitude
+        ...
+        >>> t = np.linspace(0, 10, 11)
+        >>> da = xr.DataArray(
+        ...     np.stack(
+        ...         [
+        ...             exp_decay(t, 1, 0.1),
+        ...             exp_decay(t, 2, 0.2),
+        ...             exp_decay(t, 3, 0.3),
+        ...         ]
+        ...     )
+        ...     + rng.normal(size=(3, t.size)) * 0.01,
+        ...     coords={"x": [0, 1, 2], "time": t},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 3, time: 11)>
+        array([[ 0.1012573 ,  0.0354669 ,  0.01993775,  0.00602771, -0.00352513,
+                 0.00428975,  0.01328788,  0.009562  , -0.00700381, -0.01264187,
+                -0.0062282 ],
+               [ 0.20041326,  0.09805582,  0.07138797,  0.03216692,  0.01974438,
+                 0.01097441,  0.00679441,  0.01015578,  0.01408826,  0.00093645,
+                 0.01501222],
+               [ 0.29334805,  0.21847449,  0.16305984,  0.11130396,  0.07164415,
+                 0.04744543,  0.03602333,  0.03129354,  0.01074885,  0.01284436,
+                 0.00910995]])
+        Coordinates:
+          * x        (x) int64 0 1 2
+          * time     (time) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0
+
+        Fit the exponential decay function to the data along the ``time`` dimension:
+
+        >>> fit_result = da.curvefit("time", exp_decay)
+        >>> fit_result["curvefit_coefficients"].sel(
+        ...     param="time_constant"
+        ... )  # doctest: +NUMBER
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([1.0569203, 1.7354963, 2.9421577])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'time_constant'
+        >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([0.1005489 , 0.19631423, 0.30003579])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'amplitude'
+
+        An initial guess can also be given with the ``p0`` arg (although it does not make much
+        of a difference in this simple example). To have a different guess for different
+        coordinate points, the guess can be a DataArray. Here we use the same initial guess
+        for the amplitude but different guesses for the time constant:
+
+        >>> fit_result = da.curvefit(
+        ...     "time",
+        ...     exp_decay,
+        ...     p0={
+        ...         "amplitude": 0.2,
+        ...         "time_constant": xr.DataArray([1, 2, 3], coords=[da.x]),
+        ...     },
+        ... )
+        >>> fit_result["curvefit_coefficients"].sel(param="time_constant")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([1.0569213 , 1.73550052, 2.94215733])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'time_constant'
+        >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([0.10054889, 0.1963141 , 0.3000358 ])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'amplitude'
 
         See Also
         --------
@@ -6198,6 +6317,7 @@ class DataArray(
             p0=p0,
             bounds=bounds,
             param_names=param_names,
+            errors=errors,
             kwargs=kwargs,
         )
 
