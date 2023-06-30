@@ -1614,7 +1614,7 @@ class NetCDF4Base(NetCDFBase):
     def test_raise_on_forward_slashes_in_names(self) -> None:
         # test for forward slash in variable names and dimensions
         # see GH 7943
-        data_vars = [
+        data_vars: list[dict[str, Any]] = [
             {"PASS/FAIL": (["PASSFAIL"], np.array([0]))},
             {"PASS/FAIL": np.array([0])},
             {"PASSFAIL": (["PASS/FAIL"], np.array([0]))},
