@@ -34,6 +34,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Ensure no forward slashes in variable and dimension names for HDF5-based engines.
+  (:issue:`7943`, :pull:`7953`) By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
