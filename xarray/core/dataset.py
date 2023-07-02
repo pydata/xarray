@@ -5747,11 +5747,9 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         * temperature  (temperature) float64 25.0 nan 27.5 28.0
         * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
-            *empty*
-
+        *empty*
         # Drop rows with any missing values
         >>> dataset_dropped_any = dataset.dropna(dim="time", how="any")
-
         # Print the dataset after dropping rows with any missing values
         >>> dataset_dropped_any
         <xarray.Dataset>
@@ -5762,10 +5760,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
-
         # Drop rows with all missing values
         >>> dataset_dropped_all = dataset.dropna(dim="time", how="all")
-
         # Print the dataset after dropping rows with all missing values
         >>> dataset_dropped_all
         <xarray.Dataset>
@@ -5776,10 +5772,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
-
         # Drop rows with a threshold of non-missing values
         >>> dataset_dropped_thresh = dataset.dropna(dim="time", thresh=2)
-
         # Print the dataset after dropping rows with a threshold of non-missing values
         >>> dataset_dropped_thresh
         <xarray.Dataset>
@@ -5790,10 +5784,8 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
-
         # Drop rows for a subset of variables
         >>> dataset_dropped_subset = dataset.dropna(dim="time", subset=["temperature"])
-
         # Print the dataset after dropping rows for a subset of variables
         >>> dataset_dropped_subset
         <xarray.Dataset>
@@ -6079,7 +6071,9 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         # Sample dataset with missing values
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
+
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
+
         # Perform forward fill (ffill) on the dataset
         >>> filled_dataset = dataset.ffill(dim="time")
         >>> dataset
@@ -6089,7 +6083,6 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
-
         # Print the filled dataset, fills NaN values by propagating values forward
         >>> filled_dataset
         <xarray.Dataset>
@@ -6128,8 +6121,10 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         Examples
         --------
         # Define the time range
+
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
         # Define the data array with missing values
+
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
         >>> dataset
@@ -6141,6 +6136,7 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
 
         # filled dataset, fills NaN values by propagating values backward
+
         >>> dataset.bfill(dim="time")
         <xarray.Dataset>
         Dimensions:  (time: 10)
