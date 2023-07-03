@@ -1754,7 +1754,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:      (time: 3)
         Coordinates:
-        * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
+          * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
             temperature  (time) int64 25 30 27
 
@@ -1827,28 +1827,34 @@ class Dataset(
         ...         "altitude": 1000,
         ...     },
         ... )
+
         # Dataset before resetting coordinates
+
         >>> dataset
         <xarray.Dataset>
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
-            * time           (time) datetime64[ns] 2023-01-01 2023-01-02
-            * lat            (lat) int64 40 41
-            * lon            (lon) int64 -80 -79
+          * time           (time) datetime64[ns] 2023-01-01 2023-01-02
+          * lat            (lat) int64 40 41
+          * lon            (lon) int64 -80 -79
             altitude       int64 1000
         Data variables:
             temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
             precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
+
         # Reset the 'altitude' coordinate
+
         >>> dataset_reset = dataset.reset_coords("altitude")
+
         # Dataset after resetting coordinates
+
         >>> dataset_reset
         <xarray.Dataset>
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
-            * time           (time) datetime64[ns] 2023-01-01 2023-01-02
-            * lat            (lat) int64 40 41
-            * lon            (lon) int64 -80 -79
+          * time           (time) datetime64[ns] 2023-01-01 2023-01-02
+          * lat            (lat) int64 40 41
+          * lon            (lon) int64 -80 -79
         Data variables:
             temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
             precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
@@ -1883,7 +1889,9 @@ class Dataset(
         ...         "altitude": 1000,
         ...     },
         ... )
+
         # Dataset before resetting coordinates
+
         >>> dataset
         <xarray.Dataset>
         Dimensions:        (city: 3, time: 12)
@@ -1894,9 +1902,13 @@ class Dataset(
         Data variables:
             temperature    (city, time) int64 32 34 36 40 45 50 55 ... 79 82 77 68 58 50
             precipitation  (city, time) float64 1.2 1.5 1.8 2.5 3.0 ... 2.0 1.7 1.4 1.2
+
         # Reset the 'altitude' coordinate
+
         >>> dataset_reset = dataset.reset_coords("altitude")
+
         # Dataset after resetting coordinates
+
         >>> dataset_reset
         <xarray.Dataset>
         Dimensions:        (city: 3, time: 12)
@@ -2826,19 +2838,21 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:      (temperature: 5, humidity: 5, time: 5)
         Coordinates:
-            * temperature  (temperature) float64 25.1 28.3 30.5 27.2 26.8
-            * humidity     (humidity) float64 60.2 55.6 50.3 58.8 61.7
-            * time         (time) int64 1 2 3 4 5
+          * temperature  (temperature) float64 25.1 28.3 30.5 27.2 26.8
+          * humidity     (humidity) float64 60.2 55.6 50.3 58.8 61.7
+          * time         (time) int64 1 2 3 4 5
         Data variables:
             *empty*
+
         # Use head() function to retrieve the first three elements
+
         >>> dataset.head(2)
         <xarray.Dataset>
         Dimensions:      (temperature: 2, humidity: 2, time: 2)
         Coordinates:
-            * temperature  (temperature) float64 25.1 28.3
-            * humidity     (humidity) float64 60.2 55.6
-            * time         (time) int64 1 2
+          * temperature  (temperature) float64 25.1 28.3
+          * humidity     (humidity) float64 60.2 55.6
+          * time         (time) int64 1 2
         Data variables:
             *empty*
 
@@ -2898,7 +2912,9 @@ class Dataset(
         Dimensions without coordinates: x, y
         Data variables:
             data     (x, y) int64 1 2 3 4 5 6 7 8 9
+
         # Get the last 2 elements using tail()
+
         >>> dataset.tail(2)
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
@@ -5748,57 +5764,62 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
         Coordinates:
-        * time         (time) int64 0 1 2 3
-        * temperature  (temperature) float64 25.0 nan 27.5 28.0
-        * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64 0 1 2 3
+          * temperature  (temperature) float64 25.0 nan 27.5 28.0
+          * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
-        *empty*
-        # Drop rows with any missing values
+            *empty*
+
         >>> dataset_dropped_any = dataset.dropna(dim="time", how="any")
+
         # Print the dataset after dropping rows with any missing values
+
         >>> dataset_dropped_any
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
         Coordinates:
-        * time         (time) int64 0 1 2 3
-        * temperature  (temperature) float64 25.0 nan 27.5 28.0
-        * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64 0 1 2 3
+          * temperature  (temperature) float64 25.0 nan 27.5 28.0
+          * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
+
         # Drop rows with all missing values
+
         >>> dataset_dropped_all = dataset.dropna(dim="time", how="all")
-        # Print the dataset after dropping rows with all missing values
         >>> dataset_dropped_all
         <xarray.Dataset>
         Dimensions:      (time: 0, temperature: 4, humidity: 4)
         Coordinates:
-        * time         (time) int64
-        * temperature  (temperature) float64 25.0 nan 27.5 28.0
-        * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64
+          * temperature  (temperature) float64 25.0 nan 27.5 28.0
+          * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
+
         # Drop rows with a threshold of non-missing values
+
         >>> dataset_dropped_thresh = dataset.dropna(dim="time", thresh=2)
-        # Print the dataset after dropping rows with a threshold of non-missing values
         >>> dataset_dropped_thresh
         <xarray.Dataset>
         Dimensions:      (time: 0, temperature: 4, humidity: 4)
         Coordinates:
-        * time         (time) int64
-        * temperature  (temperature) float64 25.0 nan 27.5 28.0
-        * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64
+          * temperature  (temperature) float64 25.0 nan 27.5 28.0
+          * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
+
         # Drop rows for a subset of variables
+
         >>> dataset_dropped_subset = dataset.dropna(dim="time", subset=["temperature"])
-        # Print the dataset after dropping rows for a subset of variables
         >>> dataset_dropped_subset
         <xarray.Dataset>
         Dimensions:      (time: 4, temperature: 4, humidity: 4)
         Coordinates:
-        * time         (time) int64 0 1 2 3
-        * temperature  (temperature) float64 25.0 nan 27.5 28.0
-        * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64 0 1 2 3
+          * temperature  (temperature) float64 25.0 nan 27.5 28.0
+          * humidity     (humidity) float64 60.0 65.0 nan 70.0
         Data variables:
             *empty*
 
@@ -6086,15 +6107,15 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
-            * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
-        # Print the filled dataset, fills NaN values by propagating values forward
+
         >>> filled_dataset
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
-            * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 1.0 3.0 3.0 5.0 6.0 6.0 8.0 8.0 10.0
 
@@ -6129,6 +6150,7 @@ class Dataset(
         # Define the time range
 
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
+
         # Define the data array with missing values
 
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
