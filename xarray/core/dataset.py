@@ -8648,6 +8648,7 @@ class Dataset(
         ... )
 
         # Indices of the maximum values along the 'student' dimension are calculated
+        
         >>> argmax_indices = dataset.argmax(dim="test")
 
         >>> argmax_indices
