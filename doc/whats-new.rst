@@ -100,6 +100,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+
+- Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
+  :py:meth:`Dataset.argmax` (:issue:`6793`, :pull:`7881`)
+  By `Harshitha <https://github.com/harshitha1201>`_ .
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
