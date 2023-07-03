@@ -6169,7 +6169,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
-        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 3.0 3.0 5.0 5.0 6.0 8.0 8.0 10.0 10.0
 
