@@ -4113,6 +4113,10 @@ class Dataset(
             coordinates. Note, this is an alternative to passing a dict to the
             dim kwarg and will only be used if dim is None.
 
+        Examples
+        --------
+
+
         Returns
         -------
         expanded : Dataset

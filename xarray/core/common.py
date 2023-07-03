@@ -629,6 +629,36 @@ class DataWithCoords(AttrAccessMixin):
         **kwargs
             keyword arguments passed into ``attrs.update``.
 
+        Examples
+        --------
+        >>> dataset = xr.Dataset({"temperature": [25, 30, 27]})
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 3)
+        Coordinates:
+        * temperature  (temperature) int64 25 30 27
+        Data variables:
+            *empty*
+
+        >>> new_dataset = dataset.assign_attrs(
+        ...     units="Celsius", description="Temperature data"
+        ... )
+        >>> new_dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 3)
+        Coordinates:
+        * temperature  (temperature) int64 25 30 27
+        Data variables:
+            *empty*
+        Attributes:
+            units:        Celsius
+            description:  Temperature data
+
+        # Attributes of the new dataset
+
+        >>> new_dataset.attrs
+        {'units': 'Celsius', 'description': 'Temperature data'}
+
         Returns
         -------
         assigned : same type as caller
