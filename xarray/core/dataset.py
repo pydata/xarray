@@ -2516,6 +2516,7 @@ class Dataset(
         ...         "test": ["Test 1", "Test 2", "Test 3"],
         ...     },
         ... )
+
         # A specific element from the dataset is selected
 
         >>> dataset.isel(student=1, test=0)
@@ -5998,6 +5999,7 @@ class Dataset(
         ...         "test": ["Test 1", "Test 2", "Test 3"],
         ...     },
         ... )
+
         # Calculate the 75th percentile of math scores for each student using np.percentile
 
         >>> percentile_scores = dataset.reduce(np.percentile, q=75, dim="test")
@@ -8542,16 +8544,24 @@ class Dataset(
         ... )
 
         # Indices of the minimum values along the 'student' dimension are calculated
+
         >>> argmin_indices = dataset.argmin(dim="student")
 
-        # Prints student names with minimum scores for each test
-        >>> min_score_in_math = dataset["student"].values[argmin_indices["math_scores"].values]
+        >>> min_score_in_math = dataset["student"].isel(student=argmin_indices["math_scores"])
         >>> min_score_in_math
+        <xarray.DataArray 'student' (test: 3)>
         array(['Bob', 'Bob', 'Alice'], dtype='<U7')
+        Coordinates:
+            student  (test) <U7 'Bob' 'Bob' 'Alice'
+        * test     (test) <U6 'Test 1' 'Test 2' 'Test 3'
 
         >>> min_score_in_english = dataset["student"].values[argmin_indices["english_scores"].values]
         >>> min_score_in_english
+        <xarray.DataArray 'student' (test: 3)>
         array(['Charlie', 'Bob', 'Charlie'], dtype='<U7')
+        Coordinates:
+            student  (test) <U7 'Charlie' 'Bob' 'Charlie'
+        * test     (test) <U6 'Test 1' 'Test 2' 'Test 3'
 
         See Also
         --------
