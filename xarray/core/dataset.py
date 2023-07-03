@@ -1744,7 +1744,12 @@ class Dataset(
 
         Examples
         --------
-        >>> dataset = xr.Dataset({'temperature': ('time', [25, 30, 27]), 'time': pd.date_range('2023-01-01', periods=3)})
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "temperature": ("time", [25, 30, 27]),
+        ...         "time": pd.date_range("2023-01-01", periods=3),
+        ...     }
+        ... )
         >>> dataset
         <xarray.Dataset>
         Dimensions:      (time: 3)
@@ -1753,7 +1758,7 @@ class Dataset(
         Data variables:
             temperature  (time) int64 25 30 27
 
-        >>> ds.set_coords('temperature')
+        >>> dataset.set_coords("temperature")
         <xarray.Dataset>
         Dimensions:      (time: 3)
         Coordinates:
@@ -1762,7 +1767,7 @@ class Dataset(
         Data variables:
             *empty*
 
-On calling ``set_coords`` , these variables are converted to coordinates, as shown in the final dataset.
+        On calling ``set_coords`` , these variables are converted to coordinates, as shown in the final dataset.
 
         Returns
         -------
@@ -1857,7 +1862,7 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...     # Temperature values for London
         ...     [40, 42, 44, 48, 53, 58, 62, 64, 59, 52, 46, 42],
         ...     # Temperature values for Tokyo
-        ...     [45, 47, 50, 58, 65, 72, 79, 82, 77, 68, 58, 50]
+        ...     [45, 47, 50, 58, 65, 72, 79, 82, 77, 68, 58, 50],
         ... ]
         >>> precipitation_data = [
         ...     # Precipitation values for New York
@@ -1865,7 +1870,7 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...     # Precipitation values for London
         ...     [2.0, 2.2, 2.5, 2.8, 3.0, 2.7, 2.3, 2.1, 2.3, 2.7, 2.5, 2.2],
         ...     # Precipitation values for Tokyo
-        ...     [0.8, 0.9, 1.2, 1.5, 1.8, 2.0, 2.2, 2.1, 2.0, 1.7, 1.4, 1.2]
+        ...     [0.8, 0.9, 1.2, 1.5, 1.8, 2.0, 2.2, 2.1, 2.0, 1.7, 1.4, 1.2],
         ... ]
         >>> dataset = xr.Dataset(
         ...     {
@@ -1876,7 +1881,7 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         ...         "city": cities,
         ...         "time": time,
         ...         "altitude": 1000,
-        ...     }
+        ...     },
         ... )
         # Dataset before resetting coordinates
         >>> dataset
