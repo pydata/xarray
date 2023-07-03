@@ -6009,26 +6009,6 @@ class Dataset(
         Data variables:
             math_scores     (student) float64 91.0 82.5 96.5
             english_scores  (student) float64 91.0 80.5 94.5
-
-        # To use the `skew` function, you need to import it from the `scipy.stats` module
-
-        >>> from scipy.stats import skew
-
-        # Combine the scores of both subjects into a single variable
-
-        >>> combined_scores = xr.concat([dataset["math_scores"], dataset["english_scores"]], dim="subject")
-
-        # Calculate the skewness of scores for all students
-
-        >>> skewness_scores = combined_scores.reduce(skew, dim=("test", "student"))
-        >>> skewness_scores
-        <xarray.DataArray 'math_scores' (subject: 2)>
-        array([-0.19423043, -0.60125   ])
-        Dimensions without coordinates: subject
-
-Positive skewed value implies that many students scored low with only a few scoring high ( difficult test).
-Conversely, a negative skewed value implies that many students scored high with only a few scoring low (an easier test).
-
         """
         if kwargs.get("axis", None) is not None:
             raise ValueError(
