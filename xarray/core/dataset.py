@@ -8547,15 +8547,19 @@ class Dataset(
 
         >>> argmin_indices = dataset.argmin(dim="student")
 
-        >>> min_score_in_math = dataset["student"].isel(student=argmin_indices["math_scores"])
+        >>> min_score_in_math = dataset["student"].isel(
+        ...     student=argmin_indices["math_scores"]
+        ... )
         >>> min_score_in_math
         <xarray.DataArray 'student' (test: 3)>
         array(['Bob', 'Bob', 'Alice'], dtype='<U7')
         Coordinates:
             student  (test) <U7 'Bob' 'Bob' 'Alice'
-        * test     (test) <U6 'Test 1' 'Test 2' 'Test 3'
+          * test     (test) <U6 'Test 1' 'Test 2' 'Test 3'
 
-        >>> min_score_in_english = dataset["student"].values[argmin_indices["english_scores"].values]
+        >>> min_score_in_english = dataset["student"].values[
+        ...     argmin_indices["english_scores"].values
+        ... ]
         >>> min_score_in_english
         <xarray.DataArray 'student' (test: 3)>
         array(['Charlie', 'Bob', 'Charlie'], dtype='<U7')
