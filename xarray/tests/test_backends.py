@@ -1574,14 +1574,11 @@ class NetCDF4Base(NetCDFBase):
         t_chunksize, y_chunksize, x_chunksize = chunk_sizes
 
         with create_tmp_file() as tmp_file:
-            with nc4.Dataset(tmp_file, mode="w") as nc:
-                nc.createDimension("t", t_size)
-                nc.createDimension("x", x_size)
-                nc.createDimension("y", y_size)
-                nc.createVariable("image", "int16", ("t", "y", "x"), fill_value=-1,
-                                  chunksizes=(t_chunksize, y_chunksize, x_chunksize))
-                v = nc.variables["image"]
-                v[:] = np.arange(t_size * x_size * y_size).reshape((t_size, y_size, x_size))
+            image = xr.DataArray(np.arange(t_size * x_size * y_size, dtype=np.int16).reshape((t_size, y_size, x_size)),
+                                 dims=["t", "y", "x"])
+            image.encoding = {"chunksizes": (t_chunksize, y_chunksize, x_chunksize)}
+            dataset = xr.Dataset(dict(image=image))
+            dataset.to_netcdf(tmp_file)
             yield tmp_file
 
     def test_preferred_chunks_are_disk_chunk_sizes(self) -> None:
