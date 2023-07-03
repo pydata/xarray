@@ -6057,8 +6057,7 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
         Parameters
         ----------
         dim : Hashable
-            Specifies the dimension along which to propagate values when
-            filling.
+            Specifies the dimension along which to propagate values when filling.
         limit : int or None, optional
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
@@ -6067,14 +6066,16 @@ On calling ``set_coords`` , these variables are converted to coordinates, as sho
             to axis length if filling along chunked axes (dimensions).
 
         Examples
-        -------
+        --------
         # Sample dataset with missing values
+
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
 
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
 
         # Perform forward fill (ffill) on the dataset
+
         >>> filled_dataset = dataset.ffill(dim="time")
         >>> dataset
         <xarray.Dataset>
