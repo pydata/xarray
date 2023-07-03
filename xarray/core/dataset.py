@@ -1763,7 +1763,7 @@ class Dataset(
         Dimensions:      (time: 3)
         Coordinates:
             temperature  (time) int64 25 30 27
-        * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
+          * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
             *empty*
 
@@ -1896,8 +1896,8 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:        (city: 3, time: 12)
         Coordinates:
-        * city           (city) <U8 'New York' 'London' 'Tokyo'
-        * time           (time) datetime64[ns] 2022-01-31 2022-02-28 ... 2022-12-31
+          * city           (city) <U8 'New York' 'London' 'Tokyo'
+          * time           (time) datetime64[ns] 2022-01-31 2022-02-28 ... 2022-12-31
             altitude       int64 1000
         Data variables:
             temperature    (city, time) int64 32 34 36 40 45 50 55 ... 79 82 77 68 58 50
@@ -1913,8 +1913,8 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:        (city: 3, time: 12)
         Coordinates:
-        * city           (city) <U8 'New York' 'London' 'Tokyo'
-        * time           (time) datetime64[ns] 2022-01-31 2022-02-28 ... 2022-12-31
+          * city           (city) <U8 'New York' 'London' 'Tokyo'
+          * time           (time) datetime64[ns] 2022-01-31 2022-02-28 ... 2022-12-31
         Data variables:
             temperature    (city, time) int64 32 34 36 40 45 50 55 ... 79 82 77 68 58 50
             precipitation  (city, time) float64 1.2 1.5 1.8 2.5 3.0 ... 2.0 1.7 1.4 1.2
@@ -6159,7 +6159,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
-        * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
 
