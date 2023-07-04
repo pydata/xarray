@@ -27,12 +27,12 @@ Chunked arrays have additional attributes and methods, such as ``.chunks`` and `
 Furthermore, Xarray dispatches chunk-aware computations across one or more chunked arrays using special functions known
 as "core operations". Examples include ``map_blocks``, ``blockwise``, and ``apply_gufunc``.
 
-The core operations are generalizations of functions first implemented in :py:class:`dask.array`.
+The core operations are generalizations of functions first implemented in :py:module:`dask.array`.
 The implementation of these functions is specific to the type of arrays passed to them. For example, when applying the
 ``map_blocks`` core operation, :py:class:`dask.array.Array` objects must be processed by :py:func:`dask.array.map_blocks`,
 whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
 
-In order to use the correct implementation of a core operation for the array type encountered, xarray dispatches to the
+In order to use the correct implementation of a coclassre operation for the array type encountered, xarray dispatches to the
 corresponding subclass of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`,
 also known as a "Chunk Manager". Therefore **a full list of the operations that need to be defined is set by the
 API of the :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` abstract base class**. Note that chunked array
