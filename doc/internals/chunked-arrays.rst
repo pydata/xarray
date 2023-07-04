@@ -17,28 +17,26 @@ The basic idea is that by wrapping an array that has an explicit notion of ``.ch
 the choice of chunking scheme to users via methods like :py:meth:`DataArray.chunk` whilst the wrapped array actually
 implements the handling of processing all of the chunks.
 
-Chunked array requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Chunked array methods and "core operations"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A chunked array needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays>`, but should also implement these methods:
+A chunked array needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays>`, but must also
+implement additional features.
 
-- ``.chunk``
-- ``.rechunk``
-- ``.compute``
+Chunked arrays have additional attributes and methods, such as ``.chunks`` and ``.rechunk``.
+Furthermore, Xarray dispatches chunk-aware computations across one or more chunked arrays using special functions known
+as "core operations". Examples include ``map_blocks``, ``blockwise``, and ``apply_gufunc``.
 
-Chunked operations as "core operations"
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Xarray dispatches chunk-aware computations across arrays using "core operations" that accept one or more arrays.
-Examples include ``map_blocks``, ``blockwise``, and ``apply_gufunc``.
-These core operations are generalizations of functions first implemented in :py:class:`dask.array`.
-The implementation of these functions is specific to the type of arrays passed to them: :py:class:`dask.array.Array` objects
-must be processed by :py:func:`dask.array.map_blocks`, whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
+The core operations are generalizations of functions first implemented in :py:class:`dask.array`.
+The implementation of these functions is specific to the type of arrays passed to them. For example, when applying the
+``map_blocks`` core operation, :py:class:`dask.array.Array` objects must be processed by :py:func:`dask.array.map_blocks`,
+whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
 
 In order to use the correct implementation of a core operation for the array type encountered, xarray dispatches to the
 corresponding subclass of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`,
-also known as a "Chunk Manager". Therefore a full list of the primitive functions that need to be defined is set by the API of the
-:py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` abstract base class.
+also known as a "Chunk Manager". Therefore **a full list of the operations that need to be defined is set by the
+API of the :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` abstract base class**. Note that chunked array
+methods are also currently dispatched using this class.
 
 .. note::
 
@@ -46,19 +44,18 @@ also known as a "Chunk Manager". Therefore a full list of the primitive function
     namespace for containing the chunked-aware function primitives. Ideally in the future we would have an API standard
     for chunked array types which codified this structure, making the entrypoint system unnecessary.
 
-ChunkManagerEntrypoint subclassing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. currentmodule:: xarray.core.parallelcompat
+
+.. autoclass:: ChunkManagerEntrypoint
+   :members:
+
+Registering a new ChunkManagerEntrypoint subclass
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Rather than hard-coding various chunk managers to deal with specific chunked array implementations, xarray uses an
 entrypoint system to allow developers of new chunked array implementations to register their corresponding subclass of
 :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`.
 
-The key internal API is:
-
-.. autosummary::
-
-   xarray.core.parallelcompat.list_chunkmanagers
-   xarray.core.parallelcompat.ChunkManagerEntrypoint
 
 To register a new entrypoint you need to add an entry to the ``setup.cfg`` like this::
 
@@ -67,6 +64,12 @@ To register a new entrypoint you need to add an entry to the ``setup.cfg`` like 
         dask = xarray.core.daskmanager:DaskManager
 
 See also `cubed-xarray <https://github.com/xarray-contrib/cubed-xarray>`_ for another example.
+
+To check that the entrypoint has worked correctly, you may find it useful to display the available chunkmanagers using
+the internal function :py:func:`~xarray.core.parallelcompat.list_chunkmanagers`.
+
+.. autofunction:: list_chunkmanagers
+
 
 User interface
 ~~~~~~~~~~~~~~
