@@ -31,7 +31,13 @@ if TYPE_CHECKING:
 @functools.lru_cache(maxsize=1)
 def list_chunkmanagers() -> dict[str, ChunkManagerEntrypoint]:
     """
-    Return a dictionary of available chunk managers and their ChunkManagerEntrypoint objects.
+    Return a dictionary of available chunk managers and their ChunkManagerEntrypoint subclass objects.
+
+    Returns
+    -------
+    chunnkmanagers : dict
+        Dictionary whose values are registered ChunkManagerEntrypoint subclass instances, and whose values
+        are the strings under which they are registered.
 
     Notes
     -----
@@ -143,7 +149,13 @@ def get_chunked_array_type(*args) -> ChunkManagerEntrypoint:
 
 class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     """
-    Adapter between a particular parallel computing framework and xarray.
+    Interface between a particular parallel computing framework and xarray.
+
+    This abstract base class must be subclassed by libraries implementing chunked array types, and
+    registered via the ``chunkmanagers`` entrypoint.
+
+    Abstract methods on this class must be implemented, whereas non-abstract methods are only required in order to
+    enable a subset of xarray functionality, and by default will raise a ``NotImplementedError`` if called.
 
     Attributes
     ----------
@@ -151,7 +163,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         Type of the array class this parallel computing framework provides.
 
         Parallel frameworks need to provide an array class that supports the array API standard.
-        Used for type checking.
+        This attribute is used for array instance type checking at runtime.
     """
 
     array_cls: type[T_ChunkedArray]
@@ -159,13 +171,28 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def __init__(self) -> None:
+        """Used to set the array_cls attribute at import time."""
         raise NotImplementedError()
 
     def is_chunked_array(self, data: Any) -> bool:
+        """
+        Check if the given object is an instance of this type of chunked array.
+
+        Compares against the type stored in the array_cls attribute by default.
+        """
         return isinstance(data, self.array_cls)
 
     @abstractmethod
     def chunks(self, data: T_ChunkedArray) -> T_NormalizedChunks:
+        """
+        Return the current chunks of the given array.
+
+        Used internally by xarray objects' .chunks and .chunksizes properties.
+
+        See Also
+        --------
+        dask.array.Array.chunks
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -177,14 +204,30 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dtype: np.dtype | None = None,
         previous_chunks: T_NormalizedChunks | None = None,
     ) -> T_NormalizedChunks:
-        """Called by open_dataset"""
+        """
+        Called internally by xarray.open_dataset.
+
+        See Also
+        --------
+        dask.array.normalize_chunks
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def from_array(
         self, data: np.ndarray, chunks: T_Chunks, **kwargs
     ) -> T_ChunkedArray:
-        """Called when .chunk is called on an xarray object that is not already chunked."""
+        """
+        Creates a chunked array from a non-chunked numpy-like array.
+
+        Called when the .chunk method is called on an xarray object that is not already chunked.
+        Also called within open_dataset (when chunks is not None) to create a chunked array from
+        an xarray lazily indexed array.
+
+        See Also
+        --------
+        dask.Array.array.from_array
+        """
         raise NotImplementedError()
 
     def rechunk(
@@ -193,17 +236,40 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         chunks: T_NormalizedChunks | tuple[int, ...] | T_Chunks,
         **kwargs,
     ) -> T_ChunkedArray:
-        """Called when .chunk is called on an xarray object that is already chunked."""
+        """
+        Changes the chunking pattern of the given array.
+
+        Called when the .chunk method is called on an xarray object that is already chunked.
+
+        See Also
+        --------
+        dask.array.Array.rechunk
+        """
         return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
 
     @abstractmethod
     def compute(self, *data: T_ChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
-        """Used anytime something needs to computed, including multiple arrays at once."""
+        """
+        Computes one or more chunked arrays, returning them as eager numpy arrays.
+
+        Called anytime something needs to computed, including multiple arrays at once.
+        Used by `.compute`, `.persist`, `.values`.
+
+        See Also
+        --------
+        dask.array.compute
+        """
         raise NotImplementedError()
 
     @property
     def array_api(self) -> Any:
-        """Return the array_api namespace following the python array API standard."""
+        """
+        Return the array_api namespace following the python array API standard.
+
+        See Also
+        --------
+        dask.array
+        """
         raise NotImplementedError()
 
     def reduction(
@@ -216,7 +282,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dtype: np.dtype | None = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
-        """Used in some reductions like nanfirst, which is used by groupby.first"""
+        """
+        Used in some reductions like nanfirst, which is used by groupby.first.
+
+        See Also
+        --------
+        dask.array.reduction
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -233,6 +305,10 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     ):
         """
         Called inside xarray.apply_ufunc, so must be supplied for vast majority of xarray computations to be supported.
+
+        See Also
+        --------
+        dask.array.apply_gufunc
         """
         raise NotImplementedError()
 
@@ -246,7 +322,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         new_axis: int | Sequence[int] | None = None,
         **kwargs,
     ):
-        """Called in elementwise operations, but notably not called in xarray.map_blocks."""
+        """
+        Called in elementwise operations, but notably not called in xarray.map_blocks.
+
+        See Also
+        --------
+        dask.array.map_blocks
+        """
         raise NotImplementedError()
 
     def blockwise(
@@ -259,7 +341,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         align_arrays: bool = True,
         **kwargs,
     ):
-        """Called by some niche functions in xarray."""
+        """
+        Called by some niche functions in xarray.
+
+        See Also
+        --------
+        dask.array.blockwise
+        """
         raise NotImplementedError()
 
     def unify_chunks(
@@ -267,7 +355,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
         **kwargs,
     ) -> tuple[dict[str, T_NormalizedChunks], list[T_ChunkedArray]]:
-        """Called by xr.unify_chunks."""
+        """
+        Called by xarray.unify_chunks.
+
+        See Also
+        --------
+        dask.array.unify_chunks
+        """
         raise NotImplementedError()
 
     def store(
@@ -276,5 +370,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         targets: Any,
         **kwargs: dict[str, Any],
     ):
-        """Used when writing to any backend."""
+        """
+        Used when writing to any backend.
+
+        See Also
+        --------
+        dask.array.store
+        """
         raise NotImplementedError()
