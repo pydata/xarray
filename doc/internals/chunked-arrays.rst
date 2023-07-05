@@ -35,7 +35,7 @@ whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map
 In order to use the correct implementation of a core operation for the array type encountered, xarray dispatches to the
 corresponding subclass of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`,
 also known as a "Chunk Manager". Therefore **a full list of the operations that need to be defined is set by the
-API of the :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` abstract base class**. Note that chunked array
+API of the** :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` **abstract base class**. Note that chunked array
 methods are also currently dispatched using this class.
 
 .. note::
@@ -46,7 +46,7 @@ methods are also currently dispatched using this class.
 
 .. currentmodule:: xarray.core.parallelcompat
 
-.. autoclass:: ChunkManagerEntrypoint
+.. autoclass:: xarray.core.parallelcompat.ChunkManagerEntrypoint
    :members:
 
 Registering a new ChunkManagerEntrypoint subclass
