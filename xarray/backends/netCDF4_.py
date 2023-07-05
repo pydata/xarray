@@ -196,9 +196,11 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
 
 def _ensure_no_forward_slash_in_name(name):
     if "/" in name:
-        raise ValueError(f"Forward slashes '/' are not allowed in variable and dimension names (got {name!r}). "  
-                         "Forward slashes are used as hierarchy-separators for "
-                         "HDF5-based files ('netcdf4'/'h5netcdf').")
+        raise ValueError(
+            f"Forward slashes '/' are not allowed in variable and dimension names (got {name!r}). "
+            "Forward slashes are used as hierarchy-separators for "
+            "HDF5-based files ('netcdf4'/'h5netcdf')."
+        )
 
 
 def _ensure_fill_value_valid(data, attributes):
