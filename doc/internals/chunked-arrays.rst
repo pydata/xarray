@@ -12,6 +12,8 @@ Alternative chunked array types
 
 Xarray can wrap chunked dask arrays (see :ref:`dask`), but can also wrap any other chunked array type that exposes the correct interface.
 This allows us to support using other frameworks for distributed and out-of-core processing, with user code still written as xarray commands.
+In particular xarray can now also supports wrapping :py:class:`cubed.Array` objects
+(see `Cubed's documentation <https://tom-e-white.com/cubed/>`_ and the `cubed-xarray package <https://github.com/xarray-contrib/cubed-xarray>`_).
 
 The basic idea is that by wrapping an array that has an explicit notion of ``.chunks``, xarray can expose control over
 the choice of chunking scheme to users via methods like :py:meth:`DataArray.chunk` whilst the wrapped array actually
