@@ -32,7 +32,7 @@ The implementation of these functions is specific to the type of arrays passed t
 ``map_blocks`` core operation, :py:class:`dask.array.Array` objects must be processed by :py:func:`dask.array.map_blocks`,
 whereas :py:class:`cubed.Array` objects must be processed by :py:func:`cubed.map_blocks`.
 
-In order to use the correct implementation of a coclassre operation for the array type encountered, xarray dispatches to the
+In order to use the correct implementation of a core operation for the array type encountered, xarray dispatches to the
 corresponding subclass of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint`,
 also known as a "Chunk Manager". Therefore **a full list of the operations that need to be defined is set by the
 API of the :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` abstract base class**. Note that chunked array
