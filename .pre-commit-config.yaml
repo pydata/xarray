@@ -47,7 +47,7 @@ repos:
             types-pkg_resources,
             types-PyYAML,
             types-pytz,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python
