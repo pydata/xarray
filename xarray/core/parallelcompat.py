@@ -482,6 +482,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         --------
         dask.array.apply_gufunc
         cubed.apply_gufunc
+
+        References
+        ----------
+        .. [1] https://docs.scipy.org/doc/numpy/reference/ufuncs.html
+        .. [2] https://docs.scipy.org/doc/numpy/reference/c-api/generalized-ufuncs.html
         """
         raise NotImplementedError()
 
