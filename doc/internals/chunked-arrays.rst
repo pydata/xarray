@@ -20,7 +20,7 @@ implements the handling of processing all of the chunks.
 Chunked array methods and "core operations"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A chunked array needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays>`, but must also
+A chunked array needs to meet all the :ref:`requirements for normal duck arrays <internals.duckarrays.requirements>`, but must also
 implement additional features.
 
 Chunked arrays have additional attributes and methods, such as ``.chunks`` and ``.rechunk``.
@@ -37,6 +37,10 @@ corresponding subclass of :py:class:`~xarray.core.parallelcompat.ChunkManagerEnt
 also known as a "Chunk Manager". Therefore **a full list of the operations that need to be defined is set by the
 API of the** :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint` **abstract base class**. Note that chunked array
 methods are also currently dispatched using this class.
+
+Chunked array creation is also handled by this class. As chunked array objects have a one-to-one correspondence with
+in-memory numpy arrays, it should be possible to create a chunked array from a numpy array by passing the desired
+chunking pattern to an implementation of :py:class:`~xarray.core.parallelcompat.ChunkManagerEntrypoint.from_array``.
 
 .. note::
 
