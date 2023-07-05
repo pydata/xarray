@@ -1549,7 +1549,9 @@ class NetCDF4Base(NetCDFBase):
         y_chunksize = y_size
         x_chunksize = 10
 
-        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
+        with self.create_chunked_file(
+            (1, y_size, x_size), (1, y_chunksize, x_chunksize)
+        ) as tmp_file:
             with dask.config.set({"array.chunk-size": "100KiB"}):
                 with open_dataset(tmp_file, chunks="auto", engine=self.engine) as ds:
                     t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
@@ -1563,9 +1565,13 @@ class NetCDF4Base(NetCDFBase):
         y_chunksize = y_size
         x_chunksize = 10
 
-        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
+        with self.create_chunked_file(
+            (1, y_size, x_size), (1, y_chunksize, x_chunksize)
+        ) as tmp_file:
             with open_dataset(tmp_file, chunks={}, engine=self.engine) as ds:
-                for chunksizes, expected in zip(ds["image"].data.chunks, (1, y_chunksize, x_chunksize)):
+                for chunksizes, expected in zip(
+                    ds["image"].data.chunks, (1, y_chunksize, x_chunksize)
+                ):
                     assert all(np.asanyarray(chunksizes) == expected)
 
     @contextlib.contextmanager
@@ -1574,8 +1580,12 @@ class NetCDF4Base(NetCDFBase):
         t_chunksize, y_chunksize, x_chunksize = chunk_sizes
 
         with create_tmp_file() as tmp_file:
-            image = xr.DataArray(np.arange(t_size * x_size * y_size, dtype=np.int16).reshape((t_size, y_size, x_size)),
-                                 dims=["t", "y", "x"])
+            image = xr.DataArray(
+                np.arange(t_size * x_size * y_size, dtype=np.int16).reshape(
+                    (t_size, y_size, x_size)
+                ),
+                dims=["t", "y", "x"],
+            )
             image.encoding = {"chunksizes": (t_chunksize, y_chunksize, x_chunksize)}
             dataset = xr.Dataset(dict(image=image))
             dataset.to_netcdf(tmp_file)
@@ -1586,11 +1596,15 @@ class NetCDF4Base(NetCDFBase):
         y_chunksize = y_size
         x_chunksize = 10
 
-        with self.create_chunked_file((1, y_size, x_size), (1, y_chunksize, x_chunksize)) as tmp_file:
+        with self.create_chunked_file(
+            (1, y_size, x_size), (1, y_chunksize, x_chunksize)
+        ) as tmp_file:
             with open_dataset(tmp_file, engine=self.engine) as ds:
-                assert ds["image"].encoding["preferred_chunks"] == {"t": 1,
-                                                                    "y": y_chunksize,
-                                                                    "x": x_chunksize}
+                assert ds["image"].encoding["preferred_chunks"] == {
+                    "t": 1,
+                    "y": y_chunksize,
+                    "x": x_chunksize,
+                }
 
     def test_encoding_chunksizes_unlimited(self) -> None:
         # regression test for GH1225
