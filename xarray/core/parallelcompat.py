@@ -35,7 +35,7 @@ def list_chunkmanagers() -> dict[str, ChunkManagerEntrypoint]:
 
     Returns
     -------
-    chunnkmanagers : dict
+    chunkmanagers : dict
         Dictionary whose values are registered ChunkManagerEntrypoint subclass instances, and whose values
         are the strings under which they are registered.
 
@@ -251,7 +251,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
         See Also
         --------
-        dask.array.normalize_chunks
+        dask.array.core.normalize_chunks
         """
         raise NotImplementedError()
 
@@ -480,7 +480,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
         See Also
         --------
-        dask.array.apply_gufunc
+        dask.array.gufunc.apply_gufunc
         cubed.apply_gufunc
 
         References
@@ -606,7 +606,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
         See Also
         --------
-        dask.array.unify_chunks
+        dask.array.core.unify_chunks
         cubed.core.unify_chunks
         """
         raise NotImplementedError()
