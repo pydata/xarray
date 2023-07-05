@@ -11,6 +11,8 @@ Integrating with duck arrays
 Xarray can wrap custom numpy-like arrays (":term:`duck array`\s") - see the :ref:`user guide documentation <userguide.duckarrays>`.
 This page is intended for developers who are interested in wrapping a new custom array type with xarray.
 
+.. _internals.duckarrays.requirements:
+
 Duck array requirements
 ~~~~~~~~~~~~~~~~~~~~~~~
 

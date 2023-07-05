@@ -27,7 +27,7 @@ Some numpy-like array types that xarray already has some support for:
 
     For information on wrapping dask arrays see :ref:`dask`. Whilst xarray wraps dask arrays in a similar way to that
     described on this page, chunked array types like :py:class:`dask.array.Array` implement additional methods that require
-    slightly different user code (e.g. calling ``.chunk`` or ``.compute``).
+    slightly different user code (e.g. calling ``.chunk`` or ``.compute``). See the docs on :ref:`wrapping chunked arrays <internals.chunkedarrays>`.
 
 Why "duck"?
 -----------
