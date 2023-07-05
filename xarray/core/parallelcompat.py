@@ -132,8 +132,9 @@ def get_chunked_array_type(*args) -> ChunkManagerEntrypoint:
         if chunkmanager.is_chunked_array(chunked_arr)
     ]
     if not selected:
+        possible_missing_package_name = type(chunked_arr).__module__.split(".")[0]
         raise TypeError(
-            f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
+            f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}. Try installing the {possible_missing_package_name} package."
         )
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
