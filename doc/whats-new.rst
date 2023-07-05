@@ -38,6 +38,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
+  (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Expanded the page on wrapping numpy-like "duck" arrays.
   (:pull:`7911`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
