@@ -214,6 +214,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.Array.chunks
+        cubed.Array.chunks
         """
         raise NotImplementedError()
 
@@ -275,7 +276,8 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
         See Also
         --------
-        dask.Array.array.from_array
+        dask.array.from_array
+        cubed.from_array
         """
         raise NotImplementedError()
 
@@ -306,6 +308,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.Array.rechunk
+        cubed.Array.rechunk
         """
         return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
 
@@ -331,7 +334,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.compute
-        dask.array.Array.compute
+        cubed.compute
         """
         raise NotImplementedError()
 
@@ -347,6 +350,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array
+        cubed.array_api
         """
         raise NotImplementedError()
 
@@ -395,6 +399,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.reduction
+        cubed.core.reduction
         """
         raise NotImplementedError()
 
@@ -476,6 +481,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.apply_gufunc
+        cubed.apply_gufunc
         """
         raise NotImplementedError()
 
@@ -523,8 +529,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.map_blocks
-        dask.array.blockwise : Generalized operation with control over block alignment.
-        dask.array.map_overlap : Generalized operation with overlap between neighbors.
+        cubed.map_blocks
         """
         raise NotImplementedError()
 
@@ -575,6 +580,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.blockwise
+        cubed.core.blockwise
         """
         raise NotImplementedError()
 
@@ -596,6 +602,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.unify_chunks
+        cubed.core.unify_chunks
         """
         raise NotImplementedError()
 
@@ -628,5 +635,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         See Also
         --------
         dask.array.store
+        cubed.store
         """
         raise NotImplementedError()
