@@ -96,5 +96,6 @@ Parallel processing without chunks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To use a parallel array type that does not expose a concept of chunks explicitly, none of the information on this page
-is theoretically required. Such an array type could be wrapped using xarray's existing
-support for :ref:`numpy-like "duck" arrays <userguide.duckarrays>`.
+is theoretically required. Such an array type (e.g. `Ramba <https://github.com/Python-for-HPC/ramba>`_ or
+`Arkouda <https://github.com/Bears-R-Us/arkouda>`_) could be wrapped using xarray's existing support for
+:ref:`numpy-like "duck" arrays <userguide.duckarrays>`.
