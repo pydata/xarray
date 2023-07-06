@@ -5784,7 +5784,7 @@ class Dataset(
         Data variables:
             *empty*
 
-        # Drop rows with all missing values
+        # Drop rows with all the missing values
 
         >>> dataset_dropped_all = dataset.dropna(dim="time", how="all")
         >>> dataset_dropped_all
