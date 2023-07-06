@@ -194,6 +194,15 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
         return ds
 
 
+def _ensure_no_forward_slash_in_name(name):
+    if "/" in name:
+        raise ValueError(
+            f"Forward slashes '/' are not allowed in variable and dimension names (got {name!r}). "
+            "Forward slashes are used as hierarchy-separators for "
+            "HDF5-based files ('netcdf4'/'h5netcdf')."
+        )
+
+
 def _ensure_fill_value_valid(data, attributes):
     # work around for netCDF4/scipy issue where _FillValue has the wrong type:
     # https://github.com/Unidata/netcdf4-python/issues/271
@@ -447,6 +456,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         }
 
     def set_dimension(self, name, length, is_unlimited=False):
+        _ensure_no_forward_slash_in_name(name)
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, size=dim_length)
 
@@ -470,6 +480,8 @@ class NetCDF4DataStore(WritableCFDataStore):
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
+        _ensure_no_forward_slash_in_name(name)
+
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )
