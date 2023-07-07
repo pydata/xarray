@@ -1790,31 +1790,43 @@ class Dataset(
         Example
         -------
 
-        # Create two datasets
-        >>> ds1 = xr.Dataset({"data": [1, 2, 3]}, attrs={"name": "Dataset 1"})
-        >>> ds2 = xr.Dataset({"data": [1, 2, 3]}, attrs={"name": "Dataset 2"})
+        # 2D array with shape (1, 3)
 
-        # Compare the datasets
-        >>> is_identical = ds1.identical(ds2)
-        >>> is_identical
+        >>> data = np.array([[1, 2, 3]])
+        >>> dataset1 = xr.Dataset(
+        ...     {"variable_name": (("space", "time"), data)},
+        ...     coords={"space": [0], "time": [0, 1, 2]},
+        ... )
+
+        # 2D array with shape (3, 1)
+
+        >>> data = np.array([[1], [2], [3]])
+        >>> dataset2 = xr.Dataset(
+        ...     {"variable_name": (("time", "space"), data)},
+        ...     coords={"time": [0, 1, 2], "space": [0]},
+        ... )
+        >>> dataset1
+        <xarray.Dataset>
+        Dimensions:        (space: 1, time: 3)
+        Coordinates:
+          * space          (space) int64 0
+          * time           (time) int64 0 1 2
+        Data variables:
+            variable_name  (space, time) int64 1 2 3
+
+        >>> dataset2
+        <xarray.Dataset>
+        Dimensions:        (time: 3, space: 1)
+        Coordinates:
+          * time           (time) int64 0 1 2
+          * space          (space) int64 0
+        Data variables:
+            variable_name  (time, space) int64 1 2 3
+
+        >>> dataset1.identical(dataset2)
         False
 
-        # Create two datasets
-        >>> ds1 = xr.Dataset(
-        ...     {"temperature": ([], 25)},
-        ...     attrs={"description": "Temperature dataset"},
-        ... )
-        >>> ds2 = xr.Dataset(
-        ...     {"temperature": ([], 25)},
-        ...     attrs={"description": "Temperature dataset"},
-        ... )
 
-        # Compare the datasets
-        >>> is_identical = ds1.identical(ds2)
-        >>> is_identical
-        True
-
-        # Create the first dataset
         >>> ds1 = xr.Dataset(
         ...     {
         ...         "temperature": (["latitude", "longitude"], [[25, 26], [27, 28]]),
@@ -1826,8 +1838,6 @@ class Dataset(
         ...     },
         ...     attrs={"description": "Weather dataset"},
         ... )
-
-        # Create the second dataset
         >>> ds2 = xr.Dataset(
         ...     {
         ...         "temperature": (["latitude", "longitude"], [[25, 26], [27, 28]]),
@@ -1839,10 +1849,7 @@ class Dataset(
         ...     },
         ...     attrs={"description": "Weather dataset"},
         ... )
-
-        # Compare the datasets
-        >>> is_identical = ds1.identical(ds2)
-        >>> is_identical
+        >>> ds1.identical(ds2)
         True
 
         See Also
