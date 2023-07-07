@@ -1716,29 +1716,47 @@ class Dataset(
         This method is necessary because `v1 == v2` for ``Dataset``
         does element-wise comparisons (like numpy.ndarrays).
 
-        Example
-        -------
+        Examples
+        --------
 
-        # Example datasets
-        >>> ds1 = xr.Dataset(
-        ...     {
-        ...         "temperature": (["x", "y"], [[1, 2], [3, 4]]),
-        ...     },
-        ...     coords={"x": [0, 1], "y": [0, 1]},
+        # 2D array with shape (1, 3)
+
+        >>> data = np.array([[1, 2, 3]])
+        >>> dataset1 = xr.Dataset(
+        ...     {"variable_name": (("space", "time"), data)},
+        ...     coords={"space": [0], "time": [0, 1, 2]},
         ... )
 
-        >>> ds2 = xr.Dataset(
-        ...     {
-        ...         "temperature": (["x", "y"], [[1, 2], [3, 4]]),
-        ...     },
-        ...     coords={"x": [0, 1], "y": [0, 1]},
+        # 2D array with shape (3, 1)
+
+        >>> data = np.array([[1], [2], [3]])
+        >>> dataset2 = xr.Dataset(
+        ...     {"variable_name": (("time", "space"), data)},
+        ...     coords={"time": [0, 1, 2], "space": [0]},
         ... )
+        >>> dataset1
+        <xarray.Dataset>
+        Dimensions:        (space: 1, time: 3)
+        Coordinates:
+          * space          (space) int64 0
+          * time           (time) int64 0 1 2
+        Data variables:
+            variable_name  (space, time) int64 1 2 3
 
-        # Check if the datasets are equal
-        >>> ds1.equals(ds2)
-        True
+        >>> dataset2
+        <xarray.Dataset>
+        Dimensions:        (time: 3, space: 1)
+        Coordinates:
+          * time           (time) int64 0 1 2
+          * space          (space) int64 0
+        Data variables:
+            variable_name  (time, space) int64 1 2 3
 
-        # Example datasets with NaN values
+        >>> dataset1.equals(dataset2)
+        False
+
+        Similar for missing values too:
+
         >>> ds1 = xr.Dataset(
         ...     {
         ...         "temperature": (["x", "y"], [[1, np.nan], [3, 4]]),
@@ -1752,8 +1770,6 @@ class Dataset(
         ...     },
         ...     coords={"x": [0, 1], "y": [0, 1]},
         ... )
-
-        # Check if the datasets are equal
         >>> ds1.equals(ds2)
         True
 
