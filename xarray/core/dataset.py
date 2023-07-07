@@ -1657,44 +1657,44 @@ class Dataset(
         the other dataset can still be broadcast equal if the the non-scalar
         variable is a constant.
 
-        Example
-        -------
+        Examples
+        --------
 
-        # Create two datasets
-        >>> dataset1 = xr.Dataset({"temperature": xr.DataArray([20, 25, 30])})
-        >>> dataset2 = xr.Dataset({"temperature": xr.DataArray([20, 25, 30])})
+        # 2D array with shape (1, 3)
 
-        # Check if the datasets are equal after broadcasting
-        >>> is_equal = (dataset1 == dataset2).all()
-        >>> is_equal
-        <xarray.Dataset>
-        Dimensions:      ()
-        Data variables:
-            temperature  bool True
-
-        # Create two datasets
+        >>> data = np.array([[1, 2, 3]])
         >>> dataset1 = xr.Dataset(
-        ...     {
-        ...         "temperature": xr.DataArray([[20, 25], [30, 35]]),
-        ...         "precipitation": xr.DataArray([[0.5, 0.2], [0.8, 0.4]]),
-        ...     }
+        ...     {"variable_name": (("space", "time"), data)},
+        ...     coords={"space": [0], "time": [0, 1, 2]},
         ... )
 
+        # 2D array with shape (3, 1)
+
+        >>> data = np.array([[1], [2], [3]])
         >>> dataset2 = xr.Dataset(
-        ...     {
-        ...         "temperature": xr.DataArray([25, 30]),
-        ...         "precipitation": xr.DataArray([0.2, 0.4]),
-        ...     }
+        ...     {"variable_name": (("time", "space"), data)},
+        ...     coords={"time": [0, 1, 2], "space": [0]},
         ... )
-
-        # Check if the datasets are equal after broadcasting
-        >>> is_equal = (dataset1 == dataset2).all()
-        >>> is_equal
+        >>> dataset1
         <xarray.Dataset>
-        Dimensions:        ()
+        Dimensions:        (space: 1, time: 3)
+        Coordinates:
+          * space          (space) int64 0
+          * time           (time) int64 0 1 2
         Data variables:
-            temperature    bool False
-            precipitation  bool False
+            variable_name  (space, time) int64 1 2 3
+
+        >>> dataset2
+        <xarray.Dataset>
+        Dimensions:        (time: 3, space: 1)
+        Coordinates:
+          * time           (time) int64 0 1 2
+          * space          (space) int64 0
+        Data variables:
+            variable_name  (time, space) int64 1 2 3
+
+        >>> dataset1.broadcast_equals(dataset2)
+        True
 
         See Also
         --------
