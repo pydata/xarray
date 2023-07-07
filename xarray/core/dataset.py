@@ -5312,6 +5312,56 @@ class Dataset(
             passed are not in the dataset. If 'ignore', any given names that are in the
             dataset are dropped and no error is raised.
 
+        Examples
+        --------
+
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "temperature": (
+        ...             ["time", "latitude", "longitude"],
+        ...             [[[25.5, 26.3], [27.1, 28.0]]],
+        ...         ),
+        ...         "humidity": (
+        ...             ["time", "latitude", "longitude"],
+        ...             [[[65.0, 63.8], [58.2, 59.6]]],
+        ...         ),
+        ...         "wind_speed": (
+        ...             ["time", "latitude", "longitude"],
+        ...             [[[10.2, 8.5], [12.1, 9.8]]],
+        ...         ),
+        ...     },
+        ...     coords={
+        ...         "time": pd.date_range("2023-07-01", periods=1),
+        ...         "latitude": [40.0, 40.2],
+        ...         "longitude": [-75.0, -74.8],
+        ...     },
+        ... )
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:      (time: 1, latitude: 2, longitude: 2)
+        Coordinates:
+          * time         (time) datetime64[ns] 2023-07-01
+          * latitude     (latitude) float64 40.0 40.2
+          * longitude    (longitude) float64 -75.0 -74.8
+        Data variables:
+            temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
+            humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
+            wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
+
+        # Drop the 'humidity' variable
+
+        >>> dataset_dropped = dataset.drop_vars(["humidity"])
+        >>> dataset_dropped
+        <xarray.Dataset>
+        Dimensions:      (time: 1, latitude: 2, longitude: 2)
+        Coordinates:
+          * time         (time) datetime64[ns] 2023-07-01
+          * latitude     (latitude) float64 40.0 40.2
+          * longitude    (longitude) float64 -75.0 -74.8
+        Data variables:
+            temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
+            wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
+
         Returns
         -------
         dropped : Dataset
