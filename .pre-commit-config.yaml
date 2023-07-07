@@ -16,7 +16,7 @@ repos:
         files: ^xarray/
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.272'
+    rev: 'v0.0.276'
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -33,7 +33,7 @@ repos:
         additional_dependencies: ["black==23.3.0"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.4.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -47,7 +47,7 @@ repos:
             types-pkg_resources,
             types-PyYAML,
             types-pytz,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python
