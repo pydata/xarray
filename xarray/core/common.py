@@ -636,7 +636,7 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.Dataset>
         Dimensions:      (temperature: 3)
         Coordinates:
-        * temperature  (temperature) int64 25 30 27
+          * temperature  (temperature) int64 25 30 27
         Data variables:
             *empty*
 
