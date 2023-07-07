@@ -4116,6 +4116,22 @@ class Dataset(
         Examples
         --------
 
+        >>> dataset = xr.Dataset({"temperature": ([], 25.0)})
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:      ()
+        Data variables:
+            temperature  float64 25.0
+
+        # Expand the dataset with a new dimension called "time"
+
+        >>> expanded_dataset = dataset.expand_dims(dim="time")
+        >>> expanded_dataset
+        <xarray.Dataset>
+        Dimensions:      (time: 1)
+        Dimensions without coordinates: time
+        Data variables:
+            temperature  (time) float64 25.0
 
         Returns
         -------
