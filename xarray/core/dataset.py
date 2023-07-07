@@ -5753,75 +5753,37 @@ class Dataset(
 
         Examples
         --------
-        >>> data = {
-        ...     "time": [0, 1, 2, 3],
-        ...     "temperature": [25.0, np.nan, 27.5, 28.0],
-        ...     "humidity": [60.0, 65.0, np.nan, 70.0],
-        ... }
-        >>> dataset = xr.Dataset(data)
 
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "temperature": (
+        ...             ["time", "location"],
+        ...             [[23.4, 24.1], [np.nan, 22.1], [21.8, 24.2]],
+        ...         )
+        ...     },
+        ...     coords={"time": [1, 2, 3], "location": ["A", "B"]},
+        ... )
         >>> dataset
         <xarray.Dataset>
-        Dimensions:      (time: 4, temperature: 4, humidity: 4)
+        Dimensions:      (time: 3, location: 2)
         Coordinates:
-          * time         (time) int64 0 1 2 3
-          * temperature  (temperature) float64 25.0 nan 27.5 28.0
-          * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64 1 2 3
+          * location     (location) <U1 'A' 'B'
         Data variables:
-            *empty*
+            temperature  (time, location) float64 23.4 24.1 nan 22.1 21.8 24.2
 
-        >>> dataset_dropped_any = dataset.dropna(dim="time", how="any")
+        # Drop NaN values from the dataset
 
-        # Print the dataset after dropping rows with any missing values
+        dataset_dropped = data.dropna(dim='time')
 
-        >>> dataset_dropped_any
+        >>> dataset_dropped
         <xarray.Dataset>
-        Dimensions:      (time: 4, temperature: 4, humidity: 4)
+        Dimensions:      (time: 2, location: 2)
         Coordinates:
-          * time         (time) int64 0 1 2 3
-          * temperature  (temperature) float64 25.0 nan 27.5 28.0
-          * humidity     (humidity) float64 60.0 65.0 nan 70.0
+          * time         (time) int64 1 3
+          * location     (location) <U1 'A' 'B'
         Data variables:
-            *empty*
-
-        # Drop rows with all the missing values
-
-        >>> dataset_dropped_all = dataset.dropna(dim="time", how="all")
-        >>> dataset_dropped_all
-        <xarray.Dataset>
-        Dimensions:      (time: 0, temperature: 4, humidity: 4)
-        Coordinates:
-          * time         (time) int64
-          * temperature  (temperature) float64 25.0 nan 27.5 28.0
-          * humidity     (humidity) float64 60.0 65.0 nan 70.0
-        Data variables:
-            *empty*
-
-        # Drop rows with a threshold of non-missing values
-
-        >>> dataset_dropped_thresh = dataset.dropna(dim="time", thresh=2)
-        >>> dataset_dropped_thresh
-        <xarray.Dataset>
-        Dimensions:      (time: 0, temperature: 4, humidity: 4)
-        Coordinates:
-          * time         (time) int64
-          * temperature  (temperature) float64 25.0 nan 27.5 28.0
-          * humidity     (humidity) float64 60.0 65.0 nan 70.0
-        Data variables:
-            *empty*
-
-        # Drop rows for a subset of variables
-
-        >>> dataset_dropped_subset = dataset.dropna(dim="time", subset=["temperature"])
-        >>> dataset_dropped_subset
-        <xarray.Dataset>
-        Dimensions:      (time: 4, temperature: 4, humidity: 4)
-        Coordinates:
-          * time         (time) int64 0 1 2 3
-          * temperature  (temperature) float64 25.0 nan 27.5 28.0
-          * humidity     (humidity) float64 60.0 65.0 nan 70.0
-        Data variables:
-            *empty*
+            temperature  (time, location) float64 23.4 24.1 21.8 24.2
 
         Returns
         -------
