@@ -5774,8 +5774,7 @@ class Dataset(
 
         # Drop NaN values from the dataset
 
-        dataset_dropped = data.dropna(dim='time')
-
+        >>> dataset_dropped = data.dropna(dim="time")
         >>> dataset_dropped
         <xarray.Dataset>
         Dimensions:      (time: 2, location: 2)
