@@ -2851,6 +2851,17 @@ class Dataset(
             pageviews  (date) int64 2000 1800 1500
             visitors   (date) int64 1500 1200 1000
 
+        # Using a dictionary to specify the number of elements for specific dimensions
+
+        >>> busiest_days.head({"date": 3})
+        <xarray.Dataset>
+        Dimensions:    (date: 3)
+        Coordinates:
+          * date       (date) datetime64[ns] 2023-01-05 2023-01-04 2023-01-02
+        Data variables:
+            pageviews  (date) int64 2000 1800 1500
+            visitors   (date) int64 1500 1200 1000
+
         See Also
         --------
         Dataset.tail
@@ -2922,6 +2933,15 @@ class Dataset(
         # Activities with the least energy expenditures using tail()
 
         >>> sorted_dataset.tail(3)
+        <xarray.Dataset>
+        Dimensions:             (activity: 3)
+        Coordinates:
+          * activity            (activity) <U8 'Cycling' 'Walking' 'Yoga'
+        Data variables:
+            duration            (activity) int64 60 30 60
+            energy_expenditure  (activity) int64 250 150 100
+
+        >>> sorted_dataset.tail({"activity": 3})
         <xarray.Dataset>
         Dimensions:             (activity: 3)
         Coordinates:
