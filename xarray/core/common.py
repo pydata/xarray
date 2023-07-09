@@ -2010,7 +2010,7 @@ def _contains_cftime_datetimes(array: Any) -> bool:
 
 def contains_cftime_datetimes(var: T_Variable) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
-    return _contains_cftime_datetimes(var._data)
+    return _contains_cftime_datetimes(var.data)
 
 
 def _contains_datetime_like_objects(var: T_Variable) -> bool:
