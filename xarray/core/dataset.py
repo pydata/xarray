@@ -2824,34 +2824,28 @@ class Dataset(
 
         Examples
         --------
+        >>> dates = pd.date_range(start="2023-01-01", periods=5)
+        >>> pageviews = [1200, 1500, 900, 1800, 2000]
+        >>> visitors = [800, 1000, 600, 1200, 1500]
         >>> dataset = xr.Dataset(
         ...     {
-        ...         "temperature": [25.1, 28.3, 30.5, 27.2, 26.8],
-        ...         "humidity": [60.2, 55.6, 50.3, 58.8, 61.7],
+        ...         "pageviews": (("date"), pageviews),
+        ...         "visitors": (("date"), visitors),
         ...     },
-        ...     coords={"time": [1, 2, 3, 4, 5]},
+        ...     coords={"date": dates},
         ... )
-        >>> dataset
-        <xarray.Dataset>
-        Dimensions:      (temperature: 5, humidity: 5, time: 5)
-        Coordinates:
-          * temperature  (temperature) float64 25.1 28.3 30.5 27.2 26.8
-          * humidity     (humidity) float64 60.2 55.6 50.3 58.8 61.7
-          * time         (time) int64 1 2 3 4 5
-        Data variables:
-            *empty*
 
-        # Use head() function to retrieve the first three elements
+        # Retrieve the 3 most busiest days in terms of pageviews and visitors
 
-        >>> dataset.head(2)
+        >>> busiest_days = dataset.sortby(["pageviews", "visitors"], ascending=False)
+        >>> busiest_days.head(3)
         <xarray.Dataset>
-        Dimensions:      (temperature: 2, humidity: 2, time: 2)
+        Dimensions:    (date: 3)
         Coordinates:
-          * temperature  (temperature) float64 25.1 28.3
-          * humidity     (humidity) float64 60.2 55.6
-          * time         (time) int64 1 2
+          * date       (date) datetime64[ns] 2023-01-05 2023-01-04 2023-01-02
         Data variables:
-            *empty*
+            pageviews  (date) int64 2000 1800 1500
+            visitors   (date) int64 1500 1200 1000
 
         See Also
         --------
@@ -2901,23 +2895,36 @@ class Dataset(
 
         Examples
         --------
-        >>> data = xr.DataArray([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dims=("x", "y"))
-        >>> dataset = xr.Dataset({"data": data})
-        >>> dataset
+        >>> activity_names = ["Walking", "Running", "Cycling", "Swimming", "Yoga"]
+        >>> durations = [30, 45, 60, 45, 60]  # in minutes
+        >>> energies = [150, 300, 250, 400, 100]  # in calories
+        >>> dataset = xr.Dataset(
+        ...     {
+        ...         "duration": (["activity"], durations),
+        ...         "energy_expenditure": (["activity"], energies),
+        ...     },
+        ...     coords={"activity": activity_names},
+        ... )
+        >>> sorted_dataset = dataset.sortby("energy_expenditure", ascending=False)
+        >>> sorted_dataset
         <xarray.Dataset>
-        Dimensions:  (x: 3, y: 3)
-        Dimensions without coordinates: x, y
+        Dimensions:             (activity: 5)
+        Coordinates:
+          * activity            (activity) <U8 'Swimming' 'Running' ... 'Walking' 'Yoga'
         Data variables:
-            data     (x, y) int64 1 2 3 4 5 6 7 8 9
+            duration            (activity) int64 45 45 60 30 60
+            energy_expenditure  (activity) int64 400 300 250 150 100
 
-        # Get the last 2 elements using tail()
+        # Activities with the least energy expenditures using tail()
 
-        >>> dataset.tail(2)
+        >>> sorted_dataset.tail(3)
         <xarray.Dataset>
-        Dimensions:  (x: 2, y: 2)
-        Dimensions without coordinates: x, y
+        Dimensions:             (activity: 3)
+        Coordinates:
+          * activity            (activity) <U8 'Cycling' 'Walking' 'Yoga'
         Data variables:
-            data     (x, y) int64 5 6 8 9
+            duration            (activity) int64 60 30 60
+            energy_expenditure  (activity) int64 250 150 100
 
         See Also
         --------
