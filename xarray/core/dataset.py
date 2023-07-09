@@ -1863,6 +1863,10 @@ class Dataset(
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        Dataset.set_coords
         """
         if names is None:
             names = self._coord_names - set(self._indexes)
@@ -6058,11 +6062,10 @@ class Dataset(
 
         Examples
         --------
-        # Sample dataset with missing values
-
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
-        >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
-
+        >>> data = np.array(
+        ...     [1, np.nan, np.nan, np.nan, 5, np.nan, np.nan, 8, np.nan, 10]
+        ... )
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
         >>> dataset
         <xarray.Dataset>
@@ -6070,22 +6073,35 @@ class Dataset(
         Coordinates:
           * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
-            data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
+            data     (time) float64 1.0 nan nan nan 5.0 nan nan 8.0 nan 10.0
 
         # Perform forward fill (ffill) on the dataset
 
-        >>> filled_dataset = dataset.ffill(dim="time")
-        >>> filled_dataset
+        >>> dataset.ffill(dim="time")
         <xarray.Dataset>
         Dimensions:  (time: 10)
         Coordinates:
           * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
-            data     (time) float64 1.0 1.0 3.0 3.0 5.0 6.0 6.0 8.0 8.0 10.0
+            data     (time) float64 1.0 1.0 1.0 1.0 5.0 5.0 5.0 8.0 8.0 10.0
+
+        # Limit the forward filling to a maximum of 2 consecutive NaN values
+
+        >>> dataset.ffill(dim="time", limit=2)
+        <xarray.Dataset>
+        Dimensions:  (time: 10)
+        Coordinates:
+          * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+        Data variables:
+            data     (time) float64 1.0 1.0 1.0 nan 5.0 5.0 5.0 8.0 8.0 10.0
 
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        Dataset.bfill
         """
         from xarray.core.missing import _apply_over_vars_with_dim, ffill
 
@@ -6111,13 +6127,10 @@ class Dataset(
 
         Examples
         --------
-        # Define the time range
-
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
-
-        # Define the data array with missing values
-
-        >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
+        >>> data = np.array(
+        ...     [1, np.nan, np.nan, np.nan, 5, np.nan, np.nan, 8, np.nan, 10]
+        ... )
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
         >>> dataset
         <xarray.Dataset>
@@ -6125,7 +6138,7 @@ class Dataset(
         Coordinates:
           * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
-            data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
+            data     (time) float64 1.0 nan nan nan 5.0 nan nan 8.0 nan 10.0
 
         # filled dataset, fills NaN values by propagating values backward
 
@@ -6135,11 +6148,25 @@ class Dataset(
         Coordinates:
           * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
-            data     (time) float64 1.0 3.0 3.0 5.0 5.0 6.0 8.0 8.0 10.0 10.0
+            data     (time) float64 1.0 5.0 5.0 5.0 5.0 8.0 8.0 8.0 10.0 10.0
+
+        # Limit the backward filling to a maximum of 2 consecutive NaN values
+
+        >>> dataset.bfill(dim="time", limit=2)
+        <xarray.Dataset>
+        Dimensions:  (time: 10)
+        Coordinates:
+          * time     (time) datetime64[ns] 2023-01-01 2023-01-02 ... 2023-01-10
+        Data variables:
+            data     (time) float64 1.0 nan 5.0 5.0 5.0 8.0 8.0 8.0 10.0 10.0
 
         Returns
         -------
         Dataset
+
+        See Also
+        --------
+        Dataset.ffill
         """
         from xarray.core.missing import _apply_over_vars_with_dim, bfill
 
