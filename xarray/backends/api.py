@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
-from glob import glob
 from io import BytesIO
 from numbers import Number
 from typing import (
@@ -21,7 +20,12 @@ import numpy as np
 
 from xarray import backends, conventions
 from xarray.backends import plugins
-from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
+from xarray.backends.common import (
+    AbstractDataStore,
+    ArrayWriter,
+    _find_absolute_paths,
+    _normalize_path,
+)
 from xarray.backends.locks import _get_scheduler
 from xarray.core import indexing
 from xarray.core.combine import (
@@ -967,37 +971,7 @@ def open_mfdataset(
     .. [1] https://docs.xarray.dev/en/stable/dask.html
     .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
-    if isinstance(paths, str):
-        if is_remote_uri(paths) and engine == "zarr":
-            try:
-                from fsspec.core import get_fs_token_paths
-            except ImportError as e:
-                raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
-                ) from e
-
-            fs, _, _ = get_fs_token_paths(
-                paths,
-                mode="rb",
-                storage_options=kwargs.get("backend_kwargs", {}).get(
-                    "storage_options", {}
-                ),
-                expand=False,
-            )
-            tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
-        elif is_remote_uri(paths):
-            raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs "
-                f"unless engine='zarr' is specified. Got paths: {paths}. "
-                "Instead, supply paths as an explicit list of strings."
-            )
-        else:
-            paths = sorted(glob(_normalize_path(paths)))
-    elif isinstance(paths, os.PathLike):
-        paths = [os.fspath(paths)]
-    else:
-        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
+    paths = _find_absolute_paths(paths, engine=engine, **kwargs)
 
     if not paths:
         raise OSError("no files to open")
