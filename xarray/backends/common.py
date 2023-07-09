@@ -67,7 +67,7 @@ def _find_absolute_paths(
     ----------
     paths :
         Path(s) to file(s). Can include wildcards like * .
-    **kwargs : TYPE
+    **kwargs :
         Extra kwargs. Mainly for fsspec.
 
     Examples
