@@ -40,7 +40,6 @@ def _normalize_path(path):
 
     Examples
     --------
-    >>> import os
     >>> from pathlib import Path
 
     >>> directory = Path(xr.backends.common.__file__).parent
