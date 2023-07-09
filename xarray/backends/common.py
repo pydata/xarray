@@ -43,7 +43,7 @@ def _normalize_path(path):
     >>> import os
     >>> from pathlib import Path
 
-    >>> directory = os.getcwd()
+    >>> directory = Path(xr.backends.common.__file__).parent
     >>> paths_path = Path(directory).joinpath("comm*n.py")
     >>> paths_str = xr.backends.common._normalize_path(paths_path)
     >>> [isinstance(p, str) for p in (paths_str,)]
@@ -73,11 +73,10 @@ def _find_absolute_paths(
 
     Examples
     --------
-    >>> import os
     >>> from pathlib import Path
 
-    >>> directory = os.getcwd()
-    >>> paths = str(Path(directory).joinpath("comm*n.py"))
+    >>> directory = Path(xr.backends.common.__file__).parent
+    >>> paths = str(Path(directory).joinpath("comm*n.py"))  # Find common with wildcard
     >>> paths = xr.backends.common._find_absolute_paths(paths)
     >>> [Path(p).name for p in paths]
     ['common.py']
