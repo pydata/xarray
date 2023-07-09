@@ -1746,28 +1746,28 @@ class Dataset(
         --------
         >>> dataset = xr.Dataset(
         ...     {
-        ...         "temperature": ("time", [25, 30, 27]),
+        ...         "pressure": ("time", [1.013, 1.2, 3.5]),
         ...         "time": pd.date_range("2023-01-01", periods=3),
         ...     }
         ... )
         >>> dataset
         <xarray.Dataset>
-        Dimensions:      (time: 3)
+        Dimensions:   (time: 3)
         Coordinates:
-          * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
+        * time      (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
-            temperature  (time) int64 25 30 27
+            pressure  (time) float64 1.013 1.2 3.5
 
-        >>> dataset.set_coords("temperature")
+        >>> dataset.set_coords("pressure")
         <xarray.Dataset>
-        Dimensions:      (time: 3)
+        Dimensions:   (time: 3)
         Coordinates:
-            temperature  (time) int64 25 30 27
-          * time         (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
+            pressure  (time) float64 1.013 1.2 3.5
+        * time      (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
             *empty*
 
-        On calling ``set_coords`` , these variables are converted to coordinates, as shown in the final dataset.
+        On calling ``set_coords`` , these data variables are converted to coordinates, as shown in the final dataset.
 
         Returns
         -------
@@ -1858,66 +1858,6 @@ class Dataset(
         Data variables:
             temperature    (time, lat, lon) int64 25 26 27 28 29 30 31 32
             precipitation  (time, lat, lon) float64 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
-            altitude       int64 1000
-
-        >>> cities = ["New York", "London", "Tokyo"]
-        >>> time = pd.date_range(start="2022-01-01", periods=12, freq="M")
-        >>> temperature_data = [
-        ...     # Temperature values for New York
-        ...     [32, 34, 36, 40, 45, 50, 55, 60, 55, 45, 38, 35],
-        ...     # Temperature values for London
-        ...     [40, 42, 44, 48, 53, 58, 62, 64, 59, 52, 46, 42],
-        ...     # Temperature values for Tokyo
-        ...     [45, 47, 50, 58, 65, 72, 79, 82, 77, 68, 58, 50],
-        ... ]
-        >>> precipitation_data = [
-        ...     # Precipitation values for New York
-        ...     [1.2, 1.5, 1.8, 2.5, 3.0, 2.8, 2.3, 2.0, 2.4, 2.8, 2.3, 1.8],
-        ...     # Precipitation values for London
-        ...     [2.0, 2.2, 2.5, 2.8, 3.0, 2.7, 2.3, 2.1, 2.3, 2.7, 2.5, 2.2],
-        ...     # Precipitation values for Tokyo
-        ...     [0.8, 0.9, 1.2, 1.5, 1.8, 2.0, 2.2, 2.1, 2.0, 1.7, 1.4, 1.2],
-        ... ]
-        >>> dataset = xr.Dataset(
-        ...     {
-        ...         "temperature": (["city", "time"], temperature_data),
-        ...         "precipitation": (["city", "time"], precipitation_data),
-        ...     },
-        ...     coords={
-        ...         "city": cities,
-        ...         "time": time,
-        ...         "altitude": 1000,
-        ...     },
-        ... )
-
-        # Dataset before resetting coordinates
-
-        >>> dataset
-        <xarray.Dataset>
-        Dimensions:        (city: 3, time: 12)
-        Coordinates:
-          * city           (city) <U8 'New York' 'London' 'Tokyo'
-          * time           (time) datetime64[ns] 2022-01-31 2022-02-28 ... 2022-12-31
-            altitude       int64 1000
-        Data variables:
-            temperature    (city, time) int64 32 34 36 40 45 50 55 ... 79 82 77 68 58 50
-            precipitation  (city, time) float64 1.2 1.5 1.8 2.5 3.0 ... 2.0 1.7 1.4 1.2
-
-        # Reset the 'altitude' coordinate
-
-        >>> dataset_reset = dataset.reset_coords("altitude")
-
-        # Dataset after resetting coordinates
-
-        >>> dataset_reset
-        <xarray.Dataset>
-        Dimensions:        (city: 3, time: 12)
-        Coordinates:
-          * city           (city) <U8 'New York' 'London' 'Tokyo'
-          * time           (time) datetime64[ns] 2022-01-31 2022-02-28 ... 2022-12-31
-        Data variables:
-            temperature    (city, time) int64 32 34 36 40 45 50 55 ... 79 82 77 68 58 50
-            precipitation  (city, time) float64 1.2 1.5 1.8 2.5 3.0 ... 2.0 1.7 1.4 1.2
             altitude       int64 1000
 
         Returns
@@ -6117,10 +6057,6 @@ class Dataset(
         >>> data = np.array([1, np.nan, 3, np.nan, 5, 6, np.nan, 8, np.nan, 10])
 
         >>> dataset = xr.Dataset({"data": (("time",), data)}, coords={"time": time})
-
-        # Perform forward fill (ffill) on the dataset
-
-        >>> filled_dataset = dataset.ffill(dim="time")
         >>> dataset
         <xarray.Dataset>
         Dimensions:  (time: 10)
@@ -6129,6 +6065,9 @@ class Dataset(
         Data variables:
             data     (time) float64 1.0 nan 3.0 nan 5.0 6.0 nan 8.0 nan 10.0
 
+        # Perform forward fill (ffill) on the dataset
+
+        >>> filled_dataset = dataset.ffill(dim="time")
         >>> filled_dataset
         <xarray.Dataset>
         Dimensions:  (time: 10)
