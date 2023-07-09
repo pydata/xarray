@@ -44,7 +44,7 @@ def _normalize_path(path):
     >>> from pathlib import Path
 
     >>> directory = os.getcwd()
-    >>> paths_path = Path(f"{directory}\\comm*n.py")
+    >>> paths_path = Path(directory).joinpath("comm*n.py")
     >>> paths_str = xr.backends.common._normalize_path(paths_path)
     >>> [isinstance(p, str) for p in (paths_str,)]
     [True]
@@ -77,7 +77,7 @@ def _find_absolute_paths(
     >>> from pathlib import Path
 
     >>> directory = os.getcwd()
-    >>> paths = f"{directory}\\comm*n.py"
+    >>> paths = str(Path(directory).joinpath("comm*n.py"))
     >>> paths = xr.backends.common._find_absolute_paths(paths)
     >>> [Path(p).name for p in paths]
     ['common.py']
