@@ -1763,7 +1763,7 @@ class Dataset(
         Dimensions:   (time: 3)
         Coordinates:
             pressure  (time) float64 1.013 1.2 3.5
-        * time      (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
+          * time      (time) datetime64[ns] 2023-01-01 2023-01-02 2023-01-03
         Data variables:
             *empty*
 
@@ -5785,63 +5785,63 @@ class Dataset(
         ...     {
         ...         "temperature": (
         ...             ["time", "location"],
-        ...             [[23.4, 24.1], [np.nan, 22.1], [21.8, 24.2]],
+        ...             [[23.4, 24.1], [np.nan, 22.1], [21.8, 24.2], [20.5, 25.3]],
         ...         )
         ...     },
-        ...     coords={"time": [1, 2, 3], "location": ["A", "B"]},
+        ...     coords={"time": [1, 2, 3, 4], "location": ["A", "B"]},
         ... )
         >>> dataset
         <xarray.Dataset>
-        Dimensions:      (time: 3, location: 2)
+        Dimensions:      (time: 4, location: 2)
         Coordinates:
-          * time         (time) int64 1 2 3
+          * time         (time) int64 1 2 3 4
           * location     (location) <U1 'A' 'B'
         Data variables:
-            temperature  (time, location) float64 23.4 24.1 nan 22.1 21.8 24.2
+            temperature  (time, location) float64 23.4 24.1 nan 22.1 21.8 24.2 20.5 25.3
 
         # Drop NaN values from the dataset
 
         >>> dataset.dropna(dim="time")
         <xarray.Dataset>
-        Dimensions:      (time: 2, location: 2)
+        Dimensions:      (time: 3, location: 2)
         Coordinates:
-          * time         (time) int64 1 3
+          * time         (time) int64 1 3 4
           * location     (location) <U1 'A' 'B'
         Data variables:
-            temperature  (time, location) float64 23.4 24.1 21.8 24.2
+            temperature  (time, location) float64 23.4 24.1 21.8 24.2 20.5 25.3
 
         # Drop labels with any NAN values
 
         >>> dataset.dropna(dim="time", how="any")
         <xarray.Dataset>
-        Dimensions:      (time: 2, location: 2)
+        Dimensions:      (time: 3, location: 2)
         Coordinates:
-          * time         (time) int64 1 3
+          * time         (time) int64 1 3 4
           * location     (location) <U1 'A' 'B'
         Data variables:
-            temperature  (time, location) float64 23.4 24.1 21.8 24.2
+            temperature  (time, location) float64 23.4 24.1 21.8 24.2 20.5 25.3
 
         # Drop labels with all NAN values
 
         >>> dataset.dropna(dim="time", how="all")
         <xarray.Dataset>
-        Dimensions:      (time: 3, location: 2)
+        Dimensions:      (time: 4, location: 2)
         Coordinates:
-          * time         (time) int64 1 2 3
+          * time         (time) int64 1 2 3 4
           * location     (location) <U1 'A' 'B'
         Data variables:
-            temperature  (time, location) float64 23.4 24.1 nan 22.1 21.8 nan
+            temperature  (time, location) float64 23.4 24.1 nan 22.1 21.8 24.2 20.5 25.3
 
         # Drop labels with less than 2 non-NA values
 
         >>> dataset.dropna(dim="time", thresh=2)
         <xarray.Dataset>
-        Dimensions:      (time: 1, location: 2)
+        Dimensions:      (time: 3, location: 2)
         Coordinates:
-          * time         (time) int64 1
+          * time         (time) int64 1 3 4
           * location     (location) <U1 'A' 'B'
         Data variables:
-            temperature  (time, location) float64 23.4 24.1
+            temperature  (time, location) float64 23.4 24.1 21.8 24.2 20.5 25.3
 
         Returns
         -------
