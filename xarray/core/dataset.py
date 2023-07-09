@@ -5761,7 +5761,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "temperature": (
@@ -5782,8 +5781,7 @@ class Dataset(
 
         # Drop NaN values from the dataset
 
-        >>> dataset_dropped = dataset.dropna(dim="time")
-        >>> dataset_dropped
+        >>> dataset.dropna(dim="time")
         <xarray.Dataset>
         Dimensions:      (time: 2, location: 2)
         Coordinates:
@@ -5791,6 +5789,39 @@ class Dataset(
           * location     (location) <U1 'A' 'B'
         Data variables:
             temperature  (time, location) float64 23.4 24.1 21.8 24.2
+
+        # Drop labels with any NAN values
+
+        >>> dataset.dropna(dim="time", how="any")
+        <xarray.Dataset>
+        Dimensions:      (time: 1, location: 2)
+        Coordinates:
+          * time         (time) int64 1
+          * location     (location) <U1 'A' 'B'
+        Data variables:
+            temperature  (time, location) float64 23.4 24.1
+
+        # Drop labels with all NAN values
+
+        >>> dataset.dropna(dim="time", how="all")
+        <xarray.Dataset>
+        Dimensions:      (time: 3, location: 2)
+        Coordinates:
+          * time         (time) int64 1 2 3
+          * location     (location) <U1 'A' 'B'
+        Data variables:
+            temperature  (time, location) float64 23.4 24.1 nan 22.1 21.8 nan
+
+        # Drop labels with less than 2 non-NA values
+
+        >>> dataset.dropna(dim="time", thresh=2)
+        <xarray.Dataset>
+        Dimensions:      (time: 1, location: 2)
+        Coordinates:
+          * time         (time) int64 1
+          * location     (location) <U1 'A' 'B'
+        Data variables:
+            temperature  (time, location) float64 23.4 24.1
 
         Returns
         -------
