@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = "__values__"
 
 
-def _normalize_path(path: str | os.PathLike) -> str:
+def _normalize_path(path):
     """
     Normalize pathlikes to string.
 
