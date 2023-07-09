@@ -58,7 +58,7 @@ def _normalize_path(path):
 
 
 def _find_absolute_paths(
-    paths: str | NestedSequence[str | os.PathLike], **kwargs
+    paths: str | os.PathLike | NestedSequence[str | os.PathLike], **kwargs
 ) -> list[str]:
     """
     Find absolute paths from the pattern.
