@@ -46,3 +46,5 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
+  - pip:
+    - git+https://github.com/xarray-contrib/datatree

@@ -51,6 +51,12 @@ except Exception:
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
 
+try:
+    from datatree import DataTree  # noqa
+except ImportError:
+    ...
+
+
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
 __all__ = (

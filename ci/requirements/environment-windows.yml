@@ -41,4 +41,5 @@ dependencies:
   - sparse
   - toolz
   - typing_extensions
+  - xarray-datatree
   - zarr
