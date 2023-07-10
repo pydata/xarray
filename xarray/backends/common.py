@@ -45,8 +45,8 @@ def _normalize_path(path):
     >>> directory = Path(xr.backends.common.__file__).parent
     >>> paths_path = Path(directory).joinpath("comm*n.py")
     >>> paths_str = xr.backends.common._normalize_path(paths_path)
-    >>> [type(p) for p in (paths_str,)]
-    [str]
+    >>> print([type(p) for p in (paths_str,)])
+    [<class 'str'>]
     """
     if isinstance(path, os.PathLike):
         path = os.fspath(path)
