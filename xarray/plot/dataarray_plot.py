@@ -926,6 +926,19 @@ def _plot1d(plotfunc):
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
 
+        if hue_style is not None:
+            # TODO: Not used since 2022.10. Deprecated since 2023.07.
+            warnings.warn(
+                (
+                    "hue_style is no longer used for plot1d plots "
+                    "and the argument will eventually be removed. "
+                    "Convert numbers to string for a discrete hue "
+                    "and use add_legend or add_colorbar to control which guide to display."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "scatter":
