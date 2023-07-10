@@ -23,7 +23,7 @@ conda uninstall -y --force \
     xarray
 # to limit the runtime of Upstream CI
 python -m pip install \
-    -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
+    -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
     --no-deps \
     --pre \
     --upgrade \
