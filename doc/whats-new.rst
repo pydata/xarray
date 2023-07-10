@@ -14,11 +14,60 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.06.1:
 
-.. _whats-new.2023.05.1:
-
-v2023.05.1 (unreleased)
+v2023.06.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- Ensure no forward slashes in variable and dimension names for HDF5-based engines.
+  (:issue:`7943`, :pull:`7953`) By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
+  (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Expanded the page on wrapping numpy-like "duck" arrays.
+  (:pull:`7911`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
+  :py:meth:`Dataset.argmax` (:issue:`6793`, :pull:`7881`)
+  By `Harshitha <https://github.com/harshitha1201>`_ .
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Allow chunked non-dask arrays (i.e. Cubed arrays) in groupby operations. (:pull:`7941`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+.. _whats-new.2023.06.0:
+
+v2023.06.0 (June 21, 2023)
+--------------------------
+
+This release adds features to ``curvefit``, improves the performance of concatenation, and fixes various bugs.
+
+Thank to our 13 contributors to this release:
+Anderson Banihirwe, Deepak Cherian, dependabot[bot], Illviljan, Juniper Tyree, Justus Magin, Martin Fleischmann,
+Mattia Almansi, mgunyho, Rutger van Haasteren, Thomas Nicholas, Tom Nicholas, Tom White.
+
 
 New Features
 ~~~~~~~~~~~~
@@ -54,10 +103,11 @@ Bug fixes
   By `Tom White <https://github.com/tomwhite>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Ensure dtype of reindex result matches dtype of the original DataArray (:issue:`7299`, :pull:`7917`)
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Fix bug where a zero-length zarr ``chunk_store`` was ignored as if it was ``None`` (:pull:`7923`)
+  By `Juniper Tyree <https://github.com/juntyr>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

@@ -1,4 +1,6 @@
 
+.. _internals.accessors:
+
 Extending xarray using accessors
 ================================
 

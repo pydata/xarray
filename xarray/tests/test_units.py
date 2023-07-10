@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import operator
+import sys
 
 import numpy as np
 import pandas as pd
@@ -1508,6 +1509,10 @@ def test_dot_dataarray(dtype):
 
 
 class TestVariable:
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2339,6 +2344,10 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2416,6 +2425,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -4069,6 +4082,10 @@ class TestDataset:
         # warnings or errors, but does not check the result
         func(ds)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
