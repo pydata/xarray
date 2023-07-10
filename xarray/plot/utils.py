@@ -1440,12 +1440,12 @@ class _Normalize(Sequence):
         True
 
         >>> # TODO: Datetime should be numeric right?
-        >>> a =  xr.DataArray(pd.date_range("2000-1-1", periods=4))
+        >>> a = xr.DataArray(pd.date_range("2000-1-1", periods=4))
         >>> _Normalize(a).data_is_numeric
         False
 
-        # TODO: Timedelta_range should be numeric right?
-        >>> a =  xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
+        # TODO: Datetime should be numeric right?
+        >>> a = xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
         >>> _Normalize(a).data_is_numeric
         True
         """
