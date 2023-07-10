@@ -2708,23 +2708,32 @@ class TestDatasetScatterPlots(PlotTestCase):
                 x=x, y=y, hue=hue, add_legend=add_legend, add_colorbar=add_colorbar
             )
 
-    @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
-    @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
-    def test_datetime_hue(self, hue_style: Literal["discrete", "continuous"]) -> None:
+    def test_datetime_hue(self) -> None:
         ds2 = self.ds.copy()
+
+        # TODO: Currently plots as categorical, should it behave as numerical?
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
-        ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
+        ds2.plot.scatter(x="A", y="B", hue="hue")
 
         ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
-        ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
+        ds2.plot.scatter(x="A", y="B", hue="hue")
 
-    @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
-    def test_facetgrid_hue_style(
-        self, hue_style: Literal["discrete", "continuous"]
-    ) -> None:
-        g = self.ds.plot.scatter(
-            x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
-        )
+    def test_facetgrid_hue_style(self) -> None:
+        ds2 = self.ds.copy()
+
+        # Numbers plots as continous:
+        g = self.ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
+        assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
+
+        # Datetimes plots as categorical:
+        # TODO: Currently plots as categorical, should it behave as numerical?
+        ds2["hue"] = pd.date_range("2000-1-1", periods=4)
+        g = self.ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
+        assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
+
+        # Strings plots as categorical:
+        ds2["hue"] = ["a", "a", "b", "b"]
+        g = self.ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
         assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
 
     @pytest.mark.parametrize(
