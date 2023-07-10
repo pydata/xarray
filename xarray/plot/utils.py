@@ -1444,10 +1444,10 @@ class _Normalize(Sequence):
         >>> _Normalize(a).data_is_numeric
         False
 
-        # TODO: Datetime should be numeric right?
+        # TODO: Timedelta_range should be numeric right?
         >>> a =  xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
         >>> _Normalize(a).data_is_numeric
-        False
+        True
         """
         return self._data_is_numeric
 
