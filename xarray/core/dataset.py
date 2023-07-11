@@ -2841,7 +2841,7 @@ class Dataset(
 
         # Retrieve the 3 most busiest days in terms of pageviews and visitors
 
-        >>> busiest_days = dataset.sortby(["pageviews", "visitors"], ascending=False)
+        >>> busiest_days = dataset.sortby("pageviews", ascending=False)
         >>> busiest_days.head(3)
         <xarray.Dataset>
         Dimensions:    (date: 3)
