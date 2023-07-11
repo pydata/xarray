@@ -41,6 +41,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added examples to docstrings of :py:meth:`Dataset.tail`, :py:meth:`Dataset.head`, :py:meth:`Dataset.dropna`,
+  :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.set_coords`, :py:meth:`Dataset.reset_coords`
+  (:issue:`6793`, :pull:`7936`) By `Harshitha <https://github.com/harshitha1201>`_ .
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Expanded the page on wrapping numpy-like "duck" arrays.
