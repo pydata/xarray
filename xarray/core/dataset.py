@@ -2843,7 +2843,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:    (date: 5)
         Coordinates:
-        * date       (date) datetime64[ns] 2023-01-05 2023-01-04 ... 2023-01-03
+          * date       (date) datetime64[ns] 2023-01-05 2023-01-04 ... 2023-01-03
         Data variables:
             pageviews  (date) int64 2000 1800 1500 1200 900
             visitors   (date) int64 1500 1200 1000 800 600
