@@ -1663,19 +1663,11 @@ class Dataset(
         # 2D array with shape (1, 3)
 
         >>> data = np.array([[1, 2, 3]])
-        >>> dataset1 = xr.Dataset(
+        >>> a = xr.Dataset(
         ...     {"variable_name": (("space", "time"), data)},
         ...     coords={"space": [0], "time": [0, 1, 2]},
         ... )
-
-        # 2D array with shape (3, 1)
-
-        >>> data = np.array([[1], [2], [3]])
-        >>> dataset2 = xr.Dataset(
-        ...     {"variable_name": (("time", "space"), data)},
-        ...     coords={"time": [0, 1, 2], "space": [0]},
-        ... )
-        >>> dataset1
+        >>> a
         <xarray.Dataset>
         Dimensions:        (space: 1, time: 3)
         Coordinates:
@@ -1684,7 +1676,14 @@ class Dataset(
         Data variables:
             variable_name  (space, time) int64 1 2 3
 
-        >>> dataset2
+        # 2D array with shape (3, 1)
+
+        >>> data = np.array([[1], [2], [3]])
+        >>> b = xr.Dataset(
+        ...     {"variable_name": (("time", "space"), data)},
+        ...     coords={"time": [0, 1, 2], "space": [0]},
+        ... )
+        >>> b
         <xarray.Dataset>
         Dimensions:        (time: 3, space: 1)
         Coordinates:
@@ -1693,13 +1692,24 @@ class Dataset(
         Data variables:
             variable_name  (time, space) int64 1 2 3
 
-        >>> dataset1.broadcast_equals(dataset2)
+        .equals returns True if two Datasets have the same values, dimensions, and coordinates. .broadcast_equals returns True if the
+        results of broadcasting two Datasets against each other have the same values, dimensions, and coordinates.
+
+        >>> a.equals(b)
+        False
+
+        >>> a.broadcast_equals(b)
+        True
+
+        >>> a2, b2 = xr.broadcast(a, b)
+        >>> a2.equals(b2)
         True
 
         See Also
         --------
         Dataset.equals
         Dataset.identical
+        Dataset.broadcast
         """
         try:
             return self._all_compat(other, "broadcast_equals")
@@ -1726,14 +1736,6 @@ class Dataset(
         ...     {"variable_name": (("space", "time"), data)},
         ...     coords={"space": [0], "time": [0, 1, 2]},
         ... )
-
-        # 2D array with shape (3, 1)
-
-        >>> data = np.array([[1], [2], [3]])
-        >>> dataset2 = xr.Dataset(
-        ...     {"variable_name": (("time", "space"), data)},
-        ...     coords={"time": [0, 1, 2], "space": [0]},
-        ... )
         >>> dataset1
         <xarray.Dataset>
         Dimensions:        (space: 1, time: 3)
@@ -1743,6 +1745,13 @@ class Dataset(
         Data variables:
             variable_name  (space, time) int64 1 2 3
 
+        # 2D array with shape (3, 1)
+
+        >>> data = np.array([[1], [2], [3]])
+        >>> dataset2 = xr.Dataset(
+        ...     {"variable_name": (("time", "space"), data)},
+        ...     coords={"time": [0, 1, 2], "space": [0]},
+        ... )
         >>> dataset2
         <xarray.Dataset>
         Dimensions:        (time: 3, space: 1)
@@ -1752,8 +1761,14 @@ class Dataset(
         Data variables:
             variable_name  (time, space) int64 1 2 3
 
+        .equals returns True if two Datasets have the same values, dimensions, and coordinates. .broadcast_equals returns True if the
+        results of broadcasting two Datasets against each other have the same values, dimensions, and coordinates.
+
         >>> dataset1.equals(dataset2)
         False
+
+        >>> datatset1.broadcast_equals(dataset2)
+        True
 
         Similar for missing values too:
 
@@ -1790,67 +1805,62 @@ class Dataset(
         Example
         -------
 
-        # 2D array with shape (1, 3)
-
-        >>> data = np.array([[1, 2, 3]])
-        >>> dataset1 = xr.Dataset(
-        ...     {"variable_name": (("space", "time"), data)},
-        ...     coords={"space": [0], "time": [0, 1, 2]},
+        >>> a = xr.Dataset(
+        ...     {"Width": ("X", [1, 2, 3])},
+        ...     coords={"X": [1, 2, 3]},
+        ...     attrs={"units": "m"},
         ... )
-
-        # 2D array with shape (3, 1)
-
-        >>> data = np.array([[1], [2], [3]])
-        >>> dataset2 = xr.Dataset(
-        ...     {"variable_name": (("time", "space"), data)},
-        ...     coords={"time": [0, 1, 2], "space": [0]},
+        >>> b = xr.Dataset(
+        ...     {"Width": ("X", [1, 2, 3])},
+        ...     coords={"X": [1, 2, 3]},
+        ...     attrs={"units": "m"},
         ... )
-        >>> dataset1
+        >>> c = xr.Dataset(
+        ...     {"Width": ("X", [1, 2, 3])},
+        ...     coords={"X": [1, 2, 3]},
+        ...     attrs={"units": "ft"},
+        ... )
+        >>> a
         <xarray.Dataset>
-        Dimensions:        (space: 1, time: 3)
+        Dimensions:  (X: 3)
         Coordinates:
-          * space          (space) int64 0
-          * time           (time) int64 0 1 2
+        * X        (X) int64 1 2 3
         Data variables:
-            variable_name  (space, time) int64 1 2 3
+            Width    (X) int64 1 2 3
+        Attributes:
+            units:    m
 
-        >>> dataset2
+        >>> b
         <xarray.Dataset>
-        Dimensions:        (time: 3, space: 1)
+        Dimensions:  (X: 3)
         Coordinates:
-          * time           (time) int64 0 1 2
-          * space          (space) int64 0
+        * X        (X) int64 1 2 3
         Data variables:
-            variable_name  (time, space) int64 1 2 3
+            Width    (X) int64 1 2 3
+        Attributes:
+            units:    m
 
-        >>> dataset1.identical(dataset2)
-        False
+        >>> c
+        <xarray.Dataset>
+        Dimensions:  (X: 3)
+        Coordinates:
+        * X        (X) int64 1 2 3
+        Data variables:
+            Width    (X) int64 1 2 3
+        Attributes:
+            units:    ft
 
-
-        >>> ds1 = xr.Dataset(
-        ...     {
-        ...         "temperature": (["latitude", "longitude"], [[25, 26], [27, 28]]),
-        ...         "humidity": (["latitude", "longitude"], [[50, 55], [60, 65]]),
-        ...     },
-        ...     coords={
-        ...         "latitude": [40, 45],
-        ...         "longitude": [100, 105],
-        ...     },
-        ...     attrs={"description": "Weather dataset"},
-        ... )
-        >>> ds2 = xr.Dataset(
-        ...     {
-        ...         "temperature": (["latitude", "longitude"], [[25, 26], [27, 28]]),
-        ...         "humidity": (["latitude", "longitude"], [[50, 55], [60, 65]]),
-        ...     },
-        ...     coords={
-        ...         "latitude": [40, 45],
-        ...         "longitude": [100, 105],
-        ...     },
-        ...     attrs={"description": "Weather dataset"},
-        ... )
-        >>> ds1.identical(ds2)
+        >>> a.equals(b)
         True
+
+        >>> a.identical(b)
+        True
+
+        >>> a.equals(c)
+        True
+
+        >>> a.identical(c)
+        False
 
         See Also
         --------
@@ -4205,13 +4215,40 @@ class Dataset(
 
         # Expand the dataset with a new dimension called "time"
 
-        >>> expanded_dataset = dataset.expand_dims(dim="time")
-        >>> expanded_dataset
+        >>> dataset.expand_dims(dim="time")
         <xarray.Dataset>
         Dimensions:      (time: 1)
         Dimensions without coordinates: time
         Data variables:
             temperature  (time) float64 25.0
+
+        1D and 2D data to show what the axis argument does:
+
+        # 1D data
+        >>> temperature_1d = xr.DataArray([25.0, 26.5, 24.8], dims="x")
+        >>> dataset_1d = xr.Dataset({"temperature": temperature_1d})
+
+        # Expand the dataset with a new dimension called "time" using axis argument
+
+        >>> dataset_1d.expand_dims(dim="time", axis=0)
+        <xarray.Dataset>
+        Dimensions:      (time: 1, x: 3)
+        Dimensions without coordinates: time, x
+        Data variables:
+            temperature  (time, x) float64 25.0 26.5 24.8
+
+        # 2D data
+        >>> temperature_2d = xr.DataArray(np.random.rand(3, 4), dims=("y", "x"))
+        >>> dataset_2d = xr.Dataset({"temperature": temperature_2d})
+
+        # Expand the dataset with a new dimension called "time" using axis argument
+
+        >>> dataset_2d.expand_dims(dim="time", axis=2)
+        <xarray.Dataset>
+        Dimensions:      (y: 3, x: 4, time: 1)
+        Dimensions without coordinates: y, x, time
+        Data variables:
+            temperature  (y, x, time) float64 0.4025 0.5169 0.2618 ... 0.8822 0.2091
 
         Returns
         -------
@@ -5430,8 +5467,7 @@ class Dataset(
 
         # Drop the 'humidity' variable
 
-        >>> dataset_dropped = dataset.drop_vars(["humidity"])
-        >>> dataset_dropped
+        >>> dataset.drop_vars(["humidity"])
         <xarray.Dataset>
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
@@ -5442,9 +5478,44 @@ class Dataset(
             temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
+        # Drop the 'humidity', 'temperature' variables
+
+        >>> dataset.drop_vars(["humidity", "temperature"])
+        <xarray.Dataset>
+        Dimensions:     (time: 1, latitude: 2, longitude: 2)
+        Coordinates:
+        * time        (time) datetime64[ns] 2023-07-01
+        * latitude    (latitude) float64 40.0 40.2
+        * longitude   (longitude) float64 -75.0 -74.8
+        Data variables:
+            wind_speed  (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
+
+        # Attempt to drop non-existent variable with errors="raise"
+
+        >>> dataset.drop_vars(["pressure"], errors="raise")
+
+        # Attempt to drop non-existent variable with errors="ignore"
+
+        >>> dataset.drop_vars(["pressure"], errors="ignore")
+        <xarray.Dataset>
+        Dimensions:      (time: 1, latitude: 2, longitude: 2)
+        Coordinates:
+        * time         (time) datetime64[ns] 2023-07-01
+        * latitude     (latitude) float64 40.0 40.2
+        * longitude    (longitude) float64 -75.0 -74.8
+        Data variables:
+            temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
+            humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
+            wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
+
+
         Returns
         -------
         dropped : Dataset
+
+        See Also
+        --------
+        DataArray.drop_vars
 
         """
         # the Iterable check is required for mypy
