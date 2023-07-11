@@ -2838,10 +2838,18 @@ class Dataset(
         ...     },
         ...     coords={"date": dates},
         ... )
-
-        # Retrieve the 3 most busiest days in terms of pageviews and visitors
-
         >>> busiest_days = dataset.sortby("pageviews", ascending=False)
+        >>> busiest_days.head()
+        <xarray.Dataset>
+        Dimensions:    (date: 5)
+        Coordinates:
+        * date       (date) datetime64[ns] 2023-01-05 2023-01-04 ... 2023-01-03
+        Data variables:
+            pageviews  (date) int64 2000 1800 1500 1200 900
+            visitors   (date) int64 1500 1200 1000 800 600
+
+        # Retrieve the 3 most busiest days in terms of pageviews
+
         >>> busiest_days.head(3)
         <xarray.Dataset>
         Dimensions:    (date: 3)
