@@ -460,9 +460,9 @@ and ``mean``, ``std`` and ``var`` return ``NaN``:
 Coarsen large arrays
 ====================
 
-:py:class:`DataArray` and :py:class:`Dataset` objects include a
+:py:class:`DataArray` and :py:class:`Dataset` objects include
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
-methods. This supports block aggregation along multiple dimensions,
+method. This supports block aggregation along multiple dimensions.
 
 .. ipython:: python
 
@@ -475,8 +475,8 @@ methods. This supports block aggregation along multiple dimensions,
     )
     da
 
-In order to take a block mean for every 7 days along ``time`` dimension and
-every 2 points along ``x`` dimension,
+In order to take a block mean for every 7 days along the ``time`` dimension and
+every 2 points along the ``x`` dimension,
 
 .. ipython:: python
 
@@ -491,12 +491,19 @@ the excess entries or padding ``nan`` to insufficient entries,
 
     da.coarsen(time=30, x=2, boundary="trim").mean()
 
-If you want to apply a specific function to coordinate, you can pass the
-function or method name to ``coord_func`` option,
+By default the coordinates will be replaced with the mean of the coordinate values in block.
+If instead you want to apply a specific reduction function to the coordinate values, you can pass the
+function or method name as a string via the ``coord_func`` keyword argument,
 
 .. ipython:: python
 
     da.coarsen(time=7, x=2, coord_func={"time": "min"}).mean()
+
+Or you can pass any valid reduction function as a callable
+
+.. ipython:: python
+
+    da.coarsen(time=7, x=2, coord_func={"time": np.ptp}).count()
 
 You can also :ref:`use coarsen to reshape<reshape.coarsen>` without applying a computation.
 
