@@ -51,6 +51,8 @@ Documentation
 - Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
   :py:meth:`Dataset.argmax` (:issue:`6793`, :pull:`7881`)
   By `Harshitha <https://github.com/harshitha1201>`_ .
+- Documents that :py:meth:`DataArray.coarsen` accepts a callable as the reduction function.
+  (:pull:`7981`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Internal Changes
