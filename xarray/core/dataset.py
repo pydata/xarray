@@ -5674,6 +5674,7 @@ class Dataset(
         # Attempt to drop non-existent variable with errors="raise"
 
         >>> dataset.drop_vars(["pressure"], errors="raise")
+        raise ValueError(
         ValueError: These variables cannot be found in this dataset: ['pressure']
 
         # Attempt to drop non-existent variable with errors="ignore"
