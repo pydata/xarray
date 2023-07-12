@@ -833,9 +833,9 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             Function to use to reduce the coordinate values of one block down to a single new label.
 
             Can be specified as a custom function, either by passing a callable (e.g. ``np.max``) or passing a string
-            name of a reduction function supplied by xarray (e.g. ``'min'``). The advantage of specifying as a string is
-            automatic handling of NaNs and non-numpy array types.
-            Default is to use "mean" for all coarsened dimensions.
+            name of a reduction function supplied by xarray (e.g. ``'min'``). If passed as a callable it should be a
+            valid argument to xarray's ``.reduce`` method. The advantage of specifying as a string is automatic handling
+            of NaNs and non-numpy array types. Default is to use "mean" for all coarsened dimensions.
 
         Returns
         -------
