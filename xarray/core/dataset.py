@@ -5688,6 +5688,25 @@ class Dataset(
         # Attempt to drop non-existent variable with errors="raise"
 
         >>> dataset.drop_vars(["pressure"], errors="raise")
+        ValueError                                Traceback (most recent call last)
+        Cell In[5], line 1
+        ----> 1 dataset.drop_vars(["pressure"], errors="raise")
+
+        File ~/Downloads/xarray/xarray/core/dataset.py:5711, in Dataset.drop_vars(self, names, errors)
+        5709     names = set(names)
+        5710 if errors == "raise":
+        -> 5711     self._assert_all_in_dataset(names)
+        5713 # GH6505
+        5714 other_names = set()
+
+        File ~/Downloads/xarray/xarray/core/dataset.py:5592, in Dataset._assert_all_in_dataset(self, names, virtual_okay)
+        5590 if bad_names:
+        5591     ordered_bad_names = [name for name in names if name in bad_names]
+        -> 5592     raise ValueError(
+        5593         f"These variables cannot be found in this dataset: {ordered_bad_names}"
+        5594     )
+
+        ValueError: These variables cannot be found in this dataset: ['pressure']
 
         Raises
         ------
