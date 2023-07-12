@@ -61,13 +61,16 @@ BASIC_INDEXING_TYPES = integer_types + (slice,)
 if TYPE_CHECKING:
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.types import (
+        CoarsenBoundaryOptions,
         Dims,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
+        SideOptions,
         T_Variable,
     )
+
 
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "
@@ -2494,10 +2497,29 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     def coarsen(
-        self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
+        self,
+        windows: Mapping[Any, int],
+        func: str | Callable,
+        boundary: CoarsenBoundaryOptions = "exact",
+        side: SideOptions | Mapping[Any, SideOptions] = "left",
+        keep_attrs=None,
+        **kwargs,
     ):
         """
         Apply reduction function.
+
+        Parameters
+        ----------
+        windows : mapping of hashable to int
+            A mapping from the name of the dimension to create the coarsened block along (e.g. `time`) to the size of
+            the coarsened block.
+        func : function or str name of function
+            Function to use to reduce the values of one block down along one or more axes.
+        boundary : {"exact", "trim", "pad"}
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of window size. If 'trim', the excess indexes are trimmed.
+            If 'pad', NA will be padded.
+        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         """
         windows = {k: v for k, v in windows.items() if k in self.dims}
 
@@ -2514,12 +2536,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         reshaped, axes = self.coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
-            name = func
-            func = getattr(duck_array_ops, name, None)
-            if func is None:
-                raise NameError(f"{name} is not a valid method.")
+            try:
+                callable_func = getattr(duck_array_ops, func)
+            except AttributeError:
+                raise NameError(
+                    f"{func} is not a valid xarray reduction method, so cannot be used to coarsen"
+                )
+        else:
+            callable_func = func
 
-        return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
+        return self._replace(
+            data=callable_func(reshaped, axis=axes, **kwargs), attrs=_attrs
+        )
 
     def coarsen_reshape(self, windows, boundary, side):
         """
