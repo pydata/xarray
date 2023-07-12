@@ -4429,7 +4429,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
         Data variables:
-            temperature  (y, x, time) float64 0.5488 0.7152 0.6028 ... 0.3834 0.7917 0.5289
+            temperature  (y, x, time) float64 0.5488 0.7152 0.6028 ... 0.7917 0.5289
 
         Returns
         -------
@@ -5674,7 +5674,7 @@ class Dataset(
         # Attempt to drop non-existent variable with errors="raise"
 
         >>> dataset.drop_vars(["pressure"], errors="raise")
-        UNEXPECTED EXCEPTION: ValueError("These variables cannot be found in this dataset: ['pressure']")
+        ValueError: These variables cannot be found in this dataset: ['pressure']
 
         # Attempt to drop non-existent variable with errors="ignore"
 
