@@ -1760,11 +1760,10 @@ class Dataset(
           * space          (space) int64 0
         Data variables:
             variable_name  (time, space) int64 1 2 3
-
         >>> dataset1.equals(dataset2)
         False
 
-        >>> datatset1.broadcast_equals(dataset2)
+        >>> dataset1.broadcast_equals(dataset2)
         True
 
         .equals returns True if two Datasets have the same values, dimensions, and coordinates. .broadcast_equals returns True if the
@@ -4421,7 +4420,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4)
         Dimensions without coordinates: y, x
         Data variables:
-            temperature  (y, x) float64 0.2525 0.56 0.518 ... 0.6809 0.4407 0.6101
+            temperature  (y, x) float64 0.5488 0.7152 0.6028 ... 0.3834 0.7917 0.5289
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
@@ -4430,7 +4429,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
         Data variables:
-            temperature  (y, x, time) float64 0.2525 0.56 0.518 ... 0.6809 0.4407 0.6101
+            temperature  (y, x, time) float64 0.5488 0.7152 0.6028 ... 0.3834 0.7917 0.5289
 
         Returns
         -------
@@ -5675,6 +5674,7 @@ class Dataset(
         # Attempt to drop non-existent variable with errors="raise"
 
         >>> dataset.drop_vars(["pressure"], errors="raise")
+        UNEXPECTED EXCEPTION: ValueError("These variables cannot be found in this dataset: ['pressure']")
 
         # Attempt to drop non-existent variable with errors="ignore"
 
