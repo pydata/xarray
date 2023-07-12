@@ -5671,12 +5671,6 @@ class Dataset(
         Data variables:
             wind_speed  (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Attempt to drop non-existent variable with errors="raise"
-
-        >>> dataset.drop_vars(["pressure"], errors="raise")
-        raise ValueError(
-        ValueError: These variables cannot be found in this dataset: ['pressure']
-
         # Attempt to drop non-existent variable with errors="ignore"
 
         >>> dataset.drop_vars(["pressure"], errors="ignore")
@@ -5691,6 +5685,13 @@ class Dataset(
             humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
+        # Attempt to drop non-existent variable with errors="raise"
+
+        >>> dataset.drop_vars(["pressure"], errors="raise")
+
+        Raises
+        ------
+        ValueError: These variables cannot be found in this dataset: ['pressure']
 
         Returns
         -------
