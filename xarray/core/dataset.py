@@ -1761,14 +1761,14 @@ class Dataset(
         Data variables:
             variable_name  (time, space) int64 1 2 3
 
-        .equals returns True if two Datasets have the same values, dimensions, and coordinates. .broadcast_equals returns True if the
-        results of broadcasting two Datasets against each other have the same values, dimensions, and coordinates.
-
         >>> dataset1.equals(dataset2)
         False
 
         >>> datatset1.broadcast_equals(dataset2)
         True
+
+        .equals returns True if two Datasets have the same values, dimensions, and coordinates. .broadcast_equals returns True if the
+        results of broadcasting two Datasets against each other have the same values, dimensions, and coordinates.
 
         Similar for missing values too:
 
@@ -1824,7 +1824,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (X: 3)
         Coordinates:
-        * X        (X) int64 1 2 3
+          * X        (X) int64 1 2 3
         Data variables:
             Width    (X) int64 1 2 3
         Attributes:
@@ -1834,7 +1834,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (X: 3)
         Coordinates:
-        * X        (X) int64 1 2 3
+          * X        (X) int64 1 2 3
         Data variables:
             Width    (X) int64 1 2 3
         Attributes:
@@ -1844,7 +1844,7 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:  (X: 3)
         Coordinates:
-        * X        (X) int64 1 2 3
+          * X        (X) int64 1 2 3
         Data variables:
             Width    (X) int64 1 2 3
         Attributes:
@@ -4227,6 +4227,12 @@ class Dataset(
         # 1D data
         >>> temperature_1d = xr.DataArray([25.0, 26.5, 24.8], dims="x")
         >>> dataset_1d = xr.Dataset({"temperature": temperature_1d})
+        >>> dataset_1d
+        <xarray.Dataset>
+        Dimensions:      (x: 3)
+        Dimensions without coordinates: x
+        Data variables:
+            temperature  (x) float64 25.0 26.5 24.8
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
@@ -4240,6 +4246,12 @@ class Dataset(
         # 2D data
         >>> temperature_2d = xr.DataArray(np.random.rand(3, 4), dims=("y", "x"))
         >>> dataset_2d = xr.Dataset({"temperature": temperature_2d})
+        >>> dataset_2d
+        <xarray.Dataset>
+        Dimensions:      (y: 3, x: 4)
+        Dimensions without coordinates: y, x
+        Data variables:
+            temperature  (y, x) float64 0.2525 0.56 0.518 ... 0.6809 0.4407 0.6101
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
@@ -4248,7 +4260,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
         Data variables:
-            temperature  (y, x, time) float64 0.4025 0.5169 0.2618 ... 0.8822 0.2091
+            temperature  (y, x, time) float64 0.2525 0.56 0.518 ... 0.6809 0.4407 0.6101
 
         Returns
         -------
@@ -5484,9 +5496,9 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:     (time: 1, latitude: 2, longitude: 2)
         Coordinates:
-        * time        (time) datetime64[ns] 2023-07-01
-        * latitude    (latitude) float64 40.0 40.2
-        * longitude   (longitude) float64 -75.0 -74.8
+          * time        (time) datetime64[ns] 2023-07-01
+          * latitude    (latitude) float64 40.0 40.2
+          * longitude   (longitude) float64 -75.0 -74.8
         Data variables:
             wind_speed  (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
@@ -5500,9 +5512,9 @@ class Dataset(
         <xarray.Dataset>
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
-        * time         (time) datetime64[ns] 2023-07-01
-        * latitude     (latitude) float64 40.0 40.2
-        * longitude    (longitude) float64 -75.0 -74.8
+          * time         (time) datetime64[ns] 2023-07-01
+          * latitude     (latitude) float64 40.0 40.2
+          * longitude    (longitude) float64 -75.0 -74.8
         Data variables:
             temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
             humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
