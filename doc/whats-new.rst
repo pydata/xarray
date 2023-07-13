@@ -14,7 +14,7 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.06.1:
+.. _whats-new.2023.07.0:
 
 v2023.06.1 (unreleased)
 -----------------------
@@ -31,7 +31,10 @@ Deprecations
 ~~~~~~~~~~~~
 - `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+v2023.07.0 (July 11, 2023)
+--------------------------
 
+This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
 
 Bug fixes
 ~~~~~~~~~
@@ -39,10 +42,12 @@ Bug fixes
 - Ensure no forward slashes in variable and dimension names for HDF5-based engines.
   (:issue:`7943`, :pull:`7953`) By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
-
 Documentation
 ~~~~~~~~~~~~~
 
+- Added examples to docstrings of :py:meth:`Dataset.tail`, :py:meth:`Dataset.head`, :py:meth:`Dataset.dropna`,
+  :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.set_coords`, :py:meth:`Dataset.reset_coords`
+  (:issue:`6793`, :pull:`7936`) By `Harshitha <https://github.com/harshitha1201>`_ .
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Expanded the page on wrapping numpy-like "duck" arrays.
@@ -50,7 +55,6 @@ Documentation
 - Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
   :py:meth:`Dataset.argmax` (:issue:`6793`, :pull:`7881`)
   By `Harshitha <https://github.com/harshitha1201>`_ .
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
