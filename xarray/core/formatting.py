@@ -424,7 +424,10 @@ def inline_index_repr(index, max_width=None):
 
 
 def summarize_index(
-    names: tuple[Hashable, ...], index: int, col_width: int, max_width: int | None = None
+    names: tuple[Hashable, ...],
+    index: int,
+    col_width: int,
+    max_width: int | None = None,
 ) -> str:
     if max_width is None:
         max_width = OPTIONS["display_width"]
@@ -451,7 +454,7 @@ def summarize_index(
 
 
 def filter_nondefault_indexes(indexes, filter_indexes: bool):
-    from .indexes import PandasIndex, PandasMultiIndex
+    from xarray.core.indexes import PandasIndex, PandasMultiIndex
 
     if not filter_indexes:
         return indexes
