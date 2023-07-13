@@ -21,7 +21,8 @@ v2023.06.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Visually group together coordinates with the same indexes in the index section of the text repr (:pull:`7225`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -548,7 +549,7 @@ New Features
 - Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Display the indexes in a new section of the text and HTML reprs
-  (:pull:`6795`, :pull:`7183`, :pull:`7185`, :pull:`7225`)
+  (:pull:`6795`, :pull:`7183`, :pull:`7185`)
   By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
 - Added methods :py:meth:`DataArrayGroupBy.cumprod` and :py:meth:`DatasetGroupBy.cumprod`.
   (:pull:`5816`)
