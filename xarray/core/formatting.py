@@ -425,7 +425,7 @@ def inline_index_repr(index, max_width=None):
 
 def summarize_index(
     names: tuple[Hashable, ...],
-    index: int,
+    index,
     col_width: int,
     max_width: int | None = None,
 ) -> str:
