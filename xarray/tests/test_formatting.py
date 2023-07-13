@@ -218,7 +218,7 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
-    def test_index_repr(self):
+    def test_index_repr(self) -> None:
         from xarray.core.indexes import Index
 
         class CustomIndex(Index):
@@ -230,17 +230,18 @@ class TestFormatting:
 
         coord_names = ["x", "y"]
         index = CustomIndex(coord_names)
-        name = "x"
+        names = ["x"]
 
-        normal = formatting.summarize_index(name, index, col_width=20)
-        assert name in normal
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in normal
+        assert len(normal.splitlines()) == len(names)
         assert "CustomIndex" in normal
 
         CustomIndex._repr_inline_ = (
             lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
         )
-        inline = formatting.summarize_index(name, index, col_width=20)
-        assert name in inline
+        inline = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in inline
         assert index._repr_inline_(max_width=40) in inline
 
     def test_diff_array_repr(self) -> None:
