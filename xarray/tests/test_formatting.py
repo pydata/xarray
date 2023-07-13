@@ -222,6 +222,8 @@ class TestFormatting:
         from xarray.core.indexes import Index
 
         class CustomIndex(Index):
+            names: tuple[str, ...]
+
             def __init__(self, names):
                 self.names = names
 
