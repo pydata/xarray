@@ -247,10 +247,10 @@ class TestFormatting:
     @pytest.mark.parametrize(
         "names",
         (
-            ["x"],
-            ["x", "y"],
-            ["x", "y", "z"],
-            ["x", "y", "z", "a"],
+            ("x",),
+            ("x", "y"),
+            ("x", "y", "z"),
+            ("x", "y", "z", "a"),
         ),
     )
     def test_index_repr_grouping(self, names) -> None:
