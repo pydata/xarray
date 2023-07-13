@@ -14,6 +14,35 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.07.1:
+
+v2023.07.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2023.07.0:
 
 v2023.06.1 (unreleased)
