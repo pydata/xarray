@@ -14,29 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.06.1:
+.. _whats-new.2023.07.0:
 
-v2023.06.1 (unreleased)
------------------------
+v2023.07.0 (July 11, 2023)
+--------------------------
 
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
+This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
 
 Bug fixes
 ~~~~~~~~~
 
 - Ensure no forward slashes in variable and dimension names for HDF5-based engines.
   (:issue:`7943`, :pull:`7953`) By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
 
 Documentation
 ~~~~~~~~~~~~~
@@ -51,7 +40,6 @@ Documentation
 - Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
   :py:meth:`Dataset.argmax` (:issue:`6793`, :pull:`7881`)
   By `Harshitha <https://github.com/harshitha1201>`_ .
-
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
