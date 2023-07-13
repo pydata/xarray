@@ -29,6 +29,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Bug fixes
