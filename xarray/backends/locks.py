@@ -3,7 +3,8 @@ from __future__ import annotations
 import multiprocessing
 import threading
 import weakref
-from typing import Any, MutableMapping
+from collections.abc import MutableMapping
+from typing import Any
 
 try:
     from dask.utils import SerializableLock
@@ -61,7 +62,7 @@ def _get_lock_maker(scheduler=None):
         try:
             from dask.distributed import Lock as DistributedLock
         except ImportError:
-            DistributedLock = None  # type: ignore
+            DistributedLock = None
         return DistributedLock
     else:
         raise KeyError(scheduler)

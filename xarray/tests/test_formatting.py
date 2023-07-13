@@ -10,8 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-
-from . import requires_dask, requires_netCDF4
+from xarray.tests import requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -543,7 +542,7 @@ def test_set_numpy_options() -> None:
     assert np.get_printoptions() == original_options
 
 
-def test_short_numpy_repr() -> None:
+def test_short_array_repr() -> None:
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -553,20 +552,19 @@ def test_short_numpy_repr() -> None:
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248, 599
-    # for short_numpy_repr: 1, 7, 24, 19, 25
+    # for short_array_repr: 1, 7, 24, 19, 25
     for array in cases:
-        num_lines = formatting.short_numpy_repr(array).count("\n") + 1
+        num_lines = formatting.short_array_repr(array).count("\n") + 1
         assert num_lines < 30
 
     # threshold option (default: 200)
     array2 = np.arange(100)
-    assert "..." not in formatting.short_numpy_repr(array2)
+    assert "..." not in formatting.short_array_repr(array2)
     with xr.set_options(display_values_threshold=10):
-        assert "..." in formatting.short_numpy_repr(array2)
+        assert "..." in formatting.short_array_repr(array2)
 
 
 def test_large_array_repr_length() -> None:
-
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
     result = repr(da).splitlines()
@@ -575,17 +573,28 @@ def test_large_array_repr_length() -> None:
 
 @requires_netCDF4
 def test_repr_file_collapsed(tmp_path) -> None:
-    arr = xr.DataArray(np.arange(300), dims="test")
-    arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
+    arr_to_store = xr.DataArray(np.arange(300, dtype=np.int64), dims="test")
+    arr_to_store.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
     with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
         display_expand_data=False
     ):
-        actual = formatting.array_repr(arr)
+        actual = repr(arr)
         expected = dedent(
             """\
         <xarray.DataArray (test: 300)>
-        array([  0,   1,   2, ..., 297, 298, 299])
+        [300 values with dtype=int64]
+        Dimensions without coordinates: test"""
+        )
+
+        assert actual == expected
+
+        arr_loaded = arr.compute()
+        actual = arr_loaded.__repr__()
+        expected = dedent(
+            """\
+        <xarray.DataArray (test: 300)>
+        0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299
         Dimensions without coordinates: test"""
         )
 
@@ -604,7 +613,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for (v, _c) in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
@@ -615,7 +624,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     ds.attrs = attrs
 
     with xr.set_options(display_max_rows=display_max_rows):
-
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]
@@ -699,3 +707,18 @@ def test__element_formatter(n_elements: int = 100) -> None:
     )
     actual = intro + values
     assert expected == actual
+
+
+def test_lazy_array_wont_compute() -> None:
+    from xarray.core.indexing import LazilyIndexedArray
+
+    class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
+        def __array__(self, dtype=None):
+            raise NotImplementedError("Computing this array is not possible.")
+
+    arr = LazilyIndexedArrayNotComputable(np.array([1, 2]))
+    var = xr.DataArray(arr)
+
+    # These will crash if var.data are converted to numpy arrays:
+    var.__repr__()
+    var._repr_html_()

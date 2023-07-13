@@ -112,6 +112,7 @@ Dataset contents
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.reset_encoding
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
@@ -303,6 +304,7 @@ DataArray contents
    DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.reset_coords
+   DataArray.reset_encoding
    DataArray.copy
    DataArray.convert_calendar
    DataArray.interp_calendar
@@ -595,7 +597,6 @@ Dataset methods
    load_dataset
    open_dataset
    open_mfdataset
-   open_rasterio
    open_zarr
    save_mfdataset
    Dataset.as_numpy
@@ -631,6 +632,7 @@ DataArray methods
    DataArray.from_iris
    DataArray.from_series
    DataArray.to_cdms2
+   DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
    DataArray.to_dict
@@ -641,6 +643,7 @@ DataArray methods
    DataArray.to_numpy
    DataArray.to_pandas
    DataArray.to_series
+   DataArray.to_zarr
    DataArray.chunk
    DataArray.close
    DataArray.compute
@@ -754,6 +757,7 @@ Dataset
    DatasetGroupBy.any
    DatasetGroupBy.count
    DatasetGroupBy.cumsum
+   DatasetGroupBy.cumprod
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -784,6 +788,7 @@ DataArray
    DataArrayGroupBy.any
    DataArrayGroupBy.count
    DataArrayGroupBy.cumsum
+   DataArrayGroupBy.cumprod
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median
@@ -1052,7 +1057,6 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
-   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
@@ -1094,6 +1098,7 @@ Advanced API
    backends.BackendArray
    backends.BackendEntrypoint
    backends.list_engines
+   backends.refresh_engines
 
 Default, pandas-backed indexes built-in Xarray:
 
@@ -1109,11 +1114,27 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
+   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.ZarrStore
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+These BackendEntrypoints provide a basic interface to the most commonly
+used filetypes in the xarray universe.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4BackendEntrypoint
+   backends.H5netcdfBackendEntrypoint
+   backends.PseudoNetCDFBackendEntrypoint
+   backends.PydapBackendEntrypoint
+   backends.ScipyBackendEntrypoint
+   backends.StoreBackendEntrypoint
+   backends.ZarrBackendEntrypoint
 
 Deprecated / Pending Deprecation
 ================================

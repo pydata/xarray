@@ -2,58 +2,49 @@
 from __future__ import annotations
 
 import pickle
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
-
-from typing import Any, TYPE_CHECKING
-
 import pytest
 from packaging.version import Version
 
 if TYPE_CHECKING:
     import dask
+    import dask.array as da
     import distributed
 else:
     dask = pytest.importorskip("dask")
+    da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
 from distributed.utils_test import (  # noqa: F401
+    cleanup,
     cluster,
     gen_cluster,
     loop,
-    cleanup,
     loop_in_thread,
 )
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
-from xarray.tests.test_backends import (
-    ON_WINDOWS,
-    create_tmp_file,
-    create_tmp_geotiff,
-    open_example_dataset,
-)
-from xarray.tests.test_dataset import create_test_data
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_identical,
     has_h5netcdf,
     has_netCDF4,
-    requires_rasterio,
     has_scipy,
-    requires_zarr,
-    requires_cfgrib,
     requires_cftime,
     requires_netCDF4,
+    requires_zarr,
 )
+from xarray.tests.test_backends import (
+    ON_WINDOWS,
+    create_tmp_file,
+)
+from xarray.tests.test_dataset import create_test_data
 
-# this is to stop isort throwing errors. May have been easier to just use
-# `isort:skip` in retrospect
-
-
-da = pytest.importorskip("dask.array")
 loop = loop  # loop is an imported fixture, which flake8 has issues ack-ing
 
 
@@ -95,7 +86,6 @@ ENGINES_AND_FORMATS = [
 def test_dask_distributed_netcdf_roundtrip(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -103,7 +93,6 @@ def test_dask_distributed_netcdf_roundtrip(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data().chunk(chunks)
 
             if engine == "scipy":
@@ -127,10 +116,8 @@ def test_dask_distributed_netcdf_roundtrip(
 def test_dask_distributed_write_netcdf_with_dimensionless_variables(
     loop, tmp_netcdf_filename
 ):
-
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = xr.Dataset({"x": da.zeros(())})
             original.to_netcdf(tmp_netcdf_filename)
 
@@ -158,7 +145,6 @@ def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
 def test_dask_distributed_read_netcdf_integration_test(
     loop, tmp_netcdf_filename, engine, nc_format
 ):
-
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
@@ -166,7 +152,6 @@ def test_dask_distributed_read_netcdf_integration_test(
 
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
-
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
 
@@ -185,11 +170,10 @@ def test_dask_distributed_zarr_integration_test(
     loop, consolidated: bool, compute: bool
 ) -> None:
     if consolidated:
-        pytest.importorskip("zarr", minversion="2.2.1.dev2")
         write_kwargs: dict[str, Any] = {"consolidated": True}
         read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
-        write_kwargs = read_kwargs = {}  # type: ignore
+        write_kwargs = read_kwargs = {}
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
@@ -208,32 +192,6 @@ def test_dask_distributed_zarr_integration_test(
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
-
-
-@requires_rasterio
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_rasterio_integration_test(loop) -> None:
-    with create_tmp_geotiff() as (tmp_file, expected):
-        with cluster() as (s, [a, b]):
-            with pytest.warns(DeprecationWarning), Client(s["address"], loop=loop):
-                da_tiff = xr.open_rasterio(tmp_file, chunks={"band": 1})
-                assert isinstance(da_tiff.data, da.Array)
-                actual = da_tiff.compute()
-                assert_allclose(actual, expected)
-
-
-@requires_cfgrib
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_cfgrib_integration_test(loop) -> None:
-    with cluster() as (s, [a, b]):
-        with Client(s["address"], loop=loop):
-            with open_example_dataset(
-                "example.grib", engine="cfgrib", chunks={"time": 1}
-            ) as ds:
-                with open_example_dataset("example.grib", engine="cfgrib") as expected:
-                    assert isinstance(ds["t"].data, da.Array)
-                    actual = ds.compute()
-                    assert_allclose(actual, expected)
 
 
 @pytest.mark.xfail(
@@ -290,7 +248,6 @@ async def test_serializable_locks(c, s, a, b) -> None:
         CombinedLock([HDF5_LOCK]),
         CombinedLock([HDF5_LOCK, Lock("filename.nc")]),
     ]:
-
         futures = c.map(f, list(range(10)), lock=lock)
         await c.gather(futures)
 
