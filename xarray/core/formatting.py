@@ -432,19 +432,15 @@ def summarize_index(
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    def prefix(index: int, length: int) -> str:
-        if index == 0 and length == 1:
-            return " "
-        elif index == 0:
-            return "┌"
-        elif index >= length - 1:
-            return "└"
-        else:
-            return "│"
+    def prefixes(length: int) -> list[str]:
+        if length in (0, 1):
+            return [" "]
+
+        return ["┌"] + ["│"] * max(length - 2, 0) + ["└"]
 
     preformatted = [
-        pretty_print(f"  {prefix(position, len(names))} {name}", col_width)
-        for position, name in enumerate(names)
+        pretty_print(f"  {prefix} {name}", col_width)
+        for prefix, name in zip(prefixes(len(names)), names)
     ]
 
     head, *tail = preformatted
