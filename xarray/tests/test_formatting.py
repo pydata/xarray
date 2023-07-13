@@ -230,7 +230,7 @@ class TestFormatting:
 
         coord_names = ["x", "y"]
         index = CustomIndex(coord_names)
-        names = ["x"]
+        names = ("x",)
 
         normal = formatting.summarize_index(names, index, col_width=20)
         assert names[0] in normal
