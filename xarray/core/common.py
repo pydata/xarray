@@ -14,7 +14,6 @@ from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import (
     Frozen,
@@ -961,6 +960,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedTimeResampleGrouper, TimeResampleGrouper
         from xarray.core.resample import RESAMPLE_DIM
+        from xarray.core.pdcompat import _convert_base_to_offset
 
         if keep_attrs is not None:
             warnings.warn(
