@@ -239,7 +239,7 @@ class TestFormatting:
         assert len(normal.splitlines()) == len(names)
         assert "CustomIndex" in normal
 
-        CustomIndex._repr_inline_ = (
+        CustomIndex._repr_inline_ = (  # type: ignore
             lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
         )
         inline = formatting.summarize_index(names, index, col_width=20)
