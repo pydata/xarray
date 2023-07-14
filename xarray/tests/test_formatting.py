@@ -224,13 +224,13 @@ class TestFormatting:
         class CustomIndex(Index):
             names: tuple[str, ...]
 
-            def __init__(self, names):
+            def __init__(self, names: tuple[str, ...]):
                 self.names = names
 
             def __repr__(self):
                 return f"CustomIndex(coords={self.names})"
 
-        coord_names = ["x", "y"]
+        coord_names = ("x", "y")
         index = CustomIndex(coord_names)
         names = ("x",)
 
@@ -240,7 +240,7 @@ class TestFormatting:
         assert "CustomIndex" in normal
 
         CustomIndex._repr_inline_ = (  # type: ignore
-            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
+            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"  # type: ignore
         )
         inline = formatting.summarize_index(names, index, col_width=20)
         assert names[0] in inline
