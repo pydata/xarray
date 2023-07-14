@@ -7,11 +7,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Generic,
-    Hashable,
-    Iterator,
-    List,
-    Mapping,
-    Sequence,
 )
 
 import numpy as np
