@@ -959,8 +959,8 @@ class DataWithCoords(AttrAccessMixin):
 
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedTimeResampleGrouper, TimeResampleGrouper
-        from xarray.core.resample import RESAMPLE_DIM
         from xarray.core.pdcompat import _convert_base_to_offset
+        from xarray.core.resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
             warnings.warn(
