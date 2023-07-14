@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims
-from xarray.core.utils import contains_only_dask_or_numpy, module_available
+from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -76,7 +77,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -148,7 +149,7 @@ class DatasetAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -220,7 +221,7 @@ class DatasetAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -298,7 +299,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -385,7 +386,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -476,7 +477,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -574,7 +575,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -681,7 +682,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -785,7 +786,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -889,7 +890,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -989,7 +990,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1080,7 +1081,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1173,7 +1174,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1272,7 +1273,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1338,7 +1339,7 @@ class DataArrayAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1404,7 +1405,7 @@ class DataArrayAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1476,7 +1477,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1555,7 +1556,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1638,7 +1639,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1728,7 +1729,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1825,7 +1826,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1919,7 +1920,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2013,7 +2014,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2103,7 +2104,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2186,7 +2187,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2275,7 +2276,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2372,13 +2373,22 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2403,7 +2413,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -2461,13 +2471,22 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2492,7 +2511,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -2550,13 +2569,22 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2581,7 +2609,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -2645,13 +2673,22 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2686,7 +2723,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -2752,13 +2789,22 @@ class DatasetGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2793,7 +2839,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -2861,6 +2907,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -2869,7 +2922,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2904,7 +2957,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -2979,6 +3032,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -2987,7 +3047,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3032,7 +3092,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -3109,6 +3169,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -3117,7 +3184,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3162,7 +3229,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -3236,6 +3303,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -3244,7 +3318,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3289,7 +3363,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -3363,6 +3437,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -3371,7 +3452,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3416,7 +3497,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -3486,6 +3567,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -3494,7 +3582,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3582,6 +3670,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -3590,7 +3685,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3676,6 +3771,13 @@ class DatasetGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -3684,7 +3786,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3785,13 +3887,22 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3816,7 +3927,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -3874,13 +3985,22 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3905,7 +4025,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -3963,13 +4083,22 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3994,7 +4123,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -4058,13 +4187,22 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4099,7 +4237,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -4165,13 +4303,22 @@ class DatasetResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4206,7 +4353,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -4274,6 +4421,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -4282,7 +4436,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4317,7 +4471,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -4392,6 +4546,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -4400,7 +4561,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4445,7 +4606,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -4522,6 +4683,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -4530,7 +4698,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4575,7 +4743,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -4649,6 +4817,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -4657,7 +4832,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4702,7 +4877,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -4776,6 +4951,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -4784,7 +4966,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4829,7 +5011,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -4899,6 +5081,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -4907,7 +5096,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4995,6 +5184,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -5003,7 +5199,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5089,6 +5285,13 @@ class DatasetResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -5097,7 +5300,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5198,13 +5401,22 @@ class DataArrayGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5224,7 +5436,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -5280,13 +5492,22 @@ class DataArrayGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5306,7 +5527,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -5362,13 +5583,22 @@ class DataArrayGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5388,7 +5618,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -5450,13 +5680,22 @@ class DataArrayGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5484,7 +5723,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -5548,13 +5787,22 @@ class DataArrayGroupByAggregations:
         :ref:`groupby`
             User guide on groupby operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5582,7 +5830,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -5648,6 +5896,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -5656,7 +5911,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5684,7 +5939,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -5757,6 +6012,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -5765,7 +6027,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5801,7 +6063,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -5876,6 +6138,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -5884,7 +6153,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5920,7 +6189,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -5992,6 +6261,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -6000,7 +6276,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6036,7 +6312,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -6108,6 +6384,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -6116,7 +6399,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6152,7 +6435,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -6220,6 +6503,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -6228,7 +6518,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6308,6 +6598,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -6316,7 +6613,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6398,6 +6695,13 @@ class DataArrayGroupByAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up groupby computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        other methods might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -6406,7 +6710,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6503,13 +6807,22 @@ class DataArrayResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6529,7 +6842,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -6585,13 +6898,22 @@ class DataArrayResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6611,7 +6933,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -6667,13 +6989,22 @@ class DataArrayResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6693,7 +7024,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -6755,13 +7086,22 @@ class DataArrayResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6789,7 +7129,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -6853,13 +7193,22 @@ class DataArrayResampleAggregations:
         :ref:`resampling`
             User guide on resampling operations.
 
+        Notes
+        -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6887,7 +7236,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -6953,6 +7302,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -6961,7 +7317,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6989,7 +7345,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -7062,6 +7418,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7070,7 +7433,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7106,7 +7469,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -7181,6 +7544,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7189,7 +7559,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7225,7 +7595,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -7297,6 +7667,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7305,7 +7682,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7341,7 +7718,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -7413,6 +7790,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7421,7 +7805,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7457,7 +7841,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -7525,6 +7909,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7533,7 +7924,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7613,6 +8004,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7621,7 +8019,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7703,6 +8101,13 @@ class DataArrayResampleAggregations:
 
         Notes
         -----
+        Use the ``flox`` package to significantly speed up resampling computations,
+        especially with dask arrays. Xarray will use flox by default if installed.
+        Pass flox-specific keyword arguments in ``**kwargs``.
+        The default choice is ``method="cohorts"`` which generalizes the best,
+        ``method="blockwise"`` might work better for your problem.
+        See the `flox documentation <https://flox.readthedocs.io>`_ for more.
+
         Non-numeric variables will be removed prior to reducing.
 
         Examples
@@ -7711,7 +8116,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )

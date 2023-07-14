@@ -265,6 +265,7 @@
    Variable.dims
    Variable.dtype
    Variable.encoding
+   Variable.reset_encoding
    Variable.imag
    Variable.nbytes
    Variable.ndim
@@ -405,10 +406,8 @@
    CFTimeIndex.is_floating
    CFTimeIndex.is_integer
    CFTimeIndex.is_interval
-   CFTimeIndex.is_mixed
    CFTimeIndex.is_numeric
    CFTimeIndex.is_object
-   CFTimeIndex.is_type_compatible
    CFTimeIndex.isin
    CFTimeIndex.isna
    CFTimeIndex.isnull
@@ -429,7 +428,6 @@
    CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
-   CFTimeIndex.set_value
    CFTimeIndex.shift
    CFTimeIndex.slice_indexer
    CFTimeIndex.slice_locs
@@ -443,7 +441,6 @@
    CFTimeIndex.to_flat_index
    CFTimeIndex.to_frame
    CFTimeIndex.to_list
-   CFTimeIndex.to_native_types
    CFTimeIndex.to_numpy
    CFTimeIndex.to_series
    CFTimeIndex.tolist
@@ -468,8 +465,6 @@
    CFTimeIndex.hasnans
    CFTimeIndex.hour
    CFTimeIndex.inferred_type
-   CFTimeIndex.is_all_dates
-   CFTimeIndex.is_monotonic
    CFTimeIndex.is_monotonic_increasing
    CFTimeIndex.is_monotonic_decreasing
    CFTimeIndex.is_unique
@@ -514,7 +509,6 @@
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
 
-   backends.NetCDF4BackendEntrypoint.available
    backends.NetCDF4BackendEntrypoint.description
    backends.NetCDF4BackendEntrypoint.url
    backends.NetCDF4BackendEntrypoint.guess_can_open
@@ -547,7 +541,6 @@
    backends.H5NetCDFStore.sync
    backends.H5NetCDFStore.ds
 
-   backends.H5netcdfBackendEntrypoint.available
    backends.H5netcdfBackendEntrypoint.description
    backends.H5netcdfBackendEntrypoint.url
    backends.H5netcdfBackendEntrypoint.guess_can_open
@@ -562,7 +555,6 @@
    backends.PseudoNetCDFDataStore.open_store_variable
    backends.PseudoNetCDFDataStore.ds
 
-   backends.PseudoNetCDFBackendEntrypoint.available
    backends.PseudoNetCDFBackendEntrypoint.description
    backends.PseudoNetCDFBackendEntrypoint.url
    backends.PseudoNetCDFBackendEntrypoint.guess_can_open
@@ -577,7 +569,6 @@
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
 
-   backends.PydapBackendEntrypoint.available
    backends.PydapBackendEntrypoint.description
    backends.PydapBackendEntrypoint.url
    backends.PydapBackendEntrypoint.guess_can_open
@@ -605,7 +596,6 @@
    backends.ScipyDataStore.sync
    backends.ScipyDataStore.ds
 
-   backends.ScipyBackendEntrypoint.available
    backends.ScipyBackendEntrypoint.description
    backends.ScipyBackendEntrypoint.url
    backends.ScipyBackendEntrypoint.guess_can_open
@@ -626,13 +616,11 @@
    backends.ZarrStore.sync
    backends.ZarrStore.ds
 
-   backends.ZarrBackendEntrypoint.available
    backends.ZarrBackendEntrypoint.description
    backends.ZarrBackendEntrypoint.url
    backends.ZarrBackendEntrypoint.guess_can_open
    backends.ZarrBackendEntrypoint.open_dataset
 
-   backends.StoreBackendEntrypoint.available
    backends.StoreBackendEntrypoint.description
    backends.StoreBackendEntrypoint.url
    backends.StoreBackendEntrypoint.guess_can_open

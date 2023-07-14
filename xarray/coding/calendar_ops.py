@@ -147,7 +147,7 @@ def convert_calendar(
     from xarray.core.dataarray import DataArray
 
     time = obj[dim]
-    if not _contains_datetime_like_objects(time):
+    if not _contains_datetime_like_objects(time.variable):
         raise ValueError(f"Coordinate {dim} must contain datetime objects.")
 
     use_cftime = _should_cftime_be_used(time, calendar, use_cftime)
@@ -319,8 +319,8 @@ def interp_calendar(source, target, dim="time"):
         target = DataArray(target, dims=(dim,), name=dim)
 
     if not _contains_datetime_like_objects(
-        source[dim]
-    ) or not _contains_datetime_like_objects(target):
+        source[dim].variable
+    ) or not _contains_datetime_like_objects(target.variable):
         raise ValueError(
             f"Both 'source.{dim}' and 'target' must contain datetime objects."
         )

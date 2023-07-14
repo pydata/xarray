@@ -3,21 +3,9 @@ from __future__ import annotations
 import functools
 import operator
 from collections import defaultdict
+from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    Hashable,
-    Iterable,
-    Mapping,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -98,10 +86,10 @@ def reindex_variables(
     return new_variables
 
 
-CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
-MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
-NormalizedIndexes = Dict[MatchingIndexKey, Index]
-NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
+CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
+MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
+NormalizedIndexes = dict[MatchingIndexKey, Index]
+NormalizedIndexVars = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
 class Aligner(Generic[DataAlignable]):
@@ -584,6 +572,8 @@ class Aligner(Generic[DataAlignable]):
 
         if self.join == "override":
             self.override_indexes()
+        elif self.join == "exact" and not self.copy:
+            self.results = self.objects
         else:
             self.reindex_all()
 
@@ -949,7 +939,6 @@ def reindex_like(
 
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
-
     common_coords = {}
     dims_map = {}
     for arg in args:
@@ -965,7 +954,6 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 def _broadcast_helper(
     arg: T_DataWithCoords, exclude, dims_map, common_coords
 ) -> T_DataWithCoords:
-
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 

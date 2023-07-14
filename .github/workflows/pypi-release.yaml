@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: 3.8
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: 3.8
+          python-version: "3.11"
       - uses: actions/download-artifact@v3
         with:
           name: releases
@@ -70,12 +70,26 @@ jobs:
           python -m pip install dist/xarray*.whl
           python -m xarray.util.print_versions
 
+  upload-to-test-pypi:
+    needs: test-built-dist
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://test.pypi.org/p/xarray
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: releases
+          path: dist
       - name: Publish package to TestPyPI
         if: github.event_name == 'push'
-        uses: pypa/gh-action-pypi-publish@v1.6.4
+        uses: pypa/gh-action-pypi-publish@v1.8.7
         with:
-          user: __token__
-          password: ${{ secrets.TESTPYPI_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
           verbose: true
 
@@ -84,14 +98,19 @@ jobs:
     needs: test-built-dist
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/xarray
+    permissions:
+      id-token: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: releases
           path: dist
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.6.4
+        uses: pypa/gh-action-pypi-publish@v1.8.7
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
           verbose: true

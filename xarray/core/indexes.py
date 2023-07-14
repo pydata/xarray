@@ -3,19 +3,8 @@ from __future__ import annotations
 import collections.abc
 import copy
 from collections import defaultdict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Mapping,
-    Sequence,
-    TypeVar,
-    cast,
-)
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -26,13 +15,19 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
 )
-from xarray.core.utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
+from xarray.core.utils import (
+    Frozen,
+    emit_user_level_warning,
+    get_valid_numpy_dtype,
+    is_dict_like,
+    is_scalar,
+)
 
 if TYPE_CHECKING:
     from xarray.core.types import ErrorOptions, T_Index
     from xarray.core.variable import Variable
 
-IndexVars = Dict[Any, "Variable"]
+IndexVars = dict[Any, "Variable"]
 
 
 class Index:
@@ -146,7 +141,7 @@ class Index:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == "O":
+    if len(index) > 0 and index.dtype == "O" and not isinstance(index, CFTimeIndex):
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -177,9 +172,21 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     elif isinstance(array, PandasIndexingAdapter):
         index = array.array
     else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
+        kwargs: dict[str, str] = {}
+        if hasattr(array, "dtype"):
+            if array.dtype.kind == "O":
+                kwargs["dtype"] = "object"
+            elif array.dtype == "float16":
+                emit_user_level_warning(
+                    (
+                        "`pandas.Index` does not support the `float16` dtype."
+                        " Casting to `float64` for you, but in the future please"
+                        " manually cast to either `float32` and `float64`."
+                    ),
+                    category=DeprecationWarning,
+                )
+                kwargs["dtype"] = "float64"
+
         index = pd.Index(np.asarray(array), **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
@@ -270,6 +277,8 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     labels
     """
     flat_labels = np.ravel(labels)
+    if flat_labels.dtype == "float16":
+        flat_labels = flat_labels.astype("float64")
     flat_indexer = index.get_indexer(flat_labels, method=method, tolerance=tolerance)
     indexer = flat_indexer.reshape(labels.shape)
     return indexer
@@ -979,7 +988,7 @@ class PandasMultiIndex(PandasIndex):
             # variable(s) attrs and encoding metadata are propagated
             # when replacing the indexes in the resulting xarray object
             new_vars = new_index.create_variables()
-            indexes = cast(Dict[Any, Index], {k: new_index for k in new_vars})
+            indexes = cast(dict[Any, Index], {k: new_index for k in new_vars})
 
             # add scalar variable for each dropped level
             variables = new_vars
@@ -1512,7 +1521,7 @@ def filter_indexes_from_coords(
     of coordinate names.
 
     """
-    filtered_indexes: dict[Any, Index] = dict(**indexes)
+    filtered_indexes: dict[Any, Index] = dict(indexes)
 
     index_coord_names: dict[Hashable, set[Hashable]] = defaultdict(set)
     for name, idx in indexes.items():

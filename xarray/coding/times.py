@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Hashable, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,7 @@ from xarray.coding.variables import (
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
+from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.variable import Variable
 
@@ -223,7 +225,9 @@ def _decode_datetime_with_pandas(
     delta, ref_date = _unpack_netcdf_time_units(units)
     delta = _netcdf_to_numpy_timeunit(delta)
     try:
-        ref_date = pd.Timestamp(ref_date)
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
+        ref_date = nanosecond_precision_timestamp(ref_date)
     except ValueError:
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
@@ -350,19 +354,12 @@ def _infer_time_units_from_diff(unique_timedeltas) -> str:
         time_units = _NETCDF_TIME_UNITS_CFTIME
         unit_timedelta = _unit_timedelta_cftime
         zero_timedelta = timedelta(microseconds=0)
-        timedeltas = unique_timedeltas
     else:
         time_units = _NETCDF_TIME_UNITS_NUMPY
         unit_timedelta = _unit_timedelta_numpy
         zero_timedelta = np.timedelta64(0, "ns")
-        # Note that the modulus operator was only implemented for np.timedelta64
-        # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
-        # supported is greater than or equal to this we will no longer need to cast
-        # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
-        # modulus operator works for TimedeltaIndex objects.
-        timedeltas = pd.TimedeltaIndex(unique_timedeltas)
     for time_unit in time_units:
-        if np.all(timedeltas % unit_timedelta(time_unit) == zero_timedelta):
+        if np.all(unique_timedeltas % unit_timedelta(time_unit) == zero_timedelta):
             return time_unit
     return "seconds"
 
@@ -397,7 +394,9 @@ def infer_datetime_units(dates) -> str:
         dates = to_datetime_unboxed(dates)
         dates = dates[pd.notnull(dates)]
         reference_date = dates[0] if len(dates) > 0 else "1970-01-01"
-        reference_date = pd.Timestamp(reference_date)
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
+        reference_date = nanosecond_precision_timestamp(reference_date)
     else:
         reference_date = dates[0] if len(dates) > 0 else "1970-01-01"
         reference_date = format_cftime_datetime(reference_date)
@@ -438,6 +437,8 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
     If raise_on_invalid is True (default), invalid dates trigger a ValueError.
     Otherwise, the invalid element is replaced by np.NaT."""
     times = np.asarray(times)
+    # TODO: the strict enforcement of nanosecond precision datetime values can
+    # be relaxed when addressing GitHub issue #7493.
     new = np.empty(times.shape, dtype="M8[ns]")
     for i, t in np.ndenumerate(times):
         try:
@@ -445,7 +446,7 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
             # NumPy casts it safely it np.datetime64[ns] for dates outside
             # 1678 to 2262 (this is not currently the case for
             # datetime.datetime).
-            dt = pd.Timestamp(
+            dt = nanosecond_precision_timestamp(
                 t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
             )
         except ValueError as e:
@@ -504,6 +505,10 @@ def convert_time_or_go_back(date, date_type):
 
     This is meant to convert end-of-month dates into a new calendar.
     """
+    # TODO: the strict enforcement of nanosecond precision Timestamps can be
+    # relaxed when addressing GitHub issue #7493.
+    if date_type == pd.Timestamp:
+        date_type = nanosecond_precision_timestamp
     try:
         return date_type(
             date.year,
@@ -647,7 +652,10 @@ def encode_cf_datetime(
 
         delta_units = _netcdf_to_numpy_timeunit(delta)
         time_delta = np.timedelta64(1, delta_units).astype("timedelta64[ns]")
-        ref_date = pd.Timestamp(_ref_date)
+
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
+        ref_date = nanosecond_precision_timestamp(_ref_date)
 
         # If the ref_date Timestamp is timezone-aware, convert to UTC and
         # make it timezone-naive (GH 2649).

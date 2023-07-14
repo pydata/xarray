@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -23,12 +23,13 @@ class TestAlias:
 
 
 @pytest.mark.parametrize(
-    "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
+    ["a", "b", "expected"],
+    [
+        [np.array(["a"]), np.array(["b"]), np.array(["a", "b"])],
+        [np.array([1], dtype="int64"), np.array([2], dtype="int64"), pd.Index([1, 2])],
+    ],
 )
 def test_maybe_coerce_to_str(a, b, expected):
-
-    a = np.array([a])
-    b = np.array([b])
     index = pd.Index(a).append(pd.Index(b))
 
     actual = utils.maybe_coerce_to_str(index, [a, b])
@@ -38,7 +39,6 @@ def test_maybe_coerce_to_str(a, b, expected):
 
 
 def test_maybe_coerce_to_str_minimal_str_dtype():
-
     a = np.array(["a", "a_long_string"])
     index = pd.Index(["a"])
 
@@ -215,7 +215,6 @@ def test_hidden_key_dict():
 
 
 def test_either_dict_or_kwargs():
-
     result = either_dict_or_kwargs(dict(a=1), None, "foo")
     expected = dict(a=1)
     assert result == expected

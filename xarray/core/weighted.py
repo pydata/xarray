@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence, cast
+from collections.abc import Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Generic, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -237,7 +238,10 @@ class Weighted(Generic[T_Xarray]):
         # (and not 2); GH4074
         if self.weights.dtype == bool:
             sum_of_weights = self._reduce(
-                mask, self.weights.astype(int), dim=dim, skipna=False
+                mask,
+                duck_array_ops.astype(self.weights, dtype=int),
+                dim=dim,
+                skipna=False,
             )
         else:
             sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)
@@ -342,7 +346,6 @@ class Weighted(Generic[T_Xarray]):
             skipna: bool,
             method: QUANTILE_METHODS = "linear",
         ) -> np.ndarray:
-
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
             is_nan = np.isnan(data)
@@ -443,7 +446,6 @@ class Weighted(Generic[T_Xarray]):
         return result
 
     def _implementation(self, func, dim, **kwargs):
-
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
     def sum_of_weights(
@@ -451,7 +453,6 @@ class Weighted(Generic[T_Xarray]):
         dim: Dims = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
-
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
         )
@@ -462,7 +463,6 @@ class Weighted(Generic[T_Xarray]):
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
-
         return self._implementation(
             self._sum_of_squares, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
@@ -473,7 +473,6 @@ class Weighted(Generic[T_Xarray]):
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
-
         return self._implementation(
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
@@ -484,7 +483,6 @@ class Weighted(Generic[T_Xarray]):
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
-
         return self._implementation(
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
@@ -495,7 +493,6 @@ class Weighted(Generic[T_Xarray]):
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
-
         return self._implementation(
             self._weighted_var, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
@@ -506,7 +503,6 @@ class Weighted(Generic[T_Xarray]):
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
-
         return self._implementation(
             self._weighted_std, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
@@ -519,7 +515,6 @@ class Weighted(Generic[T_Xarray]):
         keep_attrs: bool | None = None,
         skipna: bool = True,
     ) -> T_Xarray:
-
         return self._implementation(
             self._weighted_quantile, q=q, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
@@ -534,7 +529,6 @@ class Weighted(Generic[T_Xarray]):
 
 class DataArrayWeighted(Weighted["DataArray"]):
     def _implementation(self, func, dim, **kwargs) -> DataArray:
-
         self._check_dim(dim)
 
         dataset = self.obj._to_temp_dataset()
@@ -544,14 +538,12 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 class DatasetWeighted(Weighted["Dataset"]):
     def _implementation(self, func, dim, **kwargs) -> Dataset:
-
         self._check_dim(dim)
 
         return self.obj.map(func, dim=dim, **kwargs)
 
 
 def _inject_docstring(cls, cls_name):
-
     cls.sum_of_weights.__doc__ = _SUM_OF_WEIGHTS_DOCSTRING.format(cls=cls_name)
 
     cls.sum.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
