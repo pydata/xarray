@@ -45,8 +45,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 
 @pytest.fixture(

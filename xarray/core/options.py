@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-from .utils import FrozenDict
+from xarray.core.utils import FrozenDict
 
 if TYPE_CHECKING:
     try:
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
         "display_expand_coords",
         "display_expand_data_vars",
         "display_expand_data",
+        "display_expand_indexes",
+        "display_default_indexes",
         "enable_cftimeindex",
         "file_cache_maxsize",
         "keep_attrs",
@@ -42,6 +44,8 @@ if TYPE_CHECKING:
         display_expand_coords: Literal["default", True, False]
         display_expand_data_vars: Literal["default", True, False]
         display_expand_data: Literal["default", True, False]
+        display_expand_indexes: Literal["default", True, False]
+        display_default_indexes: Literal["default", True, False]
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default", True, False]
@@ -62,6 +66,8 @@ OPTIONS: T_Options = {
     "display_expand_coords": "default",
     "display_expand_data_vars": "default",
     "display_expand_data": "default",
+    "display_expand_indexes": "default",
+    "display_default_indexes": False,
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
@@ -88,6 +94,8 @@ _VALIDATORS = {
     "display_expand_coords": lambda choice: choice in [True, False, "default"],
     "display_expand_data_vars": lambda choice: choice in [True, False, "default"],
     "display_expand_data": lambda choice: choice in [True, False, "default"],
+    "display_expand_indexes": lambda choice: choice in [True, False, "default"],
+    "display_default_indexes": lambda choice: choice in [True, False, "default"],
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
@@ -98,7 +106,7 @@ _VALIDATORS = {
 
 
 def _set_file_cache_maxsize(value) -> None:
-    from ..backends.file_manager import FILE_CACHE
+    from xarray.backends.file_manager import FILE_CACHE
 
     FILE_CACHE.maxsize = value
 
@@ -161,34 +169,41 @@ class set_options:
         Colormap to use for nondivergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. mpl.cm.magma)
-    display_expand_attrs : {"default", True, False}:
+    display_expand_attrs : {"default", True, False}
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
 
         * ``True`` : to always expand attrs
         * ``False`` : to always collapse attrs
         * ``default`` : to expand unless over a pre-defined limit
-    display_expand_coords : {"default", True, False}:
+    display_expand_coords : {"default", True, False}
         Whether to expand the coordinates section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
 
         * ``True`` : to always expand coordinates
         * ``False`` : to always collapse coordinates
         * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data : {"default", True, False}:
+    display_expand_data : {"default", True, False}
         Whether to expand the data section for display of ``DataArray``
         objects. Can be
 
         * ``True`` : to always expand data
         * ``False`` : to always collapse data
         * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data_vars : {"default", True, False}:
+    display_expand_data_vars : {"default", True, False}
         Whether to expand the data variables section for display of
         ``Dataset`` objects. Can be
 
         * ``True`` : to always expand data variables
         * ``False`` : to always collapse data variables
         * ``default`` : to expand unless over a pre-defined limit
+    display_expand_indexes : {"default", True, False}
+        Whether to expand the indexes section for display of
+        ``DataArray`` or ``Dataset``. Can be
+
+        * ``True`` : to always expand indexes
+        * ``False`` : to always collapse indexes
+        * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
     display_max_rows : int, default: 12
         Maximum display rows.
     display_values_threshold : int, default: 200

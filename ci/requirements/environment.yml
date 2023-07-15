@@ -8,7 +8,6 @@ dependencies:
   - bottleneck
   - cartopy
   - cdms2
-  - cfgrib
   - cftime
   - dask-core
   - distributed
@@ -19,26 +18,27 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml # Optional dep of pydap
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
+  - numbagg
   - numexpr
-  - numpy
+  - numpy<1.24
   - packaging
   - pandas
-  - pint
+  - pint<0.21
   - pip
   - pooch
   - pre-commit
   - pseudonetcdf
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
@@ -46,5 +46,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - numbagg

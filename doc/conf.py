@@ -50,24 +50,15 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio  # noqa: F401
-except ImportError:
-    allowed_failures.update(
-        ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
-    )
-
-try:
     import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
             "gallery/plot_cartopy_facetgrid.py",
-            "gallery/plot_rasterio_rgb.py",
-            "gallery/plot_rasterio.py",
         ]
     )
 
-nbsphinx_allow_errors = True
+nbsphinx_allow_errors = False
 
 # -- General configuration ------------------------------------------------
 
@@ -97,8 +88,8 @@ extensions = [
 
 
 extlinks = {
-    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH"),
-    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
+    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH%s"),
+    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR%s"),
 }
 
 # sphinx-copybutton configurations
@@ -244,12 +235,11 @@ html_theme_options = dict(
     use_repository_button=True,
     use_issues_button=True,
     home_page_in_toc=False,
-    extra_navbar="",
-    navbar_footer_text="",
     extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
-    twitter_url="https://twitter.com/xarray_devs",
+    twitter_url="https://twitter.com/xarray_dev",
+    icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
 )
 
 
@@ -332,8 +322,8 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
-    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "cubed": ("https://tom-e-white.com/cubed/", None),
 }
 
 
@@ -393,39 +383,6 @@ def html_page_context(app, pagename, templatename, context, doctree):
         context["theme_use_edit_page_button"] = False
 
 
-def update_team(app: Sphinx):
-    """Update the team members list."""
-
-    LOGGER.info("Updating team members page...")
-
-    team = yaml.safe_load(pathlib.Path(app.srcdir, "team.yml").read_bytes())
-    items = []
-    for member in team:
-        item = f"""
-        .. grid-item-card::
-            :text-align: center
-            :link: https://github.com/{member['gh_login']}
-
-            .. image:: {member['avatar']}
-                :alt: {member['name']}
-            +++
-            {member['name']}
-        """
-        items.append(item)
-
-    items_md = indent(dedent("\n".join(items)), prefix="    ")
-
-    markdown = f"""
-.. grid:: 1 2 3 3
-    :gutter: 2
-
-    {items_md}
-    """
-
-    pathlib.Path(app.srcdir, "team-panel.txt").write_text(markdown)
-    LOGGER.info("Team members page updated.")
-
-
 def update_gallery(app: Sphinx):
     """Update the gallery page."""
 
@@ -469,7 +426,6 @@ def update_videos(app: Sphinx):
 
     items = []
     for video in videos:
-
         authors = " | ".join(video["authors"])
         item = f"""
 .. grid-item-card:: {" ".join(video["title"].split())}
@@ -496,6 +452,5 @@ def update_videos(app: Sphinx):
 
 def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
-    app.connect("builder-inited", update_team)
     app.connect("builder-inited", update_gallery)
     app.connect("builder-inited", update_videos)
