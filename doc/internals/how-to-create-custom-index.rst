@@ -65,7 +65,7 @@ Optional requirements
 ---------------------
 
 Pretty much everything else is optional. Depending on the method, in the absence
-of a (re)implementation, an index will either raise a `NotImplementedError` 
+of a (re)implementation, an index will either raise a `NotImplementedError`
 or won't do anything specific (just drop, pass or copy itself
 from/to the resulting Dataset or DataArray).
 
