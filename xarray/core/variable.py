@@ -163,7 +163,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
         if obj.ndim != 1:
             warnings.warn(
                 f"{name!r} has more than 1-dimension and the same name as one of its "
-                f"dimensions {obj.dims!r}. Xarray will not automatically"
+                f"dimensions {obj.dims!r}. Xarray will not automatically "
                 "create an Index object that would allow label-based selection.",
                 RuntimeWarning,
             )

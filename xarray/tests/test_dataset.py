@@ -467,12 +467,14 @@ class TestDataset:
 
         with pytest.raises(ValueError, match=r"conflicting sizes"):
             Dataset({"a": x1, "b": x2})
-        with pytest.raises(ValueError, match=r"disallows such variables"):
-            Dataset({"a": x1, "x": z})
         with pytest.raises(TypeError, match=r"tuple of form"):
             Dataset({"x": (1, 2, 3, 4, 5, 6, 7)})
         with pytest.raises(ValueError, match=r"already exists as a scalar"):
             Dataset({"x": 0, "y": ("x", [1, 2, 3])})
+
+        with pytest.warns(RuntimeWarning, match=r"will not automatically"):
+            actual = Dataset({"a": x1, "x": z})
+            assert "x" not in actual.xindexes
 
         # verify handling of DataArrays
         expected = Dataset({"x": x1, "z": z})
