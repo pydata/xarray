@@ -7,11 +7,11 @@ How to create a custom index
 
    This feature is highly experimental. Support for custom indexes has been
    introduced in v2022.06.0 and is still incomplete. API is subject to change
-   without deprecation notice.
+   without deprecation notice. However we encourage you to experiment and report issues that arise.
 
-Xarray's built-in support for label-based indexing and alignment operations
-relies on :py:class:`pandas.Index` objects. It is powerful and suitable for many
-applications but it also has some limitations:
+Xarray's built-in support for label-based indexing (e.g. `ds.sel(latitude=40, method="nearest")`) and alignment operations
+relies on :py:class:`pandas.Index` objects. Pandas Indexes are powerful and suitable for many
+applications but also have some limitations:
 
 - it only works with 1-dimensional coordinates where explicit labels
   are fully loaded in memory
@@ -31,9 +31,9 @@ example the case of Xarray built-in ``PandasIndex`` and ``PandasMultiIndex``
 subclasses, which wrap :py:class:`pandas.Index` and
 :py:class:`pandas.MultiIndex` respectively.
 
-The ``Index`` API closely follows the :py:meth:`Dataset` and
-:py:meth:`DataArray` API, e.g., for an index to support ``.sel()`` it needs to
-implement :py:meth:`Index.sel`, to support ``.stack()`` and ``.unstack()`` it
+The ``Index`` API closely follows the :py:class:`Dataset` and
+:py:class:`DataArray` API, e.g., for an index to support :py:meth:`DataArray.sel` it needs to
+implement :py:meth:`Index.sel`, to support :py:meth:`DataArray.stack` and :py:meth:`DataArray.unstack` it
 needs to implement :py:meth:`Index.stack` and :py:meth:`Index.unstack`, etc.
 
 Some guidelines and examples are given below. More details can be found in the
@@ -53,10 +53,10 @@ coordinates.
 
 For example, ``PandasIndex`` accepts only one coordinate and
 ``PandasMultiIndex`` accepts one or more 1-dimensional coordinates that must all
-share the same dimension. Other, custom indexes wouldn't have the same
+share the same dimension. Other, custom indexes need not have the same
 constraints, e.g.,
 
-- a georeferenced raster index which only accepts two 1-d coordinates with each
+- a georeferenced raster index which only accepts two 1-d coordinates with
   distinct dimensions
 - a staggered grid index which takes coordinates with different dimension name
   suffixes (e.g., "_c" and "_l" for center and left)
@@ -64,16 +64,16 @@ constraints, e.g.,
 Optional requirements
 ---------------------
 
-Pretty much everything else is optional. Depending on the case, in the absence
-of a (re)implementation, an index will either raise an error (operation not
-supported) or won't do anything specific (just drop, pass or copy itself
+Pretty much everything else is optional. Depending on the method, in the absence
+of a (re)implementation, an index will either raise a `NotImplementedError` 
+or won't do anything specific (just drop, pass or copy itself
 from/to the resulting Dataset or DataArray).
 
 For example, you can just skip re-implementing :py:meth:`Index.rename` if there
 is no internal attribute or object to rename according to the new desired
 coordinate or dimension names. In the case of ``PandasIndex``, we rename the
 underlying ``pandas.Index`` object and/or update the ``PandasIndex.dim``
-attribute.
+attribute since the associated dimension name has been changed.
 
 Wrap index data as coordinate data
 ----------------------------------
@@ -81,7 +81,7 @@ Wrap index data as coordinate data
 In some cases it is possible to reuse the index's underlying object or structure
 as coordinate data and hence avoid data duplication.
 
-It is the case of ``PandasIndex`` and ``PandasMultiIndex``, where we can
+For ``PandasIndex`` and ``PandasMultiIndex``, we
 leverage the fact that ``pandas.Index`` objects expose some array-like API. In
 Xarray we use some wrappers around those underlying objects as a thin
 compatibility layer to preserve dtypes, handle explicit and n-dimensional
@@ -109,11 +109,11 @@ the index to properly handle those input labels.
 :py:meth:`Index.sel` must return an instance of :py:class:`IndexSelResult`. The
 latter is a small data class that holds positional indexers (indices) and that
 may also hold new variables, new indexes, names of variables or indexes to drop,
-names of dimensions to rename, etc. This is useful in the case of
-``PandasMultiIndex`` as it allows to convert it into a single ``PandasIndex``
+names of dimensions to rename, etc. For example, this is useful in the case of
+``PandasMultiIndex`` as it allows Xarray to convert it into a single ``PandasIndex``
 when only one level remains after the selection.
 
-The ``IndexSelResult`` class is also used to merge results from label-based
+The :py:class:`IndexSelResult` class is also used to merge results from label-based
 selection performed by different indexes. Note that it is now possible to have
 two distinct indexes for two 1-d coordinates sharing the same dimension, but it
 is not currently possible to use those two indexes in the same call to
@@ -208,7 +208,7 @@ reference system.
 How to use a custom index
 -------------------------
 
-You can use ``Dataset.set_xindex()`` or ``DataArray.set_xindex()`` to assign a
+You can use :py:meth:`Dataset.set_xindex` or :py:meth:`DataArray.set_xindex` to assign a
 custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
 
 .. code-block:: python
@@ -224,7 +224,7 @@ custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
 
     # Xarray create default indexes for the 'x' and 'y' coordinates
     # we first need to explicitly drop it
-    da.drop_indexes(["x", "y"])
+    da = da.drop_indexes(["x", "y"])
 
     # Build a RasterIndex from the 'x' and 'y' coordinates
     da_raster = da.set_xindex(["x", "y"], RasterIndex)

@@ -97,7 +97,7 @@ class Index:
         type.
 
         Implementation is optional but required in order to support
-        concatenation. Otherwise it will raise an error if the index needs to be
+        ``concat``. Otherwise it will raise an error if the index needs to be
         updated during the operation.
 
         Parameters
@@ -126,7 +126,7 @@ class Index:
         """Create a new index by stacking coordinate variables into a single new
         dimension.
 
-        Implementation is optional but required in order to support stack.
+        Implementation is optional but required in order to support ``stack``.
         Otherwise it will raise an error when trying to pass the Index subclass
         as argument to :py:meth:`Dataset.stack`.
 
@@ -156,7 +156,7 @@ class Index:
         -------
         indexes : tuple
             A 2-length tuple where the 1st item is a dictionary of unstacked
-            Index objects and the 2nd item is a :py:class`pandas.MultiIndex`
+            Index objects and the 2nd item is a :py:class:`pandas.MultiIndex`
             object used to unstack unindexed coordinate variables or data
             variables.
         """
@@ -354,11 +354,11 @@ class Index:
         """Maybe update the index with new coordinate and dimension names.
 
         This method should be re-implemented in subclasses of Index if it has
-        attributes that depends on coordinate or dimension names.
+        attributes that depend on coordinate or dimension names.
 
         By default (if not re-implemented), it returns the index itself.
 
-        Warning: the input names are not filtered for this index, they may
+        Warning: the input names are not filtered for this method, they may
         correspond to any variable or dimension of a Dataset or a DataArray.
 
         Parameters
@@ -380,7 +380,7 @@ class Index:
     def copy(self: T_Index, deep: bool = True) -> T_Index:
         """Return a (deep) copy of this index.
 
-        Implementation is subclasses of Index is optional. The base class
+        Implementation in subclasses of Index is optional. The base class
         implements the default (deep) copy semantics.
 
         Parameters
