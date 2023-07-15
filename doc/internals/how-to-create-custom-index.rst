@@ -161,7 +161,6 @@ regularly spaced 2-dimensional data) that internally relies on two
 
     class RasterIndex(Index):
         def __init__(self, xy_indexes):
-
             assert len(xy_indexes) == 2
 
             # must have two distinct dimensions
