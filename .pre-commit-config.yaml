@@ -14,9 +14,9 @@ repos:
       - id: absolufy-imports
         name: absolufy-imports
         files: ^xarray/
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.275'
+    rev: 'v0.0.277'
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -47,7 +47,7 @@ repos:
             types-pkg_resources,
             types-PyYAML,
             types-pytz,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python
