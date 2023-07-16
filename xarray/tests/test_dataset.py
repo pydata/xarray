@@ -472,9 +472,9 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"already exists as a scalar"):
             Dataset({"x": 0, "y": ("x", [1, 2, 3])})
 
-        with pytest.warns(RuntimeWarning, match=r"will not automatically"):
-            actual = Dataset({"a": x1, "x": z})
-            assert "x" not in actual.xindexes
+        # nD coordinate variable "x" sharing name with dimension
+        actual = Dataset({"a": x1, "x": z})
+        assert "x" not in actual.xindexes
 
         # verify handling of DataArrays
         expected = Dataset({"x": x1, "z": z})

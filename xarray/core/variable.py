@@ -158,17 +158,9 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if name is not None and name in obj.dims:
-        # convert the Variable into an Index
-        if obj.ndim != 1:
-            warnings.warn(
-                f"{name!r} has more than 1-dimension and the same name as one of its "
-                f"dimensions {obj.dims!r}. Xarray will not automatically "
-                "create an Index object that would allow label-based selection.",
-                RuntimeWarning,
-            )
-        else:
-            obj = obj.to_index_variable()
+    if name is not None and name in obj.dims and obj.ndim == 1:
+        # automatically convert the Variable into an Index
+        obj = obj.to_index_variable()
 
     return obj
 
