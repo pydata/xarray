@@ -35,6 +35,7 @@ from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
+from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     DuckArrayWrapper,
     InaccessibleArray,
@@ -475,6 +476,7 @@ class TestDataset:
         # nD coordinate variable "x" sharing name with dimension
         actual = Dataset({"a": x1, "x": z})
         assert "x" not in actual.xindexes
+        _assert_internal_invariants(actual, check_default_indexes=True)
 
         # verify handling of DataArrays
         expected = Dataset({"x": x1, "z": z})

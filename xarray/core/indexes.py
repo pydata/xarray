@@ -1362,7 +1362,7 @@ def default_indexes(
     coord_names = set(coords)
 
     for name, var in coords.items():
-        if name in dims:
+        if name in dims and var.ndim == 1:
             index, index_vars = create_default_index_implicit(var, coords)
             if set(index_vars) <= coord_names:
                 indexes.update({k: index for k in index_vars})
