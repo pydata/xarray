@@ -19,6 +19,7 @@ The pages in this section are intended for:
    :hidden:
 
    internal-design
+   interoperability
    duck-arrays-integration
    chunked-arrays
    extending-xarray
