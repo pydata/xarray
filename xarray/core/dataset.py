@@ -4372,9 +4372,13 @@ class Dataset(
             coordinates. Note, this is an alternative to passing a dict to the
             dim kwarg and will only be used if dim is None.
 
+        Returns
+        -------
+        expanded : Dataset
+            This object, but with additional dimension(s).
+
         Examples
         --------
-
         >>> dataset = xr.Dataset({"temperature": ([], 25.0)})
         >>> dataset
         <xarray.Dataset>
@@ -4391,9 +4395,8 @@ class Dataset(
         Data variables:
             temperature  (time) float64 25.0
 
-        1D and 2D data to show what the axis argument does:
-
         # 1D data
+
         >>> temperature_1d = xr.DataArray([25.0, 26.5, 24.8], dims="x")
         >>> dataset_1d = xr.Dataset({"temperature": temperature_1d})
         >>> dataset_1d
@@ -4413,6 +4416,7 @@ class Dataset(
             temperature  (time, x) float64 25.0 26.5 24.8
 
         # 2D data
+
         >>> temperature_2d = xr.DataArray(np.random.rand(3, 4), dims=("y", "x"))
         >>> dataset_2d = xr.Dataset({"temperature": temperature_2d})
         >>> dataset_2d
@@ -4420,7 +4424,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4)
         Dimensions without coordinates: y, x
         Data variables:
-            temperature  (y, x) float64 0.5488 0.7152 0.6028 ... 0.3834 0.7917 0.5289
+            temperature  (y, x) float64 0.9877 0.8724 0.1495 ... 0.4545 0.4989 0.8073
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
@@ -4429,12 +4433,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
         Data variables:
-            temperature  (y, x, time) float64 0.5488 0.7152 0.6028 ... 0.7917 0.5289
-
-        Returns
-        -------
-        expanded : Dataset
-            This object, but with additional dimension(s).
+            temperature  (y, x, time) float64 0.9877 0.8724 0.1495 ... 0.4989 0.8073
 
         See Also
         --------
