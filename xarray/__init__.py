@@ -36,7 +36,7 @@ from xarray.core.extensions import (
 from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
-from xarray.core.variable import Coordinate, IndexVariable, Variable, as_variable
+from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.util.print_versions import show_versions
 
 try:
