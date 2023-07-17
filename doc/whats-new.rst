@@ -27,11 +27,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 
-Deprecations
-~~~~~~~~~~~~
 
-- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -42,6 +38,8 @@ Documentation
 
 - Added page on the internal design of xarray objects.
   (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added page on the interoperability of xarray objects.
+  (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -51,6 +49,12 @@ v2023.07.0 (July 11, 2023)
 --------------------------
 
 This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
+
+Deprecations
+~~~~~~~~~~~~
+
+- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
