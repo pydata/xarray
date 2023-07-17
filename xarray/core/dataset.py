@@ -3135,7 +3135,7 @@ class Dataset(
         )
 
     def _reindex_callback(
-        self,
+        self: T_Dataset,
         aligner: alignment.Aligner,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
@@ -3143,7 +3143,7 @@ class Dataset(
         fill_value: Any,
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Callback called from ``Aligner`` to create a new reindexed Dataset."""
 
         new_variables = variables.copy()

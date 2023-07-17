@@ -7,6 +7,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Generic,
+    cast,
 )
 
 import numpy as np
@@ -22,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import T_DataArray
+from xarray.core.types import T_Coordinates, T_DataArray
 from xarray.core.utils import Frozen, ReprObject
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
@@ -48,7 +49,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         raise NotImplementedError()
 
     @property
-    def dims(self) -> Mapping[Hashable, int] | tuple[Hashable, ...]:
+    def dims(self) -> Frozen[Hashable, int] | tuple[Hashable, ...]:
         raise NotImplementedError()
 
     @property
@@ -217,7 +218,7 @@ class Coordinates(AbstractCoordinates):
         self,
         coords: Mapping[Any, Any] | None = None,
         indexes: Mapping[Any, Index] | None = None,
-    ):
+    ) -> None:
         # When coordinates are constructed directly, an internal Dataset is
         # created so that it is compatible with the DatasetCoordinates and
         # DataArrayCoordinates classes serving as a proxy for the data.
@@ -257,11 +258,11 @@ class Coordinates(AbstractCoordinates):
 
     @classmethod
     def _construct_direct(
-        cls,
+        cls: type[T_Coordinates],
         coords: dict[Any, Variable],
         indexes: dict[Any, Index],
         dims: dict[Any, int] | None = None,
-    ) -> Coordinates:
+    ) -> T_Coordinates:
         from xarray.core.dataset import Dataset
 
         obj = object.__new__(cls)
@@ -274,7 +275,9 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
-    def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: str) -> Coordinates:
+    def from_pandas_multiindex(
+        cls: type[T_Coordinates], midx: pd.MultiIndex, dim: str
+    ) -> T_Coordinates:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
         The returned coordinates can be directly assigned to a
@@ -306,7 +309,7 @@ class Coordinates(AbstractCoordinates):
         return self._data._coord_names
 
     @property
-    def dims(self) -> Mapping[Hashable, int] | tuple[Hashable, ...]:
+    def dims(self) -> Frozen[Hashable, int] | tuple[Hashable, ...]:
         """Mapping from dimension names to lengths or tuple of dimension names."""
         return self._data.dims
 
@@ -470,15 +473,15 @@ class Coordinates(AbstractCoordinates):
         self._update_coords(coords, indexes)
 
     def _overwrite_indexes(
-        self,
+        self: T_Coordinates,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] | None = None,
-    ) -> Coordinates:
-        results = self.to_dataset()._overwrite_indexes(indexes, coords)
-        return results.coords
+        variables: Mapping[Any, Variable] | None = None,
+    ) -> T_Coordinates:
+        results = self.to_dataset()._overwrite_indexes(indexes, variables)
+        return cast(T_Coordinates, results.coords)
 
     def _reindex_callback(
-        self,
+        self: T_Coordinates,
         aligner: Aligner,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
@@ -486,7 +489,7 @@ class Coordinates(AbstractCoordinates):
         fill_value: Any,
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
-    ) -> Coordinates:
+    ) -> T_Coordinates:
         """Callback called from ``Aligner`` to create a new reindexed Coordinates."""
         aligned = self.to_dataset()._reindex_callback(
             aligner,
@@ -497,15 +500,17 @@ class Coordinates(AbstractCoordinates):
             exclude_dims,
             exclude_vars,
         )
-        return aligned.coords
+        return cast(T_Coordinates, aligned.coords)
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
     def copy(
-        self, deep: bool = False, memo: dict[int, Any] | None = None
-    ) -> Coordinates:
+        self: T_Coordinates,
+        deep: bool = False,
+        memo: dict[int, Any] | None = None,
+    ) -> T_Coordinates:
         """Return a copy of this Coordinates object."""
         # do not copy indexes (may corrupt multi-coordinate indexes)
         # TODO: disable variables deepcopy? it may also be problematic when they
@@ -513,7 +518,7 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return Coordinates._construct_direct(
+        return type(self)._construct_direct(
             coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
         )
 
@@ -538,7 +543,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._coord_names
 
     @property
-    def dims(self) -> Mapping[Hashable, int]:
+    def dims(self) -> Frozen[Hashable, int]:
         return self._data.dims
 
     @property

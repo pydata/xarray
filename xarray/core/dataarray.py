@@ -520,7 +520,7 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] | None = None,
+        variables: Mapping[Any, Variable] | None = None,
         drop_coords: list[Hashable] | None = None,
         rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
@@ -528,8 +528,8 @@ class DataArray(
         if not indexes:
             return self
 
-        if coords is None:
-            coords = {}
+        if variables is None:
+            variables = {}
         if drop_coords is None:
             drop_coords = []
 
@@ -538,7 +538,7 @@ class DataArray(
         new_indexes = dict(self._indexes)
 
         for name in indexes:
-            new_coords[name] = coords[name]
+            new_coords[name] = variables[name]
             new_indexes[name] = indexes[name]
 
         for name in drop_coords:

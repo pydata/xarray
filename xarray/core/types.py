@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Literal,
+    Protocol,
     SupportsIndex,
     TypeVar,
     Union,
@@ -21,11 +22,14 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     from xarray.backends.common import BackendEntrypoint
+    from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.groupby import DataArrayGroupBy, GroupBy
-    from xarray.core.indexes import Index
+    from xarray.core.indexes import Index, Indexes
+    from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
 
     try:
@@ -43,18 +47,15 @@ if TYPE_CHECKING:
     except ImportError:
         ZarrArray = np.ndarray
 
-    # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
-    # Can be uncommented if using pyright though.
-    # import sys
+    import sys
 
-    # try:
-    #     if sys.version_info >= (3, 11):
-    #         from typing import Self
-    #     else:
-    #         from typing_extensions import Self
-    # except ImportError:
-    #     Self: Any = None
-    Self: Any = None
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        try:
+            from typing_extensions import Self
+        except ImportError:
+            Self: Any = None
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -93,10 +94,63 @@ else:
     DTypeLikeSave: Any = None
 
 
+class Alignable(Protocol):
+    """Represents any Xarray type that supports alignment.
+
+    It may be ``Dataset``, ``DataArray`` or ``Coordinates``. This protocol class
+    is needed since those types do not all have a common base class.
+
+    """
+
+    @property
+    def dims(self) -> Frozen[Hashable, int] | tuple[Hashable, ...]:
+        ...
+
+    @property
+    def sizes(self) -> Frozen[Hashable, int]:
+        ...
+
+    @property
+    def xindexes(self) -> Indexes[Index]:
+        ...
+
+    def _reindex_callback(
+        self,
+        aligner: Aligner,
+        dim_pos_indexers: dict[Hashable, Any],
+        variables: dict[Hashable, Variable],
+        indexes: dict[Hashable, Index],
+        fill_value: Any,
+        exclude_dims: frozenset[Hashable],
+        exclude_vars: frozenset[Hashable],
+    ) -> Self:
+        ...
+
+    def _overwrite_indexes(
+        self,
+        indexes: Mapping[Any, Index],
+        variables: Mapping[Any, Variable] | None = None,
+    ) -> Self:
+        ...
+
+    def __len__(self) -> int:
+        ...
+
+    def __iter__(self) -> Iterator[Hashable]:
+        ...
+
+    def copy(
+        self,
+        deep: bool = False,
+    ) -> Self:
+        ...
+
+
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
+T_Coordinates = TypeVar("T_Coordinates", bound="Coordinates")
 T_Array = TypeVar("T_Array", bound="AbstractArray")
 T_Index = TypeVar("T_Index", bound="Index")
 
@@ -105,6 +159,7 @@ T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray
 # Maybe we rename this to T_Data or something less Fortran-y?
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
+T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
