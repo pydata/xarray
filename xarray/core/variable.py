@@ -1083,9 +1083,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             ndata = as_compatible_data(data)
             if self.shape != ndata.shape:
                 raise ValueError(
-                    "Data shape {} must match shape of object {}".format(
-                        ndata.shape, self.shape
-                    )
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -3044,9 +3042,7 @@ class IndexVariable(Variable):
             ndata = as_compatible_data(data)
             if self.shape != ndata.shape:
                 raise ValueError(
-                    "Data shape {} must match shape of object {}".format(
-                        ndata.shape, self.shape
-                    )
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
