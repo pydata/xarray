@@ -14,6 +14,11 @@ Xarray is designed as a general purpose library and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
 domain specific logic arises.
 
+.. _internals.accessors.composition:
+
+Composition over Inheritance
+----------------------------
+
 One potential solution to this problem is to subclass Dataset and/or DataArray to
 add domain specific functionality. However, inheritance is not very robust. It's
 easy to inadvertently use internal APIs when subclassing, which means that your
@@ -27,6 +32,11 @@ task, even if most methods are only forwarding to xarray implementations.
 If you simply want the ability to call a function with the syntax of a
 method call, then the builtin :py:meth:`~xarray.DataArray.pipe` method (copied
 from pandas) may suffice.
+
+.. _internals.accessors.writing accessors:
+
+Writing Custom Accessors
+------------------------
 
 To resolve this issue for more complex cases, xarray has the
 :py:func:`~xarray.register_dataset_accessor` and
