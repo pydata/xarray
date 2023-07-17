@@ -27,6 +27,8 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 
+Deprecations
+~~~~~~~~~~~~
 
 
 Bug fixes
@@ -45,7 +47,9 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
-v2023.07.0 (July 11, 2023)
+.. _whats-new.2023.07.0:
+
+v2023.07.0 (July 17, 2023)
 --------------------------
 
 This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
