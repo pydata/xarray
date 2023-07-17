@@ -507,10 +507,10 @@ class Coordinates(AbstractCoordinates):
         return self._data._ipython_key_completions_()
 
     def copy(
-        self: T_Coordinates,
+        self,
         deep: bool = False,
         memo: dict[int, Any] | None = None,
-    ) -> T_Coordinates:
+    ) -> Coordinates:
         """Return a copy of this Coordinates object."""
         # do not copy indexes (may corrupt multi-coordinate indexes)
         # TODO: disable variables deepcopy? it may also be problematic when they
@@ -518,7 +518,7 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return type(self)._construct_direct(
+        return Coordinates._construct_direct(
             coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
         )
 
