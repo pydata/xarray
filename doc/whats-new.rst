@@ -30,8 +30,6 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
-- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -47,10 +45,18 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 
 
-v2023.07.0 (July 11, 2023)
+.. _whats-new.2023.07.0:
+
+v2023.07.0 (July 17, 2023)
 --------------------------
 
 This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
+
+Deprecations
+~~~~~~~~~~~~
+
+- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
