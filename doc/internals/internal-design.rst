@@ -96,7 +96,7 @@ This is why most users never see the ``Variable`` class underlying each coordina
 Lookups are performed by special :py:class:`~xarray.indexes.Index` objects, which are stored in a dict under the private ``_indexes`` attribute.
 Indexes must be associated with one or more coordinates, and essentially act by translating a query given in physical coordinate space
 (typically via the :py:meth:`~xarray.DataArray.sel` method) into a set of integer indices in array index space that can be used to index the underlying n-dimensional array-like ``data``.
-Indexing in array index space (typically performed via the :py:meth:`~xarray.DataArray.sel` method) does not require consulting an ``Index`` object.
+Indexing in array index space (typically performed via the :py:meth:`~xarray.DataArray.isel` method) does not require consulting an ``Index`` object.
 
 Finally a :py:class:`~xarray.DataArray` defines a :py:attr:`~xarray.DataArray.name` attribute, which refers to its data
 variable but is stored on the wrapping ``DataArray`` class.
