@@ -92,7 +92,7 @@ from arrays to reuse it as coordinate data.
 
 If the index data can be reused as coordinate data, the ``Index`` subclass
 should implement :py:meth:`Index.create_variables`. This method accepts a
-dictionary of :py:class:`Variable` objects as input (used for propagating
+dictionary of variable names as keys and :py:class:`Variable` objects as values (used for propagating
 variable metadata) and should return a dictionary of new :py:class:`Variable` or
 :py:class:`IndexVariable` objects.
 
