@@ -4424,7 +4424,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4)
         Dimensions without coordinates: y, x
         Data variables:
-            temperature  (y, x) float64 0.9877 0.8724 0.1495 ... 0.4545 0.4989 0.8073
+            temperature  (y, x) float64 0.5488 0.7152 0.6028 ... 0.3834 0.7917 0.5289
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
@@ -4433,7 +4433,7 @@ class Dataset(
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
         Data variables:
-            temperature  (y, x, time) float64 0.9877 0.8724 0.1495 ... 0.4989 0.8073
+            temperature  (y, x, time) float64 0.5488 0.7152 0.6028 ... 0.7917 0.5289
 
         See Also
         --------
