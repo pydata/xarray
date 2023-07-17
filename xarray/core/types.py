@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import sys
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -16,6 +17,17 @@ from typing import (
 import numpy as np
 import pandas as pd
 from packaging.version import Version
+
+try:
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+except ImportError:
+    if TYPE_CHECKING:
+        raise
+    else:
+        Self: Any = None
 
 if TYPE_CHECKING:
     from numpy._typing import _SupportsDType
@@ -46,16 +58,6 @@ if TYPE_CHECKING:
         from zarr.core import Array as ZarrArray
     except ImportError:
         ZarrArray = np.ndarray
-
-    import sys
-
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        try:
-            from typing_extensions import Self
-        except ImportError:
-            Self: Any = None
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -90,7 +92,6 @@ if TYPE_CHECKING:
         CFTimeDatetime = Any
     DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
-    Self: Any = None
     DTypeLikeSave: Any = None
 
 
