@@ -42,6 +42,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:func:`as_variable` now consistently includes the variable name in any exceptions
+  raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
 
 .. _whats-new.2023.07.0:
 
