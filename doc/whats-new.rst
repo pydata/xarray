@@ -29,6 +29,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+
 - `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
@@ -39,6 +40,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the internal design of xarray objects.
+  (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
