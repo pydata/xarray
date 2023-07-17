@@ -16,35 +16,6 @@ What's New
 
 .. _whats-new.2023.07.1:
 
-v2023.07.1 (unreleased)
------------------------
-
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
-- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
-
-Bug fixes
-~~~~~~~~~
-
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
-
 v2023.07.0 (July 17, 2023)
 --------------------------
 
