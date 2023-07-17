@@ -14,12 +14,49 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.07.1:
+
+v2023.07.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- :py:func:`as_variable` now consistently includes the variable name in any exceptions
+  raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
+
 .. _whats-new.2023.07.0:
 
-v2023.07.0 (July 11, 2023)
+v2023.07.0 (July 17, 2023)
 --------------------------
 
 This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
+
+Deprecations
+~~~~~~~~~~~~
+
+- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
