@@ -403,7 +403,5 @@ def _assert_internal_invariants(
         )
     else:
         raise TypeError(
-            "{} is not a supported type for xarray invariant checks".format(
-                type(xarray_obj)
-            )
+            f"{type(xarray_obj)} is not a supported type for xarray invariant checks"
         )
