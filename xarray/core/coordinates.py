@@ -203,10 +203,12 @@ class Coordinates(AbstractCoordinates):
     Parameters
     ----------
     coords: dict-like
-         Mapping of coordinate names to any objects that can be converted
-         into a :py:class:`Variable`.
+         Mapping where keys are coordinate names and values are objects that
+         can be converted into a :py:class:`~xarray.Variable` object
+         (see :py:func:`~xarray.as_variable`).
     indexes: dict-like
-         Mapping of coordinate names to :py:class:`~indexes.Index` objects.
+         Mapping of where keys are coordinate names and values are
+         :py:class:`~xarray.indexes.Index` objects.
 
     """
 
