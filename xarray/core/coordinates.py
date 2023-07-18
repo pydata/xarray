@@ -480,11 +480,8 @@ class Coordinates(AbstractCoordinates):
     ) -> Self:
         results = self.to_dataset()._overwrite_indexes(indexes, variables)
 
-        # cast ``DatasetCoordinates`` as ``Coordinates``
-        # TODO: not correct with
-        # ``results = align(dataset.coords, dataarray.coords, join='override')``
-        # but lets assume that those are edge cases until we get rid of DatasetCoordinates
-        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)?
+        # TODO: remove cast once we get rid of DatasetCoordinates
+        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)
         return cast(Self, results.coords)
 
     def _reindex_callback(
@@ -508,10 +505,8 @@ class Coordinates(AbstractCoordinates):
             exclude_vars,
         )
 
-        # cast ``DatasetCoordinates`` as ``Coordinates``
-        # TODO: not correct with ``results = align(dataset.coords, dataarray.coords)``
-        # but lets assume that those are edge cases until we get rid of DatasetCoordinates
-        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)?
+        # TODO: remove cast once we get rid of DatasetCoordinates
+        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)
         return cast(Self, aligned.coords)
 
     def _ipython_key_completions_(self):
