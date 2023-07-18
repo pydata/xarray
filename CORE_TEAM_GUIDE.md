@@ -58,11 +58,13 @@ guidelines for how to do that.
 ## All contributors are treated the same
 
 You should now have gained the ability to merge or approve
-other contributors' pull requests.  Much like nuclear launch keys, it
-is a shared power: you must merge *only after* another core has
-approved the pull request, *and* after you yourself have carefully
-reviewed it.  (See [Reviewing](#reviewing) and especially
+other contributors' pull requests.  Merging contributions is a shared power:
+only merge contributions you yourself have carefully reviewed, and that are
+clear improvements for the project. When in doubt, and especially for more
+complex changes, wait until at least one other core team member has approved.
+(See [Reviewing](#reviewing) and especially
 [Merge Only Changes You Understand](#merge-only-changes-you-understand) below.)
+
 It should also be considered best practice to leave a reasonable (24hr) time window
 after approval before merge to ensure that other core team members have a reasonable
 chance to weigh in.
