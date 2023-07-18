@@ -46,6 +46,31 @@ You should also continue to make your own pull requests as before and in accorda
 with the [general contributing guide](https://docs.xarray.dev/en/stable/contributing.html). These pull requests still
 require the approval of another core developer before they can be merged.
 
+## Tasks
+
+Xarray values a wide range of contributions, only some of which involve writing code.
+As such, we do not currently make a distinction between a "core developer", "maintainer",
+or "triage team member" as some projects (e.g. [pandas](https://pandas.pydata.org/docs/development/maintaining.html)) do.
+
+Xarray is mostly a volunteer project, so these tasks shouldn’t be read as “expectations”.
+**There are no strict expectations**, other than to adhere to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
+Rather, the tasks that follow are general descriptions of what it might mean to be a core dev/maintainer.
+
+- Triage newly filed issues (see Issue triage),
+- Review newly opened pull requests,
+- Respond to updates on existing issues and pull requests,
+- Drive discussion and decisions on stalled issues and pull requests,
+- Provide experience / wisdom on API design questions to ensure consistency and maintainability,
+- Project organization (run / attend developer meetings, represent xarray),
+- Project evangelism (advertise xarray to new users / collaborate with maintainers of packages which could interoperate with xarray),
+- Project fundraising (help write and administrate grants that will support xarray),
+- Improve documentation or tutorials,
+- Maintain xarray's various Continuous Integration Workflows,
+- Write code that goes into xarray `main`.
+
+Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blog/2019/05/18/maintainer) may be interesting background reading,
+but should not be taken to strictly apply to the Xarray project.
+
 ## Reviewing
 
 ### How to conduct a good review
