@@ -1,13 +1,13 @@
-> **_Note:_**  This Core Developer Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html).
+> **_Note:_**  This Core Team Member Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html).
 
-# Core Developer guide
+# Core Team Member Guide
 
-Welcome, new core developer!  The core team appreciate the quality of
+Welcome, new core team member!  The core team appreciate the quality of
 your work, and enjoy working with you; we have therefore invited you
 to join us.  Thank you for your numerous contributions to the project
 so far.
 
-You can see a list of all the current core developers on our
+You can see a list of all the current core team members on our
 [@pydata/xarray](https://github.com/orgs/pydata/teams/xarray)
 GitHub team. You should now be on that list too.
 This document offers guidelines for your new role.
@@ -18,14 +18,14 @@ guidelines for how to do that.
 
 ## All contributors are treated the same
 
-As a core developer, you gain the ability to merge or approve
+As a core team member, you gain the ability to merge or approve
 other contributors' pull requests.  Much like nuclear launch keys, it
 is a shared power: you must merge *only after* another core has
 approved the pull request, *and* after you yourself have carefully
 reviewed it.  (See [Reviewing](#reviewing) and especially
 [Merge Only Changes You Understand](#merge-only-changes-you-understand) below.)
 It should also be considered best practice to leave a reasonable (24hr) time window
-after approval before merge to ensure that other core developers have a reasonable
+after approval before merge to ensure that other core team members have a reasonable
 chance to weigh in.
 Adding the "plan to merge" label notifies developers of the imminent merge.
 
@@ -44,17 +44,17 @@ to ensure a clean git history.
 
 You should also continue to make your own pull requests as before and in accordance
 with the [general contributing guide](https://docs.xarray.dev/en/stable/contributing.html). These pull requests still
-require the approval of another core developer before they can be merged.
+require the approval of another core team member before they can be merged.
 
 ## Tasks
 
 Xarray values a wide range of contributions, only some of which involve writing code.
-As such, we do not currently make a distinction between a "core developer", "maintainer",
+As such, we do not currently make a distinction between a "core team member", "core developer", "maintainer",
 or "triage team member" as some projects do (e.g. [pandas](https://pandas.pydata.org/docs/development/maintaining.html)).
 
 Xarray is mostly a volunteer project, so these tasks shouldn’t be read as “expectations”.
 **There are no strict expectations**, other than to adhere to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
-Rather, the tasks that follow are general descriptions of what it might mean to be a core dev/maintainer.
+Rather, the tasks that follow are general descriptions of what it might mean to be a core team member:
 
 - Triage newly filed issues,
 - Review newly opened pull requests,
@@ -72,12 +72,12 @@ Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blo
 but should not be taken to strictly apply to the Xarray project.
 
 It is natural that your available time and enthusiasm for the project will wax and wane - this is fine and expected!
-It is also common for core developers to have a "niche" - a particular part of the codebase they have specific expertise
-with, or certain type of task above which they primarily perform.
+It is also common for core team members to have a "niche" - a particular part of the codebase they have specific expertise
+with, or certain types of task above which they primarily perform.
 
 If however you feel that is unlikely you will be able to be actively contribute in the foreseeable future
 (or especially if you won't be available to answer questions about pieces of code that you wrote previously)
-then you may want to consider letting us know you would rather be listed as an "Emeritus Core Developer",
+then you may want to consider letting us know you would rather be listed as an "Emeritus Core Team Member",
 as this would help us in evaluating the overall health of the project.
 
 ## Reviewing
@@ -97,7 +97,7 @@ contributor, point them to our development guide, or other GitHub
 workflow tutorials around the web. Do not assume that they know how
 GitHub works (many don't realize that adding a commit
 automatically updates a pull request, for example). Gentle, polite, kind
-encouragement can make the difference between a new core developer and
+encouragement can make the difference between a new core team member and
 an abandoned pull request.
 
 When reviewing, focus on the following:
@@ -194,7 +194,7 @@ Where possible we prefer to point people towards asynchronous forms of communica
 like github issues instead of realtime chat options as they are far easier
 for a global community to consume and refer back to.
 
-We also have a private mailing list for core developers
+We also have a private mailing list for core team members
 `xarray-core-team@googlegroups.com` which is sparingly used for discussions
 that are required to be private, such as voting on new core members.
 
@@ -209,15 +209,15 @@ community values. After nomination voting will happen on a private mailing list.
 While it is expected that most votes will be unanimous, a two-thirds majority of
 the cast votes is enough.
 
-Core developers can choose to become emeritus core developers and suspend
+Core team members can choose to become emeritus core team members and suspend
 their approval and voting rights until they become active again.
 
 ## Contribute to this guide (!)
 
-This guide reflects the experience of the current core developers.  We
+This guide reflects the experience of the current core team members.  We
 may well have missed things that, by now, have become second
 nature—things that you, as a new team member, will spot more easily.
-Please ask the other core developers if you have any questions, and
+Please ask the other core team members if you have any questions, and
 submit a pull request with insights gained.
 
 ## Conclusion
