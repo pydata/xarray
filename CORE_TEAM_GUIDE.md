@@ -1,4 +1,4 @@
-> **_Note:_**  This Core Team Member Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html).
+> **_Note:_**  This Core Team Member Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html) and the [Pandas maintainers guide](https://pandas.pydata.org/docs/development/maintaining.html).
 
 # Core Team Member Guide
 
@@ -58,7 +58,65 @@ If however you feel that is unlikely you will be able to be actively contribute 
 then you may want to consider letting us know you would rather be listed as an "Emeritus Core Team Member",
 as this would help us in evaluating the overall health of the project.
 
-## Code contributions
+## Issue triage
+
+One of the main ways you might spend your contribution time is by responding to or triaging new issues.
+Here’s a typical workflow for triaging a newly opened issue or discussion:
+
+1. **Thank the reporter for opening an issue.**
+
+   The issue tracker is many people’s first interaction with the xarray project itself, beyond just using the library.
+   As such, we want it to be a welcoming, pleasant experience.
+
+2. **Is the necessary information provided?**
+
+   Ideally reporters would fill out the issue template, but many don’t. If crucial information (like the version of xarray they used),
+   is missing feel free to ask for that and label the issue with “Needs info”.
+   The report should follow the [guidelines for xarray discussions](https://github.com/pydata/xarray/discussions/5404).
+   You may want to link to that if they didn’t follow the template.
+
+   Make sure that the title accurately reflects the issue. Edit it yourself if it’s not clear.
+   Remember also that issues can be converted to discussions and vice versa if appropriate.
+
+3. **Is this a duplicate issue?**
+
+   We have many open issues. If a new issue is clearly a duplicate, label the new issue as “Duplicate” assign the milestone “No Action”, and close the issue with a link to the original issue. Make sure to still thank the reporter, and encourage them to chime in on the original issue, and perhaps try to fix it.
+
+   If the new issue provides relevant information, such as a better or slightly different example, add it to the original issue as a comment or an edit to the original post.
+
+4. **Is the issue minimal and reproducible?**
+
+   For bug reports, we ask that the reporter provide a minimal reproducible example.
+   See [minimal-bug-reports](https://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) for a good explanation.
+   If the example is not reproducible, or if it’s clearly not minimal, feel free to ask the reporter if they can provide and example or simplify the provided one.
+   Do acknowledge that writing minimal reproducible examples is hard work. If the reporter is struggling, you can try to write one yourself and we’ll edit the original post to include it.
+
+   If a reproducible example can’t be provided, add the “Needs info” label.
+
+   If a reproducible example is provided, but you see a simplification, edit the original post with your simpler reproducible example.
+
+5. **Is this a clearly defined feature request?**
+
+   Generally, xarray prefers to discuss and design new features in issues, before a pull request is made.
+   Encourage the submitter to include a proposed API for the new feature. Having them write a full docstring is a good way to pin down specifics.
+
+   We may need a discussion from several xarray maintainers before deciding whether the proposal is in scope for xarray.
+
+6. **Is this a usage question?**
+
+   We prefer that usage questions are asked on StackOverflow with the pandas tag. https://stackoverflow.com/questions/tagged/pandas
+
+   If it’s easy to answer, feel free to link to the relevant documentation section, let them know that in the future this kind of question should be on StackOverflow, and close the issue.
+
+7. **What labels and milestones should I add?**
+
+   Apply the relevant labels. This is a bit of an art, and comes with experience. Look at similar issues to get a feel for how things are labeled.
+   Labels used for labelling issues that relate to particular features or parts of the codebase normally have the form `topic-<SOMETHING>`.
+
+   If the issue is clearly defined and the fix seems relatively straightforward, label the issue as `contrib-good-first-issue`.
+
+
+## Code review and contributions
 
 As a core team member, you are a representative of the project,
 and trusted to make decisions that will serve the long term interests
@@ -66,7 +124,7 @@ of all users. You also gain the responsibility of shepherding
 other contributors through the review process; here are some
 guidelines for how to do that.
 
-## All contributors are treated the same
+### All contributors are treated the same
 
 You should now have gained the ability to merge or approve
 other contributors' pull requests.  Merging contributions is a shared power:
