@@ -27,6 +27,7 @@ reviewed it.  (See [Reviewing](#reviewing) and especially
 It should also be considered best practice to leave a reasonable (24hr) time window
 after approval before merge to ensure that other core developers have a reasonable
 chance to weigh in.
+Adding the "plan to merge" label notifies developers of the imminent merge.
 
 We are also an international community, with contributors from many different time zones,
 some of whom will only contribute during their working hours, others who might only be able
