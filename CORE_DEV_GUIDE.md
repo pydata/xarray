@@ -1,6 +1,5 @@
-> **_NOTE:_**  This Core Developer Guide was adapted from the [Napari Project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html).
+> **_Note:_**  This Core Developer Guide was adapted from the [napari project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html).
 
-(core-dev-guide)=
 # Core Developer guide
 
 Welcome, new core developer!  The core team appreciate the quality of
@@ -50,19 +49,19 @@ require the approval of another core developer before they can be merged.
 
 Xarray values a wide range of contributions, only some of which involve writing code.
 As such, we do not currently make a distinction between a "core developer", "maintainer",
-or "triage team member" as some projects (e.g. [pandas](https://pandas.pydata.org/docs/development/maintaining.html)) do.
+or "triage team member" as some projects do (e.g. [pandas](https://pandas.pydata.org/docs/development/maintaining.html)).
 
 Xarray is mostly a volunteer project, so these tasks shouldn’t be read as “expectations”.
 **There are no strict expectations**, other than to adhere to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
 Rather, the tasks that follow are general descriptions of what it might mean to be a core dev/maintainer.
 
-- Triage newly filed issues (see Issue triage),
+- Triage newly filed issues,
 - Review newly opened pull requests,
 - Respond to updates on existing issues and pull requests,
 - Drive discussion and decisions on stalled issues and pull requests,
 - Provide experience / wisdom on API design questions to ensure consistency and maintainability,
 - Project organization (run / attend developer meetings, represent xarray),
-- Project evangelism (advertise xarray to new users / collaborate with maintainers of packages which could interoperate with xarray),
+- Project evangelism (advertise xarray to new users / collaborate with maintainers of other packages which could interface with xarray),
 - Project fundraising (help write and administrate grants that will support xarray),
 - Improve documentation or tutorials,
 - Maintain xarray's various Continuous Integration Workflows,
@@ -70,6 +69,15 @@ Rather, the tasks that follow are general descriptions of what it might mean to 
 
 Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blog/2019/05/18/maintainer) may be interesting background reading,
 but should not be taken to strictly apply to the Xarray project.
+
+It is natural that your available time and enthusiasm for the project will wax and wane - this is fine and expected!
+It is also common for core developers to have a "niche" - a particular part of the codebase they have specific expertise
+with, or certain type of task above which they primarily perform.
+
+If however you feel that is unlikely you will be able to be actively contribute in the foreseeable future
+(or especially if you won't be available to answer questions about pieces of code that you wrote previously)
+then you may want to consider letting us know you would rather be listed as an "Emeritus Core Developer",
+as this would help us in evaluating the overall health of the project.
 
 ## Reviewing
 
