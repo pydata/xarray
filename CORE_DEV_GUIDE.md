@@ -140,11 +140,9 @@ that responsibility seriously.
 As a core member, you should be familiar with community and developer
 resources such as:
 
-- Our [contributor guide](xarray-contributing).
-- Our [code of conduct](xarray-coc).
-- Our [governance](xarray-governance).
-- Our [mission and values](mission-and-values).
-- Our [benchmarking guide](xarray-benchmarks).
+- Our [contributor guide](https://docs.xarray.dev/en/stable/contributing.html).
+- Our [code of conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
+- Our [philosophy and development roadmap](https://docs.xarray.dev/en/stable/roadmap.html).
 - [PEP8](https://peps.python.org/pep-0008/) for Python style.
 - [PEP257](https://peps.python.org/pep-0257/) and the
    [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
@@ -152,15 +150,15 @@ resources such as:
 - [`pre-commit`](https://pre-commit.com) hooks for autoformatting.
 - [`black`](https://github.com/psf/black) autoformatting.
 - [`flake8`](https://github.com/PyCQA/flake8) linting.
-- [#xarray on image.sc](https://forum.image.sc/tag/xarray).
-- [#xarray](https://twitter.com/search?q=%23xarray&f=live) and [@xarray_imaging](https://twitter.com/xarray_imaging) on twitter.
-- [xarray zulip](https://xarray.zulipchat.com/) community chat channel.
+- [python-xarray](https://stackoverflow.com/questions/tagged/python-xarray) on Stack Overflow.
+- [@xarray_dev](https://twitter.com/xarray_dev) on Twitter.
+- [xarray-dev](https://discord.gg/bsSGdwBn) discord community (normally only used for remote synchronous chat during sprints).
 
-You are not required to monitor the social resources.
+You are not required to monitor any of the social resources.
 
 Where possible we prefer to point people towards asynchronous forms of communication
-like forum posts and github issues instead of realtime chat options as they are easier
-for a global community to consume.
+like github issues instead of realtime chat options as they are far easier
+for a global community to consume and refer back to.
 
 We also have a private mailing list for core developers
 `xarray-core-team@googlegroups.com` which is sparingly used for discussions
