@@ -2,12 +2,11 @@
 
 # Core Team Member Guide
 
-Welcome, new core team member!  The core team appreciate the quality of
-your work, and enjoy working with you; we have therefore invited you
-to join us.  Thank you for your numerous contributions to the project
+Welcome, new core team member!  We appreciate the quality of
+your work, and enjoy working with you!  Thank you for your numerous contributions to the project
 so far.
 
-By accepting you are not required to commit to doing any more work - xarray is a volunteer project,
+By accepting you are **not required to commit to doing any more work** - xarray is a volunteer project,
 and we value the contributions you have made already.
 
 You can see a list of all the current core team members on our
@@ -26,6 +25,7 @@ Xarray is mostly a volunteer project, so these tasks shouldn’t be read as “e
 **There are no strict expectations**, other than to adhere to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
 Rather, the tasks that follow are general descriptions of what it might mean to be a core team member:
 
+- Facilitate a welcoming environment for those who file issue, make pull requests, and open discussion topics,
 - Triage newly filed issues,
 - Review newly opened pull requests,
 - Respond to updates on existing issues and pull requests,
@@ -38,10 +38,12 @@ Rather, the tasks that follow are general descriptions of what it might mean to 
 - Project fundraising (help write and administrate grants that will support xarray),
 - Improve documentation or tutorials (especially on [`tutorial.xarray.dev`](https://tutorial.xarray.dev/)),
 - Presenting or running tutorials (such as those we have given at the SciPy conference),
-- Maintain the [`xarray.dev`](https://xarray.dev/) landing page and website, the [code for which is here](https://github.com/xarray-contrib/xarray.dev),
+- Help maintain the [`xarray.dev`](https://xarray.dev/) landing page and website, the [code for which is here](https://github.com/xarray-contrib/xarray.dev),
 - Write blog posts on the [xarray blog](https://xarray.dev/blog),
-- Maintain xarray's various Continuous Integration Workflows,
-- Write code that goes into xarray `main`.
+- Help maintain xarray's various Continuous Integration Workflows,
+- Contribute to the xarray codebase.
+- Help maintain a regular release schedule (we aim for one or more releases per month)
+- Attend the bi-weekly community meeting ([issue](https://github.com/pydata/xarray/issues/4001)).
 
 (Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blog/2019/05/18/maintainer) may be
 interesting background reading, but should not be taken to strictly apply to the Xarray project.)
@@ -114,7 +116,8 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
    Labels used for labelling issues that relate to particular features or parts of the codebase normally have the form `topic-<SOMETHING>`.
 
    If the issue is clearly defined and the fix seems relatively straightforward, label the issue as `contrib-good-first-issue`.
-
+8. **Where should the poster look to fix the issue?**
+    If you can, it is very helpful to point to the approximate location in the codebase where a contributor might begin to fix the issue. This helps easy the way for new contributors to the repository.
 
 ## Code review and contributions
 
@@ -137,7 +140,7 @@ complex changes, wait until at least one other core team member has approved.
 It should also be considered best practice to leave a reasonable (24hr) time window
 after approval before merge to ensure that other core team members have a reasonable
 chance to weigh in.
-Adding the "plan to merge" label notifies developers of the imminent merge.
+Adding the `plan-to-merge` label notifies developers of the imminent merge.
 
 We are also an international community, with contributors from many different time zones,
 some of whom will only contribute during their working hours, others who might only be able
@@ -226,7 +229,8 @@ branch yourself, force-push to their branch, and advise the contributor to force
 no longer active, you may take over their branch by submitting a new pull
 request and closing the original, including a reference to the original pull
 request. In doing so, ensure you communicate that you are not throwing the
-contributor's work away!
+contributor's work away! If appropriate it is a good idea to acknowledge other contributions
+to the pull request using the `Co-authored-by` [syntax](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors) in the commit message.
 
 ### Merge only changes you understand
 
@@ -242,6 +246,8 @@ for added insight where needed, and see this as a great learning opportunity.
 While we collectively "own" any patches (and bugs!) that become part
 of the code base, you are vouching for changes you merge.  Please take
 that responsibility seriously.
+
+Feel free to ping other active maintainers with any questions you may have.
 
 ## Further resources
 
@@ -275,7 +281,7 @@ This meeting is public, so we occasionally have non-core team members join us.
 
 We also have a private mailing list for core team members
 `xarray-core-team@googlegroups.com` which is sparingly used for discussions
-that are required to be private, such as voting on new core members.
+that are required to be private, such as nominating new core members and discussing financial issues.
 
 ## Inviting new core members
 
@@ -284,7 +290,8 @@ While there is no hard-and-fast rule about who can be nominated, ideally,
 they should have: been part of the project for at least two months, contributed
 significant changes of their own, contributed to the discussion and
 review of others' work, and collaborated in a way befitting our
-community values. After nomination voting will happen on a private mailing list.
+community values. **We strongly encourage nominating anyone who has made significant non-code contributions
+to the Xarray community in any way**. After nomination voting will happen on a private mailing list.
 While it is expected that most votes will be unanimous, a two-thirds majority of
 the cast votes is enough.
 
