@@ -2,12 +2,11 @@
 
 # Core Team Member Guide
 
-Welcome, new core team member!  We appreciate the quality of
-your work, and enjoy working with you!  Thank you for your numerous contributions to the project
-so far.
+Welcome, new core team member!  We appreciate the quality of your work, and enjoy working with you!
+Thank you for your numerous contributions to the project so far.
 
-By accepting you are **not required to commit to doing any more work** - xarray is a volunteer project,
-and we value the contributions you have made already.
+By accepting the invitation to become a core team member you are **not required to commit to doing any more work** -
+xarray is a volunteer project, and we value the contributions you have made already.
 
 You can see a list of all the current core team members on our
 [@pydata/xarray](https://github.com/orgs/pydata/teams/xarray)
@@ -25,13 +24,13 @@ Xarray is mostly a volunteer project, so these tasks shouldn’t be read as “e
 **There are no strict expectations**, other than to adhere to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
 Rather, the tasks that follow are general descriptions of what it might mean to be a core team member:
 
-- Facilitate a welcoming environment for those who file issue, make pull requests, and open discussion topics,
+- Facilitate a welcoming environment for those who file issues, make pull requests, and open discussion topics,
 - Triage newly filed issues,
 - Review newly opened pull requests,
 - Respond to updates on existing issues and pull requests,
 - Drive discussion and decisions on stalled issues and pull requests,
 - Provide experience / wisdom on API design questions to ensure consistency and maintainability,
-- Project organization (run / attend developer meetings, coordinate with sponsors),
+- Project organization (run developer meetings, coordinate with sponsors),
 - Project evangelism (advertise xarray to new users),
 - Community contact (represent xarray in user communities such as [Pangeo](https://pangeo.io/)),
 - Key project contact (represent xarray's perspective within key related projects like NumPy, Zarr or Dask),
@@ -41,15 +40,15 @@ Rather, the tasks that follow are general descriptions of what it might mean to 
 - Help maintain the [`xarray.dev`](https://xarray.dev/) landing page and website, the [code for which is here](https://github.com/xarray-contrib/xarray.dev),
 - Write blog posts on the [xarray blog](https://xarray.dev/blog),
 - Help maintain xarray's various Continuous Integration Workflows,
+- Help maintain a regular release schedule (we aim for one or more releases per month),
+- Attend the bi-weekly community meeting ([issue](https://github.com/pydata/xarray/issues/4001)),
 - Contribute to the xarray codebase.
-- Help maintain a regular release schedule (we aim for one or more releases per month)
-- Attend the bi-weekly community meeting ([issue](https://github.com/pydata/xarray/issues/4001)).
 
 (Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blog/2019/05/18/maintainer) may be
 interesting background reading, but should not be taken to strictly apply to the Xarray project.)
 
-Obviously you are not expected to contribute in all, or even more than one of these ways! They are listed so as to
-indicate the many types of work that go into maintaining xarray.
+Obviously you are not expected to contribute in all (or even more than one) of these ways!
+They are listed so as to indicate the many types of work that go into maintaining xarray.
 
 It is natural that your available time and enthusiasm for the project will wax and wane - this is fine and expected!
 It is also common for core team members to have a "niche" - a particular part of the codebase they have specific expertise
@@ -68,12 +67,12 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
 1. **Thank the reporter for opening an issue.**
 
    The issue tracker is many people’s first interaction with the xarray project itself, beyond just using the library.
-   As such, we want it to be a welcoming, pleasant experience.
+   It may also be their first open-source contribution of any kind. As such, we want it to be a welcoming, pleasant experience.
 
 2. **Is the necessary information provided?**
 
    Ideally reporters would fill out the issue template, but many don’t. If crucial information (like the version of xarray they used),
-   is missing feel free to ask for that and label the issue with “Needs info”.
+   is missing feel free to ask for that and label the issue with “needs info”.
    The report should follow the [guidelines for xarray discussions](https://github.com/pydata/xarray/discussions/5404).
    You may want to link to that if they didn’t follow the template.
 
@@ -82,7 +81,8 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
 
 3. **Is this a duplicate issue?**
 
-   We have many open issues. If a new issue is clearly a duplicate, label the new issue as “Duplicate” assign the milestone “No Action”, and close the issue with a link to the original issue. Make sure to still thank the reporter, and encourage them to chime in on the original issue, and perhaps try to fix it.
+   We have many open issues. If a new issue is clearly a duplicate, label the new issue as “duplicate”, and close the issue with a link to the original issue.
+   Make sure to still thank the reporter, and encourage them to chime in on the original issue, and perhaps try to fix it.
 
    If the new issue provides relevant information, such as a better or slightly different example, add it to the original issue as a comment or an edit to the original post.
 
@@ -93,7 +93,8 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
    If the example is not reproducible, or if it’s clearly not minimal, feel free to ask the reporter if they can provide and example or simplify the provided one.
    Do acknowledge that writing minimal reproducible examples is hard work. If the reporter is struggling, you can try to write one yourself and we’ll edit the original post to include it.
 
-   If a reproducible example can’t be provided, add the “Needs info” label.
+   If a nice reproducible example has been provided, thank the reporter for that.
+   If a reproducible example can’t be provided, add the “needs mcve” label.
 
    If a reproducible example is provided, but you see a simplification, edit the original post with your simpler reproducible example.
 
@@ -106,7 +107,7 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
 
 6. **Is this a usage question?**
 
-   We prefer that usage questions are asked on StackOverflow with the pandas tag. https://stackoverflow.com/questions/tagged/pandas
+   We prefer that usage questions are asked on StackOverflow with the [`python-xarray` tag](https://stackoverflow.com/questions/tagged/python-xarray).
 
    If it’s easy to answer, feel free to link to the relevant documentation section, let them know that in the future this kind of question should be on StackOverflow, and close the issue.
 
@@ -116,8 +117,12 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
    Labels used for labelling issues that relate to particular features or parts of the codebase normally have the form `topic-<SOMETHING>`.
 
    If the issue is clearly defined and the fix seems relatively straightforward, label the issue as `contrib-good-first-issue`.
+   You can also remove the `needs triage` label that is automatically applied to all newly-opened issues.
+
 8. **Where should the poster look to fix the issue?**
-    If you can, it is very helpful to point to the approximate location in the codebase where a contributor might begin to fix the issue. This helps easy the way for new contributors to the repository.
+
+   If you can, it is very helpful to point to the approximate location in the codebase where a contributor might begin to fix the issue.
+   This helps ease the way in for new contributors to the repository.
 
 ## Code review and contributions
 
@@ -167,7 +172,7 @@ constructive criticism on ideas and implementations, and remind
 yourself of how it felt when your own work was being evaluated as a
 novice.
 
-`xarray` strongly values mentorship in code review.  New users
+``xarray`` strongly values mentorship in code review.  New users
 often need more handholding, having little to no git
 experience. Repeat yourself liberally, and, if you don’t recognize a
 contributor, point them to our development guide, or other GitHub
@@ -218,7 +223,8 @@ do so.
 
 Other changes may be *nitpicky*: spelling mistakes, formatting,
 etc. Do not insist contributors make these changes, but instead you should offer
-to make these changes by [pushing to their branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/committing-changes-to-a-pull-request-branch-created-from-a-fork), or using GitHub’s [suggestion](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request)
+to make these changes by [pushing to their branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/committing-changes-to-a-pull-request-branch-created-from-a-fork),
+or using GitHub’s [suggestion](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request)
 [feature](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/incorporating-feedback-in-your-pull-request), and
 be prepared to make them yourself if needed. Using the suggestion feature is preferred because
 it gives the contributor a choice in whether to accept the changes.
@@ -230,7 +236,8 @@ no longer active, you may take over their branch by submitting a new pull
 request and closing the original, including a reference to the original pull
 request. In doing so, ensure you communicate that you are not throwing the
 contributor's work away! If appropriate it is a good idea to acknowledge other contributions
-to the pull request using the `Co-authored-by` [syntax](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors) in the commit message.
+to the pull request using the `Co-authored-by`
+[syntax](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors) in the commit message.
 
 ### Merge only changes you understand
 
