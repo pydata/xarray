@@ -207,7 +207,7 @@ Looking at the private attribute again shows how this indexing information was p
 
 .. ipython:: python
 
-    var._data
+    var.isel(time=0)._data
 
 .. note::
 
