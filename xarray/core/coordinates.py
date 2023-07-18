@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import T_DataArray
+from xarray.core.types import Self, T_DataArray
 from xarray.core.utils import Frozen, ReprObject
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import Self
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
