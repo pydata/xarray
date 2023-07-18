@@ -31,7 +31,9 @@ Rather, the tasks that follow are general descriptions of what it might mean to 
 - Project organization (run / attend developer meetings, represent xarray),
 - Project evangelism (advertise xarray to new users / collaborate with maintainers of other packages which could interface with xarray),
 - Project fundraising (help write and administrate grants that will support xarray),
-- Improve documentation or tutorials,
+- Improve documentation or tutorials (especially on [`tutorial.xarray.dev`](https://tutorial.xarray.dev/)),
+- Maintain the [`xarray.dev`](https://xarray.dev/) landing page and website, the [code for which is here](https://github.com/xarray-contrib/xarray.dev),
+- Write blog posts on the [xarray blog](https://xarray.dev/blog),
 - Maintain xarray's various Continuous Integration Workflows,
 - Write code that goes into xarray `main`.
 
