@@ -66,9 +66,7 @@ class BaseInterpolator:
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self):
-        return "{type}: method={method}".format(
-            type=self.__class__.__name__, method=self.method
-        )
+        return f"{self.__class__.__name__}: method={self.method}"
 
 
 class NumpyInterpolator(BaseInterpolator):

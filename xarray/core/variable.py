@@ -125,17 +125,15 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
     elif isinstance(obj, tuple):
         if isinstance(obj[1], DataArray):
             raise TypeError(
-                "Using a DataArray object to construct a variable is"
+                f"Variable {name!r}: Using a DataArray object to construct a variable is"
                 " ambiguous, please extract the data using the .data property."
             )
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
-            # use .format() instead of % because it handles tuples consistently
             raise error.__class__(
-                "Could not convert tuple of form "
-                "(dims, data[, attrs, encoding]): "
-                "{} to Variable.".format(obj)
+                f"Variable {name!r}: Could not convert tuple of form "
+                f"(dims, data[, attrs, encoding]): {obj} to Variable."
             )
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
@@ -154,7 +152,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
         obj = Variable(name, data, fastpath=True)
     else:
         raise TypeError(
-            "unable to convert object into a variable without an "
+            f"Variable {name!r}: unable to convert object into a variable without an "
             f"explicit list of dimensions: {obj!r}"
         )
 
@@ -1085,9 +1083,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             ndata = as_compatible_data(data)
             if self.shape != ndata.shape:
                 raise ValueError(
-                    "Data shape {} must match shape of object {}".format(
-                        ndata.shape, self.shape
-                    )
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -3046,9 +3042,7 @@ class IndexVariable(Variable):
             ndata = as_compatible_data(data)
             if self.shape != ndata.shape:
                 raise ValueError(
-                    "Data shape {} must match shape of object {}".format(
-                        ndata.shape, self.shape
-                    )
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)

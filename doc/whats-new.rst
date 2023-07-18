@@ -42,10 +42,15 @@ Documentation
   (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added page on the interoperability of xarray objects.
   (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add docstrings for the :py:class:`Index` base class and add some documentation on how to
+  create custom, Xarray-compatible indexes (:pull:`6975`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:func:`as_variable` now consistently includes the variable name in any exceptions
+  raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
 
 .. _whats-new.2023.07.0:
 
@@ -797,6 +802,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
 - Update merge docstrings. (:issue:`6935`, :pull:`7033`)
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)

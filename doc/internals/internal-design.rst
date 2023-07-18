@@ -1,3 +1,13 @@
+.. ipython:: python
+    :suppress:
+
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+
+    np.random.seed(123456)
+    np.set_printoptions(threshold=20)
+
 .. _internal design:
 
 Internal Design
@@ -135,4 +145,80 @@ coordinates before returning.
 Lazy Indexing Classes
 ---------------------
 
-TODO
+Lazy Loading
+~~~~~~~~~~~~
+
+If we open a ``Variable`` object from disk using :py:func:`~xarray.open_dataset` we can see that the actual values of
+the array wrapped by the data variable are not displayed.
+
+.. ipython:: python
+
+    da = xr.tutorial.open_dataset("air_temperature")["air"]
+    var = da.variable
+    var
+
+We can see the size, and the dtype of the underlying array, but not the actual values.
+This is because the values have not yet been loaded.
+
+If we look at the private attribute :py:meth:`~xarray.Variable._data` containing the underlying array object, we see
+something interesting:
+
+.. ipython:: python
+
+    var._data
+
+You're looking at one of xarray's internal `Lazy Indexing Classes`. These powerful classes are hidden from the user,
+but provide important functionality.
+
+Calling the public :py:attr:`~xarray.Variable.data` property loads the underlying array into memory.
+
+.. ipython:: python
+
+    var.data
+
+This array is now cached, which we can see by accessing the private attribute again:
+
+.. ipython:: python
+
+    var._data
+
+Lazy Indexing
+~~~~~~~~~~~~~
+
+The purpose of these lazy indexing classes is to prevent more data being loaded into memory than is necessary for the
+subsequent analysis, by deferring loading data until after indexing is performed.
+
+Let's open the data from disk again.
+
+.. ipython:: python
+
+    da = xr.tutorial.open_dataset("air_temperature")["air"]
+    var = da.variable
+
+Now, notice how even after subsetting the data has does not get loaded:
+
+.. ipython:: python
+
+    var.isel(time=0)
+
+The shape has changed, but the values are still not shown.
+
+Looking at the private attribute again shows how this indexing information was propagated via the hidden lazy indexing classes:
+
+.. ipython:: python
+
+    var.isel(time=0)._data
+
+.. note::
+
+    Currently only certain indexing operations are lazy, not all array operations. For discussion of making all array
+    operations lazy see `GH issue #5081 <https://github.com/pydata/xarray/issues/5081>`_.
+
+
+Lazy Dask Arrays
+~~~~~~~~~~~~~~~~
+
+Note that xarray's implementation of Lazy Indexing classes is completely separate from how :py:class:`dask.array.Array`
+objects evaluate lazily. Dask-backed xarray objects delay almost all operations until :py:meth:`~xarray.DataArray.compute`
+is called (either explicitly or implicitly via :py:meth:`~xarray.DataArray.plot` for example). The exceptions to this
+laziness are operations whose output shape is data-dependent, such as when calling :py:meth:`~xarray.DataArray.where`.
