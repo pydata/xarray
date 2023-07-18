@@ -12,40 +12,6 @@ You can see a list of all the current core team members on our
 GitHub team. You should now be on that list too.
 This document offers guidelines for your new role.
 
-As a core team member, you gain the responsibility of shepherding
-other contributors through the review process; here are some
-guidelines for how to do that.
-
-## All contributors are treated the same
-
-As a core team member, you gain the ability to merge or approve
-other contributors' pull requests.  Much like nuclear launch keys, it
-is a shared power: you must merge *only after* another core has
-approved the pull request, *and* after you yourself have carefully
-reviewed it.  (See [Reviewing](#reviewing) and especially
-[Merge Only Changes You Understand](#merge-only-changes-you-understand) below.)
-It should also be considered best practice to leave a reasonable (24hr) time window
-after approval before merge to ensure that other core team members have a reasonable
-chance to weigh in.
-Adding the "plan to merge" label notifies developers of the imminent merge.
-
-We are also an international community, with contributors from many different time zones,
-some of whom will only contribute during their working hours, others who might only be able
-to contribute during nights and weekends. It is important to be respectful of other peoples
-schedules and working habits, even if it slows the project down slightly - we are in this
-for the long run. In the same vein you also shouldn't feel pressured to be constantly
-available or online, and users or contributors who are overly demanding and unreasonable
-to the point of harassment will be directed to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
-We value sustainable development practices over mad rushes.
-
-When merging, we automatically use GitHub's
-[Squash and Merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/merging-a-pull-request#merging-a-pull-request)
-to ensure a clean git history.
-
-You should also continue to make your own pull requests as before and in accordance
-with the [general contributing guide](https://docs.xarray.dev/en/stable/contributing.html). These pull requests still
-require the approval of another core team member before they can be merged.
-
 ## Tasks
 
 Xarray values a wide range of contributions, only some of which involve writing code.
@@ -81,7 +47,43 @@ If however you feel that is unlikely you will be able to be actively contribute 
 then you may want to consider letting us know you would rather be listed as an "Emeritus Core Team Member",
 as this would help us in evaluating the overall health of the project.
 
-## Reviewing
+## Code contributions
+
+As a core team member, you are a representative of the project,
+and trusted to make decisions that will serve the long term interests
+of all users. You also gain the responsibility of shepherding
+other contributors through the review process; here are some
+guidelines for how to do that.
+
+## All contributors are treated the same
+
+You should now have gained the ability to merge or approve
+other contributors' pull requests.  Much like nuclear launch keys, it
+is a shared power: you must merge *only after* another core has
+approved the pull request, *and* after you yourself have carefully
+reviewed it.  (See [Reviewing](#reviewing) and especially
+[Merge Only Changes You Understand](#merge-only-changes-you-understand) below.)
+It should also be considered best practice to leave a reasonable (24hr) time window
+after approval before merge to ensure that other core team members have a reasonable
+chance to weigh in.
+Adding the "plan to merge" label notifies developers of the imminent merge.
+
+We are also an international community, with contributors from many different time zones,
+some of whom will only contribute during their working hours, others who might only be able
+to contribute during nights and weekends. It is important to be respectful of other peoples
+schedules and working habits, even if it slows the project down slightly - we are in this
+for the long run. In the same vein you also shouldn't feel pressured to be constantly
+available or online, and users or contributors who are overly demanding and unreasonable
+to the point of harassment will be directed to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
+We value sustainable development practices over mad rushes.
+
+When merging, we automatically use GitHub's
+[Squash and Merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/merging-a-pull-request#merging-a-pull-request)
+to ensure a clean git history.
+
+You should also continue to make your own pull requests as before and in accordance
+with the [general contributing guide](https://docs.xarray.dev/en/stable/contributing.html). These pull requests still
+require the approval of another core team member before they can be merged.
 
 ### How to conduct a good review
 
