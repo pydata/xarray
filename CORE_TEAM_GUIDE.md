@@ -199,6 +199,11 @@ Where possible we prefer to point people towards asynchronous forms of communica
 like github issues instead of realtime chat options as they are far easier
 for a global community to consume and refer back to.
 
+We hold a [bi-weekly developers meeting](https://docs.xarray.dev/en/stable/developers-meeting.html) via video call.
+This is a great place to bring up any questions you have, raise visibility of an issue and/or gather more perspectives.
+Attendance is absolutely optional, and we keep the meeting to 30 minutes in respect of your valuable time.
+This meeting is public, so we occasionally have non-core team members join us.
+
 We also have a private mailing list for core team members
 `xarray-core-team@googlegroups.com` which is sparingly used for discussions
 that are required to be private, such as voting on new core members.
