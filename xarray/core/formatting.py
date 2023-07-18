@@ -718,9 +718,7 @@ def dataset_repr(ds):
 
 def diff_dim_summary(a, b):
     if a.dims != b.dims:
-        return "Differing dimensions:\n    ({}) != ({})".format(
-            dim_summary(a), dim_summary(b)
-        )
+        return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
 
@@ -847,9 +845,7 @@ def _compat_to_str(compat):
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     summary.append(diff_dim_summary(a, b))
@@ -880,9 +876,7 @@ def diff_array_repr(a, b, compat):
 
 def diff_dataset_repr(a, b, compat):
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))
