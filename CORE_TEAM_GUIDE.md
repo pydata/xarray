@@ -40,8 +40,11 @@ Rather, the tasks that follow are general descriptions of what it might mean to 
 - Maintain xarray's various Continuous Integration Workflows,
 - Write code that goes into xarray `main`.
 
-Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blog/2019/05/18/maintainer) may be interesting background reading,
-but should not be taken to strictly apply to the Xarray project.
+(Matt Rocklin's post on [the role of a maintainer](https://matthewrocklin.com/blog/2019/05/18/maintainer) may be
+interesting background reading, but should not be taken to strictly apply to the Xarray project.)
+
+Obviously you are not expected to contribute in all, or even more than one of these ways! They are listed so as to
+indicate the many types of work that go into maintaining xarray.
 
 It is natural that your available time and enthusiasm for the project will wax and wane - this is fine and expected!
 It is also common for core team members to have a "niche" - a particular part of the codebase they have specific expertise
