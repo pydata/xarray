@@ -7,7 +7,7 @@ to join us.  Thank you for your numerous contributions to the project
 so far.
 
 You can see a list of all the current core developers on our
-[@napari/core-devs](https://github.com/orgs/napari/teams/core-devs)
+[@xarray/core-devs](https://github.com/orgs/xarray/teams/core-devs)
 GitHub team. You should now be on that list too.
 
 This document offers guidelines for your new role.  First and
@@ -37,7 +37,7 @@ to contribute during nights and weekends. It is important to be respectful of ot
 schedules and working habits, even if it slows the project down slightly - we are in this
 for the long run. In the same vein you also shouldn't feel pressured to be constantly
 available or online, and users or contributors who are overly demanding and unreasonable
-to the point of harassment will be directed to our [Code of Conduct](napari-coc).
+to the point of harassment will be directed to our [Code of Conduct](xarray-coc).
 We value sustainable development practices over mad rushes.
 
 When merging, use GitHub's
@@ -45,7 +45,7 @@ When merging, use GitHub's
 to ensure a clean git history.
 
 You should also continue to make your own pull requests as before and in accordance
-with the [general contributor guide](napari-contributing). These pull requests still
+with the [general contributor guide](xarray-contributing). These pull requests still
 require the approval of another core developer before they can be merged.
 
 ## Reviewing
@@ -58,7 +58,7 @@ constructive criticism on ideas and implementations, and remind
 yourself of how it felt when your own work was being evaluated as a
 novice.
 
-`napari` strongly values mentorship in code review.  New users
+`xarray` strongly values mentorship in code review.  New users
 often need more handholding, having little to no git
 experience. Repeat yourself liberally, and, if you don’t recognize a
 contributor, point them to our development guide, or other GitHub
@@ -70,22 +70,22 @@ an abandoned pull request.
 
 When reviewing, focus on the following:
 
-1. **Usability and generality:** `napari` is a GUI application that strives to be accessible
+1. **Usability and generality:** `xarray` is a GUI application that strives to be accessible
 to both coding and non-coding users, and new features should ultimately be
-accessible to everyone using the app. `napari` targets the scientific user
+accessible to everyone using the app. `xarray` targets the scientific user
 community broadly, and core features should be domain-agnostic and general purpose.
 Custom functionality is meant to be provided through our plugin ecosystem. If in doubt,
 consult back with our [mission and values](mission-and-values).
 
-2. **Performance and benchmarks:** As `napari` targets scientific applications that often involve
-large multidimensional datasets, high performance is a key value of `napari`. While
+2. **Performance and benchmarks:** As `xarray` targets scientific applications that often involve
+large multidimensional datasets, high performance is a key value of `xarray`. While
 every new feature won't scale equally to all sizes of data, keeping in mind performance
-and our [benchmarks](napari-benchmarks) during a review may be important, and you may
+and our [benchmarks](xarray-benchmarks) during a review may be important, and you may
 need to ask for benchmarks to be run and reported or new benchmarks to be added.
 
 3. **APIs and stability:** Coding users and plugin developers will make
 extensive use of our APIs. The foundation of a healthy plugin ecosystem will be
-a fully capable and stable set of APIs, so as `napari` matures it will
+a fully capable and stable set of APIs, so as `xarray` matures it will
 very important to ensure our APIs are stable. For now, while the project is still
 in an earlier stage, spending the extra time to consider names of public facing
 variables and methods, along side function signatures, could save us considerable
@@ -96,8 +96,8 @@ version numbers `0.x` and do not have a deprecation policy, but we will work to 
 strings following [PEP257](https://peps.python.org/pep-0257/) and the
 [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style).
 For any major new features, accompanying changes should be made to our
-[tutorials](https://napari.org/tutorials). These should not only
-illustrates the new feature, but explains it. Titles for all documents in napari should follow [sentence case capitalization](https://apastyle.apa.org/style-grammar-guidelines/capitalization/sentence-case), but the name `napari` should always be written in lowercase.
+[tutorials](https://xarray.org/tutorials). These should not only
+illustrates the new feature, but explains it. Titles for all documents in xarray should follow [sentence case capitalization](https://apastyle.apa.org/style-grammar-guidelines/capitalization/sentence-case), but the name `xarray` should always be written in lowercase.
 
 5. **Implementations and algorithms:** You should understand the code being modified
 or added before approving it.  (See [Merge Only Changes You Understand](#merge-only-changes-you-understand)
@@ -144,11 +144,11 @@ that responsibility seriously.
 As a core member, you should be familiar with community and developer
 resources such as:
 
-- Our [contributor guide](napari-contributing).
-- Our [code of conduct](napari-coc).
-- Our [governance](napari-governance).
+- Our [contributor guide](xarray-contributing).
+- Our [code of conduct](xarray-coc).
+- Our [governance](xarray-governance).
 - Our [mission and values](mission-and-values).
-- Our [benchmarking guide](napari-benchmarks).
+- Our [benchmarking guide](xarray-benchmarks).
 - [PEP8](https://peps.python.org/pep-0008/) for Python style.
 - [PEP257](https://peps.python.org/pep-0257/) and the
    [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style)
@@ -156,9 +156,9 @@ resources such as:
 - [`pre-commit`](https://pre-commit.com) hooks for autoformatting.
 - [`black`](https://github.com/psf/black) autoformatting.
 - [`flake8`](https://github.com/PyCQA/flake8) linting.
-- [#napari on image.sc](https://forum.image.sc/tag/napari).
-- [#napari](https://twitter.com/search?q=%23napari&f=live) and [@napari_imaging](https://twitter.com/napari_imaging) on twitter.
-- [napari zulip](https://napari.zulipchat.com/) community chat channel.
+- [#xarray on image.sc](https://forum.image.sc/tag/xarray).
+- [#xarray](https://twitter.com/search?q=%23xarray&f=live) and [@xarray_imaging](https://twitter.com/xarray_imaging) on twitter.
+- [xarray zulip](https://xarray.zulipchat.com/) community chat channel.
 
 You are not required to monitor the social resources.
 
@@ -167,7 +167,7 @@ like forum posts and github issues instead of realtime chat options as they are 
 for a global community to consume.
 
 We also have a private mailing list for core developers
-`napari-core-devs@googlegroups.com` which is sparingly used for discussions
+`xarray-core-devs@googlegroups.com` which is sparingly used for discussions
 that are required to be private, such as voting on new core members.
 
 ## Inviting new core members
