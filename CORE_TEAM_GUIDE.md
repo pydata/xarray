@@ -51,6 +51,7 @@ require the approval of another core team member before they can be merged.
 Xarray values a wide range of contributions, only some of which involve writing code.
 As such, we do not currently make a distinction between a "core team member", "core developer", "maintainer",
 or "triage team member" as some projects do (e.g. [pandas](https://pandas.pydata.org/docs/development/maintaining.html)).
+That said, if you prefer to refer to your role as one of the other titles above then that is fine by us!
 
 Xarray is mostly a volunteer project, so these tasks shouldn’t be read as “expectations”.
 **There are no strict expectations**, other than to adhere to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
