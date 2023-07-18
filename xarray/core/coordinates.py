@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import T_Coordinates, T_DataArray
+from xarray.core.types import T_DataArray
 from xarray.core.utils import Frozen, ReprObject
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.types import Self
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -260,11 +261,11 @@ class Coordinates(AbstractCoordinates):
 
     @classmethod
     def _construct_direct(
-        cls: type[T_Coordinates],
+        cls,
         coords: dict[Any, Variable],
         indexes: dict[Any, Index],
         dims: dict[Any, int] | None = None,
-    ) -> T_Coordinates:
+    ) -> Self:
         from xarray.core.dataset import Dataset
 
         obj = object.__new__(cls)
@@ -277,9 +278,7 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
-    def from_pandas_multiindex(
-        cls: type[T_Coordinates], midx: pd.MultiIndex, dim: str
-    ) -> T_Coordinates:
+    def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: str) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
         The returned coordinates can be directly assigned to a
@@ -475,15 +474,21 @@ class Coordinates(AbstractCoordinates):
         self._update_coords(coords, indexes)
 
     def _overwrite_indexes(
-        self: T_Coordinates,
+        self,
         indexes: Mapping[Any, Index],
         variables: Mapping[Any, Variable] | None = None,
-    ) -> T_Coordinates:
+    ) -> Self:
         results = self.to_dataset()._overwrite_indexes(indexes, variables)
-        return cast(T_Coordinates, results.coords)
+
+        # cast ``DatasetCoordinates`` as ``Coordinates``
+        # TODO: not correct with
+        # ``results = align(dataset.coords, dataarray.coords, join='override')``
+        # but lets assume that those are edge cases until we get rid of DatasetCoordinates
+        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)?
+        return cast(Self, results.coords)
 
     def _reindex_callback(
-        self: T_Coordinates,
+        self,
         aligner: Aligner,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
@@ -491,8 +496,8 @@ class Coordinates(AbstractCoordinates):
         fill_value: Any,
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
-    ) -> T_Coordinates:
-        """Callback called from ``Aligner`` to create a new reindexed Coordinates."""
+    ) -> Self:
+        """Callback called from ``Aligner`` to create a new reindexed Coordinate."""
         aligned = self.to_dataset()._reindex_callback(
             aligner,
             dim_pos_indexers,
@@ -502,7 +507,12 @@ class Coordinates(AbstractCoordinates):
             exclude_dims,
             exclude_vars,
         )
-        return cast(T_Coordinates, aligned.coords)
+
+        # cast ``DatasetCoordinates`` as ``Coordinates``
+        # TODO: not correct with ``results = align(dataset.coords, dataarray.coords)``
+        # but lets assume that those are edge cases until we get rid of DatasetCoordinates
+        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)?
+        return cast(Self, aligned.coords)
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
