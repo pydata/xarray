@@ -7,9 +7,12 @@ your work, and enjoy working with you; we have therefore invited you
 to join us.  Thank you for your numerous contributions to the project
 so far.
 
+By accepting you are not required to commit to doing any more work - xarray is a volunteer project,
+and we value the contributions you have made already.
+
 You can see a list of all the current core team members on our
 [@pydata/xarray](https://github.com/orgs/pydata/teams/xarray)
-GitHub team. You should now be on that list too.
+GitHub team. Once accepted, you should now be on that list too.
 This document offers guidelines for your new role.
 
 ## Tasks
@@ -31,7 +34,7 @@ Rather, the tasks that follow are general descriptions of what it might mean to 
 - Project organization (run / attend developer meetings, coordinate with sponsors),
 - Project evangelism (advertise xarray to new users),
 - Community contact (represent xarray in user communities such as [Pangeo](https://pangeo.io/)),
-- Key project contact (represent xarray's perspective within key related projects like numpy, Zarr or Dask),
+- Key project contact (represent xarray's perspective within key related projects like NumPy, Zarr or Dask),
 - Project fundraising (help write and administrate grants that will support xarray),
 - Improve documentation or tutorials (especially on [`tutorial.xarray.dev`](https://tutorial.xarray.dev/)),
 - Presenting or running tutorials (such as those we have given at the SciPy conference),
