@@ -1,3 +1,5 @@
+> **_NOTE:_**  This Core Developer Guide was adapted from the [Napari Project's Core Developer Guide](https://napari.org/stable/developers/core_dev_guide.html).
+
 (core-dev-guide)=
 # Core Developer guide
 
@@ -7,13 +9,9 @@ to join us.  Thank you for your numerous contributions to the project
 so far.
 
 You can see a list of all the current core developers on our
-[@xarray/core-devs](https://github.com/orgs/xarray/teams/core-devs)
+[@pydata/xarray](https://github.com/orgs/pydata/teams/xarray)
 GitHub team. You should now be on that list too.
-
-This document offers guidelines for your new role.  First and
-foremost, you should familiarize yourself with the project's
-[mission and values](mission-and-values).  When in
-doubt, always refer back there.
+This document offers guidelines for your new role.
 
 As a core team member, you gain the responsibility of shepherding
 other contributors through the review process; here are some
@@ -37,15 +35,15 @@ to contribute during nights and weekends. It is important to be respectful of ot
 schedules and working habits, even if it slows the project down slightly - we are in this
 for the long run. In the same vein you also shouldn't feel pressured to be constantly
 available or online, and users or contributors who are overly demanding and unreasonable
-to the point of harassment will be directed to our [Code of Conduct](xarray-coc).
+to the point of harassment will be directed to our [Code of Conduct](https://github.com/pydata/xarray/tree/main/CODE_OF_CONDUCT.md).
 We value sustainable development practices over mad rushes.
 
-When merging, use GitHub's
+When merging, we automatically use GitHub's
 [Squash and Merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/merging-a-pull-request#merging-a-pull-request)
 to ensure a clean git history.
 
 You should also continue to make your own pull requests as before and in accordance
-with the [general contributor guide](xarray-contributing). These pull requests still
+with the [general contributing guide](https://docs.xarray.dev/en/stable/contributing.html). These pull requests still
 require the approval of another core developer before they can be merged.
 
 ## Reviewing
@@ -70,34 +68,32 @@ an abandoned pull request.
 
 When reviewing, focus on the following:
 
-1. **Usability and generality:** `xarray` is a GUI application that strives to be accessible
-to both coding and non-coding users, and new features should ultimately be
-accessible to everyone using the app. `xarray` targets the scientific user
+1. **Usability and generality:** `xarray` is a user-facing package that strives to be accessible
+to both novice and advanced users, and new features should ultimately be
+accessible to everyone using the package. `xarray` targets the scientific user
 community broadly, and core features should be domain-agnostic and general purpose.
-Custom functionality is meant to be provided through our plugin ecosystem. If in doubt,
-consult back with our [mission and values](mission-and-values).
+Custom functionality is meant to be provided through our various types of interoperability.
 
 2. **Performance and benchmarks:** As `xarray` targets scientific applications that often involve
 large multidimensional datasets, high performance is a key value of `xarray`. While
 every new feature won't scale equally to all sizes of data, keeping in mind performance
-and our [benchmarks](xarray-benchmarks) during a review may be important, and you may
+and our [benchmarks](https://github.com/pydata/xarray/tree/main/asv_bench) during a review may be important, and you may
 need to ask for benchmarks to be run and reported or new benchmarks to be added.
 
-3. **APIs and stability:** Coding users and plugin developers will make
-extensive use of our APIs. The foundation of a healthy plugin ecosystem will be
+3. **APIs and stability:** Coding users and developers will make
+extensive use of our APIs. The foundation of a healthy ecosystem will be
 a fully capable and stable set of APIs, so as `xarray` matures it will
-very important to ensure our APIs are stable. For now, while the project is still
-in an earlier stage, spending the extra time to consider names of public facing
-variables and methods, along side function signatures, could save us considerable
-trouble in the future. Right now we are still making breaking changes with minor
-version numbers `0.x` and do not have a deprecation policy, but we will work to add one soon.
+very important to ensure our APIs are stable. Spending the extra time to consider names of public facing
+variables and methods, alongside function signatures, could save us considerable
+trouble in the future. We do our best to provide [deprecation cycles](https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility)
+when making backwards-incompatible changes.
 
 4. **Documentation and tutorials:** All new methods should have appropriate doc
 strings following [PEP257](https://peps.python.org/pep-0257/) and the
 [NumPy documentation guide](https://numpy.org/devdocs/dev/howto-docs.html#documentation-style).
 For any major new features, accompanying changes should be made to our
-[tutorials](https://xarray.org/tutorials). These should not only
-illustrates the new feature, but explains it. Titles for all documents in xarray should follow [sentence case capitalization](https://apastyle.apa.org/style-grammar-guidelines/capitalization/sentence-case), but the name `xarray` should always be written in lowercase.
+[tutorials](https://tutorial.xarray.dev). These should not only
+illustrates the new feature, but explains it.
 
 5. **Implementations and algorithms:** You should understand the code being modified
 or added before approving it.  (See [Merge Only Changes You Understand](#merge-only-changes-you-understand)
@@ -167,7 +163,7 @@ like forum posts and github issues instead of realtime chat options as they are 
 for a global community to consume.
 
 We also have a private mailing list for core developers
-`xarray-core-devs@googlegroups.com` which is sparingly used for discussions
+`xarray-core-team@googlegroups.com` which is sparingly used for discussions
 that are required to be private, such as voting on new core members.
 
 ## Inviting new core members
