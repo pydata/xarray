@@ -307,9 +307,7 @@ class AttrAccessMixin:
         except AttributeError as e:
             # Don't accidentally shadow custom AttributeErrors, e.g.
             # DataArray.dims.setter
-            if str(e) != "{!r} object has no attribute {!r}".format(
-                type(self).__name__, name
-            ):
+            if str(e) != f"{type(self).__name__!r} object has no attribute {name!r}":
                 raise
             raise AttributeError(
                 f"cannot set attribute {name!r} on a {type(self).__name__!r} object. Use __setitem__ style"
@@ -1323,9 +1321,7 @@ class DataWithCoords(AttrAccessMixin):
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
-                "isin() argument must be convertible to an array: {}".format(
-                    test_elements
-                )
+                f"isin() argument must be convertible to an array: {test_elements}"
             )
         elif isinstance(test_elements, (Variable, DataArray)):
             # need to explicitly pull out data to support dask arrays as the
