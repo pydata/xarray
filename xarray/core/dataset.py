@@ -5692,7 +5692,8 @@ class Dataset(
 
         Raises
         ------
-        ValueError: These variables cannot be found in this dataset: ['pressure']
+        ValueError
+             Raised if you attempt to drop a variable which is not present, and the kwarg ``errors='raise'``.
 
         Returns
         -------
