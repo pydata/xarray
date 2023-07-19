@@ -21,8 +21,14 @@ v2023.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
 - Visually group together coordinates with the same indexes in the index section of the text repr (:pull:`7225`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Allow creating Xarray objects where a multidimensional variable shares its name
+  with a dimension. Examples include output from finite volume models like FVCOM.
+  (:issue:`2233`, :pull:`7989`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
