@@ -1247,8 +1247,10 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(("x", "y"), data)
         with pytest.raises(ValueError, match=r"without explicit dimension names"):
             as_variable(data, name="x")
-        with pytest.raises(ValueError, match=r"has more than 1-dimension"):
-            as_variable(expected, name="x")
+
+        # name of nD variable matches dimension name
+        actual = as_variable(expected, name="x")
+        assert_identical(expected, actual)
 
         # test datetime, timedelta conversion
         dt = np.array([datetime(1999, 1, 1) + timedelta(days=x) for x in range(10)])
