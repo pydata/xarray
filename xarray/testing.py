@@ -380,9 +380,6 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
             for (k, v) in ds._variables.items()
             if v.dims == (k,)
         ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
-        assert all(
-            v.dims == (k,) for (k, v) in ds._variables.items() if k in ds._dims
-        ), {k: v.dims for k, v in ds._variables.items() if k in ds._dims}
 
     if ds._indexes is not None:
         _assert_indexes_invariants_checks(
@@ -418,7 +415,5 @@ def _assert_internal_invariants(
         )
     else:
         raise TypeError(
-            "{} is not a supported type for xarray invariant checks".format(
-                type(xarray_obj)
-            )
+            f"{type(xarray_obj)} is not a supported type for xarray invariant checks"
         )

@@ -479,6 +479,21 @@
    CFTimeIndex.values
    CFTimeIndex.year
 
+   Index.from_variables
+   Index.concat
+   Index.stack
+   Index.unstack
+   Index.create_variables
+   Index.to_pandas_index
+   Index.isel
+   Index.sel
+   Index.join
+   Index.reindex_like
+   Index.equals
+   Index.roll
+   Index.rename
+   Index.copy
+
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode
    backends.NetCDF4DataStore.encode_attribute

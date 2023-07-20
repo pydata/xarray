@@ -33,6 +33,8 @@ from xarray.core.extensions import (
     register_dataarray_accessor,
     register_dataset_accessor,
 )
+from xarray.core.indexes import Index
+from xarray.core.indexing import IndexSelResult
 from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
@@ -102,6 +104,8 @@ __all__ = (
     "Coordinates",
     "DataArray",
     "Dataset",
+    "Index",
+    "IndexSelResult",
     "IndexVariable",
     "Variable",
     # Exceptions

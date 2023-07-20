@@ -4712,11 +4712,7 @@ class DataArray(
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}{unit}".format(
-                        dim=dim,
-                        v=format_item(coord.values),
-                        unit=_get_units_from_attrs(coord),
-                    )
+                    f"{dim} = {format_item(coord.values)}{_get_units_from_attrs(coord)}"
                 )
 
         title = ", ".join(one_dims)

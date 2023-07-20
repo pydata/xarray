@@ -36,6 +36,13 @@ New Features
   :py:func:`align` and :py:func:`merge`.
   (:issue:`6392`, :pull:`7368`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Visually group together coordinates with the same indexes in the index section of the text repr (:pull:`7225`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Allow creating Xarray objects where a multidimensional variable shares its name
+  with a dimension. Examples include output from finite volume models like FVCOM.
+  (:issue:`2233`, :pull:`7989`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -43,8 +50,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -53,15 +59,28 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Add docstrings for the :py:class:`Index` base class and add some documentation on how to
+  create custom, Xarray-compatible indexes (:pull:`6975`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:func:`as_variable` now consistently includes the variable name in any exceptions
+  raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
 
-v2023.07.0 (July 11, 2023)
+.. _whats-new.2023.07.0:
+
+v2023.07.0 (July 17, 2023)
 --------------------------
 
 This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
+
+Deprecations
+~~~~~~~~~~~~
+
+- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -800,6 +819,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
 - Update merge docstrings. (:issue:`6935`, :pull:`7033`)
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
