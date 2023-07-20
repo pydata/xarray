@@ -108,7 +108,7 @@ Thanks to our many contributors!
 
 ## License
 
-Copyright 2014-2019, xarray Developers
+Copyright 2014-2023, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License"); you
 may not use this file except in compliance with the License. You may
@@ -125,12 +125,12 @@ limitations under the License.
 Xarray bundles portions of pandas, NumPy and Seaborn, all of which are
 available under a "3-clause BSD" license:
 
-- pandas: setup.py, xarray/util/print_versions.py
-- NumPy: xarray/core/npcompat.py
-- Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
+- pandas: `setup.py`, `xarray/util/print_versions.py`
+- NumPy: `xarray/core/npcompat.py`
+- Seaborn: `_determine_cmap_params` in `xarray/core/plot/utils.py`
 
 Xarray also bundles portions of CPython, which is available under the
-"Python Software Foundation License" in xarray/core/pycompat.py.
+"Python Software Foundation License" in `xarray/core/pycompat.py`.
 
 Xarray uses icons from the icomoon package (free version), which is
 available under the "CC BY 4.0" license.
