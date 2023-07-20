@@ -106,8 +106,9 @@ Here’s a typical workflow for triaging a newly opened issue or discussion:
 
 6. **Is this a usage question?**
 
-   We prefer that usage questions are asked on StackOverflow with the pandas tag. https://stackoverflow.com/questions/tagged/pandas
-
+   We prefer that usage questions are asked on StackOverflow with the [`python-xarray` tag](https://stackoverflow.com/questions/tagged/python-xarray
+) or as a [GitHub discussion topic](https://github.com/pydata/xarray/discussions). 
+   
    If it’s easy to answer, feel free to link to the relevant documentation section, let them know that in the future this kind of question should be on StackOverflow, and close the issue.
 
 7. **What labels and milestones should I add?**
