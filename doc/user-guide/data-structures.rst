@@ -19,7 +19,8 @@ DataArray
 :py:class:`xarray.DataArray` is xarray's implementation of a labeled,
 multi-dimensional array. It has several key properties:
 
-- ``values``: a :py:class:`numpy.ndarray` holding the array's values
+- ``values``: a :py:class:`numpy.ndarray` or
+  :ref:`numpy-like array <userguide.duckarrays>` holding the array's values
 - ``dims``: dimension names for each axis (e.g., ``('x', 'y', 'z')``)
 - ``coords``: a dict-like container of arrays (*coordinates*) that label each
   point (e.g., 1-dimensional arrays of numbers, datetime objects or
@@ -46,7 +47,8 @@ Creating a DataArray
 The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
-  :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or ``pandas.Panel``)
+  a :ref:`numpy-like array <userguide.duckarrays>`, :py:class:`~pandas.Series`,
+  :py:class:`~pandas.DataFrame` or ``pandas.Panel``)
 - ``coords``: a list or dictionary of coordinates. If a list, it should be a
   list of tuples where the first element is the dimension name and the second
   element is the corresponding coordinate array_like object.

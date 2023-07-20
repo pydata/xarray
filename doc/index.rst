@@ -75,7 +75,7 @@ efficient, and fun!
    Contributing Guide <contributing>
    Xarray Internals <internals/index>
    Development Roadmap <roadmap>
-   Team <team>
+   Team <https://xarray.dev/team>
    Developers Meeting <developers-meeting>
    What’s New <whats-new>
    GitHub repository <https://github.com/pydata/xarray>

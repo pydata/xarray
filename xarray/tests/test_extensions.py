@@ -5,8 +5,7 @@ import pickle
 import pytest
 
 import xarray as xr
-
-from . import assert_identical
+from xarray.tests import assert_identical
 
 
 @xr.register_dataset_accessor("example_accessor")
@@ -37,7 +36,6 @@ class TestAccessor:
 
         da = xr.DataArray(0)
         assert da.demo.foo == "bar"
-
         # accessor is cached
         assert ds.demo is ds.demo
 
@@ -45,7 +43,7 @@ class TestAccessor:
         assert ds.demo.__doc__ == "Demo accessor."
         # TODO: typing doesn't seem to work with accessors
         assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore
-        assert isinstance(ds.demo, DemoAccessor)  # type: ignore
+        assert isinstance(ds.demo, DemoAccessor)
         assert xr.Dataset.demo is DemoAccessor  # type: ignore
 
         # ensure we can remove it

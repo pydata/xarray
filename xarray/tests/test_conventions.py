@@ -20,15 +20,19 @@ from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
-
-from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
-from .test_backends import CFEncodedBase
+from xarray.tests import (
+    assert_array_equal,
+    requires_cftime,
+    requires_dask,
+    requires_netCDF4,
+)
+from xarray.tests.test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray:
     def test_booltype_array(self) -> None:
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
-        bx = conventions.BoolTypeArray(x)
+        bx = coding.variables.BoolTypeArray(x)
         assert bx.dtype == bool
         assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
@@ -37,7 +41,7 @@ class TestNativeEndiannessArray:
     def test(self) -> None:
         x = np.arange(5, dtype=">i8")
         expected = np.arange(5, dtype="int64")
-        a = conventions.NativeEndiannessArray(x)
+        a = coding.variables.NativeEndiannessArray(x)
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
@@ -164,6 +168,7 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -181,6 +186,7 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -243,7 +249,7 @@ class TestDecodeCF:
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
         expected = Variable((), np.int64(0))
-        actual = conventions.maybe_encode_nonstring_dtype(original)
+        actual = coding.variables.NonStringCoder().encode(original)
         assert_identical(expected, actual)
 
     def test_decode_cf_with_multiple_missing_values(self) -> None:
@@ -467,3 +473,32 @@ def test_decode_cf_variable_cftime():
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
     assert_identical(decoded, variable)
+
+
+def test_scalar_units() -> None:
+    # test that scalar units does not raise an exception
+    var = Variable(["t"], [np.nan, np.nan, 2], {"units": np.nan})
+
+    actual = conventions.decode_cf_variable("t", var)
+    assert_identical(actual, var)
+
+
+def test_decode_cf_error_includes_variable_name():
+    ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
+    with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
+        decode_cf(ds)
+
+
+def test_encode_cf_variable_with_vlen_dtype() -> None:
+    v = Variable(
+        ["x"], np.array(["a", "b"], dtype=coding.strings.create_vlen_dtype(str))
+    )
+    encoded_v = conventions.encode_cf_variable(v)
+    assert encoded_v.data.dtype.kind == "O"
+    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str
+
+    # empty array
+    v = Variable(["x"], np.array([], dtype=coding.strings.create_vlen_dtype(str)))
+    encoded_v = conventions.encode_cf_variable(v)
+    assert encoded_v.data.dtype.kind == "O"
+    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str

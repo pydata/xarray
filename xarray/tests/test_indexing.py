@@ -11,8 +11,14 @@ from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
-
-from . import IndexerMaker, ReturnItem, assert_array_equal
+from xarray.tests import (
+    IndexerMaker,
+    ReturnItem,
+    assert_array_equal,
+    assert_identical,
+    raise_if_dask_computes,
+    requires_dask,
+)
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -234,7 +240,6 @@ class TestIndexers:
         test_indexer(mdata, {"one": "a"}, expected)
 
     def test_read_only_view(self) -> None:
-
         arr = DataArray(
             np.random.rand(3, 3),
             coords={"x": np.arange(3), "y": np.arange(3)},
@@ -711,7 +716,6 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
         np.arange(10) < 5,
     ]
     for i, j, k in itertools.product(indexers, repeat=3):
-
         if isinstance(j, np.ndarray) and j.dtype.kind == "b":  # match size
             j = np.arange(20) < 4
         if isinstance(k, np.ndarray) and k.dtype.kind == "b":
@@ -823,3 +827,65 @@ def test_indexing_1d_object_array() -> None:
     expected = DataArray(expected_data)
 
     assert [actual.data.item()] == [expected.data.item()]
+
+
+@requires_dask
+def test_indexing_dask_array():
+    import dask.array
+
+    da = DataArray(
+        np.ones(10 * 3 * 3).reshape((10, 3, 3)),
+        dims=("time", "x", "y"),
+    ).chunk(dict(time=-1, x=1, y=1))
+    with raise_if_dask_computes():
+        actual = da.isel(time=dask.array.from_array([9], chunks=(1,)))
+    expected = da.isel(time=[9])
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_indexing_dask_array_scalar():
+    # GH4276
+    import dask.array
+
+    a = dask.array.from_array(np.linspace(0.0, 1.0))
+    da = DataArray(a, dims="x")
+    x_selector = da.argmax(dim=...)
+    with raise_if_dask_computes():
+        actual = da.isel(x_selector)
+    expected = da.isel(x=-1)
+    assert_identical(actual, expected)
+
+
+@requires_dask
+def test_vectorized_indexing_dask_array():
+    # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
+    darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
+    indexer = DataArray(
+        data=np.random.randint(0, 3, 8).reshape(4, 2).astype(int),
+        coords={"y": range(4), "x": range(2)},
+        dims=("y", "x"),
+    )
+    with pytest.raises(ValueError, match="Vectorized indexing with Dask arrays"):
+        darr[indexer.chunk({"y": 2})]
+
+
+@requires_dask
+def test_advanced_indexing_dask_array():
+    # GH4663
+    import dask.array as da
+
+    ds = Dataset(
+        dict(
+            a=("x", da.from_array(np.random.randint(0, 100, 100))),
+            b=(("x", "y"), da.random.random((100, 10))),
+        )
+    )
+    expected = ds.b.sel(x=ds.a.compute())
+    with raise_if_dask_computes():
+        actual = ds.b.sel(x=ds.a)
+    assert_identical(expected, actual)
+
+    with raise_if_dask_computes():
+        actual = ds.b.sel(x=ds.a.data)
+    assert_identical(expected, actual)
