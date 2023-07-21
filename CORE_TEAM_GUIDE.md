@@ -196,6 +196,7 @@ large multidimensional datasets, high performance is a key value of `xarray`. Wh
 every new feature won't scale equally to all sizes of data, keeping in mind performance
 and our [benchmarks](https://github.com/pydata/xarray/tree/main/asv_bench) during a review may be important, and you may
 need to ask for benchmarks to be run and reported or new benchmarks to be added.
+You can run the CI benchmarking suite on any PR by tagging it with the ``run-benchmark`` label.
 
 3. **APIs and stability:** Coding users and developers will make
 extensive use of our APIs. The foundation of a healthy ecosystem will be
