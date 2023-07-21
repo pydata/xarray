@@ -48,6 +48,8 @@ Documentation
 - Add docstrings for the :py:class:`Index` base class and add some documentation on how to
   create custom, Xarray-compatible indexes (:pull:`6975`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Added a page clarifying the role of Xarray core team members.
+  (:pull:`7999`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
