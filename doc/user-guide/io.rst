@@ -564,8 +564,9 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
 HDF5
 ----
 `HDF5`_ is both a file format and a data model for storing information. HDF5 stores
-data hierarchically, using groups to create a nested structure. In this way HDF5 is
-simliar to netCDF4.
+data hierarchically, using groups to create a nested structure. HDF5 is a more
+general verion of the netCDF4 data model, so the nested structure is one of many
+similarities between the two data formats.
 
 Reading HDF5 files in xarray requires the ``h5netcdf`` engine, which can be installed
 with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 files:
