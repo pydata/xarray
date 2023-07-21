@@ -235,6 +235,13 @@ class TestMergeFunction:
         expected = xr.Dataset({"x": [12], "y": ("x", [13])})
         assert_identical(actual, expected)
 
+    def test_merge_coordinates(self):
+        coords1 = xr.Coordinates({"x": ("x", [0, 1, 2])})
+        coords2 = xr.Coordinates({"y": ("y", [3, 4, 5])})
+        expected = xr.Dataset(coords={"x": [0, 1, 2], "y": [3, 4, 5]})
+        actual = xr.merge([coords1, coords2])
+        assert_identical(actual, expected)
+
     def test_merge_error(self):
         ds = xr.Dataset({"x": 0})
         with pytest.raises(xr.MergeError):

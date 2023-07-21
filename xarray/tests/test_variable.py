@@ -12,7 +12,7 @@ import pytest
 import pytz
 from packaging.version import Version
 
-from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
+from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
@@ -2446,11 +2446,6 @@ class TestIndexVariable(VariableSubclassobjects):
         actual = IndexVariable.concat([a, b])
         assert actual.identical(expected)
         assert np.issubdtype(actual.dtype, dtype)
-
-    def test_coordinate_alias(self):
-        with pytest.warns(Warning, match="deprecated"):
-            x = Coordinate("x", [1, 2, 3])
-        assert isinstance(x, IndexVariable)
 
     def test_datetime64(self):
         # GH:1932  Make sure indexing keeps precision

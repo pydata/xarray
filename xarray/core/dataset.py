@@ -50,7 +50,12 @@ from xarray.core.common import (
     get_chunksizes,
 )
 from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DatasetCoordinates, assert_coordinate_consistent
+from xarray.core.coordinates import (
+    Coordinates,
+    DatasetCoordinates,
+    assert_coordinate_consistent,
+    create_coords_with_default_indexes,
+)
 from xarray.core.daskmanager import DaskManager
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
@@ -70,7 +75,7 @@ from xarray.core.merge import (
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
-    merge_data_and_coords,
+    merge_core,
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -113,7 +118,6 @@ if TYPE_CHECKING:
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping
@@ -400,6 +404,26 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
+def merge_data_and_coords(data_vars, coords):
+    """Used in Dataset.__init__."""
+    if isinstance(coords, Coordinates):
+        coords = coords.copy()
+    else:
+        coords = create_coords_with_default_indexes(coords, data_vars)
+
+    # exclude coords from alignment (all variables in a Coordinates object should
+    # already be aligned together) and use coordinates' indexes to align data_vars
+    return merge_core(
+        [data_vars, coords],
+        compat="broadcast_equals",
+        join="outer",
+        explicit_coords=tuple(coords),
+        indexes=coords.xindexes,
+        priority_arg=1,
+        skip_align_args=[1],
+    )
+
+
 class DataVariables(Mapping[Any, "DataArray"]):
     __slots__ = ("_dataset",)
 
@@ -491,8 +515,11 @@ class Dataset(
     Dataset implements the mapping interface with keys given by variable
     names and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are
-    index coordinates used for label based indexing.
+    By default, pandas indexes are created for one dimensional variables with
+    name equal to their dimension (i.e., :term:`Dimension coordinate`) so those
+    variables can be readily used as coordinates for label based indexing. When a
+    :py:class:`~xarray.Coordinates` object is passed to ``coords``, any existing
+    index(es) built from those coordinates will be added to the Dataset.
 
     To load data from a file or file-like object, use the `open_dataset`
     function.
@@ -513,22 +540,21 @@ class Dataset(
         - mapping {var name: (dimension name, array-like)}
         - mapping {var name: (tuple of dimension names, array-like)}
         - mapping {dimension name: array-like}
-          (it will be automatically moved to coords, see below)
+          (if array-like is not a scalar it will be automatically moved to coords,
+          see below)
 
         Each dimension must have the same length in all variables in
         which it appears.
-    coords : dict-like, optional
-        Another mapping in similar form as the `data_vars` argument,
-        except the each item is saved on the dataset as a "coordinate".
+    coords : :py:class:`~xarray.Coordinates` or dict-like, optional
+        A :py:class:`~xarray.Coordinates` object or another mapping in
+        similar form as the `data_vars` argument, except that each item
+        is saved on the dataset as a "coordinate".
         These variables have an associated meaning: they describe
         constant/fixed/independent quantities, unlike the
         varying/measured/dependent quantities that belong in
-        `variables`. Coordinates values may be given by 1-dimensional
-        arrays or scalars, in which case `dims` do not need to be
-        supplied: 1D arrays will be assumed to give index values along
-        the dimension with the same name.
+        `variables`.
 
-        The following notations are accepted:
+        The following notations are accepted for arbitrary mappings:
 
         - mapping {coord name: DataArray}
         - mapping {coord name: Variable}
@@ -538,8 +564,16 @@ class Dataset(
           (the dimension name is implicitly set to be the same as the
           coord name)
 
-        The last notation implies that the coord name is the same as
-        the dimension name.
+        The last notation implies either that the coordinate value is a scalar
+        or that it is a 1-dimensional array and the coord name is the same as
+        the dimension name (i.e., a :term:`Dimension coordinate`). In the latter
+        case, the 1-dimensional array will be assumed to give index values
+        along the dimension with the same name.
+
+        Alternatively, a :py:class:`~xarray.Coordinates` object may be used in
+        order to explicitly pass indexes (e.g., a multi-index or any custom
+        Xarray index) or to bypass the creation of a default index for any
+        :term:`Dimension coordinate` included in that object.
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
@@ -602,6 +636,7 @@ class Dataset(
         precipitation   float64 8.326
     Attributes:
         description:  Weather related data.
+
     """
 
     _attrs: dict[Hashable, Any] | None
@@ -633,8 +668,6 @@ class Dataset(
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
     ) -> None:
-        # TODO(shoyer): expose indexes as a public argument in __init__
-
         if data_vars is None:
             data_vars = {}
         if coords is None:
@@ -650,7 +683,7 @@ class Dataset(
             coords = coords._variables
 
         variables, coord_names, dims, indexes, _ = merge_data_and_coords(
-            data_vars, coords, compat="broadcast_equals"
+            data_vars, coords
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
@@ -1719,13 +1752,19 @@ class Dataset(
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        """Mapping of xarray Index objects used for label based indexing."""
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
 
     @property
     def coords(self) -> DatasetCoordinates:
-        """Dictionary of xarray.DataArray objects corresponding to coordinate
-        variables
+        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
+        coordinate variables.
+
+        See Also
+        --------
+        Coordinates
         """
         return DatasetCoordinates(self)
 
@@ -3103,7 +3142,7 @@ class Dataset(
         )
 
     def _reindex_callback(
-        self,
+        self: T_Dataset,
         aligner: alignment.Aligner,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
@@ -3111,7 +3150,7 @@ class Dataset(
         fill_value: Any,
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Callback called from ``Aligner`` to create a new reindexed Dataset."""
 
         new_variables = variables.copy()
@@ -3158,6 +3197,8 @@ class Dataset(
             reindexed = self._replace_with_new_dims(
                 new_variables, new_coord_names, indexes=new_indexes
             )
+
+        reindexed.encoding = self.encoding
 
         return reindexed
 

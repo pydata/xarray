@@ -3126,10 +3126,6 @@ class IndexVariable(Variable):
         )
 
 
-# for backwards compatibility
-Coordinate = utils.alias(IndexVariable, "Coordinate")
-
-
 def _unified_dims(variables):
     # validate dimensions
     all_dims = {}

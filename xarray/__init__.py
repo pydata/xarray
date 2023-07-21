@@ -26,6 +26,7 @@ from xarray.core.computation import (
     where,
 )
 from xarray.core.concat import concat
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.extensions import (
@@ -37,7 +38,7 @@ from xarray.core.indexing import IndexSelResult
 from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
-from xarray.core.variable import Coordinate, IndexVariable, Variable, as_variable
+from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.util.print_versions import show_versions
 
 try:
@@ -100,6 +101,7 @@ __all__ = (
     "CFTimeIndex",
     "Context",
     "Coordinate",
+    "Coordinates",
     "DataArray",
     "Dataset",
     "Index",

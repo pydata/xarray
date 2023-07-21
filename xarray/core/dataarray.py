@@ -23,7 +23,12 @@ from xarray.core.alignment import (
 from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DataArrayCoordinates, assert_coordinate_consistent
+from xarray.core.coordinates import (
+    Coordinates,
+    DataArrayCoordinates,
+    assert_coordinate_consistent,
+    create_coords_with_default_indexes,
+)
 from xarray.core.dataset import Dataset
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -34,7 +39,7 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
     Default,
@@ -104,9 +109,35 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
+def _check_coords_dims(shape, coords, dims):
+    sizes = dict(zip(dims, shape))
+    for k, v in coords.items():
+        if any(d not in dims for d in v.dims):
+            raise ValueError(
+                f"coordinate {k} has dimensions {v.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dims}"
+            )
+
+        for d, s in zip(v.dims, v.shape):
+            if s != sizes[d]:
+                raise ValueError(
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
+                )
+
+        if k in sizes and v.shape != (sizes[k],):
+            raise ValueError(
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
+            )
+
+
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> tuple[dict[Hashable, Variable], tuple[Hashable, ...]]:
+) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
     if (
@@ -144,40 +175,22 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError(f"dimension {d} is not a string")
 
-    new_coords: dict[Hashable, Variable] = {}
+    new_coords: Mapping[Hashable, Any]
 
-    if utils.is_dict_like(coords):
-        for k, v in coords.items():
-            new_coords[k] = as_variable(v, name=k)
-    elif coords is not None:
-        for dim, coord in zip(dims, coords):
-            var = as_variable(coord, name=dim)
-            var.dims = (dim,)
-            new_coords[dim] = var.to_index_variable()
+    if isinstance(coords, Coordinates):
+        new_coords = coords
+    else:
+        new_coords = {}
+        if utils.is_dict_like(coords):
+            for k, v in coords.items():
+                new_coords[k] = as_variable(v, name=k)
+        elif coords is not None:
+            for dim, coord in zip(dims, coords):
+                var = as_variable(coord, name=dim)
+                var.dims = (dim,)
+                new_coords[dim] = var.to_index_variable()
 
-    sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
-        if any(d not in dims for d in v.dims):
-            raise ValueError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dims}"
-            )
-
-        for d, s in zip(v.dims, v.shape):
-            if s != sizes[d]:
-                raise ValueError(
-                    f"conflicting sizes for dimension {d!r}: "
-                    f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
-                )
-
-        if k in sizes and v.shape != (sizes[k],):
-            raise ValueError(
-                f"coordinate {k!r} is a DataArray dimension, but "
-                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
-                "matching the dimension size"
-            )
+    _check_coords_dims(shape, new_coords, dims)
 
     return new_coords, dims
 
@@ -266,7 +279,7 @@ class DataArray(
         or pandas object, attempts are made to use this array's
         metadata to fill in other unspecified arguments. A view of the
         array's data is used instead of a copy if possible.
-    coords : sequence or dict of array_like, optional
+    coords : sequence or dict of array_like or :py:class:`~xarray.Coordinates`, optional
         Coordinates (tick labels) to use for indexing along each
         dimension. The following notations are accepted:
 
@@ -286,6 +299,10 @@ class DataArray(
         - mapping {coord name: (dimension name, array-like)}
         - mapping {coord name: (tuple of dimension names, array-like)}
 
+        Alternatively, a :py:class:`~xarray.Coordinates` object may be used in
+        order to explicitly pass indexes (e.g., a multi-index or any custom
+        Xarray index) or to bypass the creation of a default index for any
+        :term:`Dimension coordinate` included in that object.
     dims : Hashable or sequence of Hashable, optional
         Name(s) of the data dimension(s). Must be either a Hashable
         (only for 1D data) or a sequence of Hashables with length equal
@@ -297,6 +314,11 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
+    indexes : py:class:`~xarray.Indexes` or dict-like, optional
+        For internal use only. For passing indexes objects to the
+        new DataArray, use the ``coords`` argument instead with a
+        :py:class:`~xarray.Coordinate` object (both coordinate variables
+        and indexes will be extracted from the latter).
 
     Examples
     --------
@@ -386,7 +408,7 @@ class DataArray(
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] | None = None,
+        indexes: Mapping[Any, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -395,10 +417,11 @@ class DataArray(
             assert attrs is None
             assert indexes is not None
         else:
-            # TODO: (benbovy - explicit indexes) remove
-            # once it becomes part of the public interface
             if indexes is not None:
-                raise ValueError("Providing explicit indexes is not supported yet")
+                raise ValueError(
+                    "Explicitly passing indexes via the `indexes` argument is not supported "
+                    "when `fastpath=False`. Use the `coords` argument instead."
+                )
 
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
@@ -422,17 +445,18 @@ class DataArray(
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
-            indexes, coords = _create_indexes_from_coords(coords)
+
+            if not isinstance(coords, Coordinates):
+                coords = create_coords_with_default_indexes(coords)
+            indexes = dict(coords.xindexes)
+            coords = {k: v.copy() for k, v in coords.variables.items()}
 
         # These fully describe a DataArray
         self._variable = variable
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-
-        # TODO(shoyer): document this argument, once it becomes part of the
-        # public interface.
-        self._indexes = indexes
+        self._indexes = indexes  # type: ignore[assignment]
 
         self._close = None
 
@@ -500,7 +524,7 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] | None = None,
+        variables: Mapping[Any, Variable] | None = None,
         drop_coords: list[Hashable] | None = None,
         rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
@@ -508,8 +532,8 @@ class DataArray(
         if not indexes:
             return self
 
-        if coords is None:
-            coords = {}
+        if variables is None:
+            variables = {}
         if drop_coords is None:
             drop_coords = []
 
@@ -518,7 +542,7 @@ class DataArray(
         new_indexes = dict(self._indexes)
 
         for name in indexes:
-            new_coords[name] = coords[name]
+            new_coords[name] = variables[name]
             new_indexes[name] = indexes[name]
 
         for name in drop_coords:
@@ -906,12 +930,20 @@ class DataArray(
 
     @property
     def xindexes(self) -> Indexes:
-        """Mapping of xarray Index objects used for label based indexing."""
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
     def coords(self) -> DataArrayCoordinates:
-        """Dictionary-like container of coordinate arrays."""
+        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
+        coordinate variables.
+
+        See Also
+        --------
+        Coordinates
+        """
         return DataArrayCoordinates(self)
 
     @overload
@@ -1803,7 +1835,11 @@ class DataArray(
             exclude_dims,
             exclude_vars,
         )
-        return self._from_temp_dataset(reindexed)
+
+        da = self._from_temp_dataset(reindexed)
+        da.encoding = self.encoding
+
+        return da
 
     def reindex_like(
         self: T_DataArray,
