@@ -2043,7 +2043,7 @@ class Dataset(
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,
             "zlib": True}, ...}``.
-            If encoding is specified the original encoding of the variables of
+            If ``encoding`` is specified the original encoding of the variables of
             the dataset is ignored.
 
             The `h5netcdf` engine supports both the NetCDF4-style compression
