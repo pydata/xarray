@@ -575,6 +575,25 @@ with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 f
 
     xr.open_dataset('/path/to/my/file.h5')
 
+The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the 
+same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
+
+.. ipython:: python
+
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 5))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": pd.date_range("2000-01-01", periods=5),
+            "z": ("x", list("abcd")),
+        },
+    )
+
+    ds.to_netcdf("saved_on_disk.h5")
+
+Groups
+~~~~~~
+
 If you have multiple or highly nested groups, xarray by default may not read the group
 that you want. A particular group of an HDF5 file can be specified using the ``group`` 
 argument:
