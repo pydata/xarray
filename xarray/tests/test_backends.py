@@ -2723,7 +2723,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             ds["test"] = ds["test"].chunk((1, 1, 1))
             encoding = None
         else:
-            encoding = {"test": {"chunks": (1,1,1)}}
+            encoding = {"test": {"chunks": (1, 1, 1)}}
 
         with self.temp_dir() as (d, store):
             ds.to_zarr(
