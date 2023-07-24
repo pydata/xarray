@@ -2723,7 +2723,10 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
         with self.temp_dir() as (d, store):
             ds.to_zarr(
-                store, mode="w", encoding={"test": {"write_empty_chunks": write_empty}}
+                # store, mode="w", encoding={"test": {"write_empty_chunks": write_empty}}
+                store,
+                mode="w",
+                write_empty_chunks=write_empty,
             )
 
             with self.roundtrip_dir(

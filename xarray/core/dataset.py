@@ -2110,7 +2110,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-        write_empty_chunks: bool = False,
+        write_empty_chunks: bool = True,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore:
         ...
@@ -2133,7 +2133,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
-        write_empty_chunks: bool = False,
+        write_empty_chunks: bool = True,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed:
         ...

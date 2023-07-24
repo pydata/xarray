@@ -685,8 +685,17 @@ class ZarrStore(AbstractWritableDataStore):
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
+
+                # If user has specified write_empty_chunks through per-variable encoding, prefer that.
+                if "write_empty_chunks" not in encoding:
+                    encoding["write_empty_chunks"] = self._write_empty
+
                 zarr_array = self.zarr_group.create(
-                    name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
+                    name,
+                    shape=shape,
+                    dtype=dtype,
+                    fill_value=fill_value,
+                    **encoding,
                 )
                 zarr_array = _put_attrs(zarr_array, encoded_attrs)
 
