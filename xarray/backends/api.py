@@ -1520,6 +1520,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool = True,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore:
     ...
@@ -1543,6 +1544,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool = True,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed:
     ...
@@ -1563,6 +1565,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool = True,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
@@ -1656,6 +1659,7 @@ def to_zarr(
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
         zarr_version=zarr_version,
+        write_empty=write_empty_chunks,
     )
 
     if mode in ["a", "r+"]:

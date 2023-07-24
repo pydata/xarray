@@ -368,6 +368,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_synchronizer",
         "_write_region",
         "_safe_chunks",
+        "_write_empty",
     )
 
     @classmethod
@@ -386,6 +387,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        write_empty=True,
     ):
         import zarr
 
@@ -457,6 +459,7 @@ class ZarrStore(AbstractWritableDataStore):
             append_dim,
             write_region,
             safe_chunks,
+            write_empty,
         )
 
     def __init__(
@@ -467,6 +470,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        write_empty=True,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -477,6 +481,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._append_dim = append_dim
         self._write_region = write_region
         self._safe_chunks = safe_chunks
+        self._write_empty = write_empty
 
     @property
     def ds(self):
@@ -666,6 +671,7 @@ class ZarrStore(AbstractWritableDataStore):
                 # metadata. This would need some case work properly with region
                 # and append_dim.
                 zarr_array = self.zarr_group[name]
+                zarr_array._write_empty_chunks = self._write_empty
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(

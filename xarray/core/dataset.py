@@ -2110,6 +2110,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        write_empty_chunks: bool = False,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore:
         ...
@@ -2132,6 +2133,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        write_empty_chunks: bool = False,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> Delayed:
         ...
@@ -2151,6 +2153,7 @@ class Dataset(
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
+        write_empty_chunks: bool = True,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
@@ -2240,6 +2243,15 @@ class Dataset(
             The desired zarr spec version to target (currently 2 or 3). The
             default of None will attempt to determine the zarr version from
             ``store`` when possible, otherwise defaulting to 2.
+        write_empty_chunks : bool, default: False
+            If True (default), all chunks will be stored regardless of their
+            contents. If False, each chunk is compared to the array's fill value
+            prior to storing. If a chunk is uniformly equal to the fill value, then
+            that chunk is not be stored, and the store entry for that chunk's key
+            is deleted. This setting enables sparser storage, as only chunks with
+            non-fill-value data are stored, at the expense of overhead associated
+            with checking the data of each chunk. (From write_empty_chunks in
+            zarr docs)
         chunkmanager_store_kwargs : dict, optional
             Additional keyword arguments passed on to the `ChunkManager.store` method used to store
             chunked arrays. For example for a dask array additional kwargs will be passed eventually to
@@ -2289,6 +2301,7 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             zarr_version=zarr_version,
+            write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
         )
 
