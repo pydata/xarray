@@ -95,7 +95,7 @@ all of which are implemented by forwarding on to the underlying ``Variable`` obj
 
 In addition, a :py:class:`~xarray.DataArray` stores additional ``Variable`` objects stored in a dict under the private ``_coords`` attribute,
 each of which is referred to as a "Coordinate Variable". These coordinate variable objects are only allowed to have ``dims`` that are a subset of the data variable's ``dims``,
-and each dim has a specific length. This means that the full :py:attr:`~xarray.DataArray.size` of the dataarray can be represented by a dictionary mapping dimension names to integer sizes.
+and each dim has a specific length. This means that the full :py:attr:`~xarray.DataArray.sizes` of the dataarray can be represented by a dictionary mapping dimension names to integer sizes.
 The underlying data variable has this exact same size, and the attached coordinate variables have sizes which are some subset of the size of the data variable.
 Another way of saying this is that all coordinate variables must be "alignable" with the data variable.
 
