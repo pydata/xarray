@@ -573,7 +573,7 @@ with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 f
 
 .. code:: python
 
-    xr.open_dataset('/path/to/my/file.h5')
+    xr.open_dataset("/path/to/my/file.h5")
 
 The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the 
 same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
@@ -595,23 +595,23 @@ Groups
 ~~~~~~
 
 If you have multiple or highly nested groups, xarray by default may not read the group
-that you want. A particular group of an HDF5 file can be specified using the ``group`` 
+that you want. A particular group of an HDF5 file can be specified using the ``group``
 argument:
 
 .. code:: python
 
-    xr.open_dataset('/path/to/my/file.h5', group='/my/group')
+    xr.open_dataset("/path/to/my/file.h5", group="/my/group")
 
 While xarray cannot interrogate an HDF5 file to determine which groups are available,
 the HDF5 Python reader `h5py`_ can be used instead.
 
-Natively the xarray data structures can only handle one level of nesting, organized as 
-DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you 
+Natively the xarray data structures can only handle one level of nesting, organized as
+DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
 .. note::
 
-    For native handling of multiple HDF5 groups with xarray, including I/O, you might be 
+    For native handling of multiple HDF5 groups with xarray, including I/O, you might be
     interested in the experimental
     `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
 
