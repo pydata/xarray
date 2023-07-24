@@ -6083,6 +6083,11 @@ class Dataset(
         interpolated: Dataset
             Filled in Dataset.
 
+        Warning
+        --------
+        When passing fill_value as a keyword argument with method="linear", it does not use
+        ``numpy.interp`` but it uses ``scipy.interpolate.interp1d``, which provides the fill_value parameter.
+
         See Also
         --------
         numpy.interp
