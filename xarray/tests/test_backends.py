@@ -2719,7 +2719,8 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             }
         )
 
-        ds["test"] = ds["test"].chunk((1, 1, 1))
+        if has_dask:
+            ds["test"] = ds["test"].chunk((1, 1, 1))
 
         with self.temp_dir() as (d, store):
             ds.to_zarr(
