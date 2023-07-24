@@ -152,7 +152,7 @@ over all other aspects, then use :py:func:`hypothesis.strategies.just()`.
 (This is technically another example of chaining strategies - :py:func:`hypothesis.strategies.just()` is simply a
 special strategy that just contains a single example.)
 
-To fix the length of dimensions you can instead pass `dims` as a mapping of dimension names to lengths
+To fix the length of dimensions you can instead pass ``dims`` as a mapping of dimension names to lengths
 (i.e. following xarray objects' ``.sizes()`` property), e.g.
 
 .. ipython:: python
@@ -187,17 +187,17 @@ Here we have used one of hypothesis' built-in strategies :py:func:`hypothesis.st
 strategy which generates mappings of dimension names to lengths (i.e. the ``size`` of the xarray object we want).
 This particular strategy will always generate an ``x`` dimension of length 2, and a ``y`` dimension of
 length either 3 or 4, and will sometimes also generate a ``z`` dimension of length 2.
-By feeding this strategy for dictionaries into the `dims` argument of xarray's `dataarrays` strategy, we can generate
-arbitrary ``DataArray`` objects whose dimensions will always match these specifications.
+By feeding this strategy for dictionaries into the ``dims`` argument of xarray's :py:func:`~st.dataarrays` strategy,
+we can generate arbitrary :py:class:`~xarray.DataArray` objects whose dimensions will always match these specifications.
 
 
 Creating Duck-type Arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
-numpy array (so-called "duck array wrapping", see :ref:`internals.duck_arrays`).
+numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duck_arrays>`).
 
-Imagine we want to write a strategy which generates arbitrary `DataArray` objects, each of which wraps a
+Imagine we want to write a strategy which generates arbitrary ``DataArray`` objects, each of which wraps a
 :py:class:`sparse.COO` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
 
 1. Create a xarray object with numpy data and use ``.map()`` to convert the underlying array to a
