@@ -2721,12 +2721,15 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
         if has_dask:
             ds["test"] = ds["test"].chunk((1, 1, 1))
+            encoding = None
+        else:
+            encoding = {"test": {"chunks": (1,1,1)}}
 
         with self.temp_dir() as (d, store):
             ds.to_zarr(
-                # store, mode="w", encoding={"test": {"write_empty_chunks": write_empty}}
                 store,
                 mode="w",
+                encoding=encoding,
                 write_empty_chunks=write_empty,
             )
 
