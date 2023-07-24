@@ -894,11 +894,11 @@ class GroupBy(Generic[T_Xarray]):
         # and contains our lazy indexing classes
         # We need to check for dask-backed Datasets
         # so utils.is_duck_dask_array does not work for this check
-        if obj.chunks is not None and other.chunks is None:
+        if obj.chunks and not other.chunks:
             # TODO: What about datasets with some dask vars, and others not?
             # This handles dims other than `name``
             # a chunk size of 1 seems reasonable since we expect it to be repeated
-            chunks = {k: v for k, v in obj.chunksizes if k in other}
+            chunks = {k: v for k, v in obj.chunksizes.items() if k in other.dims}
             chunks[name] = 1
             other = other.chunk(chunks)
 
