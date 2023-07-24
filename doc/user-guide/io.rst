@@ -575,7 +575,7 @@ with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 f
 
     xr.open_dataset("/path/to/my/file.h5")
 
-The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the 
+The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the
 same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
 
 .. ipython:: python
