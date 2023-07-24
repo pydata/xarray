@@ -28,6 +28,7 @@ only return native xarray objects.
 The standard advice is to use :issue:`composition over inheritance <706>`, but
 reimplementing an API as large as xarray's on your own objects can be an onerous
 task, even if most methods are only forwarding to xarray implementations.
+(For an example of a project which took this approach of subclassing see `UXarray <https://github.com/UXARRAY/uxarray>`_).
 
 If you simply want the ability to call a function with the syntax of a
 method call, then the builtin :py:meth:`~xarray.DataArray.pipe` method (copied
