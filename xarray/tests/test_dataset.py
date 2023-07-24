@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -31,11 +31,13 @@ from xarray import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
-from xarray.core.coordinates import DatasetCoordinates
+from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
+from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
+    DuckArrayWrapper,
     InaccessibleArray,
     UnexpectedDataAccess,
     assert_allclose,
@@ -101,57 +103,63 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
     bool_var = np.array([True, False, True], dtype=bool)
     bool_var_to_append = np.array([False, True], dtype=bool)
 
-    ds = xr.Dataset(
-        data_vars={
-            "da": xr.DataArray(
-                rs.rand(3, 3, nt1),
-                coords=[lat, lon, time1],
-                dims=["lat", "lon", "time"],
-            ),
-            "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
-            "string_var_fixed_length": xr.DataArray(
-                string_var_fixed_length, coords=[time1], dims=["time"]
-            ),
-            "unicode_var": xr.DataArray(
-                unicode_var, coords=[time1], dims=["time"]
-            ).astype(np.unicode_),
-            "datetime_var": xr.DataArray(datetime_var, coords=[time1], dims=["time"]),
-            "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
-        }
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "Converting non-nanosecond")
+        ds = xr.Dataset(
+            data_vars={
+                "da": xr.DataArray(
+                    rs.rand(3, 3, nt1),
+                    coords=[lat, lon, time1],
+                    dims=["lat", "lon", "time"],
+                ),
+                "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
+                "string_var_fixed_length": xr.DataArray(
+                    string_var_fixed_length, coords=[time1], dims=["time"]
+                ),
+                "unicode_var": xr.DataArray(
+                    unicode_var, coords=[time1], dims=["time"]
+                ).astype(np.unicode_),
+                "datetime_var": xr.DataArray(
+                    datetime_var, coords=[time1], dims=["time"]
+                ),
+                "bool_var": xr.DataArray(bool_var, coords=[time1], dims=["time"]),
+            }
+        )
 
-    ds_to_append = xr.Dataset(
-        data_vars={
-            "da": xr.DataArray(
-                rs.rand(3, 3, nt2),
-                coords=[lat, lon, time2],
-                dims=["lat", "lon", "time"],
-            ),
-            "string_var": xr.DataArray(
-                string_var_to_append, coords=[time2], dims=["time"]
-            ),
-            "string_var_fixed_length": xr.DataArray(
-                string_var_fixed_length_to_append, coords=[time2], dims=["time"]
-            ),
-            "unicode_var": xr.DataArray(
-                unicode_var[:nt2], coords=[time2], dims=["time"]
-            ).astype(np.unicode_),
-            "datetime_var": xr.DataArray(
-                datetime_var_to_append, coords=[time2], dims=["time"]
-            ),
-            "bool_var": xr.DataArray(bool_var_to_append, coords=[time2], dims=["time"]),
-        }
-    )
+        ds_to_append = xr.Dataset(
+            data_vars={
+                "da": xr.DataArray(
+                    rs.rand(3, 3, nt2),
+                    coords=[lat, lon, time2],
+                    dims=["lat", "lon", "time"],
+                ),
+                "string_var": xr.DataArray(
+                    string_var_to_append, coords=[time2], dims=["time"]
+                ),
+                "string_var_fixed_length": xr.DataArray(
+                    string_var_fixed_length_to_append, coords=[time2], dims=["time"]
+                ),
+                "unicode_var": xr.DataArray(
+                    unicode_var[:nt2], coords=[time2], dims=["time"]
+                ).astype(np.unicode_),
+                "datetime_var": xr.DataArray(
+                    datetime_var_to_append, coords=[time2], dims=["time"]
+                ),
+                "bool_var": xr.DataArray(
+                    bool_var_to_append, coords=[time2], dims=["time"]
+                ),
+            }
+        )
 
-    ds_with_new_var = xr.Dataset(
-        data_vars={
-            "new_var": xr.DataArray(
-                rs.rand(3, 3, nt1 + nt2),
-                coords=[lat, lon, time1.append(time2)],
-                dims=["lat", "lon", "time"],
-            )
-        }
-    )
+        ds_with_new_var = xr.Dataset(
+            data_vars={
+                "new_var": xr.DataArray(
+                    rs.rand(3, 3, nt1 + nt2),
+                    coords=[lat, lon, time1.append(time2)],
+                    dims=["lat", "lon", "time"],
+                )
+            }
+        )
 
     assert all(objp.data.flags.writeable for objp in ds.variables.values())
     assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
@@ -203,6 +211,10 @@ def create_test_stacked_array() -> tuple[DataArray, DataArray]:
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
+    """
+    Store that does not allow any data access.
+    """
+
     def __init__(self):
         super().__init__()
         self._indexvars = set()
@@ -221,6 +233,47 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
             return Variable(v.dims, data, v.attrs)
 
         return {k: lazy_inaccessible(k, v) for k, v in self._variables.items()}
+
+
+class DuckBackendArrayWrapper(backends.common.BackendArray):
+    """Mimic a BackendArray wrapper around DuckArrayWrapper"""
+
+    def __init__(self, array):
+        self.array = DuckArrayWrapper(array)
+        self.shape = array.shape
+        self.dtype = array.dtype
+
+    def get_array(self):
+        return self.array
+
+    def __getitem__(self, key):
+        return self.array[key.tuple]
+
+
+class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
+    """
+    Store that returns a duck array, not convertible to numpy array,
+    on read. Modeled after nVIDIA's kvikio.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._indexvars = set()
+
+    def store(self, variables, *args, **kwargs) -> None:
+        super().store(variables, *args, **kwargs)
+        for k, v in variables.items():
+            if isinstance(v, IndexVariable):
+                self._indexvars.add(k)
+
+    def get_variables(self) -> dict[Any, xr.Variable]:
+        def lazy_accessible(k, v) -> xr.Variable:
+            if k in self._indexvars:
+                return v
+            data = indexing.LazilyIndexedArray(DuckBackendArrayWrapper(v.values))
+            return Variable(v.dims, data, v.attrs)
+
+        return {k: lazy_accessible(k, v) for k, v in self._variables.items()}
 
 
 class TestDataset:
@@ -415,12 +468,15 @@ class TestDataset:
 
         with pytest.raises(ValueError, match=r"conflicting sizes"):
             Dataset({"a": x1, "b": x2})
-        with pytest.raises(ValueError, match=r"disallows such variables"):
-            Dataset({"a": x1, "x": z})
         with pytest.raises(TypeError, match=r"tuple of form"):
             Dataset({"x": (1, 2, 3, 4, 5, 6, 7)})
         with pytest.raises(ValueError, match=r"already exists as a scalar"):
             Dataset({"x": 0, "y": ("x", [1, 2, 3])})
+
+        # nD coordinate variable "x" sharing name with dimension
+        actual = Dataset({"a": x1, "x": z})
+        assert "x" not in actual.xindexes
+        _assert_internal_invariants(actual, check_default_indexes=True)
 
         # verify handling of DataArrays
         expected = Dataset({"x": x1, "z": z})
@@ -443,6 +499,7 @@ class TestDataset:
         actual = Dataset({"x": [5, 6, 7, 8, 9]})
         assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_constructor_0d(self) -> None:
         expected = Dataset({"x": ([], 1)})
         for arg in [1, np.array(1), expected["x"]]:
@@ -576,6 +633,37 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
             Dataset({}, {"x": mindex, "y": mindex})
             Dataset({}, {"x": mindex, "level_1": range(4)})
+
+    def test_constructor_no_default_index(self) -> None:
+        # explicitly passing a Coordinates object skips the creation of default index
+        ds = Dataset(coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        assert "x" in ds
+        assert "x" not in ds.xindexes
+
+    def test_constructor_multiindex(self) -> None:
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        coords = Coordinates.from_pandas_multiindex(midx, "x")
+
+        ds = Dataset(coords=coords)
+        assert_identical(ds, coords.to_dataset())
+
+        with pytest.warns(
+            FutureWarning, match=".*`pandas.MultiIndex` via data variable.*"
+        ):
+            Dataset(data_vars={"x": midx})
+
+    def test_constructor_custom_index(self) -> None:
+        class CustomIndex(Index):
+            ...
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        ds = Dataset(coords=coords)
+        assert isinstance(ds.xindexes["x"], CustomIndex)
+
+        # test coordinate variables copied
+        assert ds.variables["x"] is not coords.variables["x"]
 
     def test_properties(self) -> None:
         ds = create_test_data()
@@ -2827,6 +2915,21 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"contain all variables in original"):
             orig.copy(data={"var1": new_var1})
 
+    def test_reset_encoding(self) -> None:
+        orig = create_test_data()
+        vencoding = {"scale_factor": 10}
+        orig.encoding = {"foo": "bar"}
+
+        for k, v in orig.variables.items():
+            orig[k].encoding = vencoding
+
+        actual = orig.reset_encoding()
+        assert actual.encoding == {}
+        for k, v in actual.variables.items():
+            assert v.encoding == {}
+
+        assert_equal(actual, orig)
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
@@ -4183,6 +4286,25 @@ class TestDataset:
         actual = ds.assign_coords(y=[4, 5, 6])
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
+    def test_assign_coords_custom_index(self) -> None:
+        class CustomIndex(Index):
+            pass
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        ds = Dataset()
+        actual = ds.assign_coords(coords)
+        assert isinstance(actual.xindexes["x"], CustomIndex)
+
+    def test_assign_coords_no_default_index(self) -> None:
+        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        ds = Dataset()
+        actual = ds.assign_coords(coords)
+        expected = coords.to_dataset()
+        assert_identical(expected, actual, check_default_indexes=False)
+        assert "y" not in actual.xindexes
+
     def test_merge_multiindex_level(self) -> None:
         data = create_test_multiindex()
 
@@ -4528,7 +4650,11 @@ class TestDataset:
         expected = df.apply(np.asarray)
         assert roundtripped.equals(expected)
 
-    def test_to_and_from_dict(self) -> None:
+    @pytest.mark.parametrize("encoding", [True, False])
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    def test_to_and_from_dict(
+        self, encoding: bool, data: bool | Literal["list", "array"]
+    ) -> None:
         # <xarray.Dataset>
         # Dimensions:  (t: 10)
         # Coordinates:
@@ -4549,14 +4675,25 @@ class TestDataset:
                 "b": {"dims": ("t",), "data": y.tolist(), "attrs": {}},
             },
         }
+        if encoding:
+            ds.t.encoding.update({"foo": "bar"})
+            expected["encoding"] = {}
+            expected["coords"]["t"]["encoding"] = ds.t.encoding
+            for vvs in ["a", "b"]:
+                expected["data_vars"][vvs]["encoding"] = {}
 
-        actual = ds.to_dict()
+        actual = ds.to_dict(data=data, encoding=encoding)
 
         # check that they are identical
-        assert expected == actual
+        np.testing.assert_equal(expected, actual)
 
         # check roundtrip
-        assert_identical(ds, Dataset.from_dict(actual))
+        ds_rt = Dataset.from_dict(actual)
+        assert_identical(ds, ds_rt)
+        if encoding:
+            assert set(ds_rt.variables) == set(ds.variables)
+            for vv in ds.variables:
+                np.testing.assert_equal(ds_rt[vv].encoding, ds[vv].encoding)
 
         # check the data=False option
         expected_no_data = expected.copy()
@@ -4567,14 +4704,18 @@ class TestDataset:
         expected_no_data["coords"]["t"].update({"dtype": endiantype, "shape": (10,)})
         expected_no_data["data_vars"]["a"].update({"dtype": "float64", "shape": (10,)})
         expected_no_data["data_vars"]["b"].update({"dtype": "float64", "shape": (10,)})
-        actual_no_data = ds.to_dict(data=False)
+        actual_no_data = ds.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
         # verify coords are included roundtrip
         expected_ds = ds.set_coords("b")
-        actual2 = Dataset.from_dict(expected_ds.to_dict())
+        actual2 = Dataset.from_dict(expected_ds.to_dict(data=data, encoding=encoding))
 
         assert_identical(expected_ds, actual2)
+        if encoding:
+            assert set(expected_ds.variables) == set(actual2.variables)
+            for vv in ds.variables:
+                np.testing.assert_equal(expected_ds[vv].encoding, actual2[vv].encoding)
 
         # test some incomplete dicts:
         # this one has no attrs field, the dims are strings, and x, y are
@@ -4622,7 +4763,10 @@ class TestDataset:
         roundtripped = Dataset.from_dict(ds.to_dict())
         assert_identical(ds, roundtripped)
 
-    def test_to_and_from_dict_with_nan_nat(self) -> None:
+    @pytest.mark.parametrize("data", [True, "list", "array"])
+    def test_to_and_from_dict_with_nan_nat(
+        self, data: bool | Literal["list", "array"]
+    ) -> None:
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
         y[2] = np.nan
@@ -4638,7 +4782,7 @@ class TestDataset:
                 "lat": ("lat", lat),
             }
         )
-        roundtripped = Dataset.from_dict(ds.to_dict())
+        roundtripped = Dataset.from_dict(ds.to_dict(data=data))
         assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:
@@ -4683,6 +4827,29 @@ class TestDataset:
             # these should not raise UnexpectedDataAccess:
             ds.isel(time=10)
             ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
+
+    def test_lazy_load_duck_array(self) -> None:
+        store = AccessibleAsDuckArrayDataStore()
+        create_test_data().dump_to_store(store)
+
+        for decode_cf in [True, False]:
+            ds = open_dataset(store, decode_cf=decode_cf)
+            with pytest.raises(UnexpectedDataAccess):
+                ds["var1"].values
+
+            # these should not raise UnexpectedDataAccess:
+            ds.var1.data
+            ds.isel(time=10)
+            ds.isel(time=slice(10), dim1=[0]).isel(dim1=0, dim2=-1)
+            repr(ds)
+
+            # preserve the duck array type and don't cast to array
+            assert isinstance(ds["var1"].load().data, DuckArrayWrapper)
+            assert isinstance(
+                ds["var1"].isel(dim2=0, dim1=0).load().data, DuckArrayWrapper
+            )
+
+            ds.close()
 
     def test_dropna(self) -> None:
         x = np.random.randn(4, 4)
@@ -5495,6 +5662,7 @@ class TestDataset:
         expected = ds + other.reindex_like(ds)
         assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_dataset_math_errors(self) -> None:
         ds = self.make_example_math_dataset()
 
@@ -6083,6 +6251,13 @@ class TestDataset:
             ds["var3"].coords[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
+        coords = Coordinates(ds.coords)
+        actual = coords._ipython_key_completions_()
+        expected = ["time", "dim2", "dim3", "numbers"]
+        for item in actual:
+            coords[item]  # should not raise
+        assert sorted(actual) == sorted(expected)
+
         # data_vars
         actual = ds.data_vars._ipython_key_completions_()
         expected = ["var1", "var2", "var3", "dim1"]
@@ -6102,6 +6277,14 @@ class TestDataset:
 
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
+
+    def test_polyfit_weighted(self) -> None:
+        # Make sure weighted polyfit does not change the original object (issue #5644)
+        ds = create_test_data(seed=1)
+        ds_copy = ds.copy(deep=True)
+
+        ds.polyfit("dim2", 2, w=np.arange(ds.sizes["dim2"]))
+        xr.testing.assert_identical(ds, ds_copy)
 
     def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
@@ -6494,6 +6677,7 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 def test_differentiate_datetime(dask) -> None:
     rs = np.random.RandomState(42)
@@ -6690,6 +6874,7 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapz_datetime(dask, which_datetime) -> None:

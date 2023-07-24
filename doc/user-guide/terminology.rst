@@ -54,23 +54,22 @@ complete examples, please consult the relevant documentation.*
     Coordinate
         An array that labels a dimension or set of dimensions of another
         ``DataArray``. In the usual one-dimensional case, the coordinate array's
-        values can loosely be thought of as tick labels along a dimension. There
-        are two types of coordinate arrays: *dimension coordinates* and
-        *non-dimension coordinates* (see below). A coordinate named ``x`` can be
-        retrieved from ``arr.coords[x]``. A ``DataArray`` can have more
-        coordinates than dimensions because a single dimension can be labeled by
-        multiple coordinate arrays. However, only one coordinate array can be a
-        assigned as a particular dimension's dimension coordinate array. As a
+        values can loosely be thought of as tick labels along a dimension. We
+        distinguish :term:`Dimension coordinate` vs. :term:`Non-dimension
+        coordinate` and :term:`Indexed coordinate` vs. :term:`Non-indexed
+        coordinate`. A coordinate named ``x`` can be retrieved from
+        ``arr.coords[x]``. A ``DataArray`` can have more coordinates than
+        dimensions because a single dimension can be labeled by multiple
+        coordinate arrays. However, only one coordinate array can be a assigned
+        as a particular dimension's dimension coordinate array. As a
         consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
 
     Dimension coordinate
         A one-dimensional coordinate array assigned to ``arr`` with both a name
-        and dimension name in ``arr.dims``. Dimension coordinates are used for
-        label-based indexing and alignment, like the index found on a
-        :py:class:`pandas.DataFrame` or :py:class:`pandas.Series`. In fact,
-        dimension coordinates use :py:class:`pandas.Index` objects under the
-        hood for efficient computation. Dimension coordinates are marked by
-        ``*`` when printing a ``DataArray`` or ``Dataset``.
+        and dimension name in ``arr.dims``. Usually (but not always), a
+        dimension coordinate is also an :term:`Indexed coordinate` so that it can
+        be used for label-based indexing and alignment, like the index found on
+        a :py:class:`pandas.DataFrame` or :py:class:`pandas.Series`.
 
     Non-dimension coordinate
         A coordinate array assigned to ``arr`` with a name in ``arr.coords`` but
@@ -79,20 +78,40 @@ complete examples, please consult the relevant documentation.*
         example, multidimensional coordinates are often used in geoscience
         datasets when :doc:`the data's physical coordinates (such as latitude
         and longitude) differ from their logical coordinates
-        <../examples/multidimensional-coords>`. However, non-dimension coordinates
-        are not indexed, and any operation on non-dimension coordinates that
-        leverages indexing will fail. Printing ``arr.coords`` will print all of
-        ``arr``'s coordinate names, with the corresponding dimension(s) in
-        parentheses. For example, ``coord_name (dim_name) 1 2 3 ...``.
+        <../examples/multidimensional-coords>`. Printing ``arr.coords`` will
+        print all of ``arr``'s coordinate names, with the corresponding
+        dimension(s) in parentheses. For example, ``coord_name (dim_name) 1 2 3
+        ...``.
+
+    Indexed coordinate
+        A coordinate which has an associated :term:`Index`. Generally this means
+        that the coordinate labels can be used for indexing (selection) and/or
+        alignment. An indexed coordinate may have one or more arbitrary
+        dimensions although in most cases it is also a :term:`Dimension
+        coordinate`. It may or may not be grouped with other indexed coordinates
+        depending on whether they share the same index. Indexed coordinates are
+        marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+
+    Non-indexed coordinate
+        A coordinate which has no associated :term:`Index`. It may still
+        represent fixed labels along one or more dimensions but it cannot be
+        used for label-based indexing and alignment.
 
     Index
-        An *index* is a data structure optimized for efficient selecting and
-        slicing of an associated array. Xarray creates indexes for dimension
-        coordinates so that operations along dimensions are fast, while
-        non-dimension coordinates are not indexed. Under the hood, indexes are
-        implemented as :py:class:`pandas.Index` objects. The index associated
-        with dimension name ``x`` can be retrieved by ``arr.indexes[x]``. By
-        construction, ``len(arr.dims) == len(arr.indexes)``
+        An *index* is a data structure optimized for efficient data selection
+        and alignment within a discrete or continuous space that is defined by
+        coordinate labels (unless it is a functional index). By default, Xarray
+        creates a :py:class:`~xarray.indexes.PandasIndex` object (i.e., a
+        :py:class:`pandas.Index` wrapper) for each :term:`Dimension coordinate`.
+        For more advanced use cases (e.g., staggered or irregular grids,
+        geospatial indexes), Xarray also accepts any instance of a specialized
+        :py:class:`~xarray.indexes.Index` subclass that is associated to one or
+        more arbitrary coordinates. The index associated with the coordinate
+        ``x`` can be retrieved by ``arr.xindexes[x]`` (or ``arr.indexes["x"]``
+        if the index is convertible to a :py:class:`pandas.Index` object). If
+        two coordinates ``x`` and ``y`` share the same index,
+        ``arr.xindexes[x]`` and ``arr.xindexes[y]`` both return the same
+        :py:class:`~xarray.indexes.Index` object.
 
     name
         The names of dimensions, coordinates, DataArray objects and data

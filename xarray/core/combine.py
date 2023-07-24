@@ -369,9 +369,8 @@ def _nested_combine(
     return combined
 
 
-# Define type for arbitrarily-nested list of lists recursively
-# Currently mypy cannot handle this but other linters can (https://stackoverflow.com/a/53845083/3154101)
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore[misc]
+# Define type for arbitrarily-nested list of lists recursively:
+DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 
 def combine_nested(
@@ -971,10 +970,9 @@ def combine_by_coords(
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together
-        concatenated_grouped_by_data_vars = []
-        for vars, datasets_with_same_vars in grouped_by_vars:
-            concatenated = _combine_single_variable_hypercube(
-                list(datasets_with_same_vars),
+        concatenated_grouped_by_data_vars = tuple(
+            _combine_single_variable_hypercube(
+                tuple(datasets_with_same_vars),
                 fill_value=fill_value,
                 data_vars=data_vars,
                 coords=coords,
@@ -982,7 +980,8 @@ def combine_by_coords(
                 join=join,
                 combine_attrs=combine_attrs,
             )
-            concatenated_grouped_by_data_vars.append(concatenated)
+            for vars, datasets_with_same_vars in grouped_by_vars
+        )
 
     return merge(
         concatenated_grouped_by_data_vars,

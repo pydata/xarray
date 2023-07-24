@@ -7,10 +7,11 @@ dependencies:
   - python=3.10
   - bottleneck
   - cartopy
-  - cfgrib>=0.9
+  - cfgrib
   - dask-core>=2022.1
   - h5netcdf>=0.13
   - ipykernel
+  - ipywidgets  # silence nbsphinx warning
   - ipython
   - iris>=2.3
   - jupyter_client
@@ -20,12 +21,11 @@ dependencies:
   - numba
   - numpy>=1.21,<1.24
   - packaging>=21.3
-  - pandas>=1.4,<2
+  - pandas>=1.4
   - pooch
   - pip
   - pre-commit
   - pyproj
-  - rasterio>=1.1
   - scipy!=1.10.0
   - seaborn
   - setuptools

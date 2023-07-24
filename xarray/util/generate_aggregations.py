@@ -22,12 +22,13 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims
-from xarray.core.utils import contains_only_dask_or_numpy, module_available
+from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -337,7 +338,7 @@ class AggregationGenerator:
         >>> da = xr.DataArray({method.np_example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )"""
@@ -394,7 +395,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="{method.name}",

@@ -4,8 +4,6 @@ import warnings
 from collections.abc import Hashable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
-import numpy as np
-
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
     DatasetResampleAggregations,
@@ -56,27 +54,7 @@ class Resample(GroupBy[T_Xarray]):
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
-        from xarray.core.dataarray import DataArray
-
-        kwargs.setdefault("method", "cohorts")
-
-        # now create a label DataArray since resample doesn't do that somehow
-        repeats = []
-        for slicer in self._group_indices:
-            assert isinstance(slicer, slice)
-            stop = (
-                slicer.stop
-                if slicer.stop is not None
-                else self._obj.sizes[self._group_dim]
-            )
-            repeats.append(stop - slicer.start)
-        labels = np.repeat(self._unique_coord.data, repeats)
-        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
-
-        result = super()._flox_reduce(
-            dim=dim, group=group, keep_attrs=keep_attrs, **kwargs
-        )
-        result = self._maybe_restore_empty_groups(result)
+        result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
 
@@ -106,8 +84,9 @@ class Resample(GroupBy[T_Xarray]):
         padded : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="pad", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="pad", tolerance=tolerance
         )
 
     ffill = pad
@@ -130,8 +109,9 @@ class Resample(GroupBy[T_Xarray]):
         backfilled : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="backfill", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="backfill", tolerance=tolerance
         )
 
     bfill = backfill
@@ -155,8 +135,9 @@ class Resample(GroupBy[T_Xarray]):
         upsampled : DataArray or Dataset
         """
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.reindex(
-            {self._dim: self._full_index}, method="nearest", tolerance=tolerance
+            {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
         )
 
     def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
@@ -192,8 +173,9 @@ class Resample(GroupBy[T_Xarray]):
     def _interpolate(self, kind="linear") -> T_Xarray:
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
+        (grouper,) = self.groupers
         return obj.interp(
-            coords={self._dim: self._full_index},
+            coords={self._dim: grouper.full_index},
             assume_sorted=True,
             method=kind,
             kwargs={"bounds_error": False},

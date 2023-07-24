@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims
-from xarray.core.utils import contains_only_dask_or_numpy, module_available
+from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -77,7 +77,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -149,7 +149,7 @@ class DatasetAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -221,7 +221,7 @@ class DatasetAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -299,7 +299,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -386,7 +386,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -477,7 +477,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -575,7 +575,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -682,7 +682,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -786,7 +786,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -890,7 +890,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -990,7 +990,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1081,7 +1081,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1174,7 +1174,7 @@ class DatasetAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1273,7 +1273,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1339,7 +1339,7 @@ class DataArrayAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1405,7 +1405,7 @@ class DataArrayAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1477,7 +1477,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1556,7 +1556,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1639,7 +1639,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1729,7 +1729,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1826,7 +1826,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -1920,7 +1920,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2014,7 +2014,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2104,7 +2104,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2187,7 +2187,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2276,7 +2276,7 @@ class DataArrayAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2388,7 +2388,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2413,7 +2413,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -2486,7 +2486,7 @@ class DatasetGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2511,7 +2511,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -2584,7 +2584,7 @@ class DatasetGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2609,7 +2609,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -2688,7 +2688,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2723,7 +2723,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -2804,7 +2804,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2839,7 +2839,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -2922,7 +2922,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -2957,7 +2957,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -3047,7 +3047,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3092,7 +3092,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -3184,7 +3184,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3229,7 +3229,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -3318,7 +3318,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3363,7 +3363,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -3452,7 +3452,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3497,7 +3497,7 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -3582,7 +3582,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3685,7 +3685,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3786,7 +3786,7 @@ class DatasetGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3902,7 +3902,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -3927,7 +3927,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -4000,7 +4000,7 @@ class DatasetResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4025,7 +4025,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -4098,7 +4098,7 @@ class DatasetResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4123,7 +4123,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -4202,7 +4202,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4237,7 +4237,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -4318,7 +4318,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4353,7 +4353,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -4436,7 +4436,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4471,7 +4471,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -4561,7 +4561,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4606,7 +4606,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -4698,7 +4698,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4743,7 +4743,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -4832,7 +4832,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -4877,7 +4877,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -4966,7 +4966,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5011,7 +5011,7 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -5096,7 +5096,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5199,7 +5199,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5300,7 +5300,7 @@ class DatasetResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5416,7 +5416,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5436,7 +5436,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -5507,7 +5507,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5527,7 +5527,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -5598,7 +5598,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5618,7 +5618,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -5695,7 +5695,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5723,7 +5723,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -5802,7 +5802,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5830,7 +5830,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -5911,7 +5911,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -5939,7 +5939,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -6027,7 +6027,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6063,7 +6063,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -6153,7 +6153,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6189,7 +6189,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -6276,7 +6276,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6312,7 +6312,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -6399,7 +6399,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6435,7 +6435,7 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -6518,7 +6518,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6613,7 +6613,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6710,7 +6710,7 @@ class DataArrayGroupByAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6822,7 +6822,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6842,7 +6842,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="count",
@@ -6913,7 +6913,7 @@ class DataArrayResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -6933,7 +6933,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="all",
@@ -7004,7 +7004,7 @@ class DataArrayResampleAggregations:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7024,7 +7024,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="any",
@@ -7101,7 +7101,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7129,7 +7129,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="max",
@@ -7208,7 +7208,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7236,7 +7236,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="min",
@@ -7317,7 +7317,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7345,7 +7345,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="mean",
@@ -7433,7 +7433,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7469,7 +7469,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="prod",
@@ -7559,7 +7559,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7595,7 +7595,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="sum",
@@ -7682,7 +7682,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7718,7 +7718,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="std",
@@ -7805,7 +7805,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -7841,7 +7841,7 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="var",
@@ -7924,7 +7924,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -8019,7 +8019,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
@@ -8116,7 +8116,7 @@ class DataArrayResampleAggregations:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )

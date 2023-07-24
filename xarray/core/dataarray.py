@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from os import PathLike
 from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overload
 
@@ -23,7 +23,12 @@ from xarray.core.alignment import (
 from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DataArrayCoordinates, assert_coordinate_consistent
+from xarray.core.coordinates import (
+    Coordinates,
+    DataArrayCoordinates,
+    assert_coordinate_consistent,
+    create_coords_with_default_indexes,
+)
 from xarray.core.dataset import Dataset
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -34,7 +39,7 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
     Default,
@@ -42,6 +47,7 @@ from xarray.core.utils import (
     ReprObject,
     _default,
     either_dict_or_kwargs,
+    emit_user_level_warning,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -58,6 +64,10 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     try:
+        from dask.dataframe import DataFrame as DaskDataFrame
+    except ImportError:
+        DaskDataFrame = None  # type: ignore
+    try:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
@@ -70,8 +80,10 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
+    from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
+    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -97,9 +109,35 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
+def _check_coords_dims(shape, coords, dims):
+    sizes = dict(zip(dims, shape))
+    for k, v in coords.items():
+        if any(d not in dims for d in v.dims):
+            raise ValueError(
+                f"coordinate {k} has dimensions {v.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dims}"
+            )
+
+        for d, s in zip(v.dims, v.shape):
+            if s != sizes[d]:
+                raise ValueError(
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
+                )
+
+        if k in sizes and v.shape != (sizes[k],):
+            raise ValueError(
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
+            )
+
+
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> tuple[dict[Hashable, Variable], tuple[Hashable, ...]]:
+) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
     if (
@@ -137,40 +175,22 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError(f"dimension {d} is not a string")
 
-    new_coords: dict[Hashable, Variable] = {}
+    new_coords: Mapping[Hashable, Any]
 
-    if utils.is_dict_like(coords):
-        for k, v in coords.items():
-            new_coords[k] = as_variable(v, name=k)
-    elif coords is not None:
-        for dim, coord in zip(dims, coords):
-            var = as_variable(coord, name=dim)
-            var.dims = (dim,)
-            new_coords[dim] = var.to_index_variable()
+    if isinstance(coords, Coordinates):
+        new_coords = coords
+    else:
+        new_coords = {}
+        if utils.is_dict_like(coords):
+            for k, v in coords.items():
+                new_coords[k] = as_variable(v, name=k)
+        elif coords is not None:
+            for dim, coord in zip(dims, coords):
+                var = as_variable(coord, name=dim)
+                var.dims = (dim,)
+                new_coords[dim] = var.to_index_variable()
 
-    sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
-        if any(d not in dims for d in v.dims):
-            raise ValueError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dims}"
-            )
-
-        for d, s in zip(v.dims, v.shape):
-            if s != sizes[d]:
-                raise ValueError(
-                    f"conflicting sizes for dimension {d!r}: "
-                    f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
-                )
-
-        if k in sizes and v.shape != (sizes[k],):
-            raise ValueError(
-                f"coordinate {k!r} is a DataArray dimension, but "
-                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
-                "matching the dimension size"
-            )
+    _check_coords_dims(shape, new_coords, dims)
 
     return new_coords, dims
 
@@ -259,7 +279,7 @@ class DataArray(
         or pandas object, attempts are made to use this array's
         metadata to fill in other unspecified arguments. A view of the
         array's data is used instead of a copy if possible.
-    coords : sequence or dict of array_like, optional
+    coords : sequence or dict of array_like or :py:class:`~xarray.Coordinates`, optional
         Coordinates (tick labels) to use for indexing along each
         dimension. The following notations are accepted:
 
@@ -279,6 +299,10 @@ class DataArray(
         - mapping {coord name: (dimension name, array-like)}
         - mapping {coord name: (tuple of dimension names, array-like)}
 
+        Alternatively, a :py:class:`~xarray.Coordinates` object may be used in
+        order to explicitly pass indexes (e.g., a multi-index or any custom
+        Xarray index) or to bypass the creation of a default index for any
+        :term:`Dimension coordinate` included in that object.
     dims : Hashable or sequence of Hashable, optional
         Name(s) of the data dimension(s). Must be either a Hashable
         (only for 1D data) or a sequence of Hashables with length equal
@@ -290,6 +314,11 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
+    indexes : py:class:`~xarray.Indexes` or dict-like, optional
+        For internal use only. For passing indexes objects to the
+        new DataArray, use the ``coords`` argument instead with a
+        :py:class:`~xarray.Coordinate` object (both coordinate variables
+        and indexes will be extracted from the latter).
 
     Examples
     --------
@@ -379,7 +408,7 @@ class DataArray(
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] | None = None,
+        indexes: Mapping[Any, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -388,10 +417,11 @@ class DataArray(
             assert attrs is None
             assert indexes is not None
         else:
-            # TODO: (benbovy - explicit indexes) remove
-            # once it becomes part of the public interface
             if indexes is not None:
-                raise ValueError("Providing explicit indexes is not supported yet")
+                raise ValueError(
+                    "Explicitly passing indexes via the `indexes` argument is not supported "
+                    "when `fastpath=False`. Use the `coords` argument instead."
+                )
 
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
@@ -415,17 +445,18 @@ class DataArray(
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
-            indexes, coords = _create_indexes_from_coords(coords)
+
+            if not isinstance(coords, Coordinates):
+                coords = create_coords_with_default_indexes(coords)
+            indexes = dict(coords.xindexes)
+            coords = {k: v.copy() for k, v in coords.variables.items()}
 
         # These fully describe a DataArray
         self._variable = variable
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-
-        # TODO(shoyer): document this argument, once it becomes part of the
-        # public interface.
-        self._indexes = indexes
+        self._indexes = indexes  # type: ignore[assignment]
 
         self._close = None
 
@@ -493,7 +524,7 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] | None = None,
+        variables: Mapping[Any, Variable] | None = None,
         drop_coords: list[Hashable] | None = None,
         rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
@@ -501,8 +532,8 @@ class DataArray(
         if not indexes:
             return self
 
-        if coords is None:
-            coords = {}
+        if variables is None:
+            variables = {}
         if drop_coords is None:
             drop_coords = []
 
@@ -511,7 +542,7 @@ class DataArray(
         new_indexes = dict(self._indexes)
 
         for name in indexes:
-            new_coords[name] = coords[name]
+            new_coords[name] = variables[name]
             new_indexes[name] = indexes[name]
 
         for name in drop_coords:
@@ -877,6 +908,12 @@ class DataArray(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = dict(value)
 
+    def reset_encoding(self: T_DataArray) -> T_DataArray:
+        """Return a new DataArray without encoding on the array or any attached
+        coords."""
+        ds = self._to_temp_dataset().reset_encoding()
+        return self._from_temp_dataset(ds)
+
     @property
     def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing.
@@ -893,12 +930,20 @@ class DataArray(
 
     @property
     def xindexes(self) -> Indexes:
-        """Mapping of xarray Index objects used for label based indexing."""
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
     def coords(self) -> DataArrayCoordinates:
-        """Dictionary-like container of coordinate arrays."""
+        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
+        coordinate variables.
+
+        See Also
+        --------
+        Coordinates
+        """
         return DataArrayCoordinates(self)
 
     @overload
@@ -1253,6 +1298,8 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
@@ -1274,12 +1321,21 @@ class DataArray(
             Prefix for the name of the new dask array.
         token : str, optional
             Token uniquely identifying this array.
-        lock : optional
+        lock : bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
-        inline_array: optional
+        inline_array: bool, default: False
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce the underlying data array to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1317,6 +1373,8 @@ class DataArray(
             token=token,
             lock=lock,
             inline_array=inline_array,
+            chunked_array_type=chunked_array_type,
+            from_array_kwargs=from_array_kwargs,
         )
         return self._from_temp_dataset(ds)
 
@@ -1777,7 +1835,11 @@ class DataArray(
             exclude_dims,
             exclude_vars,
         )
-        return self._from_temp_dataset(reindexed)
+
+        da = self._from_temp_dataset(reindexed)
+        da.encoding = self.encoding
+
+        return da
 
     def reindex_like(
         self: T_DataArray,
@@ -3334,9 +3396,9 @@ class DataArray(
         use_coordinate : bool or str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
-            eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
+            equally-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
-            coordinate variariable to use as the index.
+            coordinate variable to use as the index.
         limit : int or None, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
@@ -3849,7 +3911,7 @@ class DataArray(
         compute: bool = True,
         invalid_netcdf: bool = False,
     ) -> bytes | Delayed | None:
-        """Write dataset contents to a netCDF file.
+        """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------
@@ -3963,7 +4025,213 @@ class DataArray(
             invalid_netcdf=invalid_netcdf,
         )
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
+    # compute=True (default) returns ZarrStore
+    @overload
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike[str] | None = None,
+        chunk_store: MutableMapping | str | PathLike | None = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
+        synchronizer=None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
+        compute: Literal[True] = True,
+        consolidated: bool | None = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
+        safe_chunks: bool = True,
+        storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
+    ) -> ZarrStore:
+        ...
+
+    # compute=False returns dask.Delayed
+    @overload
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike[str] | None = None,
+        chunk_store: MutableMapping | str | PathLike | None = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
+        synchronizer=None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
+        *,
+        compute: Literal[False],
+        consolidated: bool | None = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
+        safe_chunks: bool = True,
+        storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
+    ) -> Delayed:
+        ...
+
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike[str] | None = None,
+        chunk_store: MutableMapping | str | PathLike | None = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
+        synchronizer=None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
+        compute: bool = True,
+        consolidated: bool | None = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
+        safe_chunks: bool = True,
+        storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
+    ) -> ZarrStore | Delayed:
+        """Write DataArray contents to a Zarr store
+
+        Zarr chunks are determined in the following way:
+
+        - From the ``chunks`` attribute in each variable's ``encoding``
+          (can be set via `DataArray.chunk`).
+        - If the variable is a Dask array, from the dask chunks
+        - If neither Dask chunks nor encoding chunks are present, chunks will
+          be determined automatically by Zarr
+        - If both Dask chunks and encoding chunks are present, encoding chunks
+          will be used, provided that there is a many-to-one relationship between
+          encoding chunks and dask chunks (i.e. Dask chunks are bigger than and
+          evenly divide encoding chunks); otherwise raise a ``ValueError``.
+          This restriction ensures that no synchronization / locks are required
+          when writing. To disable this restriction, use ``safe_chunks=False``.
+
+        Parameters
+        ----------
+        store : MutableMapping, str or path-like, optional
+            Store or path to directory in local or remote file system.
+        chunk_store : MutableMapping, str or path-like, optional
+            Store or path to directory in local or remote file system only for Zarr
+            array chunks. Requires zarr-python v2.4.0 or later.
+        mode : {"w", "w-", "a", "r+", None}, optional
+            Persistence mode: "w" means create (overwrite if exists);
+            "w-" means create (fail if exists);
+            "a" means override existing variables (create if does not exist);
+            "r+" means modify existing array *values* only (raise an error if
+            any metadata or shapes would change).
+            The default mode is "a" if ``append_dim`` is set. Otherwise, it is
+            "r+" if ``region`` is set and ``w-`` otherwise.
+        synchronizer : object, optional
+            Zarr array synchronizer.
+        group : str, optional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
+        compute : bool, default: True
+            If True write array data immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed to write
+            array data later. Metadata is always updated eagerly.
+        consolidated : bool, optional
+            If True, apply zarr's `consolidate_metadata` function to the store
+            after writing metadata and read existing stores with consolidated
+            metadata; if False, do not. The default (`consolidated=None`) means
+            write consolidated metadata and attempt to read consolidated
+            metadata for existing stores (falling back to non-consolidated).
+
+            When the experimental ``zarr_version=3``, ``consolidated`` must be
+            either be ``None`` or ``False``.
+        append_dim : hashable, optional
+            If set, the dimension along which the data will be appended. All
+            other dimensions on overridden variables must remain the same size.
+        region : dict, optional
+            Optional mapping from dimension names to integer slices along
+            dataarray dimensions to indicate the region of existing zarr array(s)
+            in which to write this datarray's data. For example,
+            ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
+            that values should be written to the region ``0:1000`` along ``x``
+            and ``10000:11000`` along ``y``.
+
+            Two restrictions apply to the use of ``region``:
+
+            - If ``region`` is set, _all_ variables in a dataarray must have at
+              least one dimension in common with the region. Other variables
+              should be written in a separate call to ``to_zarr()``.
+            - Dimensions cannot be included in both ``region`` and
+              ``append_dim`` at the same time. To create empty arrays to fill
+              in with ``region``, use a separate call to ``to_zarr()`` with
+              ``compute=False``. See "Appending to existing Zarr stores" in
+              the reference documentation for full details.
+        safe_chunks : bool, default: True
+            If True, only allow writes to when there is a many-to-one relationship
+            between Zarr chunks (specified in encoding) and Dask chunks.
+            Set False to override this restriction; however, data may become corrupted
+            if Zarr arrays are written in parallel. This option may be useful in combination
+            with ``compute=False`` to initialize a Zarr store from an existing
+            DataArray with arbitrary chunk structure.
+        storage_options : dict, optional
+            Any additional parameters for the storage backend (ignored for local
+            paths).
+        zarr_version : int or None, optional
+            The desired zarr spec version to target (currently 2 or 3). The
+            default of None will attempt to determine the zarr version from
+            ``store`` when possible, otherwise defaulting to 2.
+
+        Returns
+        -------
+            * ``dask.delayed.Delayed`` if compute is False
+            * ZarrStore otherwise
+
+        References
+        ----------
+        https://zarr.readthedocs.io/
+
+        Notes
+        -----
+        Zarr chunking behavior:
+            If chunks are found in the encoding argument or attribute
+            corresponding to any DataArray, those chunks are used.
+            If a DataArray is a dask array, it is written with those chunks.
+            If not other chunks are found, Zarr uses its own heuristics to
+            choose automatic chunk sizes.
+
+        encoding:
+            The encoding attribute (if exists) of the DataArray(s) will be
+            used. Override any existing encodings by providing the ``encoding`` kwarg.
+
+        See Also
+        --------
+        Dataset.to_zarr
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
+        """
+        from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_zarr
+
+        if self.name is None:
+            # If no name is set then use a generic xarray name
+            dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
+        elif self.name in self.coords or self.name in self.dims:
+            # The name is the same as one of the coords names, which the netCDF data model
+            # does not support, so rename it but keep track of the old name
+            dataset = self.to_dataset(name=DATAARRAY_VARIABLE)
+            dataset.attrs[DATAARRAY_NAME] = self.name
+        else:
+            # No problems with the name - so we're fine!
+            dataset = self.to_dataset()
+
+        return to_zarr(  # type: ignore[call-overload,misc]
+            dataset,
+            store=store,
+            chunk_store=chunk_store,
+            mode=mode,
+            synchronizer=synchronizer,
+            group=group,
+            encoding=encoding,
+            compute=compute,
+            consolidated=consolidated,
+            append_dim=append_dim,
+            region=region,
+            safe_chunks=safe_chunks,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+        )
+
+    def to_dict(
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
+    ) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -3974,9 +4242,14 @@ class DataArray(
 
         Parameters
         ----------
-        data : bool, default: True
+        data : bool or {"list", "array"}, default: "list"
             Whether to include the actual data in the dictionary. When set to
-            False, returns just the schema.
+            False, returns just the schema. If set to "array", returns data as
+            underlying array type. If set to "list" (or True for backwards
+            compatibility), returns data in lists of Python data types. Note
+            that for obtaining the "list" output efficiently, use
+            `da.compute().to_dict(data="list")`.
+
         encoding : bool, default: False
             Whether to include the Dataset's encoding in the dictionary.
 
@@ -4095,15 +4368,43 @@ class DataArray(
         return result
 
     def to_cdms2(self) -> cdms2_Variable:
-        """Convert this array into a cdms2.Variable"""
+        """Convert this array into a cdms2.Variable
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        .. _xcdat: https://github.com/xCDAT/xcdat
+        """
         from xarray.convert import to_cdms2
+
+        emit_user_level_warning(
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
+            DeprecationWarning,
+        )
 
         return to_cdms2(self)
 
     @classmethod
     def from_cdms2(cls, variable: cdms2_Variable) -> DataArray:
-        """Convert a cdms2.Variable into an xarray.DataArray"""
+        """Convert a cdms2.Variable into an xarray.DataArray
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        .. _xcdat: https://github.com/xCDAT/xcdat
+        """
         from xarray.convert import from_cdms2
+
+        emit_user_level_warning(
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
+            DeprecationWarning,
+        )
 
         return from_cdms2(variable)
 
@@ -4411,11 +4712,7 @@ class DataArray(
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}{unit}".format(
-                        dim=dim,
-                        v=format_item(coord.values),
-                        unit=_get_units_from_attrs(coord),
-                    )
+                    f"{dim} = {format_item(coord.values)}{_get_units_from_attrs(coord)}"
                 )
 
         title = ", ".join(one_dims)
@@ -5239,6 +5536,7 @@ class DataArray(
         numpy.polyfit
         numpy.polyval
         xarray.polyval
+        DataArray.curvefit
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
@@ -5893,9 +6191,10 @@ class DataArray(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, Any] | None = None,
-        bounds: dict[str, Any] | None = None,
+        p0: dict[str, float | DataArray] | None = None,
+        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
+        errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         """
@@ -5925,17 +6224,25 @@ class DataArray(
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like or None, optional
             Optional dictionary of parameter names to initial guesses passed to the
-            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
-            be assigned initial values following the default scipy behavior.
-        bounds : dict-like or None, optional
-            Optional dictionary of parameter names to bounding values passed to the
-            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
-            will be unbounded following the default scipy behavior.
+            `curve_fit` `p0` arg. If the values are DataArrays, they will be appropriately
+            broadcast to the coordinates of the array. If none or only some parameters are
+            passed, the rest will be assigned initial values following the default scipy
+            behavior.
+        bounds : dict-like, optional
+            Optional dictionary of parameter names to tuples of bounding values passed to the
+            `curve_fit` `bounds` arg. If any of the bounds are DataArrays, they will be
+            appropriately broadcast to the coordinates of the array. If none or only some
+            parameters are passed, the rest will be unbounded following the default scipy
+            behavior.
         param_names : sequence of Hashable or None, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
+            raise an exception. If 'ignore', the coefficients and covariances for the
+            coordinates where the fitting failed will be NaN.
         **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -5948,6 +6255,86 @@ class DataArray(
                 The coefficients of the best fit.
             [var]_curvefit_covariance
                 The covariance matrix of the coefficient estimates.
+
+        Examples
+        --------
+        Generate some exponentially decaying data, where the decay constant and amplitude are
+        different for different values of the coordinate ``x``:
+
+        >>> rng = np.random.default_rng(seed=0)
+        >>> def exp_decay(t, time_constant, amplitude):
+        ...     return np.exp(-t / time_constant) * amplitude
+        ...
+        >>> t = np.linspace(0, 10, 11)
+        >>> da = xr.DataArray(
+        ...     np.stack(
+        ...         [
+        ...             exp_decay(t, 1, 0.1),
+        ...             exp_decay(t, 2, 0.2),
+        ...             exp_decay(t, 3, 0.3),
+        ...         ]
+        ...     )
+        ...     + rng.normal(size=(3, t.size)) * 0.01,
+        ...     coords={"x": [0, 1, 2], "time": t},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 3, time: 11)>
+        array([[ 0.1012573 ,  0.0354669 ,  0.01993775,  0.00602771, -0.00352513,
+                 0.00428975,  0.01328788,  0.009562  , -0.00700381, -0.01264187,
+                -0.0062282 ],
+               [ 0.20041326,  0.09805582,  0.07138797,  0.03216692,  0.01974438,
+                 0.01097441,  0.00679441,  0.01015578,  0.01408826,  0.00093645,
+                 0.01501222],
+               [ 0.29334805,  0.21847449,  0.16305984,  0.11130396,  0.07164415,
+                 0.04744543,  0.03602333,  0.03129354,  0.01074885,  0.01284436,
+                 0.00910995]])
+        Coordinates:
+          * x        (x) int64 0 1 2
+          * time     (time) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0
+
+        Fit the exponential decay function to the data along the ``time`` dimension:
+
+        >>> fit_result = da.curvefit("time", exp_decay)
+        >>> fit_result["curvefit_coefficients"].sel(
+        ...     param="time_constant"
+        ... )  # doctest: +NUMBER
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([1.0569203, 1.7354963, 2.9421577])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'time_constant'
+        >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([0.1005489 , 0.19631423, 0.30003579])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'amplitude'
+
+        An initial guess can also be given with the ``p0`` arg (although it does not make much
+        of a difference in this simple example). To have a different guess for different
+        coordinate points, the guess can be a DataArray. Here we use the same initial guess
+        for the amplitude but different guesses for the time constant:
+
+        >>> fit_result = da.curvefit(
+        ...     "time",
+        ...     exp_decay,
+        ...     p0={
+        ...         "amplitude": 0.2,
+        ...         "time_constant": xr.DataArray([1, 2, 3], coords=[da.x]),
+        ...     },
+        ... )
+        >>> fit_result["curvefit_coefficients"].sel(param="time_constant")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([1.0569213 , 1.73550052, 2.94215733])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'time_constant'
+        >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([0.10054889, 0.1963141 , 0.3000358 ])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'amplitude'
 
         See Also
         --------
@@ -5962,6 +6349,7 @@ class DataArray(
             p0=p0,
             bounds=bounds,
             param_names=param_names,
+            errors=errors,
             kwargs=kwargs,
         )
 
@@ -6256,21 +6644,20 @@ class DataArray(
         core.groupby.DataArrayGroupBy
         pandas.DataFrame.groupby
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            DataArrayGroupBy,
+            ResolvedUniqueGrouper,
+            UniqueGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
-
+        _validate_groupby_squeeze(squeeze)
+        rgrouper = ResolvedUniqueGrouper(UniqueGrouper(), group, self)
         return DataArrayGroupBy(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def groupby_bins(
@@ -6341,20 +6728,30 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        from xarray.core.groupby import DataArrayGroupBy
+        from xarray.core.groupby import (
+            BinGrouper,
+            DataArrayGroupBy,
+            ResolvedBinGrouper,
+            _validate_groupby_squeeze,
+        )
 
-        return DataArrayGroupBy(
-            self,
-            group,
-            squeeze=squeeze,
+        _validate_groupby_squeeze(squeeze)
+        grouper = BinGrouper(
             bins=bins,
-            restore_coord_dims=restore_coord_dims,
             cut_kwargs={
                 "right": right,
                 "labels": labels,
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+        rgrouper = ResolvedBinGrouper(grouper, group, self)
+
+        return DataArrayGroupBy(
+            self,
+            (rgrouper,),
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
         )
 
     def weighted(self, weights: DataArray) -> DataArrayWeighted:
@@ -6669,6 +7066,71 @@ class DataArray(
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
         )
+
+    def to_dask_dataframe(
+        self,
+        dim_order: Sequence[Hashable] | None = None,
+        set_index: bool = False,
+    ) -> DaskDataFrame:
+        """Convert this array into a dask.dataframe.DataFrame.
+
+        Parameters
+        ----------
+        dim_order : Sequence of Hashable or None , optional
+            Hierarchical dimension order for the resulting dataframe.
+            Array content is transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major influence
+            on which operations are efficient on the resulting dask dataframe.
+        set_index : bool, default: False
+            If set_index=True, the dask DataFrame is indexed by this dataset's
+            coordinate. Since dask DataFrames do not support multi-indexes,
+            set_index only works if the dataset only contains one dimension.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(4 * 2 * 2).reshape(4, 2, 2),
+        ...     dims=("time", "lat", "lon"),
+        ...     coords={
+        ...         "time": np.arange(4),
+        ...         "lat": [-30, -20],
+        ...         "lon": [120, 130],
+        ...     },
+        ...     name="eg_dataarray",
+        ...     attrs={"units": "Celsius", "description": "Random temperature data"},
+        ... )
+        >>> da.to_dask_dataframe(["lat", "lon", "time"]).compute()
+            lat  lon  time  eg_dataarray
+        0   -30  120     0             0
+        1   -30  120     1             4
+        2   -30  120     2             8
+        3   -30  120     3            12
+        4   -30  130     0             1
+        5   -30  130     1             5
+        6   -30  130     2             9
+        7   -30  130     3            13
+        8   -20  120     0             2
+        9   -20  120     1             6
+        10  -20  120     2            10
+        11  -20  120     3            14
+        12  -20  130     0             3
+        13  -20  130     1             7
+        14  -20  130     2            11
+        15  -20  130     3            15
+        """
+        if self.name is None:
+            raise ValueError(
+                "Cannot convert an unnamed DataArray to a "
+                "dask dataframe : use the ``.rename`` method to assign a name."
+            )
+        name = self.name
+        ds = self._to_dataset_whole(name, shallow_copy=False)
+        return ds.to_dask_dataframe(dim_order, set_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

@@ -304,7 +304,7 @@ def _determine_cmap_params(
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+    if (levels is not None) and (not isinstance(norm, mpl.colors.BoundaryNorm)):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
@@ -1436,6 +1436,16 @@ class _Normalize(Sequence):
         False
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a).data_is_numeric
+        True
+
+        >>> # TODO: Datetime should be numeric right?
+        >>> a = xr.DataArray(pd.date_range("2000-1-1", periods=4))
+        >>> _Normalize(a).data_is_numeric
+        False
+
+        # TODO: Timedelta should be numeric right?
+        >>> a = xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
         >>> _Normalize(a).data_is_numeric
         True
         """
