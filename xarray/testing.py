@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import duck_array_ops, formatting, utils
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
@@ -68,9 +69,9 @@ def assert_equal(a, b):
 
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+    a : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The first object to compare.
-    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+    b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
 
     See Also
@@ -79,11 +80,15 @@ def assert_equal(a, b):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
+    assert (
+        type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    )
     if isinstance(a, (Variable, DataArray)):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
+    elif isinstance(a, Coordinates):
+        assert a.equals(b), formatting.diff_coords_repr(a, b, "equals")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -97,9 +102,9 @@ def assert_identical(a, b):
 
     Parameters
     ----------
-    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+    a : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The first object to compare.
-    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+    b : xarray.Dataset, xarray.DataArray, xarray.Variable or xarray.Coordinates
         The second object to compare.
 
     See Also
@@ -107,7 +112,9 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
+    assert (
+        type(a) == type(b) or isinstance(a, Coordinates) and isinstance(b, Coordinates)
+    )
     if isinstance(a, Variable):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, DataArray):
@@ -115,6 +122,8 @@ def assert_identical(a, b):
         assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
     elif isinstance(a, (Dataset, Variable)):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
+    elif isinstance(a, Coordinates):
+        assert a.identical(b), formatting.diff_coords_repr(a, b, "identical")
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -364,14 +373,13 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
     assert all(
         ds._dims[k] == v.sizes[k] for v in ds._variables.values() for k in v.sizes
     ), (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
-    assert all(
-        isinstance(v, IndexVariable)
-        for (k, v) in ds._variables.items()
-        if v.dims == (k,)
-    ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
-    assert all(v.dims == (k,) for (k, v) in ds._variables.items() if k in ds._dims), {
-        k: v.dims for k, v in ds._variables.items() if k in ds._dims
-    }
+
+    if check_default_indexes:
+        assert all(
+            isinstance(v, IndexVariable)
+            for (k, v) in ds._variables.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
 
     if ds._indexes is not None:
         _assert_indexes_invariants_checks(
@@ -400,6 +408,10 @@ def _assert_internal_invariants(
     elif isinstance(xarray_obj, Dataset):
         _assert_dataset_invariants(
             xarray_obj, check_default_indexes=check_default_indexes
+        )
+    elif isinstance(xarray_obj, Coordinates):
+        _assert_dataset_invariants(
+            xarray_obj.to_dataset(), check_default_indexes=check_default_indexes
         )
     else:
         raise TypeError(

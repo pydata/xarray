@@ -22,6 +22,27 @@ v2023.07.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:class:`Coordinates` can now be constructed independently of any Dataset or
+  DataArray (it is also returned by the :py:attr:`Dataset.coords` and
+  :py:attr:`DataArray.coords` properties). ``Coordinates`` objects are useful for
+  passing both coordinate variables and indexes to new Dataset / DataArray objects,
+  e.g., via their constructor or via :py:meth:`Dataset.assign_coords`. We may also
+  wrap coordinate variables in a ``Coordinates`` object in order to skip
+  the automatic creation of (pandas) indexes for dimension coordinates.
+  The :py:class:`Coordinates.from_pandas_multiindex` constructor may be used to
+  create coordinates directly from a :py:class:`pandas.MultiIndex` object (it is
+  preferred over passing it directly as coordinate data, which may be deprecated soon).
+  Like Dataset and DataArray objects, ``Coordinates`` objects may now be used in
+  :py:func:`align` and :py:func:`merge`.
+  (:issue:`6392`, :pull:`7368`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Visually group together coordinates with the same indexes in the index section of the text repr (:pull:`7225`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Allow creating Xarray objects where a multidimensional variable shares its name
+  with a dimension. Examples include output from finite volume models like FVCOM.
+  (:issue:`2233`, :pull:`7989`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -44,6 +65,8 @@ Documentation
 - Add docstrings for the :py:class:`Index` base class and add some documentation on how to
   create custom, Xarray-compatible indexes (:pull:`6975`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Added a page clarifying the role of Xarray core team members.
+  (:pull:`7999`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
