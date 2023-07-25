@@ -106,7 +106,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         axis: int | None = None,
         dtype: np.dtype | None = None,
     ):
-        from dask.array import cumreduction
+        from dask.array.reductions import cumreduction
 
         return cumreduction(
             func,
