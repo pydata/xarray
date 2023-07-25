@@ -470,7 +470,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        write_empty=None,
+        write_empty: bool | None = None,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
