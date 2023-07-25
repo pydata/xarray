@@ -59,9 +59,9 @@ which is used as the basic building block behind xarray's
 - ``data``: The N-dimensional array (typically a NumPy or Dask array) storing
   the Variable's data. It must have the same number of dimensions as the length
   of ``dims``.
-- ``attrs``: An ordered dictionary of metadata associated with this array. By
+- ``attrs``: A dictionary of metadata associated with this array. By
   convention, xarray's built-in operations never use this metadata.
-- ``encoding``: Another ordered dictionary used to store information about how
+- ``encoding``: Another dictionary used to store information about how
   these variable's data is represented on disk. See :ref:`io.encoding` for more
   details.
 
