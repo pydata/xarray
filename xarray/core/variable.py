@@ -156,14 +156,8 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
             f"explicit list of dimensions: {obj!r}"
         )
 
-    if name is not None and name in obj.dims:
-        # convert the Variable into an Index
-        if obj.ndim != 1:
-            raise MissingDimensionsError(
-                f"{name!r} has more than 1-dimension and the same name as one of its "
-                f"dimensions {obj.dims!r}. xarray disallows such variables because they "
-                "conflict with the coordinates used to label dimensions."
-            )
+    if name is not None and name in obj.dims and obj.ndim == 1:
+        # automatically convert the Variable into an Index
         obj = obj.to_index_variable()
 
     return obj
@@ -3130,10 +3124,6 @@ class IndexVariable(Variable):
         raise TypeError(
             "Values of an IndexVariable are immutable and can not be modified inplace"
         )
-
-
-# for backwards compatibility
-Coordinate = utils.alias(IndexVariable, "Coordinate")
 
 
 def _unified_dims(variables):
