@@ -52,6 +52,12 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed (:pull:`8016`):
+
+   ========================== =========  ========
+    Package                         Old      New
+   ========================== =========  ========
+    zarr                           2.10     2.12
 
 Deprecations
 ~~~~~~~~~~~~
