@@ -671,11 +671,54 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
 
 
+def _chunked_push(array, n, axis):
+    """
+    Chunk-aware bottleneck.push
+    """
+    import bottleneck
+    import numpy as np
+
+    chunkmanager = get_chunked_array_type(array)
+    xp = chunkmanager.array_api
+
+    def _fill_with_last_one(a, b):
+        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
+        # the missing values using the last data of the previous chunk
+        return np.where(~np.isnan(b), b, a)
+
+    if n is not None and 0 < n < array.shape[axis] - 1:
+        arange = xp.arange(
+            array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
+        )
+        broadcasted_arange = xp.broadcast_to(
+            xp.reshape(
+                arange,
+                tuple(size if i == axis else 1 for i, size in enumerate(array.shape)),
+            ),
+            array.shape,
+            array.chunks,
+        )
+        valid_arange = xp.where(xp.notnull(array), broadcasted_arange, np.nan)
+        valid_limits = (arange - push(valid_arange, None, axis)) <= n
+        # omit the forward fill that violate the limit
+        return xp.where(valid_limits, push(array, None, axis), np.nan)
+
+    # The method parameter makes that the tests for python 3.7 fails.
+    return chunkmanager.scan(
+        func=bottleneck.push,
+        binop=_fill_with_last_one,
+        ident=np.nan,
+        arr=array,
+        axis=axis,
+        dtype=array.dtype,
+    )
+
+
 def push(array, n, axis):
     from bottleneck import push
 
-    if is_duck_dask_array(array):
-        return dask_array_ops.push(array, n, axis)
+    if is_chunked_array(array):
+        return _chunked_push(array, n, axis)
     else:
         return push(array, n, axis)
 
