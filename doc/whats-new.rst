@@ -46,7 +46,7 @@ New Features
   user can now specify that chunks that will contain no valid data will not be written.
   Originally, this could be done by specifying ``"write_empty_chunks": True`` in the
   ``encoding`` parameter; however, this setting would not carry over when appending new
-  data to an existing dataset. (:issue:`8009`)
+  data to an existing dataset. (:issue:`8009`) Requires ``zarr>=2.11``.
 
 
 Breaking changes

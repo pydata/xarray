@@ -387,7 +387,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
-        write_empty=True,
+        write_empty=None,
     ):
         import zarr
 
@@ -470,7 +470,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        write_empty=True,
+        write_empty=None,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -671,7 +671,8 @@ class ZarrStore(AbstractWritableDataStore):
                 # metadata. This would need some case work properly with region
                 # and append_dim.
                 zarr_array = self.zarr_group[name]
-                zarr_array._write_empty_chunks = self._write_empty
+                if self._write_empty is not None:
+                    zarr_array._write_empty_chunks = self._write_empty
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -686,9 +687,16 @@ class ZarrStore(AbstractWritableDataStore):
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
 
-                # If user has specified write_empty_chunks through per-variable encoding, prefer that.
-                if "write_empty_chunks" not in encoding:
-                    encoding["write_empty_chunks"] = self._write_empty
+                if self._write_empty is not None:
+                    if (
+                        "write_empty_chunks" in encoding
+                        and encoding["write_empty_chunks"] != self._write_empty
+                    ):
+                        raise ValueError(
+                            'Differing "write_empty_chunks" values in encoding and parameters'
+                        )
+                    else:
+                        encoding["write_empty_chunks"] = self._write_empty
 
                 zarr_array = self.zarr_group.create(
                     name,

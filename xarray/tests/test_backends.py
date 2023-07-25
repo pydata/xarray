@@ -2696,6 +2696,13 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
     @pytest.mark.parametrize("write_empty", [True, False])
     def test_write_empty(self, write_empty):
+        import zarr
+
+        if tuple([int(n) for n in zarr.__version__.split(".")]) < (2, 11):
+            pytest.skip(
+                f"Zarr version {zarr.__version__} does not satisfy requirement (>= 2.11) for feature test"
+            )
+
         if not write_empty:
             expected = ["0.1.0", "1.1.0"]
         else:
