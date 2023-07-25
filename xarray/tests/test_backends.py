@@ -2695,7 +2695,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             yield ds
 
     @pytest.mark.parametrize("write_empty", [True, False])
-    def test_write_empty(self, write_empty):
+    def test_write_empty(self, write_empty: bool) -> None:
         if not write_empty:
             expected = ["0.1.0", "1.1.0"]
         else:
