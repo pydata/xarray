@@ -97,6 +97,26 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             keepdims=keepdims,
         )
 
+    def scan(
+        self,
+        func: Callable,
+        binop: Callable,
+        ident: float,
+        arr: T_ChunkedArray,
+        axis: int | None = None,
+        dtype: np.dtype | None = None,
+    ):
+        from dask.array import cumreduction
+
+        return cumreduction(
+            func,
+            binop,
+            ident,
+            arr,
+            axis=axis,
+            dtype=dtype,
+        )
+
     def apply_gufunc(
         self,
         func: Callable,
