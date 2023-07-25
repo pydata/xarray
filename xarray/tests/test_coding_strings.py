@@ -32,6 +32,10 @@ def test_vlen_dtype() -> None:
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
 
+    # check h5py variant ("vlen")
+    dtype = np.dtype("O", metadata={"vlen": str})  # type: ignore[call-overload]
+    assert strings.check_vlen_dtype(dtype) is str
+
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 

@@ -24,8 +24,8 @@ dependencies:
   # - numbagg
   - numpy
   - packaging
-  - pandas<2
-  - pint
+  - pandas
+  - pint<0.21
   - pip
   - pre-commit
   - pseudonetcdf

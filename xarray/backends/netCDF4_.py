@@ -65,10 +65,12 @@ class BaseNetCDF4Array(BackendArray):
 
         dtype = array.dtype
         if dtype is str:
-            # use object dtype because that's the only way in numpy to
-            # represent variable length strings; it also prevents automatic
-            # string concatenation via conventions.decode_cf_variable
-            dtype = np.dtype("O")
+            # use object dtype (with additional vlen string metadata) because that's
+            # the only way in numpy to represent variable length strings and to
+            # check vlen string dtype in further steps
+            # it also prevents automatic string concatenation via
+            # conventions.decode_cf_variable
+            dtype = coding.strings.create_vlen_dtype(str)
         self.dtype = dtype
 
     def __setitem__(self, key, value):
@@ -190,6 +192,15 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     # wrap error to provide slightly more helpful message
                     raise OSError(f"group not found: {key}", e)
         return ds
+
+
+def _ensure_no_forward_slash_in_name(name):
+    if "/" in name:
+        raise ValueError(
+            f"Forward slashes '/' are not allowed in variable and dimension names (got {name!r}). "
+            "Forward slashes are used as hierarchy-separators for "
+            "HDF5-based files ('netcdf4'/'h5netcdf')."
+        )
 
 
 def _ensure_fill_value_valid(data, attributes):
@@ -445,6 +456,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         }
 
     def set_dimension(self, name, length, is_unlimited=False):
+        _ensure_no_forward_slash_in_name(name)
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, size=dim_length)
 
@@ -468,6 +480,8 @@ class NetCDF4DataStore(WritableCFDataStore):
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
+        _ensure_no_forward_slash_in_name(name)
+
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )

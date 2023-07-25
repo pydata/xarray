@@ -22,13 +22,13 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  # - numba
-  # - numbagg
+  - numba
+  - numbagg
   - numexpr
   - numpy
   - packaging
-  - pandas<2
-  - pint
+  - pandas
+  - pint<0.21
   - pip
   - pooch
   - pre-commit
@@ -42,7 +42,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  # - sparse
+  - sparse
   - toolz
   - typing_extensions
   - zarr

@@ -530,7 +530,7 @@ def line(
     if np.issubdtype(xplt.dtype, np.datetime64):
         for xlabels in ax.get_xticklabels():
             xlabels.set_rotation(30)
-            xlabels.set_ha("right")
+            xlabels.set_horizontalalignment("right")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
@@ -733,15 +733,6 @@ def _plot1d(plotfunc):
         If specified plot 3D and use this coordinate for *z* axis.
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
-    hue_style: {'discrete', 'continuous'} or None, optional
-        How to use the ``hue`` variable:
-
-        - ``'continuous'`` -- continuous color scale
-          (default for numeric ``hue`` variables)
-        - ``'discrete'`` -- a color for each unique value,
-          using the default color cycle
-          (default for non-numeric ``hue`` variables)
-
     markersize: Hashable or None, optional
         scatter only. Variable by which to vary size of scattered points.
     linewidth: Hashable or None, optional
@@ -935,6 +926,19 @@ def _plot1d(plotfunc):
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
 
+        if hue_style is not None:
+            # TODO: Not used since 2022.10. Deprecated since 2023.07.
+            warnings.warn(
+                (
+                    "hue_style is no longer used for plot1d plots "
+                    "and the argument will eventually be removed. "
+                    "Convert numbers to string for a discrete hue "
+                    "and use add_legend or add_colorbar to control which guide to display."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "scatter":
@@ -1099,7 +1103,7 @@ def _add_labels(
             # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
             for labels in getattr(ax, f"get_{axis}ticklabels")():
                 labels.set_rotation(30)
-                labels.set_ha("right")
+                labels.set_horizontalalignment("right")
 
 
 @overload
@@ -1639,7 +1643,7 @@ def _plot2d(plotfunc):
         if np.issubdtype(xplt.dtype, np.datetime64):
             for xlabels in ax.get_xticklabels():
                 xlabels.set_rotation(30)
-                xlabels.set_ha("right")
+                xlabels.set_horizontalalignment("right")
 
         return primitive
 

@@ -57,7 +57,12 @@ from xarray.coding.times import (
     format_cftime_datetime,
 )
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
-from xarray.core.pdcompat import NoDefault, count_not_none, no_default
+from xarray.core.pdcompat import (
+    NoDefault,
+    count_not_none,
+    nanosecond_precision_timestamp,
+    no_default,
+)
 from xarray.core.utils import emit_user_level_warning
 
 try:
@@ -1286,8 +1291,10 @@ def date_range_like(source, calendar, use_cftime=None):
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
-        source_start = pd.Timestamp(source_start)
-        source_end = pd.Timestamp(source_end)
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
+        source_start = nanosecond_precision_timestamp(source_start)
+        source_end = nanosecond_precision_timestamp(source_end)
     else:
         if isinstance(source, CFTimeIndex):
             source_calendar = source.calendar

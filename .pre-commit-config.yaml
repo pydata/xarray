@@ -14,27 +14,26 @@ repos:
       - id: absolufy-imports
         name: absolufy-imports
         files: ^xarray/
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.260'
+    rev: 'v0.0.280'
     hooks:
       - id: ruff
         args: ["--fix"]
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.7.0
     hooks:
-      - id: black
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.8
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==23.3.0"]
+        additional_dependencies: ["black==23.7.0"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.1.1
+    rev: v1.4.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -48,7 +47,7 @@ repos:
             types-pkg_resources,
             types-PyYAML,
             types-pytz,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python

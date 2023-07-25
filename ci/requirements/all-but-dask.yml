@@ -25,8 +25,8 @@ dependencies:
   - numbagg
   - numpy<1.24
   - packaging
-  - pandas<2
-  - pint
+  - pandas
+  - pint<0.21
   - pip
   - pseudonetcdf
   - pydap
