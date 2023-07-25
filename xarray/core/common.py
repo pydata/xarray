@@ -14,7 +14,6 @@ from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.core.pdcompat import _convert_base_to_offset
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import (
     Frozen,
@@ -607,9 +606,17 @@ class DataWithCoords(AttrAccessMixin):
         Dataset.swap_dims
         Dataset.set_coords
         """
+        from xarray.core.coordinates import Coordinates
+
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results: dict[Hashable, Any] = self._calc_assign_results(coords_combined)
+
+        results: Coordinates | dict[Hashable, Any]
+        if isinstance(coords, Coordinates):
+            results = coords
+        else:
+            results = self._calc_assign_results(coords_combined)
+
         data.coords.update(results)
         return data
 
@@ -626,6 +633,36 @@ class DataWithCoords(AttrAccessMixin):
             positional arguments passed into ``attrs.update``.
         **kwargs
             keyword arguments passed into ``attrs.update``.
+
+        Examples
+        --------
+        >>> dataset = xr.Dataset({"temperature": [25, 30, 27]})
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 3)
+        Coordinates:
+          * temperature  (temperature) int64 25 30 27
+        Data variables:
+            *empty*
+
+        >>> new_dataset = dataset.assign_attrs(
+        ...     units="Celsius", description="Temperature data"
+        ... )
+        >>> new_dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 3)
+        Coordinates:
+          * temperature  (temperature) int64 25 30 27
+        Data variables:
+            *empty*
+        Attributes:
+            units:        Celsius
+            description:  Temperature data
+
+        # Attributes of the new dataset
+
+        >>> new_dataset.attrs
+        {'units': 'Celsius', 'description': 'Temperature data'}
 
         Returns
         -------
@@ -950,6 +987,7 @@ class DataWithCoords(AttrAccessMixin):
 
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedTimeResampleGrouper, TimeResampleGrouper
+        from xarray.core.pdcompat import _convert_base_to_offset
         from xarray.core.resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
