@@ -215,9 +215,7 @@ array 'c' has three dimensions "c", "x", and "y", and contains the numbers 1 to 
 
 Combining
     Combining in xarray is a general term used to describe the process of combining two or more DataArrays or Datasets
-    into a single ``DataArray`` or ``Dataset``. This can include both merging and concatenating, as well as other operations
-    like arithmetic operations (e.g., adding two arrays together) or stacking (e.g., stacking two arrays along a new
-    dimension).
+    into a single ``DataArray`` or ``Dataset`` using some combination of merging and concatenation operations.
 
 .. ipython:: python
 
