@@ -240,7 +240,7 @@ Combining
     print(combined_ds)
 
 This code creates two datasets, ds1 and ds2, each containing a 2D array of data with dimensions 'x' and 'y' and
-corresponding coordinate arrays. The datasets have overlapping coordinates on dimension 'x', with values [1, 2] in
+corresponding coordinate arrays. The datasets have overlapping coordinates on dimension ``'x'``, with values ``[1, 2]`` in
 ds1 and [2, 3] in ds2, but no overlapping coordinates on dimension 'y'.
 
 The ``xr.combine_by_coords`` function is then used to combine the datasets by their coordinates. This function combines
