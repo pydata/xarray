@@ -2682,7 +2682,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         save_kwargs=None,
         open_kwargs=None,
         allow_cleanup_failure=False,
-    ):
+    ) -> None:
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
