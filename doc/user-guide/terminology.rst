@@ -243,7 +243,7 @@ This code creates two datasets, ds1 and ds2, each containing a 2D array of data 
 corresponding coordinate arrays. The datasets have overlapping coordinates on dimension ``'x'``, with values ``[1, 2]`` in
 ds1 and [2, 3] in ds2, but no overlapping coordinates on dimension 'y'.
 
-The ``xr.combine_by_coords`` function is then used to combine the datasets by their coordinates. This function combines
+The :py:func:`xr.combine_by_coords` function is then used to combine the datasets by their coordinates. This function combines
 datasets with non-overlapping dimensions and concatenates arrays along overlapping dimensions. In this case, it will
 concatenate the data arrays along dimension 'x' and create a new coordinate array with values [1, 2, 3]. The resulting
 combined dataset 'combined_ds' will have dimensions 'x' and 'y'.
