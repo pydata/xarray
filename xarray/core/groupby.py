@@ -897,8 +897,9 @@ class GroupBy(Generic[T_Xarray]):
         if obj.chunks and not other.chunks:
             # TODO: What about datasets with some dask vars, and others not?
             # This handles dims other than `name``
-            # a chunk size of 1 seems reasonable since we expect it to be repeated
             chunks = {k: v for k, v in obj.chunksizes.items() if k in other.dims}
+            # a chunk size of 1 seems reasonable since we expect individual elements of
+            # other to be repeated multiple times across the reduced dimension(s)
             chunks[name] = 1
             other = other.chunk(chunks)
 
