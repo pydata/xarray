@@ -387,7 +387,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
-        write_empty=None,
+        write_empty: bool | None = None,
     ):
         import zarr
 
