@@ -406,9 +406,7 @@ def map_blocks(
     new_layers: collections.defaultdict[str, dict[Any, Any]] = collections.defaultdict(
         dict
     )
-    gname = "{}-{}".format(
-        dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
-    )
+    gname = f"{dask.utils.funcname(func)}-{dask.base.tokenize(npargs[0], args, kwargs)}"
 
     # map dims to list of chunk indexes
     ichunk = {dim: range(len(chunks_v)) for dim, chunks_v in input_chunks.items()}

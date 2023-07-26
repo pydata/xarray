@@ -14,6 +14,7 @@ from xarray.core.common import (
 )
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import T_DataArray
+from xarray.core.variable import IndexVariable
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -48,7 +49,10 @@ def _access_through_cftimeindex(values, name):
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    values_as_cftimeindex = CFTimeIndex(values.ravel())
+    if not isinstance(values, CFTimeIndex):
+        values_as_cftimeindex = CFTimeIndex(values.ravel())
+    else:
+        values_as_cftimeindex = values
     if name == "season":
         months = values_as_cftimeindex.month
         field_values = _season_from_months(months)
@@ -115,7 +119,7 @@ def _get_date_field(values, name, dtype):
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
-        return access_method(values, name).astype(dtype)
+        return access_method(values, name).astype(dtype, copy=False)
 
 
 def _round_through_series_or_index(values, name, freq):
@@ -200,6 +204,13 @@ def _strftime(values, date_format):
         return access_method(values, date_format)
 
 
+def _index_or_data(obj):
+    if isinstance(obj.variable, IndexVariable):
+        return obj.to_index()
+    else:
+        return obj.data
+
+
 class TimeAccessor(Generic[T_DataArray]):
     __slots__ = ("_obj",)
 
@@ -209,14 +220,14 @@ class TimeAccessor(Generic[T_DataArray]):
     def _date_field(self, name: str, dtype: DTypeLike) -> T_DataArray:
         if dtype is None:
             dtype = self._obj.dtype
-        obj_type = type(self._obj)
-        result = _get_date_field(self._obj.data, name, dtype)
-        return obj_type(result, name=name, coords=self._obj.coords, dims=self._obj.dims)
+        result = _get_date_field(_index_or_data(self._obj), name, dtype)
+        newvar = self._obj.variable.copy(data=result, deep=False)
+        return self._obj._replace(newvar, name=name)
 
     def _tslib_round_accessor(self, name: str, freq: str) -> T_DataArray:
-        obj_type = type(self._obj)
-        result = _round_field(self._obj.data, name, freq)
-        return obj_type(result, name=name, coords=self._obj.coords, dims=self._obj.dims)
+        result = _round_field(_index_or_data(self._obj), name, freq)
+        newvar = self._obj.variable.copy(data=result, deep=False)
+        return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
         """

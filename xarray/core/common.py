@@ -13,8 +13,8 @@ import pandas as pd
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pdcompat import _convert_base_to_offset
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import (
     Frozen,
     either_dict_or_kwargs,
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         DTypeLikeSave,
         ScalarOrArray,
         SideOptions,
+        T_Chunks,
         T_DataWithCoords,
         T_Variable,
     )
@@ -159,7 +160,7 @@ class AbstractArray:
     def __complex__(self: Any) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
+    def __array__(self: Any, dtype: DTypeLike | None = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -209,7 +210,7 @@ class AbstractArray:
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if isinstance(dim, Iterable) and not isinstance(dim, str):
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
             return tuple(self._get_axis_num(d) for d in dim)
         else:
             return self._get_axis_num(dim)
@@ -305,9 +306,7 @@ class AttrAccessMixin:
         except AttributeError as e:
             # Don't accidentally shadow custom AttributeErrors, e.g.
             # DataArray.dims.setter
-            if str(e) != "{!r} object has no attribute {!r}".format(
-                type(self).__name__, name
-            ):
+            if str(e) != f"{type(self).__name__!r} object has no attribute {name!r}":
                 raise
             raise AttributeError(
                 f"cannot set attribute {name!r} on a {type(self).__name__!r} object. Use __setitem__ style"
@@ -607,9 +606,17 @@ class DataWithCoords(AttrAccessMixin):
         Dataset.swap_dims
         Dataset.set_coords
         """
+        from xarray.core.coordinates import Coordinates
+
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results: dict[Hashable, Any] = self._calc_assign_results(coords_combined)
+
+        results: Coordinates | dict[Hashable, Any]
+        if isinstance(coords, Coordinates):
+            results = coords
+        else:
+            results = self._calc_assign_results(coords_combined)
+
         data.coords.update(results)
         return data
 
@@ -626,6 +633,36 @@ class DataWithCoords(AttrAccessMixin):
             positional arguments passed into ``attrs.update``.
         **kwargs
             keyword arguments passed into ``attrs.update``.
+
+        Examples
+        --------
+        >>> dataset = xr.Dataset({"temperature": [25, 30, 27]})
+        >>> dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 3)
+        Coordinates:
+          * temperature  (temperature) int64 25 30 27
+        Data variables:
+            *empty*
+
+        >>> new_dataset = dataset.assign_attrs(
+        ...     units="Celsius", description="Temperature data"
+        ... )
+        >>> new_dataset
+        <xarray.Dataset>
+        Dimensions:      (temperature: 3)
+        Coordinates:
+          * temperature  (temperature) int64 25 30 27
+        Data variables:
+            *empty*
+        Attributes:
+            units:        Celsius
+            description:  Temperature data
+
+        # Attributes of the new dataset
+
+        >>> new_dataset.attrs
+        {'units': 'Celsius', 'description': 'Temperature data'}
 
         Returns
         -------
@@ -950,6 +987,7 @@ class DataWithCoords(AttrAccessMixin):
 
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import ResolvedTimeResampleGrouper, TimeResampleGrouper
+        from xarray.core.pdcompat import _convert_base_to_offset
         from xarray.core.resample import RESAMPLE_DIM
 
         if keep_attrs is not None:
@@ -1291,9 +1329,7 @@ class DataWithCoords(AttrAccessMixin):
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
-                "isin() argument must be convertible to an array: {}".format(
-                    test_elements
-                )
+                f"isin() argument must be convertible to an array: {test_elements}"
             )
         elif isinstance(test_elements, (Variable, DataArray)):
             # need to explicitly pull out data to support dask arrays as the
@@ -1396,28 +1432,52 @@ class DataWithCoords(AttrAccessMixin):
 
 @overload
 def full_like(
-    other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None
+    other: DataArray,
+    fill_value: Any,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray:
     ...
 
 
 @overload
 def full_like(
-    other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None
+    other: Dataset,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset:
     ...
 
 
 @overload
 def full_like(
-    other: Variable, fill_value: Any, dtype: DTypeLikeSave = None
+    other: Variable,
+    fill_value: Any,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     ...
 
 
 @overload
 def full_like(
-    other: Dataset | DataArray, fill_value: Any, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = {},
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
     ...
 
@@ -1426,7 +1486,11 @@ def full_like(
 def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
@@ -1434,9 +1498,16 @@ def full_like(
 def full_like(
     other: Dataset | DataArray | Variable,
     fill_value: Any,
-    dtype: DTypeMaybeMapping = None,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
-    """Return a new object with the same shape and type as a given object.
+    """
+    Return a new object with the same shape and type as a given object.
+
+    Returned object will be chunked if if the given object is chunked, or if chunks or chunked_array_type are specified.
 
     Parameters
     ----------
@@ -1449,6 +1520,18 @@ def full_like(
     dtype : dtype or dict-like of dtype, optional
         dtype of the new array. If a dict-like, maps dtypes to
         variables. If omitted, it defaults to other.dtype.
+    chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+        ``{"x": 5, "y": 5}``.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1562,7 +1645,12 @@ def full_like(
 
         data_vars = {
             k: _full_like_variable(
-                v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None)
+                v.variable,
+                fill_value.get(k, dtypes.NA),
+                dtype_.get(k, None),
+                chunks,
+                chunked_array_type,
+                from_array_kwargs,
             )
             for k, v in other.data_vars.items()
         }
@@ -1571,7 +1659,14 @@ def full_like(
         if isinstance(dtype, Mapping):
             raise ValueError("'dtype' cannot be dict-like when passing a DataArray")
         return DataArray(
-            _full_like_variable(other.variable, fill_value, dtype),
+            _full_like_variable(
+                other.variable,
+                fill_value,
+                dtype,
+                chunks,
+                chunked_array_type,
+                from_array_kwargs,
+            ),
             dims=other.dims,
             coords=other.coords,
             attrs=other.attrs,
@@ -1580,13 +1675,20 @@ def full_like(
     elif isinstance(other, Variable):
         if isinstance(dtype, Mapping):
             raise ValueError("'dtype' cannot be dict-like when passing a Variable")
-        return _full_like_variable(other, fill_value, dtype)
+        return _full_like_variable(
+            other, fill_value, dtype, chunks, chunked_array_type, from_array_kwargs
+        )
     else:
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
 def _full_like_variable(
-    other: Variable, fill_value: Any, dtype: DTypeLike = None
+    other: Variable,
+    fill_value: Any,
+    dtype: DTypeLike | None = None,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from xarray.core.variable import Variable
@@ -1594,13 +1696,28 @@ def _full_like_variable(
     if fill_value is dtypes.NA:
         fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)
 
-    if is_duck_dask_array(other.data):
-        import dask.array
+    if (
+        is_chunked_array(other.data)
+        or chunked_array_type is not None
+        or chunks is not None
+    ):
+        if chunked_array_type is None:
+            chunkmanager = get_chunked_array_type(other.data)
+        else:
+            chunkmanager = guess_chunkmanager(chunked_array_type)
 
         if dtype is None:
             dtype = other.dtype
-        data = dask.array.full(
-            other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        data = chunkmanager.array_api.full(
+            other.shape,
+            fill_value,
+            dtype=dtype,
+            chunks=chunks if chunks else other.data.chunks,
+            **from_array_kwargs,
         )
     else:
         data = np.full_like(other.data, fill_value, dtype=dtype)
@@ -1609,36 +1726,72 @@ def _full_like_variable(
 
 
 @overload
-def zeros_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
-    ...
-
-
-@overload
-def zeros_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
-    ...
-
-
-@overload
-def zeros_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+def zeros_like(
+    other: DataArray,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> DataArray:
     ...
 
 
 @overload
 def zeros_like(
-    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+    other: Dataset,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Variable,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Variable:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
     ...
 
 
 @overload
 def zeros_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def zeros_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of zeros with the same shape and
     type as a given dataarray or dataset.
@@ -1649,6 +1802,18 @@ def zeros_like(
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
+    chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+        ``{"x": 5, "y": 5}``.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1692,40 +1857,83 @@ def zeros_like(
     full_like
 
     """
-    return full_like(other, 0, dtype)
+    return full_like(
+        other,
+        0,
+        dtype,
+        chunks=chunks,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
+    )
 
 
 @overload
-def ones_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
-    ...
-
-
-@overload
-def ones_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
-    ...
-
-
-@overload
-def ones_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+def ones_like(
+    other: DataArray,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> DataArray:
     ...
 
 
 @overload
 def ones_like(
-    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+    other: Dataset,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Dataset:
+    ...
+
+
+@overload
+def ones_like(
+    other: Variable,
+    dtype: DTypeLikeSave | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
+) -> Variable:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray:
     ...
 
 
 @overload
 def ones_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def ones_like(
-    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    dtype: DTypeMaybeMapping | None = None,
+    *,
+    chunks: T_Chunks = None,
+    chunked_array_type: str | None = None,
+    from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object of ones with the same shape and
     type as a given dataarray or dataset.
@@ -1736,6 +1944,18 @@ def ones_like(
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
+    chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+        ``{"x": 5, "y": 5}``.
+    chunked_array_type: str, optional
+        Which chunked array type to coerce the underlying data array to.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Experimental API that should not be relied upon.
+    from_array_kwargs: dict, optional
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+        For example, with dask as the default chunked array type, this method would pass additional kwargs
+        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
 
     Returns
     -------
@@ -1771,7 +1991,14 @@ def ones_like(
     full_like
 
     """
-    return full_like(other, 1, dtype)
+    return full_like(
+        other,
+        1,
+        dtype,
+        chunks=chunks,
+        chunked_array_type=chunked_array_type,
+        from_array_kwargs=from_array_kwargs,
+    )
 
 
 def get_chunksizes(

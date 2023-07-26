@@ -14,11 +14,185 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.07.1:
+
+v2023.07.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- :py:class:`Coordinates` can now be constructed independently of any Dataset or
+  DataArray (it is also returned by the :py:attr:`Dataset.coords` and
+  :py:attr:`DataArray.coords` properties). ``Coordinates`` objects are useful for
+  passing both coordinate variables and indexes to new Dataset / DataArray objects,
+  e.g., via their constructor or via :py:meth:`Dataset.assign_coords`. We may also
+  wrap coordinate variables in a ``Coordinates`` object in order to skip
+  the automatic creation of (pandas) indexes for dimension coordinates.
+  The :py:class:`Coordinates.from_pandas_multiindex` constructor may be used to
+  create coordinates directly from a :py:class:`pandas.MultiIndex` object (it is
+  preferred over passing it directly as coordinate data, which may be deprecated soon).
+  Like Dataset and DataArray objects, ``Coordinates`` objects may now be used in
+  :py:func:`align` and :py:func:`merge`.
+  (:issue:`6392`, :pull:`7368`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Visually group together coordinates with the same indexes in the index section of the text repr (:pull:`7225`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Allow creating Xarray objects where a multidimensional variable shares its name
+  with a dimension. Examples include output from finite volume models like FVCOM.
+  (:issue:`2233`, :pull:`7989`)
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
+- Add docstrings for the :py:class:`Index` base class and add some documentation on how to
+  create custom, Xarray-compatible indexes (:pull:`6975`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Added a page clarifying the role of Xarray core team members.
+  (:pull:`7999`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- :py:func:`as_variable` now consistently includes the variable name in any exceptions
+  raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
+
+.. _whats-new.2023.07.0:
+
+v2023.07.0 (July 17, 2023)
+--------------------------
+
+This release brings improvements to the documentation on wrapping numpy-like arrays, improved docstrings, and bug fixes.
+
+Deprecations
+~~~~~~~~~~~~
+
+- `hue_style` is being deprecated for scatter plots. (:issue:`7907`, :pull:`7925`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Ensure no forward slashes in variable and dimension names for HDF5-based engines.
+  (:issue:`7943`, :pull:`7953`) By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
+- Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
+  (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Expanded the page on wrapping numpy-like "duck" arrays.
+  (:pull:`7911`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added examples to docstrings of :py:meth:`Dataset.isel`, :py:meth:`Dataset.reduce`, :py:meth:`Dataset.argmin`,
+  :py:meth:`Dataset.argmax` (:issue:`6793`, :pull:`7881`)
+  By `Harshitha <https://github.com/harshitha1201>`_ .
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Allow chunked non-dask arrays (i.e. Cubed arrays) in groupby operations. (:pull:`7941`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+.. _whats-new.2023.06.0:
+
+v2023.06.0 (June 21, 2023)
+--------------------------
+
+This release adds features to ``curvefit``, improves the performance of concatenation, and fixes various bugs.
+
+Thank to our 13 contributors to this release:
+Anderson Banihirwe, Deepak Cherian, dependabot[bot], Illviljan, Juniper Tyree, Justus Magin, Martin Fleischmann,
+Mattia Almansi, mgunyho, Rutger van Haasteren, Thomas Nicholas, Tom Nicholas, Tom White.
+
+
+New Features
+~~~~~~~~~~~~
+
+- Added support for multidimensional initial guess and bounds in :py:meth:`DataArray.curvefit` (:issue:`7768`, :pull:`7821`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
+- Add an ``errors`` option to :py:meth:`Dataset.curve_fit` that allows
+  returning NaN for the parameters and covariances of failed fits, rather than
+  failing the whole series of fits (:issue:`6317`, :pull:`7891`).
+  By `Dominik Stańczak <https://github.com/StanczakDominik>`_ and `András Gunyhó <https://github.com/mgunyho>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+- Deprecate the `cdms2 <https://github.com/CDAT/cdms>`_ conversion methods (:pull:`7876`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Performance
+~~~~~~~~~~~
+- Improve concatenation performance (:issue:`7833`, :pull:`7824`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+Bug fixes
+~~~~~~~~~
+- Fix bug where weighted ``polyfit`` were changing the original object (:issue:`5644`, :pull:`7900`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+- Don't call ``CachingFileManager.__del__`` on interpreter shutdown (:issue:`7814`, :pull:`7880`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Preserve vlen dtype for empty string arrays (:issue:`7328`, :pull:`7862`).
+  By `Tom White <https://github.com/tomwhite>`_ and `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Ensure dtype of reindex result matches dtype of the original DataArray (:issue:`7299`, :pull:`7917`)
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
+- Fix bug where a zero-length zarr ``chunk_store`` was ignored as if it was ``None`` (:pull:`7923`)
+  By `Juniper Tyree <https://github.com/juntyr>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Minor improvements to support of the python `array api standard <https://data-apis.org/array-api/latest/>`_,
+  internally using the function ``xp.astype()`` instead of the method ``arr.astype()``, as the latter is not in the standard.
+  (:pull:`7847`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Xarray now uploads nightly wheels to https://pypi.anaconda.org/scientific-python-nightly-wheels/simple/ (:issue:`7863`, :pull:`7865`).
+  By `Martin Fleischmann <https://github.com/martinfleis>`_.
+- Stop uploading development wheels to TestPyPI (:pull:`7889`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Added an exception catch for ``AttributeError`` along with ``ImportError`` when duck typing the dynamic imports in pycompat.py. This catches some name collisions between packages. (:issue:`7870`, :pull:`7874`)
 
 .. _whats-new.2023.05.0:
 
-v2023.05.0 (unreleased)
------------------------
+v2023.05.0 (May 18, 2023)
+-------------------------
+
+This release adds some new methods and operators, updates our deprecation policy for python versions, fixes some bugs with groupby,
+and introduces experimental support for alternative chunked parallel array computation backends via a new plugin system!
+
+**Note:** If you are using a locally-installed development version of xarray then pulling the changes from this release may require you to re-install.
+This avoids an error where xarray cannot detect dask via the new entrypoints system introduced in :pull:`7019`. See :issue:`7856` for details.
+
+Thanks to our 14 contributors:
+Alan Brammer, crusaderky, David Stansby, dcherian, Deeksha, Deepak Cherian, Illviljan, James McCreight,
+Joe Hamman, Justus Magin, Kyle Sunden, Max Hollmann, mgunyho, and Tom Nicholas
+
 
 New Features
 ~~~~~~~~~~~~
@@ -27,28 +201,37 @@ New Features
 - Add support for lshift and rshift binary operators (``<<``, ``>>``) on
   :py:class:`xr.DataArray` of type :py:class:`int` (:issue:`7727` , :pull:`7741`).
   By `Alan Brammer <https://github.com/abrammer>`_.
-
+- Keyword argument `data='array'` to both :py:meth:`xarray.Dataset.to_dict` and
+  :py:meth:`xarray.DataArray.to_dict` will now return data as the underlying array type.
+  Python lists are returned for `data='list'` or `data=True`. Supplying `data=False` only returns the schema without data.
+  ``encoding=True`` returns the encoding dictionary for the underlying variable also. (:issue:`1599`, :pull:`7739`) .
+  By `James McCreight <https://github.com/jmccreight>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - adjust the deprecation policy for python to once again align with NEP-29 (:issue:`7765`, :pull:`7793`)
   By `Justus Magin <https://github.com/keewis>`_.
 
-Deprecations
-~~~~~~~~~~~~
-
+Performance
+~~~~~~~~~~~
+- Optimize ``.dt `` accessor performance with ``CFTimeIndex``. (:pull:`7796`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Fix `as_compatible_data` for masked float arrays, now always creates a copy when mask is present (:issue:`2377`, :pull:`7788`).
+  By `Max Hollmann <https://github.com/maxhollmann>`_.
 - Fix groupby binary ops when grouped array is subset relative to other. (:issue:`7797`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
+- Fix groupby sum, prod for all-NaN groups with ``flox``. (:issue:`7808`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Experimental support for wrapping chunked array libraries other than dask.
+  A new ABC is defined - :py:class:`xr.core.parallelcompat.ChunkManagerEntrypoint` - which can be subclassed and then
+  registered by alternative chunked array implementations. (:issue:`6807`, :pull:`7019`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 .. _whats-new.2023.04.2:
@@ -109,10 +292,6 @@ New Features
 - Added ability to save ``DataArray`` objects directly to Zarr using :py:meth:`~xarray.DataArray.to_zarr`.
   (:issue:`7692`, :pull:`7693`) .
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Keyword argument `data='array'` to both :py:meth:`xarray.Dataset.to_dict` and
-  :py:meth:`xarray.DataArray.to_dict` will now return data as the underlying array type. Python lists are returned for `data='list'` or `data=True`. Supplying `data=False` only returns the schema without data. ``encoding=True`` returns the encoding dictionary for the underlying variable also.
-  (:issue:`1599`, :pull:`7739`) .
-  By `James McCreight <https://github.com/jmccreight>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -645,6 +824,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
 - Update merge docstrings. (:issue:`6935`, :pull:`7033`)
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)

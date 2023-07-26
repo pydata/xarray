@@ -193,11 +193,9 @@ class TestVariable(DaskTestCase):
 
     def test_repr(self):
         expected = dedent(
-            """\
+            f"""\
             <xarray.Variable (x: 4, y: 6)>
-            {!r}""".format(
-                self.lazy_var.data
-            )
+            {self.lazy_var.data!r}"""
         )
         assert expected == repr(self.lazy_var)
 
@@ -656,14 +654,12 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         expected = dedent(
-            """\
+            f"""\
             <xarray.DataArray 'data' (x: 1)>
-            {!r}
+            {data!r}
             Coordinates:
                 y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x""".format(
-                data
-            )
+            Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array
@@ -904,13 +900,12 @@ class TestToDaskDataFrame:
 
 @pytest.mark.parametrize("method", ["load", "compute"])
 def test_dask_kwargs_variable(method):
-    x = Variable("y", da.from_array(np.arange(3), chunks=(2,)))
-    # args should be passed on to da.Array.compute()
-    with mock.patch.object(
-        da.Array, "compute", return_value=np.arange(3)
-    ) as mock_compute:
+    chunked_array = da.from_array(np.arange(3), chunks=(2,))
+    x = Variable("y", chunked_array)
+    # args should be passed on to dask.compute() (via DaskManager.compute())
+    with mock.patch.object(da, "compute", return_value=(np.arange(3),)) as mock_compute:
         getattr(x, method)(foo="bar")
-    mock_compute.assert_called_with(foo="bar")
+    mock_compute.assert_called_with(chunked_array, foo="bar")
 
 
 @pytest.mark.parametrize("method", ["load", "compute", "persist"])
