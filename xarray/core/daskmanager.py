@@ -105,6 +105,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         arr: T_ChunkedArray,
         axis: int | None = None,
         dtype: np.dtype | None = None,
+        **kwargs,
     ):
         from dask.array.reductions import cumreduction
 
@@ -115,6 +116,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             arr,
             axis=axis,
             dtype=dtype,
+            **kwargs,
         )
 
     def apply_gufunc(

@@ -411,6 +411,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         arr: T_ChunkedArray,
         axis: int | None = None,
         dtype: np.dtype | None = None,
+        **kwargs,
     ):
         """
         General version of a 1D scan, also known as a cumulative array reduction.
