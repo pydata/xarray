@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Literal, Union
@@ -653,7 +652,6 @@ def _combine_single_variable_hypercube(
     return concatenated
 
 
-# TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions = "no_conflicts",
@@ -662,7 +660,6 @@ def combine_by_coords(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
-    datasets: Iterable[Dataset] | None = None,
 ) -> Dataset | DataArray:
     """
 
@@ -759,8 +756,6 @@ def combine_by_coords(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-
-    datasets : Iterable of Datasets
 
     Returns
     -------
@@ -917,14 +912,6 @@ def combine_by_coords(
     Finally, if you attempt to combine a mix of unnamed DataArrays with either named
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
-
-    # TODO remove after version 0.21, see PR4696
-    if datasets is not None:
-        warnings.warn(
-            "The datasets argument has been renamed to `data_objects`."
-            " From 0.21 on passing a value for datasets will raise an error."
-        )
-        data_objects = datasets
 
     if not data_objects:
         return Dataset()
