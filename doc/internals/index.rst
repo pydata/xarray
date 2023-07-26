@@ -21,6 +21,8 @@ The pages in this section are intended for:
 
    variable-objects
    duck-arrays-integration
+   chunked-arrays
    extending-xarray
    zarr-encoding-spec
    how-to-add-new-backend
+   how-to-create-custom-index

@@ -20,6 +20,7 @@ from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_wri
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _encode_nc4_variable,
+    _ensure_no_forward_slash_in_name,
     _extract_nc4_variable_encoding,
     _get_datatype,
     _nc4_require_group,
@@ -258,6 +259,7 @@ class H5NetCDFStore(WritableCFDataStore):
             }
 
     def set_dimension(self, name, length, is_unlimited=False):
+        _ensure_no_forward_slash_in_name(name)
         if is_unlimited:
             self.ds.dimensions[name] = None
             self.ds.resize_dimension(name, length)
@@ -275,6 +277,7 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5py
 
+        _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
 

@@ -1682,6 +1682,20 @@ class NetCDF4Base(NetCDFBase):
             assert actual.encoding["unlimited_dims"] == set("y")
             assert_equal(ds, actual)
 
+    def test_raise_on_forward_slashes_in_names(self) -> None:
+        # test for forward slash in variable names and dimensions
+        # see GH 7943
+        data_vars: list[dict[str, Any]] = [
+            {"PASS/FAIL": (["PASSFAIL"], np.array([0]))},
+            {"PASS/FAIL": np.array([0])},
+            {"PASSFAIL": (["PASS/FAIL"], np.array([0]))},
+        ]
+        for dv in data_vars:
+            ds = Dataset(data_vars=dv)
+            with pytest.raises(ValueError, match="Forward slashes '/' are not allowed"):
+                with self.roundtrip(ds):
+                    pass
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
