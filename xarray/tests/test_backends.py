@@ -2669,7 +2669,7 @@ class TestZarrDirectoryStore(ZarrBase):
 @requires_zarr
 class TestZarrWriteEmpty(TestZarrDirectoryStore):
     @contextlib.contextmanager
-    def temp_dir(self):
+    def temp_dir(self) -> Iterator[tuple[str, str]]:
         with tempfile.TemporaryDirectory() as d:
             store = os.path.join(d, "test.zarr")
             yield d, store
@@ -2682,7 +2682,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         save_kwargs=None,
         open_kwargs=None,
         allow_cleanup_failure=False,
-    ) -> None:
+    ) -> Iterator[Dataset]:
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
