@@ -7,7 +7,6 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -33,12 +32,7 @@ from xarray.tests.test_coding_times import (
 # cftime 1.5.2 renames "gregorian" to "standard"
 standard_or_gregorian = ""
 if has_cftime:
-    import cftime
-
-    if Version(cftime.__version__) >= Version("1.5.2"):
-        standard_or_gregorian = "standard"
-    else:
-        standard_or_gregorian = "gregorian"
+    standard_or_gregorian = "standard"
 
 
 def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):

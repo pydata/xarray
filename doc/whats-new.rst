@@ -52,13 +52,29 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- The minimum versions of some dependencies were changed (:pull:`8016`):
+- The minimum versions of some dependencies were changed (:pull:`8022`):
 
-   ========================== =========  ========
-    Package                         Old      New
-   ========================== =========  ========
-    zarr                           2.10     2.12
-   ========================== =========  ========
+  ===================== =========  ========
+   Package                    Old      New
+  ===================== =========  ========
+   boto3                     1.20     1.24
+   cftime                     1.5      1.6
+   dask-core               2022.1   2022.7
+   distributed             2022.1   2022.7
+   hfnetcdf                  0.13      1.0
+   iris                       3.1      3.2
+   lxml                       4.7      4.9
+   netcdf4                  1.5.7    1.6.0
+   numpy                     1.21     1.22
+   pint                      0.18     0.19
+   pydap                      3.2      3.3
+   rasterio                   1.2      1.3
+   scipy                      1.7      1.8
+   toolz                     0.11     0.12
+   typing_extensions          4.0      4.3
+   zarr                      2.10     2.12
+   numbagg                    0.1    0.2.1
+  ===================== =========  ========
 
 Deprecations
 ~~~~~~~~~~~~
@@ -71,6 +87,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Add docstrings for the :py:class:`Index` base class and add some documentation on how to
   create custom, Xarray-compatible indexes (:pull:`6975`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
@@ -105,9 +124,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Added examples to docstrings of :py:meth:`Dataset.tail`, :py:meth:`Dataset.head`, :py:meth:`Dataset.dropna`,
-  :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.set_coords`, :py:meth:`Dataset.reset_coords`
-  (:issue:`6793`, :pull:`7936`) By `Harshitha <https://github.com/harshitha1201>`_ .
+- Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Expanded the page on wrapping numpy-like "duck" arrays.
