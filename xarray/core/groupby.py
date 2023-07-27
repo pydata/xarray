@@ -1102,15 +1102,15 @@ class GroupBy(Generic[T_Xarray]):
             desired quantile lies between two data points. The options sorted by their R
             type as summarized in the H&F paper [1]_ are:
 
-                1. "inverted_cdf" (*)
-                2. "averaged_inverted_cdf" (*)
-                3. "closest_observation" (*)
-                4. "interpolated_inverted_cdf" (*)
-                5. "hazen" (*)
-                6. "weibull" (*)
+                1. "inverted_cdf"
+                2. "averaged_inverted_cdf"
+                3. "closest_observation"
+                4. "interpolated_inverted_cdf"
+                5. "hazen"
+                6. "weibull"
                 7. "linear"  (default)
-                8. "median_unbiased" (*)
-                9. "normal_unbiased" (*)
+                8. "median_unbiased"
+                9. "normal_unbiased"
 
             The first three methods are discontiuous.  The following discontinuous
             variations of the default "linear" (7.) option are also available:
@@ -1120,9 +1120,8 @@ class GroupBy(Generic[T_Xarray]):
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterisk require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
         keep_attrs : bool or None, default: None
             If True, the dataarray's attributes (`attrs`) will be copied from
