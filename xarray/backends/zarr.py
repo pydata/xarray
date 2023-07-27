@@ -653,6 +653,8 @@ class ZarrStore(AbstractWritableDataStore):
             dimensions.
         """
 
+        import zarr
+
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -670,9 +672,14 @@ class ZarrStore(AbstractWritableDataStore):
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
                 # and append_dim.
-                zarr_array = self.zarr_group[name]
                 if self._write_empty is not None:
-                    zarr_array._write_empty_chunks = self._write_empty
+                    zarr_array = zarr.open(
+                        store=self.zarr_group.store,
+                        path=f"{self.zarr_group.name}/{name}",
+                        write_empty_chunks=self._write_empty,
+                    )
+                else:
+                    zarr_array = self.zarr_group[name]
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
