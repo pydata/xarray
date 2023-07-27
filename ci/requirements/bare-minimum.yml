@@ -11,6 +11,6 @@ dependencies:
   - pytest-env
   - pytest-xdist
   - pytest-timeout
-  - numpy=1.21
+  - numpy=1.22
   - packaging=21.3
   - pandas=1.4

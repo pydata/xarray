@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
-from packaging.version import Version
 
 if TYPE_CHECKING:
     import dask
@@ -194,10 +193,6 @@ def test_dask_distributed_zarr_integration_test(
                     assert_allclose(original, computed)
 
 
-@pytest.mark.xfail(
-    condition=Version(distributed.__version__) < Version("2022.02.0"),
-    reason="https://github.com/dask/distributed/pull/5739",
-)
 @gen_cluster(client=True)
 async def test_async(c, s, a, b) -> None:
     x = create_test_data()
@@ -230,10 +225,6 @@ def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
-@pytest.mark.xfail(
-    condition=Version(distributed.__version__) < Version("2022.02.0"),
-    reason="https://github.com/dask/distributed/pull/5739",
-)
 @gen_cluster(client=True)
 async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):

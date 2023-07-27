@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
@@ -2198,15 +2197,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             desired quantile lies between two data points. The options sorted by their R
             type as summarized in the H&F paper [1]_ are:
 
-                1. "inverted_cdf" (*)
-                2. "averaged_inverted_cdf" (*)
-                3. "closest_observation" (*)
-                4. "interpolated_inverted_cdf" (*)
-                5. "hazen" (*)
-                6. "weibull" (*)
+                1. "inverted_cdf"
+                2. "averaged_inverted_cdf"
+                3. "closest_observation"
+                4. "interpolated_inverted_cdf"
+                5. "hazen"
+                6. "weibull"
                 7. "linear"  (default)
-                8. "median_unbiased" (*)
-                9. "normal_unbiased" (*)
+                8. "median_unbiased"
+                9. "normal_unbiased"
 
             The first three methods are discontiuous.  The following discontinuous
             variations of the default "linear" (7.) option are also available:
@@ -2219,8 +2218,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
             was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
-
-            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
@@ -2289,14 +2286,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
 
-        if Version(np.__version__) >= Version("1.22.0"):
-            kwargs = {"q": q, "axis": axis, "method": method}
-        else:
-            if method not in ("linear", "lower", "higher", "midpoint", "nearest"):
-                raise ValueError(
-                    f"Interpolation method '{method}' requires numpy >= 1.22 or is not supported."
-                )
-            kwargs = {"q": q, "axis": axis, "interpolation": method}
+        kwargs = {"q": q, "axis": axis, "method": method}
 
         result = apply_ufunc(
             _wrapper,

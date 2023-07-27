@@ -6,8 +6,6 @@ import os
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
-from packaging.version import Version
-
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
@@ -233,28 +231,14 @@ class H5NetCDFStore(WritableCFDataStore):
         return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
-        import h5netcdf
-
-        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
-            return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
-        else:
-            return self.ds.dimensions
+        return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
     def get_encoding(self):
-        import h5netcdf
-
-        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
-            return {
-                "unlimited_dims": {
-                    k for k, v in self.ds.dimensions.items() if v.isunlimited()
-                }
+        return {
+            "unlimited_dims": {
+                k for k, v in self.ds.dimensions.items() if v.isunlimited()
             }
-        else:
-            return {
-                "unlimited_dims": {
-                    k for k, v in self.ds.dimensions.items() if v is None
-                }
-            }
+        }
 
     def set_dimension(self, name, length, is_unlimited=False):
         _ensure_no_forward_slash_in_name(name)

@@ -16,7 +16,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 try:
     if sys.version_info >= (3, 11):
@@ -248,27 +247,18 @@ NestedSequence = Union[
 ]
 
 
-if Version(np.__version__) >= Version("1.22.0"):
-    QuantileMethods = Literal[
-        "inverted_cdf",
-        "averaged_inverted_cdf",
-        "closest_observation",
-        "interpolated_inverted_cdf",
-        "hazen",
-        "weibull",
-        "linear",
-        "median_unbiased",
-        "normal_unbiased",
-        "lower",
-        "higher",
-        "midpoint",
-        "nearest",
-    ]
-else:
-    QuantileMethods = Literal[  # type: ignore[misc]
-        "linear",
-        "lower",
-        "higher",
-        "midpoint",
-        "nearest",
-    ]
+QuantileMethods = Literal[
+    "inverted_cdf",
+    "averaged_inverted_cdf",
+    "closest_observation",
+    "interpolated_inverted_cdf",
+    "hazen",
+    "weibull",
+    "linear",
+    "median_unbiased",
+    "normal_unbiased",
+    "lower",
+    "higher",
+    "midpoint",
+    "nearest",
+]

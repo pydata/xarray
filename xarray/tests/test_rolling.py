@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
@@ -391,14 +390,6 @@ class TestDataArrayRollingExp:
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     @pytest.mark.parametrize("func", ["mean", "sum"])
     def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
-        import numbagg
-
-        if (
-            Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
-            and func == "sum"
-        ):
-            pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
-
         da = da.where(da > 0.2)
 
         rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
@@ -430,14 +421,6 @@ class TestDataArrayRollingExp:
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     @pytest.mark.parametrize("func", ["mean", "sum"])
     def test_rolling_exp_keep_attrs(self, da, func) -> None:
-        import numbagg
-
-        if (
-            Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
-            and func == "sum"
-        ):
-            pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
-
         attrs = {"attrs": "da"}
         da.attrs = attrs
 

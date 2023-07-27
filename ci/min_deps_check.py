@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Fetch from conda database all available versions of the xarray dependencies and their
-publication date. Compare it against requirements/py37-min-all-deps.yml to verify the
+publication date. Compare it against requirements/min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
 import itertools
@@ -46,7 +46,7 @@ def warning(msg: str) -> None:
 
 
 def parse_requirements(fname) -> Iterator[tuple[str, int, int, int | None]]:
-    """Load requirements/py37-min-all-deps.yml
+    """Load requirements/min-all-deps.yml
 
     Yield (package name, major version, minor version, [patch version])
     """

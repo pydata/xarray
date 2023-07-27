@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import pytz
-from packaging.version import Version
 
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
@@ -1832,10 +1831,7 @@ class TestVariable(VariableSubclassobjects):
         q = np.array([0.25, 0.5, 0.75])
         actual = v.quantile(q, dim="y", method=method)
 
-        if Version(np.__version__) >= Version("1.22"):
-            expected = np.nanquantile(self.d, q, axis=1, method=method)
-        else:
-            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)
+        expected = np.nanquantile(self.d, q, axis=1, method=method)
 
         if use_dask:
             assert isinstance(actual.data, dask_array_type)

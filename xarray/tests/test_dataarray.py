@@ -2848,10 +2848,7 @@ class TestDataArray:
         q = [0.25, 0.5, 0.75]
         actual = DataArray(self.va).quantile(q, method=method)
 
-        if Version(np.__version__) >= Version("1.22.0"):
-            expected = np.nanquantile(self.dv.values, np.array(q), method=method)
-        else:
-            expected = np.nanquantile(self.dv.values, np.array(q), interpolation=method)
+        expected = np.nanquantile(self.dv.values, np.array(q), method=method)
 
         np.testing.assert_allclose(actual.values, expected)
 
