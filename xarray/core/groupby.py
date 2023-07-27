@@ -888,6 +888,21 @@ class GroupBy(Generic[T_Xarray]):
             group = group.where(~mask, drop=True)
             codes = codes.where(~mask, drop=True).astype(int)
 
+        # if other is dask-backed, that's a hint that the
+        # "expanded" dataset is too big to hold in memory.
+        # this can be the case when `other` was read from disk
+        # and contains our lazy indexing classes
+        # We need to check for dask-backed Datasets
+        # so utils.is_duck_dask_array does not work for this check
+        if obj.chunks and not other.chunks:
+            # TODO: What about datasets with some dask vars, and others not?
+            # This handles dims other than `name``
+            chunks = {k: v for k, v in obj.chunksizes.items() if k in other.dims}
+            # a chunk size of 1 seems reasonable since we expect individual elements of
+            # other to be repeated multiple times across the reduced dimension(s)
+            chunks[name] = 1
+            other = other.chunk(chunks)
+
         # codes are defined for coord, so we align `other` with `coord`
         # before indexing
         other, _ = align(other, coord, join="right", copy=False)
