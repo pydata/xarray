@@ -2423,8 +2423,7 @@ class Dataset(
             with checking the data of each chunk. If None (default) fall back to
             specification(s) in ``encoding`` or Zarr defaults. A ``ValueError``
             will be raised if the value of this (if not None) differs with
-            ``encoding``.(From write_empty_chunks in zarr docs) Requires
-            zarr >= 2.11
+            ``encoding``.
         chunkmanager_store_kwargs : dict, optional
             Additional keyword arguments passed on to the `ChunkManager.store` method used to store
             chunked arrays. For example for a dask array additional kwargs will be passed eventually to
