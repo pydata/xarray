@@ -226,10 +226,6 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_attribute(self, k, v):
         ...
 
-    @abstractmethod
-    def set_variable(self, k, v):
-        ...
-
     def store_dataset(self, dataset):
         """
         in stores, variables are all variables AND coordinates
