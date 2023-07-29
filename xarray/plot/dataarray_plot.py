@@ -992,9 +992,13 @@ def _plot1d(plotfunc):
 
         with plt.rc_context(_styles):
             if z is not None:
+                import mpl_toolkits
+
                 if ax is None:
                     subplot_kws.update(projection="3d")
                 ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+                assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
+
                 # Using 30, 30 minimizes rotation of the plot. Making it easier to
                 # build on your intuition from 2D plots:
                 ax.view_init(azim=30, elev=30, vertical_axis="y")
@@ -1261,8 +1265,8 @@ def scatter(
 
     plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
     plts_or_none = [plts_dict[v] for v in axis_order]
-    plts = [p for p in plts_or_none if p is not None]
-    primitive = ax.scatter(*[p.to_numpy().ravel() for p in plts], **kwargs)
+    plts = [p.to_numpy().ravel() for p in plts_or_none if p is not None]
+    primitive = ax.scatter(*plts, **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive
@@ -1616,6 +1620,7 @@ def _plot2d(plotfunc):
             ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
             if plotfunc.__name__ == "surface":
+                assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
                 ax.set_zlabel(label_from_attrs(darray))
 
         if add_colorbar:
@@ -2465,5 +2470,8 @@ def surface(
 
     Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
     """
+    import mpl_toolkits
+
+    assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
     primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive

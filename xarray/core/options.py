@@ -164,11 +164,11 @@ class set_options:
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
+        (e.g. mpl.colormaps["magma"])
     cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
         Colormap to use for nondivergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
+        (e.g. mpl.colormaps["magma"])
     display_expand_attrs : {"default", True, False}
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
