@@ -6,17 +6,17 @@ import contextlib
 import functools
 import math
 from collections import defaultdict
+from collections.abc import Collection, Hashable
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
-from typing import Collection, Hashable
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.duck_array_ops import array_equiv
-from xarray.core.indexing import MemoryCachedArray
+from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.pycompat import array_type
 from xarray.core.utils import is_duck_array
@@ -114,9 +114,9 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    # Timestamp is only valid for 1678 to 2262
     try:
-        datetime_str = str(pd.Timestamp(t))
+        timestamp = pd.Timestamp(t)
+        datetime_str = timestamp.isoformat(sep=" ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
@@ -424,20 +424,36 @@ def inline_index_repr(index, max_width=None):
 
 
 def summarize_index(
-    name: Hashable, index, col_width: int, max_width: int | None = None
-):
+    names: tuple[Hashable, ...],
+    index,
+    col_width: int,
+    max_width: int | None = None,
+) -> str:
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    preformatted = pretty_print(f"    {name} ", col_width)
+    def prefixes(length: int) -> list[str]:
+        if length in (0, 1):
+            return [" "]
 
-    index_width = max_width - len(preformatted)
+        return ["┌"] + ["│"] * max(length - 2, 0) + ["└"]
+
+    preformatted = [
+        pretty_print(f"  {prefix} {name}", col_width)
+        for prefix, name in zip(prefixes(len(names)), names)
+    ]
+
+    head, *tail = preformatted
+    index_width = max_width - len(head)
     repr_ = inline_index_repr(index, max_width=index_width)
-    return preformatted + repr_
+    return "\n".join([head + repr_] + [line.rstrip() for line in tail])
 
 
-def nondefault_indexes(indexes):
+def filter_nondefault_indexes(indexes, filter_indexes: bool):
     from xarray.core.indexes import PandasIndex, PandasMultiIndex
+
+    if not filter_indexes:
+        return indexes
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -448,7 +464,9 @@ def nondefault_indexes(indexes):
     }
 
 
-def indexes_repr(indexes, col_width=None, max_rows=None):
+def indexes_repr(indexes, max_rows: int | None = None) -> str:
+    col_width = _calculate_col_width(chain.from_iterable(indexes))
+
     return _mapping_repr(
         indexes,
         "Indexes",
@@ -557,8 +575,15 @@ def limit_lines(string: str, *, limit: int):
     return string
 
 
-def short_numpy_repr(array):
-    array = np.asarray(array)
+def short_array_repr(array):
+    from xarray.core.common import AbstractArray
+
+    if isinstance(array, ExplicitlyIndexed):
+        array = array.get_duck_array()
+    elif isinstance(array, AbstractArray):
+        array = array.data
+    if not is_duck_array(array):
+        array = np.asarray(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -582,14 +607,20 @@ def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory:
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
+
+
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
 
 
 @recursive_repr("<recursive array>")
@@ -636,15 +667,13 @@ def array_repr(arr):
         display_default_indexes = _get_boolean_with_default(
             "display_default_indexes", False
         )
-        if display_default_indexes:
-            xindexes = arr.xindexes
-        else:
-            xindexes = nondefault_indexes(arr.xindexes)
+
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
 
         if xindexes:
-            summary.append(
-                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
-            )
+            summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
@@ -675,12 +704,11 @@ def dataset_repr(ds):
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
-    if display_default_indexes:
-        xindexes = ds.xindexes
-    else:
-        xindexes = nondefault_indexes(ds.xindexes)
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
     if xindexes:
-        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
+        summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
@@ -690,9 +718,7 @@ def dataset_repr(ds):
 
 def diff_dim_summary(a, b):
     if a.dims != b.dims:
-        return "Differing dimensions:\n    ({}) != ({})".format(
-            dim_summary(a), dim_summary(b)
-        )
+        return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
 
@@ -819,9 +845,7 @@ def _compat_to_str(compat):
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     summary.append(diff_dim_summary(a, b))
@@ -831,7 +855,7 @@ def diff_array_repr(a, b, compat):
         equiv = array_equiv
 
     if not equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)
@@ -852,9 +876,7 @@ def diff_array_repr(a, b, compat):
 
 def diff_dataset_repr(a, b, compat):
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))

@@ -470,13 +470,9 @@ class CFTimeIndex(pd.Index):
         else:
             return super().get_loc(key)
 
-    def _maybe_cast_slice_bound(self, label, side, kind=None):
+    def _maybe_cast_slice_bound(self, label, side):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
-
-        Note that we have never used the kind argument in CFTimeIndex and it is
-        deprecated as of pandas version 1.3.0.  It exists only for compatibility
-        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
         """
         if not isinstance(label, str):
             return label
@@ -613,7 +609,7 @@ class CFTimeIndex(pd.Index):
         ------
         ValueError
             If the CFTimeIndex contains dates that are not possible in the
-            standard calendar or outside the pandas.Timestamp-valid range.
+            standard calendar or outside the nanosecond-precision range.
 
         Warns
         -----

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, cast, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Union, cast, overload
 
+import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, utils
-from xarray.core.alignment import align
+from xarray.core.alignment import align, reindex_variables
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.merge import (
@@ -26,12 +28,14 @@ if TYPE_CHECKING:
         JoinOptions,
     )
 
+    T_DataVars = Union[ConcatOptions, Iterable[Hashable]]
+
 
 @overload
 def concat(
     objs: Iterable[T_Dataset],
     dim: Hashable | T_DataArray | pd.Index,
-    data_vars: ConcatOptions | list[Hashable] = "all",
+    data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
@@ -46,7 +50,7 @@ def concat(
 def concat(
     objs: Iterable[T_DataArray],
     dim: Hashable | T_DataArray | pd.Index,
-    data_vars: ConcatOptions | list[Hashable] = "all",
+    data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
@@ -60,7 +64,7 @@ def concat(
 def concat(
     objs,
     dim,
-    data_vars="all",
+    data_vars: T_DataVars = "all",
     coords="different",
     compat: CompatOptions = "equals",
     positions=None,
@@ -290,7 +294,7 @@ def _calc_concat_dim_index(
     return dim, index
 
 
-def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
+def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, compat):
     """
     Determine which dataset variables need to be concatenated in the result,
     """
@@ -378,7 +382,9 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
             elif opt == "all":
                 concat_over.update(
-                    set(getattr(datasets[0], subset)) - set(datasets[0].dims)
+                    set().union(
+                        *list(set(getattr(d, subset)) - set(d.dims) for d in datasets)
+                    )
                 )
             elif opt == "minimal":
                 pass
@@ -406,19 +412,26 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
 def _parse_datasets(
-    datasets: Iterable[T_Dataset],
-) -> tuple[dict[Hashable, Variable], dict[Hashable, int], set[Hashable], set[Hashable]]:
-
+    datasets: list[T_Dataset],
+) -> tuple[
+    dict[Hashable, Variable],
+    dict[Hashable, int],
+    set[Hashable],
+    set[Hashable],
+    list[Hashable],
+]:
     dims: set[Hashable] = set()
     all_coord_names: set[Hashable] = set()
     data_vars: set[Hashable] = set()  # list of data_vars
     dim_coords: dict[Hashable, Variable] = {}  # maps dim name to variable
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
+    variables_order: dict[Hashable, Variable] = {}  # variables in order of appearance
 
     for ds in datasets:
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
+        variables_order.update(ds.variables)
 
         # preserves ordering of dimensions
         for dim in ds.dims:
@@ -429,17 +442,17 @@ def _parse_datasets(
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    return dim_coords, dims_sizes, all_coord_names, data_vars
+    return dim_coords, dims_sizes, all_coord_names, data_vars, list(variables_order)
 
 
 def _dataset_concat(
     datasets: list[T_Dataset],
     dim: str | T_DataArray | pd.Index,
-    data_vars: str | list[str],
+    data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
-    fill_value: object = dtypes.NA,
+    fill_value: Any = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
 ) -> T_Dataset:
@@ -471,7 +484,9 @@ def _dataset_concat(
         align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
-    dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
+    dim_coords, dims_sizes, coord_names, data_names, vars_order = _parse_datasets(
+        datasets
+    )
     dim_names = set(dim_coords)
     unlabeled_dims = dim_names - coord_names
 
@@ -503,7 +518,7 @@ def _dataset_concat(
     if variables_to_merge:
         grouped = {
             k: v
-            for k, v in collect_variables_and_indexes(list(datasets)).items()
+            for k, v in collect_variables_and_indexes(datasets).items()
             if k in variables_to_merge
         }
         merged_vars, merged_indexes = merge_collected(
@@ -525,11 +540,11 @@ def _dataset_concat(
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
-    def ensure_common_dims(vars):
+    def ensure_common_dims(vars, concat_dim_lengths):
         # ensure each variable with the given name shares the same
         # dimensions and the same shape for all of them except along the
         # concat dimension
-        common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
+        common_dims = tuple(utils.OrderedSet(d for v in vars for d in v.dims))
         if dim not in common_dims:
             common_dims = (dim,) + common_dims
         for var, dim_len in zip(vars, concat_dim_lengths):
@@ -553,20 +568,46 @@ def _dataset_concat(
                     data = var.set_dims(dim).values
                     yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
+    # create concatenation index, needed for later reindexing
+    file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
+    concat_index = np.arange(file_start_indexes[-1])
+    concat_index_size = concat_index.size
+    variable_index_mask = np.ones(concat_index_size, dtype=bool)
+
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
-    for name in datasets[0].variables:
+    ndatasets = len(datasets)
+    for name in vars_order:
         if name in concat_over and name not in result_indexes:
-            try:
-                vars = ensure_common_dims([ds[name].variable for ds in datasets])
-            except KeyError:
-                raise ValueError(f"{name!r} is not present in all datasets.")
+            variables = []
+            # Initialize the mask to all True then set False if any name is missing in
+            # the datasets:
+            variable_index_mask.fill(True)
+            var_concat_dim_length = []
+            for i, ds in enumerate(datasets):
+                if name in ds.variables:
+                    variables.append(ds[name].variable)
+                    var_concat_dim_length.append(concat_dim_lengths[i])
+                else:
+                    # raise if coordinate not in all datasets
+                    if name in coord_names:
+                        raise ValueError(
+                            f"coordinate {name!r} not present in all datasets."
+                        )
 
-            # Try concatenate the indexes, concatenate the variables when no index
+                    # Mask out the indexes without the name:
+                    start = file_start_indexes[i]
+                    end = file_start_indexes[i + 1]
+                    variable_index_mask[slice(start, end)] = False
+
+            variable_index = concat_index[variable_index_mask]
+            vars = ensure_common_dims(variables, var_concat_dim_length)
+
+            # Try to concatenate the indexes, concatenate the variables when no index
             # is found on all datasets.
             indexes: list[Index] = list(get_indexes(name))
             if indexes:
-                if len(indexes) < len(datasets):
+                if len(indexes) < ndatasets:
                     raise ValueError(
                         f"{name!r} must have either an index or no index in all datasets, "
                         f"found {len(indexes)}/{len(datasets)} datasets with an index."
@@ -589,6 +630,15 @@ def _dataset_concat(
                 combined_var = concat_vars(
                     vars, dim, positions, combine_attrs=combine_attrs
                 )
+                # reindex if variable is not present in all datasets
+                if len(variable_index) < concat_index_size:
+                    combined_var = reindex_variables(
+                        variables={name: combined_var},
+                        dim_pos_indexers={
+                            dim: pd.Index(variable_index).get_indexer(concat_index)
+                        },
+                        fill_value=fill_value,
+                    )[name]
                 result_vars[name] = combined_var
 
         elif name in result_vars:
@@ -625,7 +675,7 @@ def _dataset_concat(
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
     dim: str | T_DataArray | pd.Index,
-    data_vars: str | list[str],
+    data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,

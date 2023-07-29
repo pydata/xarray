@@ -174,7 +174,6 @@ class TestPandasIndex:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype) -> None:
-
         a = PandasIndex(np.array(["a"], dtype=dtype), "x", coord_dtype=dtype)
         b = PandasIndex(np.array(["b"], dtype=dtype), "x", coord_dtype=dtype)
         expected = PandasIndex(
@@ -583,7 +582,12 @@ class TestIndexes:
 
         _, variables = indexes_and_vars
 
-        return Indexes(indexes, variables)
+        if isinstance(x_idx, Index):
+            index_type = Index
+        else:
+            index_type = pd.Index
+
+        return Indexes(indexes, variables, index_type=index_type)
 
     def test_interface(self, unique_indexes, indexes) -> None:
         x_idx = unique_indexes[0]

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Mapping
+from collections.abc import Mapping
+from typing import Any, Generic
 
 import numpy as np
-from packaging.version import Version
 
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
@@ -35,10 +35,6 @@ def move_exp_nansum(array, *, axis, alpha):
     if is_duck_dask_array(array):
         raise TypeError("rolling_exp is not currently supported for dask-like arrays")
     import numbagg
-
-    # numbagg <= 0.2.0 did not have a __version__ attribute
-    if Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.0"):
-        raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
 
     return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 

@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
@@ -55,7 +54,6 @@ class TestDataArrayRolling:
 
     @requires_dask
     def test_repeated_rolling_rechunks(self) -> None:
-
         # regression test for GH3277, GH2514
         dat = DataArray(np.random.rand(7653, 300), dims=("day", "item"))
         dat_chunk = dat.chunk({"item": 20})
@@ -392,14 +390,6 @@ class TestDataArrayRollingExp:
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     @pytest.mark.parametrize("func", ["mean", "sum"])
     def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
-        import numbagg
-
-        if (
-            Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
-            and func == "sum"
-        ):
-            pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
-
         da = da.where(da > 0.2)
 
         rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
@@ -431,14 +421,6 @@ class TestDataArrayRollingExp:
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     @pytest.mark.parametrize("func", ["mean", "sum"])
     def test_rolling_exp_keep_attrs(self, da, func) -> None:
-        import numbagg
-
-        if (
-            Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
-            and func == "sum"
-        ):
-            pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
-
         attrs = {"attrs": "da"}
         da.attrs = attrs
 
@@ -656,7 +638,6 @@ class TestDatasetRolling:
         "name", ("sum", "mean", "std", "var", "min", "max", "median")
     )
     def test_rolling_reduce(self, ds, center, min_periods, window, name) -> None:
-
         if min_periods is not None and window < min_periods:
             min_periods = window
 
@@ -761,13 +742,11 @@ class TestDatasetRolling:
 class TestDatasetRollingExp:
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_exp(self, ds) -> None:
-
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)
 
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_exp_keep_attrs(self, ds) -> None:
-
         attrs_global = {"attrs": "global"}
         attrs_z1 = {"attr": "z1"}
 
