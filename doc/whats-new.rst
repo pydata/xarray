@@ -47,6 +47,29 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed (:pull:`8022`):
+
+  ===================== =========  ========
+   Package                    Old      New
+  ===================== =========  ========
+   boto3                     1.20     1.24
+   cftime                     1.5      1.6
+   dask-core               2022.1   2022.7
+   distributed             2022.1   2022.7
+   hfnetcdf                  0.13      1.0
+   iris                       3.1      3.2
+   lxml                       4.7      4.9
+   netcdf4                  1.5.7    1.6.0
+   numpy                     1.21     1.22
+   pint                      0.18     0.19
+   pydap                      3.2      3.3
+   rasterio                   1.2      1.3
+   scipy                      1.7      1.8
+   toolz                     0.11     0.12
+   typing_extensions          4.0      4.3
+   zarr                      2.10     2.12
+   numbagg                    0.1    0.2.1
+  ===================== =========  ========
 
 Deprecations
 ~~~~~~~~~~~~

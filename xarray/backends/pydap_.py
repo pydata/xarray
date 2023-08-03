@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from packaging.version import Version
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -123,11 +122,10 @@ class PydapDataStore(AbstractDataStore):
             "output_grid": output_grid or True,
             "timeout": timeout,
         }
-        if Version(pydap.lib.__version__) >= Version("3.3.0"):
-            if verify is not None:
-                kwargs.update({"verify": verify})
-            if user_charset is not None:
-                kwargs.update({"user_charset": user_charset})
+        if verify is not None:
+            kwargs.update({"verify": verify})
+        if user_charset is not None:
+            kwargs.update({"user_charset": user_charset})
         ds = pydap.client.open_url(**kwargs)
         return cls(ds)
 
