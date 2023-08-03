@@ -129,9 +129,9 @@ class TestEncodeCFVariable:
         foo1_coords = enc["foo1"].attrs.get("coordinates", "")
         foo2_coords = enc["foo2"].attrs.get("coordinates", "")
         foo3_coords = enc["foo3"].attrs.get("coordinates", "")
-        assert set(foo1_coords.split()) == {"lat1", "lon1"}
-        assert set(foo2_coords.split()) == {"lat2", "lon2"}
-        assert set(foo3_coords.split()) == {"lat3", "lon3"}
+        assert foo1_coords == "lon1 lat1"
+        assert foo2_coords == "lon2 lat2"
+        assert foo3_coords == "lon3 lat3"
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
@@ -150,11 +150,12 @@ class TestEncodeCFVariable:
         enc, attrs = conventions.encode_dataset_coordinates(orig)
         # Make sure we have the right coordinates for each variable.
         values_coords = enc["values"].attrs.get("coordinates", "")
-        assert set(values_coords.split()) == {"time", "lat", "lon"}
+        assert values_coords == "time lon lat"
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
     def test_do_not_overwrite_user_coordinates(self) -> None:
+        # don't overwrite user-defined "coordinates" encoding
         orig = Dataset(
             coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},
             data_vars={"a": ("x", [1, 2, 3]), "b": ("x", [3, 5, 6])},
@@ -167,6 +168,18 @@ class TestEncodeCFVariable:
         orig["a"].attrs["coordinates"] = "foo"
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
+
+    def test_deterministic_coords_encoding(self) -> None:
+        # the coordinates attribute is sorted when set by xarray.conventions ...
+        # ... on a variable's coordinates attribute
+        ds = Dataset({"foo": 0}, coords={"baz": 0, "bar": 0})
+        vars, attrs = conventions.encode_dataset_coordinates(ds)
+        assert vars["foo"].attrs["coordinates"] == "bar baz"
+        assert attrs.get("coordinates") is None
+        # ... on the global coordinates attribute
+        ds = ds.drop_vars("foo")
+        vars, attrs = conventions.encode_dataset_coordinates(ds)
+        assert attrs["coordinates"] == "bar baz"
 
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:

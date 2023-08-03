@@ -694,7 +694,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         if not coords_str and variable_coordinates[name]:
             coordinates_text = " ".join(
                 str(coord_name)
-                for coord_name in variable_coordinates[name]
+                for coord_name in sorted(variable_coordinates[name])
                 if coord_name not in not_technically_coordinates
             )
             if coordinates_text:
@@ -719,7 +719,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 SerializationWarning,
             )
         else:
-            attributes["coordinates"] = " ".join(map(str, global_coordinates))
+            attributes["coordinates"] = " ".join(sorted(map(str, global_coordinates)))
 
     return variables, attributes
 
