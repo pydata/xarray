@@ -96,6 +96,9 @@ Internal Changes
 
 - :py:func:`as_variable` now consistently includes the variable name in any exceptions
   raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
+- :py:func:`encode_dataset_coordinates` now sorts coordinates automatically assigned to
+  `coordinates` attributes during serialization (:issue:`8026`, :pull:`8034`).
+  `By Ian Carroll <https://github.com/itcarroll>`_.
 
 .. _whats-new.2023.07.0:
 
