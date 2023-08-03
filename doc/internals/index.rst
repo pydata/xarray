@@ -12,7 +12,7 @@ The pages in this section are intended for:
 
 * Contributors to xarray who wish to better understand some of the internals,
 * Developers from other fields who wish to extend xarray with domain-specific logic, perhaps to support a new scientific community of users,
-* Developers of other packages who wish to interface xarray with their existing tools, e.g. by creating a plugin for reading a new file format, or wrapping a custom array type.
+* Developers of other packages who wish to interface xarray with their existing tools, e.g. by creating a backend for reading a new file format, or wrapping a custom array type.
 
 .. toctree::
    :maxdepth: 2
