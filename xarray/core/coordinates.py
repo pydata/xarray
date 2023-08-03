@@ -141,7 +141,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
             index_lengths = np.fromiter(
                 (len(index) for index in indexes), dtype=np.intp
             )
-            cumprod_lengths = np.cumproduct(index_lengths)
+            cumprod_lengths = np.cumprod(index_lengths)
 
             if cumprod_lengths[-1] == 0:
                 # if any factor is empty, the cartesian product is empty
