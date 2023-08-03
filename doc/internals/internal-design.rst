@@ -124,7 +124,7 @@ The :py:class:`~xarray.Dataset` class is a generalization of the :py:class:`~xar
 Internally all data variables and coordinate variables are stored under a single ``variables`` dict, and coordinates are
 specified by storing their names in a private ``_coord_names`` dict.
 
-The dataset's ``dims`` are the set of all dims present across any variable, but (similar to in dataarrays) coordinate
+The dataset's dimensions are the set of all dims present across any variable, but (similar to in dataarrays) coordinate
 variables cannot have a dimension that is not present on any data variable.
 
 When a data variable or coordinate variable is accessed, a new ``DataArray`` is again constructed from all compatible
