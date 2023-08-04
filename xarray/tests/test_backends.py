@@ -16,6 +16,7 @@ import warnings
 from collections.abc import Iterator
 from contextlib import ExitStack
 from io import BytesIO
+from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -2663,6 +2664,86 @@ class TestZarrDirectoryStore(ZarrBase):
                 # verify that a v2 store was created
                 assert group.zarr_group.store._store_version == 2
             yield group
+
+
+@requires_zarr
+class TestZarrWriteEmpty(TestZarrDirectoryStore):
+    @contextlib.contextmanager
+    def temp_dir(self) -> Iterator[tuple[str, str]]:
+        with tempfile.TemporaryDirectory() as d:
+            store = os.path.join(d, "test.zarr")
+            yield d, store
+
+    @contextlib.contextmanager
+    def roundtrip_dir(
+        self,
+        data,
+        store,
+        save_kwargs=None,
+        open_kwargs=None,
+        allow_cleanup_failure=False,
+    ) -> Iterator[Dataset]:
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
+
+        data.to_zarr(store, **save_kwargs, **self.version_kwargs)
+        with xr.open_dataset(
+            store, engine="zarr", **open_kwargs, **self.version_kwargs
+        ) as ds:
+            yield ds
+
+    @pytest.mark.parametrize("write_empty", [True, False])
+    def test_write_empty(self, write_empty: bool) -> None:
+        if not write_empty:
+            expected = ["0.1.0", "1.1.0"]
+        else:
+            expected = [
+                "0.0.0",
+                "0.0.1",
+                "0.1.0",
+                "0.1.1",
+                "1.0.0",
+                "1.0.1",
+                "1.1.0",
+                "1.1.1",
+            ]
+
+        ds = xr.Dataset(
+            data_vars={
+                "test": (
+                    ("Z", "Y", "X"),
+                    np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2)),
+                )
+            }
+        )
+
+        if has_dask:
+            ds["test"] = ds["test"].chunk((1, 1, 1))
+            encoding = None
+        else:
+            encoding = {"test": {"chunks": (1, 1, 1)}}
+
+        with self.temp_dir() as (d, store):
+            ds.to_zarr(
+                store,
+                mode="w",
+                encoding=encoding,
+                write_empty_chunks=write_empty,
+            )
+
+            with self.roundtrip_dir(
+                ds,
+                store,
+                {"mode": "a", "append_dim": "Z", "write_empty_chunks": write_empty},
+            ) as a_ds:
+                expected_ds = xr.concat([ds, ds], dim="Z")
+
+                assert_identical(a_ds, expected_ds)
+
+                ls = listdir(os.path.join(store, "test"))
+                assert set(expected) == set([file for file in ls if file[0] != "."])
 
 
 class ZarrBaseV3(ZarrBase):

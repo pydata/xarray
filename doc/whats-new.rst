@@ -42,6 +42,11 @@ New Features
   with a dimension. Examples include output from finite volume models like FVCOM.
   (:issue:`2233`, :pull:`7989`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+- When outputting :py:class:`Dataset` objects as Zarr via :py:meth:`Dataset.to_zarr`,
+  user can now specify that chunks that will contain no valid data will not be written.
+  Originally, this could be done by specifying ``"write_empty_chunks": True`` in the
+  ``encoding`` parameter; however, this setting would not carry over when appending new
+  data to an existing dataset. (:issue:`8009`) Requires ``zarr>=2.11``.
 
 
 Breaking changes
