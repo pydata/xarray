@@ -757,6 +757,7 @@ def open_zarr(
     zarr_version=None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    set_indexes=True,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -850,6 +851,10 @@ def open_zarr(
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         Defaults to {'manager': 'dask'}, meaning additional kwargs will be passed eventually to
         :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    set_indexes : bool, optional
+        If True (default), create a default (pandas) index for each
+        :term:`Dimension coordinate`. Set it to False if the dataset contains
+        dimension coordinate arrays that are too large to load fully in memory.
 
     Returns
     -------
@@ -906,6 +911,7 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        set_indexes=set_indexes,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
@@ -950,6 +956,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         concat_characters=True,
         decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
+        set_indexes: bool = True,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
@@ -986,6 +993,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 drop_variables=drop_variables,
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
+                set_indexes=set_indexes,
             )
         return ds
 
