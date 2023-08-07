@@ -490,6 +490,7 @@ class BackendEntrypoint:
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
+        set_indexes: bool = True,
         **kwargs: Any,
     ) -> Dataset:
         """

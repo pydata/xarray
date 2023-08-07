@@ -403,6 +403,7 @@ def open_dataset(
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    set_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -492,6 +493,12 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    set_indexes : bool, optional
+        If True (default), create new indexes from coordinates. Both the number and
+        the type(s) of those indexes depend on the backend used to open the dataset.
+        For most common backends this creates a pandas index for each
+        :term:`Dimension coordinate`, which loads the coordinate data fully in memory.
+        Set it to False if you want to avoid loading data into memory.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -570,6 +577,7 @@ def open_dataset(
     backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
+        set_indexes=set_indexes,
         **decoders,
         **kwargs,
     )
@@ -604,6 +612,7 @@ def open_dataarray(
     concat_characters: bool | None = None,
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
+    set_indexes: bool = True,
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
@@ -695,6 +704,12 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    set_indexes : bool, optional
+        If True (default), create new indexes from coordinates. Both the number and
+        the type(s) of those indexes depend on the backend used to open the dataset.
+        For most common backends this creates a pandas index for each
+        :term:`Dimension coordinate`, which loads the coordinate data fully in memory.
+        Set it to False if you want to avoid loading data into memory.
     inline_array: bool, default: False
         How to include the array in the dask task graph.
         By default(``inline_array=False``) the array is included in a task by
@@ -752,6 +767,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
+        set_indexes=set_indexes,
         inline_array=inline_array,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
