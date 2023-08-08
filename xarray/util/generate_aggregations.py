@@ -186,6 +186,15 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
+_COUNT_SEE_ALSO = """
+        See Also
+        --------
+        pandas.DataFrame.{method}
+        dask.dataframe.DataFrame.{method}
+        {see_also_obj}.{method}
+        :ref:`{docref}`
+            User guide on {docref_description}."""
+
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
@@ -312,12 +321,21 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        yield TEMPLATE_SEE_ALSO.format(
-            **template_kwargs,
-            docref=self.docref,
-            docref_description=self.docref_description,
-            see_also_obj=self.see_also_obj,
-        )
+        if method.name == "count":
+            # Fixes broken links mentioned in #8055
+            yield _COUNT_SEE_ALSO.format(
+                **template_kwargs,
+                docref=self.docref,
+                docref_description=self.docref_description,
+                see_also_obj=self.see_also_obj,
+            )
+        else:
+            yield TEMPLATE_SEE_ALSO.format(
+                **template_kwargs,
+                docref=self.docref,
+                docref_description=self.docref_description,
+                see_also_obj=self.see_also_obj,
+            )
 
         notes = self.notes
         if method.numeric_only:

@@ -65,8 +65,8 @@ class DatasetAggregations:
 
         See Also
         --------
-        numpy.count
-        dask.array.count
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
         DataArray.count
         :ref:`agg`
             User guide on reduction or aggregation operations.
@@ -1261,8 +1261,8 @@ class DataArrayAggregations:
 
         See Also
         --------
-        numpy.count
-        dask.array.count
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
         Dataset.count
         :ref:`agg`
             User guide on reduction or aggregation operations.
@@ -2367,8 +2367,8 @@ class DatasetGroupByAggregations:
 
         See Also
         --------
-        numpy.count
-        dask.array.count
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
         Dataset.count
         :ref:`groupby`
             User guide on groupby operations.
@@ -3881,8 +3881,8 @@ class DatasetResampleAggregations:
 
         See Also
         --------
-        numpy.count
-        dask.array.count
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
         Dataset.count
         :ref:`resampling`
             User guide on resampling operations.
@@ -5395,8 +5395,8 @@ class DataArrayGroupByAggregations:
 
         See Also
         --------
-        numpy.count
-        dask.array.count
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
         DataArray.count
         :ref:`groupby`
             User guide on groupby operations.
@@ -6801,8 +6801,8 @@ class DataArrayResampleAggregations:
 
         See Also
         --------
-        numpy.count
-        dask.array.count
+        pandas.DataFrame.count
+        dask.dataframe.DataFrame.count
         DataArray.count
         :ref:`resampling`
             User guide on resampling operations.
