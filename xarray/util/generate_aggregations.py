@@ -249,7 +249,7 @@ class Method:
         else:
             self.array_method = name
             self.np_example_array = """
-        ...     np.array([1, 2, 3, 1, 2, np.nan])"""
+        ...     np.array([1, 2, 3, 0, 2, np.nan])"""
 
 
 class AggregationGenerator:
