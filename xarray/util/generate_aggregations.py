@@ -321,16 +321,9 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        if method.name == "count":
-            # Fixes broken links mentioned in #8055
-            yield _COUNT_SEE_ALSO.format(
-                **template_kwargs,
-                docref=self.docref,
-                docref_description=self.docref_description,
-                see_also_obj=self.see_also_obj,
-            )
-        else:
-            yield TEMPLATE_SEE_ALSO.format(
+        see_also = _COUNT_SEE_ALSO if method.name == "count" else TEMPLATE_SEE_ALSO
+        # Fixes broken links mentioned in #8055
+        yield see_also.format(
                 **template_kwargs,
                 docref=self.docref,
                 docref_description=self.docref_description,

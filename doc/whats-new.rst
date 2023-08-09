@@ -95,6 +95,8 @@ Documentation
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Added a page clarifying the role of Xarray core team members.
   (:pull:`7999`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fixed broken links in "See also" section of :py:meth:`Dataset.count` (:issue:`8055`, :pull:`8057`)
+  By `Articoking <https://github.com/Articoking>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
