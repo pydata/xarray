@@ -324,11 +324,11 @@ class AggregationGenerator:
         see_also = _COUNT_SEE_ALSO if method.name == "count" else TEMPLATE_SEE_ALSO
         # Fixes broken links mentioned in #8055
         yield see_also.format(
-                **template_kwargs,
-                docref=self.docref,
-                docref_description=self.docref_description,
-                see_also_obj=self.see_also_obj,
-            )
+            **template_kwargs,
+            docref=self.docref,
+            docref_description=self.docref_description,
+            see_also_obj=self.see_also_obj,
+        )
 
         notes = self.notes
         if method.numeric_only:
