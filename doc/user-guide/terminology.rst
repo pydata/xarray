@@ -147,10 +147,10 @@ complete examples, please consult the relevant documentation.*
         the specified dimensions and creates a new ``Dataset`` containing all the variables and coordinates.
 
     Concatenating
-        Concatenating is used to combine two or more Datasets or DataArrays along a new dimension. When concatenating,
-        xarray stacks the datasets or dataarrays along a new dimension, and the resulting ``Dataset`` or ``Dataarray``
+        Concatenating is used to combine two or more Datasets or DataArrays along a dimension. When concatenating,
+        xarray arranges the datasets or dataarrays along a new dimension, and the resulting ``Dataset`` or ``Dataarray``
         will have the same variables and coordinates along the other dimensions.
 
     Combining
-        Combining in xarray is a general term used to describe the process of combining two or more DataArrays or Datasets
+        Combining in xarray is a general term used to describe the process of arranging two or more DataArrays or Datasets
         into a single ``DataArray`` or ``Dataset`` using some combination of merging and concatenation operations.
