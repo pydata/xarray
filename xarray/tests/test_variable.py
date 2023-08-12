@@ -2140,6 +2140,15 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(["x", "y"], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
+    def test_setitem_with_dataarray(self):
+        v = Variable(["a", "b", "c", "d"], np.r_[:120].reshape(2, 3, 4, 5))
+        b = Variable(["u", "v"], [[0, 0], [1, 0]])
+        c = Variable(["u", "v"], [[0, 1], [2, 3]])
+        w = DataArray([-1, -2], dims=["u"])
+        index = dict(b=b, c=c)
+        v[index] = w
+        assert (v[index] == w).all()
+
     def test_coarsen(self):
         v = self.cls(["x"], [0, 1, 2, 3, 4])
         actual = v.coarsen({"x": 2}, boundary="pad", func="mean")
