@@ -1849,6 +1849,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 create_template = np.empty_like
         else:
             dtype = self.dtype
+            create_template = partial(np.full_like, fill_value=fill_value)
 
         if sparse:
             # unstacking a dense multitindexed array to a sparse array
