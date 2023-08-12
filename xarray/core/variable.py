@@ -943,7 +943,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         See __getitem__ for more details.
         """
+        from xarray.core.dataarray import DataArray
+
         dims, index_tuple, new_order = self._broadcast_indexes(key)
+
+        if isinstance(value, DataArray):
+            value = value.variable
 
         if not isinstance(value, Variable):
             value = as_compatible_data(value)
