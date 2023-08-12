@@ -7,6 +7,7 @@ import numbers
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 
 import numpy as np
@@ -1840,9 +1841,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             is_missing_values = math.prod(new_shape) > math.prod(self.shape)
             if is_missing_values:
                 dtype, fill_value = dtypes.maybe_promote(self.dtype)
+
+                create_template = partial(np.full_like, fill_value=fill_value)
             else:
                 dtype = self.dtype
                 fill_value = dtypes.get_fill_value(dtype)
+                create_template = np.empty_like
         else:
             dtype = self.dtype
 
@@ -1867,12 +1871,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             )
 
         else:
-            data = np.full_like(
-                self.data,
-                fill_value=fill_value,
-                shape=new_shape,
-                dtype=dtype,
-            )
+            data = create_template(self.data, shape=new_shape, dtype=dtype)
 
             # Indexer is a list of lists of locations. Each list is the locations
             # on the new dimension. This is robust to the data being sparse; in that
