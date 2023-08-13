@@ -83,6 +83,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug where :py:class:`DataArray` instances on the right-hand side
+  of :py:meth:`Variable.__setitem__` lose dimension names.
+  (:issue:`7030`) By `Darsh Ranjan <https://github.com/dranjan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
