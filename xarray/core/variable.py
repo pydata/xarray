@@ -1837,6 +1837,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
+        create_template: Callable
         if fill_value is dtypes.NA:
             is_missing_values = math.prod(new_shape) > math.prod(self.shape)
             if is_missing_values:
