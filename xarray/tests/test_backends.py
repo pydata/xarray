@@ -17,7 +17,7 @@ from collections.abc import Iterator
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast, Generator
 
 import numpy as np
 import pandas as pd
