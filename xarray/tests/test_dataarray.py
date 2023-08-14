@@ -846,7 +846,7 @@ class TestDataArray:
 
         # Indexing with coordinates
         v = xr.DataArray(np.r_[:120].reshape(2, 3, 4, 5), dims=["a", "b", "c", "d"])
-        v.coords['b'] = [2, 4, 6]
+        v.coords["b"] = [2, 4, 6]
         b = xr.DataArray([[2, 2], [4, 2]], dims=["u", "v"])
         c = xr.DataArray([[0, 1], [2, 3]], dims=["u", "v"])
         w = xr.DataArray([-1, -2], dims=["u"])
