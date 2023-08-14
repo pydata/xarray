@@ -2594,7 +2594,7 @@ class Dataset(
             already as dask array.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
-            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
             Experimental API that should not be relied upon.
         from_array_kwargs: dict, optional
             Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -2647,6 +2647,7 @@ class Dataset(
                 token,
                 lock,
                 name_prefix,
+                overwrite_encoded_chunks=True,
                 inline_array=inline_array,
                 chunked_array_type=chunkmanager,
                 from_array_kwargs=from_array_kwargs.copy(),

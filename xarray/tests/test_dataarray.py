@@ -851,14 +851,17 @@ class TestDataArray:
 
         blocked = unblocked.chunk()
         assert blocked.chunks == ((3,), (4,))
+        assert blocked.encoding.get("chunks", None) == (3, 4)
         first_dask_name = blocked.data.name
 
         blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
         assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.encoding.get("chunks", None) == (2, 2)
         assert blocked.data.name != first_dask_name
 
         blocked = unblocked.chunk(chunks=(3, 3))
         assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.encoding.get("chunks", None) == (3, 3)
         assert blocked.data.name != first_dask_name
 
         # name doesn't change when rechunking by same amount

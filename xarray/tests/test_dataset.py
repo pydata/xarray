@@ -1111,17 +1111,24 @@ class TestDataset:
 
         # test kwargs form of chunks
         assert data.chunk(expected_chunks).chunks == expected_chunks
+        # Verify the encoding attributes have been set
+        for da_reblocked in reblocked.values():
+            assert da_reblocked.encoding.get("chunks", None) == da_reblocked.shape
 
         def get_dask_names(ds):
             return {k: v.data.name for k, v in ds.items()}
 
         orig_dask_names = get_dask_names(reblocked)
 
-        reblocked = data.chunk({"time": 5, "dim1": 5, "dim2": 5, "dim3": 5})
+        desired_chunks = {"time": 6, "dim1": 5, "dim2": 4, "dim3": 3}
+        reblocked = data.chunk(desired_chunks)
         # time is not a dim in any of the data_vars, so it
         # doesn't get chunked
-        expected_chunks = {"dim1": (5, 3), "dim2": (5, 4), "dim3": (5, 5)}
+        expected_chunks = {"dim1": (5, 3), "dim2": (4, 4, 1), "dim3": (3, 3, 3, 1)}
         assert reblocked.chunks == expected_chunks
+        # Verify the encoding attributes have been set
+        for da_reblocked in reblocked.values():
+            assert da_reblocked.encoding.get("chunks", None) == tuple(desired_chunks[d] for d in da_reblocked.dims)
 
         # make sure dask names change when rechunking by different amounts
         # regression test for GH3350
