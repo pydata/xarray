@@ -1889,7 +1889,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks == original[k].chunks
 
     @requires_dask
-    @pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+    @pytest.mark.filterwarnings("ignore:The specified chunks separate")
     def test_manual_chunk(self) -> None:
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 

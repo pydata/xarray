@@ -1128,7 +1128,9 @@ class TestDataset:
         assert reblocked.chunks == expected_chunks
         # Verify the encoding attributes have been set
         for da_reblocked in reblocked.values():
-            assert da_reblocked.encoding.get("chunks", None) == tuple(desired_chunks[d] for d in da_reblocked.dims)
+            assert da_reblocked.encoding.get("chunks", None) == tuple(
+                desired_chunks[str(d)] for d in da_reblocked.dims
+            )
 
         # make sure dask names change when rechunking by different amounts
         # regression test for GH3350

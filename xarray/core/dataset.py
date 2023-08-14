@@ -317,7 +317,8 @@ def _maybe_chunk(
         )
 
         if overwrite_encoded_chunks and var.chunks is not None:
-            var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
+            # Use chunk size 1 for dimensions of length 0
+            var.encoding["chunks"] = tuple(x[0] if x[0] != 0 else 1 for x in var.chunks)
         return var
     else:
         return var

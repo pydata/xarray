@@ -3468,6 +3468,8 @@ class TestDataArray:
 
         if has_dask:
             da = array.chunk()
+            if encoding:
+                expected["encoding"]["chunks"] = da.shape
         else:
             da = array
 
