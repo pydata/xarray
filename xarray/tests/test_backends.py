@@ -1575,7 +1575,9 @@ class NetCDF4Base(NetCDFBase):
                     assert all(np.asanyarray(chunksizes) == expected)
 
     @contextlib.contextmanager
-    def create_chunked_file(self, array_shape: tuple[int, int, int], chunk_sizes: tuple[int, int, int]) -> Generator[str, None, None]:
+    def create_chunked_file(
+        self, array_shape: tuple[int, int, int], chunk_sizes: tuple[int, int, int]
+    ) -> Generator[str, None, None]:
         t_size, y_size, x_size = array_shape
         t_chunksize, y_chunksize, x_chunksize = chunk_sizes
 
