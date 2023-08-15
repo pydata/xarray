@@ -12,6 +12,7 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
 from xarray.tests import (
+    InaccessibleArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -2392,3 +2393,17 @@ def test_min_count_error(use_flox: bool) -> None:
     with xr.set_options(use_flox=use_flox):
         with pytest.raises(TypeError):
             da.groupby("labels").mean(min_count=1)
+
+
+@requires_dask
+def test_groupby_math_auto_chunk():
+    da = xr.DataArray(
+        [[1, 2, 3], [1, 2, 3], [1, 2, 3]],
+        dims=("y", "x"),
+        coords={"label": ("x", [2, 2, 1])},
+    )
+    sub = xr.DataArray(
+        InaccessibleArray(np.array([1, 2])), dims="label", coords={"label": [1, 2]}
+    )
+    actual = da.chunk(x=1, y=2).groupby("label") - sub
+    assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
