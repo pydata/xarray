@@ -132,25 +132,104 @@ complete examples, please consult the relevant documentation.*
 
         __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
 
+        .. ipython:: python
+            :suppress:
+
+            import numpy as np
+            import pandas as pd
+            import xarray as xr
+
     Aligning
         Aligning refers to the process of ensuring that two or more DataArrays or Datasets
         have the same dimensions and coordinates, so that they can be combined or compared properly.
+
+        .. ipython:: python
+
+            x = xr.DataArray(
+                [[25, 35], [10, 24]],
+                dims=("lat", "lon"),
+                coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+            )
+            y = xr.DataArray(
+                [[20, 5], [7, 13]],
+                dims=("lat", "lon"),
+                coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
+            )
+            x
+            y
 
     Broadcasting
         A technique that allows operations to be performed on arrays with different shapes and dimensions.
         When performing operations on arrays with different shapes and dimensions, xarray will automatically broadcast the
         arrays to a common shape before the operation is applied.
 
+        .. ipython:: python
+
+            # 'a' has shape (3,) and 'b' has shape (4,)
+            a = xr.DataArray(np.array([1, 2, 3]), dims=["x"])
+            b = xr.DataArray(np.array([4, 5, 6, 7]), dims=["y"])
+
+            # 2D array with shape (3, 4)
+            a + b
+
     Merging
         Merging is used to combine two or more Datasets or DataArrays that have different variables or coordinates along
         the same dimensions. When merging, xarray aligns the variables and coordinates of the different datasets along
         the specified dimensions and creates a new ``Dataset`` containing all the variables and coordinates.
+
+        .. ipython:: python
+
+            # create two 1D arrays with names
+            arr1 = xr.DataArray(
+                [1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]}, name="arr1"
+            )
+            arr2 = xr.DataArray(
+                [4, 5, 6], dims=["x"], coords={"x": [20, 30, 40]}, name="arr2"
+            )
+
+            # merge the two arrays into a new dataset
+            merged_ds = xr.Dataset({"arr1": arr1, "arr2": arr2})
+            merged_ds
 
     Concatenating
         Concatenating is used to combine two or more Datasets or DataArrays along a dimension. When concatenating,
         xarray arranges the datasets or dataarrays along a new dimension, and the resulting ``Dataset`` or ``Dataarray``
         will have the same variables and coordinates along the other dimensions.
 
+        .. ipython:: python
+
+            a = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))
+            b = xr.DataArray([[5, 6], [7, 8]], dims=("x", "y"))
+            c = xr.concat([a, b], dim="c")
+            c
+
     Combining
         Combining in xarray is a general term used to describe the process of arranging two or more DataArrays or Datasets
         into a single ``DataArray`` or ``Dataset`` using some combination of merging and concatenation operations.
+
+        .. ipython:: python
+
+            ds1 = xr.Dataset(
+                {"data": xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))},
+                coords={"x": [1, 2], "y": [3, 4]},
+            )
+            ds2 = xr.Dataset(
+                {"data": xr.DataArray([[5, 6], [7, 8]], dims=("x", "y"))},
+                coords={"x": [2, 3], "y": [4, 5]},
+            )
+
+            # combine the datasets
+            combined_ds = xr.combine_by_coords([ds1, ds2])
+            combined_ds
+
+    lazy
+        When working with xarray, you often deal with big sets of data. Instead of doing
+        calculations right away, xarray lets you plan what calculations you want to do, like finding the
+        average temperature in a dataset.This planning is called "lazy evaluation." It's like writing down the
+        steps you need to follow to build the LEGO spaceship, without actually building it yet.Later, when
+        you're ready to see the final result, you tell xarray, "Okay, go ahead and do those calculations now!"
+        That's when xarray starts working through the steps you planned and gives you the answer you wanted.This
+        lazy approach helps save time and memory because xarray only does the work when you actually need the
+        results.
+
+    labeled
