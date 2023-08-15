@@ -37,6 +37,7 @@ from xarray.core.pycompat import integer_types
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
     either_dict_or_kwargs,
+    emit_user_level_warning,
     hashable,
     is_scalar,
     maybe_wrap_array,
@@ -71,6 +72,21 @@ def check_reduce_dims(reduce_dims, dimensions):
                 f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
                 f"to reduce over all dimensions or one or more of {dimensions!r}."
             )
+
+
+def _maybe_squeeze_indices(
+    indices, squeeze: bool | None, grouper: ResolvedGrouper, warn: bool
+):
+    if squeeze in [None, True] and grouper.can_squeeze:
+        if squeeze is None and warn:
+            emit_user_level_warning(
+                "The `squeeze` kwarg to GroupBy is being removed."
+                "Pass .groupby(..., squeeze=False) to silence this warning."
+            )
+        if isinstance(indices, slice):
+            assert indices.stop - indices.start == 1
+            indices = indices.start
+    return indices
 
 
 def unique_value_groups(
@@ -366,10 +382,10 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
         return self.group1d.dims
 
     @abstractmethod
-    def _factorize(self, squeeze: bool) -> T_FactorizeOut:
+    def factorize(self) -> T_FactorizeOut:
         raise NotImplementedError
 
-    def factorize(self, squeeze: bool) -> None:
+    def _factorize(self) -> None:
         # This design makes it clear  to mypy that
         # codes, group_indices, unique_coord, and full_index
         # are set by the factorize  method on the derived class.
@@ -378,7 +394,7 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
             self.group_indices,
             self.unique_coord,
             self.full_index,
-        ) = self._factorize(squeeze)
+        ) = self.factorize()
 
     @property
     def is_unique_and_monotonic(self) -> bool:
@@ -393,15 +409,19 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
             self._group_as_index = self.group1d.to_index()
         return self._group_as_index
 
+    @property
+    def can_squeeze(self):
+        is_dimension = self.group.dims == (self.group.name,)
+        return is_dimension and self.is_unique_and_monotonic
+
 
 @dataclass
 class ResolvedUniqueGrouper(ResolvedGrouper):
     grouper: UniqueGrouper
 
-    def _factorize(self, squeeze) -> T_FactorizeOut:
-        is_dimension = self.group.dims == (self.group.name,)
-        if is_dimension and self.is_unique_and_monotonic:
-            return self._factorize_dummy(squeeze)
+    def factorize(self) -> T_FactorizeOut:
+        if self.can_squeeze:
+            return self._factorize_dummy()
         else:
             return self._factorize_unique()
 
@@ -424,15 +444,12 @@ class ResolvedUniqueGrouper(ResolvedGrouper):
 
         return codes, group_indices, unique_coord, full_index
 
-    def _factorize_dummy(self, squeeze) -> T_FactorizeOut:
+    def _factorize_dummy(self) -> T_FactorizeOut:
         size = self.group.size
         # no need to factorize
-        if not squeeze:
-            # use slices to do views instead of fancy indexing
-            # equivalent to: group_indices = group_indices.reshape(-1, 1)
-            group_indices: T_GroupIndices = [slice(i, i + 1) for i in range(size)]
-        else:
-            group_indices = list(range(size))
+        # use slices to do views instead of fancy indexing
+        # equivalent to: group_indices = group_indices.reshape(-1, 1)
+        group_indices: T_GroupIndices = [slice(i, i + 1) for i in range(size)]
         size_range = np.arange(size)
         if isinstance(self.group, _DummyGroup):
             codes = self.group.to_dataarray().copy(data=size_range)
@@ -448,7 +465,7 @@ class ResolvedUniqueGrouper(ResolvedGrouper):
 class ResolvedBinGrouper(ResolvedGrouper):
     grouper: BinGrouper
 
-    def _factorize(self, squeeze: bool) -> T_FactorizeOut:
+    def factorize(self) -> T_FactorizeOut:
         from xarray.core.dataarray import DataArray
 
         data = self.group1d.values
@@ -546,7 +563,7 @@ class ResolvedTimeResampleGrouper(ResolvedGrouper):
                 _apply_loffset(self.grouper.loffset, first_items)
             return first_items, codes
 
-    def _factorize(self, squeeze: bool) -> T_FactorizeOut:
+    def factorize(self) -> T_FactorizeOut:
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
         group_indices: T_GroupIndices = [
@@ -591,14 +608,14 @@ class TimeResampleGrouper(Grouper):
     loffset: datetime.timedelta | str | None
 
 
-def _validate_groupby_squeeze(squeeze: bool) -> None:
+def _validate_groupby_squeeze(squeeze: bool | None) -> None:
     # While we don't generally check the type of every arg, passing
     # multiple dimensions as multiple arguments is common enough, and the
     # consequences hidden enough (strings evaluate as true) to warrant
     # checking here.
     # A future version could make squeeze kwarg only, but would face
     # backward-compat issues.
-    if not isinstance(squeeze, bool):
+    if squeeze is not None and not isinstance(squeeze, bool):
         raise TypeError(f"`squeeze` must be True or False, but {squeeze} was supplied")
 
 
@@ -730,7 +747,7 @@ class GroupBy(Generic[T_Xarray]):
         self._original_obj = obj
 
         for grouper_ in self.groupers:
-            grouper_.factorize(squeeze)
+            grouper_._factorize()
 
         (grouper,) = self.groupers
         self._original_group = grouper.group
@@ -762,9 +779,14 @@ class GroupBy(Generic[T_Xarray]):
         Dataset.sizes
         """
         if self._sizes is None:
-            self._sizes = self._obj.isel(
-                {self._group_dim: self._group_indices[0]}
-            ).sizes
+            (grouper,) = self.groupers
+            index = _maybe_squeeze_indices(
+                self._group_indices[0],
+                self._squeeze,
+                grouper,
+                warn=True,
+            )
+            self._sizes = self._obj.isel({self._group_dim: index}).sizes
 
         return self._sizes
 
@@ -798,14 +820,22 @@ class GroupBy(Generic[T_Xarray]):
         # provided to mimic pandas.groupby
         if self._groups is None:
             (grouper,) = self.groupers
-            self._groups = dict(zip(grouper.unique_coord.values, self._group_indices))
+            squeezed_indices = (
+                _maybe_squeeze_indices(ind, self._squeeze, grouper, warn=idx > 0)
+                for idx, ind in enumerate(self._group_indices)
+            )
+            self._groups = dict(zip(grouper.unique_coord.values, squeezed_indices))
         return self._groups
 
     def __getitem__(self, key: GroupKey) -> T_Xarray:
         """
         Get DataArray or Dataset corresponding to a particular group label.
         """
-        return self._obj.isel({self._group_dim: self.groups[key]})
+        (grouper,) = self.groupers
+        index = _maybe_squeeze_indices(
+            self.groups[key], self._squeeze, grouper, warn=True
+        )
+        return self._obj.isel({self._group_dim: index})
 
     def __len__(self) -> int:
         (grouper,) = self.groupers
@@ -826,7 +856,11 @@ class GroupBy(Generic[T_Xarray]):
 
     def _iter_grouped(self) -> Iterator[T_Xarray]:
         """Iterate over each element in this group"""
-        for indices in self._group_indices:
+        (grouper,) = self.groupers
+        for idx, indices in enumerate(self._group_indices):
+            indices = _maybe_squeeze_indices(
+                indices, self._squeeze, grouper, warn=idx > 0
+            )
             yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
@@ -1309,7 +1343,11 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     @property
     def dims(self) -> tuple[Hashable, ...]:
         if self._dims is None:
-            self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
+            (grouper,) = self.groupers
+            index = _maybe_squeeze_indices(
+                self._group_indices[0], self._squeeze, grouper, warn=True
+            )
+            self._dims = self._obj.isel({self._group_dim: index}).dims
 
         return self._dims
 
@@ -1318,7 +1356,11 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         metadata
         """
         var = self._obj.variable
-        for indices in self._group_indices:
+        (grouper,) = self.groupers
+        for idx, indices in enumerate(self._group_indices):
+            indices = _maybe_squeeze_indices(
+                indices, self._squeeze, grouper, warn=idx > 0
+            )
             yield var[{self._group_dim: indices}]
 
     def _concat_shortcut(self, applied, dim, positions=None):
@@ -1517,7 +1559,14 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     @property
     def dims(self) -> Frozen[Hashable, int]:
         if self._dims is None:
-            self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
+            (grouper,) = self.groupers
+            index = _maybe_squeeze_indices(
+                self._group_indices[0],
+                self._squeeze,
+                grouper,
+                warn=True,
+            )
+            self._dims = self._obj.isel({self._group_dim: index}).dims
 
         return self._dims
 
