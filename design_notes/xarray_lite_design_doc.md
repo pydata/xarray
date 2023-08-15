@@ -86,7 +86,7 @@ The Xarray-lite package is designed to be interoperable with other scientific Py
     2. IndexVariable will remain in xarray.core.variable and subclass the new xarray-lite data structure pending future deletion.
 6. Docstrings and user-facing APIs will need to be updated to reflect the changed methods on Variable objects.
 
-Further implementation details are in Appendix: Implementation Details.
+Further implementation details are in Appendix: [Implementation Details](#appendix-implementation-details).
 
 ## Project Timeline and Milestones
 
@@ -97,7 +97,10 @@ We have identified the following milestones for the completion of this project:
 3. **Break out the package and create continuous integration infrastructure**: this will entail breaking out the xarray-lite project into a Python package and creating a continuous integration (CI) system. This will help to modularize the code and make it easier to manage. Building a CI system will help ensure that codebase changes do not break existing functionality.
 4. Incrementally add new functions & methods to the new package, ported from xarray. This will start to make xarray-lite useful on its own.
 5. Refactor the existing Xarray codebase to rely on the newly created package (xarray-lite): This will help to demonstrate the usefulness of the new package, and also provide an example for others who may want to use it.
-6. Expand tests, add documentation, and write a blog post: expanding the test suite will help to ensure that the code is reliable and that changes do not introduce bugs. Adding documentation will make it easier for others to understand and use the project. Finally, we will write a blog post on [xarray.dev](https://xarray.dev/) to promote the project and attract more contributors.
+6. Expand tests, add documentation, and write a blog post: expanding the test suite will help to ensure that the code is reliable and that changes do not introduce bugs. Adding documentation will make it easier for others to understand and use the project.
+7. Finally, we will write a series of blog posts on [xarray.dev](https://xarray.dev/) to promote the project and attract more contributors.
+   * Toward the end of the process, write a few blog posts that demonstrate the use of the newly available data structure
+   * pick the same example applications used by other implementations/applications (e.g. Pytorch, sklearn, and Levanter) to show how it can work.
 
 ## Related Work
 
@@ -324,8 +327,13 @@ class VariableArithmetic(
 * Move over `_typed_ops.VariableOpsMixin`
 * Build a list of utility functions used elsewhere : Which of these should become public API?
   * `broadcast_variables`: `dataset.py`, `dataarray.py`,`missing.py`
+    * This could be just called "broadcast" in xarray-lite.
   * `Variable._getitem_with_mask` : `alignment.py`
+    * keep this method/function as private and inside Xarray.
 * The Variable constructor will need to be rewritten to no longer accept tuples, encodings, etc. These details should be handled at the Xarray data structure level.
 * What happens to `duck_array_ops?`
 * What about Variable.chunk and "chunk managers"?
+  * Could this functionality be left in Xarray proper for now? Alternative array types like JAX also have some notion of "chunks" for parallel arrays, but the details differ in a number of ways from the Dask/Cubed.
+  * Perhaps variable.chunk/load methods should become functions defined in xarray that convert Variable objects. This is easy so long as xarray can reach in and replace .data
+
 * Utility functions like `as_variable` should be moved out of `base_variable.py` so they can convert BaseVariable objects to/from DataArray or Dataset containing explicitly indexed arrays.
