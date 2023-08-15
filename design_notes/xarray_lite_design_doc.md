@@ -145,18 +145,16 @@ Questions:
 1. Document Xarray indexing rules
 2. Document use of .oindex and .vindex protocols
 3. Do we use `.mean` and `.nanmean` or `.mean(skipna=...)`?
+   * Default behavior in xarray-lite should mirror NumPy / the array API standard, not pandas.
+   * nanmean is not (yet) in the [array API](https://github.com/pydata/xarray/pull/7424#issuecomment-1373979208). There are a handful of other key functions (e.g., median) that are are also missing. I think that should be OK, as long as what we support is a strict superset of the array API.
 4. What methods need to be exposed on Variable?
-    * `Variable.concat` classmethod
+    * `Variable.concat` classmethod: create two functions, one as the equivalent of `np.stack` and other for `np.concat`
     * `.rolling_window` and `.coarsen_reshape` ?
     * `Xarray-lite.apply_ufunc`: used in astype, clip, quantile, isnull, notnull`
 
-```python
-# Testing
-   Variable.broadcast_equals
-   Variable.equals
-   Variable.identical
-   Variable.no_conflicts
+#### methods to be preserved from xarray.Variable
 
+```python
 # Sorting
    Variable.argsort
    Variable.searchsorted
@@ -167,75 +165,14 @@ Questions:
    Variable.notnull
 
 # Lazy data handling
-   Variable.chunk
-   Variable.compute
-   Variable.load
+   Variable.chunk # Could instead have accessor interface and recommend users use `Variable.dask.chunk` and `Variable.cubed.chunk`?
    Variable.to_numpy()
    Variable.as_numpy()
 
 # Xarray-specific
    Variable.get_axis_num
-
-   Variable.concat
-
-   Variable.coarsen
-   Variable.coarsen_reshape
-   Variable.rolling_window
-
    Variable.isel
-
-   Variable.to_index
-   Variable.to_index_variable
-   Variable.to_variable
-   Variable.to_base_variable
-   Variable.to_coord
-
    Variable.to_dict
-   Variable.rank
-   Variable.set_dims
-
-# Properties
-   Variable.attrs
-   Variable.chunks
-   Variable.data
-   Variable.values
-   Variable.dims
-   Variable.dtype
-
-   Variable.nbytes
-   Variable.ndim
-   Variable.shape
-   Variable.size
-   Variable.sizes
-
-   Variable.T
-   Variable.real
-   Variable.imag
-   Variable.conj
-
-# Encoding
-   Variable.encoding
-   Variable.reset_encoding
-
-# Reordering/Reshaping
-   Variable.squeeze
-   Variable.stack
-   Variable.transpose
-   Variable.unstack
-   Variable.pad
-   Variable.roll
-   Variable.shift
-
-# numpy-like Methods
-   Variable.astype
-   Variable.copy
-   Variable.clip
-   Variable.conjugate
-   Variable.round
-   Variable.item
-   Variable.where
-
-   Variable.__array_wrap__
 
 # Reductions
    Variable.reduce
@@ -258,6 +195,110 @@ Questions:
    Variable.cumprod
    Variable.cumsum
 
+# numpy-like Methods
+   Variable.astype
+   Variable.copy
+   Variable.clip
+   Variable.round
+   Variable.item
+   Variable.where
+
+# Reordering/Reshaping
+   Variable.squeeze
+   Variable.pad
+   Variable.roll
+   Variable.shift
+
+```
+
+#### methods to be renamed from xarray.Variable
+
+```python
+# Xarray-specific
+   Variable.concat # create two functions, one as the equivalent of `np.stack` and other for `np.concat`
+
+   # Given how niche these are, these would be better as functions than methods.
+   # We could also keep these in Xarray, at least for now. If we don't think people will use functionality outside of Xarray it probably is not worth the trouble of porting it (including documentation, etc).
+   Variable.coarsen # This should probably be called something like coarsen_reduce.
+   Variable.coarsen_reshape
+   Variable.rolling_window
+
+   Variable.set_dims # split this into broadcas_to and expand_dims
+
+
+# Reordering/Reshaping
+   Variable.stack # To avoid confusion with np.stack, let's call this stack_dims.
+   Variable.transpose # Could consider calling this permute_dims, like the [array API standard](https://data-apis.org/array-api/2022.12/API_specification/manipulation_functions.html#objects-in-api)
+   Variable.unstack # Likewise, maybe call this unstack_dims?
+```
+
+#### methods to be removed from xarray.Variable
+
+```python
+# Testing
+   Variable.broadcast_equals
+   Variable.equals
+   Variable.identical
+   Variable.no_conflicts
+
+# Lazy data handling
+   Variable.compute # We can probably omit this method for now, too, given that dask.compute() uses a protocol. The other concern is that different array libraries have different notions of "compute" and this one is rather Dask specific, including conversion from Dask to NumPy arrays. For example, in JAX every operation executes eagerly, but in a non-blocking fashion, and you need to call jax.block_until_ready() to ensure computation is finished.
+   Variable.load # Could remove? compute vs load is a common source of confusion.
+
+# Xarray-specific
+   Variable.to_index
+   Variable.to_index_variable
+   Variable.to_variable
+   Variable.to_base_variable
+   Variable.to_coord
+
+   Variable.rank # Uses bottleneck. Delete? Could use https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rankdata.html instead
+
+
+# numpy-like Methods
+   Variable.conjugate # .conj is enough
+   Variable.__array_wrap__ # This is a very old NumPy protocol for duck arrays. We don't need it now that we have `__array_ufunc__` and `__array_function__`
+
+# Encoding
+    Variable.reset_encoding
+
+```
+
+#### Attributes to be preserved from xarray.Variable
+
+```python
+# Properties
+   Variable.attrs
+   Variable.chunks
+   Variable.data
+   Variable.dims
+   Variable.dtype
+
+   Variable.nbytes
+   Variable.ndim
+   Variable.shape
+   Variable.size
+   Variable.sizes
+
+   Variable.T
+   Variable.real
+   Variable.imag
+   Variable.conj
+```
+
+#### Attributes to be renamed from xarray.Variable
+
+```python
+```
+
+#### Attributes to be removed from xarray.Variable
+
+```python
+
+   Variable.values # Probably also remove -- this is a legacy from before Xarray supported dask arrays. ".data" is enough.
+
+# Encoding
+   Variable.encoding
 
 ```
 
