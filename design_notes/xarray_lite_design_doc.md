@@ -150,9 +150,135 @@ Questions:
     * `.rolling_window` and `.coarsen_reshape` ?
     * `Xarray-lite.apply_ufunc`: used in astype, clip, quantile, isnull, notnull`
 
+```python
+# Testing
+   Variable.broadcast_equals
+   Variable.equals
+   Variable.identical
+   Variable.no_conflicts
+
+# Sorting
+   Variable.argsort
+   Variable.searchsorted
+
+# NaN handling
+   Variable.fillna
+   Variable.isnull
+   Variable.notnull
+
+# Lazy data handling
+   Variable.chunk
+   Variable.compute
+   Variable.load
+   Variable.to_numpy()
+   Variable.as_numpy()
+
+# Xarray-specific
+   Variable.get_axis_num
+
+   Variable.concat
+
+   Variable.coarsen
+   Variable.coarsen_reshape
+   Variable.rolling_window
+
+   Variable.isel
+
+   Variable.to_index
+   Variable.to_index_variable
+   Variable.to_variable
+   Variable.to_base_variable
+   Variable.to_coord
+
+   Variable.to_dict
+   Variable.rank
+   Variable.set_dims
+
+# Properties
+   Variable.attrs
+   Variable.chunks
+   Variable.data
+   Variable.values
+   Variable.dims
+   Variable.dtype
+
+   Variable.nbytes
+   Variable.ndim
+   Variable.shape
+   Variable.size
+   Variable.sizes
+
+   Variable.T
+   Variable.real
+   Variable.imag
+   Variable.conj
+
+# Encoding
+   Variable.encoding
+   Variable.reset_encoding
+
+# Reordering/Reshaping
+   Variable.squeeze
+   Variable.stack
+   Variable.transpose
+   Variable.unstack
+   Variable.pad
+   Variable.roll
+   Variable.shift
+
+# numpy-like Methods
+   Variable.astype
+   Variable.copy
+   Variable.clip
+   Variable.conjugate
+   Variable.round
+   Variable.item
+   Variable.where
+
+   Variable.__array_wrap__
+
+# Reductions
+   Variable.reduce
+   Variable.all
+   Variable.any
+   Variable.argmax
+   Variable.argmin
+   Variable.count
+   Variable.max
+   Variable.mean
+   Variable.median
+   Variable.min
+   Variable.prod
+   Variable.quantile
+   Variable.std
+   Variable.sum
+   Variable.var
+
+# Accumulate
+   Variable.cumprod
+   Variable.cumsum
+
+
+```
+
 ### Appendix: Implementation Details
 
 * Merge in VariableArithmetic's parent classes: AbstractArray, NdimSizeLenMixin with the new data structure..
+
+```python
+class VariableArithmetic(
+ ImplementsArrayReduce,
+ IncludeReduceMethods,
+ IncludeCumMethods,
+ IncludeNumpySameMethods,
+ SupportsArithmetic,
+ VariableOpsMixin,
+):
+ __slots__ = ()
+ # prioritize our operations over those of numpy.ndarray (priority=0)
+ __array_priority__ = 50
+
+```
 
 * Move over `_typed_ops.VariableOpsMixin`
 * Build a list of utility functions used elsewhere : Which of these should become public API?
