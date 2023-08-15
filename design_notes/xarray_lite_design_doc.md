@@ -4,7 +4,7 @@
 
 Despite the wealth of scientific libraries in the Python ecosystem, there is a gap for a lightweight, efficient array structure with named dimensions that can provide convenient broadcasting and indexing.
 
-Existing solutions like Xarray's Variable, Pytorch Named Tensor, Levanter, and Larray have their own strengths and weaknesses. Xarray's Variable is an efficient data structure, but it depends on the relatively heavy-weight library Pandas, which limits its use in other projects. Pytorch Named Tensor offers named dimensions, but it lacks support for many operations, making it less user-friendly. Levanter is a powerful tool with a named tensor module (Haliax) that makes deep learning code easier to read, understand, and write, but it is not as lightweight or generic as desired. Larry offers labeled N-dimensional arrays, but it may not provide the level of seamless interoperability with other scientific Python libraries that some users need.
+Existing solutions like Xarray's Variable, [Pytorch Named Tensor](https://github.com/pytorch/pytorch/issues/60832), [Levanter](https://crfm.stanford.edu/2023/06/16/levanter-1_0-release.html), and [Larray](https://larray.readthedocs.io/en/stable/tutorial/getting_started.html) have their own strengths and weaknesses. Xarray's Variable is an efficient data structure, but it depends on the relatively heavy-weight library Pandas, which limits its use in other projects. Pytorch Named Tensor offers named dimensions, but it lacks support for many operations, making it less user-friendly. Levanter is a powerful tool with a named tensor module (Haliax) that makes deep learning code easier to read, understand, and write, but it is not as lightweight or generic as desired. Larry offers labeled N-dimensional arrays, but it may not provide the level of seamless interoperability with other scientific Python libraries that some users need.
 
 Xarray-lite aims to solve these issues by exposing the core functionality of Xarray's Variable class as a standalone package.
 
@@ -71,7 +71,7 @@ The Xarray-lite package is designed to be interoperable with other scientific Py
         * Support `.oindex` and `.vindex` for explicit indexing
         * Potentially implement this by introducing a new compliant wrapper object?
     * Delete the `NON_NUMPY_SUPPORTED_ARRAY_TYPES` variable which special-cases ExplicitlyIndexed and `pd.Index.`
-        * `ExplicitlyIndexed` class and subclasses should provide `.oindex` and `.vindex` for indexing by `Variable.__getitem__.`
+        * `ExplicitlyIndexed` class and subclasses should provide `.oindex` and `.vindex` for indexing by `Variable.__getitem__.`: `oindex` and `vindex` were proposed in [NEP21](https://numpy.org/neps/nep-0021-advanced-indexing.html), but have not been implemented yet
         * Delete the ExplicitIndexer objects (`BasicIndexer`, `VectorizedIndexer`, `OuterIndexer`)
         * Remove explicit support for `pd.Index`. When provided with a `pd.Index` object, Variable will coerce to an array using `np.array(pd.Index)`. For Xarray's purposes, Xarray can use `as_variable` to explicitly wrap these in PandasIndexingAdapter and pass them to `Variable.__init__`.
 3. Define a minimal variable interface that the rest of Xarray can use:
