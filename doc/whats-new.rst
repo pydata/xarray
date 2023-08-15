@@ -43,6 +43,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The `squeeze` kwarg to GroupBy is now deprecated. (:issue:`2157`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 - As part of an effort to standardize the API, we're renaming the ``dims``
   keyword arg to ``dim`` for the minority of functions which current use
