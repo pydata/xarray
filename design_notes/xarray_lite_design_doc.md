@@ -78,7 +78,6 @@ The Xarray-lite package is designed to be interoperable with other scientific Py
     1. `dims`: tuple of dimension names
     2. `data`: numpy/dask/duck arrays`
     3. `attrs``: dictionary of attributes
-    4. <del>Encoding: dict</del> ([GH](https://github.com/pydata/xarray/issues/6323))
 
 4. Implement basic functions & methods for manipulating these objects. These methods will be a cleaned-up subset (for now) of functionality on xarray.Variable, with adaptations inspired by the [Python array API](https://data-apis.org/array-api/2022.12/API_specification/index.html).
 5. Existing Variable structures
