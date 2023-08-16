@@ -15,10 +15,10 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
-from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
+from xarray.named_array.utils import NDArrayMixin
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
@@ -138,7 +138,7 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
+class InaccessibleArray(NDArrayMixin, ExplicitlyIndexed):
     """Disallows any loading."""
 
     def __init__(self, array):
@@ -162,7 +162,7 @@ class FirstElementAccessibleArray(InaccessibleArray):
         return self.array[tuple_idxr]
 
 
-class DuckArrayWrapper(utils.NDArrayMixin):
+class DuckArrayWrapper(NDArrayMixin):
     """Array-like that prevents casting to array.
     Modeled after cupy."""
 

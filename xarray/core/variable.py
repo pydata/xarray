@@ -34,7 +34,6 @@ from xarray.core.pycompat import (
     is_duck_dask_array,
 )
 from xarray.core.utils import (
-    NdimSizeLenMixin,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -308,7 +307,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(NamedArray, AbstractArray, NdimSizeLenMixin, VariableArithmetic):
+class Variable(NamedArray, AbstractArray, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -2414,28 +2413,6 @@ class Variable(NamedArray, AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             dask="allowed",
             keep_attrs=keep_attrs,
         )
-
-    @property
-    def real(self):
-        """
-        The real part of the variable.
-
-        See Also
-        --------
-        numpy.ndarray.real
-        """
-        return self._replace(data=self.data.real)
-
-    @property
-    def imag(self):
-        """
-        The imaginary part of the variable.
-
-        See Also
-        --------
-        numpy.ndarray.imag
-        """
-        return self._replace(data=self.data.imag)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)

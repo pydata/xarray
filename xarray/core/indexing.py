@@ -26,12 +26,12 @@ from xarray.core.pycompat import (
 )
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
-    NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
     is_scalar,
     to_0d_array,
 )
+from xarray.named_array.utils import NDArrayMixin
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

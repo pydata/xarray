@@ -7,9 +7,10 @@ import numpy.typing as npt
 
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import Frozen, _default
+from xarray.named_array.utils import NdimSizeLenMixin
 
 
-class NamedArray:
+class NamedArray(NdimSizeLenMixin):
     __slots__ = ("_dims", "_data", "_attrs")
 
     def __init__(
@@ -109,6 +110,28 @@ class NamedArray:
                 f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
             )
         self._data = data
+
+    @property
+    def real(self):
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._replace(data=self.data.real)
+
+    @property
+    def imag(self):
+        """
+        The imaginary part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
+        return self._replace(data=self.data.imag)
 
     def __dask_tokenize__(self):
         # Use v.data, instead of v._data, in order to cope with the wrappers
