@@ -1712,7 +1712,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["z"], [0, 1, 2, 3])
         expected = Variable(["x", "y"], [[0, 1], [2, 3]])
 
-        actual = v.unstack({"x": 2, "y": 2})
+        actual = v.unstack(z={"x": 2, "y": 2})
 
         assert_identical(actual, expected)
 
