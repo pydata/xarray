@@ -1,4 +1,4 @@
-# Xarray-lite Design Document
+# named-array Design Document
 
 ## Abstract
 
@@ -6,7 +6,7 @@ Despite the wealth of scientific libraries in the Python ecosystem, there is a g
 
 Existing solutions like Xarray's Variable, [Pytorch Named Tensor](https://github.com/pytorch/pytorch/issues/60832), [Levanter](https://crfm.stanford.edu/2023/06/16/levanter-1_0-release.html), and [Larray](https://larray.readthedocs.io/en/stable/tutorial/getting_started.html) have their own strengths and weaknesses. Xarray's Variable is an efficient data structure, but it depends on the relatively heavy-weight library Pandas, which limits its use in other projects. Pytorch Named Tensor offers named dimensions, but it lacks support for many operations, making it less user-friendly. Levanter is a powerful tool with a named tensor module (Haliax) that makes deep learning code easier to read, understand, and write, but it is not as lightweight or generic as desired. Larry offers labeled N-dimensional arrays, but it may not provide the level of seamless interoperability with other scientific Python libraries that some users need.
 
-Xarray-lite aims to solve these issues by exposing the core functionality of Xarray's Variable class as a standalone package.
+named-array aims to solve these issues by exposing the core functionality of Xarray's Variable class as a standalone package.
 
 ## Motivation and Scope
 
@@ -14,44 +14,44 @@ The Python ecosystem boasts a wealth of scientific libraries that enable efficie
 
 Xarray internally maintains a data structure that meets this need, referred to as [`xarray.Variable`](https://docs.xarray.dev/en/latest/generated/xarray.Variable.html) . However, Xarray's dependency on Pandas, a relatively heavy-weight library, restricts other projects from leveraging this efficient data structure (<https://github.com/nipy/nibabel/issues/412>, <https://github.com/scikit-learn/enhancement_proposals/pull/18>, <https://github.com/scikit-learn/enhancement_proposals/pull/18#issuecomment-511991096>).
 
-We propose the creation of a standalone Python package, "Xarray-lite" (actual name TBD). This package is envisioned to be a version of the "xarray.Variable" data structure, cleanly separated from the heavier dependencies of Xarray. Xarray-lite will provide a lightweight, user-friendly array-like data structure with named dimensions, facilitating convenient indexing and broadcasting. The package will use existing scientific Python community standards such as established array protocols and the new [Python array API standard](https://data-apis.org/array-api/latest), allowing users to wrap multiple duck-array objects, including, but not limited to, NumPy, Dask, Sparse, Pint, CuPy, and Pytorch.
+We propose the creation of a standalone Python package, "named-array". This package is envisioned to be a version of the `xarray.Variable` data structure, cleanly separated from the heavier dependencies of Xarray. named-array will provide a lightweight, user-friendly array-like data structure with named dimensions, facilitating convenient indexing and broadcasting. The package will use existing scientific Python community standards such as established array protocols and the new [Python array API standard](https://data-apis.org/array-api/latest), allowing users to wrap multiple duck-array objects, including, but not limited to, NumPy, Dask, Sparse, Pint, CuPy, and Pytorch.
 
-The development of Xarray-lite is projected to meet a key community need and expected to broaden Xarray's user base. By making the core "xarray.Variable" more accessible, we anticipate an increase in contributors and a reduction in the developer burden on current Xarray maintainers.
+The development of named-array is projected to meet a key community need and expected to broaden Xarray's user base. By making the core `xarray.Variable` more accessible, we anticipate an increase in contributors and a reduction in the developer burden on current Xarray maintainers.
 
 ### Goals
 
-1. **Simple and minimal**: Xarray-lite will expose Xarray's [Variable class](https://docs.xarray.dev/en/stable/internals/variable-objects.html) as a standalone object with named axes (dimensions) and arbitrary metadata (attributes) but without coordinate labels. This will make it a lightweight, efficient array data structure that allows convenient broadcasting and indexing.
+1. **Simple and minimal**: named-array will expose Xarray's [Variable class](https://docs.xarray.dev/en/stable/internals/variable-objects.html) as a standalone object (`NamedArray`) with named axes (dimensions) and arbitrary metadata (attributes) but without coordinate labels. This will make it a lightweight, efficient array data structure that allows convenient broadcasting and indexing.
 
-2. **Interoperability**: Xarray-lite will follow established scientific Python community standards and in doing so, will allow it to wrap multiple duck-array objects, including but not limited to, NumPy, Dask, Sparse, Pint, CuPy, and Pytorch.
+2. **Interoperability**: named-array will follow established scientific Python community standards and in doing so, will allow it to wrap multiple duck-array objects, including but not limited to, NumPy, Dask, Sparse, Pint, CuPy, and Pytorch.
 
-3. **Community Engagement**: By making the core "xarray.Variable" more accessible, we open the door to increased adoption of this fundamental data structure. As such, we hope to see an increase in contributors and reduction in the developer burden on current Xarray maintainers.
+3. **Community Engagement**: By making the core `xarray.Variable` more accessible, we open the door to increased adoption of this fundamental data structure. As such, we hope to see an increase in contributors and reduction in the developer burden on current Xarray maintainers.
 
 ### Non-Goals
 
-1. **Extensive Data Analysis**: Xarray-lite will not provide extensive data analysis features like statistical functions, data cleaning, or visualization. Its primary focus is on providing a data structure that allows users to use dimension names for descriptive array manipulations.
+1. **Extensive Data Analysis**: named-array will not provide extensive data analysis features like statistical functions, data cleaning, or visualization. Its primary focus is on providing a data structure that allows users to use dimension names for descriptive array manipulations.
 
-2. **Support for I/O**: Xarray-lite will not bundle file reading functions. Instead users will be expected to handle I/O and then wrap those arrays with the new xarray-lite data structure.
+2. **Support for I/O**: named-array will not bundle file reading functions. Instead users will be expected to handle I/O and then wrap those arrays with the new named-array data structure.
 
 ## Backward Compatibility
 
-The creation of "Xarray-lite" is intended to separate the `xarray.Variable` from Xarray into a standalone package. This allows it to be used independently, without the need for Xarray's dependencies, like Pandas. This separation has implications for backward compatibility.
+The creation of named-array is intended to separate the `xarray.Variable` from Xarray into a standalone package. This allows it to be used independently, without the need for Xarray's dependencies, like Pandas. This separation has implications for backward compatibility.
 
-Since the new Xarray-lite is envisioned to contain the core features of Xarray's variable, existing code using Variable from Xarray should be able to switch to Xarray-lite with minimal changes. However, there are several potential issues related to backward compatibility:
+Since the new named-array is envisioned to contain the core features of Xarray's variable, existing code using Variable from Xarray should be able to switch to named-array with minimal changes. However, there are several potential issues related to backward compatibility:
 
-* **API Changes**: as the Variable is decoupled from Xarray and moved into Xarray-lite, some changes to the API may be necessary. These changes might include differences in function signature, etc. These changes could breaking existing code that relies on the current API and associated utility functions (e.g. `as_variable()`)
+* **API Changes**: as the Variable is decoupled from Xarray and moved into named-array, some changes to the API may be necessary. These changes might include differences in function signature, etc. These changes could breaking existing code that relies on the current API and associated utility functions (e.g. `as_variable()`)
 
 ## Detailed Description
 
-Xarray-lite aims to provide a lightweight, efficient array structure with named dimensions, or axes, that enables convenient broadcasting and indexing. The primary component of Xarray-lite is a standalone version of the xarray.Variable data structure, which was previously a part of the Xarray library.
-The xarray.Variable data structure in Xarray-lite will maintain the core features of its counterpart in Xarray, including:
+named-array aims to provide a lightweight, efficient array structure with named dimensions, or axes, that enables convenient broadcasting and indexing. The primary component of named-array is a standalone version of the xarray.Variable data structure, which was previously a part of the Xarray library.
+The xarray.Variable data structure in named-array will maintain the core features of its counterpart in Xarray, including:
 
 * **Named Axes (Dimensions)**: Each axis of the array can be given a name, providing a descriptive and intuitive way to reference the dimensions of the array.
 
-* **Arbitrary Metadata (Attributes)**: Xarray-lite will support the attachment of arbitrary metadata to arrays as a dict, providing a mechanism to store additional information about the data that the array represents.
+* **Arbitrary Metadata (Attributes)**: named-array will support the attachment of arbitrary metadata to arrays as a dict, providing a mechanism to store additional information about the data that the array represents.
 
 * **Convenient Broadcasting and Indexing**: With named dimensions, broadcasting and indexing operations become more intuitive and less error-prone.
 
-The Xarray-lite package is designed to be interoperable with other scientific Python libraries. It will follow established scientific Python community standards and use standard array protocols, as well as the new data-apis standard. This allows Xarray-lite to wrap multiple duck-array objects, including, but not limited to, NumPy, Dask, Sparse, Pint, CuPy, and Pytorch.
+The named-array package is designed to be interoperable with other scientific Python libraries. It will follow established scientific Python community standards and use standard array protocols, as well as the new data-apis standard. This allows named-array to wrap multiple duck-array objects, including, but not limited to, NumPy, Dask, Sparse, Pint, CuPy, and Pytorch.
 
 ## Implementation
 
@@ -59,7 +59,7 @@ The Xarray-lite package is designed to be interoperable with other scientific Py
 * **Move Xarray's internal lazy indexing classes to follow standard Array Protocols**: moving the lazy indexing classes like `ExplicitlyIndexed` to use standard array protocols will be a key step in decoupling. It will also potentially improve interoperability with other libraries that use these protocols, and prepare these classes [for eventual movement out](https://github.com/pydata/xarray/issues/5081) of the Xarray code base. However, this will also require significant changes to the code, and we will need to ensure that all existing functionality is preserved.
   * Use [https://data-apis.org/array-api-compat/](https://data-apis.org/array-api-compat/) to handle compatibility issues?
 * **Leave lazy indexing classes in Xarray for now**
-* **Preserve support for Dask collection protocols**: Xarray-lite will preserve existing support for the dask collections protocol namely the __dask_***__ methods
+* **Preserve support for Dask collection protocols**: named-array will preserve existing support for the dask collections protocol namely the __dask_***__ methods
 * **Preserve support for ChunkManagerEntrypoint?** Opening variables backed by dask vs cubed arrays currently is [handled within Variable.chunk](https://github.com/pydata/xarray/blob/92c8b33eb464b09d6f8277265b16cae039ab57ee/xarray/core/variable.py#L1272C15-L1272C15). If we are preserving dask support it would be nice to preserve general chunked array type support, but this currently requires an entrypoint.
 
 ### Plan
@@ -82,7 +82,7 @@ The Xarray-lite package is designed to be interoperable with other scientific Py
 4. Implement basic functions & methods for manipulating these objects. These methods will be a cleaned-up subset (for now) of functionality on xarray.Variable, with adaptations inspired by the [Python array API](https://data-apis.org/array-api/2022.12/API_specification/index.html).
 5. Existing Variable structures
     1. Keep Variable object which subclasses the new structure that adds the `.encoding` attribute and potentially other methods needed for easy refactoring.
-    2. IndexVariable will remain in xarray.core.variable and subclass the new xarray-lite data structure pending future deletion.
+    2. IndexVariable will remain in xarray.core.variable and subclass the new named-array data structure pending future deletion.
 6. Docstrings and user-facing APIs will need to be updated to reflect the changed methods on Variable objects.
 
 Further implementation details are in Appendix: [Implementation Details](#appendix-implementation-details).
@@ -91,11 +91,11 @@ Further implementation details are in Appendix: [Implementation Details](#append
 
 We have identified the following milestones for the completion of this project:
 
-1. **Write and publish a design document**: this document will explain the purpose of xarray-lite, the intended audience, and the features it will provide. It will also describe the architecture of xarray-lite and how it will be implemented. This will ensure early community awareness and engagement in the project to promote subsequent uptake.
+1. **Write and publish a design document**: this document will explain the purpose of named-array, the intended audience, and the features it will provide. It will also describe the architecture of named-array and how it will be implemented. This will ensure early community awareness and engagement in the project to promote subsequent uptake.
 2. **Refactor `variable.py` to `base_variable.py`** and remove internal Xarray imports.
-3. **Break out the package and create continuous integration infrastructure**: this will entail breaking out the xarray-lite project into a Python package and creating a continuous integration (CI) system. This will help to modularize the code and make it easier to manage. Building a CI system will help ensure that codebase changes do not break existing functionality.
-4. Incrementally add new functions & methods to the new package, ported from xarray. This will start to make xarray-lite useful on its own.
-5. Refactor the existing Xarray codebase to rely on the newly created package (xarray-lite): This will help to demonstrate the usefulness of the new package, and also provide an example for others who may want to use it.
+3. **Break out the package and create continuous integration infrastructure**: this will entail breaking out the named-array project into a Python package and creating a continuous integration (CI) system. This will help to modularize the code and make it easier to manage. Building a CI system will help ensure that codebase changes do not break existing functionality.
+4. Incrementally add new functions & methods to the new package, ported from xarray. This will start to make named-array useful on its own.
+5. Refactor the existing Xarray codebase to rely on the newly created package (named-array): This will help to demonstrate the usefulness of the new package, and also provide an example for others who may want to use it.
 6. Expand tests, add documentation, and write a blog post: expanding the test suite will help to ensure that the code is reliable and that changes do not introduce bugs. Adding documentation will make it easier for others to understand and use the project.
 7. Finally, we will write a series of blog posts on [xarray.dev](https://xarray.dev/) to promote the project and attract more contributors.
    * Toward the end of the process, write a few blog posts that demonstrate the use of the newly available data structure
@@ -147,12 +147,12 @@ Questions:
 1. Document Xarray indexing rules
 2. Document use of .oindex and .vindex protocols
 3. Do we use `.mean` and `.nanmean` or `.mean(skipna=...)`?
-   * Default behavior in xarray-lite should mirror NumPy / the array API standard, not pandas.
+   * Default behavior in named-array should mirror NumPy / the array API standard, not pandas.
    * nanmean is not (yet) in the [array API](https://github.com/pydata/xarray/pull/7424#issuecomment-1373979208). There are a handful of other key functions (e.g., median) that are are also missing. I think that should be OK, as long as what we support is a strict superset of the array API.
 4. What methods need to be exposed on Variable?
     * `Variable.concat` classmethod: create two functions, one as the equivalent of `np.stack` and other for `np.concat`
     * `.rolling_window` and `.coarsen_reshape` ?
-    * `Xarray-lite.apply_ufunc`: used in astype, clip, quantile, isnull, notnull`
+    * `named-array.apply_ufunc`: used in astype, clip, quantile, isnull, notnull`
 
 #### methods to be preserved from xarray.Variable
 
@@ -326,7 +326,7 @@ class VariableArithmetic(
 * Move over `_typed_ops.VariableOpsMixin`
 * Build a list of utility functions used elsewhere : Which of these should become public API?
   * `broadcast_variables`: `dataset.py`, `dataarray.py`,`missing.py`
-    * This could be just called "broadcast" in xarray-lite.
+    * This could be just called "broadcast" in named-array.
   * `Variable._getitem_with_mask` : `alignment.py`
     * keep this method/function as private and inside Xarray.
 * The Variable constructor will need to be rewritten to no longer accept tuples, encodings, etc. These details should be handled at the Xarray data structure level.
