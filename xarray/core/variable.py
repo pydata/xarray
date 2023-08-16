@@ -25,10 +25,7 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import (
-    get_chunked_array_type,
-    guess_chunkmanager,
-)
+from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
     array_type,
     integer_types,
@@ -37,7 +34,6 @@ from xarray.core.pycompat import (
     is_duck_dask_array,
 )
 from xarray.core.utils import (
-    Frozen,
     NdimSizeLenMixin,
     OrderedSet,
     _default,
@@ -49,6 +45,7 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
+from xarray.named_array.core import NamedArray
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -311,7 +308,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
+class Variable(NamedArray, AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -362,42 +359,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             self.attrs = attrs
         if encoding is not None:
             self.encoding = encoding
-
-    @property
-    def dtype(self) -> np.dtype:
-        """
-        Data-type of the array’s elements.
-
-        See Also
-        --------
-        ndarray.dtype
-        numpy.dtype
-        """
-        return self._data.dtype
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        """
-        Tuple of array dimensions.
-
-        See Also
-        --------
-        numpy.ndarray.shape
-        """
-        return self._data.shape
-
-    @property
-    def nbytes(self) -> int:
-        """
-        Total bytes consumed by the elements of the data array.
-
-        If the underlying data array does not include ``nbytes``, estimates
-        the bytes consumed based on the ``size`` and ``dtype``.
-        """
-        if hasattr(self._data, "nbytes"):
-            return self._data.nbytes
-        else:
-            return self.size * self.dtype.itemsize
 
     @property
     def _in_memory(self):
@@ -560,41 +521,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
-    def __dask_tokenize__(self):
-        # Use v.data, instead of v._data, in order to cope with the wrappers
-        # around NetCDF and the like
-        from dask.base import normalize_token
-
-        return normalize_token((type(self), self._dims, self.data, self._attrs))
-
-    def __dask_graph__(self):
-        if is_duck_dask_array(self._data):
-            return self._data.__dask_graph__()
-        else:
-            return None
-
-    def __dask_keys__(self):
-        return self._data.__dask_keys__()
-
-    def __dask_layers__(self):
-        return self._data.__dask_layers__()
-
-    @property
-    def __dask_optimize__(self):
-        return self._data.__dask_optimize__
-
-    @property
-    def __dask_scheduler__(self):
-        return self._data.__dask_scheduler__
-
-    def __dask_postcompute__(self):
-        array_func, array_args = self._data.__dask_postcompute__()
-        return self._dask_finalize, (array_func,) + array_args
-
-    def __dask_postpersist__(self):
-        array_func, array_args = self._data.__dask_postpersist__()
-        return self._dask_finalize, (array_func,) + array_args
-
     def _dask_finalize(self, results, array_func, *args, **kwargs):
         data = array_func(results, *args, **kwargs)
         return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
@@ -655,27 +581,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             item["encoding"] = dict(self.encoding)
 
         return item
-
-    @property
-    def dims(self) -> tuple[Hashable, ...]:
-        """Tuple of dimension names with which this variable is associated."""
-        return self._dims
-
-    @dims.setter
-    def dims(self, value: str | Iterable[Hashable]) -> None:
-        self._dims = self._parse_dimensions(value)
-
-    def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
-        if isinstance(dims, str):
-            dims = (dims,)
-        else:
-            dims = tuple(dims)
-        if len(dims) != self.ndim:
-            raise ValueError(
-                f"dimensions {dims} must have the same length as the "
-                f"number of data dimensions, ndim={self.ndim}"
-            )
-        return dims
 
     def _item_key_to_tuple(self, key):
         if utils.is_dict_like(key):
@@ -758,18 +663,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     if k.ndim > 1:
                         raise IndexError(
                             "Unlabeled multi-dimensional array cannot be "
-                            "used for indexing: {}".format(k)
+                            f"used for indexing: {k}"
                         )
                 if k.dtype.kind == "b":
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
-                            "Boolean array size {:d} is used to index array "
-                            "with shape {:s}.".format(len(k), str(self.shape))
+                            f"Boolean array size {len(k):d} is used to index array "
+                            f"with shape {str(self.shape):s}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
-                            "{}-dimensional boolean indexing is "
-                            "not supported. ".format(k.ndim)
+                            f"{k.ndim}-dimensional boolean indexing is "
+                            "not supported. "
                         )
                     if is_duck_dask_array(k.data):
                         raise KeyError(
@@ -782,9 +687,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            "on {:s} but the target dimension is {:s}.".format(
-                                str(k.dims), dim
-                            )
+                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
                         )
 
     def _broadcast_indexes_outer(self, key):
@@ -968,17 +871,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> dict[Any, Any]:
-        """Dictionary of local attributes on this variable."""
-        if self._attrs is None:
-            self._attrs = {}
-        return self._attrs
-
-    @attrs.setter
-    def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
-
-    @property
     def encoding(self) -> dict[Any, Any]:
         """Dictionary of encodings on this variable."""
         if self._encoding is None:
@@ -995,66 +887,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def reset_encoding(self: T_Variable) -> T_Variable:
         """Return a new Variable without encoding."""
         return self._replace(encoding={})
-
-    def copy(
-        self: T_Variable, deep: bool = True, data: ArrayLike | None = None
-    ) -> T_Variable:
-        """Returns a copy of this object.
-
-        If `deep=True`, the data array is loaded into memory and copied onto
-        the new object. Dimensions, attributes and encodings are always copied.
-
-        Use `data` to create a new object with the same structure as
-        original but entirely new data.
-
-        Parameters
-        ----------
-        deep : bool, default: True
-            Whether the data array is loaded into memory and copied onto
-            the new object. Default is True.
-        data : array_like, optional
-            Data to use in the new object. Must have same shape as original.
-            When `data` is used, `deep` is ignored.
-
-        Returns
-        -------
-        object : Variable
-            New object with dimensions, attributes, encodings, and optionally
-            data copied from original.
-
-        Examples
-        --------
-        Shallow copy versus deep copy
-
-        >>> var = xr.Variable(data=[1, 2, 3], dims="x")
-        >>> var.copy()
-        <xarray.Variable (x: 3)>
-        array([1, 2, 3])
-        >>> var_0 = var.copy(deep=False)
-        >>> var_0[0] = 7
-        >>> var_0
-        <xarray.Variable (x: 3)>
-        array([7, 2, 3])
-        >>> var
-        <xarray.Variable (x: 3)>
-        array([7, 2, 3])
-
-        Changing the data using the ``data`` argument maintains the
-        structure of the original object, but with the new data. Original
-        object is unaffected.
-
-        >>> var.copy(data=[0.1, 0.2, 0.3])
-        <xarray.Variable (x: 3)>
-        array([0.1, 0.2, 0.3])
-        >>> var
-        <xarray.Variable (x: 3)>
-        array([7, 2, 3])
-
-        See Also
-        --------
-        pandas.DataFrame.copy
-        """
-        return self._copy(deep=deep, data=data)
 
     def _copy(
         self: T_Variable,
@@ -1094,64 +926,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         attrs=_default,
         encoding=_default,
     ) -> T_Variable:
-        if dims is _default:
-            dims = copy.copy(self._dims)
-        if data is _default:
-            data = copy.copy(self.data)
-        if attrs is _default:
-            attrs = copy.copy(self._attrs)
+        new_object = super()._replace(dims, data, attrs)
         if encoding is _default:
             encoding = copy.copy(self._encoding)
-        return type(self)(dims, data, attrs, encoding, fastpath=True)
-
-    def __copy__(self: T_Variable) -> T_Variable:
-        return self._copy(deep=False)
-
-    def __deepcopy__(
-        self: T_Variable, memo: dict[int, Any] | None = None
-    ) -> T_Variable:
-        return self._copy(deep=True, memo=memo)
-
-    # mutable objects should not be hashable
-    # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore[assignment]
-
-    @property
-    def chunks(self) -> tuple[tuple[int, ...], ...] | None:
-        """
-        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
-        the underlying data is not a dask array.
-
-        See Also
-        --------
-        Variable.chunk
-        Variable.chunksizes
-        xarray.unify_chunks
-        """
-        return getattr(self._data, "chunks", None)
-
-    @property
-    def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
-        """
-        Mapping from dimension names to block lengths for this variable's data, or None if
-        the underlying data is not a dask array.
-        Cannot be modified directly, but can be modified by calling .chunk().
-
-        Differs from variable.chunks because it returns a mapping of dimensions to chunk shapes
-        instead of a tuple of chunk shapes.
-
-        See Also
-        --------
-        Variable.chunk
-        Variable.chunks
-        xarray.unify_chunks
-        """
-        if hasattr(self._data, "chunks"):
-            return Frozen({dim: c for dim, c in zip(self.dims, self.data.chunks)})
-        else:
-            return {}
-
-    _array_counter = itertools.count()
+        new_object._encoding = encoding
+        return new_object
 
     def chunk(
         self,
@@ -2549,8 +2328,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
-                    "{} is invalid for boundary. Valid option is 'exact', "
-                    "'trim' and 'pad'".format(boundary[d])
+                    f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
+                    "'trim' and 'pad'"
                 )
 
         shape = []
