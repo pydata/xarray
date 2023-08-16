@@ -1,3 +1,4 @@
+import importlib
 import math
 import typing
 
@@ -65,3 +66,47 @@ class NDArrayMixin(NdimSizeLenMixin):
 
     def __repr__(self: typing.Any) -> str:
         return f"{type(self).__name__}(array={self.array!r})"
+
+
+def module_available(module: str) -> bool:
+    """Checks whether a module is installed without importing it.
+
+    Use this for a lightweight check and lazy imports.
+
+    Parameters
+    ----------
+    module : str
+        Name of the module.
+
+    Returns
+    -------
+    available : bool
+        Whether the module is installed.
+    """
+    return importlib.util.find_spec(module) is not None
+
+
+def is_dask_collection(x):
+    if module_available("dask"):
+        from dask.base import is_dask_collection
+
+        return is_dask_collection(x)
+    return False
+
+
+def is_duck_array(value: typing.Any) -> bool:
+    if isinstance(value, np.ndarray):
+        return True
+    return (
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
+    )
+
+
+def is_duck_dask_array(x):
+    return is_duck_array(x) and is_dask_collection(x)

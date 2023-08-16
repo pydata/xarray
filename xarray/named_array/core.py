@@ -5,9 +5,8 @@ import typing
 import numpy as np
 import numpy.typing as npt
 
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import Frozen, _default
-from xarray.named_array.utils import NdimSizeLenMixin
+from xarray.named_array.utils import NdimSizeLenMixin, is_duck_dask_array
 
 
 class NamedArray(NdimSizeLenMixin):
