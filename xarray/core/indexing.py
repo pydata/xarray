@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 import functools
+import math
 import operator
 from collections import Counter, defaultdict
 from collections.abc import Hashable, Iterable, Mapping
@@ -31,7 +32,6 @@ from xarray.core.utils import (
     is_scalar,
     to_0d_array,
 )
-from xarray.namedarray.utils import NDArrayMixin
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -458,8 +458,52 @@ class ExplicitlyIndexed:
         return self.array
 
 
-class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
+class ExplicitlyIndexedNDArrayMixin(ExplicitlyIndexed):
     __slots__ = ()
+
+    @property
+    def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
+        return len(self.shape)
+
+    @property
+    def size(self: Any) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
+
+    def __len__(self: Any) -> int:
+        try:
+            return self.shape[0]
+        except IndexError:
+            raise TypeError("len() of unsized object")
+
+    @property
+    def dtype(self: Any) -> np.dtype:
+        return self.array.dtype
+
+    @property
+    def shape(self: Any) -> tuple[int, ...]:
+        return self.array.shape
+
+    def __getitem__(self: Any, key):
+        return self.array[key]
+
+    def __repr__(self: Any) -> str:
+        return f"{type(self).__name__}(array={self.array!r})"
 
     def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
@@ -471,7 +515,7 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
 
-class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
+class ImplicitToExplicitIndexingAdapter:
     """Wrap an array, converting tuples into the indicated explicit indexer."""
 
     __slots__ = ("array", "indexer_cls")
@@ -482,6 +526,47 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 
     def __array__(self, dtype: np.typing.DTypeLike = None) -> np.ndarray:
         return np.asarray(self.get_duck_array(), dtype=dtype)
+
+    @property
+    def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
+        return len(self.shape)
+
+    @property
+    def size(self: Any) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
+
+    def __len__(self: Any) -> int:
+        try:
+            return self.shape[0]
+        except IndexError:
+            raise TypeError("len() of unsized object")
+
+    @property
+    def dtype(self: Any) -> np.dtype:
+        return self.array.dtype
+
+    @property
+    def shape(self: Any) -> tuple[int, ...]:
+        return self.array.shape
+
+    def __repr__(self: Any) -> str:
+        return f"{type(self).__name__}(array={self.array!r})"
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -1303,7 +1388,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if not isinstance(array, np.ndarray):
             raise TypeError(
                 "NumpyIndexingAdapter only wraps np.ndarray. "
-                "Trying to wrap {}".format(type(array))
+                f"Trying to wrap {type(array)}"
             )
         self.array = array
 
