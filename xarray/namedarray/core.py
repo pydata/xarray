@@ -2,6 +2,7 @@ import copy
 import itertools
 import math
 import typing
+from collections.abc import Hashable, Iterable, Mapping
 
 import numpy as np
 import numpy.typing as npt
@@ -86,17 +87,15 @@ class NamedArray:
             return self.size * self.dtype.itemsize
 
     @property
-    def dims(self) -> tuple[typing.Hashable, ...]:
+    def dims(self) -> tuple[Hashable, ...]:
         """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
-    def dims(self, value: str | typing.Iterable[typing.Hashable]) -> None:
+    def dims(self, value: str | Iterable[Hashable]) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(
-        self, dims: str | typing.Iterable[typing.Hashable]
-    ) -> tuple[typing.Hashable, ...]:
+    def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
         dims = (dims,) if isinstance(dims, str) else tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
@@ -113,7 +112,7 @@ class NamedArray:
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: typing.Mapping[typing.Any, typing.Any]) -> None:
+    def attrs(self, value: Mapping[typing.Any, typing.Any]) -> None:
         self._attrs = dict(value)
 
     @property
