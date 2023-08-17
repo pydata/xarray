@@ -1158,7 +1158,12 @@ class TestDataset:
         for k, v in new_dask_names.items():
             assert v == orig_dask_names[k]
 
-        with pytest.raises(ValueError, match=r"some chunks"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "chunks keys ('foo',) not found in dataset dimensions ('dim2', 'dim3', 'time', 'dim1')"
+            ),
+        ):
             data.chunk({"foo": 10})
 
     @requires_dask
@@ -2780,7 +2785,10 @@ class TestDataset:
         assert type(actual.x.variable) is Variable
         assert type(actual.y.variable) is Variable
 
-        with pytest.raises(ValueError, match="those coordinates don't exist"):
+        with pytest.raises(
+            ValueError,
+            match=r"The coordinates \('not_a_coord',\) are not found in the dataset coordinates",
+        ):
             ds.drop_indexes("not_a_coord")
 
         with pytest.raises(ValueError, match="those coordinates do not have an index"):
@@ -3672,7 +3680,12 @@ class TestDataset:
 
     def test_unstack_errors(self) -> None:
         ds = Dataset({"x": [1, 2, 3]})
-        with pytest.raises(ValueError, match=r"does not contain the dimensions"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Dimensions ('foo',) not found in dataset dimensions ('x',)"
+            ),
+        ):
             ds.unstack("foo")
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
@@ -4962,7 +4975,10 @@ class TestDataset:
         expected = ds.isel(a=[1, 3])
         assert_identical(actual, ds)
 
-        with pytest.raises(ValueError, match=r"a single dataset dimension"):
+        with pytest.raises(
+            ValueError,
+            match=r"'foo' not found in dataset dimensions \('a', 'b'\)",
+        ):
             ds.dropna("foo")
         with pytest.raises(ValueError, match=r"invalid how"):
             ds.dropna("a", how="somehow")  # type: ignore
@@ -5280,7 +5296,10 @@ class TestDataset:
 
     def test_reduce_bad_dim(self) -> None:
         data = create_test_data()
-        with pytest.raises(ValueError, match=r"Dataset does not contain"):
+        with pytest.raises(
+            ValueError,
+            match=r"Dimensions \('bad_dim',\) not found in dataset dimensions",
+        ):
             data.mean(dim="bad_dim")
 
     def test_reduce_cumsum(self) -> None:
@@ -5306,7 +5325,10 @@ class TestDataset:
     @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
     def test_reduce_cumsum_test_dims(self, reduct, expected, func) -> None:
         data = create_test_data()
-        with pytest.raises(ValueError, match=r"Dataset does not contain"):
+        with pytest.raises(
+            ValueError,
+            match=r"Dimensions \('bad_dim',\) not found in dataset dimensions",
+        ):
             getattr(data, func)(dim="bad_dim")
 
         # ensure dimensions are correct
@@ -5554,7 +5576,12 @@ class TestDataset:
         assert list(z.coords) == list(ds.coords)
         assert list(x.coords) == list(y.coords)
         # invalid dim
-        with pytest.raises(ValueError, match=r"does not contain"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Dimension 'invalid_dim' not found in dataset dimensions ('dim3', 'dim1')"
+            ),
+        ):
             x.rank("invalid_dim")
 
     def test_rank_use_bottleneck(self) -> None:
@@ -7087,7 +7114,12 @@ class TestDropDuplicates:
         result = ds.drop_duplicates("time", keep=keep)
         assert_equal(expected, result)
 
-        with pytest.raises(ValueError, match="['space'] not found"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Dimensions ('space',) not found in dataset dimensions ('time',)"
+            ),
+        ):
             ds.drop_duplicates("space", keep=keep)
 
 
