@@ -1707,6 +1707,15 @@ class TestVariable(VariableSubclassobjects):
         actual = v.stack(z=("x", "y")).unstack(z={"x": 2, "y": 2})
         assert_identical(actual, v)
 
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    def test_unstack_without_missing(self):
+        v = Variable(["z"], [0, 1, 2, 3])
+        expected = Variable(["x", "y"], [[0, 1], [2, 3]])
+
+        actual = v.unstack(z={"x": 2, "y": 2})
+
+        assert_identical(actual, expected)
+
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = Variable(["a", "b"], x)
