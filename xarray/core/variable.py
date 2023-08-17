@@ -43,8 +43,8 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
-from xarray.named_array.core import NamedArray
-from xarray.named_array.utils import _default
+from xarray.namedarray.core import NamedArray
+from xarray.namedarray.utils import _default
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,

@@ -5,7 +5,7 @@ import typing
 import numpy as np
 import numpy.typing as npt
 
-from xarray.named_array.utils import (
+from xarray.namedarray.utils import (
     Frozen,
     NdimSizeLenMixin,
     _default,

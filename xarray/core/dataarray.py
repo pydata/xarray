@@ -53,7 +53,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
-from xarray.named_array.utils import Default, _default
+from xarray.namedarray.utils import Default, _default
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 

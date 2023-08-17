@@ -15,7 +15,7 @@ from xarray.core import indexing
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, is_remote_uri
-from xarray.named_array.utils import NdimSizeLenMixin
+from xarray.namedarray.utils import NdimSizeLenMixin
 
 if TYPE_CHECKING:
     from io import BufferedIOBase

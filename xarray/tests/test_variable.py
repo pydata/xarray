@@ -27,7 +27,7 @@ from xarray.core.indexing import (
 )
 from xarray.core.pycompat import array_type
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.named_array.utils import NDArrayMixin
+from xarray.namedarray.utils import NDArrayMixin
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,

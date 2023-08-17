@@ -109,7 +109,7 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
-from xarray.named_array.utils import Default, _default
+from xarray.namedarray.utils import Default, _default
 from xarray.plot.accessor import DatasetPlotAccessor
 
 if TYPE_CHECKING:

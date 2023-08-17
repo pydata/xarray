@@ -31,7 +31,7 @@ from xarray.core.utils import (
     is_scalar,
     to_0d_array,
 )
-from xarray.named_array.utils import NDArrayMixin
+from xarray.namedarray.utils import NDArrayMixin
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

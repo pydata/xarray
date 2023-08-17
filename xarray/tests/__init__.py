@@ -18,7 +18,7 @@ from xarray import Dataset
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
-from xarray.named_array.utils import NDArrayMixin
+from xarray.namedarray.utils import NDArrayMixin
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
