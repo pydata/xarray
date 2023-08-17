@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import time
 import traceback
@@ -15,7 +16,6 @@ from xarray.core import indexing
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, is_remote_uri
-from xarray.namedarray.utils import NdimSizeLenMixin
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -163,8 +163,38 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
             time.sleep(1e-3 * next_delay)
 
 
-class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+class BackendArray(indexing.ExplicitlyIndexed):
     __slots__ = ()
+
+    @property
+    def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
+        return len(self.shape)
+
+    @property
+    def size(self: Any) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
+
+    def __len__(self: Any) -> int:
+        try:
+            return self.shape[0]
+        except IndexError:
+            raise TypeError("len() of unsized object")
 
     def get_duck_array(self, dtype: np.typing.DTypeLike = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)

@@ -19,9 +19,12 @@ class Default(enum.Enum):
 _default = Default.token
 
 
-class NdimSizeLenMixin:
-    """Mixin class that extends a class that defines a ``shape`` property to
-    one that also defines ``ndim``, ``size`` and ``__len__``.
+class NDArrayMixin:
+    """Mixin class for making wrappers of N-dimensional arrays that conform to
+    the ndarray interface required for the data argument to Variable objects.
+
+    A subclass should set the `array` property and override one or more of
+    `dtype`, `shape` and `__getitem__`.
     """
 
     __slots__ = ()
@@ -55,17 +58,6 @@ class NdimSizeLenMixin:
             return self.shape[0]
         except IndexError:
             raise TypeError("len() of unsized object")
-
-
-class NDArrayMixin(NdimSizeLenMixin):
-    """Mixin class for making wrappers of N-dimensional arrays that conform to
-    the ndarray interface required for the data argument to Variable objects.
-
-    A subclass should set the `array` property and override one or more of
-    `dtype`, `shape` and `__getitem__`.
-    """
-
-    __slots__ = ()
 
     @property
     def dtype(self: typing.Any) -> np.dtype:

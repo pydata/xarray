@@ -1,19 +1,15 @@
 import copy
 import itertools
+import math
 import typing
 
 import numpy as np
 import numpy.typing as npt
 
-from xarray.namedarray.utils import (
-    Frozen,
-    NdimSizeLenMixin,
-    _default,
-    is_duck_dask_array,
-)
+from xarray.namedarray.utils import Frozen, _default, is_duck_dask_array
 
 
-class NamedArray(NdimSizeLenMixin):
+class NamedArray:
     __slots__ = ("_dims", "_data", "_attrs")
 
     def __init__(
@@ -22,6 +18,36 @@ class NamedArray(NdimSizeLenMixin):
         self._dims = self._parse_dimensions(dims)
         self._data = data
         self._attrs = attrs or {}
+
+    @property
+    def ndim(self: typing.Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
+        return len(self.shape)
+
+    @property
+    def size(self: typing.Any) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
+
+    def __len__(self: typing.Any) -> int:
+        try:
+            return self.shape[0]
+        except IndexError:
+            raise TypeError("len() of unsized object")
 
     @property
     def dtype(self) -> np.dtype:
