@@ -773,7 +773,7 @@ def assert_coordinate_consistent(
 
 
 def create_coords_with_default_indexes(
-    coords: Mapping[Any, Any], data_vars: Mapping[Any, Variable] | None = None
+    coords: Mapping[Any, Any], data_vars: Mapping[Any, Any] | None = None
 ) -> Coordinates:
     """Maybe create default indexes from a mapping of coordinates."""
 
@@ -791,30 +791,27 @@ def create_coords_with_default_indexes(
     indexes: dict[Hashable, Index] = {}
     variables: dict[Hashable, Variable] = {}
 
-    maybe_index_vars: dict[Hashable, Variable] = {}
-    mindex_data_vars: list[Hashable] = []
+    maybe_index_vars: dict[Hashable, Any] = {}
+    pd_mindex_keys: list[Hashable] = []
 
     for k, v in all_variables.items():
-        if k in coords:
-            maybe_index_vars[k] = v
-        elif isinstance(v, pd.MultiIndex):
+        if isinstance(v, pd.MultiIndex):
             # TODO: eventually stop promoting multi-index passed via data variables
-            mindex_data_vars.append(k)
+            maybe_index_vars[k] = v
+            pd_mindex_keys.append(k)
+        elif k in coords:
             maybe_index_vars[k] = v
 
-    if mindex_data_vars:
+    if pd_mindex_keys:
+        pd_mindex_keys_fmt = ",".join([f"'{k}'" for k in pd_mindex_keys])
         warnings.warn(
-            f"passing one or more `pandas.MultiIndex` via data variable(s) {mindex_data_vars} "
-            "will no longer create indexed coordinates in the future. "
-            "If you want to keep this behavior, pass it as coordinates instead.",
+            f"the `pandas.MultiIndex` object(s) passed as {pd_mindex_keys_fmt} coordinate(s) or "
+            "data variable(s) will no longer be implicitly wrapped into "
+            "multiple indexed coordinates in the future. "
+            "If you want to keep this behavior, you need to first wrap it explicitly "
+            "using `xarray.Coordinates.from_pandas_multiindex()`.",
             FutureWarning,
         )
-
-    maybe_index_vars = {
-        k: v
-        for k, v in all_variables.items()
-        if k in coords or isinstance(v, pd.MultiIndex)
-    }
 
     dataarray_coords: list[DataArrayCoordinates] = []
 

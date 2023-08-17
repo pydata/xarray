@@ -648,9 +648,16 @@ class TestDataset:
         assert_identical(ds, coords.to_dataset())
 
         with pytest.warns(
-            FutureWarning, match=".*`pandas.MultiIndex` via data variable.*"
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly wrapped.*",
         ):
             Dataset(data_vars={"x": midx})
+
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly wrapped.*",
+        ):
+            Dataset(coords={"x": midx})
 
     def test_constructor_custom_index(self) -> None:
         class CustomIndex(Index):
