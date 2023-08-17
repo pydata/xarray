@@ -38,7 +38,7 @@ The creation of named-array is intended to separate the `xarray.Variable` from X
 
 Since the new named-array is envisioned to contain the core features of Xarray's variable, existing code using Variable from Xarray should be able to switch to named-array with minimal changes. However, there are several potential issues related to backward compatibility:
 
-* **API Changes**: as the Variable is decoupled from Xarray and moved into named-array, some changes to the API may be necessary. These changes might include differences in function signature, etc. These changes could breaking existing code that relies on the current API and associated utility functions (e.g. `as_variable()`)
+* **API Changes**: as the Variable is decoupled from Xarray and moved into named-array, some changes to the API may be necessary. These changes might include differences in function signature, etc. These changes could break existing code that relies on the current API and associated utility functions (e.g. `as_variable()`).  The `xarray.Variable` object will subclass `NamedArray`, and provide the existing interface for compatibility.
 
 ## Detailed Description
 
