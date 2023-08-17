@@ -239,7 +239,7 @@ Instead of doing
         cities and another for time.
 
     serialization
-        Serialization is like putting your collection of data into a format that makes it easy to save and share.
+        Serialization is the process of converting your data into a format that makes it easy to save and share.
         When you serialize data in xarray, you're taking all those temperature measurements, along with their
         labels and other information, and turning them into a format that can be stored in a file or sent over
         the internet.
