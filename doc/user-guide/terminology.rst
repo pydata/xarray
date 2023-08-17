@@ -245,7 +245,7 @@ complete examples, please consult the relevant documentation.*
         the internet.
 
     indexing
-        Indexing is way to quickly find and grab the specific pieces of data you're interested in from your
+        Indexing is how you select subsets of your data which you are interested in.
         dataset.
         Label-based Indexing: You can use labels to specify what you want like "Give me the temperature for New York on July 15th."
         Positional Indexing: You can use numbers to refer to positions in the data like "Give me the third temperature in the list." This is useful when you know the order of your data but don't need to remember the exact labels.
