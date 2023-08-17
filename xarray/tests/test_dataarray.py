@@ -2490,6 +2490,19 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
+    @pytest.mark.filterwarnings("error")
+    def test_unstack_roundtrip_integer_array(self) -> None:
+        arr = xr.DataArray(
+            np.arange(6).reshape(2, 3),
+            coords={"x": ["a", "b"], "y": [0, 1, 2]},
+            dims=["x", "y"],
+        )
+
+        stacked = arr.stack(z=["x", "y"])
+        roundtripped = stacked.unstack()
+
+        assert_identical(arr, roundtripped)
+
     def test_stack_nonunique_consistency(self, da) -> None:
         da = da.isel(time=0, drop=True)  # 2D
         actual = da.stack(z=["a", "x"])
