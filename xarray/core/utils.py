@@ -56,7 +56,6 @@ from collections.abc import (
     MutableSet,
     Sequence,
 )
-from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1042,14 +1041,6 @@ class UncachedAccessor(Generic[_Accessor]):
             return self._accessor
 
         return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token = 0
-
-
-_default = Default.token
 
 
 def iterate_nested(nested_list):

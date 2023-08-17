@@ -91,11 +91,9 @@ from xarray.core.pycompat import (
 )
 from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
-    Default,
     Frozen,
     HybridMappingProxy,
     OrderedSet,
-    _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
@@ -111,6 +109,7 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.named_array.utils import Default, _default
 from xarray.plot.accessor import DatasetPlotAccessor
 
 if TYPE_CHECKING:

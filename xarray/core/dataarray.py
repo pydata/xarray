@@ -42,10 +42,8 @@ from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
-    Default,
     HybridMappingProxy,
     ReprObject,
-    _default,
     either_dict_or_kwargs,
     emit_user_level_warning,
 )
@@ -55,6 +53,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.named_array.utils import Default, _default
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 

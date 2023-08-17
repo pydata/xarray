@@ -5,8 +5,12 @@ import typing
 import numpy as np
 import numpy.typing as npt
 
-from xarray.core.utils import _default
-from xarray.named_array.utils import Frozen, NdimSizeLenMixin, is_duck_dask_array
+from xarray.named_array.utils import (
+    Frozen,
+    NdimSizeLenMixin,
+    _default,
+    is_duck_dask_array,
+)
 
 
 class NamedArray(NdimSizeLenMixin):

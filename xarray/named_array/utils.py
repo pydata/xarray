@@ -1,3 +1,4 @@
+import enum
 import importlib
 import math
 import typing
@@ -8,6 +9,14 @@ import numpy as np
 K = typing.TypeVar("K")
 V = typing.TypeVar("V")
 T = typing.TypeVar("T")
+
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(enum.Enum):
+    token = 0
+
+
+_default = Default.token
 
 
 class NdimSizeLenMixin:
