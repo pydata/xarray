@@ -2046,9 +2046,13 @@ def _calc_idxminmax(
         raise ValueError("Must supply 'dim' argument for multidimensional arrays")
 
     if dim not in array.dims:
-        raise KeyError(f'Dimension "{dim}" not in dimension')
+        raise KeyError(
+            f"Dimension {dim!r} not found in array dimensions {array.dims!r}"
+        )
     if dim not in array.coords:
-        raise KeyError(f'Dimension "{dim}" does not have coordinates')
+        raise KeyError(
+            f"Dimension {dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
+        )
 
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"
