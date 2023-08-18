@@ -159,7 +159,7 @@ complete examples, please consult the relevant documentation.*
 
     Broadcasting
         A technique that allows operations to be performed on arrays with different shapes and dimensions.
-        When performing operations on arrays with different shapes and dimensions, xarray will automatically broadcast the
+        When performing operations on arrays with different shapes and dimensions, xarray will automatically attempt to broadcast the
         arrays to a common shape before the operation is applied.
 
         .. ipython:: python
