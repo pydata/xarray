@@ -17,7 +17,7 @@ What's New
 .. _whats-new.2023.08.0:
 
 v2023.08.0 (Aug 18, 2023)
------------------------
+-------------------------
 
 This release brings changes to minimum dependencies, allows reading of datasets where a dimension name is
 associated with a multidimensional variable (e.g. finite volume ocean model output), and introduces
