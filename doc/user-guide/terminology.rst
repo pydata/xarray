@@ -243,8 +243,8 @@ complete examples, please consult the relevant documentation.*
         When you serialize data in xarray, you're taking all those temperature measurements, along with their
         labels and other information, and turning them into a format that can be stored in a file or sent over
         the internet. xarray objects can be serialized into formats which store the labels alongside the data.
-        "Some supported serialization formats are files that can then be stored or transferred (e.g. netCDF),
-        whilst others are protocols that allow for data access over a network (e.g. Zarr)."
+        Some supported serialization formats are files that can then be stored or transferred (e.g. netCDF),
+        whilst others are protocols that allow for data access over a network (e.g. Zarr).
 
     indexing
         Indexing is how you select subsets of your data which you are interested in.
