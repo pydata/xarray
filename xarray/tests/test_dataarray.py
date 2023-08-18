@@ -835,6 +835,7 @@ class TestDataArray:
         da[dict(x=ind)] = value  # should not raise
 
     def test_setitem_vectorized(self) -> None:
+        # Regression test for GH:7030
         # Positional indexing
         v = xr.DataArray(np.r_[:120].reshape(2, 3, 4, 5), dims=["a", "b", "c", "d"])
         b = xr.DataArray([[0, 0], [1, 0]], dims=["u", "v"])
