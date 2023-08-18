@@ -69,14 +69,24 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
+    dtype = np.int64
+    if any(np.isnat(values)):
+        dtype = np.float64
+
     values_as_series = pd.Series(values.ravel(), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
     elif name == "isocalendar":
         # isocalendar returns iso- year, week, and weekday -> reshape
-        field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
-        return field_values.T.reshape(3, *values.shape)
+        iso = values_as_series.dt.isocalendar()
+        field_values = np.vstack(
+            [
+                getattr(iso, name).astype(dtype, copy=False)
+                for name in ["year", "week", "day"]
+            ]
+        )
+        return field_values.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
@@ -106,11 +116,14 @@ def _get_date_field(values, name, dtype):
     else:
         access_method = _access_through_cftimeindex
 
+    if any(np.isnat(values)):
+        dtype = np.float64
+
     if is_duck_dask_array(values):
         from dask.array import map_blocks
 
         new_axis = chunks = None
-        # isocalendar adds adds an axis
+        # isocalendar adds an axis
         if name == "isocalendar":
             chunks = (3,) + values.chunksize
             new_axis = 0
