@@ -232,8 +232,7 @@ complete examples, please consult the relevant documentation.*
 
     labeled
         Labeled data has metadata describing the context of the data, not just the raw data values.
-        These can be tick labels (stored as Coordinates) or unique names for each array. labels are
-        constituted by two main components: coordinates and attributes. These labels
+        This contextual information can be labels for array axes (i.e. dimension names) tick labels along axes (stored as Coordinate variables) or unique names for each array. These labels
         provide context and meaning to the data, making it easier to understand and work with. If you have
         temperature data for different cities over time. Using xarray, you can label the dimensions: one for
         cities and another for time.
