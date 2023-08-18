@@ -929,8 +929,14 @@ def open_mfdataset(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
+    drop_variables: str or iterable of str, optional
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values.
     **kwargs : optional
-        Additional arguments passed on to :py:func:`xarray.open_dataset`.
+        Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
+        overview of some of the possible optionals, see the documentation of
+        :py:func:`xarray.open_dataset`
 
     Returns
     -------
