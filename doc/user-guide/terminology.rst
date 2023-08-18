@@ -246,7 +246,7 @@ complete examples, please consult the relevant documentation.*
         whilst others are protocols that allow for data access over a network (e.g. Zarr).
 
     indexing
-        Indexing is how you select subsets of your data which you are interested in.
+        :ref:`Indexing` is how you select subsets of your data which you are interested in.
 
         - Label-based Indexing: Selecting data by passing a specific label and comparing it to the labels
           stored in the associated coordinates. You can use labels to specify what you want like "Give me the
