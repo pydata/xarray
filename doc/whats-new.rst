@@ -97,6 +97,9 @@ Documentation
   (:pull:`7999`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Fixed broken links in "See also" section of :py:meth:`Dataset.count` (:issue:`8055`, :pull:`8057`)
   By `Articoking <https://github.com/Articoking>`_.
+- Extended the glossary by adding terms Aligning, Broadcasting, Merging, Concatenating, Combining, lazy,
+  labeled, serialization, indexing (:issue:`3355`, :pull:`7732`)
+  By `Harshitha <https://github.com/harshitha1201>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
