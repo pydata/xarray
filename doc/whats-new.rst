@@ -26,8 +26,8 @@ a new :py:class:`xarray.Coordinates` object.
 Thanks to the 16 contributors to this release: Anderson Banihirwe, Articoking, Benoit Bovy, Deepak Cherian, Harshitha, Ian Carroll,
 Joe Hamman, Justus Magin, Peter Hill, Rachel Wegener, Riley Kuttruff, Thomas Nicholas, Tom Nicholas, ilgast, quantsnus, vallirep
 
-Annoucements
-~~~~~~~~~~~~
+Announcements
+~~~~~~~~~~~~~
 
 The :py:class:`xarray.Variable` class is being refactored out to a new project title 'namedarray'.
 See the `design doc <https://github.com/pydata/xarray/blob/main/design_notes/named_array_design_doc.md>`_ for more
