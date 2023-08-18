@@ -25,11 +25,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
-from typing_extensions import Self
-
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
-from xarray.core.types import Dims
+from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
@@ -298,10 +296,7 @@ class AggregationGenerator:
             yield self.generate_method(method)
 
     def generate_method(self, method):
-        template_kwargs = dict(
-            obj=self.datastructure.name,
-            method=method.name,
-        )
+        template_kwargs = dict(obj=self.datastructure.name, method=method.name)
 
         if method.extra_kwargs:
             extra_kwargs = "\n        " + "\n        ".join(
