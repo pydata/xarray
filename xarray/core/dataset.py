@@ -500,7 +500,7 @@ class _LocIndexer(Generic[T_Dataset]):
         self.dataset[dim_indexers] = value
 
 
-class Dataset(
+class Dataset(  # type: ignore[misc,unused-ignore]
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
