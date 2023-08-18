@@ -23,7 +23,7 @@ class NamedArray:
         self._attrs = attrs or {}
 
     @property
-    def ndim(self: typing.Any) -> int:
+    def ndim(self) -> int:
         """
         Number of array dimensions.
 
@@ -34,7 +34,7 @@ class NamedArray:
         return len(self.shape)
 
     @property
-    def size(self: typing.Any) -> int:
+    def size(self) -> int:
         """
         Number of elements in the array.
 
@@ -46,7 +46,7 @@ class NamedArray:
         """
         return math.prod(self.shape)
 
-    def __len__(self: typing.Any) -> int:
+    def __len__(self) -> int:
         try:
             return self.shape[0]
         except IndexError:
@@ -118,7 +118,7 @@ class NamedArray:
         self._attrs = dict(value)
 
     @property
-    def data(self) -> typing.Any:
+    def data(self) -> T_Array:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
