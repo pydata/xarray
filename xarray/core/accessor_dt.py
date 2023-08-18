@@ -69,15 +69,14 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
-    dtype = np.int64
-    if any(np.isnat(values)):
-        dtype = np.float64
-
     values_as_series = pd.Series(values.ravel(), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
     elif name == "isocalendar":
+        dtype = np.int64
+        if any(np.isnat(values)):
+            dtype = np.float64
         # isocalendar returns iso- year, week, and weekday -> reshape
         iso = values_as_series.dt.isocalendar()
         field_values = np.vstack(
@@ -113,11 +112,10 @@ def _get_date_field(values, name, dtype):
     """
     if is_np_datetime_like(values.dtype):
         access_method = _access_through_series
+        if any(np.isnat(values)):
+            dtype = np.float64
     else:
         access_method = _access_through_cftimeindex
-
-    if any(np.isnat(values)):
-        dtype = np.float64
 
     if is_duck_dask_array(values):
         from dask.array import map_blocks
