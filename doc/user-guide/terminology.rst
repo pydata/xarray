@@ -136,7 +136,6 @@ complete examples, please consult the relevant documentation.*
             :suppress:
 
             import numpy as np
-            import pandas as pd
             import xarray as xr
 
     Aligning
@@ -204,8 +203,8 @@ complete examples, please consult the relevant documentation.*
             c
 
     Combining
-        Combining in xarray is a general term used to describe the process of arranging two or more DataArrays or Datasets
-        into a single ``DataArray`` or ``Dataset`` using some combination of merging and concatenation operations.
+        Combining is the process of arranging two or more DataArrays or Datasets into a single ``DataArray`` or
+        ``Dataset`` using some combination of merging and concatenation operations.
 
         .. ipython:: python
 
@@ -223,8 +222,8 @@ complete examples, please consult the relevant documentation.*
             combined_ds
 
     lazy
-Instead of doing
-        calculations right away, xarray lets you plan what calculations you want to do, like finding the
+        Lazily-evaluated operations do not load data into memory until necessary.Instead of doing calculations
+        right away, xarray lets you plan what calculations you want to do, like finding the
         average temperature in a dataset.This planning is called "lazy evaluation." Later, when
         you're ready to see the final result, you tell xarray, "Okay, go ahead and do those calculations now!"
         That's when xarray starts working through the steps you planned and gives you the answer you wanted.This
@@ -232,8 +231,9 @@ Instead of doing
         results.
 
     labeled
-        labeled refers to the way data is named with meaningful labels or coordinates.Instead of just having
-        numerical indices to locate values, xarray allows you to attach labels to each dimension. These labels
+        Labeled data has metadata describing the context of the data, not just the raw data values.
+        These can be tick labels (stored as Coordinates) or unique names for each array. labels are
+        constituted by two main components: coordinates and attributes. These labels
         provide context and meaning to the data, making it easier to understand and work with. If you have
         temperature data for different cities over time. Using xarray, you can label the dimensions: one for
         cities and another for time.
@@ -242,18 +242,19 @@ Instead of doing
         Serialization is the process of converting your data into a format that makes it easy to save and share.
         When you serialize data in xarray, you're taking all those temperature measurements, along with their
         labels and other information, and turning them into a format that can be stored in a file or sent over
-        the internet.
+        the internet. xarray objects can be serialized into formats which store the labels alongside the data.
+        "Some supported serialization formats are files that can then be stored or transferred (e.g. netCDF),
+        whilst others are protocols that allow for data access over a network (e.g. Zarr)."
 
     indexing
         Indexing is how you select subsets of your data which you are interested in.
         dataset.
-        Label-based Indexing: You can use labels to specify what you want like "Give me the temperature for New York on July 15th."
-        Positional Indexing: You can use numbers to refer to positions in the data like "Give me the third temperature in the list." This is useful when you know the order of your data but don't need to remember the exact labels.
-        Slicing: You can take a "slice" of your data, like you might want all temperatures from July 1st to July 10th.
-        Boolean Indexing: You can use true/false statements to filter your data. It's like saying "Show me temperatures where it was above 80 degrees."
 
-    backend
-        "backend" refers to the way xarray stores and manages your data behind the scenes.If you have a bunch
-        of temperature measurements from different cities. You want to use xarray to organize and analyze this
-        data. The backend is how xarray decides to store this information in memory so that you can easily
-        access and manipulate it.
+        - Label-based Indexing: Selecting data by passing a specific label and comparing it to the labels
+          stored in the associated coordinates. You can use labels to specify what you want like "Give me the
+          temperature for New York on July 15th."
+
+        - Positional Indexing: You can use numbers to refer to positions in the data like "Give me the third temperature value" This is useful when you know the order of your data but don't need to remember the exact labels.
+
+        - Slicing: You can take a "slice" of your data, like you might want all temperatures from July 1st
+          to July 10th. xarray supports slicing for both positional and label-based indexing.
