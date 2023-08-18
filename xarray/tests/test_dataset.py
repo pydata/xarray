@@ -4164,24 +4164,24 @@ class TestDataset:
         # Regression test for GH:7030
         # Positional indexing
         da = xr.DataArray(np.r_[:120].reshape(2, 3, 4, 5), dims=["a", "b", "c", "d"])
-        ds = xr.Dataset({'da': da})
+        ds = xr.Dataset({"da": da})
         b = xr.DataArray([[0, 0], [1, 0]], dims=["u", "v"])
         c = xr.DataArray([[0, 1], [2, 3]], dims=["u", "v"])
         w = xr.DataArray([-1, -2], dims=["u"])
         index = dict(b=b, c=c)
-        ds[index] = xr.Dataset({'da': w})
-        assert (ds[index]['da'] == w).all()
+        ds[index] = xr.Dataset({"da": w})
+        assert (ds[index]["da"] == w).all()
 
         # Indexing with coordinates
         da = xr.DataArray(np.r_[:120].reshape(2, 3, 4, 5), dims=["a", "b", "c", "d"])
-        ds = xr.Dataset({'da': da})
+        ds = xr.Dataset({"da": da})
         ds.coords["b"] = [2, 4, 6]
         b = xr.DataArray([[2, 2], [4, 2]], dims=["u", "v"])
         c = xr.DataArray([[0, 1], [2, 3]], dims=["u", "v"])
         w = xr.DataArray([-1, -2], dims=["u"])
         index = dict(b=b, c=c)
-        ds.loc[index] = xr.Dataset({'da': w}, coords={'b': ds.coords['b']})
-        assert (ds.loc[index]['da'] == w).all()
+        ds.loc[index] = xr.Dataset({"da": w}, coords={"b": ds.coords["b"]})
+        assert (ds.loc[index]["da"] == w).all()
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_setitem_str_dtype(self, dtype) -> None:
