@@ -769,7 +769,9 @@ class DatasetCoordinates(Coordinates):
         if key in self:
             del self._data[key]
         else:
-            raise KeyError(f"{key!r} is not a coordinate variable.")
+            raise KeyError(
+                f"{key!r} is not in coordinate variables {tuple(self.keys())}"
+            )
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
@@ -855,7 +857,9 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
 
     def __delitem__(self, key: Hashable) -> None:
         if key not in self:
-            raise KeyError(f"{key!r} is not a coordinate variable.")
+            raise KeyError(
+                f"{key!r} is not in coordinate variables {tuple(self.keys())}"
+            )
         assert_no_index_corrupted(self._data.xindexes, {key})
 
         del self._data._coords[key]
