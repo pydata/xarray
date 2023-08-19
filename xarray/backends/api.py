@@ -971,8 +971,7 @@ def open_mfdataset(
     with ``open_mfdataset``, such as for example ``drop_variables``:
 
     >>> ds = xr.open_mfdataset(
-    ...     "file.nc",
-    ...     drop_variables=["varname_1", "varname_2"]  # any list of vars
+    ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
     ... )  # doctest: +SKIP
 
     References
