@@ -65,6 +65,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 .. _whats-new.2023.08.0:
 
