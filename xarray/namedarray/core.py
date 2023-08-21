@@ -204,7 +204,7 @@ class NamedArray:
 
     def _dask_finalize(self, results, array_func, *args, **kwargs):
         data = array_func(results, *args, **kwargs)
-        return NamedArray(self._dims, data, attrs=self._attrs)
+        return type(self)(self._dims, data, attrs=self._attrs)
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
