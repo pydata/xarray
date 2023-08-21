@@ -72,6 +72,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import (
+    CoercibleValue,
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
@@ -6943,8 +6944,8 @@ class Dataset(
         results: CoercibleMapping = data._calc_assign_results(variables)
 
         # split data variables to add/replace vs. coordinates to replace
-        results_data_vars: CoercibleMapping = {}
-        results_coords: CoercibleMapping = {}
+        results_data_vars: dict[Hashable, CoercibleValue] = {}
+        results_coords: dict[Hashable, CoercibleValue] = {}
         for k, v in results.items():
             if k in data._coord_names:
                 results_coords[k] = v
