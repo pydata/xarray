@@ -83,6 +83,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
+  (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
