@@ -931,7 +931,7 @@ def open_mfdataset(
         as its only parameters.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
-        overview of some of the possible optionals, see the documentation of
+        overview of some of the possible options, see the documentation of
         :py:func:`xarray.open_dataset`
 
     Returns
