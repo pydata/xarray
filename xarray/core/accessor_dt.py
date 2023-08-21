@@ -74,20 +74,22 @@ def _access_through_series(values, name):
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
     elif name == "isocalendar":
-        dtype = np.int64
-        if any(np.isnat(values)):
-            dtype = np.float64
-        # isocalendar returns iso- year, week, and weekday -> reshape
-        iso = values_as_series.dt.isocalendar()
-        field_values = np.vstack(
+        # special NaT-handling can be removed when
+        # https://github.com/pandas-dev/pandas/issues/54657 is resolved
+        field_values = values_as_series.dt.isocalendar()
+        # test for <NA> and apply needed dtype
+        dtype = "float64" if any(field_values.year.isnull()) else "int64"
+        field_values = np.dstack(
             [
-                getattr(iso, name).astype(dtype, copy=False)
+                getattr(field_values, name).astype(dtype, copy=False).values
                 for name in ["year", "week", "day"]
             ]
         )
-        return field_values.reshape(3, *values.shape)
+        # isocalendar returns iso- year, week, and weekday -> reshape
+        return field_values.T.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
+
     return field_values.reshape(values.shape)
 
 
@@ -112,8 +114,6 @@ def _get_date_field(values, name, dtype):
     """
     if is_np_datetime_like(values.dtype):
         access_method = _access_through_series
-        if any(np.isnat(values)):
-            dtype = np.float64
     else:
         access_method = _access_through_cftimeindex
 
@@ -130,7 +130,12 @@ def _get_date_field(values, name, dtype):
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
-        return access_method(values, name).astype(dtype, copy=False)
+        out = access_method(values, name)
+        # cast only for integer types to keep float64 in presence of NaT
+        # see https://github.com/pydata/xarray/issues/7928
+        if np.issubdtype(out.dtype, np.integer):
+            out = out.astype(dtype, copy=False)
+        return out
 
 
 def _round_through_series_or_index(values, name, freq):
