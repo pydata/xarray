@@ -6942,7 +6942,7 @@ class Dataset(
         # do all calculations first...
         results: CoercibleMapping = data._calc_assign_results(variables)
 
-        # split data variables to add vs. coordinates to replace
+        # split data variables to add/replace vs. coordinates to replace
         results_data_vars: CoercibleMapping = {}
         results_coords: CoercibleMapping = {}
         for k, v in results.items():
