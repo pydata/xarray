@@ -11,6 +11,10 @@ import numpy.typing as npt
 
 from xarray.namedarray.utils import Frozen, _default, is_duck_dask_array
 
+# temporary placeholder for indicating that an array api compliant
+# type. hopefully in the future we can narrow this down more
+T_Array = typing.TypeVar("T_Array", bound=typing.Any)
+
 
 class NamedArray:
     __slots__ = ("_dims", "_data", "_attrs")
@@ -132,13 +136,16 @@ class NamedArray:
 
         return self._data
 
-    @data.setter
-    def data(self, data):
-        if data.shape != self.shape:
+    def _check_shape(self, new_data):
+        if new_data.shape != self.shape:
             raise ValueError(
                 f"replacement data must match the Variable's shape. "
-                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
+                f"replacement data has shape {new_data.shape}; Variable has shape {self.shape}"
             )
+
+    @data.setter
+    def data(self, data):
+        self._check_shape(data)
         self._data = data
 
     @property
@@ -256,10 +263,7 @@ class NamedArray:
                 ndata = copy.deepcopy(ndata, memo=memo)
         else:
             ndata = data
-            if self.shape != ndata.shape:
-                raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
-                )
+            self._check_shape(ndata)
 
         attrs = (
             copy.deepcopy(self._attrs, memo=memo) if deep else copy.copy(self._attrs)
