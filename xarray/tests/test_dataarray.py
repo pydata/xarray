@@ -1435,7 +1435,7 @@ class TestDataArray:
         assert_identical(da, expected)
 
         with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+            ValueError, match=r"cannot drop or update coordinate.*corrupt.*index "
         ):
             self.mda["level_1"] = ("x", np.arange(4))
             self.mda.coords["level_1"] = ("x", np.arange(4))
@@ -1555,7 +1555,7 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+            ValueError, match=r"cannot drop or update coordinate.*corrupt.*index "
         ):
             self.mda.assign_coords(level_1=("x", range(4)))
 
@@ -1608,7 +1608,7 @@ class TestDataArray:
 
     def test_set_coords_multiindex_level(self) -> None:
         with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+            ValueError, match=r"cannot drop or update coordinate.*corrupt.*index "
         ):
             self.mda["level_1"] = range(4)
 
