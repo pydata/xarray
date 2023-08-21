@@ -6879,6 +6879,10 @@ class Dataset(
         possible, but you cannot reference other variables created within the
         same ``assign`` call.
 
+        The new assigned variables that replace existing coordinates in the
+        original dataset are still listed as coordinates in the returned
+        Dataset.
+
         See Also
         --------
         pandas.DataFrame.assign
@@ -6934,11 +6938,23 @@ class Dataset(
         """
         variables = either_dict_or_kwargs(variables, variables_kwargs, "assign")
         data = self.copy()
+
         # do all calculations first...
         results: CoercibleMapping = data._calc_assign_results(variables)
-        data.coords._drop_indexed_coords(set(results.keys()))
+
+        # split data variables to add vs. coordinates to replace
+        results_data_vars: CoercibleMapping = {}
+        results_coords: CoercibleMapping = {}
+        for k, v in results.items():
+            if k in data._coord_names:
+                results_coords[k] = v
+            else:
+                results_data_vars[k] = v
+
         # ... and then assign
-        data.update(results)
+        data.coords.update(results_coords)
+        data.update(results_data_vars)
+
         return data
 
     def to_array(
