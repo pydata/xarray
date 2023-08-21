@@ -649,13 +649,13 @@ class TestDataset:
 
         with pytest.warns(
             FutureWarning,
-            match=".*`pandas.MultiIndex`.*no longer be implicitly wrapped.*",
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             Dataset(data_vars={"x": midx})
 
         with pytest.warns(
             FutureWarning,
-            match=".*`pandas.MultiIndex`.*no longer be implicitly wrapped.*",
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             Dataset(coords={"x": midx})
 
@@ -879,7 +879,7 @@ class TestDataset:
         assert_array_equal(actual["z"], ["a", "b"])
 
         actual = data.copy(deep=True)
-        with pytest.raises(ValueError, match=r"conflicting sizes"):
+        with pytest.raises(ValueError, match=r"conflicting dimension sizes"):
             actual.coords["x"] = ("x", [-1])
         assert_identical(actual, data)  # should not be modified
 
@@ -916,9 +916,7 @@ class TestDataset:
 
     def test_coords_setitem_multiindex(self) -> None:
         data = create_test_multiindex()
-        with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
-        ):
+        with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):
             data.coords["level_1"] = range(4)
 
     def test_coords_set(self) -> None:
@@ -4251,11 +4249,21 @@ class TestDataset:
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
-        with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
-        ):
+        with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
+
+    def test_assign_coords_new_multiindex(self) -> None:
+        ds = Dataset()
+        midx = pd.MultiIndex.from_arrays(
+            [["a", "a", "b", "b"], [0, 1, 0, 1]], names=("one", "two")
+        )
+
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+        ):
+            ds.assign_coords({"x": midx})
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = create_test_multiindex()
