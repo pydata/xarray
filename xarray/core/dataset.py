@@ -72,7 +72,6 @@ from xarray.core.indexes import (
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import (
-    CoercibleValue,
     dataset_merge_method,
     dataset_update_method,
     merge_coordinates_without_align,
@@ -121,7 +120,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping
+    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
