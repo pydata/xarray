@@ -464,25 +464,25 @@ class Coordinates(AbstractCoordinates):
                 getattr(other, "variables", other)
             )
 
-        # discard original indexed coordinates allows to
+        # Discard original indexed coordinates prior to merge allows to:
         # - fail early if the new coordinates don't preserve the integrity of existing
         #   multi-coordinate indexes
-        # - skip unnecessary alignment operations and/or avoid alignment errors
-        #   in `merge_coords` below
-        coords_noconflict = drop_indexed_coords(set(other_coords), self)
-        coords_to_drop = self._names - coords_noconflict._names
+        # - drop & replace coordinates without alignment (note: we must keep indexed
+        #   coordinates extracted from the DataArray objects passed as values to
+        #   `other` - if any - as those are still used for aligning the old/new coordinates)
+        coords_to_align = drop_indexed_coords(set(other_coords) & set(other), self)
 
         coords, indexes = merge_coords(
-            [coords_noconflict, other_coords],
+            [coords_to_align, other_coords],
             priority_arg=1,
-            indexes=coords_noconflict.xindexes,
+            indexes=coords_to_align.xindexes,
         )
 
         # special case for PandasMultiIndex: updating only its dimension coordinate
         # is still allowed but depreciated.
-        # It is the only case where we need to drop coordinates here (multi-index levels)
+        # It is the only case where we need to actually drop coordinates here (multi-index levels)
         # TODO: remove when removing PandasMultiIndex's dimension coordinate.
-        self._drop_coords(coords_to_drop)
+        self._drop_coords(self._names - coords_to_align._names)
 
         self._update_coords(coords, indexes)
 
