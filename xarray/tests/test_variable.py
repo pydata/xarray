@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-import typing
 import warnings
 from abc import ABC, abstractmethod
 from copy import copy, deepcopy
@@ -28,6 +26,7 @@ from xarray.core.indexing import (
     VectorizedIndexer,
 )
 from xarray.core.pycompat import array_type
+from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
     assert_allclose,
@@ -2693,53 +2692,9 @@ class TestAsCompatibleData:
 
     def test_unsupported_type(self):
         # Non indexable type
-        class CustomArray:
+        class CustomArray(NDArrayMixin):
             def __init__(self, array):
                 self.array = array
-
-            @property
-            def ndim(self: typing.Any) -> int:
-                """
-                Number of array dimensions.
-
-                See Also
-                --------
-                numpy.ndarray.ndim
-                """
-                return len(self.shape)
-
-            @property
-            def size(self: typing.Any) -> int:
-                """
-                Number of elements in the array.
-
-                Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
-
-                See Also
-                --------
-                numpy.ndarray.size
-                """
-                return math.prod(self.shape)
-
-            def __len__(self: typing.Any) -> int:
-                try:
-                    return self.shape[0]
-                except IndexError:
-                    raise TypeError("len() of unsized object")
-
-            @property
-            def dtype(self: typing.Any) -> np.dtype:
-                return self.array.dtype
-
-            @property
-            def shape(self: typing.Any) -> tuple[int, ...]:
-                return self.array.shape
-
-            def __getitem__(self: typing.Any, key):
-                return self.array[key]
-
-            def __repr__(self: typing.Any) -> str:
-                return f"{type(self).__name__}(array={self.array!r})"
 
         class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
             pass

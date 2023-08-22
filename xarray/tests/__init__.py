@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import math
 import platform
 import warnings
 from contextlib import contextmanager, nullcontext
@@ -16,6 +15,7 @@ from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
 from xarray import Dataset
+from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
@@ -138,7 +138,7 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-class InaccessibleArray(ExplicitlyIndexed):
+class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
     """Disallows any loading."""
 
     def __init__(self, array):
@@ -153,31 +153,6 @@ class InaccessibleArray(ExplicitlyIndexed):
     def __getitem__(self, key):
         raise UnexpectedDataAccess("Tried accessing data.")
 
-    @property
-    def ndim(self) -> int:
-        return len(self.array.shape)
-
-    @property
-    def size(self) -> int:
-        return math.prod(self.array.shape)
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self.array.dtype
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        return self.array.shape
-
-    def __len__(self) -> int:
-        try:
-            return self.array.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(array={self.array!r})"
-
 
 class FirstElementAccessibleArray(InaccessibleArray):
     def __getitem__(self, key):
@@ -187,7 +162,7 @@ class FirstElementAccessibleArray(InaccessibleArray):
         return self.array[tuple_idxr]
 
 
-class DuckArrayWrapper:
+class DuckArrayWrapper(utils.NDArrayMixin):
     """Array-like that prevents casting to array.
     Modeled after cupy."""
 
@@ -202,31 +177,6 @@ class DuckArrayWrapper:
 
     def __array_namespace__(self):
         """Present to satisfy is_duck_array test."""
-
-    @property
-    def ndim(self) -> int:
-        return len(self.array.shape)
-
-    @property
-    def size(self) -> int:
-        return math.prod(self.array.shape)
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self.array.dtype
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        return self.array.shape
-
-    def __len__(self) -> int:
-        try:
-            return self.array.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(array={self.array!r})"
 
 
 class ReturnItem:
