@@ -9,11 +9,10 @@ from collections.abc import Hashable, Iterable, Mapping
 import numpy as np
 import numpy.typing as npt
 
-from xarray.namedarray.utils import Frozen, _default, is_duck_dask_array, is_duck_array
-
 # TODO: get rid of this after migrating this class
 # to array API
 from xarray.core.indexing import ExplicitlyIndexed
+from xarray.namedarray.utils import Frozen, _default, is_duck_array, is_duck_dask_array
 
 # temporary placeholder for indicating that an array api compliant
 # type. hopefully in the future we can narrow this down more
