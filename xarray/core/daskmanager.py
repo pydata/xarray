@@ -54,7 +54,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def from_array(self, data: Any, chunks, **kwargs) -> DaskArray:
         import dask.array as da
 
-        if isinstance(data, ImplicitToExplicitIndexingAdapter):
+        if isinstance(data, ImplicitToExplicitIndexingAdapter) and "meta" not in kwargs:
             # lazily loaded backend array classes should use NumPy array operations.
             kwargs["meta"] = np.ndarray
 
