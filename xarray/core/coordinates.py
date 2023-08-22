@@ -454,6 +454,11 @@ class Coordinates(AbstractCoordinates):
 
     def update(self, other: Mapping[Any, Any]) -> None:
         """Update this Coordinates variables with other coordinate variables."""
+
+        # prevent unecessary merge / align operations if there is nothing to update
+        if not len(other):
+            return
+
         other_coords: Coordinates
 
         if isinstance(other, Coordinates):
