@@ -246,7 +246,7 @@ def as_compatible_data(data, fastpath: bool = False):
     if isinstance(data, (Variable, DataArray)):
         return data.data
 
-    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+    if isinstance(data, pd.Index):
         data = _possibly_convert_datetime_or_timedelta_index(data)
         return _maybe_wrap_data(data)
 
@@ -261,7 +261,7 @@ def as_compatible_data(data, fastpath: bool = False):
         data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
-    if isinstance(data, (pd.Series, pd.Index, pd.DataFrame)):
+    if isinstance(data, (pd.Series, pd.DataFrame)):
         data = data.values
 
     if isinstance(data, np.ma.MaskedArray):
@@ -271,11 +271,6 @@ def as_compatible_data(data, fastpath: bool = False):
             data = duck_array_ops.where_method(data, ~mask, fill_value)
         else:
             data = np.asarray(data)
-
-    if not isinstance(data, np.ndarray) and (
-        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
-    ):
-        return data
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
@@ -351,12 +346,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             Well-behaved code to serialize a Variable should ignore
             unrecognized encoding items.
         """
-        self._data = as_compatible_data(data, fastpath=fastpath)
-        self._dims = self._parse_dimensions(dims)
-        self._attrs = None
+        super().__init__(
+            data=as_compatible_data(data, fastpath=fastpath), dims=dims, attrs=attrs
+        )
         self._encoding = None
-        if attrs is not None:
-            self.attrs = attrs
         if encoding is not None:
             self.encoding = encoding
 

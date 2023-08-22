@@ -9,11 +9,37 @@ from collections.abc import Hashable, Iterable, Mapping
 import numpy as np
 import numpy.typing as npt
 
-from xarray.namedarray.utils import Frozen, _default, is_duck_dask_array
+from xarray.namedarray.utils import Frozen, _default, is_duck_dask_array, is_duck_array
+
+# TODO: get rid of this after migrating this class
+# to array API
+from xarray.core.indexing import ExplicitlyIndexed
 
 # temporary placeholder for indicating that an array api compliant
 # type. hopefully in the future we can narrow this down more
 T_Array = typing.TypeVar("T_Array", bound=typing.Any)
+
+
+# TODO: Add tests!
+def as_compatible_data(data, fastpath: bool = False):
+    if fastpath and getattr(data, "ndim", 0) > 0:
+        # can't use fastpath (yet) for scalars
+        return data
+
+    # TODO : check scalar
+    if is_duck_array(data):
+        return data
+    if isinstance(data, NamedArray):
+        raise ValueError
+    if isinstance(data, np.ma.MaskedArray):
+        raise ValueError
+    if isinstance(data, ExplicitlyIndexed):
+        return data
+    if isinstance(data, tuple):
+        data = utils.to_0d_object_array(data)
+
+    # validate whether the data is valid data types.
+    return np.asarray(data)
 
 
 class NamedArray:
@@ -22,8 +48,8 @@ class NamedArray:
     def __init__(
         self, dims, data: npt.ArrayLike, attrs: dict[typing.Any, typing.Any] = None
     ):
+        self._data = as_compatible_data(data)
         self._dims = self._parse_dimensions(dims)
-        self._data = data
         self._attrs = attrs or {}
 
     @property
