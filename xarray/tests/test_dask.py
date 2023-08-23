@@ -299,7 +299,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    def test_tokenize_empty_attrs(self):
+    def test_tokenize_empty_attrs(self) -> None:
         # Issue #6970
         assert self.eager_var._attrs is None
         expected = dask.base.tokenize(self.eager_var)
