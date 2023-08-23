@@ -8,6 +8,7 @@ from collections.abc import Hashable, Iterable, Mapping
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
+from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import _default
 from xarray.namedarray.utils import (
@@ -255,7 +256,7 @@ class NamedArray:
         return getattr(self._data, "chunks", None)
 
     @property
-    def chunksizes(self) -> typing.Mapping[typing.Any, tuple[int, ...]]:
+    def chunksizes(self) -> typing.Mapping[typing.Any, tuple[int, ...]] | None:
         """
         Mapping from dimension names to block lengths for this variable's data, or None if
         the underlying data is not a dask array.
@@ -273,9 +274,9 @@ class NamedArray:
         if hasattr(self._data, "chunks"):
             return Frozen(dict(zip(self.dims, self.data.chunks)))
         else:
-            return {}
+            return None
 
-    def _replace(self, dims=_default, data=_default, attrs=_default):
+    def _replace(self, dims=_default, data=_default, attrs=_default) -> NamedArray:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -292,11 +293,10 @@ class NamedArray:
     ):
         if data is None:
             ndata = self._data
-
             if deep:
                 ndata = copy.deepcopy(ndata, memo=memo)
         else:
-            ndata = data
+            ndata = as_compatible_data(data)
             self._check_shape(ndata)
 
         attrs = (
@@ -305,7 +305,7 @@ class NamedArray:
 
         return self._replace(data=ndata, attrs=attrs)
 
-    def __copy__(self):
+    def __copy__(self) -> NamedArray:
         return self._copy(deep=False)
 
     def __deepcopy__(self, memo: dict[int, typing.Any] | None = None):
@@ -368,3 +368,40 @@ class NamedArray:
         pandas.DataFrame.copy
         """
         return self._copy(deep=deep, data=data)
+
+    def _nonzero(self):
+        """Equivalent numpy's nonzero but returns a tuple of Variables."""
+        # TODO we should replace dask's native nonzero
+        # after https://github.com/dask/dask/issues/1076 is implemented.
+        nonzeros = np.nonzero(self.data)
+        return tuple(type(self)((dim), nz) for nz, dim in zip(nonzeros, self.dims))
+
+    def _as_sparse(self, sparse_format: str = _default, fill_value=dtypes.NA):
+        """
+        use sparse-array as backend.
+        """
+        import sparse
+
+        # TODO: what to do if dask-backended?
+        if fill_value is dtypes.NA:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = dtypes.result_type(self.dtype, fill_value)
+
+        if sparse_format is _default:
+            sparse_format = "coo"
+        try:
+            as_sparse = getattr(sparse, f"as_{sparse_format.lower()}")
+        except AttributeError:
+            raise ValueError(f"{sparse_format} is not a valid sparse format")
+
+        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        return self._replace(data=data)
+
+    def _to_dense(self):
+        """
+        Change backend from sparse to np.array
+        """
+        if hasattr(self._data, "todense"):
+            return self._replace(data=self._data.todense())
+        return self.copy(deep=False)

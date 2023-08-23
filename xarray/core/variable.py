@@ -709,13 +709,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         return dims, OuterIndexer(tuple(new_key)), None
 
-    def _nonzero(self):
-        """Equivalent numpy's nonzero but returns a tuple of Variables."""
-        # TODO we should replace dask's native nonzero
-        # after https://github.com/dask/dask/issues/1076 is implemented.
-        nonzeros = np.nonzero(self.data)
-        return tuple(Variable((dim), nz) for nz, dim in zip(nonzeros, self.dims))
-
     def _broadcast_indexes_vectorized(self, key):
         variables = []
         out_dims_set = OrderedSet()
@@ -1079,36 +1072,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def as_numpy(self: T_Variable) -> T_Variable:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
-
-    def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
-        """
-        use sparse-array as backend.
-        """
-        import sparse
-
-        # TODO: what to do if dask-backended?
-        if fill_value is dtypes.NA:
-            dtype, fill_value = dtypes.maybe_promote(self.dtype)
-        else:
-            dtype = dtypes.result_type(self.dtype, fill_value)
-
-        if sparse_format is _default:
-            sparse_format = "coo"
-        try:
-            as_sparse = getattr(sparse, f"as_{sparse_format.lower()}")
-        except AttributeError:
-            raise ValueError(f"{sparse_format} is not a valid sparse format")
-
-        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
-        return self._replace(data=data)
-
-    def _to_dense(self):
-        """
-        Change backend from sparse to np.array
-        """
-        if hasattr(self._data, "todense"):
-            return self._replace(data=self._data.todense())
-        return self.copy(deep=False)
 
     def isel(
         self: T_Variable,
