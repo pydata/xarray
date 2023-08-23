@@ -18,6 +18,7 @@ from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
+    PandasIndex,
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
@@ -198,17 +199,17 @@ class Coordinates(AbstractCoordinates):
     - built directly from coordinate data and index objects (beware that no consistency
       check is done on those inputs).
 
-    In the latter case, no default (pandas) index is created.
-
     Parameters
     ----------
-    coords: dict-like
-         Mapping where keys are coordinate names and values are objects that
-         can be converted into a :py:class:`~xarray.Variable` object
-         (see :py:func:`~xarray.as_variable`).
-    indexes: dict-like
-         Mapping of where keys are coordinate names and values are
-         :py:class:`~xarray.indexes.Index` objects.
+    coords: dict-like, optional
+        Mapping where keys are coordinate names and values are objects that
+        can be converted into a :py:class:`~xarray.Variable` object
+        (see :py:func:`~xarray.as_variable`).
+    indexes: dict-like, optional
+        Mapping of where keys are coordinate names and values are
+        :py:class:`~xarray.indexes.Index` objects. If None (default),
+        pandas indexes will be created for each dimension coordinate.
+        Passing an empty dictionary will skip this default behavior.
 
     """
 
@@ -228,16 +229,39 @@ class Coordinates(AbstractCoordinates):
         from xarray.core.dataset import Dataset
 
         if coords is None:
-            variables = {}
-        elif isinstance(coords, Coordinates):
+            coords = {}
+
+        variables: dict[Hashable, Variable]
+        default_indexes: dict[Hashable, PandasIndex] = {}
+        coords_obj_indexes: dict[Hashable, Index] = {}
+
+        if isinstance(coords, Coordinates):
+            if indexes is not None:
+                raise ValueError(
+                    "passing both a ``Coordinates`` object and a mapping of indexes "
+                    "to ``Coordinates.__init__`` is not allowed "
+                    "(this constructor does not support merging them)"
+                )
             variables = {k: v.copy() for k, v in coords.variables.items()}
+            indexes = dict(coords.xindexes)
         else:
-            variables = {k: as_variable(v) for k, v in coords.items()}
+            variables = {}
+            for name, data in coords.items():
+                var = as_variable(data, name=name)
+                if var.dims == (name,) and indexes is None:
+                    index, index_vars = create_default_index_implicit(var, list(coords))
+                    default_indexes.update({k: index for k in index_vars})
+                    variables.update(index_vars)
+                else:
+                    variables[name] = var
 
         if indexes is None:
             indexes = {}
         else:
             indexes = dict(indexes)
+
+        indexes.update(default_indexes)
+        indexes.update(coords_obj_indexes)
 
         no_coord_index = set(indexes) - set(variables)
         if no_coord_index:
