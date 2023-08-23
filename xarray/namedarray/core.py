@@ -164,7 +164,7 @@ class NamedArray:
 
         return self._data
 
-    def _check_shape(self, new_data: DuckArray):
+    def _check_shape(self, new_data: DuckArray) -> None:
         if new_data.shape != self.shape:
             raise ValueError(
                 f"replacement data must match the Variable's shape. "
@@ -173,6 +173,7 @@ class NamedArray:
 
     @data.setter
     def data(self, data: DuckArray) -> None:
+        data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
 
