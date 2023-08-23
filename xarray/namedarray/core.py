@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import itertools
 import math
 import typing
 from collections.abc import Hashable, Iterable, Mapping
@@ -53,7 +52,7 @@ class NamedArray:
     ):
         self._data: DuckArray = as_compatible_data(data)
         self._dims: tuple[Hashable, ...] = self._parse_dimensions(dims)
-        self._attrs: dict | None = None if attrs else dict(attrs)
+        self._attrs: dict | None = dict(attrs) if attrs else None
 
     @property
     def ndim(self) -> int:
@@ -363,9 +362,3 @@ class NamedArray:
         pandas.DataFrame.copy
         """
         return self._copy(deep=deep, data=data)
-
-    # mutable objects should not be hashable
-    # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore[assignment]
-
-    _array_counter = itertools.count()
