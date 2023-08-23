@@ -498,6 +498,7 @@ class Coordinates(AbstractCoordinates):
         Examples
         --------
         >>> coords = xr.Coordinates()
+        >>> coords
         Coordinates:
           *empty*
 
