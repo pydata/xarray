@@ -299,6 +299,17 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
+    def test_tokenize_empty_attrs(self):
+        # Issue #6970
+        assert self.eager_var._attrs is None
+        expected = dask.base.tokenize(self.eager_var)
+        assert self.eager_var.attrs == self.eager_var._attrs == {}
+        assert (
+            expected
+            == dask.base.tokenize(self.eager_var)
+            == dask.base.tokenize(self.lazy_var.compute())
+        )
+
     @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint

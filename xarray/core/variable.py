@@ -566,7 +566,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._dims, self.data, self._attrs))
+        return normalize_token((type(self), self._dims, self.data, self.attrs))
 
     def __dask_graph__(self):
         if is_duck_dask_array(self._data):
