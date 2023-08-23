@@ -4289,12 +4289,16 @@ class TestDataset:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = create_test_multiindex()
-        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
+        with pytest.warns(
+            FutureWarning, match=r"updating coordinate.*MultiIndex.*inconsistent"
+        ):
             updated = data.assign_coords(x=range(4))
         # https://github.com/pydata/xarray/issues/7097 (coord names updated)
         assert len(updated.coords) == 1
 
-        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
+        with pytest.warns(
+            FutureWarning, match=r"updating coordinate.*MultiIndex.*inconsistent"
+        ):
             updated = data.assign(x=range(4))
         # https://github.com/pydata/xarray/issues/7097 (coord names updated)
         assert len(updated.coords) == 1

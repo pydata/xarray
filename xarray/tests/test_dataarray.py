@@ -1570,7 +1570,9 @@ class TestDataArray:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = self.mda
-        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
+        with pytest.warns(
+            FutureWarning, match=r"updating coordinate.*MultiIndex.*inconsistent"
+        ):
             data.assign_coords(x=range(4))
 
     def test_assign_coords_custom_index(self) -> None:

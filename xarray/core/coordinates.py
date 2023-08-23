@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
@@ -24,7 +23,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import Self, T_DataArray
-from xarray.core.utils import Frozen, ReprObject
+from xarray.core.utils import Frozen, ReprObject, emit_user_level_warning
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
@@ -765,13 +764,12 @@ def drop_indexed_coords(
         # TODO: remove when removing PandasMultiIndex's dimension coordinate.
         if isinstance(idx, PandasMultiIndex) and idx_drop_coords == {idx.dim}:
             idx_drop_coords.update(idx.index.names)
-            warnings.warn(
-                f"Updating MultiIndexed coordinate {idx.dim!r} would corrupt indices for "
-                f"other variables: {list(idx.index.names)!r}. "
+            emit_user_level_warning(
+                f"updating coordinate {idx.dim!r} with a PandasMultiIndex would leave "
+                f"the multi-index level coordinates {list(idx.index.names)!r} in an inconsistent state. "
                 f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` before "
                 "assigning new coordinate values.",
                 FutureWarning,
-                stacklevel=4,
             )
 
         elif idx_drop_coords and len(idx_drop_coords) != len(idx_coords):
@@ -843,12 +841,15 @@ def create_coords_with_default_indexes(
 
     if pd_mindex_keys:
         pd_mindex_keys_fmt = ",".join([f"'{k}'" for k in pd_mindex_keys])
-        warnings.warn(
+        emit_user_level_warning(
             f"the `pandas.MultiIndex` object(s) passed as {pd_mindex_keys_fmt} coordinate(s) or "
             "data variable(s) will no longer be implicitly promoted and wrapped into "
-            "multiple indexed coordinates in the future. "
-            "If you want to keep this behavior, you need to first wrap it explicitly "
-            "using `xarray.Coordinates.from_pandas_multiindex()` and pass it as coordinates.",
+            "multiple indexed coordinates in the future "
+            "(i.e., one coordinate for each multi-index level + one dimension coordinate). "
+            "If you want to keep this behavior, you need to first wrap it explicitly using "
+            "`mindex_coords = xarray.Coordinates.from_pandas_multiindex(mindex_obj, 'dim')` "
+            "and pass it as coordinates, e.g., `xarray.Dataset(coords=mindex_coords)`, "
+            "`dataset.assign_coords(mindex_coords)` or `dataarray.assign_coords(mindex_coords)`.",
             FutureWarning,
         )
 
