@@ -36,6 +36,7 @@ from xarray.core.pycompat import (
 )
 from xarray.core.utils import (
     OrderedSet,
+    _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
@@ -45,7 +46,6 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
-from xarray.namedarray.utils import _default
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
