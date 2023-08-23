@@ -35,6 +35,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
+  names were not updated properly internally (:issue:`7405`, :issue:`7588`,
+  :pull:`8104`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
