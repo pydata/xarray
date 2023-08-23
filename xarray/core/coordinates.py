@@ -500,7 +500,7 @@ class Coordinates(AbstractCoordinates):
         >>> coords = xr.Coordinates()
         >>> coords
         Coordinates:
-          *empty*
+            *empty*
 
         >>> coords.assign(x=[1, 2])
         Coordinates:
