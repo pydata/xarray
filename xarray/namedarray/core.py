@@ -10,9 +10,9 @@ import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core.indexing import ExplicitlyIndexed
+from xarray.core.utils import _default
 from xarray.namedarray.utils import (
     Frozen,
-    _default,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -49,11 +49,11 @@ class NamedArray:
     __slots__ = ("_dims", "_data", "_attrs")
 
     def __init__(
-        self, dims, data: DuckArray, attrs: dict[typing.Any, typing.Any] = None
+        self, dims: str | Iterable[Hashable], data: DuckArray, attrs: dict | None = None
     ):
-        self._data = as_compatible_data(data)
-        self._dims = self._parse_dimensions(dims)
-        self._attrs = None if attrs is None else dict(attrs)
+        self._data: DuckArray = as_compatible_data(data)
+        self._dims: tuple[Hashable, ...] = self._parse_dimensions(dims)
+        self._attrs: dict | None = None if attrs else dict(attrs)
 
     @property
     def ndim(self) -> int:

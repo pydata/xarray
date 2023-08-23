@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 import importlib
 import typing
 from collections.abc import Iterator, Mapping
@@ -10,14 +9,6 @@ import numpy as np
 K = typing.TypeVar("K")
 V = typing.TypeVar("V")
 T = typing.TypeVar("T")
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(enum.Enum):
-    token = 0
-
-
-_default = Default.token
 
 
 class Frozen(Mapping[K, V]):
