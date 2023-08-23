@@ -7,16 +7,20 @@ import typing
 from collections.abc import Hashable, Iterable, Mapping
 
 import numpy as np
-import numpy.typing as npt
 
-# TODO: get rid of this after migrating this class
-# to array API
+# TODO: get rid of this after migrating this class to array API
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray.utils import Frozen, _default, is_duck_array, is_duck_dask_array
+from xarray.namedarray.utils import (
+    Frozen,
+    _default,
+    is_duck_array,
+    is_duck_dask_array,
+    to_0d_object_array,
+)
 
-# temporary placeholder for indicating that an array api compliant
-# type. hopefully in the future we can narrow this down more
-T_Array = typing.TypeVar("T_Array", bound=typing.Any)
+# temporary placeholder for indicating an array api compliant type.
+# hopefully in the future we can narrow this down more
+DuckArray = typing.TypeVar("DuckArray", bound=typing.Any)
 
 
 # TODO: Add tests!
@@ -35,7 +39,7 @@ def as_compatible_data(data, fastpath: bool = False):
     if isinstance(data, ExplicitlyIndexed):
         return data
     if isinstance(data, tuple):
-        data = utils.to_0d_object_array(data)
+        data = to_0d_object_array(data)
 
     # validate whether the data is valid data types.
     return np.asarray(data)
@@ -45,7 +49,7 @@ class NamedArray:
     __slots__ = ("_dims", "_data", "_attrs")
 
     def __init__(
-        self, dims, data: npt.ArrayLike, attrs: dict[typing.Any, typing.Any] = None
+        self, dims, data: DuckArray, attrs: dict[typing.Any, typing.Any] = None
     ):
         self._data = as_compatible_data(data)
         self._dims = self._parse_dimensions(dims)
@@ -147,7 +151,7 @@ class NamedArray:
         self._attrs = dict(value)
 
     @property
-    def data(self) -> T_Array:
+    def data(self) -> DuckArray:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -161,7 +165,7 @@ class NamedArray:
 
         return self._data
 
-    def _check_shape(self, new_data):
+    def _check_shape(self, new_data: DuckArray):
         if new_data.shape != self.shape:
             raise ValueError(
                 f"replacement data must match the Variable's shape. "
@@ -169,7 +173,7 @@ class NamedArray:
             )
 
     @data.setter
-    def data(self, data):
+    def data(self, data: DuckArray) -> None:
         self._check_shape(data)
         self._data = data
 
@@ -278,7 +282,7 @@ class NamedArray:
     def _copy(
         self,
         deep: bool = True,
-        data: npt.ArrayLike | None = None,
+        data: DuckArray | None = None,
         memo: dict[int, typing.Any] | None = None,
     ):
         if data is None:
@@ -302,7 +306,7 @@ class NamedArray:
     def __deepcopy__(self, memo: dict[int, typing.Any] | None = None):
         return self._copy(deep=True, memo=memo)
 
-    def copy(self, deep: bool = True, data: npt.ArrayLike | None = None):
+    def copy(self, deep: bool = True, data: DuckArray | None = None):
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
