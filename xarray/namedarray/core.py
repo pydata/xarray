@@ -147,7 +147,7 @@ class NamedArray:
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[typing.Any, typing.Any]) -> None:
+    def attrs(self, value: Mapping) -> None:
         self._attrs = dict(value)
 
     @property
