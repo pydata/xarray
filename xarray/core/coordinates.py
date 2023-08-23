@@ -194,22 +194,69 @@ class Coordinates(AbstractCoordinates):
     Coordinates are either:
 
     - returned via the :py:attr:`Dataset.coords` and :py:attr:`DataArray.coords`
-      properties.
-    - built from index objects (e.g., :py:meth:`Coordinates.from_pandas_multiindex`).
-    - built directly from coordinate data and index objects (beware that no consistency
-      check is done on those inputs).
+      properties
+    - built from Pandas or other index objects
+      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`)
+    - built directly from coordinate data and Xarray ``Index`` objects (beware that
+      no consistency check is done on those inputs)
 
     Parameters
     ----------
     coords: dict-like, optional
         Mapping where keys are coordinate names and values are objects that
         can be converted into a :py:class:`~xarray.Variable` object
-        (see :py:func:`~xarray.as_variable`).
+        (see :py:func:`~xarray.as_variable`). If another
+        :py:class:`~xarray.Coordinates` object is passed, its indexes
+        will be added to the new created object.
     indexes: dict-like, optional
         Mapping of where keys are coordinate names and values are
         :py:class:`~xarray.indexes.Index` objects. If None (default),
         pandas indexes will be created for each dimension coordinate.
         Passing an empty dictionary will skip this default behavior.
+
+    Examples
+    --------
+    Create a dimension coordinate with a default (pandas) index:
+
+    >>> xr.Coordinates({"x": [1, 2]})
+    Coordinates:
+      * x        (x) int64 1 2
+
+    Create a dimension coordinate with no index:
+
+    >>> xr.Coordinates(coords={"x": [1, 2]}, indexes={})
+    Coordinates:
+        x        (x) int64 1 2
+
+    Create a new Coordinates object from existing dataset coordinates
+    (indexes are passed):
+
+    >>> ds = xr.Dataset(coords={"x": [1, 2]})
+    >>> coords = xr.Coordinates(ds.coords)
+    Coordinates:
+      * x        (x) int64 1 2
+
+    Create indexed coordinates from a ``pandas.MultiIndex`` object:
+
+    >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
+    >>> xr.Coordinates.from_pandas_multiindex(midx, "x")
+    Coordinates:
+      * x          (x) object MultiIndex
+      * x_level_0  (x) object 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 0 1 0 1
+
+    Create a new Dataset object by passing a Coordinates object:
+
+    >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
+    >>> xr.Dataset(coords=midx_coords)
+    <xarray.Dataset>
+    Dimensions:    (x: 4)
+    Coordinates:
+      * x          (x) object MultiIndex
+      * x_level_0  (x) object 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 0 1 0 1
+    Data variables:
+        *empty*
 
     """
 
@@ -243,7 +290,7 @@ class Coordinates(AbstractCoordinates):
                     "(this constructor does not support merging them)"
                 )
             variables = {k: v.copy() for k, v in coords.variables.items()}
-            indexes = dict(coords.xindexes)
+            coords_obj_indexes = dict(coords.xindexes)
         else:
             variables = {}
             for name, data in coords.items():
