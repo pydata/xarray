@@ -49,7 +49,7 @@ class NamedArray:
     ):
         self._data = as_compatible_data(data)
         self._dims = self._parse_dimensions(dims)
-        self._attrs = attrs or {}
+        self._attrs = None if attrs is None else dict(attrs)
 
     @property
     def ndim(self) -> int:
