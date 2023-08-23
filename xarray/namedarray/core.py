@@ -37,6 +37,11 @@ def as_compatible_data(data, fastpath: bool = False):
         raise ValueError
     if isinstance(data, ExplicitlyIndexed):
         return data
+
+    if not isinstance(data, np.ndarray) and (
+        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+    ):
+        return data
     if isinstance(data, tuple):
         data = to_0d_object_array(data)
 
