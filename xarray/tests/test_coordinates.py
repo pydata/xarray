@@ -112,7 +112,7 @@ class TestCoordinates:
         assert coords.identical(coords)
         assert not coords.identical("no_a_coords")
 
-    def test_assign(self):
+    def test_assign(self) -> None:
         _ds = Dataset(coords={"x": [0, 1, 2]})
         coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
 
