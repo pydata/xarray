@@ -112,6 +112,21 @@ class TestCoordinates:
         assert coords.identical(coords)
         assert not coords.identical("no_a_coords")
 
+    def test_assign(self):
+        _ds = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+
+        _ds_expected = Dataset(coords={"x": [0, 1, 2], "y": [3, 4]})
+        expected = Coordinates(
+            coords=_ds_expected.coords, indexes=_ds_expected.xindexes
+        )
+
+        actual = coords.assign(y=[3, 4])
+        assert_identical(actual, expected)
+
+        actual = coords.assign({"y": [3, 4]})
+        assert_identical(actual, expected)
+
     def test_copy(self) -> None:
         no_index_coords = Coordinates({"foo": ("x", [1, 2, 3])})
         copied = no_index_coords.copy()

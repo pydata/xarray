@@ -24,7 +24,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import Self, T_DataArray
-from xarray.core.utils import Frozen, ReprObject
+from xarray.core.utils import Frozen, ReprObject, either_dict_or_kwargs
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
@@ -471,6 +471,35 @@ class Coordinates(AbstractCoordinates):
         )
 
         self._update_coords(coords, indexes)
+
+    def assign(
+        self, coords: Mapping | None = None, **coords_kwargs: Any
+    ) -> Coordinates:
+        """Assign new coordinates (and indexes) to a Coordinates object, returning
+        a new object with all the original coordinates in addition to the new ones.
+
+        Parameters
+        ----------
+        coords : :class:`Coordinates` or mapping of hashable to Any
+            Mapping from coordinate names to the new values. If a ``Coordinates``
+            object is passed, its indexes are assigned in the returned object.
+            Otherwise, a default (pandas) index is created for each dimension
+            coordinate found in the mapping.
+        **coords_kwargs
+            The keyword arguments form of ``coords``.
+            One of ``coords`` or ``coords_kwargs`` must be provided.
+
+        Returns
+        -------
+        new_coords : Coordinates
+            A new Coordinates object with the new coordinates (and indexes)
+            in addition to all the existing coordinates.
+
+        """
+        coords = either_dict_or_kwargs(coords, coords_kwargs, "assign")
+        new_coords = self.copy()
+        new_coords.update(coords)
+        return new_coords
 
     def _overwrite_indexes(
         self,
