@@ -232,7 +232,7 @@ class Coordinates(AbstractCoordinates):
         elif isinstance(coords, Coordinates):
             variables = {k: v.copy() for k, v in coords.variables.items()}
         else:
-            variables = {k: as_variable(v) for k, v in coords.items()}
+            variables = {k: as_variable(v, name=k) for k, v in coords.items()}
 
         if indexes is None:
             indexes = {}
@@ -494,6 +494,23 @@ class Coordinates(AbstractCoordinates):
         new_coords : Coordinates
             A new Coordinates object with the new coordinates (and indexes)
             in addition to all the existing coordinates.
+
+        Examples
+        --------
+        >>> coords = xr.Coordinates()
+        Coordinates:
+          *empty*
+
+        >>> coords.assign(x=[1, 2])
+        Coordinates:
+          * x          (x) int64 1 2
+
+        >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
+        >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
+        Coordinates:
+          * y          (y) object MultiIndex
+          * y_level_0  (y) object 'a' 'a' 'b' 'b'
+          * y_level_1  (y) int64 0 1 0 1
 
         """
         coords = either_dict_or_kwargs(coords, coords_kwargs, "assign")
