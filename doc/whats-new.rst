@@ -34,7 +34,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix bug where empty attrs would generate inconsistent tokens (:issue:`6970`, :pull:`8101`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Documentation
 ~~~~~~~~~~~~~
