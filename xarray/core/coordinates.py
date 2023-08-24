@@ -504,7 +504,7 @@ class Coordinates(AbstractCoordinates):
 
         >>> coords.assign(x=[1, 2])
         Coordinates:
-          * x          (x) int64 1 2
+          * x        (x) int64 1 2
 
         >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
         >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
