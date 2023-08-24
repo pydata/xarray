@@ -7,8 +7,7 @@ import xarray as xr
 from xarray.core import dtypes, merge
 from xarray.core.merge import MergeError
 from xarray.testing import assert_equal, assert_identical
-
-from .test_dataset import create_test_data
+from xarray.tests.test_dataset import create_test_data
 
 
 class TestMergeInternals:
@@ -234,6 +233,13 @@ class TestMergeFunction:
     def test_merge_dicts_dims(self):
         actual = xr.merge([{"y": ("x", [13])}, {"x": [12]}])
         expected = xr.Dataset({"x": [12], "y": ("x", [13])})
+        assert_identical(actual, expected)
+
+    def test_merge_coordinates(self):
+        coords1 = xr.Coordinates({"x": ("x", [0, 1, 2])})
+        coords2 = xr.Coordinates({"y": ("y", [3, 4, 5])})
+        expected = xr.Dataset(coords={"x": [0, 1, 2], "y": [3, 4, 5]})
+        actual = xr.merge([coords1, coords2])
         assert_identical(actual, expected)
 
     def test_merge_error(self):

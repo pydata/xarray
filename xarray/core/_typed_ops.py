@@ -3,7 +3,7 @@
 
 import operator
 
-from . import nputils, ops
+from xarray.core import nputils, ops
 
 
 class DatasetOpsMixin:
@@ -41,6 +41,12 @@ class DatasetOpsMixin:
 
     def __or__(self, other):
         return self._binary_op(other, operator.or_)
+
+    def __lshift__(self, other):
+        return self._binary_op(other, operator.lshift)
+
+    def __rshift__(self, other):
+        return self._binary_op(other, operator.rshift)
 
     def __lt__(self, other):
         return self._binary_op(other, operator.lt)
@@ -123,6 +129,12 @@ class DatasetOpsMixin:
     def __ior__(self, other):
         return self._inplace_binary_op(other, operator.ior)
 
+    def __ilshift__(self, other):
+        return self._inplace_binary_op(other, operator.ilshift)
+
+    def __irshift__(self, other):
+        return self._inplace_binary_op(other, operator.irshift)
+
     def _unary_op(self, f, *args, **kwargs):
         raise NotImplementedError
 
@@ -160,6 +172,8 @@ class DatasetOpsMixin:
     __and__.__doc__ = operator.and_.__doc__
     __xor__.__doc__ = operator.xor.__doc__
     __or__.__doc__ = operator.or_.__doc__
+    __lshift__.__doc__ = operator.lshift.__doc__
+    __rshift__.__doc__ = operator.rshift.__doc__
     __lt__.__doc__ = operator.lt.__doc__
     __le__.__doc__ = operator.le.__doc__
     __gt__.__doc__ = operator.gt.__doc__
@@ -186,6 +200,8 @@ class DatasetOpsMixin:
     __iand__.__doc__ = operator.iand.__doc__
     __ixor__.__doc__ = operator.ixor.__doc__
     __ior__.__doc__ = operator.ior.__doc__
+    __ilshift__.__doc__ = operator.ilshift.__doc__
+    __irshift__.__doc__ = operator.irshift.__doc__
     __neg__.__doc__ = operator.neg.__doc__
     __pos__.__doc__ = operator.pos.__doc__
     __abs__.__doc__ = operator.abs.__doc__
@@ -232,6 +248,12 @@ class DataArrayOpsMixin:
     def __or__(self, other):
         return self._binary_op(other, operator.or_)
 
+    def __lshift__(self, other):
+        return self._binary_op(other, operator.lshift)
+
+    def __rshift__(self, other):
+        return self._binary_op(other, operator.rshift)
+
     def __lt__(self, other):
         return self._binary_op(other, operator.lt)
 
@@ -313,6 +335,12 @@ class DataArrayOpsMixin:
     def __ior__(self, other):
         return self._inplace_binary_op(other, operator.ior)
 
+    def __ilshift__(self, other):
+        return self._inplace_binary_op(other, operator.ilshift)
+
+    def __irshift__(self, other):
+        return self._inplace_binary_op(other, operator.irshift)
+
     def _unary_op(self, f, *args, **kwargs):
         raise NotImplementedError
 
@@ -350,6 +378,8 @@ class DataArrayOpsMixin:
     __and__.__doc__ = operator.and_.__doc__
     __xor__.__doc__ = operator.xor.__doc__
     __or__.__doc__ = operator.or_.__doc__
+    __lshift__.__doc__ = operator.lshift.__doc__
+    __rshift__.__doc__ = operator.rshift.__doc__
     __lt__.__doc__ = operator.lt.__doc__
     __le__.__doc__ = operator.le.__doc__
     __gt__.__doc__ = operator.gt.__doc__
@@ -376,6 +406,8 @@ class DataArrayOpsMixin:
     __iand__.__doc__ = operator.iand.__doc__
     __ixor__.__doc__ = operator.ixor.__doc__
     __ior__.__doc__ = operator.ior.__doc__
+    __ilshift__.__doc__ = operator.ilshift.__doc__
+    __irshift__.__doc__ = operator.irshift.__doc__
     __neg__.__doc__ = operator.neg.__doc__
     __pos__.__doc__ = operator.pos.__doc__
     __abs__.__doc__ = operator.abs.__doc__
@@ -422,6 +454,12 @@ class VariableOpsMixin:
     def __or__(self, other):
         return self._binary_op(other, operator.or_)
 
+    def __lshift__(self, other):
+        return self._binary_op(other, operator.lshift)
+
+    def __rshift__(self, other):
+        return self._binary_op(other, operator.rshift)
+
     def __lt__(self, other):
         return self._binary_op(other, operator.lt)
 
@@ -503,6 +541,12 @@ class VariableOpsMixin:
     def __ior__(self, other):
         return self._inplace_binary_op(other, operator.ior)
 
+    def __ilshift__(self, other):
+        return self._inplace_binary_op(other, operator.ilshift)
+
+    def __irshift__(self, other):
+        return self._inplace_binary_op(other, operator.irshift)
+
     def _unary_op(self, f, *args, **kwargs):
         raise NotImplementedError
 
@@ -540,6 +584,8 @@ class VariableOpsMixin:
     __and__.__doc__ = operator.and_.__doc__
     __xor__.__doc__ = operator.xor.__doc__
     __or__.__doc__ = operator.or_.__doc__
+    __lshift__.__doc__ = operator.lshift.__doc__
+    __rshift__.__doc__ = operator.rshift.__doc__
     __lt__.__doc__ = operator.lt.__doc__
     __le__.__doc__ = operator.le.__doc__
     __gt__.__doc__ = operator.gt.__doc__
@@ -566,6 +612,8 @@ class VariableOpsMixin:
     __iand__.__doc__ = operator.iand.__doc__
     __ixor__.__doc__ = operator.ixor.__doc__
     __ior__.__doc__ = operator.ior.__doc__
+    __ilshift__.__doc__ = operator.ilshift.__doc__
+    __irshift__.__doc__ = operator.irshift.__doc__
     __neg__.__doc__ = operator.neg.__doc__
     __pos__.__doc__ = operator.pos.__doc__
     __abs__.__doc__ = operator.abs.__doc__
@@ -611,6 +659,12 @@ class DatasetGroupByOpsMixin:
 
     def __or__(self, other):
         return self._binary_op(other, operator.or_)
+
+    def __lshift__(self, other):
+        return self._binary_op(other, operator.lshift)
+
+    def __rshift__(self, other):
+        return self._binary_op(other, operator.rshift)
 
     def __lt__(self, other):
         return self._binary_op(other, operator.lt)
@@ -670,6 +724,8 @@ class DatasetGroupByOpsMixin:
     __and__.__doc__ = operator.and_.__doc__
     __xor__.__doc__ = operator.xor.__doc__
     __or__.__doc__ = operator.or_.__doc__
+    __lshift__.__doc__ = operator.lshift.__doc__
+    __rshift__.__doc__ = operator.rshift.__doc__
     __lt__.__doc__ = operator.lt.__doc__
     __le__.__doc__ = operator.le.__doc__
     __gt__.__doc__ = operator.gt.__doc__
@@ -724,6 +780,12 @@ class DataArrayGroupByOpsMixin:
     def __or__(self, other):
         return self._binary_op(other, operator.or_)
 
+    def __lshift__(self, other):
+        return self._binary_op(other, operator.lshift)
+
+    def __rshift__(self, other):
+        return self._binary_op(other, operator.rshift)
+
     def __lt__(self, other):
         return self._binary_op(other, operator.lt)
 
@@ -782,6 +844,8 @@ class DataArrayGroupByOpsMixin:
     __and__.__doc__ = operator.and_.__doc__
     __xor__.__doc__ = operator.xor.__doc__
     __or__.__doc__ = operator.or_.__doc__
+    __lshift__.__doc__ = operator.lshift.__doc__
+    __rshift__.__doc__ = operator.rshift.__doc__
     __lt__.__doc__ = operator.lt.__doc__
     __le__.__doc__ = operator.le.__doc__
     __gt__.__doc__ = operator.gt.__doc__

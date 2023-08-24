@@ -3,9 +3,10 @@ from __future__ import annotations
 import contextlib
 import inspect
 import math
+from collections.abc import Hashable
 from copy import copy
 from datetime import datetime
-from typing import Any, Callable, Hashable, Literal
+from typing import Any, Callable, Literal
 
 import numpy as np
 import pandas as pd
@@ -26,10 +27,10 @@ from xarray.plot.utils import (
     get_axis,
     label_from_attrs,
 )
-
-from . import (
+from xarray.tests import (
     assert_array_equal,
     assert_equal,
+    assert_no_warnings,
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
@@ -43,7 +44,7 @@ has_nc_time_axis = module_available("nc_time_axis")
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    import mpl_toolkits  # type: ignore
+    import mpl_toolkits
 except ImportError:
     pass
 
@@ -425,6 +426,16 @@ class TestPlot(PlotTestCase):
             # same as the first
             _, unique_counts = np.unique(v[:-1], axis=0, return_counts=True)
             assert np.all(unique_counts == 1)
+
+    def test_str_coordinates_pcolormesh(self) -> None:
+        # test for #6775
+        x = DataArray(
+            [[1, 2, 3], [4, 5, 6]],
+            dims=("a", "b"),
+            coords={"a": [1, 2], "b": ["a", "b", "c"]},
+        )
+        x.plot.pcolormesh()
+        x.T.plot.pcolormesh()
 
     def test_contourf_cmap_set(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
@@ -1085,7 +1096,6 @@ class TestDetermineCmapParams:
             ["neither", "neither", "both", "max", "min"],
             [7, None, None, None, None],
         ):
-
             test_min = vmin if norm.vmin is None else norm.vmin
             test_max = vmax if norm.vmax is None else norm.vmax
 
@@ -1121,7 +1131,7 @@ class TestDiscreteColorMap:
 
     @pytest.mark.slow
     def test_build_discrete_cmap(self) -> None:
-        for (cmap, levels, extend, filled) in [
+        for cmap, levels, extend, filled in [
             ("jet", [0, 1], "both", False),
             ("hot", [-4, 4], "max", True),
         ]:
@@ -1193,6 +1203,13 @@ class TestDiscreteColorMap:
         norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
         primitive = self.darray.plot.contourf(norm=norm)
         np.testing.assert_allclose(primitive.levels, norm.boundaries)
+
+    def test_discrete_colormap_provided_boundary_norm_matching_cmap_levels(
+        self,
+    ) -> None:
+        norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
+        primitive = self.darray.plot.contourf(norm=norm)
+        assert primitive.colorbar.norm.Ncmap == primitive.colorbar.norm.N
 
 
 class Common2dMixin:
@@ -1282,7 +1299,6 @@ class Common2dMixin:
         self.pass_in_axis(self.plotmethod)
 
     def test_xyincrease_defaults(self) -> None:
-
         # With default settings the axis must be ordered regardless
         # of the coords order.
         self.plotfunc(DataArray(easy_array((3, 2)), coords=[[1, 2, 3], [1, 2]]))
@@ -1386,7 +1402,6 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == ax.get_ylabel()
 
     def test_bad_x_string_exception(self) -> None:
-
         with pytest.raises(ValueError, match=r"x and y cannot be equal."):
             self.plotmethod(x="y", y="y")
 
@@ -1651,7 +1666,6 @@ class Common2dMixin:
 
 @pytest.mark.slow
 class TestContourf(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.contourf)
 
     @pytest.mark.slow
@@ -1701,7 +1715,6 @@ class TestContourf(Common2dMixin, PlotTestCase):
 
 @pytest.mark.slow
 class TestContour(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.contour)
 
     # matplotlib cmap.colors gives an rgbA ndarray
@@ -1711,7 +1724,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         return tuple(c[:3])
 
     def test_colors(self) -> None:
-
         # with single color, we don't want rgb array
         artist = self.plotmethod(colors="k")
         assert artist.cmap.colors[0] == "k"
@@ -1728,7 +1740,6 @@ class TestContour(Common2dMixin, PlotTestCase):
         assert self._color_as_tuple(artist.cmap._rgba_over) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
-
         # https://github.com/pydata/xarray/issues/3284
         levels = np.array([-0.5, 0.0, 0.5, 1.0])
         artist = self.darray.plot.contour(levels=levels, colors=["k", "r", "w", "b"])
@@ -1761,7 +1772,6 @@ class TestContour(Common2dMixin, PlotTestCase):
 
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.pcolormesh)
 
     def test_primitive_artist_returned(self) -> None:
@@ -1839,7 +1849,6 @@ class TestPcolormeshLogscale(PlotTestCase):
 
 @pytest.mark.slow
 class TestImshow(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.imshow)
 
     @pytest.mark.slow
@@ -1859,7 +1868,6 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
     @pytest.mark.slow
     def test_cannot_change_mpl_aspect(self) -> None:
-
         with pytest.raises(ValueError, match=r"not available in xarray"):
             self.darray.plot.imshow(aspect="equal")
 
@@ -1980,7 +1988,6 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
 
 class TestSurface(Common2dMixin, PlotTestCase):
-
     plotfunc = staticmethod(xplt.surface)
     subplot_kws = {"projection": "3d"}
 
@@ -2035,7 +2042,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
     def test_convenient_facetgrid(self) -> None:
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=["y", "x", "z"])
-        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
+        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
 
         assert_array_equal(g.axs.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axs):
@@ -2044,7 +2051,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "x" == ax.get_xlabel()
 
         # Inferring labels
-        g = self.plotfunc(d, col="z", col_wrap=2)
+        g = self.plotfunc(d, col="z", col_wrap=2)  # type: ignore[arg-type] # https://github.com/python/mypy/issues/15015
         assert_array_equal(g.axs.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axs):
             assert ax.has_data()
@@ -2119,6 +2126,14 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
         assert 1 == len(find_possible_colorbars())
+
+    def test_colorbar_scatter(self) -> None:
+        ds = Dataset({"a": (("x", "y"), np.arange(4).reshape(2, 2))})
+        fg: xplt.FacetGrid = ds.plot.scatter(x="a", y="a", row="x", hue="a")
+        cbar = fg.cbar
+        assert cbar is not None
+        assert cbar.vmin == 0
+        assert cbar.vmax == 3
 
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
@@ -2204,7 +2219,6 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_figure_size(self) -> None:
-
         assert_array_equal(self.g.fig.get_size_inches(), (10, 3))
 
         g = xplt.FacetGrid(self.darray, col="z", size=6)
@@ -2513,7 +2527,6 @@ class TestDatasetQuiverPlots(PlotTestCase):
         ],
     )
     def test_add_guide(self, add_guide, hue_style, legend, colorbar):
-
         meta_data = _infer_meta_data(
             self.ds,
             x="x",
@@ -2605,7 +2618,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         self.ds = ds
 
     def test_accessor(self) -> None:
-        from ..plot.accessor import DatasetPlotAccessor
+        from xarray.plot.accessor import DatasetPlotAccessor
 
         assert Dataset.plot is DatasetPlotAccessor
         assert isinstance(self.ds.plot, DatasetPlotAccessor)
@@ -2628,7 +2641,6 @@ class TestDatasetScatterPlots(PlotTestCase):
         legend: bool,
         colorbar: bool,
     ) -> None:
-
         meta_data = _infer_meta_data(
             self.ds,
             x="A",
@@ -2696,23 +2708,32 @@ class TestDatasetScatterPlots(PlotTestCase):
                 x=x, y=y, hue=hue, add_legend=add_legend, add_colorbar=add_colorbar
             )
 
-    @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
-    @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
-    def test_datetime_hue(self, hue_style: Literal["discrete", "continuous"]) -> None:
+    def test_datetime_hue(self) -> None:
         ds2 = self.ds.copy()
+
+        # TODO: Currently plots as categorical, should it behave as numerical?
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
-        ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
+        ds2.plot.scatter(x="A", y="B", hue="hue")
 
         ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
-        ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
+        ds2.plot.scatter(x="A", y="B", hue="hue")
 
-    @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
-    def test_facetgrid_hue_style(
-        self, hue_style: Literal["discrete", "continuous"]
-    ) -> None:
-        g = self.ds.plot.scatter(
-            x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
-        )
+    def test_facetgrid_hue_style(self) -> None:
+        ds2 = self.ds.copy()
+
+        # Numbers plots as continous:
+        g = ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
+        assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
+
+        # Datetimes plots as categorical:
+        # TODO: Currently plots as categorical, should it behave as numerical?
+        ds2["hue"] = pd.date_range("2000-1-1", periods=4)
+        g = ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
+        assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
+
+        # Strings plots as categorical:
+        ds2["hue"] = ["a", "a", "b", "b"]
+        g = ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
         assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
 
     @pytest.mark.parametrize(
@@ -2730,7 +2751,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_non_numeric_legend(self) -> None:
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "b", "c", "d"]
-        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
+        pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         # should make a discrete legend
         assert pc.axes.legend_ is not None
 
@@ -2738,15 +2759,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         # regression test for #4126: incorrect legend labels
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "a", "b", "b"]
-        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
+        pc = ds2.plot.scatter(x="A", y="B", markersize="hue")
         actual = [t.get_text() for t in pc.axes.get_legend().texts]
-        expected = [
-            "col [colunits]",
-            "$\\mathdefault{0}$",
-            "$\\mathdefault{1}$",
-            "$\\mathdefault{2}$",
-            "$\\mathdefault{3}$",
-        ]
+        expected = ["hue", "a", "b"]
         assert actual == expected
 
     def test_legend_labels_facetgrid(self) -> None:
@@ -2805,6 +2820,7 @@ class TestDatetimePlot(PlotTestCase):
         # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_datetime_plot2d(self) -> None:
         # Test that matplotlib-native datetime works:
         da = DataArray(
@@ -3100,7 +3116,6 @@ def test_get_axis_current() -> None:
 
 @requires_matplotlib
 def test_maybe_gca() -> None:
-
     with figure_context():
         ax = _maybe_gca(aspect=1)
 
@@ -3108,7 +3123,6 @@ def test_maybe_gca() -> None:
         assert ax.get_aspect() == 1
 
     with figure_context():
-
         # create figure without axes
         plt.figure()
         ax = _maybe_gca(aspect=1)
@@ -3220,3 +3234,38 @@ def test_facetgrid_axes_raises_deprecation_warning() -> None:
             ds = xr.tutorial.scatter_example_dataset()
             g = ds.plot.scatter(x="A", y="B", col="x")
             g.axes
+
+
+@requires_matplotlib
+def test_plot1d_default_rcparams() -> None:
+    import matplotlib as mpl
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    with figure_context():
+        # scatter markers should by default have white edgecolor to better
+        # see overlapping markers:
+        fig, ax = plt.subplots(1, 1)
+        ds.plot.scatter(x="A", y="B", marker="o", ax=ax)
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
+        )
+
+        # Facetgrids should have the default value as well:
+        fg = ds.plot.scatter(x="A", y="B", col="x", marker="o")
+        ax = fg.axs.ravel()[0]
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("w")
+        )
+
+        # scatter should not emit any warnings when using unfilled markers:
+        with assert_no_warnings():
+            fig, ax = plt.subplots(1, 1)
+            ds.plot.scatter(x="A", y="B", ax=ax, marker="x")
+
+        # Prioritize edgecolor argument over default plot1d values:
+        fig, ax = plt.subplots(1, 1)
+        ds.plot.scatter(x="A", y="B", marker="o", ax=ax, edgecolor="k")
+        np.testing.assert_allclose(
+            ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
+        )

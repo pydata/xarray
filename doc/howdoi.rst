@@ -42,7 +42,7 @@ How do I ...
    * - extract the underlying array (e.g. NumPy or Dask arrays)
      - :py:attr:`DataArray.data`
    * - convert to and extract the underlying NumPy array
-     - :py:attr:`DataArray.values`
+     - :py:attr:`DataArray.to_numpy`
    * - convert to a pandas DataFrame
      - :py:attr:`Dataset.to_dataframe`
    * - sort values

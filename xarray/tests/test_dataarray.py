@@ -3,9 +3,10 @@ from __future__ import annotations
 import pickle
 import sys
 import warnings
+from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
-from typing import Any, Final, Hashable, cast
+from typing import Any, Final, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -26,10 +27,12 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
+from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.tests import (
+    InaccessibleArray,
     ReturnItem,
     assert_allclose,
     assert_array_equal,
@@ -276,6 +279,25 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
+    def test_reset_encoding(self) -> None:
+        array = self.mda
+        encoding = {"scale_factor": 10}
+        array.encoding = encoding
+        array["x"].encoding = encoding
+
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        actual = array.reset_encoding()
+
+        # did not modify in place
+        assert array.encoding == encoding
+        assert array["x"].encoding == encoding
+
+        # variable and coord encoding is empty
+        assert actual.encoding == {}
+        assert actual["x"].encoding == {}
+
     def test_constructor(self) -> None:
         data = np.random.random((2, 3))
 
@@ -465,6 +487,32 @@ class TestDataArray:
         expected = DataArray(data, coords={"x": ecoord, "y": ecoord}, dims=["x", "y"])
         assert_equal(actual, expected)
 
+    def test_constructor_no_default_index(self) -> None:
+        # explicitly passing a Coordinates object skips the creation of default index
+        da = DataArray(range(3), coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        assert "x" in da.coords
+        assert "x" not in da.xindexes
+
+    def test_constructor_multiindex(self) -> None:
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        coords = Coordinates.from_pandas_multiindex(midx, "x")
+
+        da = DataArray(range(4), coords=coords, dims="x")
+        assert_identical(da.coords, coords)
+
+    def test_constructor_custom_index(self) -> None:
+        class CustomIndex(Index):
+            ...
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        da = DataArray(range(3), coords=coords)
+        assert isinstance(da.xindexes["x"], CustomIndex)
+
+        # test coordinate variables copied
+        assert da.coords["x"] is not coords.variables["x"]
+
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
 
@@ -512,7 +560,7 @@ class TestDataArray:
 
     def test_equals_failures(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
-        assert not orig.equals(np.arange(5))  # type: ignore
+        assert not orig.equals(np.arange(5))  # type: ignore[arg-type]
         assert not orig.identical(123)  # type: ignore
         assert not orig.broadcast_equals({1: 2})  # type: ignore
 
@@ -1002,32 +1050,53 @@ class TestDataArray:
         result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
         assert_equal(result, array)
 
-    def test_sel_float(self) -> None:
+    @pytest.mark.parametrize(
+        ["coord_values", "indices"],
+        (
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float64"),
+                slice(1, 3),
+                id="float64",
+            ),
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"),
+                slice(1, 3),
+                id="float32",
+            ),
+            pytest.param(
+                np.array([0.0, 0.111, 0.222, 0.333], dtype="float32"), [2], id="scalar"
+            ),
+        ),
+    )
+    def test_sel_float(self, coord_values, indices) -> None:
         data_values = np.arange(4)
 
-        # case coords are float32 and label is list of floats
-        float_values = [0.0, 0.111, 0.222, 0.333]
-        coord_values = np.asarray(float_values, dtype="float32")
-        array = DataArray(data_values, [("float32_coord", coord_values)])
-        expected = DataArray(data_values[1:3], [("float32_coord", coord_values[1:3])])
-        actual = array.sel(float32_coord=float_values[1:3])
-        # case coords are float16 and label is list of floats
-        coord_values_16 = np.asarray(float_values, dtype="float16")
-        expected_16 = DataArray(
-            data_values[1:3], [("float16_coord", coord_values_16[1:3])]
-        )
-        array_16 = DataArray(data_values, [("float16_coord", coord_values_16)])
-        actual_16 = array_16.sel(float16_coord=float_values[1:3])
+        arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
 
-        # case coord, label are scalars
-        expected_scalar = DataArray(
-            data_values[2], coords={"float32_coord": coord_values[2]}
+        actual = arr.sel(x=coord_values[indices])
+        expected = DataArray(
+            data_values[indices], coords={"x": coord_values[indices]}, dims="x"
         )
-        actual_scalar = array.sel(float32_coord=float_values[2])
 
-        assert_equal(expected, actual)
-        assert_equal(expected_scalar, actual_scalar)
-        assert_equal(expected_16, actual_16)
+        assert_equal(actual, expected)
+
+    def test_sel_float16(self) -> None:
+        data_values = np.arange(4)
+        coord_values = np.array([0.0, 0.111, 0.222, 0.333], dtype="float16")
+        indices = slice(1, 3)
+
+        message = "`pandas.Index` does not support the `float16` dtype.*"
+
+        with pytest.warns(DeprecationWarning, match=message):
+            arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
+        with pytest.warns(DeprecationWarning, match=message):
+            expected = DataArray(
+                data_values[indices], coords={"x": coord_values[indices]}, dims="x"
+            )
+
+        actual = arr.sel(x=coord_values[indices])
+
+        assert_equal(actual, expected)
 
     def test_sel_float_multiindex(self) -> None:
         # regression test https://github.com/pydata/xarray/issues/5691
@@ -1504,6 +1573,24 @@ class TestDataArray:
         with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign_coords(x=range(4))
 
+    def test_assign_coords_custom_index(self) -> None:
+        class CustomIndex(Index):
+            pass
+
+        coords = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        da = xr.DataArray([0, 1, 2], dims="x")
+        actual = da.assign_coords(coords)
+        assert isinstance(actual.xindexes["x"], CustomIndex)
+
+    def test_assign_coords_no_default_index(self) -> None:
+        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        da = DataArray([1, 2, 3], dims="y")
+        actual = da.assign_coords(coords)
+        assert_identical(actual.coords, coords, check_default_indexes=False)
+        assert "y" not in actual.xindexes
+
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [("x", [1, 2, 3])])
@@ -1646,7 +1733,6 @@ class TestDataArray:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_reindex_str_dtype(self, dtype) -> None:
-
         data = DataArray(
             [1, 2], dims="x", coords={"x": np.array(["a", "b"], dtype=dtype)}
         )
@@ -1657,8 +1743,20 @@ class TestDataArray:
         assert_identical(expected, actual)
         assert actual.dtype == expected.dtype
 
-    def test_rename(self) -> None:
+    def test_reindex_empty_array_dtype(self) -> None:
+        # Dtype of reindex result should match dtype of the original DataArray.
+        # See GH issue #7299
+        x = xr.DataArray([], dims=("x",), coords={"x": []}).astype("float32")
+        y = x.reindex(x=[1.0, 2.0])
 
+        assert (
+            x.dtype == y.dtype
+        ), "Dtype of reindexed DataArray should match dtype of the original DataArray"
+        assert (
+            y.dtype == np.float32
+        ), "Dtype of reindexed DataArray should remain float32"
+
+    def test_rename(self) -> None:
         da = xr.DataArray(
             [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
         )
@@ -2164,13 +2262,11 @@ class TestDataArray:
         assert_identical(a - b, expected)
 
     def test_non_overlapping_dataarrays_return_empty_result(self) -> None:
-
         a = DataArray(range(5), [("x", range(5))])
         result = a.isel(x=slice(2)) + a.isel(x=slice(2, None))
         assert len(result["x"]) == 0
 
     def test_empty_dataarrays_return_empty_result(self) -> None:
-
         a = DataArray(data=[])
         result = a * a
         assert len(result["dim_0"]) == 0
@@ -2393,6 +2489,19 @@ class TestDataArray:
         expected = DataArray(s.unstack(), name="foo")
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
+
+    @pytest.mark.filterwarnings("error")
+    def test_unstack_roundtrip_integer_array(self) -> None:
+        arr = xr.DataArray(
+            np.arange(6).reshape(2, 3),
+            coords={"x": ["a", "b"], "y": [0, 1, 2]},
+            dims=["x", "y"],
+        )
+
+        stacked = arr.stack(z=["x", "y"])
+        roundtripped = stacked.unstack()
+
+        assert_identical(arr, roundtripped)
 
     def test_stack_nonunique_consistency(self, da) -> None:
         da = da.isel(time=0, drop=True)  # 2D
@@ -2733,7 +2842,6 @@ class TestDataArray:
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna) -> None:
-
         va = self.va.copy(deep=True)
         va[0, 0] = np.NaN
 
@@ -2753,16 +2861,12 @@ class TestDataArray:
         q = [0.25, 0.5, 0.75]
         actual = DataArray(self.va).quantile(q, method=method)
 
-        if Version(np.__version__) >= Version("1.22.0"):
-            expected = np.nanquantile(self.dv.values, np.array(q), method=method)  # type: ignore[call-arg]
-        else:
-            expected = np.nanquantile(self.dv.values, np.array(q), interpolation=method)  # type: ignore[call-arg]
+        expected = np.nanquantile(self.dv.values, np.array(q), method=method)
 
         np.testing.assert_allclose(actual.values, expected)
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecated(self, method) -> None:
-
         da = DataArray(self.va)
         q = [0.25, 0.5, 0.75]
 
@@ -3013,7 +3117,6 @@ class TestDataArray:
             )
 
     def test_align_str_dtype(self) -> None:
-
         a = DataArray([0, 1], dims=["x"], coords={"x": ["a", "b"]})
         b = DataArray([1, 2], dims=["x"], coords={"x": ["b", "c"]})
 
@@ -3210,6 +3313,39 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    @requires_dask
+    def test_to_dask_dataframe(self) -> None:
+        arr_np = np.arange(3 * 4).reshape(3, 4)
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+        expected = arr.to_series()
+        actual = arr.to_dask_dataframe()["foo"]
+
+        assert_array_equal(actual.values, expected.values)
+
+        actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
+
+        # regression test for coords with different dimensions
+
+        arr.coords["C"] = ("B", [-1, -2, -3])
+        expected = arr.to_series().to_frame()
+        expected["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected = expected[["C", "foo"]]
+        actual = arr.to_dask_dataframe()[["C", "foo"]]
+
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.columns.values, actual.columns.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dask_dataframe(dim_order=["B", "A", "C"])
+
+        arr.name = None
+        with pytest.raises(
+            ValueError,
+            match="Cannot convert an unnamed DataArray",
+        ):
+            arr.to_dask_dataframe()
+
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
@@ -3277,6 +3413,21 @@ class TestDataArray:
 
         np.testing.assert_equal(actual_coords, expected_coords)
 
+    def test_nbytes_does_not_load_data(self) -> None:
+        array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
+        da = xr.DataArray(array, dims=["x", "y"])
+
+        # If xarray tries to instantiate the InaccessibleArray to compute
+        # nbytes, the following will raise an error.
+        # However, it should still be able to accurately give us information
+        # about the number of bytes from the metadata
+        assert da.nbytes == 9
+        # Here we confirm that this does not depend on array having the
+        # nbytes property, since it isn't really required by the array
+        # interface. nbytes is more a property of arrays that have been
+        # cast to numpy arrays.
+        assert not hasattr(array, "nbytes")
+
     def test_to_and_from_empty_series(self) -> None:
         # GH697
         expected = pd.Series([], dtype=np.float64)
@@ -3295,46 +3446,70 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
-    def test_to_and_from_dict(self, encoding) -> None:
+    def test_to_and_from_dict(
+        self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
+    ) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
-        array.encoding = {"bar": "spam"}
-        expected = {
+        array.encoding = encoding_data
+
+        return_data = array.to_numpy()
+        coords_data = np.array(["a", "b"])
+        if data == "list" or data is True:
+            return_data = return_data.tolist()
+            coords_data = coords_data.tolist()
+
+        expected: dict[str, Any] = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": return_data,
             "attrs": {},
-            "coords": {"x": {"dims": ("x",), "data": ["a", "b"], "attrs": {}}},
+            "coords": {"x": {"dims": ("x",), "data": coords_data, "attrs": {}}},
         }
         if encoding:
-            expected["encoding"] = {"bar": "spam"}
-        actual = array.to_dict(encoding=encoding)
+            expected["encoding"] = encoding_data
+
+        if has_dask:
+            da = array.chunk()
+        else:
+            da = array
+
+        if data == "array" or data is False:
+            with raise_if_dask_computes():
+                actual = da.to_dict(encoding=encoding, data=data)
+        else:
+            actual = da.to_dict(encoding=encoding, data=data)
 
         # check that they are identical
-        assert expected == actual
+        np.testing.assert_equal(expected, actual)
 
         # check roundtrip
-        assert_identical(array, DataArray.from_dict(actual))
+        assert_identical(da, DataArray.from_dict(actual))
 
         # a more bare bones representation still roundtrips
         d = {
             "name": "foo",
             "dims": ("x", "y"),
-            "data": array.values.tolist(),
+            "data": da.values.tolist(),
             "coords": {"x": {"dims": "x", "data": ["a", "b"]}},
         }
-        assert_identical(array, DataArray.from_dict(d))
+        assert_identical(da, DataArray.from_dict(d))
 
         # and the most bare bones representation still roundtrips
-        d = {"name": "foo", "dims": ("x", "y"), "data": array.values}
-        assert_identical(array.drop_vars("x"), DataArray.from_dict(d))
+        d = {"name": "foo", "dims": ("x", "y"), "data": da.values}
+        assert_identical(da.drop_vars("x"), DataArray.from_dict(d))
 
         # missing a dims in the coords
         d = {
             "dims": ("x", "y"),
-            "data": array.values,
+            "data": da.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
         with pytest.raises(
@@ -3357,7 +3532,7 @@ class TestDataArray:
         endiantype = "<U1" if sys.byteorder == "little" else ">U1"
         expected_no_data["coords"]["x"].update({"dtype": endiantype, "shape": (2,)})
         expected_no_data.update({"dtype": "float64", "shape": (2, 3)})
-        actual_no_data = array.to_dict(data=False, encoding=encoding)
+        actual_no_data = da.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
     def test_to_and_from_dict_with_time_dim(self) -> None:
@@ -3441,6 +3616,10 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_classic(self) -> None:
         """Classic with 1D axes"""
         pytest.importorskip("cdms2")
@@ -3458,7 +3637,8 @@ class TestDataArray:
             IndexVariable("distance", [-2, 2]),
             IndexVariable("time", [0, 1, 2]),
         ]
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
         assert tuple(actual.getAxisIds()) == original.dims
@@ -3471,7 +3651,8 @@ class TestDataArray:
         assert len(component_times) == 3
         assert str(component_times[0]) == "2000-1-1 0:0:0.0"
 
-        roundtripped = DataArray.from_cdms2(actual)
+        with pytest.deprecated_call(match=".*cdms2"):
+            roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
 
         back = from_cdms2(actual)
@@ -3480,6 +3661,10 @@ class TestDataArray:
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name], back.coords[coord_name])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_sgrid(self) -> None:
         """Curvilinear (structured) grid
 
@@ -3498,7 +3683,8 @@ class TestDataArray:
             coords=dict(x=x, y=y, lon=lon, lat=lat),
             name="sst",
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call():
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
         assert_array_equal(original.coords["lat"], actual.getLatitude().asma())
@@ -3509,6 +3695,10 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
+    @pytest.mark.skipif(
+        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
+        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
+    )
     def test_to_and_from_cdms2_ugrid(self) -> None:
         """Unstructured grid"""
         pytest.importorskip("cdms2")
@@ -3519,7 +3709,8 @@ class TestDataArray:
         original = DataArray(
             np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
         )
-        actual = original.to_cdms2()
+        with pytest.deprecated_call(match=".*cdms2"):
+            actual = original.to_cdms2()
         assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
         assert_array_equal(original.coords["lat"], actual.getLatitude().getValue())
@@ -3572,7 +3763,6 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_to_dataset_retains_keys(self) -> None:
-
         # use dates as convenient non-str objects. Not a specific date test
         import datetime
 
@@ -3835,7 +4025,6 @@ class TestDataArray:
         assert_equal(expected2, actual2)
 
     def test_matmul(self) -> None:
-
         # copied from above (could make a fixture)
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
@@ -3876,6 +4065,11 @@ class TestDataArray:
         assert expected is actual
 
         actual = (self.dv > 10).xindexes["x"]
+        assert expected is actual
+
+        # use mda for bitshift test as it's type int
+        actual = (self.mda << 2).xindexes["x"]
+        expected = self.mda.xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self) -> None:
@@ -4063,15 +4257,8 @@ class TestDataArray:
         expected = xr.DataArray([1, 9, 1], dims="x")
         assert_identical(actual, expected)
 
-        if Version(np.__version__) >= Version("1.20"):
-            with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-                ar.pad(x=1, constant_values=np.NaN)
-        else:
-            actual = ar.pad(x=1, constant_values=np.NaN)
-            expected = xr.DataArray(
-                [-9223372036854775808, 9, -9223372036854775808], dims="x"
-            )
-            assert_identical(actual, expected)
+        with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
+            ar.pad(x=1, constant_values=np.NaN)
 
     def test_pad_coords(self) -> None:
         ar = DataArray(
@@ -4148,7 +4335,6 @@ class TestDataArray:
     @pytest.mark.parametrize("mode", ("reflect", "symmetric"))
     @pytest.mark.parametrize("reflect_type", (None, "even", "odd"))
     def test_pad_reflect(self, mode, reflect_type) -> None:
-
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(
             dim_0=(1, 3), dim_2=(2, 2), mode=mode, reflect_type=reflect_type
@@ -4165,6 +4351,36 @@ class TestDataArray:
 
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["keep_attrs", "attrs", "expected"],
+        [
+            pytest.param(None, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="default"),
+            pytest.param(False, {"a": 1, "b": 2}, {}, id="False"),
+            pytest.param(True, {"a": 1, "b": 2}, {"a": 1, "b": 2}, id="True"),
+        ],
+    )
+    def test_pad_keep_attrs(self, keep_attrs, attrs, expected) -> None:
+        arr = xr.DataArray(
+            [1, 2], dims="x", coords={"c": ("x", [-1, 1], attrs)}, attrs=attrs
+        )
+        expected = xr.DataArray(
+            [0, 1, 2, 0],
+            dims="x",
+            coords={"c": ("x", [np.nan, -1, 1, np.nan], expected)},
+            attrs=expected,
+        )
+
+        keep_attrs_ = "default" if keep_attrs is None else keep_attrs
+
+        with set_options(keep_attrs=keep_attrs_):
+            actual = arr.pad({"x": (1, 1)}, mode="constant", constant_values=0)
+            xr.testing.assert_identical(actual, expected)
+
+        actual = arr.pad(
+            {"x": (1, 1)}, mode="constant", constant_values=0, keep_attrs=keep_attrs
+        )
+        xr.testing.assert_identical(actual, expected)
 
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
@@ -4186,37 +4402,40 @@ class TestDataArray:
         d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
             object
         )
-        if backend == "numpy":
-            aa = DataArray(data=a, dims=["x"], name="a")
-            bb = DataArray(data=b, dims=["x"], name="b")
-            cc = DataArray(data=c, dims=["y"], name="c")
-            dd = DataArray(data=d, dims=["z"], name="d")
+        aa = DataArray(data=a, dims=["x"], name="a", coords={"a2": ("x", a)})
+        bb = DataArray(data=b, dims=["x"], name="b", coords={"b2": ("x", b)})
+        cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
+        dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        elif backend == "dask":
+        if backend == "dask":
             import dask.array as da
 
-            aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
-            bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
-            cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
-            dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+            aa = aa.copy(data=da.from_array(a, chunks=3))
+            bb = bb.copy(data=da.from_array(b, chunks=3))
+            cc = cc.copy(data=da.from_array(c, chunks=7))
+            dd = dd.copy(data=da.from_array(d, chunks=12))
 
         # query single dim, single variable
-        actual = aa.query(x="a > 5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
         expect = aa.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
-        actual = aa.query(dict(x="a > 5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(dict(x="a2 > 5"), engine=engine, parser=parser)
         expect = aa.isel(dict(x=(a > 5)))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = bb.query(x="b > 50", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = bb.query(x="b2 > 50", engine=engine, parser=parser)
         expect = bb.isel(x=(b > 50))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = cc.query(y="c < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = cc.query(y="c2 < .5", engine=engine, parser=parser)
         expect = cc.isel(y=(c < 0.5))
         assert_identical(expect, actual)
 
@@ -4224,7 +4443,8 @@ class TestDataArray:
         if parser == "pandas":
             # N.B., this query currently only works with the pandas parser
             # xref https://github.com/pandas-dev/pandas/issues/40436
-            actual = dd.query(z='d == "bar"', engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = dd.query(z='d2 == "bar"', engine=engine, parser=parser)
             expect = dd.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 
@@ -4263,7 +4483,7 @@ class TestDataArray:
             da = da.chunk({"x": 1})
 
         fit = da.curvefit(
-            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": [2, 6]}
+            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": (2, 6)}
         )
         assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
 
@@ -4284,11 +4504,182 @@ class TestDataArray:
         assert param_defaults == {"n0": 4, "tau": 6}
         assert bounds_defaults == {"n0": (-np.inf, np.inf), "tau": (5, np.inf)}
 
+        # DataArray as bound
+        param_defaults, bounds_defaults = xr.core.dataset._initialize_curvefit_params(
+            params=params,
+            p0={"n0": 4},
+            bounds={"tau": [DataArray([3, 4], coords=[("x", [1, 2])]), np.inf]},
+            func_args=func_args,
+        )
+        assert param_defaults["n0"] == 4
+        assert (
+            param_defaults["tau"] == xr.DataArray([4, 5], coords=[("x", [1, 2])])
+        ).all()
+        assert bounds_defaults["n0"] == (-np.inf, np.inf)
+        assert (
+            bounds_defaults["tau"][0] == DataArray([3, 4], coords=[("x", [1, 2])])
+        ).all()
+        assert bounds_defaults["tau"][1] == np.inf
+
         param_names = ["a"]
         params, func_args = xr.core.dataset._get_func_args(np.power, param_names)
         assert params == param_names
         with pytest.raises(ValueError):
             xr.core.dataset._get_func_args(np.power, [])
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fitting to a sine curve produces a different result depending on the
+        # initial guess: either the phase is zero and the amplitude is positive
+        # or the phase is 0.5 * 2pi and the amplitude is negative.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        # Different initial guesses for different values of x
+        a_guess = DataArray([1, -1], coords=[da.x])
+        p_guess = DataArray([0, 0.5], coords=[da.x])
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"a": a_guess, "p": p_guess, "f": 2},
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Initial guess for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # initial guess with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                p0={"a": DataArray([1, 2], coords={"foo": [1, 2]})},
+            )
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def sine(t, a, f, p):
+            return a * np.sin(2 * np.pi * (f * t + p))
+
+        t = np.arange(0, 2, 0.02)
+        da = xr.DataArray(
+            np.stack([sine(t, 1.0, 2, 0), sine(t, 1.0, 2, 0)]),
+            coords={"x": [0, 1], "t": t},
+        )
+
+        # Fit a sine with different bounds: positive amplitude should result in a fit with
+        # phase 0 and negative amplitude should result in phase 0.5 * 2pi.
+
+        expected = DataArray(
+            [[1, 2, 0], [-1, 2, 0.5]],
+            coords={"x": [0, 1], "param": ["a", "f", "p"]},
+        )
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (
+                    DataArray([0, -2], coords=[da.x]),
+                    DataArray([2, 0], coords=[da.x]),
+                ),
+            },
+        )
+        assert_allclose(fit.curvefit_coefficients, expected)
+
+        # Scalar lower bound with array upper bound
+        fit2 = da.curvefit(
+            coords=[da.t],
+            func=sine,
+            p0={"f": 2, "p": 0.25},  # this guess is needed to get the expected result
+            bounds={
+                "a": (-2, DataArray([2, 0], coords=[da.x])),
+            },
+        )
+        assert_allclose(fit2.curvefit_coefficients, expected)
+
+        with pytest.raises(
+            ValueError,
+            match=r"Upper bound for 'a' has unexpected dimensions .* should only have "
+            "dimensions that are in data dimensions",
+        ):
+            # bounds with additional dimensions should be an error
+            da.curvefit(
+                coords=[da.t],
+                func=sine,
+                bounds={"a": (0, DataArray([1], coords={"foo": [1]}))},
+            )
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        # nonsense function to make the optimization fail
+        def line(x, a, b):
+            if a > 10:
+                return 0
+            return a * x + b
+
+        da = DataArray(
+            [[1, 3, 5], [0, 20, 40]],
+            coords={"i": [1, 2], "x": [0.0, 1.0, 2.0]},
+        )
+
+        if use_dask:
+            da = da.chunk({"i": 1})
+
+        expected = DataArray(
+            [[2, 1], [np.nan, np.nan]], coords={"i": [1, 2], "param": ["a", "b"]}
+        )
+
+        with pytest.raises(RuntimeError, match="calls to function has reached maxfev"):
+            da.curvefit(
+                coords="x",
+                func=line,
+                # limit maximum number of calls so the optimization fails
+                kwargs=dict(maxfev=5),
+            ).compute()  # have to compute to raise the error
+
+        fit = da.curvefit(
+            coords="x",
+            func=line,
+            errors="ignore",
+            # limit maximum number of calls so the optimization fails
+            kwargs=dict(maxfev=5),
+        ).compute()
+
+        assert_allclose(fit.curvefit_coefficients, expected)
 
 
 class TestReduce:
@@ -5653,7 +6044,6 @@ class TestReduce3D(TestReduce):
         nanindices_yz: dict[str, np.ndarray],
         nanindices_xyz: dict[str, np.ndarray],
     ) -> None:
-
         ar = xr.DataArray(
             x,
             dims=["x", "y", "z"],
@@ -5881,7 +6271,6 @@ class TestReduce3D(TestReduce):
         nanindices_yz: dict[str, np.ndarray],
         nanindices_xyz: dict[str, np.ndarray],
     ) -> None:
-
         ar = xr.DataArray(
             x,
             dims=["x", "y", "z"],
@@ -6191,7 +6580,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims
@@ -6267,7 +6656,7 @@ class TestIrisConversion:
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values
+                coord.points, CFDatetimeCoder().encode(original_coord.variable).values
             )
             assert actual.coord_dims(coord) == original.get_axis_num(
                 original.coords[coord.var_name].dims

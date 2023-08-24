@@ -22,16 +22,17 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
-from . import duck_array_ops
-from .options import OPTIONS
-from .types import Dims
-from .utils import contains_only_dask_or_numpy, module_available
+from xarray.core import duck_array_ops
+from xarray.core.options import OPTIONS
+from xarray.core.types import Dims
+from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 flox_available = module_available("flox")'''
 
@@ -60,7 +61,7 @@ class {obj}{cls}Aggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -71,7 +72,7 @@ class {obj}{cls}Aggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -84,7 +85,7 @@ class {obj}{cls}Aggregations:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -95,7 +96,7 @@ class {obj}{cls}Aggregations:
 
     def _flox_reduce(
         self,
-        dim: Dims | ellipsis,
+        dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -117,7 +118,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: Dims | ellipsis = None,
+        dim: Dims = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -147,11 +148,11 @@ TEMPLATE_SEE_ALSO = """
 TEMPLATE_NOTES = """
         Notes
         -----
-        {notes}"""
+{notes}"""
 
-_DIM_DOCSTRING = """dim : str, Iterable of Hashable, or None, default: None
+_DIM_DOCSTRING = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
-    or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
+    or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions."""
 
 _DIM_DOCSTRING_GROUPBY = """dim : str, Iterable of Hashable, "..." or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
@@ -185,7 +186,27 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
+_COUNT_SEE_ALSO = """
+        See Also
+        --------
+        pandas.DataFrame.{method}
+        dask.dataframe.DataFrame.{method}
+        {see_also_obj}.{method}
+        :ref:`{docref}`
+            User guide on {docref_description}."""
+
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
+
+_FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
+especially with dask arrays. Xarray will use flox by default if installed.
+Pass flox-specific keyword arguments in ``**kwargs``.
+The default choice is ``method="cohorts"`` which generalizes the best,
+{recco} might work better for your problem.
+See the `flox documentation <https://flox.readthedocs.io>`_ for more."""
+_FLOX_GROUPBY_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="groupby", recco="other methods")
+_FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(
+    kind="resampling", recco='``method="blockwise"``'
+)
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = ExtraKwarg(
@@ -237,11 +258,10 @@ class Method:
         else:
             self.array_method = name
             self.np_example_array = """
-        ...     np.array([1, 2, 3, 1, 2, np.nan])"""
+        ...     np.array([1, 2, 3, 0, 2, np.nan])"""
 
 
 class AggregationGenerator:
-
     _dim_docstring = _DIM_DOCSTRING
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE
 
@@ -255,6 +275,7 @@ class AggregationGenerator:
         example_call_preamble,
         definition_preamble,
         see_also_obj=None,
+        notes=None,
     ):
         self.datastructure = datastructure
         self.cls = cls
@@ -263,6 +284,7 @@ class AggregationGenerator:
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
         self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
+        self.notes = "" if notes is None else notes
         if not see_also_obj:
             self.see_also_obj = self.datastructure.name
         else:
@@ -299,15 +321,23 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        yield TEMPLATE_SEE_ALSO.format(
+        see_also = _COUNT_SEE_ALSO if method.name == "count" else TEMPLATE_SEE_ALSO
+        # Fixes broken links mentioned in #8055
+        yield see_also.format(
             **template_kwargs,
             docref=self.docref,
             docref_description=self.docref_description,
             see_also_obj=self.see_also_obj,
         )
 
+        notes = self.notes
         if method.numeric_only:
-            yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
+            if notes != "":
+                notes += "\n\n"
+            notes += _NUMERIC_ONLY_NOTES
+
+        if notes != "":
+            yield TEMPLATE_NOTES.format(notes=textwrap.indent(notes, 8 * " "))
 
         yield textwrap.indent(self.generate_example(method=method), "")
         yield '        """'
@@ -319,7 +349,7 @@ class AggregationGenerator:
         >>> da = xr.DataArray({method.np_example_array},
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )"""
@@ -376,7 +406,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="{method.name}",
@@ -484,6 +514,7 @@ DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
+    notes=_FLOX_GROUPBY_NOTES,
 )
 DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
@@ -493,6 +524,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
+    notes=_FLOX_RESAMPLE_NOTES,
 )
 DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
@@ -502,6 +534,7 @@ DATASET_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
+    notes=_FLOX_GROUPBY_NOTES,
 )
 DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     cls="Resample",
@@ -511,6 +544,7 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=RESAMPLE_PREAMBLE,
+    notes=_FLOX_RESAMPLE_NOTES,
 )
 
 

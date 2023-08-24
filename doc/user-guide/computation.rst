@@ -63,10 +63,18 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
     arr.round(2)
     arr.T
 
+    intarr = xr.DataArray([0, 1, 2, 3, 4, 5])
+    intarr << 2  # only supported for int types
+    intarr >> 1
+
 .. _missing_values:
 
 Missing values
 ==============
+
+Xarray represents missing values using the "NaN" (Not a Number) value from NumPy, which is a
+special floating-point value that indicates a value that is undefined or unrepresentable.
+There are several methods for handling missing values in xarray:
 
 Xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
 :py:meth:`~xarray.DataArray.notnull`, :py:meth:`~xarray.DataArray.count`,
@@ -74,22 +82,102 @@ Xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
 :py:meth:`~xarray.DataArray.ffill`, and :py:meth:`~xarray.DataArray.bfill`
 methods for working with missing data from pandas:
 
+:py:meth:`~xarray.DataArray.isnull` is a method in xarray that can be used to check for missing or null values in an xarray object.
+It returns a new xarray object with the same dimensions as the original object, but with boolean values
+indicating where **missing values** are present.
+
 .. ipython:: python
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.isnull()
+
+In this example, the third and fourth elements of 'x' are NaN, so the resulting :py:class:`~xarray.DataArray`
+object has 'True' values in the third and fourth positions and 'False' values in the other positions.
+
+:py:meth:`~xarray.DataArray.notnull` is a method in xarray that can be used to check for non-missing or non-null values in an xarray
+object. It returns a new xarray object with the same dimensions as the original object, but with boolean
+values indicating where **non-missing values** are present.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.notnull()
+
+In this example, the first two and the last elements of x are not NaN, so the resulting
+:py:class:`~xarray.DataArray` object has 'True' values in these positions, and 'False' values in the
+third and fourth positions where NaN is located.
+
+:py:meth:`~xarray.DataArray.count` is a method in xarray that can be used to count the number of
+non-missing values along one or more dimensions of an xarray object. It returns a new xarray object with
+the same dimensions as the original object, but with each element replaced by the count of non-missing
+values along the specified dimensions.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.count()
+
+In this example, 'x' has five elements, but two of them are NaN, so the resulting
+:py:class:`~xarray.DataArray` object having a single element containing the value '3', which represents
+the number of non-null elements in x.
+
+:py:meth:`~xarray.DataArray.dropna` is a method in xarray that can be used to remove missing or null values from an xarray object.
+It returns a new xarray object with the same dimensions as the original object, but with missing values
+removed.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.dropna(dim="x")
+
+In this example, on calling x.dropna(dim="x") removes any missing values and returns a new
+:py:class:`~xarray.DataArray` object with only the non-null elements [0, 1, 2] of 'x', in the
+original order.
+
+:py:meth:`~xarray.DataArray.fillna` is a method in xarray that can be used to fill missing or null values in an xarray object with a
+specified value or method. It returns a new xarray object with the same dimensions as the original object, but with missing values filled.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.fillna(-1)
+
+In this example, there are two NaN values in 'x', so calling x.fillna(-1) replaces these values with -1 and
+returns a new :py:class:`~xarray.DataArray` object with five elements, containing the values
+[0, 1, -1, -1, 2] in the original order.
+
+:py:meth:`~xarray.DataArray.ffill` is a method in xarray that can be used to forward fill (or fill forward) missing values in an
+xarray object along one or more dimensions. It returns a new xarray object with the same dimensions as the
+original object, but with missing values replaced by the last non-missing value along the specified dimensions.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.ffill("x")
+
+In this example, there are two NaN values in 'x', so calling x.ffill("x") fills these values with the last
+non-null value in the same dimension, which are 0 and 1, respectively. The resulting :py:class:`~xarray.DataArray` object has
+five elements, containing the values [0, 1, 1, 1, 2] in the original order.
+
+:py:meth:`~xarray.DataArray.bfill` is a method in xarray that can be used to backward fill (or fill backward) missing values in an
+xarray object along one or more dimensions. It returns a new xarray object with the same dimensions as the original object, but
+with missing values replaced by the next non-missing value along the specified dimensions.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.bfill("x")
+
+In this example, there are two NaN values in 'x', so calling x.bfill("x") fills these values with the next
+non-null value in the same dimension, which are 2 and 2, respectively. The resulting :py:class:`~xarray.DataArray` object has
+five elements, containing the values [0, 1, 2, 2, 2] in the original order.
 
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
 
 Xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
-for filling missing values via 1D interpolation.
+for filling missing values via 1D interpolation. It returns a new xarray object with the same dimensions
+as the original object, but with missing values interpolated.
 
 .. ipython:: python
 
@@ -99,6 +187,13 @@ for filling missing values via 1D interpolation.
         coords={"xx": xr.Variable("x", [0, 1, 1.1, 1.9, 3])},
     )
     x.interpolate_na(dim="x", method="linear", use_coordinate="xx")
+
+In this example, there are two NaN values in 'x', so calling x.interpolate_na(dim="x", method="linear",
+use_coordinate="xx") fills these values with interpolated values along the "x" dimension using linear
+interpolation based on the values of the xx coordinate. The resulting :py:class:`~xarray.DataArray` object has five elements,
+containing the values [0., 1., 1.05, 1.45, 2.] in the original order. Note that the interpolated values
+are calculated based on the values of the 'xx' coordinate, which has non-integer values, resulting in
+non-integer interpolated values.
 
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
@@ -804,7 +899,7 @@ to set ``axis=-1``. As an example, here is how we would wrap
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like
 :py:func:`numpy.broadcast_arrays` and :py:class:`numpy.vectorize`. For high performance
-needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
+needs, consider using :doc:`Numba's vectorize and guvectorize <numba:user/vectorize>`.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
 many functions when using dask by setting ``dask='parallelized'``. See

@@ -20,9 +20,8 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
-
-from . import assert_array_equal, assert_identical, requires_cftime
-from .test_coding_times import _all_cftime_date_types
+from xarray.tests import assert_array_equal, assert_identical, requires_cftime
+from xarray.tests.test_coding_times import _all_cftime_date_types
 
 
 def test_asarray_tuplesafe() -> None:
@@ -175,7 +174,6 @@ class TestPandasIndex:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype) -> None:
-
         a = PandasIndex(np.array(["a"], dtype=dtype), "x", coord_dtype=dtype)
         b = PandasIndex(np.array(["b"], dtype=dtype), "x", coord_dtype=dtype)
         expected = PandasIndex(
@@ -584,7 +582,12 @@ class TestIndexes:
 
         _, variables = indexes_and_vars
 
-        return Indexes(indexes, variables)
+        if isinstance(x_idx, Index):
+            index_type = Index
+        else:
+            index_type = pd.Index
+
+        return Indexes(indexes, variables, index_type=index_type)
 
     def test_interface(self, unique_indexes, indexes) -> None:
         x_idx = unique_indexes[0]
@@ -698,3 +701,10 @@ def test_safe_cast_to_index_datetime_datetime():
     actual = safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)
+
+
+@pytest.mark.parametrize("dtype", ["int32", "float32"])
+def test_restore_dtype_on_multiindexes(dtype: str) -> None:
+    foo = xr.Dataset(coords={"bar": ("bar", np.array([0, 1], dtype=dtype))})
+    foo = foo.stack(baz=("bar",))
+    assert str(foo["bar"].values.dtype) == dtype
