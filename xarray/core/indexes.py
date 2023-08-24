@@ -1290,7 +1290,20 @@ class PandasMultiIndex(PandasIndex):
         else:
             return IndexSelResult({self.dim: indexer})
 
+    def equals(self, other: Index):
+        is_equal = super().equals(other)
+        if is_equal and isinstance(other, PandasMultiIndex):
+            is_equal = self.index.names == other.index.names
+        return is_equal
+
     def join(self, other, how: str = "inner"):
+        if other.index.names != self.index.names:
+            raise ValueError(
+                f"cannot join together a PandasMultiIndex with levels {tuple(self.index.names)!r} and "
+                f"another PandasMultiIndex with levels {tuple(other.index.names)!r} "
+                "(level order mismatch)."
+            )
+
         if how == "outer":
             # bug in pandas? need to reset index.name
             other_index = other.index.copy()
