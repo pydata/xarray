@@ -56,7 +56,7 @@ def module_available(module: str) -> bool:
     return importlib.util.find_spec(module) is not None
 
 
-def is_dask_collection(x):
+def is_dask_collection(x: typing.Any) -> bool:
     if module_available("dask"):
         from dask.base import is_dask_collection
 
@@ -78,7 +78,7 @@ def is_duck_array(value: typing.Any) -> bool:
     )
 
 
-def is_duck_dask_array(x):
+def is_duck_dask_array(x: typing.Any) -> bool:
     return is_duck_array(x) and is_dask_collection(x)
 
 

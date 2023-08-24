@@ -10,7 +10,7 @@ import numpy as np
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.core.utils import _default
+from xarray.core.utils import Default, _default
 from xarray.namedarray.utils import (
     Frozen,
     is_duck_array,
@@ -20,7 +20,9 @@ from xarray.namedarray.utils import (
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-DuckArray = typing.TypeVar("DuckArray", bound=typing.Any)
+T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
+
+T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
 
 
 # TODO: Add tests!
@@ -54,14 +56,17 @@ class NamedArray:
     __slots__ = ("_dims", "_data", "_attrs")
 
     def __init__(
-        self, dims: str | Iterable[Hashable], data: DuckArray, attrs: dict | None = None
+        self,
+        dims: str | Iterable[Hashable],
+        data: T_DuckArray,
+        attrs: dict | None = None,
     ):
-        self._data: DuckArray = as_compatible_data(data)
+        self._data: T_DuckArray = as_compatible_data(data)
         self._dims: tuple[Hashable, ...] = self._parse_dimensions(dims)
         self._attrs: dict | None = dict(attrs) if attrs else None
 
     @property
-    def ndim(self) -> int:
+    def ndim(self: T_NamedArray) -> int:
         """
         Number of array dimensions.
 
@@ -72,7 +77,7 @@ class NamedArray:
         return len(self.shape)
 
     @property
-    def size(self) -> int:
+    def size(self: T_NamedArray) -> int:
         """
         Number of elements in the array.
 
@@ -87,11 +92,11 @@ class NamedArray:
     def __len__(self) -> int:
         try:
             return self.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
+        except Exception as exc:
+            raise TypeError("len() of unsized object") from exc
 
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self: T_NamedArray) -> np.dtype:
         """
         Data-type of the array’s elements.
 
@@ -103,7 +108,7 @@ class NamedArray:
         return self._data.dtype
 
     @property
-    def shape(self) -> tuple[int, ...]:
+    def shape(self: T_NamedArray) -> tuple[int, ...]:
         """
         Tuple of array dimensions.
 
@@ -114,7 +119,7 @@ class NamedArray:
         return self._data.shape
 
     @property
-    def nbytes(self) -> int:
+    def nbytes(self: T_NamedArray) -> int:
         """
         Total bytes consumed by the elements of the data array.
 
@@ -127,15 +132,17 @@ class NamedArray:
             return self.size * self.dtype.itemsize
 
     @property
-    def dims(self) -> tuple[Hashable, ...]:
+    def dims(self: T_NamedArray) -> tuple[Hashable, ...]:
         """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
-    def dims(self, value: str | Iterable[Hashable]) -> None:
+    def dims(self: T_NamedArray, value: str | Iterable[Hashable]) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
+    def _parse_dimensions(
+        self: T_NamedArray, dims: str | Iterable[Hashable]
+    ) -> tuple[Hashable, ...]:
         dims = (dims,) if isinstance(dims, str) else tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
@@ -145,18 +152,25 @@ class NamedArray:
         return dims
 
     @property
-    def attrs(self) -> dict[typing.Any, typing.Any]:
+    def attrs(self: T_NamedArray) -> dict[typing.Any, typing.Any]:
         """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping) -> None:
+    def attrs(self: T_NamedArray, value: Mapping) -> None:
         self._attrs = dict(value)
 
+    def _check_shape(self, new_data: T_DuckArray) -> None:
+        if new_data.shape != self.shape:
+            raise ValueError(
+                f"replacement data must match the Variable's shape. "
+                f"replacement data has shape {new_data.shape}; Variable has shape {self.shape}"
+            )
+
     @property
-    def data(self) -> DuckArray:
+    def data(self: T_NamedArray):
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -170,21 +184,14 @@ class NamedArray:
 
         return self._data
 
-    def _check_shape(self, new_data: DuckArray) -> None:
-        if new_data.shape != self.shape:
-            raise ValueError(
-                f"replacement data must match the Variable's shape. "
-                f"replacement data has shape {new_data.shape}; Variable has shape {self.shape}"
-            )
-
     @data.setter
-    def data(self, data: DuckArray) -> None:
+    def data(self: T_NamedArray, data: T_DuckArray) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
 
     @property
-    def real(self):
+    def real(self: T_NamedArray) -> T_NamedArray:
         """
         The real part of the variable.
 
@@ -195,7 +202,7 @@ class NamedArray:
         return self._replace(data=self.data.real)
 
     @property
-    def imag(self):
+    def imag(self: T_NamedArray) -> T_NamedArray:
         """
         The imaginary part of the variable.
 
@@ -205,44 +212,50 @@ class NamedArray:
         """
         return self._replace(data=self.data.imag)
 
-    def __dask_tokenize__(self):
+    def __dask_tokenize__(self: T_NamedArray):
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._dims, self.data, self._attrs))
+        return normalize_token((type(self), self._dims, self.data, self.attrs))
 
-    def __dask_graph__(self):
+    def __dask_graph__(self: T_NamedArray):
         return self._data.__dask_graph__() if is_duck_dask_array(self._data) else None
 
-    def __dask_keys__(self):
+    def __dask_keys__(self: T_NamedArray):
         return self._data.__dask_keys__()
 
-    def __dask_layers__(self):
+    def __dask_layers__(self: T_NamedArray):
         return self._data.__dask_layers__()
 
     @property
-    def __dask_optimize__(self):
+    def __dask_optimize__(self: T_NamedArray) -> typing.Callable:
         return self._data.__dask_optimize__
 
     @property
-    def __dask_scheduler__(self):
+    def __dask_scheduler__(self: T_NamedArray) -> typing.Callable:
         return self._data.__dask_scheduler__
 
-    def __dask_postcompute__(self):
+    def __dask_postcompute__(
+        self: T_NamedArray,
+    ) -> tuple[typing.Callable, tuple[typing.Any, ...]]:
         array_func, array_args = self._data.__dask_postcompute__()
         return self._dask_finalize, (array_func,) + array_args
 
-    def __dask_postpersist__(self):
+    def __dask_postpersist__(
+        self: T_NamedArray,
+    ) -> tuple[typing.Callable, tuple[typing.Any, ...]]:
         array_func, array_args = self._data.__dask_postpersist__()
         return self._dask_finalize, (array_func,) + array_args
 
-    def _dask_finalize(self, results, array_func, *args, **kwargs):
+    def _dask_finalize(
+        self: T_NamedArray, results, array_func, *args, **kwargs
+    ) -> T_NamedArray:
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @property
-    def chunks(self) -> tuple[tuple[int, ...], ...] | None:
+    def chunks(self: T_NamedArray) -> tuple[tuple[int, ...], ...] | None:
         """
         Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
         the underlying data is not a dask array.
@@ -256,7 +269,9 @@ class NamedArray:
         return getattr(self._data, "chunks", None)
 
     @property
-    def chunksizes(self) -> typing.Mapping[typing.Any, tuple[int, ...]] | None:
+    def chunksizes(
+        self: T_NamedArray,
+    ) -> typing.Mapping[typing.Any, tuple[int, ...]] | None:
         """
         Mapping from dimension names to block lengths for this variable's data, or None if
         the underlying data is not a dask array.
@@ -276,7 +291,9 @@ class NamedArray:
         else:
             return None
 
-    def _replace(self, dims=_default, data=_default, attrs=_default) -> NamedArray:
+    def _replace(
+        self: T_NamedArray, dims=_default, data=_default, attrs=_default
+    ) -> T_NamedArray:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -286,11 +303,11 @@ class NamedArray:
         return type(self)(dims, data, attrs)
 
     def _copy(
-        self,
+        self: T_NamedArray,
         deep: bool = True,
-        data: DuckArray | None = None,
+        data: T_DuckArray | None = None,
         memo: dict[int, typing.Any] | None = None,
-    ):
+    ) -> T_NamedArray:
         if data is None:
             ndata = self._data
             if deep:
@@ -305,13 +322,17 @@ class NamedArray:
 
         return self._replace(data=ndata, attrs=attrs)
 
-    def __copy__(self) -> NamedArray:
+    def __copy__(self: T_NamedArray) -> T_NamedArray:
         return self._copy(deep=False)
 
-    def __deepcopy__(self, memo: dict[int, typing.Any] | None = None):
+    def __deepcopy__(
+        self: T_NamedArray, memo: dict[int, typing.Any] | None = None
+    ) -> T_NamedArray:
         return self._copy(deep=True, memo=memo)
 
-    def copy(self, deep: bool = True, data: DuckArray | None = None):
+    def copy(
+        self: T_NamedArray, deep: bool = True, data: T_DuckArray | None = None
+    ) -> T_NamedArray:
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
@@ -369,14 +390,18 @@ class NamedArray:
         """
         return self._copy(deep=deep, data=data)
 
-    def _nonzero(self):
+    def _nonzero(self: T_NamedArray) -> tuple[T_NamedArray, ...]:
         """Equivalent numpy's nonzero but returns a tuple of Variables."""
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)
         return tuple(type(self)((dim), nz) for nz, dim in zip(nonzeros, self.dims))
 
-    def _as_sparse(self, sparse_format: str = _default, fill_value=dtypes.NA):
+    def _as_sparse(
+        self: T_NamedArray,
+        sparse_format: str | Default = _default,
+        fill_value=dtypes.NA,
+    ) -> T_NamedArray:
         """
         use sparse-array as backend.
         """
@@ -392,13 +417,13 @@ class NamedArray:
             sparse_format = "coo"
         try:
             as_sparse = getattr(sparse, f"as_{sparse_format.lower()}")
-        except AttributeError:
-            raise ValueError(f"{sparse_format} is not a valid sparse format")
+        except AttributeError as exc:
+            raise ValueError(f"{sparse_format} is not a valid sparse format") from exc
 
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self):
+    def _to_dense(self: T_NamedArray) -> T_NamedArray:
         """
         Change backend from sparse to np.array
         """
