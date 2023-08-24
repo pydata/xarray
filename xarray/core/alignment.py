@@ -84,8 +84,8 @@ def reindex_variables(
     return new_variables
 
 
-CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
-MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
+SortedCoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
+MatchingIndexKey = tuple[SortedCoordNamesAndDims, type[Index]]
 NormalizedIndexes = dict[MatchingIndexKey, Index]
 NormalizedIndexVars = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
@@ -226,6 +226,10 @@ class Aligner(Generic[T_Alignable]):
                     "these are used by an index together with non-excluded dimensions "
                     f"{incl_dims_str}"
                 )
+
+            # sort by coordinate name so that finding matching indexes
+            # doesn't rely on coordinate order
+            coord_names_and_dims.sort(key=lambda i: i[0])
 
             key = (tuple(coord_names_and_dims), type(idx))
             normalized_indexes[key] = idx
