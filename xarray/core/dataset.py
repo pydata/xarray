@@ -4698,7 +4698,9 @@ class Dataset(
             if len(var_names) == 1 and (not append or dim not in self._indexes):
                 var_name = var_names[0]
                 var = self._variables[var_name]
-                if var.dims != (dim,):
+                # an error with a better message will be raised for scalar variables
+                # when creating the PandasIndex
+                if var.ndim > 0 and var.dims != (dim,):
                     raise ValueError(
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
