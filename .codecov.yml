@@ -1,8 +1,5 @@
 codecov:
-  ci:
-    # by default, codecov doesn't recognize azure as a CI provider
-    - dev.azure.com
-  require_ci_to_pass: yes
+  require_ci_to_pass: true
 
 coverage:
   status:
@@ -12,12 +9,14 @@ coverage:
         target: 1%
         flags:
           - unittests
-        paths: "!xarray/tests/"
+        paths:
+         - "!xarray/tests/"
       unittests:
         target: 90%
         flags:
           - unittests
-        paths: "!xarray/tests/"
+        paths:
+          - "!xarray/tests/"
       mypy:
         target: 20%
         flags:
@@ -25,7 +24,7 @@ coverage:
     patch: false
     changes: false
 
-comment: off
+comment: false
 
 flags:
   unittests:
