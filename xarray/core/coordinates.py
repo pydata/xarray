@@ -232,7 +232,7 @@ class Coordinates(AbstractCoordinates):
     (indexes are passed):
 
     >>> ds = xr.Dataset(coords={"x": [1, 2]})
-    >>> coords = xr.Coordinates(ds.coords)
+    >>> xr.Coordinates(ds.coords)
     Coordinates:
       * x        (x) int64 1 2
 
