@@ -2439,6 +2439,73 @@ class TestDataset:
         assert ds.x.attrs == {"units": "m"}
         assert ds_noattr.x.attrs == {}
 
+    def test_align_custom_index_no_coord_order(self) -> None:
+        class CustomIndex(Index):
+            """A meta-index wrapping a dict of PandasIndex objects where the
+            order of the coordinares doesn't matter.
+            """
+
+            def __init__(self, indexes: dict[Hashable, PandasIndex]):
+                self._indexes = indexes
+
+            @classmethod
+            def from_variables(cls, variables, *, options):
+                indexes = {
+                    k: PandasIndex.from_variables({k: v}, options=options)
+                    for k, v in variables.items()
+                }
+                return cls(indexes)
+
+            def create_variables(self, variables=None):
+                if variables is None:
+                    variables = {}
+                idx_vars = {}
+                for k, v in variables.items():
+                    idx_vars.update(self._indexes[k].create_variables({k: v}))
+                return idx_vars
+
+            def equals(self, other: CustomIndex):
+                return all(
+                    [self._indexes[k].equals(other._indexes[k]) for k in self._indexes]
+                )
+
+            def join(self, other: CustomIndex, how="inner"):
+                indexes = {
+                    k: self._indexes[k].join(other._indexes[k], how=how)
+                    for k in self._indexes
+                }
+                return CustomIndex(indexes)
+
+            def reindex_like(self, other, method=None, tolerance=None):
+                result = {}
+                for k, idx in self._indexes.items():
+                    result.update(
+                        idx.reindex_like(
+                            other._indexes[k], method=method, tolerance=tolerance
+                        )
+                    )
+                return result
+
+        ds1 = (
+            Dataset(coords={"x": [1, 2], "y": [1, 2, 3, 4]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["x", "y"], CustomIndex)
+        )
+        ds2 = (
+            Dataset(coords={"y": [3, 4, 5, 6], "x": [1, 2]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["y", "x"], CustomIndex)
+        )
+        expected = (
+            Dataset(coords={"x": [1, 2], "y": [3, 4]})
+            .drop_indexes(["x", "y"])
+            .set_xindex(["x", "y"], CustomIndex)
+        )
+
+        actual1, actual2 = xr.align(ds1, ds2, join="inner")
+        assert_identical(actual1, expected, check_default_indexes=False)
+        assert_identical(actual2, expected, check_default_indexes=False)
+
     def test_broadcast(self) -> None:
         ds = Dataset(
             {"foo": 0, "bar": ("x", [1]), "baz": ("y", [2, 3])}, {"c": ("x", [4])}

@@ -487,7 +487,7 @@ class TestPandasMultiIndex:
         with pytest.raises(IndexError):
             index.sel({"x": (slice(None), 1, "no_level")})
 
-    def test_join(self):
+    def test_join(self) -> None:
         midx = pd.MultiIndex.from_product([["a", "aa"], [1, 2]], names=("one", "two"))
         level_coords_dtype = {"one": "=U2", "two": "i"}
         index1 = PandasMultiIndex(midx, "x", level_coords_dtype=level_coords_dtype)
@@ -500,6 +500,21 @@ class TestPandasMultiIndex:
         actual = index1.join(index2, how="outer")
         assert actual.equals(index1)
         assert actual.level_coords_dtype == level_coords_dtype
+
+    def test_swap_index_levels(self) -> None:
+        # when the order of level names down't match
+        # - equals should return False
+        # - join should fail
+        # TODO: remove when fixed upstream
+        midx1 = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("one", "two"))
+        idx1 = PandasMultiIndex(midx1, "x")
+        midx2 = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("two", "one"))
+        idx2 = PandasMultiIndex(midx2, "x")
+
+        assert idx1.equals(idx2) is False
+
+        with pytest.raises(ValueError, match=".*level order mismatch"):
+            idx1.join(idx2)
 
     def test_rename(self) -> None:
         level_coords_dtype = {"one": "<U1", "two": np.int32}

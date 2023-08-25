@@ -815,8 +815,8 @@ def diff_coords_repr(a, b, compat, col_width=None):
         "Coordinates",
         summarize_variable,
         col_width=col_width,
-        a_indexes=a.indexes,
-        b_indexes=b.indexes,
+        a_indexes=a.xindexes,
+        b_indexes=b.xindexes,
     )
 
 
