@@ -229,7 +229,7 @@ class Aligner(Generic[T_Alignable]):
 
             # sort by coordinate name so that finding matching indexes
             # doesn't rely on coordinate order
-            coord_names_and_dims.sort(key=lambda i: i[0])
+            coord_names_and_dims.sort(key=lambda i: str(i[0]))
 
             key = (tuple(coord_names_and_dims), type(idx))
             normalized_indexes[key] = idx
