@@ -6962,7 +6962,7 @@ class TestDropDuplicates:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Dimensions ('space',) not found in dataset dimensions ('time',)"
+                "Dimensions ('space',) not found in data dimensions ('time',)"
             ),
         ):
             da.drop_duplicates("space", keep=keep)

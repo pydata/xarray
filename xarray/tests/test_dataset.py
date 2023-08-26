@@ -1161,7 +1161,7 @@ class TestDataset:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "chunks keys ('foo',) not found in dataset dimensions ('dim2', 'dim3', 'time', 'dim1')"
+                "chunks keys ('foo',) not found in data dimensions ('dim2', 'dim3', 'time', 'dim1')"
             ),
         ):
             data.chunk({"foo": 10})
@@ -3682,9 +3682,7 @@ class TestDataset:
         ds = Dataset({"x": [1, 2, 3]})
         with pytest.raises(
             ValueError,
-            match=re.escape(
-                "Dimensions ('foo',) not found in dataset dimensions ('x',)"
-            ),
+            match=re.escape("Dimensions ('foo',) not found in data dimensions ('x',)"),
         ):
             ds.unstack("foo")
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
@@ -4977,7 +4975,7 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"'foo' not found in dataset dimensions \('a', 'b'\)",
+            match=r"'foo' not found in data dimensions \('a', 'b'\)",
         ):
             ds.dropna("foo")
         with pytest.raises(ValueError, match=r"invalid how"):
@@ -5298,7 +5296,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in dataset dimensions",
+            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
         ):
             data.mean(dim="bad_dim")
 
@@ -5327,7 +5325,7 @@ class TestDataset:
         data = create_test_data()
         with pytest.raises(
             ValueError,
-            match=r"Dimensions \('bad_dim',\) not found in dataset dimensions",
+            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
         ):
             getattr(data, func)(dim="bad_dim")
 
@@ -5579,7 +5577,7 @@ class TestDataset:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Dimension 'invalid_dim' not found in dataset dimensions ('dim3', 'dim1')"
+                "Dimension 'invalid_dim' not found in data dimensions ('dim3', 'dim1')"
             ),
         ):
             x.rank("invalid_dim")
@@ -7117,7 +7115,7 @@ class TestDropDuplicates:
         with pytest.raises(
             ValueError,
             match=re.escape(
-                "Dimensions ('space',) not found in dataset dimensions ('time',)"
+                "Dimensions ('space',) not found in data dimensions ('time',)"
             ),
         ):
             ds.drop_duplicates("space", keep=keep)

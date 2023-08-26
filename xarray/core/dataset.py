@@ -2629,7 +2629,7 @@ class Dataset(
         bad_dims = chunks.keys() - self.dims.keys()
         if bad_dims:
             raise ValueError(
-                f"chunks keys {tuple(bad_dims)} not found in dataset dimensions {tuple(self.dims)}"
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
             )
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
@@ -5442,7 +5442,7 @@ class Dataset(
             missing_dims = set(dims) - set(self.dims)
             if missing_dims:
                 raise ValueError(
-                    f"Dimensions {tuple(missing_dims)} not found in dataset dimensions {tuple(self.dims)}"
+                    f"Dimensions {tuple(missing_dims)} not found in data dimensions {tuple(self.dims)}"
                 )
 
         # each specified dimension must have exactly one multi-index
@@ -6078,7 +6078,7 @@ class Dataset(
             missing_dims = drop_dims - set(self.dims)
             if missing_dims:
                 raise ValueError(
-                    f"Dimensions {tuple(missing_dims)} not found in dataset dimensions {tuple(self.dims)}"
+                    f"Dimensions {tuple(missing_dims)} not found in data dimensions {tuple(self.dims)}"
                 )
 
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
@@ -6239,7 +6239,7 @@ class Dataset(
 
         if dim not in self.dims:
             raise ValueError(
-                f"Dimension {dim!r} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
             )
 
         if subset is None:
@@ -6724,7 +6724,7 @@ class Dataset(
         missing_dimensions = tuple(d for d in dims if d not in self.dims)
         if missing_dimensions:
             raise ValueError(
-                f"Dimensions {missing_dimensions} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimensions {missing_dimensions} not found in data dimensions {tuple(self.dims)}"
             )
 
         if keep_attrs is None:
@@ -7710,7 +7710,7 @@ class Dataset(
         invalid = tuple(k for k in shifts if k not in self.dims)
         if invalid:
             raise ValueError(
-                f"Dimensions {invalid} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimensions {invalid} not found in data dimensions {tuple(self.dims)}"
             )
 
         variables = {}
@@ -7789,7 +7789,7 @@ class Dataset(
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError(
-                f"Dimensions {invalid} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimensions {invalid} not found in data dimensions {tuple(self.dims)}"
             )
 
         unrolled_vars: tuple[Hashable, ...]
@@ -8042,7 +8042,7 @@ class Dataset(
         invalid_dims = set(dims) - set(self.dims)
         if invalid_dims:
             raise ValueError(
-                f"Dimensions {tuple(invalid_dims)} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimensions {tuple(invalid_dims)} not found in data dimensions {tuple(self.dims)}"
             )
 
         q = np.asarray(q, dtype=np.float64)
@@ -8120,7 +8120,7 @@ class Dataset(
 
         if dim not in self.dims:
             raise ValueError(
-                f"Dimension {dim!r} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
             )
 
         variables = {}
@@ -9782,7 +9782,7 @@ class Dataset(
         missing_dims = set(dims) - set(self.dims)
         if missing_dims:
             raise ValueError(
-                f"Dimensions {tuple(missing_dims)} not found in dataset dimensions {tuple(self.dims)}"
+                f"Dimensions {tuple(missing_dims)} not found in data dimensions {tuple(self.dims)}"
             )
 
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
