@@ -608,7 +608,7 @@ def test_weighted_operations_3D(dim, add_nans, skipna):
     # add approximately 25 % NaNs (https://stackoverflow.com/a/32182680/3010700)
     if add_nans:
         c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
+        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
 
     data = DataArray(data, dims=dims, coords=coords)
 
@@ -631,7 +631,7 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
     # add approximately 25 % NaNs (https://stackoverflow.com/a/32182680/3010700)
     if add_nans:
         c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
+        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
 
     da = DataArray(data, dims=dims, coords=coords)
 
@@ -709,7 +709,7 @@ def test_weighted_operations_different_shapes(
     # add approximately 25 % NaNs
     if add_nans:
         c = int(data.size * 0.25)
-        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
+        data.ravel()[np.random.choice(data.size, c, replace=False)] = np.nan
 
     data = DataArray(data)
 

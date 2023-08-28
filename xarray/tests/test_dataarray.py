@@ -2830,7 +2830,7 @@ class TestDataArray:
     )
     def test_quantile(self, q, axis, dim, skipna) -> None:
         va = self.va.copy(deep=True)
-        va[0, 0] = np.NaN
+        va[0, 0] = np.nan
 
         actual = DataArray(va).quantile(q, dim=dim, keep_attrs=True, skipna=skipna)
         _percentile_func = np.nanpercentile if skipna in (True, None) else np.percentile
@@ -3108,10 +3108,10 @@ class TestDataArray:
         b = DataArray([1, 2], dims=["x"], coords={"x": ["b", "c"]})
 
         expected_a = DataArray(
-            [0, 1, np.NaN], dims=["x"], coords={"x": ["a", "b", "c"]}
+            [0, 1, np.nan], dims=["x"], coords={"x": ["a", "b", "c"]}
         )
         expected_b = DataArray(
-            [np.NaN, 1, 2], dims=["x"], coords={"x": ["a", "b", "c"]}
+            [np.nan, 1, 2], dims=["x"], coords={"x": ["a", "b", "c"]}
         )
 
         actual_a, actual_b = xr.align(a, b, join="outer")
@@ -4237,7 +4237,7 @@ class TestDataArray:
         ar = xr.DataArray([9], dims="x")
 
         actual = ar.pad(x=1)
-        expected = xr.DataArray([np.NaN, 9, np.NaN], dims="x")
+        expected = xr.DataArray([np.nan, 9, np.nan], dims="x")
         assert_identical(actual, expected)
 
         actual = ar.pad(x=1, constant_values=1.23456)
@@ -4245,7 +4245,7 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-            ar.pad(x=1, constant_values=np.NaN)
+            ar.pad(x=1, constant_values=np.nan)
 
     def test_pad_coords(self) -> None:
         ar = DataArray(
@@ -4683,10 +4683,10 @@ class TestReduce:
             np.array([0.0, 1.0, 2.0, 0.0, -2.0, -4.0, 2.0]), 5, 2, None, id="float"
         ),
         pytest.param(
-            np.array([1.0, np.NaN, 2.0, np.NaN, -2.0, -4.0, 2.0]), 5, 2, 1, id="nan"
+            np.array([1.0, np.nan, 2.0, np.nan, -2.0, -4.0, 2.0]), 5, 2, 1, id="nan"
         ),
         pytest.param(
-            np.array([1.0, np.NaN, 2.0, np.NaN, -2.0, -4.0, 2.0]).astype("object"),
+            np.array([1.0, np.nan, 2.0, np.nan, -2.0, -4.0, 2.0]).astype("object"),
             5,
             2,
             1,
@@ -4695,7 +4695,7 @@ class TestReduce:
             ),
             id="obj",
         ),
-        pytest.param(np.array([np.NaN, np.NaN]), np.NaN, np.NaN, 0, id="allnan"),
+        pytest.param(np.array([np.nan, np.nan]), np.nan, np.nan, 0, id="allnan"),
         pytest.param(
             np.array(
                 ["2015-12-31", "2020-01-02", "2020-01-01", "2016-01-01"],
@@ -4888,7 +4888,7 @@ class TestReduce1D(TestReduce):
 
         if hasna:
             coordarr1[...] = 1
-            fill_value_0 = np.NaN
+            fill_value_0 = np.nan
         else:
             fill_value_0 = 1
 
@@ -4902,7 +4902,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result0, expected0)
 
         # Manually specify NaN fill_value
-        result1 = ar0.idxmin(fill_value=np.NaN)
+        result1 = ar0.idxmin(fill_value=np.nan)
         assert_identical(result1, expected0)
 
         # keep_attrs
@@ -5001,7 +5001,7 @@ class TestReduce1D(TestReduce):
 
         if hasna:
             coordarr1[...] = 1
-            fill_value_0 = np.NaN
+            fill_value_0 = np.nan
         else:
             fill_value_0 = 1
 
@@ -5015,7 +5015,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result0, expected0)
 
         # Manually specify NaN fill_value
-        result1 = ar0.idxmax(fill_value=np.NaN)
+        result1 = ar0.idxmax(fill_value=np.nan)
         assert_identical(result1, expected0)
 
         # keep_attrs
@@ -5180,12 +5180,12 @@ class TestReduce1D(TestReduce):
             np.array(
                 [
                     [2.0, 1.0, 2.0, 0.0, -2.0, -4.0, 2.0],
-                    [-4.0, np.NaN, 2.0, np.NaN, -2.0, -4.0, 2.0],
-                    [np.NaN] * 7,
+                    [-4.0, np.nan, 2.0, np.nan, -2.0, -4.0, 2.0],
+                    [np.nan] * 7,
                 ]
             ),
-            [5, 0, np.NaN],
-            [0, 2, np.NaN],
+            [5, 0, np.nan],
+            [0, 2, np.nan],
             [None, 1, 0],
             id="nan",
         ),
@@ -5193,12 +5193,12 @@ class TestReduce1D(TestReduce):
             np.array(
                 [
                     [2.0, 1.0, 2.0, 0.0, -2.0, -4.0, 2.0],
-                    [-4.0, np.NaN, 2.0, np.NaN, -2.0, -4.0, 2.0],
-                    [np.NaN] * 7,
+                    [-4.0, np.nan, 2.0, np.nan, -2.0, -4.0, 2.0],
+                    [np.nan] * 7,
                 ]
             ).astype("object"),
-            [5, 0, np.NaN],
-            [0, 2, np.NaN],
+            [5, 0, np.nan],
+            [0, 2, np.nan],
             [None, 1, 0],
             marks=pytest.mark.filterwarnings(
                 "ignore:invalid value encountered in reduce:RuntimeWarning:"
@@ -5473,7 +5473,7 @@ class TestReduce2D(TestReduce):
         coordarr1[hasna, :] = 1
         minindex0 = [x if not np.isnan(x) else 0 for x in minindex]
 
-        nan_mult_0 = np.array([np.NaN if x else 1 for x in hasna])[:, None]
+        nan_mult_0 = np.array([np.nan if x else 1 for x in hasna])[:, None]
         expected0list = [
             (coordarr1 * nan_mult_0).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex0)
@@ -5488,7 +5488,7 @@ class TestReduce2D(TestReduce):
 
         # Manually specify NaN fill_value
         with raise_if_dask_computes(max_computes=max_computes):
-            result1 = ar0.idxmin(dim="x", fill_value=np.NaN)
+            result1 = ar0.idxmin(dim="x", fill_value=np.nan)
         assert_identical(result1, expected0)
 
         # keep_attrs
@@ -5615,7 +5615,7 @@ class TestReduce2D(TestReduce):
         coordarr1[hasna, :] = 1
         maxindex0 = [x if not np.isnan(x) else 0 for x in maxindex]
 
-        nan_mult_0 = np.array([np.NaN if x else 1 for x in hasna])[:, None]
+        nan_mult_0 = np.array([np.nan if x else 1 for x in hasna])[:, None]
         expected0list = [
             (coordarr1 * nan_mult_0).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex0)
@@ -5630,7 +5630,7 @@ class TestReduce2D(TestReduce):
 
         # Manually specify NaN fill_value
         with raise_if_dask_computes(max_computes=max_computes):
-            result1 = ar0.idxmax(dim="x", fill_value=np.NaN)
+            result1 = ar0.idxmax(dim="x", fill_value=np.nan)
         assert_identical(result1, expected0)
 
         # keep_attrs
@@ -5889,31 +5889,31 @@ class TestReduce2D(TestReduce):
             np.array(
                 [
                     [[2.0, 1.0, 2.0, 0.0], [-2.0, -4.0, 2.0, 0.0]],
-                    [[-4.0, np.NaN, 2.0, np.NaN], [-2.0, -4.0, 2.0, 0.0]],
-                    [[np.NaN] * 4, [np.NaN] * 4],
+                    [[-4.0, np.nan, 2.0, np.nan], [-2.0, -4.0, 2.0, 0.0]],
+                    [[np.nan] * 4, [np.nan] * 4],
                 ]
             ),
             {"x": np.array([[1, 0, 0, 0], [0, 0, 0, 0]])},
             {
                 "y": np.array(
-                    [[1, 1, 0, 0], [0, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                    [[1, 1, 0, 0], [0, 1, 0, 1], [np.nan, np.nan, np.nan, np.nan]]
                 )
             },
-            {"z": np.array([[3, 1], [0, 1], [np.NaN, np.NaN]])},
+            {"z": np.array([[3, 1], [0, 1], [np.nan, np.nan]])},
             {"x": np.array([1, 0, 0, 0]), "y": np.array([0, 1, 0, 0])},
             {"x": np.array([1, 0]), "z": np.array([0, 1])},
-            {"y": np.array([1, 0, np.NaN]), "z": np.array([1, 0, np.NaN])},
+            {"y": np.array([1, 0, np.nan]), "z": np.array([1, 0, np.nan])},
             {"x": np.array(0), "y": np.array(1), "z": np.array(1)},
             {"x": np.array([[0, 0, 0, 0], [0, 0, 0, 0]])},
             {
                 "y": np.array(
-                    [[0, 0, 0, 0], [1, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                    [[0, 0, 0, 0], [1, 1, 0, 1], [np.nan, np.nan, np.nan, np.nan]]
                 )
             },
-            {"z": np.array([[0, 2], [2, 2], [np.NaN, np.NaN]])},
+            {"z": np.array([[0, 2], [2, 2], [np.nan, np.nan]])},
             {"x": np.array([0, 0, 0, 0]), "y": np.array([0, 0, 0, 0])},
             {"x": np.array([0, 0]), "z": np.array([2, 2])},
-            {"y": np.array([0, 0, np.NaN]), "z": np.array([0, 2, np.NaN])},
+            {"y": np.array([0, 0, np.nan]), "z": np.array([0, 2, np.nan])},
             {"x": np.array(0), "y": np.array(0), "z": np.array(0)},
             {"x": np.array([[2, 1, 2, 1], [2, 2, 2, 2]])},
             {
@@ -5932,31 +5932,31 @@ class TestReduce2D(TestReduce):
             np.array(
                 [
                     [[2.0, 1.0, 2.0, 0.0], [-2.0, -4.0, 2.0, 0.0]],
-                    [[-4.0, np.NaN, 2.0, np.NaN], [-2.0, -4.0, 2.0, 0.0]],
-                    [[np.NaN] * 4, [np.NaN] * 4],
+                    [[-4.0, np.nan, 2.0, np.nan], [-2.0, -4.0, 2.0, 0.0]],
+                    [[np.nan] * 4, [np.nan] * 4],
                 ]
             ).astype("object"),
             {"x": np.array([[1, 0, 0, 0], [0, 0, 0, 0]])},
             {
                 "y": np.array(
-                    [[1, 1, 0, 0], [0, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                    [[1, 1, 0, 0], [0, 1, 0, 1], [np.nan, np.nan, np.nan, np.nan]]
                 )
             },
-            {"z": np.array([[3, 1], [0, 1], [np.NaN, np.NaN]])},
+            {"z": np.array([[3, 1], [0, 1], [np.nan, np.nan]])},
             {"x": np.array([1, 0, 0, 0]), "y": np.array([0, 1, 0, 0])},
             {"x": np.array([1, 0]), "z": np.array([0, 1])},
-            {"y": np.array([1, 0, np.NaN]), "z": np.array([1, 0, np.NaN])},
+            {"y": np.array([1, 0, np.nan]), "z": np.array([1, 0, np.nan])},
             {"x": np.array(0), "y": np.array(1), "z": np.array(1)},
             {"x": np.array([[0, 0, 0, 0], [0, 0, 0, 0]])},
             {
                 "y": np.array(
-                    [[0, 0, 0, 0], [1, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                    [[0, 0, 0, 0], [1, 1, 0, 1], [np.nan, np.nan, np.nan, np.nan]]
                 )
             },
-            {"z": np.array([[0, 2], [2, 2], [np.NaN, np.NaN]])},
+            {"z": np.array([[0, 2], [2, 2], [np.nan, np.nan]])},
             {"x": np.array([0, 0, 0, 0]), "y": np.array([0, 0, 0, 0])},
             {"x": np.array([0, 0]), "z": np.array([2, 2])},
-            {"y": np.array([0, 0, np.NaN]), "z": np.array([0, 2, np.NaN])},
+            {"y": np.array([0, 0, np.nan]), "z": np.array([0, 2, np.nan])},
             {"x": np.array(0), "y": np.array(0), "z": np.array(0)},
             {"x": np.array([[2, 1, 2, 1], [2, 2, 2, 2]])},
             {
@@ -6502,12 +6502,12 @@ def test_isin(da) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        xr.DataArray([1, 2, np.NaN]) > 0
+        xr.DataArray([1, 2, np.nan]) > 0
 
 
 @pytest.mark.filterwarnings("error")
 def test_no_warning_for_all_nan() -> None:
-    _ = xr.DataArray([np.NaN, np.NaN]).mean()
+    _ = xr.DataArray([np.nan, np.nan]).mean()
 
 
 def test_name_in_masking() -> None:
@@ -6547,7 +6547,7 @@ class TestIrisConversion:
         )
 
         # Set a bad value to test the masking logic
-        original.data[0, 2] = np.NaN
+        original.data[0, 2] = np.nan
 
         original.attrs["cell_methods"] = "height: mean (comment: A cell method)"
         actual = original.to_iris()

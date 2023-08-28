@@ -5773,8 +5773,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
@@ -5869,8 +5869,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},

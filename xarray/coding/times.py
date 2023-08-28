@@ -467,7 +467,7 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
     Useful to convert between calendars in numpy and cftime or between cftime calendars.
 
     If raise_on_valid is True (default), invalid dates trigger a ValueError.
-    Otherwise, the invalid element is replaced by np.NaN for cftime types and np.NaT for np.datetime64.
+    Otherwise, the invalid element is replaced by np.nan for cftime types and np.NaT for np.datetime64.
     """
     if date_type in (pd.Timestamp, np.datetime64) and not is_np_datetime_like(
         times.dtype
@@ -491,7 +491,7 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
                     )
                 )
             else:
-                dt = np.NaN
+                dt = np.nan
 
         new[i] = dt
     return new
