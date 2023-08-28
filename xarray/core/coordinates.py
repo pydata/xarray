@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import Self, T_DataArray
+from xarray.core.types import ErrorOptions, Self, T_DataArray
 from xarray.core.utils import Frozen, ReprObject
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
@@ -471,6 +471,68 @@ class Coordinates(AbstractCoordinates):
         )
 
         self._update_coords(coords, indexes)
+
+    def set_xindex(
+        self,
+        coord_names: str | Sequence[Hashable],
+        index_cls: type[Index] | None = None,
+        **options,
+    ) -> Self:
+        """Set a new, Xarray-compatible index from one or more existing
+        coordinate(s).
+
+        Parameters
+        ----------
+        coord_names : str or list
+            Name(s) of the coordinate(s) used to build the index.
+            If several names are given, their order matters.
+        index_cls : subclass of :class:`~xarray.indexes.Index`, optional
+            The type of index to create. By default, try setting
+            a ``PandasIndex`` if ``len(coord_names) == 1``,
+            otherwise a ``PandasMultiIndex``.
+        **options
+            Options passed to the index constructor.
+
+        Returns
+        -------
+        obj : Coordinates
+            Another Coordinates object with a new index.
+
+        """
+        new_obj = self._data.set_xindex(coord_names, index_cls, **options)
+
+        # TODO: remove cast once we get rid of DatasetCoordinates
+        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)
+        return cast(Self, new_obj.coords)
+
+    def drop_indexes(
+        self,
+        coord_names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop the indexes assigned to the given coordinates.
+
+        Parameters
+        ----------
+        coord_names : hashable or iterable of hashable
+            Name(s) of the coordinate(s) for which to drop the index.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the coordinates
+            passed have no index or are not in the dataset.
+            If 'ignore', no error is raised.
+
+        Returns
+        -------
+        dropped : Coordinates
+            A new Coordinates object with dropped indexes.
+
+        """
+        new_obj = self._data.drop_indexes(coord_names, errors=errors)
+
+        # TODO: remove cast once we get rid of DatasetCoordinates
+        # and DataArrayCoordinates (i.e., Dataset and DataArray encapsulate Coordinates)
+        return cast(Self, new_obj.coords)
 
     def _overwrite_indexes(
         self,
