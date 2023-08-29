@@ -199,7 +199,7 @@ def create_test_multiindex() -> Dataset:
     mindex = pd.MultiIndex.from_product(
         [["a", "b"], [1, 2]], names=("level_1", "level_2")
     )
-    return Dataset({}, {"x": mindex})
+    return Dataset({}, Coordinates.from_pandas_multiindex(mindex, "x"))
 
 
 def create_test_stacked_array() -> tuple[DataArray, DataArray]:
@@ -648,9 +648,16 @@ class TestDataset:
         assert_identical(ds, coords.to_dataset())
 
         with pytest.warns(
-            FutureWarning, match=".*`pandas.MultiIndex` via data variable.*"
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
         ):
             Dataset(data_vars={"x": midx})
+
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+        ):
+            Dataset(coords={"x": midx})
 
     def test_constructor_custom_index(self) -> None:
         class CustomIndex(Index):
@@ -872,7 +879,7 @@ class TestDataset:
         assert_array_equal(actual["z"], ["a", "b"])
 
         actual = data.copy(deep=True)
-        with pytest.raises(ValueError, match=r"conflicting sizes"):
+        with pytest.raises(ValueError, match=r"conflicting dimension sizes"):
             actual.coords["x"] = ("x", [-1])
         assert_identical(actual, data)  # should not be modified
 
@@ -909,9 +916,7 @@ class TestDataset:
 
     def test_coords_setitem_multiindex(self) -> None:
         data = create_test_multiindex()
-        with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
-        ):
+        with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):
             data.coords["level_1"] = range(4)
 
     def test_coords_set(self) -> None:
@@ -4244,22 +4249,58 @@ class TestDataset:
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
-        with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
-        ):
+        with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
 
+    def test_assign_new_multiindex(self) -> None:
+        midx = pd.MultiIndex.from_arrays([["a", "a", "b", "b"], [0, 1, 0, 1]])
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+
+        ds = Dataset(coords={"x": [1, 2]})
+        expected = Dataset(coords=midx_coords)
+
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+        ):
+            actual = ds.assign(x=midx)
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("orig_coords", [{}, {"x": range(4)}])
+    def test_assign_coords_new_multiindex(self, orig_coords) -> None:
+        ds = Dataset(coords=orig_coords)
+        midx = pd.MultiIndex.from_arrays(
+            [["a", "a", "b", "b"], [0, 1, 0, 1]], names=("one", "two")
+        )
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+
+        expected = Dataset(coords=midx_coords)
+
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+        ):
+            actual = ds.assign_coords({"x": midx})
+        assert_identical(actual, expected)
+
+        actual = ds.assign_coords(midx_coords)
+        assert_identical(actual, expected)
+
     def test_assign_coords_existing_multiindex(self) -> None:
         data = create_test_multiindex()
-        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
-            data.assign_coords(x=range(4))
-
-        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
-            data.assign(x=range(4))
-
+        with pytest.warns(
+            FutureWarning, match=r"updating coordinate.*MultiIndex.*inconsistent"
+        ):
+            updated = data.assign_coords(x=range(4))
         # https://github.com/pydata/xarray/issues/7097 (coord names updated)
-        updated = data.assign_coords(x=range(4))
+        assert len(updated.coords) == 1
+
+        with pytest.warns(
+            FutureWarning, match=r"updating coordinate.*MultiIndex.*inconsistent"
+        ):
+            updated = data.assign(x=range(4))
+        # https://github.com/pydata/xarray/issues/7097 (coord names updated)
         assert len(updated.coords) == 1
 
     def test_assign_all_multiindex_coords(self) -> None:
