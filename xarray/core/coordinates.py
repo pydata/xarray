@@ -24,10 +24,10 @@ from xarray.core.indexes import (
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import Self, T_DataArray
 from xarray.core.utils import (
-  Frozen,
-  ReprObject,
-  either_dict_or_kwargs,
-  emit_user_level_warning,
+    Frozen,
+    ReprObject,
+    either_dict_or_kwargs,
+    emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
