@@ -231,7 +231,9 @@ class Coordinates(AbstractCoordinates):
         elif isinstance(coords, Coordinates):
             variables = {k: v.copy() for k, v in coords.variables.items()}
         else:
-            variables = {k: as_variable(v) for k, v in coords.items()}
+            variables = {
+                k: as_variable(v, name=k, auto_convert=False) for k, v in coords.items()
+            }
 
         if indexes is None:
             indexes = {}
@@ -859,7 +861,7 @@ def create_coords_with_default_indexes(
         if isinstance(obj, DataArray):
             dataarray_coords.append(obj.coords)
 
-        variable = as_variable(obj, name=name)
+        variable = as_variable(obj, name=name, auto_convert=False)
 
         if variable.dims == (name,):
             idx, idx_vars = create_default_index_implicit(variable, all_variables)

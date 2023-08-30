@@ -162,7 +162,9 @@ def _infer_coords_and_dims(
                 dims = list(coords.keys())
             else:
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    coord = as_variable(
+                        coord, name=dims[n], auto_convert=False
+                    ).to_index_variable()
                     dims[n] = coord.name
         dims = tuple(dims)
     elif len(dims) != len(shape):
@@ -183,10 +185,12 @@ def _infer_coords_and_dims(
         new_coords = {}
         if utils.is_dict_like(coords):
             for k, v in coords.items():
-                new_coords[k] = as_variable(v, name=k)
+                new_coords[k] = as_variable(v, name=k, auto_convert=False)
+                if new_coords[k].dims == (k,):
+                    new_coords[k] = new_coords[k].to_index_variable()
         elif coords is not None:
             for dim, coord in zip(dims, coords):
-                var = as_variable(coord, name=dim)
+                var = as_variable(coord, name=dim, auto_convert=False)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
