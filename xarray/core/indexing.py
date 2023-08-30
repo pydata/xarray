@@ -1468,7 +1468,10 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 class IndexedCoordinateArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an Xarray indexed coordinate array and make it "immutable"."""
+    """Wrap an Xarray indexed coordinate array to make sure it keeps
+    synced with its index.
+
+    """
 
     __slots__ = ("array",)
 
