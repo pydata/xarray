@@ -47,6 +47,10 @@ Bug fixes
   names were not updated properly internally (:issue:`7405`, :issue:`7588`,
   :pull:`8104`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Return ``float64`` in presence of ``NaT`` in :py:class:`~core.accessor_dt.DatetimeAccessor` and
+  special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()`
+  (:issue:`7928`, :pull:`8084`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
