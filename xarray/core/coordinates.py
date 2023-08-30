@@ -864,6 +864,9 @@ def create_coords_with_default_indexes(
         variable = as_variable(obj, name=name, auto_convert=False)
 
         if variable.dims == (name,):
+            # still needed to convert to IndexVariable first due to some
+            # pandas multi-index edge cases.
+            variable = variable.to_index_variable()
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
             indexes.update({k: idx for k in idx_vars})
             variables.update(idx_vars)
