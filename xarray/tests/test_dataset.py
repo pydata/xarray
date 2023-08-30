@@ -3397,6 +3397,12 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"dimension mismatch.*"):
             ds.set_index(y="x_var")
 
+        ds = Dataset(coords={"x": 1})
+        with pytest.raises(
+            ValueError, match=r".*cannot set a PandasIndex.*scalar variable.*"
+        ):
+            ds.set_index(x="x")
+
     def test_set_index_deindexed_coords(self) -> None:
         # test de-indexed coordinates are converted to base variable
         # https://github.com/pydata/xarray/issues/6969
