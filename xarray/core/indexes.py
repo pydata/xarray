@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.indexing import (
+    IndexedCoordinateArray,
     IndexSelResult,
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
@@ -1330,6 +1331,29 @@ class PandasMultiIndex(PandasIndex):
         return self._replace(
             index, dim=new_dim, level_coords_dtype=new_level_coords_dtype
         )
+
+
+def create_index_variables(
+    index: Index, variables: Mapping[Any, Variable] | None = None
+) -> IndexVars:
+    """Create index coordinate variables and wrap their data in order to prevent
+    modifying their values in-place.
+
+    """
+    # - IndexVariable already has safety guards that prevent updating its values
+    #   (it is a special case for PandasIndex that will likely be removed, eventually)
+    # - For Variable objects: wrap their data.
+    from xarray.core.variable import IndexVariable
+
+    index_vars = index.create_variables(variables)
+
+    for var in index_vars.values():
+        if not isinstance(var, IndexVariable) and not isinstance(
+            var._data, IndexedCoordinateArray
+        ):
+            var._data = IndexedCoordinateArray(var._data)
+
+    return index_vars
 
 
 def create_default_index_implicit(
