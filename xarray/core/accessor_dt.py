@@ -78,13 +78,16 @@ def _access_through_series(values, name):
         # https://github.com/pandas-dev/pandas/issues/54657 is resolved
         field_values = values_as_series.dt.isocalendar()
         # test for <NA> and apply needed dtype
-        dtype = "float64" if any(field_values.year.isnull()) else "int64"
-        field_values = np.dstack(
-            [
-                getattr(field_values, name).astype(dtype, copy=False).values
-                for name in ["year", "week", "day"]
-            ]
-        )
+        hasna = any(field_values.year.isnull())
+        if hasna:
+            field_values = np.dstack(
+                [
+                    getattr(field_values, name).astype(np.float64, copy=False).values
+                    for name in ["year", "week", "day"]
+                ]
+            )
+        else:
+            field_values = np.array(field_values, dtype=np.int64)
         # isocalendar returns iso- year, week, and weekday -> reshape
         return field_values.T.reshape(3, *values.shape)
     else:
