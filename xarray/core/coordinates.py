@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
@@ -24,7 +23,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import Self, T_DataArray
-from xarray.core.utils import Frozen, ReprObject
+from xarray.core.utils import Frozen, ReprObject, emit_user_level_warning
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
@@ -83,7 +82,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
     def _update_coords(self, coords, indexes):
         raise NotImplementedError()
 
-    def _maybe_drop_multiindex_coords(self, coords):
+    def _drop_coords(self, coord_names):
         raise NotImplementedError()
 
     def __iter__(self) -> Iterator[Hashable]:
@@ -379,9 +378,9 @@ class Coordinates(AbstractCoordinates):
         # redirect to DatasetCoordinates._update_coords
         self._data.coords._update_coords(coords, indexes)
 
-    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
-        # redirect to DatasetCoordinates._maybe_drop_multiindex_coords
-        self._data.coords._maybe_drop_multiindex_coords(coords)
+    def _drop_coords(self, coord_names):
+        # redirect to DatasetCoordinates._drop_coords
+        self._data.coords._drop_coords(coord_names)
 
     def _merge_raw(self, other, reflexive):
         """For use with binary arithmetic."""
@@ -454,21 +453,39 @@ class Coordinates(AbstractCoordinates):
 
     def update(self, other: Mapping[Any, Any]) -> None:
         """Update this Coordinates variables with other coordinate variables."""
-        other_obj: Coordinates | Mapping[Hashable, Variable]
+
+        if not len(other):
+            return
+
+        other_coords: Coordinates
 
         if isinstance(other, Coordinates):
-            # special case: default indexes won't be created
-            other_obj = other
+            # Coordinates object: just pass it (default indexes won't be created)
+            other_coords = other
         else:
-            other_obj = getattr(other, "variables", other)
+            other_coords = create_coords_with_default_indexes(
+                getattr(other, "variables", other)
+            )
 
-        self._maybe_drop_multiindex_coords(set(other_obj))
+        # Discard original indexed coordinates prior to merge allows to:
+        # - fail early if the new coordinates don't preserve the integrity of existing
+        #   multi-coordinate indexes
+        # - drop & replace coordinates without alignment (note: we must keep indexed
+        #   coordinates extracted from the DataArray objects passed as values to
+        #   `other` - if any - as those are still used for aligning the old/new coordinates)
+        coords_to_align = drop_indexed_coords(set(other_coords) & set(other), self)
 
         coords, indexes = merge_coords(
-            [self.variables, other_obj],
+            [coords_to_align, other_coords],
             priority_arg=1,
-            indexes=self.xindexes,
+            indexes=coords_to_align.xindexes,
         )
+
+        # special case for PandasMultiIndex: updating only its dimension coordinate
+        # is still allowed but depreciated.
+        # It is the only case where we need to actually drop coordinates here (multi-index levels)
+        # TODO: remove when removing PandasMultiIndex's dimension coordinate.
+        self._drop_coords(self._names - coords_to_align._names)
 
         self._update_coords(coords, indexes)
 
@@ -610,15 +627,20 @@ class DatasetCoordinates(Coordinates):
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
-    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
-        """Drops variables in coords, and any associated variables as well."""
+    def _drop_coords(self, coord_names):
+        # should drop indexed coordinates only
+        for name in coord_names:
+            del self._data._variables[name]
+            del self._data._indexes[name]
+        self._data._coord_names.difference_update(coord_names)
+
+    def _drop_indexed_coords(self, coords_to_drop: set[Hashable]) -> None:
         assert self._data.xindexes is not None
-        variables, indexes = drop_coords(
-            coords, self._data._variables, self._data.xindexes
-        )
-        self._data._coord_names.intersection_update(variables)
-        self._data._variables = variables
-        self._data._indexes = indexes
+        new_coords = drop_indexed_coords(coords_to_drop, self)
+        for name in self._data._coord_names - new_coords._names:
+            del self._data._variables[name]
+        self._data._indexes = dict(new_coords.xindexes)
+        self._data._coord_names.intersection_update(new_coords._names)
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
@@ -691,13 +713,11 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
-    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
-        """Drops variables in coords, and any associated variables as well."""
-        variables, indexes = drop_coords(
-            coords, self._data._coords, self._data.xindexes
-        )
-        self._data._coords = variables
-        self._data._indexes = indexes
+    def _drop_coords(self, coord_names):
+        # should drop indexed coordinates only
+        for name in coord_names:
+            del self._data._coords[name]
+            del self._data._indexes[name]
 
     @property
     def variables(self):
@@ -724,35 +744,48 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         return self._data._ipython_key_completions_()
 
 
-def drop_coords(
-    coords_to_drop: set[Hashable], variables, indexes: Indexes
-) -> tuple[dict, dict]:
-    """Drop index variables associated with variables in coords_to_drop."""
-    # Only warn when we're dropping the dimension with the multi-indexed coordinate
-    # If asked to drop a subset of the levels in a multi-index, we raise an error
-    # later but skip the warning here.
-    new_variables = dict(variables.copy())
-    new_indexes = dict(indexes.copy())
-    for key in coords_to_drop & set(indexes):
-        maybe_midx = indexes[key]
-        idx_coord_names = set(indexes.get_all_coords(key))
-        if (
-            isinstance(maybe_midx, PandasMultiIndex)
-            and key == maybe_midx.dim
-            and (idx_coord_names - coords_to_drop)
-        ):
-            warnings.warn(
-                f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
-                f"other variables: {list(maybe_midx.index.names)!r}. "
-                f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
+def drop_indexed_coords(
+    coords_to_drop: set[Hashable], coords: Coordinates
+) -> Coordinates:
+    """Drop indexed coordinates associated with coordinates in coords_to_drop.
+
+    This will raise an error in case it corrupts any passed index and its
+    coordinate variables.
+
+    """
+    new_variables = dict(coords.variables)
+    new_indexes = dict(coords.xindexes)
+
+    for idx, idx_coords in coords.xindexes.group_by_index():
+        idx_drop_coords = set(idx_coords) & coords_to_drop
+
+        # special case for pandas multi-index: still allow but deprecate
+        # dropping only its dimension coordinate.
+        # TODO: remove when removing PandasMultiIndex's dimension coordinate.
+        if isinstance(idx, PandasMultiIndex) and idx_drop_coords == {idx.dim}:
+            idx_drop_coords.update(idx.index.names)
+            emit_user_level_warning(
+                f"updating coordinate {idx.dim!r} with a PandasMultiIndex would leave "
+                f"the multi-index level coordinates {list(idx.index.names)!r} in an inconsistent state. "
+                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` before "
                 "assigning new coordinate values.",
                 FutureWarning,
-                stacklevel=4,
             )
-            for k in idx_coord_names:
-                del new_variables[k]
-                del new_indexes[k]
-    return new_variables, new_indexes
+
+        elif idx_drop_coords and len(idx_drop_coords) != len(idx_coords):
+            idx_drop_coords_str = ", ".join(f"{k!r}" for k in idx_drop_coords)
+            idx_coords_str = ", ".join(f"{k!r}" for k in idx_coords)
+            raise ValueError(
+                f"cannot drop or update coordinate(s) {idx_drop_coords_str}, which would corrupt "
+                f"the following index built from coordinates {idx_coords_str}:\n"
+                f"{idx}"
+            )
+
+        for k in idx_drop_coords:
+            del new_variables[k]
+            del new_indexes[k]
+
+    return Coordinates._construct_direct(coords=new_variables, indexes=new_indexes)
 
 
 def assert_coordinate_consistent(
@@ -773,11 +806,15 @@ def assert_coordinate_consistent(
 
 
 def create_coords_with_default_indexes(
-    coords: Mapping[Any, Any], data_vars: Mapping[Any, Variable] | None = None
+    coords: Mapping[Any, Any], data_vars: Mapping[Any, Any] | None = None
 ) -> Coordinates:
-    """Maybe create default indexes from a mapping of coordinates."""
+    """Returns a Coordinates object from a mapping of coordinates (arbitrary objects).
 
-    # Note: data_vars are needed here only because a pd.MultiIndex object
+    Create default (pandas) indexes for each of the input dimension coordinates.
+    Extract coordinates from each input DataArray.
+
+    """
+    # Note: data_vars is needed here only because a pd.MultiIndex object
     # can be promoted as coordinates.
     # TODO: It won't be relevant anymore when this behavior will be dropped
     # in favor of the more explicit ``Coordinates.from_pandas_multiindex()``.
@@ -791,34 +828,34 @@ def create_coords_with_default_indexes(
     indexes: dict[Hashable, Index] = {}
     variables: dict[Hashable, Variable] = {}
 
-    maybe_index_vars: dict[Hashable, Variable] = {}
-    mindex_data_vars: list[Hashable] = []
+    # promote any pandas multi-index in data_vars as coordinates
+    coords_promoted: dict[Hashable, Any] = {}
+    pd_mindex_keys: list[Hashable] = []
 
     for k, v in all_variables.items():
-        if k in coords:
-            maybe_index_vars[k] = v
-        elif isinstance(v, pd.MultiIndex):
-            # TODO: eventually stop promoting multi-index passed via data variables
-            mindex_data_vars.append(k)
-            maybe_index_vars[k] = v
+        if isinstance(v, pd.MultiIndex):
+            coords_promoted[k] = v
+            pd_mindex_keys.append(k)
+        elif k in coords:
+            coords_promoted[k] = v
 
-    if mindex_data_vars:
-        warnings.warn(
-            f"passing one or more `pandas.MultiIndex` via data variable(s) {mindex_data_vars} "
-            "will no longer create indexed coordinates in the future. "
-            "If you want to keep this behavior, pass it as coordinates instead.",
+    if pd_mindex_keys:
+        pd_mindex_keys_fmt = ",".join([f"'{k}'" for k in pd_mindex_keys])
+        emit_user_level_warning(
+            f"the `pandas.MultiIndex` object(s) passed as {pd_mindex_keys_fmt} coordinate(s) or "
+            "data variable(s) will no longer be implicitly promoted and wrapped into "
+            "multiple indexed coordinates in the future "
+            "(i.e., one coordinate for each multi-index level + one dimension coordinate). "
+            "If you want to keep this behavior, you need to first wrap it explicitly using "
+            "`mindex_coords = xarray.Coordinates.from_pandas_multiindex(mindex_obj, 'dim')` "
+            "and pass it as coordinates, e.g., `xarray.Dataset(coords=mindex_coords)`, "
+            "`dataset.assign_coords(mindex_coords)` or `dataarray.assign_coords(mindex_coords)`.",
             FutureWarning,
         )
 
-    maybe_index_vars = {
-        k: v
-        for k, v in all_variables.items()
-        if k in coords or isinstance(v, pd.MultiIndex)
-    }
-
     dataarray_coords: list[DataArrayCoordinates] = []
 
-    for name, obj in maybe_index_vars.items():
+    for name, obj in coords_promoted.items():
         if isinstance(obj, DataArray):
             dataarray_coords.append(obj.coords)
 

@@ -146,6 +146,11 @@ class TestPandasIndex:
             PandasIndex.from_variables({"x": var, "foo": var2}, options={})
 
         with pytest.raises(
+            ValueError, match=r".*cannot set a PandasIndex.*scalar variable.*"
+        ):
+            PandasIndex.from_variables({"foo": xr.Variable((), 1)}, options={})
+
+        with pytest.raises(
             ValueError, match=r".*only accepts a 1-dimensional variable.*"
         ):
             PandasIndex.from_variables({"foo": var2}, options={})
