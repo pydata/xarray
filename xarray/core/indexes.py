@@ -1655,7 +1655,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
                 convert_new_idx = False
 
             new_idx = idx._copy(deep=deep, memo=memo)
-            idx_vars = idx.create_variables(coords)
+            idx_vars = create_index_variables(idx, coords)
 
             if convert_new_idx:
                 new_idx = cast(PandasIndex, new_idx).index
@@ -1803,7 +1803,7 @@ def _apply_indexes(
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
                 new_indexes.update({k: new_index for k in index_vars})
-                new_index_vars = new_index.create_variables(index_vars)
+                new_index_vars = create_index_variables(new_index, index_vars)
                 new_index_variables.update(new_index_vars)
             else:
                 for k in index_vars:

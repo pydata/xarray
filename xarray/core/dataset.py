@@ -65,6 +65,7 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
+    create_index_variables,
     filter_indexes_from_coords,
     isel_indexes,
     remove_unused_levels_categories,
@@ -4106,11 +4107,12 @@ class Dataset(
             new_index = index.rename(name_dict, dims_dict)
             new_coord_names = [name_dict.get(k, k) for k in coord_names]
             indexes.update({k: new_index for k in new_coord_names})
-            new_index_vars = new_index.create_variables(
+            new_index_vars = create_index_variables(
+                new_index,
                 {
                     new: self._variables[old]
                     for old, new in zip(coord_names, new_coord_names)
-                }
+                },
             )
             variables.update(new_index_vars)
 
@@ -4940,7 +4942,7 @@ class Dataset(
 
         index = index_cls.from_variables(coord_vars, options=options)
 
-        new_coord_vars = index.create_variables(coord_vars)
+        new_coord_vars = create_index_variables(index, coord_vars)
 
         # special case for setting a pandas multi-index from level coordinates
         # TODO: remove it once we depreciate pandas multi-index dimension (tuple
@@ -5134,7 +5136,7 @@ class Dataset(
                 idx = index_cls.stack(product_vars, new_dim)
                 new_indexes[new_dim] = idx
                 new_indexes.update({k: idx for k in product_vars})
-                idx_vars = idx.create_variables(product_vars)
+                idx_vars = create_index_variables(idx, product_vars)
                 # keep consistent multi-index coordinate order
                 for k in idx_vars:
                     new_variables.pop(k, None)
@@ -5326,7 +5328,7 @@ class Dataset(
         indexes.update(new_indexes)
 
         for name, idx in new_indexes.items():
-            variables.update(idx.create_variables(index_vars))
+            variables.update(create_index_variables(idx, index_vars))
 
         for name, var in self.variables.items():
             if name not in index_vars:
@@ -5367,7 +5369,7 @@ class Dataset(
 
         new_index_variables = {}
         for name, idx in new_indexes.items():
-            new_index_variables.update(idx.create_variables(index_vars))
+            new_index_variables.update(create_index_variables(idx, index_vars))
 
         new_dim_sizes = {k: v.size for k, v in new_index_variables.items()}
         variables.update(new_index_variables)

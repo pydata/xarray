@@ -9,7 +9,7 @@ import pandas as pd
 from xarray.core import dtypes, utils
 from xarray.core.alignment import align, reindex_variables
 from xarray.core.duck_array_ops import lazy_array_equiv
-from xarray.core.indexes import Index, PandasIndex
+from xarray.core.indexes import Index, PandasIndex, create_index_variables
 from xarray.core.merge import (
     _VALID_COMPAT,
     collect_variables_and_indexes,
@@ -619,7 +619,7 @@ def _dataset_concat(
                     # index created from a scalar coordinate
                     idx_vars = {name: datasets[0][name].variable}
                 result_indexes.update({k: combined_idx for k in idx_vars})
-                combined_idx_vars = combined_idx.create_variables(idx_vars)
+                combined_idx_vars = create_index_variables(combined_idx, idx_vars)
                 for k, v in combined_idx_vars.items():
                     v.attrs = merge_attrs(
                         [ds.variables[k].attrs for ds in datasets],
