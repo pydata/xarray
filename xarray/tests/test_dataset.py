@@ -1046,6 +1046,17 @@ class TestDataset:
             "bar": np.dtype("float64"),
         }
 
+        # len
+        ds.coords["x"] = [1]
+        assert len(ds.data_vars) == 2
+
+        # https://github.com/pydata/xarray/issues/7588
+        with pytest.raises(
+            AssertionError, match="something is wrong with Dataset._coord_names"
+        ):
+            ds._coord_names = {"w", "x", "y", "z"}
+            len(ds.data_vars)
+
     def test_equals_and_identical(self) -> None:
         data = create_test_data(seed=42)
         assert data.equals(data)

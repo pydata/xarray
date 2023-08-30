@@ -723,6 +723,9 @@ def merge_core(
     dims = calculate_dimensions(variables)
 
     coord_names, noncoord_names = determine_coords(coerced)
+    if compat == "minimal":
+        # coordinates may be dropped in merged results
+        coord_names.intersection_update(variables)
     if explicit_coords is not None:
         assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)
