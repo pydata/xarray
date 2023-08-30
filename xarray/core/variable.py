@@ -20,6 +20,7 @@ from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
     BasicIndexer,
+    IndexedCoordinateArray,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -430,6 +431,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @data.setter
     def data(self, data):
+        if isinstance(self._data, IndexedCoordinateArray):
+            raise ValueError(
+                "Cannot assign to the .data attribute of an indexed coordinate "
+                "as it may corrupt its index. "
+                "Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
+            )
+
         data = as_compatible_data(data)
         if data.shape != self.shape:
             raise ValueError(
