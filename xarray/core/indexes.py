@@ -1373,7 +1373,13 @@ def create_default_index_implicit(
         all_variables = {k: None for k in all_variables}
 
     name = dim_variable.dims[0]
-    array = getattr(dim_variable._data, "array", None)
+    data = dim_variable._data
+    if isinstance(data, PandasIndexingAdapter):
+        array = data.array
+    elif isinstance(data, IndexedCoordinateArray):
+        array = getattr(data.array, "array", None)
+    else:
+        array = None
     index: PandasIndex
 
     if isinstance(array, pd.MultiIndex):
