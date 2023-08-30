@@ -382,6 +382,16 @@ class TestMergeMethod:
 
         assert ds1.identical(ds1.merge(ds2, compat="override"))
 
+    def test_merge_compat_minimal(self) -> None:
+        # https://github.com/pydata/xarray/issues/7405
+        # https://github.com/pydata/xarray/issues/7588
+        ds1 = xr.Dataset(coords={"foo": [1, 2, 3], "bar": 4})
+        ds2 = xr.Dataset(coords={"foo": [1, 2, 3], "bar": 5})
+
+        actual = xr.merge([ds1, ds2], compat="minimal")
+        expected = xr.Dataset(coords={"foo": [1, 2, 3]})
+        assert_identical(actual, expected)
+
     def test_merge_auto_align(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = xr.Dataset({"b": ("x", [3, 4]), "x": [1, 2]})

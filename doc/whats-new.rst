@@ -14,7 +14,6 @@ What's New
 
     np.random.seed(123456)
 
-
 .. _whats-new.2023.08.1:
 
 v2023.08.1 (unreleased)
@@ -31,10 +30,23 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Deprecate passing a :py:class:`pandas.MultiIndex` object directly to the
+  :py:class:`Dataset` and :py:class:`DataArray` constructors as well as to
+  :py:meth:`Dataset.assign` and :py:meth:`Dataset.assign_coords`.
+  A new Xarray :py:class:`Coordinates` object has to be created first using
+  :py:meth:`Coordinates.from_pandas_multiindex` (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
+  (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
+  names were not updated properly internally (:issue:`7405`, :issue:`7588`,
+  :pull:`8104`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -119,7 +131,6 @@ Breaking changes
    zarr                      2.10     2.12
    numbagg                    0.1    0.2.1
   ===================== =========  ========
-
 
 Documentation
 ~~~~~~~~~~~~~
