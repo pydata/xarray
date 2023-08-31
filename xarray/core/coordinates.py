@@ -296,9 +296,15 @@ class Coordinates(AbstractCoordinates):
             variables = {k: v.copy() for k, v in coords.variables.items()}
             coords_obj_indexes = dict(coords.xindexes)
         else:
-            variables = {
-                k: as_variable(v, name=k, auto_convert=False) for k, v in coords.items()
-            }
+            variables = {}
+            for name, data in coords.items():
+                var = as_variable(data, name=name, auto_convert=False)
+                if var.dims == (name,) and indexes is None:
+                    index, index_vars = create_default_index_implicit(var, list(coords))
+                    default_indexes.update({k: index for k in index_vars})
+                    variables.update(index_vars)
+                else:
+                    variables[name] = var
 
         if indexes is None:
             indexes = {}
