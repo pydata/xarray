@@ -489,7 +489,7 @@ class TestDataArray:
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
-        da = DataArray(range(3), coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        da = DataArray(range(3), coords=Coordinates({"x": [1, 2, 3]}, indexes={}))
         assert "x" in da.coords
         assert "x" not in da.xindexes
 
@@ -1587,7 +1587,7 @@ class TestDataArray:
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
     def test_assign_coords_no_default_index(self) -> None:
-        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        coords = Coordinates({"y": [1, 2, 3]}, indexes={})
         da = DataArray([1, 2, 3], dims="y")
         actual = da.assign_coords(coords)
         assert_identical(actual.coords, coords, check_default_indexes=False)

@@ -930,7 +930,9 @@ def open_mfdataset(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     **kwargs : optional
-        Additional arguments passed on to :py:func:`xarray.open_dataset`.
+        Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
+        overview of some of the possible options, see the documentation of
+        :py:func:`xarray.open_dataset`
 
     Returns
     -------
@@ -963,6 +965,13 @@ def open_mfdataset(
     >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
     >>> ds = xr.open_mfdataset(
     ...     "file_*.nc", concat_dim="time", preprocess=partial_func
+    ... )  # doctest: +SKIP
+
+    It is also possible to use any argument to ``open_dataset`` together
+    with ``open_mfdataset``, such as for example ``drop_variables``:
+
+    >>> ds = xr.open_mfdataset(
+    ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
     ... )  # doctest: +SKIP
 
     References
