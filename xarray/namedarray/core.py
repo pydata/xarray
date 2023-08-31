@@ -26,7 +26,9 @@ T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
 
 
 # TODO: Add tests!
-def as_compatible_data(data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False) -> T_DuckArray:
+def as_compatible_data(
+    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
+) -> T_DuckArray:
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return data
