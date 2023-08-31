@@ -7086,6 +7086,7 @@ def test_nD_coord_dataarray():
         },
     )
     da2 = DataArray(np.ones(4), dims=("y"), coords={"y": ("y", np.arange(4))})
+    da3 = DataArray(np.ones(4), dims=("z"))
 
     _, actual = xr.align(da, da2)
     assert_identical(da2, actual)
@@ -7093,3 +7094,7 @@ def test_nD_coord_dataarray():
     expected = da.drop_vars("x")
     _, actual = xr.broadcast(da, da2)
     assert_identical(expected, actual)
+
+    actual, _ = xr.broadcast(da, da3)
+    expected = da.expand_dims(z=4, axis=-1)
+    assert_identical(actual, expected)
