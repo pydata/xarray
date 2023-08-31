@@ -42,6 +42,7 @@ New Features
   with a dimension. Examples include output from finite volume models like FVCOM.
   (:issue:`2233`, :pull:`7989`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+- Provide `preferred_chunks` for data read from netcdf files (:pull:`7948`)
 
 
 Breaking changes
