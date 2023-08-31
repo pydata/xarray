@@ -1901,6 +1901,14 @@ def load_indexes(
     return _apply_index_method(indexes, "load", kwargs=kwargs)
 
 
+def chunk_indexes(
+    indexes: Indexes[Index],
+    chunks: Mapping,
+    **kwargs,
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    return _apply_index_method(indexes, "chunk", dim_args=chunks, kwargs=kwargs)
+
+
 def filter_indexes_from_coords(
     indexes: Mapping[Any, Index],
     filtered_coord_names: set,
