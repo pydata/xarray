@@ -26,6 +26,12 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The :py:class:`Coordinates` constructor now creates a (pandas) index by
+  default for each dimension coordinate. To keep the previous behavior (no index
+  created), pass an empty dictionary to ``indexes``. The constructor now also
+  extracts and add the indexes from another :py:class:`Coordinates` object
+  passed via ``coords`` (:pull:`8107`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Deprecations
 ~~~~~~~~~~~~
