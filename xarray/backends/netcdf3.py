@@ -62,6 +62,13 @@ def coerce_nc3_dtype(arr):
     dtype = str(arr.dtype)
     if dtype in _nc3_dtype_coercions:
         new_dtype = _nc3_dtype_coercions[dtype]
+        # check if this looks like a time with NaT
+        # and transform to float64
+        if np.issubdtype(dtype, np.int64):
+            mask = arr == np.iinfo(np.int64).min
+            if mask.any():
+                arr = np.where(mask, np.nan, arr)
+                return arr
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():

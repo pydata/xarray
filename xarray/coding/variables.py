@@ -236,19 +236,32 @@ class CFMaskCoder(VariableCoder):
                 f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
+        # special case DateTime to properly handle NaT
+        is_date = "since" in attrs.get("units", "")
+
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
-                data = duck_array_ops.fillna(data, fill_value)
+                if is_date:
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
 
         if mv_exists:
             # Ensure missing_value is cast to same dtype as data's
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and not fv_exists:
-                data = duck_array_ops.fillna(data, fill_value)
+                if is_date:
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
@@ -275,7 +288,11 @@ class CFMaskCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-            dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+            # special case DateTime to properly handle NaT
+            if "since" in str(attrs.get("units", "")):
+                dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
+            else:
+                dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
 
             if encoded_fill_values:
                 transform = partial(
