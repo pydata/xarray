@@ -17,6 +17,7 @@ from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
+    PandasIndex,
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
@@ -192,22 +193,69 @@ class Coordinates(AbstractCoordinates):
     Coordinates are either:
 
     - returned via the :py:attr:`Dataset.coords` and :py:attr:`DataArray.coords`
-      properties.
-    - built from index objects (e.g., :py:meth:`Coordinates.from_pandas_multiindex`).
-    - built directly from coordinate data and index objects (beware that no consistency
-      check is done on those inputs).
-
-    In the latter case, no default (pandas) index is created.
+      properties
+    - built from Pandas or other index objects
+      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`)
+    - built directly from coordinate data and Xarray ``Index`` objects (beware that
+      no consistency check is done on those inputs)
 
     Parameters
     ----------
-    coords: dict-like
-         Mapping where keys are coordinate names and values are objects that
-         can be converted into a :py:class:`~xarray.Variable` object
-         (see :py:func:`~xarray.as_variable`).
-    indexes: dict-like
-         Mapping of where keys are coordinate names and values are
-         :py:class:`~xarray.indexes.Index` objects.
+    coords: dict-like, optional
+        Mapping where keys are coordinate names and values are objects that
+        can be converted into a :py:class:`~xarray.Variable` object
+        (see :py:func:`~xarray.as_variable`). If another
+        :py:class:`~xarray.Coordinates` object is passed, its indexes
+        will be added to the new created object.
+    indexes: dict-like, optional
+        Mapping of where keys are coordinate names and values are
+        :py:class:`~xarray.indexes.Index` objects. If None (default),
+        pandas indexes will be created for each dimension coordinate.
+        Passing an empty dictionary will skip this default behavior.
+
+    Examples
+    --------
+    Create a dimension coordinate with a default (pandas) index:
+
+    >>> xr.Coordinates({"x": [1, 2]})
+    Coordinates:
+      * x        (x) int64 1 2
+
+    Create a dimension coordinate with no index:
+
+    >>> xr.Coordinates(coords={"x": [1, 2]}, indexes={})
+    Coordinates:
+        x        (x) int64 1 2
+
+    Create a new Coordinates object from existing dataset coordinates
+    (indexes are passed):
+
+    >>> ds = xr.Dataset(coords={"x": [1, 2]})
+    >>> xr.Coordinates(ds.coords)
+    Coordinates:
+      * x        (x) int64 1 2
+
+    Create indexed coordinates from a ``pandas.MultiIndex`` object:
+
+    >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
+    >>> xr.Coordinates.from_pandas_multiindex(midx, "x")
+    Coordinates:
+      * x          (x) object MultiIndex
+      * x_level_0  (x) object 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 0 1 0 1
+
+    Create a new Dataset object by passing a Coordinates object:
+
+    >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
+    >>> xr.Dataset(coords=midx_coords)
+    <xarray.Dataset>
+    Dimensions:    (x: 4)
+    Coordinates:
+      * x          (x) object MultiIndex
+      * x_level_0  (x) object 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 0 1 0 1
+    Data variables:
+        *empty*
 
     """
 
@@ -227,18 +275,39 @@ class Coordinates(AbstractCoordinates):
         from xarray.core.dataset import Dataset
 
         if coords is None:
-            variables = {}
-        elif isinstance(coords, Coordinates):
+            coords = {}
+
+        variables: dict[Hashable, Variable]
+        default_indexes: dict[Hashable, PandasIndex] = {}
+        coords_obj_indexes: dict[Hashable, Index] = {}
+
+        if isinstance(coords, Coordinates):
+            if indexes is not None:
+                raise ValueError(
+                    "passing both a ``Coordinates`` object and a mapping of indexes "
+                    "to ``Coordinates.__init__`` is not allowed "
+                    "(this constructor does not support merging them)"
+                )
             variables = {k: v.copy() for k, v in coords.variables.items()}
+            coords_obj_indexes = dict(coords.xindexes)
         else:
-            variables = {
-                k: as_variable(v, name=k, auto_convert=False) for k, v in coords.items()
-            }
+            variables = {}
+            for name, data in coords.items():
+                var = as_variable(data, name=name, auto_convert=False)
+                if var.dims == (name,) and indexes is None:
+                    index, index_vars = create_default_index_implicit(var, list(coords))
+                    default_indexes.update({k: index for k in index_vars})
+                    variables.update(index_vars)
+                else:
+                    variables[name] = var
 
         if indexes is None:
             indexes = {}
         else:
             indexes = dict(indexes)
+
+        indexes.update(default_indexes)
+        indexes.update(coords_obj_indexes)
 
         no_coord_index = set(indexes) - set(variables)
         if no_coord_index:

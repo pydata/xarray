@@ -636,7 +636,7 @@ class TestDataset:
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
-        ds = Dataset(coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        ds = Dataset(coords=Coordinates({"x": [1, 2, 3]}, indexes={}))
         assert "x" in ds
         assert "x" not in ds.xindexes
 
@@ -4356,7 +4356,7 @@ class TestDataset:
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
     def test_assign_coords_no_default_index(self) -> None:
-        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        coords = Coordinates({"y": [1, 2, 3]}, indexes={})
         ds = Dataset()
         actual = ds.assign_coords(coords)
         expected = coords.to_dataset()
