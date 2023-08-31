@@ -125,13 +125,8 @@ class TestCoordinates:
         assert not coords.identical("not_a_coords")
 
     def test_assign(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
-
-        _ds_expected = Dataset(coords={"x": [0, 1, 2], "y": [3, 4]})
-        expected = Coordinates(
-            coords=_ds_expected.coords, indexes=_ds_expected.xindexes
-        )
+        coords = Coordinates(coords={"x": [0, 1, 2]})
+        expected = Coordinates(coords={"x": [0, 1, 2], "y": [3, 4]})
 
         actual = coords.assign(y=[3, 4])
         assert_identical(actual, expected)
