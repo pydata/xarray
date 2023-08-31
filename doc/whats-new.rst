@@ -30,6 +30,12 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The :py:class:`Coordinates` constructor now creates a (pandas) index by
+  default for each dimension coordinate. To keep the previous behavior (no index
+  created), pass an empty dictionary to ``indexes``. The constructor now also
+  extracts and add the indexes from another :py:class:`Coordinates` object
+  passed via ``coords`` (:pull:`8107`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -46,6 +52,10 @@ Bug fixes
 
 - Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
   (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
+  names were not updated properly internally (:issue:`7405`, :issue:`7588`,
+  :pull:`8104`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation

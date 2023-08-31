@@ -616,7 +616,14 @@ class PandasIndex(Index):
 
         name, var = next(iter(variables.items()))
 
-        if var.ndim != 1:
+        if var.ndim == 0:
+            raise ValueError(
+                f"cannot set a PandasIndex from the scalar variable {name!r}, "
+                "only 1-dimensional variables are supported. "
+                f"Note: you might want to use `obj.expand_dims({name!r})` to create a "
+                f"new dimension and turn {name!r} as an indexed dimension coordinate."
+            )
+        elif var.ndim != 1:
             raise ValueError(
                 "PandasIndex only accepts a 1-dimensional variable, "
                 f"variable {name!r} has {var.ndim} dimensions"

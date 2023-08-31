@@ -636,7 +636,7 @@ class TestDataset:
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
-        ds = Dataset(coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        ds = Dataset(coords=Coordinates({"x": [1, 2, 3]}, indexes={}))
         assert "x" in ds
         assert "x" not in ds.xindexes
 
@@ -1045,6 +1045,17 @@ class TestDataset:
             "foo": np.dtype("float64"),
             "bar": np.dtype("float64"),
         }
+
+        # len
+        ds.coords["x"] = [1]
+        assert len(ds.data_vars) == 2
+
+        # https://github.com/pydata/xarray/issues/7588
+        with pytest.raises(
+            AssertionError, match="something is wrong with Dataset._coord_names"
+        ):
+            ds._coord_names = {"w", "x", "y", "z"}
+            len(ds.data_vars)
 
     def test_equals_and_identical(self) -> None:
         data = create_test_data(seed=42)
@@ -3397,6 +3408,12 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"dimension mismatch.*"):
             ds.set_index(y="x_var")
 
+        ds = Dataset(coords={"x": 1})
+        with pytest.raises(
+            ValueError, match=r".*cannot set a PandasIndex.*scalar variable.*"
+        ):
+            ds.set_index(x="x")
+
     def test_set_index_deindexed_coords(self) -> None:
         # test de-indexed coordinates are converted to base variable
         # https://github.com/pydata/xarray/issues/6969
@@ -4339,7 +4356,7 @@ class TestDataset:
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
     def test_assign_coords_no_default_index(self) -> None:
-        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        coords = Coordinates({"y": [1, 2, 3]}, indexes={})
         ds = Dataset()
         actual = ds.assign_coords(coords)
         expected = coords.to_dataset()
