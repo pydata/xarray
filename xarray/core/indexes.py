@@ -1835,14 +1835,15 @@ def _apply_index_method(
     dim_args: Mapping | None = None,
     kwargs: Mapping | None = None,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    """Utility function that applies a given Index method for an Indexes
+    """Utility function that applies a given Index method to an Indexes
     collection and that returns new collections of indexes and coordinate
     variables.
 
-    Filter index method calls and arguments according to ``dim_args`` if not
-    None. Otherwise, call the method unconditionally for each index.
+    Index method calls and arguments are filtered according to ``dim_args`` if
+    it is not None. Otherwise, the method is called unconditionally for each
+    index.
 
-    ``kwargs`` is passed to every method call.
+    ``kwargs`` is passed to every call of the index method.
 
     """
     if kwargs is None:
@@ -1854,17 +1855,20 @@ def _apply_index_method(
     for index, index_vars in indexes.group_by_index():
         func = getattr(index, method_name)
 
-        if dim_args is not None:
+        if dim_args is None:
+            new_index = func(**kwargs)
+            skip_index = False
+        else:
             index_dims = {d for var in index_vars.values() for d in var.dims}
             index_args = {k: v for k, v in dim_args.items() if k in index_dims}
-        else:
-            index_args = {}
-
-        if dim_args is None or index_args:
             if index_args:
                 new_index = func(index_args, **kwargs)
+                skip_index = False
             else:
-                new_index = func(**kwargs)
+                new_index = None
+                skip_index = True
+
+        if not skip_index:
             if new_index is not None:
                 new_indexes.update({k: new_index for k in index_vars})
                 new_index_vars = new_index.create_variables(index_vars)
@@ -1878,16 +1882,16 @@ def _apply_index_method(
 
 def isel_indexes(
     indexes: Indexes[Index],
-    dim_indexers: Mapping,
+    indexers: Mapping,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    return _apply_index_method(indexes, "isel", dim_args=dim_indexers)
+    return _apply_index_method(indexes, "isel", dim_args=indexers)
 
 
 def roll_indexes(
     indexes: Indexes[Index],
-    dim_shifts: Mapping[Any, int],
+    shifts: Mapping[Any, int],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    return _apply_index_method(indexes, "roll", dim_args=dim_shifts)
+    return _apply_index_method(indexes, "roll", dim_args=shifts)
 
 
 def load_indexes(
