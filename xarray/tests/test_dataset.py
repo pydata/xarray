@@ -3783,7 +3783,7 @@ class TestDataset:
         )
         with pytest.raises(
             ValueError,
-            match="Variables in the dataset must contain all ``sample_dims`` but 'b' misses ['y']",
+            match=r"Variables in the dataset must contain all ``sample_dims`` but 'b' misses \['y'\]",
         ):
             data.to_stacked_array("features", sample_dims=["y"])
 
