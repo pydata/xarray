@@ -67,6 +67,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
     filter_indexes_from_coords,
     isel_indexes,
+    load_indexes,
     remove_unused_levels_categories,
     roll_indexes,
 )
@@ -816,6 +817,11 @@ class Dataset(
         --------
         dask.compute
         """
+        # apply Index.load, collect new indexes and variables and replace the existing ones
+        # new index variables may still be lazy: load them here after
+        indexes, index_variables = load_indexes(self.xindexes, kwargs)
+        self.coords._update_coords(index_variables, indexes)
+
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
             k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
