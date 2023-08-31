@@ -7073,3 +7073,23 @@ class TestStackEllipsis:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
             da.stack(flat=...)  # type: ignore
+
+
+def test_nD_coord_dataarray():
+    # should succeed
+    da = DataArray(
+        np.ones((2, 4)),
+        dims=("x", "y"),
+        coords={
+            "x": (("x", "y"), np.arange(8).reshape((2, 4))),
+            "y": ("y", np.arange(4)),
+        },
+    )
+    da2 = DataArray(np.ones(4), dims=("y"), coords={"y": ("y", np.arange(4))})
+
+    _, actual = xr.align(da, da2)
+    assert_identical(da2, actual)
+
+    expected = da.drop_vars("x")
+    _, actual = xr.broadcast(da, da2)
+    assert_identical(expected, actual)
