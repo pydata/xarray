@@ -7,7 +7,7 @@ from xarray.namedarray.core import NamedArray
 @pytest.mark.parametrize(
     "dims, data, attrs", [("x", [1, 2, 3], {"key": "value"}), ("y", [4, 5], None)]
 )
-def test_named_array_initialization(dims, data, attrs):
+def test_named_array_initialization(dims, data, attrs) -> None:
     named_array = NamedArray(dims, data, attrs)
     assert named_array.dims == (dims,)
     assert np.array_equal(named_array.data, data)
@@ -29,7 +29,7 @@ def test_named_array_properties(
     expected_dtype,
     expected_shape,
     expected_len,
-):
+) -> None:
     named_array = NamedArray(dims, data)
     expected_nbytes = expected_size * np.array(data).dtype.itemsize
     assert named_array.ndim == expected_ndim
@@ -47,7 +47,7 @@ def test_named_array_properties(
         (["x", "y"], [[1, 2], [3, 4]], ["a", "b"]),
     ],
 )
-def test_named_array_dims_setter(initial_dims, initial_data, new_dims):
+def test_named_array_dims_setter(initial_dims, initial_data, new_dims) -> None:
     named_array = NamedArray(initial_dims, initial_data)
     named_array.dims = new_dims
     assert named_array.dims == tuple(new_dims)
@@ -62,7 +62,7 @@ def test_named_array_dims_setter(initial_dims, initial_data, new_dims):
         ("x", [1, 2, 3], {}),
     ],
 )
-def test_named_array_attrs_setter(initial_dims, initial_data, new_attrs):
+def test_named_array_attrs_setter(initial_dims, initial_data, new_attrs) -> None:
     named_array = NamedArray(initial_dims, initial_data)
     named_array.attrs = new_attrs
     assert named_array.attrs == new_attrs
@@ -77,7 +77,7 @@ def test_named_array_attrs_setter(initial_dims, initial_data, new_attrs):
         ("x", [1, 2, 3], [1, 2, 3]),
     ],
 )
-def test_named_array_data_setter(initial_dims, initial_data, new_data):
+def test_named_array_data_setter(initial_dims, initial_data, new_data) -> None:
     named_array = NamedArray(initial_dims, initial_data)
     named_array.data = new_data
     assert np.array_equal(named_array.data, new_data)

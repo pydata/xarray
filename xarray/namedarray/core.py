@@ -26,7 +26,7 @@ T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
 
 
 # TODO: Add tests!
-def as_compatible_data(data, fastpath: bool = False):
+def as_compatible_data(data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False) -> T_DuckArray:
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return data
@@ -58,7 +58,7 @@ class NamedArray:
     def __init__(
         self,
         dims: str | Iterable[Hashable],
-        data: T_DuckArray,
+        data: T_DuckArray | np.typing.ArrayLike,
         attrs: dict | None = None,
     ):
         self._data: T_DuckArray = as_compatible_data(data)
@@ -271,7 +271,7 @@ class NamedArray:
     @property
     def chunksizes(
         self: T_NamedArray,
-    ) -> typing.Mapping[typing.Any, tuple[int, ...]] | None:
+    ) -> typing.Mapping[typing.Any, tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this variable's data, or None if
         the underlying data is not a dask array.
@@ -289,7 +289,7 @@ class NamedArray:
         if hasattr(self._data, "chunks"):
             return Frozen(dict(zip(self.dims, self.data.chunks)))
         else:
-            return None
+            return {}
 
     def _replace(
         self: T_NamedArray, dims=_default, data=_default, attrs=_default
