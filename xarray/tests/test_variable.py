@@ -1129,7 +1129,7 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable([], np.bytes_("foo"))
         assert v.dtype == np.dtype("S3")
-        assert v.values == bytes("foo", "ascii")
+        assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp("2000-01-01"))
