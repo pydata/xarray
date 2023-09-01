@@ -4222,7 +4222,7 @@ class TestDataArray:
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
 
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", np.RankWarning)
+            warnings.simplefilter("ignore", RankWarning)
             out = da.polyfit("x", 8, full=True)
             np.testing.assert_array_equal(out.polyfit_residuals.isnull(), [True, False])
 
