@@ -257,6 +257,44 @@ def test_apply_two_outputs() -> None:
     assert_identical(out1, dataset)
 
 
+def test_apply_missing_dims() -> None:
+    def add_one(a, core_dims, missing_core_dim):
+        return apply_ufunc(
+            lambda x: x + 1,
+            a,
+            input_core_dims=core_dims,
+            output_core_dims=core_dims,
+            missing_core_dim=missing_core_dim,
+        )
+
+    array = np.arange(6).reshape(2, 3)
+    variable = xr.Variable(["x", "y"], array)
+    variable_no_y = xr.Variable(["x", "z"], array)
+
+    dataset = xr.Dataset({"matching": variable, "missing": variable_no_y})
+
+    # Check the standard stuff works OK
+    assert_identical(
+        add_one(dataset[["matching"]], core_dims=[["y"]], missing_core_dim="raise"),
+        dataset[["matching"]] + 1,
+    )
+
+    # `raise` — should raise on a missing dim
+    with pytest.raises(ValueError):
+        add_one(dataset, core_dims=[["y"]], missing_core_dim="raise"),
+
+    # `drop` — should drop the var with the missing dim
+    assert_identical(
+        add_one(dataset, core_dims=[["y"]], missing_core_dim="drop"),
+        (dataset + 1).drop_vars("missing"),
+    )
+
+    # `copy` — should not add one to the missing with `copy`
+    copy_result = add_one(dataset, core_dims=[["y"]], missing_core_dim="copy")
+    assert_identical(copy_result["matching"], (dataset + 1)["matching"])
+    assert_identical(copy_result["missing"], dataset["missing"])
+
+
 @requires_dask
 def test_apply_dask_parallelized_two_outputs() -> None:
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))

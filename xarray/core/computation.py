@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import CombineAttrsOptions, JoinOptions
 
+    MissingCoreDimOptions = Literal["raise", "copy", "drop"]
+
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
@@ -42,6 +44,7 @@ def _first_of_type(args, kind):
     for arg in args:
         if isinstance(arg, kind):
             return arg
+
     raise ValueError("This should be unreachable.")
 
 
@@ -376,7 +379,7 @@ def collect_dict_values(
     ]
 
 
-def _as_variables_or_variable(arg):
+def _as_variables_or_variable(arg) -> Variable | tuple[Variable]:
     try:
         return arg.variables
     except AttributeError:
@@ -397,7 +400,12 @@ def _unpack_dict_tuples(
 
 
 def apply_dict_of_variables_vfunc(
-    func, *args, signature: _UFuncSignature, join="inner", fill_value=None
+    func,
+    *args,
+    signature: _UFuncSignature,
+    join="inner",
+    fill_value=None,
+    missing_core_dim: MissingCoreDimOptions = "raise",
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
@@ -408,7 +416,26 @@ def apply_dict_of_variables_vfunc(
 
     result_vars = {}
     for name, variable_args in zip(names, grouped_by_name):
-        result_vars[name] = func(*variable_args)
+        # TODO: is this a reasonable to check for missing core dims? We check for a dims
+        # property to protect against the case where a numpy array is passed in.
+        if hasattr(variable_args[0], "dims") and set(
+            signature.all_input_core_dims
+        ) - set(variable_args[0].dims):
+            if missing_core_dim == "raise":
+                raise ValueError(
+                    f"Missing core dimension on {name!r}. Either add the core dimension, or set `missing_core_dim` to `copy` or `drop`."
+                )
+            elif missing_core_dim == "copy":
+                # TODO: is it correct to copy the first variable here?
+                result_vars[name] = variable_args[0]
+            elif missing_core_dim == "drop":
+                pass
+            else:
+                raise ValueError(
+                    f"Invalid value for `missing_core_dim`: {missing_core_dim!r}"
+                )
+        else:
+            result_vars[name] = func(*variable_args)
 
     if signature.num_outputs > 1:
         return _unpack_dict_tuples(result_vars, signature.num_outputs)
@@ -441,6 +468,7 @@ def apply_dataset_vfunc(
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
+    missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Dataset | tuple[Dataset, ...]:
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -467,7 +495,12 @@ def apply_dataset_vfunc(
     args = tuple(getattr(arg, "data_vars", arg) for arg in args)
 
     result_vars = apply_dict_of_variables_vfunc(
-        func, *args, signature=signature, join=dataset_join, fill_value=fill_value
+        func,
+        *args,
+        signature=signature,
+        join=dataset_join,
+        fill_value=fill_value,
+        missing_core_dim=missing_core_dim,
     )
 
     out: Dataset | tuple[Dataset, ...]
@@ -850,6 +883,7 @@ def apply_ufunc(
     output_sizes: Mapping[Any, int] | None = None,
     meta: Any = None,
     dask_gufunc_kwargs: dict[str, Any] | None = None,
+    missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -1191,6 +1225,7 @@ def apply_ufunc(
             dataset_join=dataset_join,
             fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
+            missing_core_dim=missing_core_dim,
         )
     # feed DataArray apply_variable_ufunc through apply_dataarray_vfunc
     elif any(isinstance(a, DataArray) for a in args):
