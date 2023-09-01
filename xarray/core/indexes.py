@@ -1335,12 +1335,13 @@ class PandasMultiIndex(PandasIndex):
 def create_default_index_implicit(
     dim_variable: Variable,
     all_variables: Mapping | Iterable[Hashable] | None = None,
+    warn_multi_index: bool = True,
 ) -> tuple[PandasIndex, IndexVars]:
     """Create a default index from a dimension variable.
 
     Create a PandasMultiIndex if the given variable wraps a pandas.MultiIndex,
     otherwise create a PandasIndex (note that this will become obsolete once we
-    depreciate implicitly passing a pandas.MultiIndex as a coordinate).
+    deprecate implicitly passing a pandas.MultiIndex as a coordinate).
 
     """
     if all_variables is None:
@@ -1353,6 +1354,15 @@ def create_default_index_implicit(
     index: PandasIndex
 
     if isinstance(array, pd.MultiIndex):
+        if warn_multi_index:
+            # raise ValueError("no pd.MultiIndex please!")
+            emit_user_level_warning(
+                f"the `pandas.MultiIndex` object wrapped in variable {name} will no longer "
+                "be implicitly promoted into multiple indexed coordinates in the future. "
+                "If you want to pass it as coordinates, you need to first wrap it explicitly "
+                "using `xarray.Coordinates.from_pandas_multiindex()`.",
+                FutureWarning,
+            )
         index = PandasMultiIndex(array, name)
         index_vars = index.create_variables()
         # check for conflict between level names and variable names
@@ -1680,7 +1690,9 @@ def default_indexes(
 
     for name, var in coords.items():
         if name in dims and var.ndim == 1:
-            index, index_vars = create_default_index_implicit(var, coords)
+            index, index_vars = create_default_index_implicit(
+                var, coords, warn_multi_index=False
+            )
             if set(index_vars) <= coord_names:
                 indexes.update({k: index for k in index_vars})
 
