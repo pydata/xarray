@@ -118,7 +118,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                 ),
                 "unicode_var": xr.DataArray(
                     unicode_var, coords=[time1], dims=["time"]
-                ).astype(np.unicode_),
+                ).astype(np.str_),
                 "datetime_var": xr.DataArray(
                     datetime_var, coords=[time1], dims=["time"]
                 ),
@@ -141,7 +141,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                 ),
                 "unicode_var": xr.DataArray(
                     unicode_var[:nt2], coords=[time2], dims=["time"]
-                ).astype(np.unicode_),
+                ).astype(np.str_),
                 "datetime_var": xr.DataArray(
                     datetime_var_to_append, coords=[time2], dims=["time"]
                 ),

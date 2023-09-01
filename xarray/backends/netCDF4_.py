@@ -207,7 +207,7 @@ def _ensure_fill_value_valid(data, attributes):
     # work around for netCDF4/scipy issue where _FillValue has the wrong type:
     # https://github.com/Unidata/netcdf4-python/issues/271
     if data.dtype.kind == "S" and "_FillValue" in attributes:
-        attributes["_FillValue"] = np.string_(attributes["_FillValue"])
+        attributes["_FillValue"] = np.bytes_(attributes["_FillValue"])
 
 
 def _force_native_endianness(var):

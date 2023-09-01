@@ -1127,7 +1127,7 @@ class TestVariable(VariableSubclassobjects):
         assert v.dtype == np.dtype("U3")
         assert v.values == "foo"
 
-        v = Variable([], np.string_("foo"))
+        v = Variable([], np.bytes_("foo"))
         assert v.dtype == np.dtype("S3")
         assert v.values == bytes("foo", "ascii")
 
@@ -1466,10 +1466,10 @@ class TestVariable(VariableSubclassobjects):
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
-        v = Variable([], np.string_("asdf"))
+        v = Variable([], np.bytes_("asdf"))
         assert_identical(v[()], v)
 
-        v = Variable([], np.unicode_("asdf"))
+        v = Variable([], np.str_("asdf"))
         assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
