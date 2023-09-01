@@ -24,6 +24,13 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
@@ -8755,9 +8762,9 @@ class Dataset(
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
-                    warnings.simplefilter("ignore", np.RankWarning)
+                    warnings.simplefilter("ignore", RankWarning)
                 else:  # Raise only once per variable
-                    warnings.simplefilter("once", np.RankWarning)
+                    warnings.simplefilter("once", RankWarning)
 
                 coeffs, residuals = duck_array_ops.least_squares(
                     lhs, rhs.data, rcond=rcond, skipna=skipna_da

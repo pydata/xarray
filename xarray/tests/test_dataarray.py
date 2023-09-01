@@ -13,6 +13,12 @@ import pandas as pd
 import pytest
 from packaging.version import Version
 
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import xarray as xr
 from xarray import (
     DataArray,
@@ -4195,7 +4201,7 @@ class TestDataArray:
 
         # Full output and deficient rank
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", np.RankWarning)
+            warnings.simplefilter("ignore", RankWarning)
             out = da.polyfit("x", 12, full=True)
             assert out.polyfit_residuals.isnull().all()
 

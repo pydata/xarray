@@ -15,6 +15,12 @@ import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
 
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import xarray as xr
 from xarray import (
     DataArray,
@@ -6292,7 +6298,7 @@ class TestDataset:
         with warnings.catch_warnings(record=True) as ws:
             ds.var1.polyfit("dim2", 10, full=False)
             assert len(ws) == 1
-            assert ws[0].category == np.RankWarning
+            assert ws[0].category == RankWarning
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
