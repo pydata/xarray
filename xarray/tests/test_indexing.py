@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable
+from xarray import Coordinates, DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
@@ -68,9 +68,9 @@ class TestIndexers:
 
     def test_group_indexers_by_index(self) -> None:
         mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        data = DataArray(
-            np.zeros((4, 2, 2)), coords={"x": mindex, "y": [1, 2]}, dims=("x", "y", "z")
-        )
+        coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        coords["y"] = [1, 2]
+        data = DataArray(np.zeros((4, 2, 2)), coords=coords, dims=("x", "y", "z"))
         data.coords["y2"] = ("y", [2.0, 3.0])
 
         grouped_indexers = indexing.group_indexers_by_index(
@@ -146,7 +146,8 @@ class TestIndexers:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
         )
-        mdata = DataArray(range(8), [("x", mindex)])
+        mindex_coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        mdata = DataArray(range(8), coords=mindex_coords)
 
         test_indexer(data, 1, indexing.IndexSelResult({"x": 0}))
         test_indexer(data, np.int32(1), indexing.IndexSelResult({"x": 0}))
