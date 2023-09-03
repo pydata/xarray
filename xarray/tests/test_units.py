@@ -144,21 +144,28 @@ def strip_units(obj):
             strip_units(name): strip_units(value)
             for name, value in obj.data_vars.items()
         }
-        coords = {
-            strip_units(name): strip_units(value) for name, value in obj.coords.items()
-        }
+        coords = xr.Coordinates(
+            coords={
+                strip_units(name): strip_units(value)
+                for name, value in obj.coords.items()
+            },
+            indexes=dict(obj.xindexes),
+        )
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
     elif isinstance(obj, xr.DataArray):
         data = array_strip_units(obj.variable._data)
-        coords = {
-            strip_units(name): (
-                (value.dims, array_strip_units(value.variable._data))
-                if isinstance(value.data, Quantity)
-                else value  # to preserve multiindexes
-            )
-            for name, value in obj.coords.items()
-        }
+        coords = xr.Coordinates(
+            coords={
+                strip_units(name): (
+                    (value.dims, array_strip_units(value.variable._data))
+                    if isinstance(value.data, Quantity)
+                    else value  # to preserve multiindexes
+                )
+                for name, value in obj.coords.items()
+            },
+            indexes=dict(obj.xindexes),
+        )
 
         new_obj = xr.DataArray(
             name=strip_units(obj.name), data=data, coords=coords, dims=obj.dims
