@@ -8758,13 +8758,20 @@ class Dataset(
                 skipna_da = bool(np.any(da.isnull()))
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_coords: dict[Hashable, DataArray] = {}
+            stacked_coords = Coordinates()
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
                 rhs = da.transpose(dim, *dims_to_stack).stack(
                     {stacked_dim: dims_to_stack}
                 )
-                stacked_coords = {stacked_dim: rhs[stacked_dim]}
+                idx, idx_vars = rhs._to_temp_dataset()._get_stack_index(
+                    stacked_dim, multi=True
+                )
+                if idx is not None:
+                    coords = Coordinates._construct_direct(
+                        idx_vars, indexes={k: idx for k in idx_vars}
+                    )
+                    stacked_coords.update(coords)
                 scale_da = scale[:, np.newaxis]
             else:
                 rhs = da
@@ -8789,10 +8796,12 @@ class Dataset(
                 # Thus a ReprObject => polyfit was called on a DataArray
                 name = ""
 
+            coeffs_coords = stacked_coords.assign({degree_dim: np.arange(order)[::-1]})
+
             coeffs = DataArray(
                 coeffs / scale_da,
-                dims=[degree_dim] + list(stacked_coords.keys()),
-                coords={degree_dim: np.arange(order)[::-1], **stacked_coords},
+                dims=[degree_dim] + list(stacked_coords.dims),
+                coords=coeffs_coords,
                 name=name + "polyfit_coefficients",
             )
             if dims_to_stack:
@@ -8802,7 +8811,7 @@ class Dataset(
             if full or (cov is True):
                 residuals = DataArray(
                     residuals if dims_to_stack else residuals.squeeze(),
-                    dims=list(stacked_coords.keys()),
+                    dims=stacked_coords.dims,
                     coords=stacked_coords,
                     name=name + "polyfit_residuals",
                 )
