@@ -1355,7 +1355,6 @@ def create_default_index_implicit(
 
     if isinstance(array, pd.MultiIndex):
         if warn_multi_index:
-            # raise ValueError("no pd.MultiIndex please!")
             emit_user_level_warning(
                 f"the `pandas.MultiIndex` object wrapped in variable {name} will no longer "
                 "be implicitly promoted into multiple indexed coordinates in the future. "
