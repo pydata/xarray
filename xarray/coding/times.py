@@ -25,6 +25,7 @@ from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
 try:
@@ -685,7 +686,7 @@ def encode_cf_datetime(
                 1, _netcdf_to_numpy_timeunit(needed_delta)
             ).astype("timedelta64[ns]")
             if needed_delta != delta and time_delta > needed_time_delta:
-                warnings.warn(
+                emit_user_level_warning(
                     f"Times can't be serialized faithfully with requested units {units!r}. "
                     f"Resolution of {needed_delta!r} needed. "
                     f"Serializing timeseries to floating point."
@@ -721,8 +722,18 @@ def encode_cf_timedelta(timedeltas, units: str | None = None) -> tuple[np.ndarra
         units = infer_timedelta_units(timedeltas)
 
     np_unit = _netcdf_to_numpy_timeunit(units)
-    num = 1.0 * timedeltas / np.timedelta64(1, np_unit)
-    num = np.where(pd.isnull(timedeltas), np.nan, num)
+
+    time_delta = np.timedelta64(1, np_unit).astype("timedelta64[ns]")
+    time_deltas = pd.TimedeltaIndex(timedeltas.ravel())
+
+    if np.all(time_deltas.dropna() % time_delta == np.timedelta64(0, "ns")):
+        # calculate int64 floor division
+        num = time_deltas // time_delta.astype(np.int64)
+        num = num.astype(np.int64, copy=False)
+    else:
+        num = time_deltas / time_delta
+    num = num.values.reshape(timedeltas.shape)
+
     num = cast_to_int_if_safe(num)
     return (num, units)
 
