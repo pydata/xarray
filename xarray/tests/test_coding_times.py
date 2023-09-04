@@ -576,10 +576,10 @@ def test_infer_cftime_datetime_units(calendar, date_args, expected) -> None:
         ("1ms", "milliseconds", np.int64(1)),
         ("1us", "microseconds", np.int64(1)),
         ("1ns", "nanoseconds", np.int64(1)),
-        (["NaT", "0s", "1s"], None, [np.nan, 0, 1]),
+        (["NaT", "0s", "1s"], None, [np.iinfo(np.int64).min, 0, 1]),
         (["30m", "60m"], "hours", [0.5, 1.0]),
-        ("NaT", "days", np.nan),
-        (["NaT", "NaT"], "days", [np.nan, np.nan]),
+        ("NaT", "days", np.iinfo(np.int64).min),
+        (["NaT", "NaT"], "days", [np.iinfo(np.int64).min, np.iinfo(np.int64).min]),
     ],
 )
 def test_cf_timedelta(timedeltas, units, numbers) -> None:
