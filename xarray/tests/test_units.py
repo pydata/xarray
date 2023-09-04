@@ -93,11 +93,14 @@ def array_strip_units(array):
 
 
 def array_attach_units(data, unit):
+    if unit is None or (isinstance(unit, int) and unit == 1):
+        return data
+
     if isinstance(data, Quantity):
         raise ValueError(f"cannot attach unit {unit} to quantity {data}")
 
     try:
-        quantity = data * unit
+        quantity = unit._REGISTRY.Quantity(data, unit)
     except np.core._exceptions.UFuncTypeError:
         if isinstance(unit, unit_registry.Unit):
             raise
@@ -182,36 +185,40 @@ def attach_units(obj, units):
         return array_attach_units(obj, units)
 
     if isinstance(obj, xr.Dataset):
-        data_vars = {
-            name: attach_units(value, units) for name, value in obj.data_vars.items()
+        variables = {
+            name: attach_units(value, {None: units.get(name)})
+            for name, value in obj.variables.items()
         }
-
         coords = {
-            name: attach_units(value, units) for name, value in obj.coords.items()
+            name: var for name, var in variables.items() if name in obj._coord_names
         }
-
+        data_vars = {
+            name: var for name, var in variables.items() if name not in obj._coord_names
+        }
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
     elif isinstance(obj, xr.DataArray):
         # try the array name, "data" and None, then fall back to dimensionless
-        data_units = units.get(obj.name, None) or units.get(None, None) or 1
+        units = units.copy()
+        THIS_ARRAY = xr.core.dataarray._THIS_ARRAY
+        unset = object()
+        if obj.name in units:
+            name = obj.name
+        elif None in units:
+            name = None
+        else:
+            name = unset
 
-        data = array_attach_units(obj.data, data_units)
+        if name is not unset:
+            units[THIS_ARRAY] = units.pop(name)
 
-        coords = {
-            name: (
-                (value.dims, array_attach_units(value.data, units.get(name) or 1))
-                if name in units
-                else (value.dims, value.data)
-            )
-            for name, value in obj.coords.items()
-        }
-        dims = obj.dims
-        attrs = obj.attrs
-
-        new_obj = xr.DataArray(
-            name=obj.name, data=data, coords=coords, attrs=attrs, dims=dims
-        )
+        ds = obj._to_temp_dataset()
+        attached = attach_units(ds, units)
+        new_obj = obj._from_temp_dataset(attached, name=obj.name)
     else:
+        if isinstance(obj, xr.IndexVariable):
+            # no units for index variables
+            return obj
+
         data_units = units.get("data", None) or units.get(None, None) or 1
 
         data = array_attach_units(obj.data, data_units)

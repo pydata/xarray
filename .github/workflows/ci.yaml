@@ -59,6 +59,15 @@ jobs:
           - env: "flaky"
             python-version: "3.10"
             os: ubuntu-latest
+          - env: "duckarrays"
+            python-version: "3.10"
+            os: "ubuntu-latest"
+          - env: "duckarrays"
+            python-version: "3.10"
+            os: "windows-latest"
+          - env: "duckarrays"
+            python-version: "3.10"
+            os: "macos-latest"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -76,17 +85,20 @@ jobs:
           elif [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
-          elif [[ "${{ matrix.env }}" != "" ]] ;
+          else
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+          fi
+
+          if [[ "${{ matrix.env }}" != "" ]] ;
           then
-            if [[ "${{ matrix.env }}" == "flaky" ]] ;
-            then
+            if [[ "${{ matrix.env }}" == "flaky" ]] ; then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+            elif [[ "${{ matrix.env }}" == "duckarrays" ]] ; then
+              echo "PYTEST_EXTRA_FLAGS=--run-duckarray-tests xarray/tests/duckarrays/" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
-          else
-            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
           fi
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
@@ -105,7 +117,7 @@ jobs:
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
       - name: Install error reporter
-        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.10'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' && matrix.env == ''
         run: |
           python -m pip install pytest-github-actions-annotate-failures
 

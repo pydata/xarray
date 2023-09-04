@@ -11,6 +11,11 @@ def pytest_addoption(parser):
         action="store_true",
         help="runs tests requiring a network connection",
     )
+    parser.addoption(
+        "--run-duckarray-tests",
+        action="store_true",
+        help="runs the duckarray hypothesis tests",
+    )
 
 
 def pytest_runtest_setup(item):
@@ -21,6 +26,10 @@ def pytest_runtest_setup(item):
         pytest.skip(
             "set --run-network-tests to run test requiring an internet connection"
         )
+    if "duckarrays" in item.keywords and not item.config.getoption(
+        "--run-duckarray-tests"
+    ):
+        pytest.skip("set --run-duckarray-tests option to run duckarray tests")
 
 
 @pytest.fixture(autouse=True)
