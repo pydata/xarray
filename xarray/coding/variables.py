@@ -215,6 +215,21 @@ def _apply_mask(
     return np.where(condition, decoded_fill_value, data)
 
 
+def _is_time_like(units):
+    # test for time-like
+    time_strings = [
+        "since",
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
+    return any(tstr in str(units) for tstr in time_strings)
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -237,14 +252,14 @@ class CFMaskCoder(VariableCoder):
             )
 
         # special case DateTime to properly handle NaT
-        is_date = "since" in attrs.get("units", "")
+        is_time_like = _is_time_like(attrs.get("units"))
 
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
-                if is_date and data.dtype.kind in "iu":
+                if is_time_like and data.dtype.kind in "iu":
                     data = duck_array_ops.where(
                         data != np.iinfo(np.int64).min, data, fill_value
                     )
@@ -256,7 +271,7 @@ class CFMaskCoder(VariableCoder):
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and not fv_exists:
-                if is_date and data.dtype.kind in "iu":
+                if is_time_like and data.dtype.kind in "iu":
                     data = duck_array_ops.where(
                         data != np.iinfo(np.int64).min, data, fill_value
                     )
@@ -289,7 +304,7 @@ class CFMaskCoder(VariableCoder):
                 )
 
             # special case DateTime to properly handle NaT
-            if "since" in str(attrs.get("units", "")) and data.dtype.kind in "iu":
+            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
                 dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)

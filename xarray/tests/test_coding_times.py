@@ -1191,3 +1191,59 @@ def test_contains_cftime_lazy() -> None:
     )
     array = FirstElementAccessibleArray(times)
     assert _contains_cftime_datetimes(array)
+
+
+@pytest.mark.parametrize(
+    "time, dtype, fill_value",
+    [
+        (
+            np.datetime64("1677-09-21T00:12:43.145224193", "ns"),
+            np.int64,
+            20,
+        ),
+        (
+            np.datetime64("1970-09-21T00:12:44.145224808", "ns"),
+            np.float64,
+            1e30,
+        ),
+        (
+            np.datetime64("1677-09-21T00:12:43.145225216", "ns"),
+            np.float64,
+            -9.223372036854776e18,
+        ),
+    ],
+)
+def test_roundtrip_datetime64_nanosecond_precision(
+    time: np.datetime64, dtype: np.typing.DTypeLike, fill_value: int | float
+) -> None:
+    # test for GH7817
+    times = [np.datetime64("1970-01-01", "ns"), np.datetime64("NaT"), time]
+    encoding = dict(dtype=dtype, _FillValue=fill_value)
+    var = Variable(["time"], times, encoding=encoding)
+
+    encoded_var = conventions.encode_cf_variable(var)
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    assert_identical(var, decoded_var)
+
+
+@pytest.mark.parametrize(
+    "dtype, fill_value",
+    [(np.int64, 20), (np.int64, np.iinfo(np.int64).min), (np.float64, 1e30)],
+)
+def test_roundtrip_timedelta64_nanosecond_precision(
+    dtype: np.typing.DTypeLike, fill_value: int | float
+) -> None:
+    # test for GH7942
+    one_day = np.timedelta64(1, "ns")
+    nat = np.timedelta64("nat", "ns")
+    timedelta_values = (np.arange(5) * one_day).astype("timedelta64[ns]")
+    timedelta_values[2] = nat
+    timedelta_values[4] = nat
+
+    encoding = dict(dtype=dtype, _FillValue=fill_value)
+    var = Variable(["time"], timedelta_values, encoding=encoding)
+
+    encoded_var = conventions.encode_cf_variable(var)
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+
+    assert_identical(var, decoded_var)
