@@ -5132,7 +5132,8 @@ class Dataset(
 
             if len(product_vars) == len(dims):
                 idx = index_cls.stack(product_vars, new_dim)
-                new_indexes[new_dim] = idx
+                if not OPTIONS["future_no_mindex_dim_coord"]:
+                    new_indexes[new_dim] = idx
                 new_indexes.update({k: idx for k in product_vars})
                 idx_vars = idx.create_variables(product_vars)
                 # keep consistent multi-index coordinate order
@@ -5779,7 +5780,7 @@ class Dataset(
         for var in names:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
-                idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+                idx_coord_names = set(self.xindexes.get_all_coords(var))
                 idx_other_names = idx_coord_names - set(names)
                 other_names.update(idx_other_names)
         if other_names:
