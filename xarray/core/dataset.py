@@ -5008,6 +5008,15 @@ class Dataset(
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
+        warnings.warn(
+            "The `reorder_levels` method will be removed in the future, "
+            "when dimension coordinates with a PandasMultiIndex are removed.\n"
+            "Instead of `ds.reorder_levels(x=['two', 'one'])`, you could do:\n"
+            "`new_midx = ds.xindexes['one'].index.reorder_levels(['two', 'one'])`\n"
+            "`ds.assign_coords(xr.Coordinates.from_pandas_multiindex(new_midx, 'x'))`",
+            FutureWarning,
+            stacklevel=2,
+        )
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
         indexes = dict(self._indexes)
