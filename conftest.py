@@ -2,6 +2,8 @@
 
 import pytest
 
+from xarray import set_options
+
 
 def pytest_addoption(parser):
     """Add command-line flags for pytest."""
@@ -39,3 +41,10 @@ def add_standard_imports(doctest_namespace, tmpdir):
 
     # always switch to the temporary directory, so files get written there
     tmpdir.chdir()
+
+
+@pytest.fixture(scope="function", params=[True, False])
+def mindex_dim_coord(request):
+    set_options(future_no_mindex_dim_coord=not request.param)
+    yield request.param
+    set_options(future_no_mindex_dim_coord=request.param)

@@ -8,7 +8,7 @@ from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
-from xarray.core.indexes import Index, PandasIndex
+from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
 from xarray.core.pycompat import array_type, integer_types
 from xarray.core.utils import is_scalar
 from xarray.testing import _assert_internal_invariants
@@ -335,42 +335,57 @@ class TestDataset:
         data = Dataset(attrs={"foo": "bar" * 1000})
         assert len(repr(data)) < 1000
 
-    def test_repr_multiindex(self) -> None:
+    def test_repr_multiindex(self, mindex_dim_coord) -> None:
         data = create_test_multiindex()
-        expected = dedent(
-            """\
-            <xarray.Dataset>
-            Dimensions:  (x: 4)
-            Coordinates:
-              * x        (x) object MultiIndex
-              * level_1  (x) object 'a' 'a' 'b' 'b'
-              * level_2  (x) int64 1 2 1 2
-            Data variables:
-                *empty*"""
-        )
+        if mindex_dim_coord:
+            expected = dedent(
+                """\
+                <xarray.Dataset>
+                Dimensions:  (x: 4)
+                Coordinates:
+                  * x        (x) object MultiIndex
+                  * level_1  (x) object 'a' 'a' 'b' 'b'
+                  * level_2  (x) int64 1 2 1 2
+                Data variables:
+                    *empty*"""
+            )
+        else:
+            expected = dedent(
+                """\
+                <xarray.Dataset>
+                Dimensions:  (x: 4)
+                Coordinates:
+                  * level_1  (x) object 'a' 'a' 'b' 'b'
+                  * level_2  (x) int64 1 2 1 2
+                Dimensions without coordinates: x
+                Data variables:
+                    *empty*"""
+            )
+
         actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
         print(actual)
         assert expected == actual
 
-        # verify that long level names are not truncated
-        mindex = pd.MultiIndex.from_product(
-            [["a", "b"], [1, 2]], names=("a_quite_long_level_name", "level_2")
-        )
-        data = Dataset({}, {"x": mindex})
-        expected = dedent(
-            """\
-            <xarray.Dataset>
-            Dimensions:                  (x: 4)
-            Coordinates:
-              * x                        (x) object MultiIndex
-              * a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
-              * level_2                  (x) int64 1 2 1 2
-            Data variables:
-                *empty*"""
-        )
-        actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
-        print(actual)
-        assert expected == actual
+        if not mindex_dim_coord:
+            # verify that long level names are not truncated
+            mindex = pd.MultiIndex.from_product(
+                [["a", "b"], [1, 2]], names=("a_quite_long_level_name", "level_2")
+            )
+            data = Dataset({}, {"x": mindex})
+            expected = dedent(
+                """\
+                <xarray.Dataset>
+                Dimensions:                  (x: 4)
+                Coordinates:
+                  * a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+                  * level_2                  (x) int64 1 2 1 2
+                Dimensions without coordinates: x
+                Data variables:
+                    *empty*"""
+            )
+            actual = "\n".join(x.rstrip() for x in repr(data).split("\n"))
+            print(actual)
+            assert expected == actual
 
     def test_repr_period_index(self) -> None:
         data = create_test_data(seed=456)
@@ -2644,8 +2659,9 @@ class TestDataset:
         assert_identical(expected, actual)
 
     def test_drop_multiindex_level(self) -> None:
-        data = create_test_multiindex()
-        expected = data.drop_vars(["x", "level_1", "level_2"])
+        with set_options(future_no_mindex_dim_coord=True):
+            data = create_test_multiindex()
+            expected = data.drop_vars(["level_1", "level_2"])
         with pytest.warns(DeprecationWarning):
             actual = data.drop_vars("level_1")
         assert_identical(expected, actual)
@@ -3377,15 +3393,15 @@ class TestDataset:
         )
         assert_identical(other_way_expected, other_way)
 
-    def test_set_index(self) -> None:
+    def test_set_index(self, mindex_dim_coord) -> None:
         expected = create_test_multiindex()
-        mindex = expected["x"].to_index()
+        mindex = cast(PandasMultiIndex, expected.xindexes["level_1"]).index
         indexes = [mindex.get_level_values(n) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
         ds = Dataset({}, coords=coords)
 
         obj = ds.set_index(x=mindex.names)
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
 
         # ensure pre-existing indexes involved are removed
         # (level_2 should be a coordinate with no index)
@@ -3434,14 +3450,17 @@ class TestDataset:
         )
         assert_identical(actual, expected)
 
-    def test_reset_index(self) -> None:
+    def test_reset_index(self, mindex_dim_coord) -> None:
         ds = create_test_multiindex()
-        mindex = ds["x"].to_index()
+        mindex = cast(PandasMultiIndex, ds.xindexes["level_1"]).index
         indexes = [mindex.get_level_values(n) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = Dataset({}, coords=coords)
 
-        obj = ds.reset_index("x")
+        if mindex_dim_coord:
+            obj = ds.reset_index("x")
+        else:
+            obj = ds.reset_index(["level_1", "level_2"])
         assert_identical(obj, expected, check_default_indexes=False)
         assert len(obj.xindexes) == 0
 
@@ -3475,12 +3494,15 @@ class TestDataset:
         ],
     )
     def test_reset_index_drop_convert(
-        self, arg, drop, dropped, converted, renamed
+        self, arg, drop, dropped, converted, renamed, mindex_dim_coord
     ) -> None:
         # regressions https://github.com/pydata/xarray/issues/6946 and
         # https://github.com/pydata/xarray/issues/6989
         # check that multi-index dimension or level coordinates are dropped, converted
         # from IndexVariable to Variable or renamed to dimension as expected
+        if arg == "x" or "x" in arg and not mindex_dim_coord:
+            return
+
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("foo", "bar"))
         ds = xr.Dataset(coords={"x": midx})
         reset = ds.reset_index(arg, drop=drop)
@@ -3494,7 +3516,7 @@ class TestDataset:
 
     def test_reorder_levels(self) -> None:
         ds = create_test_multiindex()
-        mindex = ds["x"].to_index()
+        mindex = cast(PandasMultiIndex, ds.xindexes["level_1"]).index
         midx = mindex.reorder_levels(["level_2", "level_1"])
         expected = Dataset({}, coords={"x": midx})
 
@@ -3502,12 +3524,14 @@ class TestDataset:
         ds["level_1"].attrs["foo"] = "bar"
         expected["level_1"].attrs["foo"] = "bar"
 
-        reindexed = ds.reorder_levels(x=["level_2", "level_1"])
+        with pytest.warns(FutureWarning, match=r"will be removed"):
+            reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
 
         ds = Dataset({}, coords={"x": [1, 2]})
-        with pytest.raises(ValueError, match=r"has no MultiIndex"):
-            ds.reorder_levels(x=["level_1", "level_2"])
+        with pytest.warns(FutureWarning, match=r"will be removed"):
+            with pytest.raises(ValueError, match=r"has no MultiIndex"):
+                ds.reorder_levels(x=["level_1", "level_2"])
 
     def test_set_xindex(self) -> None:
         ds = Dataset(
