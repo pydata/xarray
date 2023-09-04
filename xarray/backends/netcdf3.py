@@ -62,13 +62,6 @@ def coerce_nc3_dtype(arr):
     dtype = str(arr.dtype)
     if dtype in _nc3_dtype_coercions:
         new_dtype = _nc3_dtype_coercions[dtype]
-        # check if this looks like a time with NaT
-        # and transform to float64
-        if np.issubdtype(dtype, np.int64):
-            mask = arr == np.iinfo(np.int64).min
-            if mask.any():
-                arr = np.where(mask, np.nan, arr)
-                return arr
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
@@ -95,13 +88,40 @@ def encode_nc3_attrs(attrs):
     return {k: encode_nc3_attr_value(v) for k, v in attrs.items()}
 
 
+def _maybe_prepare_times(var):
+    # checks for integer-based time-like and
+    # replaces np.iinfo(np.int64).min with _FillValue or np.nan
+    # this keeps backwards compatibility
+
+    # should we import this from coding.times here?
+    time_strings = [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "since",
+    ]
+    data = var.data
+    if data.dtype.kind in "iu":
+        units = var.attrs.get("units", None)
+        if units is not None:
+            if any(tstr in units for tstr in time_strings):
+                mask = data == np.iinfo(np.int64).min
+                if mask.any():
+                    data = np.where(mask, var.attrs.get("_FillValue", np.nan), data)
+    return data
+
+
 def encode_nc3_variable(var):
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
     ]:
         var = coder.encode(var)
-    data = coerce_nc3_dtype(var.data)
+    data = _maybe_prepare_times(var)
+    data = coerce_nc3_dtype(data)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 
