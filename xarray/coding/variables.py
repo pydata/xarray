@@ -244,7 +244,7 @@ class CFMaskCoder(VariableCoder):
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
-                if is_date:
+                if is_date and data.dtype.kind in "iu":
                     data = duck_array_ops.where(
                         data != np.iinfo(np.int64).min, data, fill_value
                     )
@@ -256,7 +256,7 @@ class CFMaskCoder(VariableCoder):
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and not fv_exists:
-                if is_date:
+                if is_date and data.dtype.kind in "iu":
                     data = duck_array_ops.where(
                         data != np.iinfo(np.int64).min, data, fill_value
                     )
@@ -289,7 +289,7 @@ class CFMaskCoder(VariableCoder):
                 )
 
             # special case DateTime to properly handle NaT
-            if "since" in str(attrs.get("units", "")):
+            if "since" in str(attrs.get("units", "")) and data.dtype.kind in "iu":
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
                 dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
