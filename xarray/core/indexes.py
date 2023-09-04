@@ -15,6 +15,7 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
 )
+from xarray.core.options import OPTIONS
 from xarray.core.utils import (
     Frozen,
     emit_user_level_warning,
@@ -1123,7 +1124,13 @@ class PandasMultiIndex(PandasIndex):
             variables = {}
 
         index_vars: IndexVars = {}
-        for name in (self.dim,) + self.index.names:
+
+        if OPTIONS["future_no_mindex_dim_coord"]:
+            names = self.index.names
+        else:
+            names = (self.dim,) + self.index.names
+
+        for name in names:
             if name == self.dim:
                 level = None
                 dtype = None
