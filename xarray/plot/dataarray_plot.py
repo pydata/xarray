@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     )
     from xarray.plot.facetgrid import FacetGrid
 
-_styles: MutableMapping[str, Any] = {
+_styles: dict[str, Any] = {
     # Add a white border to make it easier seeing overlapping markers:
     "scatter.edgecolors": "w",
 }

@@ -632,7 +632,7 @@ def streamplot(
         du = du.transpose(ydim, xdim)
         dv = dv.transpose(ydim, xdim)
 
-    args = [dx.values, dy.values, du.values, dv.values]
+    args = (dx.values, dy.values, du.values, dv.values)
     hue = kwargs.pop("hue")
     cmap_params = kwargs.pop("cmap_params")
 
