@@ -47,14 +47,6 @@ _MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
 _LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
 
 
-def import_matplotlib_pyplot():
-    """import pyplot"""
-    # TODO: This function doesn't do anything (after #6109), remove it?
-    import matplotlib.pyplot as plt
-
-    return plt
-
-
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
@@ -505,28 +497,29 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
     return plt.axes(**subplot_kws)
 
 
-def _get_units_from_attrs(da) -> str:
+def _get_units_from_attrs(da: DataArray) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
-        units = units.format(str(da.data.units))
-    elif da.attrs.get("units"):
-        units = units.format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = units.format(da.attrs["unit"])
-    else:
-        units = ""
-    return units
+        return units.format(str(da.data.units))
+    if "units" in da.attrs:
+        return units.format(da.attrs["units"])
+    if "unit" in da.attrs:
+        return units.format(da.attrs["unit"])
+    return ""
 
 
-def label_from_attrs(da, extra: str = "") -> str:
+def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
+    if da is None:
+        return ""
+
     name: str = "{}"
-    if da.attrs.get("long_name"):
+    if "long_name" in da.attrs:
         name = name.format(da.attrs["long_name"])
-    elif da.attrs.get("standard_name"):
+    elif "standard_name" in da.attrs:
         name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
         name = name.format(da.name)
@@ -1166,7 +1159,7 @@ def legend_elements(
 
 def _legend_add_subtitle(handles, labels, text):
     """Add a subtitle to legend handles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
@@ -1184,7 +1177,7 @@ def _legend_add_subtitle(handles, labels, text):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)
@@ -1640,7 +1633,7 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         def _func(x: Any, pos: None | Any = None):
             return f"{self._lookup_arr([x])[0]}"

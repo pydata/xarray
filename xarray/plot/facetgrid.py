@@ -21,7 +21,6 @@ from xarray.plot.utils import (
     _Normalize,
     _parse_size,
     _process_cmap_cbar_kwargs,
-    import_matplotlib_pyplot,
     label_from_attrs,
 )
 
@@ -166,7 +165,7 @@ class FacetGrid(Generic[T_Xarray]):
 
         """
 
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
@@ -985,7 +984,7 @@ class FacetGrid(Generic[T_Xarray]):
         self : FacetGrid object
 
         """
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         for ax, namedict in zip(self.axs.flat, self.name_dicts.flat):
             if namedict is not None:

@@ -29,7 +29,6 @@ from xarray.plot.utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
-    import_matplotlib_pyplot,
     label_from_attrs,
 )
 
@@ -879,7 +878,7 @@ def _plot1d(plotfunc):
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -1082,12 +1081,12 @@ def _plot1d(plotfunc):
 
 def _add_labels(
     add_labels: bool | Iterable[bool],
-    darrays: Iterable[DataArray],
+    darrays: Iterable[DataArray | None],
     suffixes: Iterable[str],
     rotate_labels: Iterable[bool],
     ax: Axes,
 ) -> None:
-    # Set x, y, z labels:
+    """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
     for axis, add_label, darray, suffix, rotate_label in zip(
         ("x", "y", "z"), add_labels, darrays, suffixes, rotate_labels
@@ -1261,15 +1260,24 @@ def scatter(
     if sizeplt is not None:
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
-    axis_order = ["x", "y", "z"]
+    plts_or_none = (xplt, yplt, zplt)
+    _add_labels(add_labels, plts_or_none, ("", "", ""), (True, False, False), ax)
 
-    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
-    plts_or_none = [plts_dict[v] for v in axis_order]
-    plts = [p.to_numpy().ravel() for p in plts_or_none if p is not None]
-    primitive = ax.scatter(*plts, **kwargs)
-    _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
+    xplt_np = None if xplt is None else xplt.to_numpy().ravel()
+    yplt_np = None if yplt is None else yplt.to_numpy().ravel()
+    zplt_np = None if zplt is None else zplt.to_numpy().ravel()
+    plts_np = tuple(p for p in (xplt_np, yplt_np, zplt_np) if p is not None)
 
-    return primitive
+    if len(plts_np) == 3:
+        import mpl_toolkits
+
+        assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
+        return ax.scatter(xplt_np, yplt_np, zplt_np, **kwargs)
+
+    if len(plts_np) == 2:
+        return ax.scatter(plts_np[0], plts_np[1], **kwargs)
+
+    raise ValueError("At least two variables required for a scatter plot.")
 
 
 def _plot2d(plotfunc):
@@ -1505,8 +1513,6 @@ def _plot2d(plotfunc):
         if darray.ndim == 0 or darray.size == 0:
             # TypeError to be consistent with pandas
             raise TypeError("No numeric data to plot.")
-
-        plt = import_matplotlib_pyplot()
 
         if (
             plotfunc.__name__ == "surface"
