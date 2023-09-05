@@ -14,10 +14,76 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.07.1:
+.. _whats-new.2023.08.1:
 
-v2023.07.1 (unreleased)
+v2023.08.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Added the :py:meth:`Coordinates.assign` method that can be used to combine
+  different collections of coordinates prior to assign them to a Dataset or
+  DataArray (:pull:`8102`) at once.
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The :py:class:`Coordinates` constructor now creates a (pandas) index by
+  default for each dimension coordinate. To keep the previous behavior (no index
+  created), pass an empty dictionary to ``indexes``. The constructor now also
+  extracts and add the indexes from another :py:class:`Coordinates` object
+  passed via ``coords`` (:pull:`8107`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Deprecate passing a :py:class:`pandas.MultiIndex` object directly to the
+  :py:class:`Dataset` and :py:class:`DataArray` constructors as well as to
+  :py:meth:`Dataset.assign` and :py:meth:`Dataset.assign_coords`.
+  A new Xarray :py:class:`Coordinates` object has to be created first using
+  :py:meth:`Coordinates.from_pandas_multiindex` (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
+  (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
+  names were not updated properly internally (:issue:`7405`, :issue:`7588`,
+  :pull:`8104`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.08.0:
+
+v2023.08.0 (Aug 18, 2023)
+-------------------------
+
+This release brings changes to minimum dependencies, allows reading of datasets where a dimension name is
+associated with a multidimensional variable (e.g. finite volume ocean model output), and introduces
+a new :py:class:`xarray.Coordinates` object.
+
+Thanks to the 16 contributors to this release: Anderson Banihirwe, Articoking, Benoit Bovy, Deepak Cherian, Harshitha, Ian Carroll,
+Joe Hamman, Justus Magin, Peter Hill, Rachel Wegener, Riley Kuttruff, Thomas Nicholas, Tom Nicholas, ilgast, quantsnus, vallirep
+
+Announcements
+~~~~~~~~~~~~~
+
+The :py:class:`xarray.Variable` class is being refactored out to a new project title 'namedarray'.
+See the `design doc <https://github.com/pydata/xarray/blob/main/design_notes/named_array_design_doc.md>`_ for more
+details. Reach out to us on this [discussion topic](https://github.com/pydata/xarray/discussions/8080) if you have any thoughts.
 
 New Features
 ~~~~~~~~~~~~
@@ -42,6 +108,11 @@ New Features
   with a dimension. Examples include output from finite volume models like FVCOM.
   (:issue:`2233`, :pull:`7989`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
+- When outputting :py:class:`Dataset` objects as Zarr via :py:meth:`Dataset.to_zarr`,
+  user can now specify that chunks that will contain no valid data will not be written.
+  Originally, this could be done by specifying ``"write_empty_chunks": True`` in the
+  ``encoding`` parameter; however, this setting would not carry over when appending new
+  data to an existing dataset. (:issue:`8009`) Requires ``zarr>=2.11``.
 
 
 Breaking changes
@@ -71,14 +142,6 @@ Breaking changes
    numbagg                    0.1    0.2.1
   ===================== =========  ========
 
-Deprecations
-~~~~~~~~~~~~
-
-
-Bug fixes
-~~~~~~~~~
-
-
 Documentation
 ~~~~~~~~~~~~~
 
@@ -90,6 +153,11 @@ Documentation
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Added a page clarifying the role of Xarray core team members.
   (:pull:`7999`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fixed broken links in "See also" section of :py:meth:`Dataset.count` (:issue:`8055`, :pull:`8057`)
+  By `Articoking <https://github.com/Articoking>`_.
+- Extended the glossary by adding terms Aligning, Broadcasting, Merging, Concatenating, Combining, lazy,
+  labeled, serialization, indexing (:issue:`3355`, :pull:`7732`)
+  By `Harshitha <https://github.com/harshitha1201>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

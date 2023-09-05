@@ -489,7 +489,7 @@ class TestDataArray:
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
-        da = DataArray(range(3), coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        da = DataArray(range(3), coords=Coordinates({"x": [1, 2, 3]}, indexes={}))
         assert "x" in da.coords
         assert "x" not in da.xindexes
 
@@ -1435,7 +1435,7 @@ class TestDataArray:
         assert_identical(da, expected)
 
         with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+            ValueError, match=r"cannot drop or update coordinate.*corrupt.*index "
         ):
             self.mda["level_1"] = ("x", np.arange(4))
             self.mda.coords["level_1"] = ("x", np.arange(4))
@@ -1555,7 +1555,7 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+            ValueError, match=r"cannot drop or update coordinate.*corrupt.*index "
         ):
             self.mda.assign_coords(level_1=("x", range(4)))
 
@@ -1570,7 +1570,9 @@ class TestDataArray:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = self.mda
-        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
+        with pytest.warns(
+            FutureWarning, match=r"updating coordinate.*MultiIndex.*inconsistent"
+        ):
             data.assign_coords(x=range(4))
 
     def test_assign_coords_custom_index(self) -> None:
@@ -1585,7 +1587,7 @@ class TestDataArray:
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
     def test_assign_coords_no_default_index(self) -> None:
-        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        coords = Coordinates({"y": [1, 2, 3]}, indexes={})
         da = DataArray([1, 2, 3], dims="y")
         actual = da.assign_coords(coords)
         assert_identical(actual.coords, coords, check_default_indexes=False)
@@ -1608,7 +1610,7 @@ class TestDataArray:
 
     def test_set_coords_multiindex_level(self) -> None:
         with pytest.raises(
-            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+            ValueError, match=r"cannot drop or update coordinate.*corrupt.*index "
         ):
             self.mda["level_1"] = range(4)
 
@@ -2489,6 +2491,19 @@ class TestDataArray:
         expected = DataArray(s.unstack(), name="foo")
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
+
+    @pytest.mark.filterwarnings("error")
+    def test_unstack_roundtrip_integer_array(self) -> None:
+        arr = xr.DataArray(
+            np.arange(6).reshape(2, 3),
+            coords={"x": ["a", "b"], "y": [0, 1, 2]},
+            dims=["x", "y"],
+        )
+
+        stacked = arr.stack(z=["x", "y"])
+        roundtripped = stacked.unstack()
+
+        assert_identical(arr, roundtripped)
 
     def test_stack_nonunique_consistency(self, da) -> None:
         da = da.isel(time=0, drop=True)  # 2D
