@@ -2904,9 +2904,9 @@ class DataArray(
             b        (x) int64 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a', 0.0),
-                    ('a', 1.0),
-                    ('a', 2.0),
+        MultiIndex([('a',   0),
+                    ('a',   1),
+                    ('a',   2),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
