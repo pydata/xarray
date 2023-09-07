@@ -105,7 +105,7 @@ class BaseCFTimeOffset:
         if not isinstance(n, int):
             raise TypeError(
                 "The provided multiple 'n' must be an integer. "
-                "Instead a value of type {!r} was provided.".format(type(n))
+                f"Instead a value of type {type(n)!r} was provided."
             )
         self.n = n
 
@@ -353,13 +353,13 @@ def _validate_month(month, default_month):
         raise TypeError(
             "'self.month' must be an integer value between 1 "
             "and 12.  Instead, it was set to a value of "
-            "{!r}".format(result_month)
+            f"{result_month!r}"
         )
     elif not (1 <= result_month <= 12):
         raise ValueError(
             "'self.month' must be an integer value between 1 "
             "and 12.  Instead, it was set to a value of "
-            "{!r}".format(result_month)
+            f"{result_month!r}"
         )
     return result_month
 
@@ -771,7 +771,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
         raise TypeError(
             "date_str_or_date must be a string or a "
             "subclass of cftime.datetime. Instead got "
-            "{!r}.".format(date_str_or_date)
+            f"{date_str_or_date!r}."
         )
 
 
