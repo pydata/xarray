@@ -22,10 +22,20 @@ v2023.08.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added the :py:meth:`Coordinates.assign` method that can be used to combine
+  different collections of coordinates prior to assign them to a Dataset or
+  DataArray (:pull:`8102`) at once.
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The :py:class:`Coordinates` constructor now creates a (pandas) index by
+  default for each dimension coordinate. To keep the previous behavior (no index
+  created), pass an empty dictionary to ``indexes``. The constructor now also
+  extracts and add the indexes from another :py:class:`Coordinates` object
+  passed via ``coords`` (:pull:`8107`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Deprecations
 ~~~~~~~~~~~~

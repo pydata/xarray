@@ -17,13 +17,19 @@ from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
+    PandasIndex,
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import Self, T_DataArray
-from xarray.core.utils import Frozen, ReprObject, emit_user_level_warning
+from xarray.core.utils import (
+    Frozen,
+    ReprObject,
+    either_dict_or_kwargs,
+    emit_user_level_warning,
+)
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
@@ -124,7 +130,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         elif set(ordered_dims) != set(self.dims):
             raise ValueError(
                 "ordered_dims must match dims, but does not: "
-                "{} vs {}".format(ordered_dims, self.dims)
+                f"{ordered_dims} vs {self.dims}"
             )
 
         if len(ordered_dims) == 0:
@@ -192,22 +198,69 @@ class Coordinates(AbstractCoordinates):
     Coordinates are either:
 
     - returned via the :py:attr:`Dataset.coords` and :py:attr:`DataArray.coords`
-      properties.
-    - built from index objects (e.g., :py:meth:`Coordinates.from_pandas_multiindex`).
-    - built directly from coordinate data and index objects (beware that no consistency
-      check is done on those inputs).
-
-    In the latter case, no default (pandas) index is created.
+      properties
+    - built from Pandas or other index objects
+      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`)
+    - built directly from coordinate data and Xarray ``Index`` objects (beware that
+      no consistency check is done on those inputs)
 
     Parameters
     ----------
-    coords: dict-like
-         Mapping where keys are coordinate names and values are objects that
-         can be converted into a :py:class:`~xarray.Variable` object
-         (see :py:func:`~xarray.as_variable`).
-    indexes: dict-like
-         Mapping of where keys are coordinate names and values are
-         :py:class:`~xarray.indexes.Index` objects.
+    coords: dict-like, optional
+        Mapping where keys are coordinate names and values are objects that
+        can be converted into a :py:class:`~xarray.Variable` object
+        (see :py:func:`~xarray.as_variable`). If another
+        :py:class:`~xarray.Coordinates` object is passed, its indexes
+        will be added to the new created object.
+    indexes: dict-like, optional
+        Mapping of where keys are coordinate names and values are
+        :py:class:`~xarray.indexes.Index` objects. If None (default),
+        pandas indexes will be created for each dimension coordinate.
+        Passing an empty dictionary will skip this default behavior.
+
+    Examples
+    --------
+    Create a dimension coordinate with a default (pandas) index:
+
+    >>> xr.Coordinates({"x": [1, 2]})
+    Coordinates:
+      * x        (x) int64 1 2
+
+    Create a dimension coordinate with no index:
+
+    >>> xr.Coordinates(coords={"x": [1, 2]}, indexes={})
+    Coordinates:
+        x        (x) int64 1 2
+
+    Create a new Coordinates object from existing dataset coordinates
+    (indexes are passed):
+
+    >>> ds = xr.Dataset(coords={"x": [1, 2]})
+    >>> xr.Coordinates(ds.coords)
+    Coordinates:
+      * x        (x) int64 1 2
+
+    Create indexed coordinates from a ``pandas.MultiIndex`` object:
+
+    >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
+    >>> xr.Coordinates.from_pandas_multiindex(midx, "x")
+    Coordinates:
+      * x          (x) object MultiIndex
+      * x_level_0  (x) object 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 0 1 0 1
+
+    Create a new Dataset object by passing a Coordinates object:
+
+    >>> midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
+    >>> xr.Dataset(coords=midx_coords)
+    <xarray.Dataset>
+    Dimensions:    (x: 4)
+    Coordinates:
+      * x          (x) object MultiIndex
+      * x_level_0  (x) object 'a' 'a' 'b' 'b'
+      * x_level_1  (x) int64 0 1 0 1
+    Data variables:
+        *empty*
 
     """
 
@@ -227,16 +280,39 @@ class Coordinates(AbstractCoordinates):
         from xarray.core.dataset import Dataset
 
         if coords is None:
-            variables = {}
-        elif isinstance(coords, Coordinates):
+            coords = {}
+
+        variables: dict[Hashable, Variable]
+        default_indexes: dict[Hashable, PandasIndex] = {}
+        coords_obj_indexes: dict[Hashable, Index] = {}
+
+        if isinstance(coords, Coordinates):
+            if indexes is not None:
+                raise ValueError(
+                    "passing both a ``Coordinates`` object and a mapping of indexes "
+                    "to ``Coordinates.__init__`` is not allowed "
+                    "(this constructor does not support merging them)"
+                )
             variables = {k: v.copy() for k, v in coords.variables.items()}
+            coords_obj_indexes = dict(coords.xindexes)
         else:
-            variables = {k: as_variable(v) for k, v in coords.items()}
+            variables = {}
+            for name, data in coords.items():
+                var = as_variable(data, name=name)
+                if var.dims == (name,) and indexes is None:
+                    index, index_vars = create_default_index_implicit(var, list(coords))
+                    default_indexes.update({k: index for k in index_vars})
+                    variables.update(index_vars)
+                else:
+                    variables[name] = var
 
         if indexes is None:
             indexes = {}
         else:
             indexes = dict(indexes)
+
+        indexes.update(default_indexes)
+        indexes.update(coords_obj_indexes)
 
         no_coord_index = set(indexes) - set(variables)
         if no_coord_index:
@@ -488,6 +564,53 @@ class Coordinates(AbstractCoordinates):
         self._drop_coords(self._names - coords_to_align._names)
 
         self._update_coords(coords, indexes)
+
+    def assign(
+        self, coords: Mapping | None = None, **coords_kwargs: Any
+    ) -> Coordinates:
+        """Assign new coordinates (and indexes) to a Coordinates object, returning
+        a new object with all the original coordinates in addition to the new ones.
+
+        Parameters
+        ----------
+        coords : :class:`Coordinates` or mapping of hashable to Any
+            Mapping from coordinate names to the new values. If a ``Coordinates``
+            object is passed, its indexes are assigned in the returned object.
+            Otherwise, a default (pandas) index is created for each dimension
+            coordinate found in the mapping.
+        **coords_kwargs
+            The keyword arguments form of ``coords``.
+            One of ``coords`` or ``coords_kwargs`` must be provided.
+
+        Returns
+        -------
+        new_coords : Coordinates
+            A new Coordinates object with the new coordinates (and indexes)
+            in addition to all the existing coordinates.
+
+        Examples
+        --------
+        >>> coords = xr.Coordinates()
+        >>> coords
+        Coordinates:
+            *empty*
+
+        >>> coords.assign(x=[1, 2])
+        Coordinates:
+          * x        (x) int64 1 2
+
+        >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
+        >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
+        Coordinates:
+          * y          (y) object MultiIndex
+          * y_level_0  (y) object 'a' 'a' 'b' 'b'
+          * y_level_1  (y) int64 0 1 0 1
+
+        """
+        coords = either_dict_or_kwargs(coords, coords_kwargs, "assign")
+        new_coords = self.copy()
+        new_coords.update(coords)
+        return new_coords
 
     def _overwrite_indexes(
         self,
