@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import pytz
-from packaging.version import Version
 
 from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
@@ -1092,7 +1091,7 @@ class TestVariable(VariableSubclassobjects):
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float
+        assert type(v.item()) is float  # noqa: E721
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
@@ -1708,6 +1707,15 @@ class TestVariable(VariableSubclassobjects):
         actual = v.stack(z=("x", "y")).unstack(z={"x": 2, "y": 2})
         assert_identical(actual, v)
 
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    def test_unstack_without_missing(self):
+        v = Variable(["z"], [0, 1, 2, 3])
+        expected = Variable(["x", "y"], [[0, 1], [2, 3]])
+
+        actual = v.unstack(z={"x": 2, "y": 2})
+
+        assert_identical(actual, expected)
+
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = Variable(["a", "b"], x)
@@ -1832,10 +1840,7 @@ class TestVariable(VariableSubclassobjects):
         q = np.array([0.25, 0.5, 0.75])
         actual = v.quantile(q, dim="y", method=method)
 
-        if Version(np.__version__) >= Version("1.22"):
-            expected = np.nanquantile(self.d, q, axis=1, method=method)
-        else:
-            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)
+        expected = np.nanquantile(self.d, q, axis=1, method=method)
 
         if use_dask:
             assert isinstance(actual.data, dask_array_type)
