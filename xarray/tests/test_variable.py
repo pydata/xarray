@@ -2906,7 +2906,9 @@ class TestNumpyCoercion:
         (np.array([datetime(2000, 1, 1)]), False),
         (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
             False,
         ),
     ],
@@ -2945,7 +2947,9 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
             pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
             pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
     ]
