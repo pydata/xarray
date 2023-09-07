@@ -839,7 +839,7 @@ def deep_align(
         elif raise_on_invalid:
             raise ValueError(
                 "object to align is neither an xarray.Dataset, "
-                "an xarray.DataArray nor a dictionary: {!r}".format(variables)
+                f"an xarray.DataArray nor a dictionary: {variables!r}"
             )
         else:
             out.append(variables)

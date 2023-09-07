@@ -2234,8 +2234,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2362,8 +2361,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
@@ -4325,7 +4323,7 @@ class DataArray(
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
-                    "'{dims_data}'".format(dims_data=str(e.args[0]))
+                    f"'{str(e.args[0])}'"
                 )
         try:
             data = d["data"]

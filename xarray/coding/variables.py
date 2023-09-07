@@ -179,10 +179,10 @@ def safe_setitem(dest, key: Hashable, value, name: T_Name = None):
     if key in dest:
         var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
-            "failed to prevent overwriting existing key {} in attrs{}. "
+            f"failed to prevent overwriting existing key {key} in attrs{var_str}. "
             "This is probably an encoding field used by xarray to describe "
             "how a variable is serialized. To proceed, remove this key from "
-            "the variable's attributes manually.".format(key, var_str)
+            "the variable's attributes manually."
         )
     dest[key] = value
 

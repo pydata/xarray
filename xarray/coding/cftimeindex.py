@@ -228,12 +228,12 @@ def assert_all_valid_date_type(data):
         if not isinstance(sample, cftime.datetime):
             raise TypeError(
                 "CFTimeIndex requires cftime.datetime "
-                "objects. Got object of {}.".format(date_type)
+                f"objects. Got object of {date_type}."
             )
         if not all(isinstance(value, date_type) for value in data):
             raise TypeError(
                 "CFTimeIndex requires using datetime "
-                "objects of all the same type.  Got\n{}.".format(data)
+                f"objects of all the same type.  Got\n{data}."
             )
 
 
@@ -553,8 +553,7 @@ class CFTimeIndex(pd.Index):
             return self + n * to_offset(freq)
         else:
             raise TypeError(
-                "'freq' must be of type "
-                "str or datetime.timedelta, got {}.".format(freq)
+                "'freq' must be of type " f"str or datetime.timedelta, got {freq}."
             )
 
     def __add__(self, other):
@@ -636,10 +635,10 @@ class CFTimeIndex(pd.Index):
         if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
                 "Converting a CFTimeIndex with dates from a non-standard "
-                "calendar, {!r}, to a pandas.DatetimeIndex, which uses dates "
+                f"calendar, {calendar!r}, to a pandas.DatetimeIndex, which uses dates "
                 "from the standard calendar.  This may lead to subtle errors "
                 "in operations that depend on the length of time between "
-                "dates.".format(calendar),
+                "dates.",
                 RuntimeWarning,
                 stacklevel=2,
             )

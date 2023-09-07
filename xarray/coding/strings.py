@@ -59,9 +59,9 @@ class EncodedStringCoder(VariableCoder):
         if contains_unicode and (encode_as_char or not self.allows_unicode):
             if "_FillValue" in attrs:
                 raise NotImplementedError(
-                    "variable {!r} has a _FillValue specified, but "
+                    f"variable {name!r} has a _FillValue specified, but "
                     "_FillValue is not yet supported on unicode strings: "
-                    "https://github.com/pydata/xarray/issues/1647".format(name)
+                    "https://github.com/pydata/xarray/issues/1647"
                 )
 
             string_encoding = encoding.pop("_Encoding", "utf-8")
@@ -176,7 +176,7 @@ def char_to_bytes(arr):
         if len(arr.chunks[-1]) > 1:
             raise ValueError(
                 "cannot stacked dask character array with "
-                "multiple chunks in the last dimension: {}".format(arr)
+                f"multiple chunks in the last dimension: {arr}"
             )
 
         dtype = np.dtype("S" + str(arr.shape[-1]))
