@@ -510,7 +510,7 @@ def _get_units_from_attrs(da: DataArray) -> str:
     return ""
 
 
-def label_from_attrs(da: Dataset | DataArray | None, extra: str = "") -> str:
+def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
     if da is None:

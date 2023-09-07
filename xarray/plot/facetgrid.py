@@ -680,7 +680,7 @@ class FacetGrid(Generic[T_Xarray]):
 
     def _adjust_fig_for_guide(self, guide) -> None:
         # Draw the plot to set the bounding boxes correctly
-        renderer = self.fig.canvas.get_renderer()
+        renderer = self.fig.canvas.get_renderer()  # type: ignore[attr-defined]
         self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
@@ -730,6 +730,9 @@ class FacetGrid(Generic[T_Xarray]):
         if hasattr(self._mappables[-1], "extend"):
             kwargs.pop("extend", None)
         if "label" not in kwargs:
+            from xarray import DataArray
+
+            assert isinstance(self.data, DataArray)
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axs.flat), **kwargs

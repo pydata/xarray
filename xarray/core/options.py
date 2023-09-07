@@ -6,10 +6,8 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 from xarray.core.utils import FrozenDict
 
 if TYPE_CHECKING:
-    try:
-        from matplotlib.colors import Colormap
-    except ImportError:
-        Colormap = str
+    from matplotlib.colors import Colormap
+
     Options = Literal[
         "arithmetic_join",
         "cmap_divergent",
