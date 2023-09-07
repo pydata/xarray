@@ -730,8 +730,6 @@ class FacetGrid(Generic[T_Xarray]):
         if hasattr(self._mappables[-1], "extend"):
             kwargs.pop("extend", None)
         if "label" not in kwargs:
-            data = self.data
-            assert isinstance(data, DataArray)
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axs.flat), **kwargs
