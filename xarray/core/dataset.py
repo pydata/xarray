@@ -120,7 +120,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping
+    from xarray.core.merge import CoercibleMapping, CoercibleValue
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -132,6 +132,7 @@ if TYPE_CHECKING:
         DatetimeLike,
         DatetimeUnitOptions,
         Dims,
+        DsCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -438,7 +439,9 @@ class DataVariables(Mapping[Any, "DataArray"]):
         )
 
     def __len__(self) -> int:
-        return len(self._dataset._variables) - len(self._dataset._coord_names)
+        length = len(self._dataset._variables) - len(self._dataset._coord_names)
+        assert length >= 0, "something is wrong with Dataset._coord_names"
+        return length
 
     def __contains__(self, key: Hashable) -> bool:
         return key in self._dataset._variables and key not in self._dataset._coord_names
@@ -693,6 +696,11 @@ class Dataset(
         self._coord_names = coord_names
         self._dims = dims
         self._indexes = indexes
+
+    # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
+    # related to https://github.com/python/mypy/issues/9319?
+    def __eq__(self: T_Dataset, other: DsCompatible) -> T_Dataset:  # type: ignore[override]
+        return super().__eq__(other)
 
     @classmethod
     def load_store(cls: type[T_Dataset], store, decoder=None) -> T_Dataset:
@@ -1332,13 +1340,13 @@ class Dataset(
             if keys_not_in_vars:
                 raise ValueError(
                     "Data must only contain variables in original "
-                    "dataset. Extra variables: {}".format(keys_not_in_vars)
+                    f"dataset. Extra variables: {keys_not_in_vars}"
                 )
             keys_missing_from_data = var_keys - data_keys
             if keys_missing_from_data:
                 raise ValueError(
                     "Data must contain all variables in original "
-                    "dataset. Data is missing {}".format(keys_missing_from_data)
+                    f"dataset. Data is missing {keys_missing_from_data}"
                 )
 
         indexes, index_vars = self.xindexes.copy_indexes(deep=deep)
@@ -2695,7 +2703,7 @@ class Dataset(
                 if v.ndim > 1:
                     raise IndexError(
                         "Unlabeled multi-dimensional array cannot be "
-                        "used for indexing: {}".format(k)
+                        f"used for indexing: {k}"
                     )
                 yield k, v
 
@@ -2735,9 +2743,9 @@ class Dataset(
                 if v.dtype.kind == "b":
                     if v.ndim != 1:  # we only support 1-d boolean array
                         raise ValueError(
-                            "{:d}d-boolean array is used for indexing along "
-                            "dimension {!r}, but only 1d boolean arrays are "
-                            "supported.".format(v.ndim, k)
+                            f"{v.ndim:d}d-boolean array is used for indexing along "
+                            f"dimension {k!r}, but only 1d boolean arrays are "
+                            "supported."
                         )
                     # Make sure in case of boolean DataArray, its
                     # coordinate also should be indexed.
@@ -3879,7 +3887,7 @@ class Dataset(
                     "coordinate, the coordinates to "
                     "interpolate to must be either datetime "
                     "strings or datetimes. "
-                    "Instead got\n{}".format(new_x)
+                    f"Instead got\n{new_x}"
                 )
             return x, new_x
 
@@ -4529,8 +4537,7 @@ class Dataset(
                 raise ValueError(f"Dimension {d} already exists.")
             if d in self._variables and not utils.is_scalar(self._variables[d]):
                 raise ValueError(
-                    "{dim} already exists as coordinate or"
-                    " variable name.".format(dim=d)
+                    f"{d} already exists as coordinate or" " variable name."
                 )
 
         variables: dict[Hashable, Variable] = {}
@@ -4553,8 +4560,7 @@ class Dataset(
                 pass  # Do nothing if the dimensions value is just an int
             else:
                 raise TypeError(
-                    "The value of new dimension {k} must be "
-                    "an iterable or an int".format(k=k)
+                    f"The value of new dimension {k} must be " "an iterable or an int"
                 )
 
         for k, v in self._variables.items():
@@ -4698,7 +4704,9 @@ class Dataset(
             if len(var_names) == 1 and (not append or dim not in self._indexes):
                 var_name = var_names[0]
                 var = self._variables[var_name]
-                if var.dims != (dim,):
+                # an error with a better message will be raised for scalar variables
+                # when creating the PandasIndex
+                if var.ndim > 0 and var.dims != (dim,):
                     raise ValueError(
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
@@ -5278,7 +5286,7 @@ class Dataset(
             if not dims_include_sample_dims:
                 raise ValueError(
                     "All variables in the dataset must contain the "
-                    "dimensions {}.".format(dims)
+                    f"dimensions {dims}."
                 )
 
         def ensure_stackable(val):
@@ -6879,6 +6887,10 @@ class Dataset(
         possible, but you cannot reference other variables created within the
         same ``assign`` call.
 
+        The new assigned variables that replace existing coordinates in the
+        original dataset are still listed as coordinates in the returned
+        Dataset.
+
         See Also
         --------
         pandas.DataFrame.assign
@@ -6934,11 +6946,23 @@ class Dataset(
         """
         variables = either_dict_or_kwargs(variables, variables_kwargs, "assign")
         data = self.copy()
+
         # do all calculations first...
         results: CoercibleMapping = data._calc_assign_results(variables)
-        data.coords._maybe_drop_multiindex_coords(set(results.keys()))
+
+        # split data variables to add/replace vs. coordinates to replace
+        results_data_vars: dict[Hashable, CoercibleValue] = {}
+        results_coords: dict[Hashable, CoercibleValue] = {}
+        for k, v in results.items():
+            if k in data._coord_names:
+                results_coords[k] = v
+            else:
+                results_data_vars[k] = v
+
         # ... and then assign
-        data.update(results)
+        data.coords.update(results_coords)
+        data.update(results_data_vars)
+
         return data
 
     def to_array(
@@ -7000,8 +7024,8 @@ class Dataset(
             dim_order = list(self.dims)
         elif set(dim_order) != set(self.dims):
             raise ValueError(
-                "dim_order {} does not match the set of dimensions of this "
-                "Dataset: {}".format(dim_order, list(self.dims))
+                f"dim_order {dim_order} does not match the set of dimensions of this "
+                f"Dataset: {list(self.dims)}"
             )
 
         ordered_dims = {k: self.dims[k] for k in dim_order}
@@ -7432,8 +7456,7 @@ class Dataset(
             }
         except KeyError as e:
             raise ValueError(
-                "cannot convert dict without the key "
-                "'{dims_data}'".format(dims_data=str(e.args[0]))
+                "cannot convert dict without the key " f"'{str(e.args[0])}'"
             )
         obj = cls(variable_dict)
 
@@ -8149,8 +8172,8 @@ class Dataset(
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
             raise ValueError(
-                "Coordinate {} must be 1 dimensional but is {}"
-                " dimensional".format(coord, coord_var.ndim)
+                f"Coordinate {coord} must be 1 dimensional but is {coord_var.ndim}"
+                " dimensional"
             )
 
         dim = coord_var.dims[0]
@@ -8251,8 +8274,8 @@ class Dataset(
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
             raise ValueError(
-                "Coordinate {} must be 1 dimensional but is {}"
-                " dimensional".format(coord, coord_var.ndim)
+                f"Coordinate {coord} must be 1 dimensional but is {coord_var.ndim}"
+                " dimensional"
             )
 
         dim = coord_var.dims[0]

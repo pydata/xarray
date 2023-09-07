@@ -2234,8 +2234,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2362,8 +2361,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
@@ -2904,9 +2902,9 @@ class DataArray(
             b        (x) int64 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a', 0.0),
-                    ('a', 1.0),
-                    ('a', 2.0),
+        MultiIndex([('a',   0),
+                    ('a',   1),
+                    ('a',   2),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
@@ -4325,7 +4323,7 @@ class DataArray(
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
-                    "'{dims_data}'".format(dims_data=str(e.args[0]))
+                    f"'{str(e.args[0])}'"
                 )
         try:
             data = d["data"]
@@ -5193,9 +5191,10 @@ class DataArray(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+        datetime_unit : {"W", "D", "h", "m", "s", "ms", \
                          "us", "ns", "ps", "fs", "as", None}, optional
-            Unit to compute gradient. Only valid for datetime coordinate.
+            Unit to compute gradient. Only valid for datetime coordinate. "Y" and "M" are not available as
+            datetime_unit.
 
         Returns
         -------

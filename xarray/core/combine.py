@@ -109,9 +109,9 @@ def _infer_concat_order_from_coords(datasets):
                     ascending = False
                 else:
                     raise ValueError(
-                        "Coordinate variable {} is neither "
+                        f"Coordinate variable {dim} is neither "
                         "monotonically increasing nor "
-                        "monotonically decreasing on all datasets".format(dim)
+                        "monotonically decreasing on all datasets"
                     )
 
                 # Assume that any two datasets whose coord along dim starts
@@ -221,10 +221,8 @@ def _combine_nd(
     n_dims = len(example_tile_id)
     if len(concat_dims) != n_dims:
         raise ValueError(
-            "concat_dims has length {} but the datasets "
-            "passed are nested in a {}-dimensional structure".format(
-                len(concat_dims), n_dims
-            )
+            f"concat_dims has length {len(concat_dims)} but the datasets "
+            f"passed are nested in a {n_dims}-dimensional structure"
         )
 
     # Each iteration of this loop reduces the length of the tile_ids tuples
@@ -646,7 +644,7 @@ def _combine_single_variable_hypercube(
         if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
             raise ValueError(
                 "Resulting object does not have monotonic"
-                " global indexes along dimension {}".format(dim)
+                f" global indexes along dimension {dim}"
             )
 
     return concatenated
