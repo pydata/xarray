@@ -364,7 +364,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims
+    assert type(ds._dims) is dict, ds._dims # noqa: E721
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():

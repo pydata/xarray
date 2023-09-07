@@ -1091,7 +1091,7 @@ class TestVariable(VariableSubclassobjects):
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float
+        assert type(v.item()) is float # noqa: E721
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
