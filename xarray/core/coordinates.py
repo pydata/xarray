@@ -130,7 +130,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         elif set(ordered_dims) != set(self.dims):
             raise ValueError(
                 "ordered_dims must match dims, but does not: "
-                "{} vs {}".format(ordered_dims, self.dims)
+                f"{ordered_dims} vs {self.dims}"
             )
 
         if len(ordered_dims) == 0:
