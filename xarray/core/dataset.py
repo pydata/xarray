@@ -502,12 +502,18 @@ class _LocIndexer(Generic[T_Dataset]):
         self.dataset[dim_indexers] = value
 
 
+# We use `type: ignore[override]` because we override `__eq__`, which is incompatible
+# with `Mapping`. See
+# https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+# for more details. If there's a better way to do this, contributions are welcome.
+
+
 class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
     Mapping[Hashable, "DataArray"],
-):
+):  # type: ignore[override]
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file,
