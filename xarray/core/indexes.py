@@ -1356,10 +1356,13 @@ def create_default_index_implicit(
     if isinstance(array, pd.MultiIndex):
         if warn_multi_index:
             emit_user_level_warning(
-                f"the `pandas.MultiIndex` object wrapped in variable {name} will no longer "
+                f"the `pandas.MultiIndex` object wrapped in variable {name!r} will no longer "
                 "be implicitly promoted into multiple indexed coordinates in the future. "
-                "If you want to pass it as coordinates, you need to first wrap it explicitly "
-                "using `xarray.Coordinates.from_pandas_multiindex()`.",
+                "If you want to keep this behavior, you need to first wrap it explicitly "
+                "using `xarray.Coordinates.from_pandas_multiindex()`. "
+                "If the multi-index was passed via a `pandas.DataFrame` or `pandas.Series` "
+                "object, please use `xarray.Dataset.from_dataframe` or "
+                "`xarray.DataArray.from_series` instead.",
                 FutureWarning,
             )
         index = PandasMultiIndex(array, name)
