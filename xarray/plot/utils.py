@@ -767,8 +767,8 @@ def _update_axes(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
 ) -> None:
     """
     Update axes with provided parameters

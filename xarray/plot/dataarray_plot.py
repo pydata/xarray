@@ -409,8 +409,8 @@ def line(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
@@ -458,7 +458,7 @@ def line(
         Specifies scaling for the *x*- and *y*-axis, respectively.
     xticks, yticks : array-like, optional
         Specify tick locations for *x*- and *y*-axis.
-    xlim, ylim : array-like, optional
+    xlim, ylim : tuple[float, float], optional
         Specify *x*- and *y*-axis limits.
     add_legend : bool, default: True
         Add legend with *y* axis coordinates (2D inputs only).
@@ -653,8 +653,8 @@ def hist(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
     **kwargs: Any,
 ) -> tuple[np.ndarray, np.ndarray, BarContainer]:
     """
@@ -690,7 +690,7 @@ def hist(
         Specifies scaling for the *x*- and *y*-axis, respectively.
     xticks, yticks : array-like, optional
         Specify tick locations for *x*- and *y*-axis.
-    xlim, ylim : array-like, optional
+    xlim, ylim : tuple[float, float], optional
         Specify *x*- and *y*-axis limits.
     **kwargs : optional
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
@@ -1386,9 +1386,9 @@ def _plot2d(plotfunc):
         Specify tick locations for x-axes.
     yticks : ArrayLike or None, optional
         Specify tick locations for y-axes.
-    xlim : ArrayLike or None, optional
+    xlim : tuple[float, float] or None, optional
         Specify x-axes limits.
-    ylim : ArrayLike or None, optional
+    ylim : tuple[float, float] or None, optional
         Specify y-axes limits.
     norm : matplotlib.colors.Normalize, optional
         If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
@@ -1441,8 +1441,8 @@ def _plot2d(plotfunc):
         yscale: ScaleOptions = None,
         xticks: ArrayLike | None = None,
         yticks: ArrayLike | None = None,
-        xlim: ArrayLike | None = None,
-        ylim: ArrayLike | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
     ) -> Any:
