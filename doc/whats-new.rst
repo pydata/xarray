@@ -44,7 +44,7 @@ Deprecations
   :py:class:`Dataset` and :py:class:`DataArray` constructors as well as to
   :py:meth:`Dataset.assign` and :py:meth:`Dataset.assign_coords`.
   A new Xarray :py:class:`Coordinates` object has to be created first using
-  :py:meth:`Coordinates.from_pandas_multiindex` (:pull:`8094`).
+  :py:meth:`Coordinates.from_pandas_multiindex` (:pull:`8094`, :pull:`8140`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
@@ -56,6 +56,10 @@ Bug fixes
 - Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
   names were not updated properly internally (:issue:`7405`, :issue:`7588`,
   :pull:`8104`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Improved support of multi-coordinate indexes for a few functions and methods:
+  :py:func:`broadcast`, :py:meth:`Dataset.concat`, :py:meth:`Dataset.polyfit`
+  (:pull:`8140`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
