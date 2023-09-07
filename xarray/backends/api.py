@@ -1056,8 +1056,8 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                "{} is an invalid option for the keyword argument"
-                " ``combine``".format(combine)
+                f"{combine} is an invalid option for the keyword argument"
+                " ``combine``"
             )
     except ValueError:
         for ds in datasets:

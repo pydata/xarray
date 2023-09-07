@@ -24,7 +24,12 @@ from xarray.core.indexes import (
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
 from xarray.core.types import Self, T_DataArray
-from xarray.core.utils import Frozen, ReprObject, emit_user_level_warning
+from xarray.core.utils import (
+    Frozen,
+    ReprObject,
+    either_dict_or_kwargs,
+    emit_user_level_warning,
+)
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
@@ -125,7 +130,7 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         elif set(ordered_dims) != set(self.dims):
             raise ValueError(
                 "ordered_dims must match dims, but does not: "
-                "{} vs {}".format(ordered_dims, self.dims)
+                f"{ordered_dims} vs {self.dims}"
             )
 
         if len(ordered_dims) == 0:
@@ -559,6 +564,53 @@ class Coordinates(AbstractCoordinates):
         self._drop_coords(self._names - coords_to_align._names)
 
         self._update_coords(coords, indexes)
+
+    def assign(
+        self, coords: Mapping | None = None, **coords_kwargs: Any
+    ) -> Coordinates:
+        """Assign new coordinates (and indexes) to a Coordinates object, returning
+        a new object with all the original coordinates in addition to the new ones.
+
+        Parameters
+        ----------
+        coords : :class:`Coordinates` or mapping of hashable to Any
+            Mapping from coordinate names to the new values. If a ``Coordinates``
+            object is passed, its indexes are assigned in the returned object.
+            Otherwise, a default (pandas) index is created for each dimension
+            coordinate found in the mapping.
+        **coords_kwargs
+            The keyword arguments form of ``coords``.
+            One of ``coords`` or ``coords_kwargs`` must be provided.
+
+        Returns
+        -------
+        new_coords : Coordinates
+            A new Coordinates object with the new coordinates (and indexes)
+            in addition to all the existing coordinates.
+
+        Examples
+        --------
+        >>> coords = xr.Coordinates()
+        >>> coords
+        Coordinates:
+            *empty*
+
+        >>> coords.assign(x=[1, 2])
+        Coordinates:
+          * x        (x) int64 1 2
+
+        >>> midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]])
+        >>> coords.assign(xr.Coordinates.from_pandas_multiindex(midx, "y"))
+        Coordinates:
+          * y          (y) object MultiIndex
+          * y_level_0  (y) object 'a' 'a' 'b' 'b'
+          * y_level_1  (y) int64 0 1 0 1
+
+        """
+        coords = either_dict_or_kwargs(coords, coords_kwargs, "assign")
+        new_coords = self.copy()
+        new_coords.update(coords)
+        return new_coords
 
     def _overwrite_indexes(
         self,

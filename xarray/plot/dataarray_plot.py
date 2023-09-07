@@ -486,8 +486,8 @@ def line(
     if ndims > 2:
         raise ValueError(
             "Line plots are for 1- or 2-dimensional DataArrays. "
-            "Passed DataArray has {ndims} "
-            "dimensions".format(ndims=ndims)
+            f"Passed DataArray has {ndims} "
+            "dimensions"
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
