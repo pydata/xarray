@@ -1131,7 +1131,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:
+        if type(num) == int:  # noqa: E721
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
