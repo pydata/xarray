@@ -132,6 +132,7 @@ if TYPE_CHECKING:
         DatetimeLike,
         DatetimeUnitOptions,
         Dims,
+        DsCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -695,6 +696,11 @@ class Dataset(
         self._coord_names = coord_names
         self._dims = dims
         self._indexes = indexes
+
+    # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
+    # related to https://github.com/python/mypy/issues/9319?
+    def __eq__(self: T_Dataset, other: DsCompatible) -> T_Dataset:  # type: ignore[override]
+        return super().__eq__(other)
 
     @classmethod
     def load_store(cls: type[T_Dataset], store, decoder=None) -> T_Dataset:
