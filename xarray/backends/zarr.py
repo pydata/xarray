@@ -667,11 +667,15 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
+            encoded_attrs = {}
+            for k2, v2 in attrs.items():
+                encoded_attrs[k2] = self.encode_attribute(v2)
+
+            # the magic for storing the hidden dimension data
+            encoded_attrs[DIMENSION_KEY] = dims
+
             if name in self.zarr_group:
                 # existing variable
-                # TODO: if mode="a", consider overriding the existing variable
-                # metadata. This would need some case work properly with region
-                # and append_dim.
                 if self._write_empty is not None:
                     zarr_array = zarr.open(
                         store=self.zarr_group.store,
@@ -680,16 +684,14 @@ class ZarrStore(AbstractWritableDataStore):
                     )
                 else:
                     zarr_array = self.zarr_group[name]
+
+                if self._mode == "a":
+                    zarr_array = _put_attrs(zarr_array, encoded_attrs)
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
                     v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
                 )
-                encoded_attrs = {}
-                # the magic for storing the hidden dimension data
-                encoded_attrs[DIMENSION_KEY] = dims
-                for k2, v2 in attrs.items():
-                    encoded_attrs[k2] = self.encode_attribute(v2)
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
