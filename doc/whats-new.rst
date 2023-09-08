@@ -14,6 +14,58 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.08.1:
+
+v2023.08.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Added the :py:meth:`Coordinates.assign` method that can be used to combine
+  different collections of coordinates prior to assign them to a Dataset or
+  DataArray (:pull:`8102`) at once.
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The :py:class:`Coordinates` constructor now creates a (pandas) index by
+  default for each dimension coordinate. To keep the previous behavior (no index
+  created), pass an empty dictionary to ``indexes``. The constructor now also
+  extracts and add the indexes from another :py:class:`Coordinates` object
+  passed via ``coords`` (:pull:`8107`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Deprecate passing a :py:class:`pandas.MultiIndex` object directly to the
+  :py:class:`Dataset` and :py:class:`DataArray` constructors as well as to
+  :py:meth:`Dataset.assign` and :py:meth:`Dataset.assign_coords`.
+  A new Xarray :py:class:`Coordinates` object has to be created first using
+  :py:meth:`Coordinates.from_pandas_multiindex` (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
+  (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
+  names were not updated properly internally (:issue:`7405`, :issue:`7588`,
+  :pull:`8104`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2023.08.0:
 
 v2023.08.0 (Aug 18, 2023)
@@ -89,7 +141,6 @@ Breaking changes
    zarr                      2.10     2.12
    numbagg                    0.1    0.2.1
   ===================== =========  ========
-
 
 Documentation
 ~~~~~~~~~~~~~
