@@ -408,9 +408,6 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
             DataArray(np.random.rand(4, 4), [("x", self.mindex), ("level_1", range(4))])
 
-        with pytest.raises(ValueError, match=r"matching the dimension size"):
-            DataArray(data, coords={"x": 0}, dims=["x", "y"])
-
     def test_constructor_from_self_described(self) -> None:
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(
@@ -7098,3 +7095,7 @@ def test_nD_coord_dataarray():
     actual, _ = xr.broadcast(da, da3)
     expected = da.expand_dims(z=4, axis=-1)
     assert_identical(actual, expected)
+
+    da2 = DataArray(np.ones((2, 4)), coords={"x": 0}, dims=["x", "y"])
+    assert "x" not in da2.xindexes
+    assert "x" in da2.coords
