@@ -680,7 +680,7 @@ class TestDataset:
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, dict)
-        assert type(ds.dims.mapping) is dict
+        assert type(ds.dims.mapping) is dict  # noqa: E721
         assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
         assert ds.sizes == ds.dims
 
@@ -4709,7 +4709,7 @@ class TestDataset:
                 "e": [True, False, True],
                 "f": pd.Categorical(list("abc")),
                 "g": pd.date_range("20130101", periods=3),
-                "h": pd.date_range("20130101", periods=3, tz="US/Eastern"),
+                "h": pd.date_range("20130101", periods=3, tz="America/New_York"),
             }
         )
         df.index = pd.MultiIndex.from_product([["a"], range(3)], names=["one", "two"])

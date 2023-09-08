@@ -147,6 +147,8 @@ Breaking changes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the internal design of xarray objects.
+  (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
   :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.

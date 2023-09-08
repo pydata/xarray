@@ -1306,7 +1306,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if not isinstance(array, np.ndarray):
             raise TypeError(
                 "NumpyIndexingAdapter only wraps np.ndarray. "
-                "Trying to wrap {}".format(type(array))
+                f"Trying to wrap {type(array)}"
             )
         self.array = array
 

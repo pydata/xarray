@@ -1091,7 +1091,7 @@ class TestVariable(VariableSubclassobjects):
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0
-        assert type(v.item()) is float
+        assert type(v.item()) is float  # noqa: E721
 
         v = IndexVariable("x", np.arange(5))
         assert 2 == v.searchsorted(2)
@@ -2604,7 +2604,7 @@ class TestAsCompatibleData:
 
     @requires_pandas_version_two
     def test_tz_datetime(self) -> None:
-        tz = pytz.timezone("US/Eastern")
+        tz = pytz.timezone("America/New_York")
         times_ns = pd.date_range("2000", periods=1, tz=tz)
 
         times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
@@ -2904,9 +2904,11 @@ class TestNumpyCoercion:
         (pd.date_range("2000", periods=1), False),
         (datetime(2000, 1, 1), False),
         (np.array([datetime(2000, 1, 1)]), False),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")), False),
+        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
             False,
         ),
     ],
@@ -2929,7 +2931,7 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("US/Eastern")
+            "ns", pytz.timezone("America/New_York")
         )
 
 
@@ -2941,12 +2943,14 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         (pd.date_range("2000", periods=1), "datetime64[s]"),
         (pd.Series(pd.date_range("2000", periods=1)), "datetime64[s]"),
         (
-            pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")),
-            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+            pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")),
+            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
-            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
+            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
     ]
     for data, dtype in cases:
@@ -2960,7 +2964,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("US/Eastern")
+            "ns", pytz.timezone("America/New_York")
         )
 
 

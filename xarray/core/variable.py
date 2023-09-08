@@ -759,18 +759,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     if k.ndim > 1:
                         raise IndexError(
                             "Unlabeled multi-dimensional array cannot be "
-                            "used for indexing: {}".format(k)
+                            f"used for indexing: {k}"
                         )
                 if k.dtype.kind == "b":
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
-                            "Boolean array size {:d} is used to index array "
-                            "with shape {:s}.".format(len(k), str(self.shape))
+                            f"Boolean array size {len(k):d} is used to index array "
+                            f"with shape {str(self.shape):s}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
-                            "{}-dimensional boolean indexing is "
-                            "not supported. ".format(k.ndim)
+                            f"{k.ndim}-dimensional boolean indexing is "
+                            "not supported. "
                         )
                     if is_duck_dask_array(k.data):
                         raise KeyError(
@@ -783,9 +783,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            "on {:s} but the target dimension is {:s}.".format(
-                                str(k.dims), dim
-                            )
+                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
                         )
 
     def _broadcast_indexes_outer(self, key):
@@ -2550,8 +2548,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
-                    "{} is invalid for boundary. Valid option is 'exact', "
-                    "'trim' and 'pad'".format(boundary[d])
+                    f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
+                    "'trim' and 'pad'"
                 )
 
         shape = []
