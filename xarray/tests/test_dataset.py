@@ -636,7 +636,7 @@ class TestDataset:
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
-        ds = Dataset(coords=Coordinates({"x": ("x", [1, 2, 3])}))
+        ds = Dataset(coords=Coordinates({"x": [1, 2, 3]}, indexes={}))
         assert "x" in ds
         assert "x" not in ds.xindexes
 
@@ -680,7 +680,7 @@ class TestDataset:
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, dict)
-        assert type(ds.dims.mapping) is dict
+        assert type(ds.dims.mapping) is dict  # noqa: E721
         assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
         assert ds.sizes == ds.dims
 
@@ -4356,7 +4356,7 @@ class TestDataset:
         assert isinstance(actual.xindexes["x"], CustomIndex)
 
     def test_assign_coords_no_default_index(self) -> None:
-        coords = Coordinates({"y": ("y", [1, 2, 3])})
+        coords = Coordinates({"y": [1, 2, 3]}, indexes={})
         ds = Dataset()
         actual = ds.assign_coords(coords)
         expected = coords.to_dataset()
@@ -4698,7 +4698,7 @@ class TestDataset:
                 "e": [True, False, True],
                 "f": pd.Categorical(list("abc")),
                 "g": pd.date_range("20130101", periods=3),
-                "h": pd.date_range("20130101", periods=3, tz="US/Eastern"),
+                "h": pd.date_range("20130101", periods=3, tz="America/New_York"),
             }
         )
         df.index = pd.MultiIndex.from_product([["a"], range(3)], names=["one", "two"])
