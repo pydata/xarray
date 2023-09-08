@@ -1809,8 +1809,8 @@ class ZarrBase(CFEncodedBase):
         return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
-    def open(self, store_target, **kwargs):
-        with xr.open_dataset(
+    def open(self, store_target, is_dataarray=False, **kwargs):
+        with (xr.open_dataarray if is_dataarray else xr.open_dataset)(
             store_target, engine="zarr", **kwargs, **self.version_kwargs
         ) as ds:
             yield ds
@@ -2452,10 +2452,6 @@ class ZarrBase(CFEncodedBase):
             {"u": (("x",), np.ones(10), {"variable": "modified"})},
             attrs={"global": "modified"},
         )
-        global_modified = Dataset(
-            {"u": (("x",), np.ones(10), {"variable": "original"})},
-            attrs={"global": "modified"},
-        )
         only_new_data = Dataset(
             {"u": (("x",), np.ones(10), {"variable": "original"})},
             attrs={"global": "original"},
@@ -2465,10 +2461,7 @@ class ZarrBase(CFEncodedBase):
             original.to_zarr(store, compute=False, **self.version_kwargs)
             both_modified.to_zarr(store, mode="a", **self.version_kwargs)
             with self.open(store) as actual:
-                # NOTE: this arguably incorrect -- we should probably be
-                # overriding the variable metadata, too. See the TODO note in
-                # ZarrStore.set_variables.
-                assert_identical(actual, global_modified)
+                assert_identical(actual, both_modified)
 
         with self.create_zarr_target() as store:
             original.to_zarr(store, compute=False, **self.version_kwargs)
