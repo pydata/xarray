@@ -35,7 +35,7 @@ Python Array API standard support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As an integration library xarray benefits greatly from the standardization of duck-array libraries' APIs, and so is a
-big supporter of the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_. .
+big supporter of the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_.
 
 We aim to support any array libraries that follow the Array API standard out-of-the-box. However, xarray does occasionally
 call some numpy functions which are not (yet) part of the standard (e.g. :py:meth:`xarray.DataArray.pad` calls :py:func:`numpy.pad`).
