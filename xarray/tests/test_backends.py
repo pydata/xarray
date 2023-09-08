@@ -2485,6 +2485,39 @@ class ZarrBase(CFEncodedBase):
             with self.open(store) as actual:
                 assert_identical(actual, only_new_data)
 
+    @pytest.mark.parametrize("is_dataarray", [True, False])
+    def test_update_attributes_behaviour(self, is_dataarray) -> None:
+        expected_attrs = dict()
+        obj = DataArray(name="foo") if is_dataarray else Dataset()
+
+        expected_attrs["a"] = 1
+
+        with self.create_zarr_target() as store:
+            obj.assign_attrs(**expected_attrs).to_zarr(
+                store, mode="w", **self.version_kwargs
+            )
+
+            with self.open(store, is_dataarray=is_dataarray) as obj:
+                assert expected_attrs == obj.attrs
+
+            expected_attrs["b"] = 2
+
+            obj.assign_attrs(**expected_attrs).to_zarr(
+                store, mode="a", **self.version_kwargs
+            )
+
+            with self.open(store, is_dataarray=is_dataarray) as obj:
+                assert expected_attrs == obj.attrs
+
+            expected_attrs["c"] = 3
+
+            obj.assign_attrs(**expected_attrs).to_zarr(
+                store, mode="r+", **self.version_kwargs
+            )
+
+            with self.open(store, is_dataarray=is_dataarray) as obj:
+                assert expected_attrs != obj.attrs
+
     def test_write_region_errors(self) -> None:
         data = Dataset({"u": (("x",), np.arange(5))})
         data2 = Dataset({"u": (("x",), np.array([10, 11]))})
