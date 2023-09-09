@@ -77,6 +77,12 @@ class TestDataArrayRolling:
         with pytest.raises(ValueError, match="min_periods must be greater than zero"):
             da.rolling(time=2, min_periods=0)
 
+        with pytest.raises(
+            KeyError,
+            match=r"\('foo',\) not found in DataArray dimensions",
+        ):
+            da.rolling(foo=2)
+
     @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
@@ -540,6 +546,11 @@ class TestDatasetRolling:
             ds.rolling(time=2, min_periods=0)
         with pytest.raises(KeyError, match="time2"):
             ds.rolling(time2=2)
+        with pytest.raises(
+            KeyError,
+            match=r"\('foo',\) not found in Dataset dimensions",
+        ):
+            ds.rolling(foo=2)
 
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "var", "min", "max", "median")

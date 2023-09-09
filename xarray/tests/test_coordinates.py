@@ -103,6 +103,11 @@ class TestCoordinates:
         del coords["x"]
         assert "x" not in coords
 
+        with pytest.raises(
+            KeyError, match="'nonexistent' is not in coordinate variables"
+        ):
+            del coords["nonexistent"]
+
     def test_update(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})
 

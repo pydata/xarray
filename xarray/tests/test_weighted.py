@@ -782,9 +782,12 @@ def test_weighted_bad_dim(operation, as_dataset):
     if operation == "quantile":
         kwargs["q"] = 0.5
 
-    error_msg = (
-        f"{data.__class__.__name__}Weighted"
-        " does not contain the dimensions: {'bad_dim'}"
-    )
-    with pytest.raises(ValueError, match=error_msg):
+    with pytest.raises(
+        ValueError,
+        match=(
+            f"Dimensions \\('bad_dim',\\) not found in {data.__class__.__name__}Weighted "
+            # the order of (dim_0, dim_1) varies
+            "dimensions \\(('dim_0', 'dim_1'|'dim_1', 'dim_0')\\)"
+        ),
+    ):
         getattr(data.weighted(weights), operation)(**kwargs)

@@ -614,8 +614,11 @@ class TestConcatDataset:
         with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with pytest.raises(ValueError, match=r"are not coordinates"):
+        with pytest.raises(ValueError, match=r"are not found in the coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
+
+        with pytest.raises(ValueError, match=r"are not found in the data variables"):
+            concat([data, data], "new_dim", data_vars=["not_found"])
 
         with pytest.raises(ValueError, match=r"global attributes not"):
             # call deepcopy seperately to get unique attrs
