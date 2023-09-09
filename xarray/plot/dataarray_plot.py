@@ -186,7 +186,7 @@ def _prepare_plot1d_data(
     # dimensions so the plotter can plot anything:
     if darray.ndim > 1:
         # When stacking dims the lines will continue connecting. For floats
-        # this can be solved by adding a nan element inbetween the flattening
+        # this can be solved by adding a nan element in between the flattening
         # points:
         dims_T = []
         if np.issubdtype(darray.dtype, np.floating):

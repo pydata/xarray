@@ -888,7 +888,7 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix side effects on index coordinate metadata after aligning objects. (:issue:`6852`, :pull:`6857`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`. (:issue:`6839`, :pull:`6843`)
+- Make FacetGrid.set_titles send kwargs correctly using `handle.update(kwargs)`. (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 - Fix bug where index variables would be changed inplace. (:issue:`6931`, :pull:`6938`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
@@ -4751,7 +4751,7 @@ Bug fixes
 - Corrected a bug with incorrect coordinates for non-georeferenced geotiff
   files (:issue:`1686`). Internally, we now use the rasterio coordinate
   transform tool instead of doing the computations ourselves. A
-  ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
+  ``parse_coordinates`` kwarg has been added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 - The colors of discrete colormaps are now the same regardless if `seaborn`
