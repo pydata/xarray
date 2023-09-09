@@ -76,7 +76,7 @@ class FacetGrid(Generic[T_Xarray]):
     The general approach to plotting here is called "small multiples",
     where the same kind of plot is repeated multiple times, and the
     specific use of small multiples to display the same relationship
-    conditioned on one ore more other variables is often called a "trellis
+    conditioned on one or more other variables is often called a "trellis
     plot".
 
     The basic workflow is to initialize the :class:`FacetGrid` object with

@@ -572,7 +572,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             and not is_duck_dask_array(self.obj.data)
             and self.ndim == 1
         ):
-            # TODO: renable bottleneck with dask after the issues
+            # TODO: re-enable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
             return self._bottleneck_reduce(

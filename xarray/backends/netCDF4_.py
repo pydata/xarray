@@ -538,7 +538,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
 
-    It can open ".nc", ".nc4", ".cdf" files and will be choosen
+    It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.
 
     Additionally it can open valid HDF5 files, see

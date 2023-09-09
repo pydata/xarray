@@ -307,7 +307,7 @@ class Index:
     def equals(self: T_Index, other: T_Index) -> bool:
         """Compare this index with another index of the same type.
 
-        Implemenation is optional but required in order to support alignment.
+        Implementation is optional but required in order to support alignment.
 
         Parameters
         ----------
