@@ -172,7 +172,7 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
-def _unpack_delta_ref_date(units):
+def _unpack_time_units_and_ref_date(units):
     # same us _unpack_netcdf_time_units but finalizes ref_date for
     # processing in encode_cf_datetime
     delta, _ref_date = _unpack_netcdf_time_units(units)
@@ -670,13 +670,13 @@ def encode_cf_datetime(
             raise OutOfBoundsDatetime
         assert dates.dtype == "datetime64[ns]"
 
-        delta, ref_date = _unpack_delta_ref_date(units)
+        delta, ref_date = _unpack_time_units_and_ref_date(units)
         delta_units = _netcdf_to_numpy_timeunit(delta)
         time_delta = np.timedelta64(1, delta_units).astype("timedelta64[ns]")
 
         # check if times can be represented with given units
         if data_units != units:
-            data_delta, data_ref_date = _unpack_delta_ref_date(data_units)
+            data_delta, data_ref_date = _unpack_time_units_and_ref_date(data_units)
             needed_delta = _infer_time_units_from_diff(
                 (data_ref_date - ref_date).to_timedelta64()
             )
