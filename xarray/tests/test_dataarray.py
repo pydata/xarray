@@ -7074,7 +7074,7 @@ class TestStackEllipsis:
             da.stack(flat=...)  # type: ignore
 
 
-def test_nD_coord_dataarray():
+def test_nD_coord_dataarray() -> None:
     # should succeed
     da = DataArray(
         np.ones((2, 4)),
@@ -7098,6 +7098,6 @@ def test_nD_coord_dataarray():
     expected = da.expand_dims(z=4, axis=-1)
     assert_identical(actual, expected)
 
-    da2 = DataArray(np.ones((2, 4)), coords={"x": 0}, dims=["x", "y"])
-    assert "x" not in da2.xindexes
-    assert "x" in da2.coords
+    da4 = DataArray(np.ones((2, 4)), coords={"x": 0}, dims=["x", "y"])
+    assert "x" not in da4.xindexes
+    assert "x" in da4.coords
