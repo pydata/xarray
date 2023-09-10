@@ -7128,7 +7128,7 @@ class Dataset(
     def _set_numpy_data_from_dataframe(
         self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
-        if not isinstance(idx, pd.MultiIndex):
+        if len(dims) == 1:
             for name, values in arrays:
                 self[name] = (dims, values)
             return
@@ -7164,17 +7164,18 @@ class Dataset(
 
     @classmethod
     def from_dataframe(
-        cls: type[T_Dataset], dataframe: pd.DataFrame, sparse: bool = False
+        cls: type[T_Dataset],
+        dataframe: pd.DataFrame,
+        sparse: bool = False,
+        unstack: bool = True,
+        dim: Hashable | None = None,
     ) -> T_Dataset:
         """Convert a pandas.DataFrame into an xarray.Dataset
 
         Each column will be converted into an independent variable in the
-        Dataset. If the dataframe's index is a MultiIndex, it will be expanded
-        into a tensor product of one-dimensional indices (filling in missing
-        values with NaN). This method will produce a Dataset very similar to
-        that on which the 'to_dataframe' method was called, except with
-        possibly redundant dimensions (since all dataset variables will have
-        the same dimensionality)
+        Dataset.
+
+        DEPRECATED: if the dataframe's index is a MultiIndex and ``dim=None``,
 
         Parameters
         ----------
@@ -7183,7 +7184,21 @@ class Dataset(
         sparse : bool, default: False
             If true, create a sparse arrays instead of dense numpy arrays. This
             can potentially save a large amount of memory if the DataFrame has
-            a MultiIndex. Requires the sparse package (sparse.pydata.org).
+            a MultiIndex and ``unstack=True``.
+            Requires the sparse package (sparse.pydata.org).
+        unstack : bool, default: True
+            If True (default) and if the dataframe's index is a MultiIndex,
+            the index will be expanded into a tensor product of one-dimensional
+            indices (filling in missing values with NaN). This method will produce a
+            Dataset very similar to that on which the 'to_dataframe' method was
+            called, except with possibly redundant dimensions (since all dataset
+            variables will have the same dimensionality).
+        dim : str, optional
+            Name of the dimension to assign to all variables and coordinates.
+            If None (default), the dimension name is set from the name of the
+            DataFrame index. If the index has no defined name, "dim_0" is used
+            as a fallback. This argument is ignored if the dataframe's index is
+            a MultiIndex and ``unstack=True``.
 
         Returns
         -------
@@ -7192,7 +7207,9 @@ class Dataset(
         See Also
         --------
         xarray.DataArray.from_series
+        xarray.Dataset.to_dataframe
         pandas.DataFrame.to_xarray
+
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -7203,10 +7220,15 @@ class Dataset(
 
         idx = remove_unused_levels_categories(dataframe.index)
 
-        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
-            raise ValueError(
-                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
-            )
+        if isinstance(idx, pd.MultiIndex):
+            if not idx.is_unique:
+                raise ValueError(
+                    "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+                )
+            if sparse and not unstack:
+                raise ValueError(
+                    "conversion to sparse arrays is no supported when unstack=False"
+                )
 
         # Cast to a NumPy array first, in case the Series is a pandas Extension
         # array (which doesn't have a valid NumPy dtype)
@@ -7216,21 +7238,35 @@ class Dataset(
 
         indexes: dict[Hashable, Index] = {}
         index_vars: dict[Hashable, Variable] = {}
+        dims: tuple[Hashable]
+
+        def get_dims(index) -> tuple[Hashable]:
+            if dim is not None:
+                return (dim,)
+            elif index.name is not None:
+                return (index.name,)
+            else:
+                return ("index",)
 
         if isinstance(idx, pd.MultiIndex):
-            dims = tuple(
-                name if name is not None else "level_%i" % n
-                for n, name in enumerate(idx.names)
-            )
-            for dim, lev in zip(dims, idx.levels):
-                xr_idx = PandasIndex(lev, dim)
-                indexes[dim] = xr_idx
-                index_vars.update(xr_idx.create_variables())
+            if unstack:
+                dims = tuple(
+                    name if name is not None else "level_%i" % n
+                    for n, name in enumerate(idx.names)
+                )
+                for dim, lev in zip(dims, idx.levels):
+                    xr_idx = PandasIndex(lev, dim)
+                    indexes[dim] = xr_idx
+                    index_vars.update(xr_idx.create_variables())
+            else:
+                dims = get_dims(idx)
+                coords = Coordinates.from_pandas_multiindex(idx, dim=dims[0])
+                indexes.update(coords.xindexes)
+                index_vars.update(coords.variables)
         else:
-            index_name = idx.name if idx.name is not None else "index"
-            dims = (index_name,)
-            xr_idx = PandasIndex(idx, index_name)
-            indexes[index_name] = xr_idx
+            dims = get_dims(idx)
+            xr_idx = PandasIndex(idx, dims[0])
+            indexes[dims[0]] = xr_idx
             index_vars.update(xr_idx.create_variables())
 
         obj = cls._construct_direct(index_vars, set(index_vars), indexes=indexes)
