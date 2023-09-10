@@ -79,10 +79,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import (
-    get_chunked_array_type,
-    guess_chunkmanager,
-)
+from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
     array_type,
     is_chunked_array,
@@ -5275,34 +5272,31 @@ class Dataset(
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
-        for variable in self:
-            dims = self[variable].dims
-            dims_include_sample_dims = set(sample_dims) <= set(dims)
-            if not dims_include_sample_dims:
+        for key, da in self.data_vars.items():
+            missing_sample_dims = set(sample_dims) - set(da.dims)
+            if missing_sample_dims:
                 raise ValueError(
-                    "All variables in the dataset must contain the "
-                    f"dimensions {dims}."
+                    "Variables in the dataset must contain all ``sample_dims`` "
+                    f"({sample_dims!r}) but '{key}' misses {sorted(missing_sample_dims)}"
                 )
 
-        def ensure_stackable(val):
-            assign_coords = {variable_dim: val.name}
-            for dim in stacking_dims:
-                if dim not in val.dims:
-                    assign_coords[dim] = None
+        def stack_dataarray(da):
+            # add missing dims/ coords and the name of the variable
 
-            expand_dims = set(stacking_dims).difference(set(val.dims))
-            expand_dims.add(variable_dim)
-            # must be list for .expand_dims
-            expand_dims = list(expand_dims)
+            missing_stack_coords = {variable_dim: da.name}
+            for dim in set(stacking_dims) - set(da.dims):
+                missing_stack_coords[dim] = None
+
+            missing_stack_dims = list(missing_stack_coords)
 
             return (
-                val.assign_coords(**assign_coords)
-                .expand_dims(expand_dims)
+                da.assign_coords(**missing_stack_coords)
+                .expand_dims(missing_stack_dims)
                 .stack({new_dim: (variable_dim,) + stacking_dims})
             )
 
         # concatenate the arrays
-        stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
+        stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
         data_array = concat(stackable_vars, dim=new_dim)
 
         if name is not None:

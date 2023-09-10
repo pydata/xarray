@@ -3792,7 +3792,10 @@ class TestDataset:
             data_vars={"a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]), "b": ("x", [6, 7])},
             coords={"y": ["u", "v", "w"]},
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"Variables in the dataset must contain all ``sample_dims`` \(\['y'\]\) but 'b' misses \['y'\]",
+        ):
             data.to_stacked_array("features", sample_dims=["y"])
 
     def test_to_stacked_array_name(self) -> None:
