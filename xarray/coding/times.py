@@ -172,10 +172,10 @@ def _unpack_netcdf_time_units(units: str) -> tuple[str, str]:
     return delta_units, ref_date
 
 
-def _unpack_time_units_and_ref_date(units):
+def _unpack_time_units_and_ref_date(units: str) -> tuple[str, pd.Timestamp]:
     # same us _unpack_netcdf_time_units but finalizes ref_date for
     # processing in encode_cf_datetime
-    delta, _ref_date = _unpack_netcdf_time_units(units)
+    time_units, _ref_date = _unpack_netcdf_time_units(units)
     # TODO: the strict enforcement of nanosecond precision Timestamps can be
     # relaxed when addressing GitHub issue #7493.
     ref_date = nanosecond_precision_timestamp(_ref_date)
@@ -183,7 +183,7 @@ def _unpack_time_units_and_ref_date(units):
     # make it timezone-naive (GH 2649).
     if ref_date.tz is not None:
         ref_date = ref_date.tz_convert(None)
-    return delta, ref_date
+    return time_units, ref_date
 
 
 def _decode_cf_datetime_dtype(
@@ -237,8 +237,8 @@ def _decode_datetime_with_pandas(
             "pandas."
         )
 
-    delta, ref_date = _unpack_netcdf_time_units(units)
-    delta = _netcdf_to_numpy_timeunit(delta)
+    time_units, ref_date = _unpack_netcdf_time_units(units)
+    time_units = _netcdf_to_numpy_timeunit(time_units)
     try:
         # TODO: the strict enforcement of nanosecond precision Timestamps can be
         # relaxed when addressing GitHub issue #7493.
@@ -252,8 +252,8 @@ def _decode_datetime_with_pandas(
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
         if flat_num_dates.size > 0:
             # avoid size 0 datetimes GH1329
-            pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-            pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+            pd.to_timedelta(flat_num_dates.min(), time_units) + ref_date
+            pd.to_timedelta(flat_num_dates.max(), time_units) + ref_date
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer and unsigned integer dtype
@@ -268,7 +268,7 @@ def _decode_datetime_with_pandas(
     # works much faster when dealing with integers (GH 1399).
     # properly handle NaN/NaT to prevent casting NaN to int
     nan = np.isnan(flat_num_dates) | (flat_num_dates == np.iinfo(np.int64).min)
-    flat_num_dates = flat_num_dates * _NS_PER_TIME_DELTA[delta]
+    flat_num_dates = flat_num_dates * _NS_PER_TIME_DELTA[time_units]
     flat_num_dates_ns_int = np.zeros_like(flat_num_dates, dtype=np.int64)
     flat_num_dates_ns_int[nan] = np.iinfo(np.int64).min
     flat_num_dates_ns_int[~nan] = flat_num_dates[~nan].astype(np.int64)
@@ -590,12 +590,12 @@ def _should_cftime_be_used(
 
 
 def _cleanup_netcdf_time_units(units: str) -> str:
-    delta, ref_date = _unpack_netcdf_time_units(units)
-    delta = delta.lower()
-    if not delta.endswith("s"):
-        delta = f"{delta}s"
+    time_units, ref_date = _unpack_netcdf_time_units(units)
+    time_units = time_units.lower()
+    if not time_units.endswith("s"):
+        time_units = f"{time_units}s"
     try:
-        units = f"{delta} since {format_timestamp(ref_date)}"
+        units = f"{time_units} since {format_timestamp(ref_date)}"
     except (OutOfBoundsDatetime, ValueError):
         # don't worry about reifying the units if they're out of bounds or
         # formatted badly
@@ -670,23 +670,23 @@ def encode_cf_datetime(
             raise OutOfBoundsDatetime
         assert dates.dtype == "datetime64[ns]"
 
-        delta, ref_date = _unpack_time_units_and_ref_date(units)
-        delta_units = _netcdf_to_numpy_timeunit(delta)
-        time_delta = np.timedelta64(1, delta_units).astype("timedelta64[ns]")
+        time_units, ref_date = _unpack_time_units_and_ref_date(units)
+        time_units = _netcdf_to_numpy_timeunit(time_units)
+        time_delta = np.timedelta64(1, time_units).astype("timedelta64[ns]")
 
         # check if times can be represented with given units
         if data_units != units:
-            data_delta, data_ref_date = _unpack_time_units_and_ref_date(data_units)
-            needed_delta = _infer_time_units_from_diff(
+            _, data_ref_date = _unpack_time_units_and_ref_date(data_units)
+            needed_units = _infer_time_units_from_diff(
                 (data_ref_date - ref_date).to_timedelta64()
             )
             needed_time_delta = np.timedelta64(
-                1, _netcdf_to_numpy_timeunit(needed_delta)
+                1, _netcdf_to_numpy_timeunit(needed_units)
             ).astype("timedelta64[ns]")
-            if needed_delta != delta and time_delta > needed_time_delta:
+            if needed_units != time_units and time_delta > needed_time_delta:
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully with requested units {units!r}. "
-                    f"Resolution of {needed_delta!r} needed. "
+                    f"Resolution of {needed_units!r} needed. "
                     f"Serializing timeseries to floating point."
                 )
 
