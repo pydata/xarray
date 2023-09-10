@@ -196,7 +196,7 @@ class VariableSubclassobjects(ABC):
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_float(self):
-        for value, dtype in [(0.5, np.float_), (np.float32(0.5), np.float32)]:
+        for value, dtype in [(0.5, float), (np.float32(0.5), np.float32)]:
             x = self.cls(["x"], [value])
             self._assertIndexedLikeNDArray(x, value, dtype)
 
