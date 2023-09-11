@@ -46,12 +46,12 @@ def as_compatible_data(
     if not isinstance(data, np.ndarray) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
-        return data
+        return typing.cast(T_DuckArray, data)
     if isinstance(data, tuple):
         data = to_0d_object_array(data)
 
     # validate whether the data is valid data types.
-    return np.asarray(data)
+    return typing.cast(T_DuckArray, np.asarray(data))
 
 
 class NamedArray:
