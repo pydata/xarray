@@ -6,6 +6,12 @@ import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 from xarray.core.options import OPTIONS
 from xarray.core.pycompat import is_duck_array
 
@@ -194,7 +200,7 @@ def _nanpolyfit_1d(arr, x, rcond=None):
 
 def warn_on_deficient_rank(rank, order):
     if rank != order:
-        warnings.warn("Polyfit may be poorly conditioned", np.RankWarning, stacklevel=2)
+        warnings.warn("Polyfit may be poorly conditioned", RankWarning, stacklevel=2)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):

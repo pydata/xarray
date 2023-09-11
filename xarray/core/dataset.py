@@ -24,6 +24,13 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
@@ -79,10 +86,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import (
-    get_chunked_array_type,
-    guess_chunkmanager,
-)
+from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
     array_type,
     is_chunked_array,
@@ -211,11 +215,6 @@ def _get_virtual_variable(
     virtual_var = Variable(ref_var.dims, data)
 
     return ref_name, var_name, virtual_var
-
-
-def _assert_empty(args: tuple, msg: str = "%s") -> None:
-    if args:
-        raise ValueError(msg % args)
 
 
 def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
@@ -2640,7 +2639,7 @@ class Dataset(
         bad_dims = chunks.keys() - self.dims.keys()
         if bad_dims:
             raise ValueError(
-                f"some chunks keys are not dimensions on this object: {bad_dims}"
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
             )
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
@@ -4243,8 +4242,8 @@ class Dataset(
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
-                    f"cannot rename {k!r} because it is not a "
-                    "dimension in this dataset"
+                    f"cannot rename {k!r} because it is not found "
+                    f"in the dimensions of this dataset {tuple(self.dims)}"
                 )
             if v in self.dims or v in self:
                 raise ValueError(
@@ -4366,7 +4365,7 @@ class Dataset(
             if k not in self.dims:
                 raise ValueError(
                     f"cannot swap from dimension {k!r} because it is "
-                    "not an existing dimension"
+                    f"not one of the dimensions of this dataset {tuple(self.dims)}"
                 )
             if v in self.variables and self.variables[v].dims != (k,):
                 raise ValueError(
@@ -5280,34 +5279,31 @@ class Dataset(
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
-        for variable in self:
-            dims = self[variable].dims
-            dims_include_sample_dims = set(sample_dims) <= set(dims)
-            if not dims_include_sample_dims:
+        for key, da in self.data_vars.items():
+            missing_sample_dims = set(sample_dims) - set(da.dims)
+            if missing_sample_dims:
                 raise ValueError(
-                    "All variables in the dataset must contain the "
-                    f"dimensions {dims}."
+                    "Variables in the dataset must contain all ``sample_dims`` "
+                    f"({sample_dims!r}) but '{key}' misses {sorted(missing_sample_dims)}"
                 )
 
-        def ensure_stackable(val):
-            assign_coords = {variable_dim: val.name}
-            for dim in stacking_dims:
-                if dim not in val.dims:
-                    assign_coords[dim] = None
+        def stack_dataarray(da):
+            # add missing dims/ coords and the name of the variable
 
-            expand_dims = set(stacking_dims).difference(set(val.dims))
-            expand_dims.add(variable_dim)
-            # must be list for .expand_dims
-            expand_dims = list(expand_dims)
+            missing_stack_coords = {variable_dim: da.name}
+            for dim in set(stacking_dims) - set(da.dims):
+                missing_stack_coords[dim] = None
+
+            missing_stack_dims = list(missing_stack_coords)
 
             return (
-                val.assign_coords(**assign_coords)
-                .expand_dims(expand_dims)
+                da.assign_coords(**missing_stack_coords)
+                .expand_dims(missing_stack_dims)
                 .stack({new_dim: (variable_dim,) + stacking_dims})
             )
 
         # concatenate the arrays
-        stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
+        stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
         data_array = concat(stackable_vars, dim=new_dim)
 
         if name is not None:
@@ -5448,10 +5444,10 @@ class Dataset(
             else:
                 dims = list(dim)
 
-            missing_dims = [d for d in dims if d not in self.dims]
+            missing_dims = set(dims) - set(self.dims)
             if missing_dims:
                 raise ValueError(
-                    f"Dataset does not contain the dimensions: {missing_dims}"
+                    f"Dimensions {tuple(missing_dims)} not found in data dimensions {tuple(self.dims)}"
                 )
 
         # each specified dimension must have exactly one multi-index
@@ -5836,7 +5832,10 @@ class Dataset(
         if errors == "raise":
             invalid_coords = coord_names - self._coord_names
             if invalid_coords:
-                raise ValueError(f"those coordinates don't exist: {invalid_coords}")
+                raise ValueError(
+                    f"The coordinates {tuple(invalid_coords)} are not found in the "
+                    f"dataset coordinates {tuple(self.coords.keys())}"
+                )
 
             unindexed_coords = set(coord_names) - set(self._indexes)
             if unindexed_coords:
@@ -6084,7 +6083,7 @@ class Dataset(
             missing_dims = drop_dims - set(self.dims)
             if missing_dims:
                 raise ValueError(
-                    f"Dataset does not contain the dimensions: {missing_dims}"
+                    f"Dimensions {tuple(missing_dims)} not found in data dimensions {tuple(self.dims)}"
                 )
 
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
@@ -6244,7 +6243,9 @@ class Dataset(
         # depending on the order of the supplied axes.
 
         if dim not in self.dims:
-            raise ValueError(f"{dim} must be a single dataset dimension")
+            raise ValueError(
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
+            )
 
         if subset is None:
             subset = iter(self.data_vars)
@@ -6725,10 +6726,10 @@ class Dataset(
         else:
             dims = set(dim)
 
-        missing_dimensions = [d for d in dims if d not in self.dims]
+        missing_dimensions = tuple(d for d in dims if d not in self.dims)
         if missing_dimensions:
             raise ValueError(
-                f"Dataset does not contain the dimensions: {missing_dimensions}"
+                f"Dimensions {missing_dimensions} not found in data dimensions {tuple(self.dims)}"
             )
 
         if keep_attrs is None:
@@ -7710,9 +7711,11 @@ class Dataset(
             foo      (x) object nan nan 'a' 'b' 'c'
         """
         shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "shift")
-        invalid = [k for k in shifts if k not in self.dims]
+        invalid = tuple(k for k in shifts if k not in self.dims)
         if invalid:
-            raise ValueError(f"dimensions {invalid!r} do not exist")
+            raise ValueError(
+                f"Dimensions {invalid} not found in data dimensions {tuple(self.dims)}"
+            )
 
         variables = {}
         for name, var in self.variables.items():
@@ -7789,7 +7792,9 @@ class Dataset(
         shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "roll")
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
-            raise ValueError(f"dimensions {invalid!r} do not exist")
+            raise ValueError(
+                f"Dimensions {invalid} not found in data dimensions {tuple(self.dims)}"
+            )
 
         unrolled_vars: tuple[Hashable, ...]
 
@@ -8038,10 +8043,11 @@ class Dataset(
         else:
             dims = set(dim)
 
-        _assert_empty(
-            tuple(d for d in dims if d not in self.dims),
-            "Dataset does not contain the dimensions: %s",
-        )
+        invalid_dims = set(dims) - set(self.dims)
+        if invalid_dims:
+            raise ValueError(
+                f"Dimensions {tuple(invalid_dims)} not found in data dimensions {tuple(self.dims)}"
+            )
 
         q = np.asarray(q, dtype=np.float64)
 
@@ -8117,7 +8123,9 @@ class Dataset(
             )
 
         if dim not in self.dims:
-            raise ValueError(f"Dataset does not contain the dimension: {dim}")
+            raise ValueError(
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
+            )
 
         variables = {}
         for name, var in self.variables.items():
@@ -8167,7 +8175,10 @@ class Dataset(
         from xarray.core.variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError(f"Coordinate {coord} does not exist.")
+            variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
+            raise ValueError(
+                f"Coordinate {coord!r} not found in variables or dimensions {variables_and_dims}."
+            )
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
@@ -8269,7 +8280,10 @@ class Dataset(
         from xarray.core.variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
-            raise ValueError(f"Coordinate {coord} does not exist.")
+            variables_and_dims = tuple(set(self.variables.keys()).union(self.dims))
+            raise ValueError(
+                f"Coordinate {coord!r} not found in variables or dimensions {variables_and_dims}."
+            )
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
@@ -8778,9 +8792,9 @@ class Dataset(
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
-                    warnings.simplefilter("ignore", np.RankWarning)
+                    warnings.simplefilter("ignore", RankWarning)
                 else:  # Raise only once per variable
-                    warnings.simplefilter("once", np.RankWarning)
+                    warnings.simplefilter("once", RankWarning)
 
                 coeffs, residuals = duck_array_ops.least_squares(
                     lhs, rhs.data, rcond=rcond, skipna=skipna_da
@@ -9070,8 +9084,8 @@ class Dataset(
         >>> array2 = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
@@ -9167,8 +9181,8 @@ class Dataset(
         >>> array2 = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
@@ -9771,7 +9785,9 @@ class Dataset(
 
         missing_dims = set(dims) - set(self.dims)
         if missing_dims:
-            raise ValueError(f"'{missing_dims}' not found in dimensions")
+            raise ValueError(
+                f"Dimensions {tuple(missing_dims)} not found in data dimensions {tuple(self.dims)}"
+            )
 
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
         return self.isel(indexes)
