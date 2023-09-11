@@ -22,11 +22,12 @@ if typing.TYPE_CHECKING:
     from xarray.namedarray.utils import T_DuckArray
 
     T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
-    T_InputData = typing.Union[T_DuckArray, np.typing.ArrayLike]
 
 
 # TODO: Add tests!
-def as_compatible_data(data: T_InputData, fastpath: bool = False) -> T_DuckArray:
+def as_compatible_data(
+    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
+) -> T_DuckArray:
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return typing.cast(T_DuckArray, data)
@@ -59,7 +60,7 @@ class NamedArray:
     def __init__(
         self,
         dims: str | Iterable[Hashable],
-        data: T_InputData,
+        data: T_DuckArray | np.typing.ArrayLike,
         attrs: dict | None = None,
     ):
         self._data: T_DuckArray = as_compatible_data(data)
@@ -186,7 +187,7 @@ class NamedArray:
         return self._data
 
     @data.setter
-    def data(self: T_NamedArray, data: T_InputData) -> None:
+    def data(self: T_NamedArray, data: T_DuckArray | np.typing.ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
@@ -306,7 +307,7 @@ class NamedArray:
     def _copy(
         self: T_NamedArray,
         deep: bool = True,
-        data: T_InputData | None = None,
+        data: T_DuckArray | np.typing.ArrayLike | None = None,
         memo: dict[int, typing.Any] | None = None,
     ) -> T_NamedArray:
         if data is None:
@@ -332,7 +333,9 @@ class NamedArray:
         return self._copy(deep=True, memo=memo)
 
     def copy(
-        self: T_NamedArray, deep: bool = True, data: T_InputData | None = None
+        self: T_NamedArray,
+        deep: bool = True,
+        data: T_DuckArray | np.typing.ArrayLike | None = None,
     ) -> T_NamedArray:
         """Returns a copy of this object.
 
