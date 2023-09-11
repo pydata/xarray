@@ -716,6 +716,13 @@ class TestPlot(PlotTestCase):
         expected = "dim_0_bins_center [m]"
         assert actual == expected
 
+    def test_multiplot_over_length_one_dim(self) -> None:
+        a = easy_array((3, 1, 1, 1))
+        d = DataArray(a, dims=("x", "col", "row", "hue"))
+        d.plot(col="col")
+        d.plot(row="row")
+        d.plot(hue="hue")
+
 
 class TestPlot1D(PlotTestCase):
     @pytest.fixture(autouse=True)
@@ -1641,13 +1648,6 @@ class Common2dMixin:
         d = DataArray(a, dims=["y", "x", "columns", "rows"])
         with pytest.raises(ValueError):
             self.plotfunc(d, x="x", y="y", col="columns", row="rows", cbar_ax=1)
-
-    def test_multiplot_over_length_one_dim(self) -> None:
-        a = easy_array((1, 1, 1))
-        d = DataArray(a, dims=("col", "row", "hue"))
-        self.plotfunc(d, col="col")
-        self.plotfunc(d, row="row")
-        self.plotfunc(d, hue="hue")
 
     def test_cmap_and_color_both(self) -> None:
         with pytest.raises(ValueError):
