@@ -325,8 +325,8 @@ def line(  # type: ignore[misc]  # None is hashable :(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
@@ -336,7 +336,7 @@ def line(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def line(
-    darray,
+    darray: DataArray,
     *args: Any,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
@@ -353,8 +353,8 @@ def line(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
@@ -364,7 +364,7 @@ def line(
 
 @overload
 def line(
-    darray,
+    darray: DataArray,
     *args: Any,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
@@ -381,8 +381,8 @@ def line(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
