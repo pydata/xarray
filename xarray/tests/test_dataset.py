@@ -15,6 +15,12 @@ import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
 
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import xarray as xr
 from xarray import (
     DataArray,
@@ -118,7 +124,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                 ),
                 "unicode_var": xr.DataArray(
                     unicode_var, coords=[time1], dims=["time"]
-                ).astype(np.unicode_),
+                ).astype(np.str_),
                 "datetime_var": xr.DataArray(
                     datetime_var, coords=[time1], dims=["time"]
                 ),
@@ -141,7 +147,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                 ),
                 "unicode_var": xr.DataArray(
                     unicode_var[:nt2], coords=[time2], dims=["time"]
-                ).astype(np.unicode_),
+                ).astype(np.str_),
                 "datetime_var": xr.DataArray(
                     datetime_var_to_append, coords=[time2], dims=["time"]
                 ),
@@ -1158,7 +1164,12 @@ class TestDataset:
         for k, v in new_dask_names.items():
             assert v == orig_dask_names[k]
 
-        with pytest.raises(ValueError, match=r"some chunks"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "chunks keys ('foo',) not found in data dimensions ('dim2', 'dim3', 'time', 'dim1')"
+            ),
+        ):
             data.chunk({"foo": 10})
 
     @requires_dask
@@ -2427,10 +2438,10 @@ class TestDataset:
         b = Dataset({"foo": ("x", [1, 2])}, coords={"x": ["b", "c"]})
 
         expected_a = Dataset(
-            {"foo": ("x", [0, 1, np.NaN])}, coords={"x": ["a", "b", "c"]}
+            {"foo": ("x", [0, 1, np.nan])}, coords={"x": ["a", "b", "c"]}
         )
         expected_b = Dataset(
-            {"foo": ("x", [np.NaN, 1, 2])}, coords={"x": ["a", "b", "c"]}
+            {"foo": ("x", [np.nan, 1, 2])}, coords={"x": ["a", "b", "c"]}
         )
 
         actual_a, actual_b = xr.align(a, b, join="outer")
@@ -2780,7 +2791,10 @@ class TestDataset:
         assert type(actual.x.variable) is Variable
         assert type(actual.y.variable) is Variable
 
-        with pytest.raises(ValueError, match="those coordinates don't exist"):
+        with pytest.raises(
+            ValueError,
+            match=r"The coordinates \('not_a_coord',\) are not found in the dataset coordinates",
+        ):
             ds.drop_indexes("not_a_coord")
 
         with pytest.raises(ValueError, match="those coordinates do not have an index"):
@@ -3672,7 +3686,10 @@ class TestDataset:
 
     def test_unstack_errors(self) -> None:
         ds = Dataset({"x": [1, 2, 3]})
-        with pytest.raises(ValueError, match=r"does not contain the dimensions"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Dimensions ('foo',) not found in data dimensions ('x',)"),
+        ):
             ds.unstack("foo")
         with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
@@ -3781,7 +3798,10 @@ class TestDataset:
             data_vars={"a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]), "b": ("x", [6, 7])},
             coords={"y": ["u", "v", "w"]},
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError,
+            match=r"Variables in the dataset must contain all ``sample_dims`` \(\['y'\]\) but 'b' misses \['y'\]",
+        ):
             data.to_stacked_array("features", sample_dims=["y"])
 
     def test_to_stacked_array_name(self) -> None:
@@ -4698,7 +4718,7 @@ class TestDataset:
                 "e": [True, False, True],
                 "f": pd.Categorical(list("abc")),
                 "g": pd.date_range("20130101", periods=3),
-                "h": pd.date_range("20130101", periods=3, tz="US/Eastern"),
+                "h": pd.date_range("20130101", periods=3, tz="America/New_York"),
             }
         )
         df.index = pd.MultiIndex.from_product([["a"], range(3)], names=["one", "two"])
@@ -4962,7 +4982,10 @@ class TestDataset:
         expected = ds.isel(a=[1, 3])
         assert_identical(actual, ds)
 
-        with pytest.raises(ValueError, match=r"a single dataset dimension"):
+        with pytest.raises(
+            ValueError,
+            match=r"'foo' not found in data dimensions \('a', 'b'\)",
+        ):
             ds.dropna("foo")
         with pytest.raises(ValueError, match=r"invalid how"):
             ds.dropna("a", how="somehow")  # type: ignore
@@ -5280,7 +5303,10 @@ class TestDataset:
 
     def test_reduce_bad_dim(self) -> None:
         data = create_test_data()
-        with pytest.raises(ValueError, match=r"Dataset does not contain"):
+        with pytest.raises(
+            ValueError,
+            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+        ):
             data.mean(dim="bad_dim")
 
     def test_reduce_cumsum(self) -> None:
@@ -5306,7 +5332,10 @@ class TestDataset:
     @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
     def test_reduce_cumsum_test_dims(self, reduct, expected, func) -> None:
         data = create_test_data()
-        with pytest.raises(ValueError, match=r"Dataset does not contain"):
+        with pytest.raises(
+            ValueError,
+            match=r"Dimensions \('bad_dim',\) not found in data dimensions",
+        ):
             getattr(data, func)(dim="bad_dim")
 
         # ensure dimensions are correct
@@ -5482,7 +5511,7 @@ class TestDataset:
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     def test_quantile(self, q, skipna) -> None:
         ds = create_test_data(seed=123)
-        ds.var1.data[0, 0] = np.NaN
+        ds.var1.data[0, 0] = np.nan
 
         for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim, skipna=skipna)
@@ -5554,7 +5583,12 @@ class TestDataset:
         assert list(z.coords) == list(ds.coords)
         assert list(x.coords) == list(y.coords)
         # invalid dim
-        with pytest.raises(ValueError, match=r"does not contain"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Dimension 'invalid_dim' not found in data dimensions ('dim3', 'dim1')"
+            ),
+        ):
             x.rank("invalid_dim")
 
     def test_rank_use_bottleneck(self) -> None:
@@ -6350,7 +6384,7 @@ class TestDataset:
         with warnings.catch_warnings(record=True) as ws:
             ds.var1.polyfit("dim2", 10, full=False)
             assert len(ws) == 1
-            assert ws[0].category == np.RankWarning
+            assert ws[0].category == RankWarning
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
@@ -6677,7 +6711,7 @@ def test_dir_unicode(ds) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
+        Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
 
 
 @pytest.mark.filterwarnings("error")
@@ -7087,7 +7121,12 @@ class TestDropDuplicates:
         result = ds.drop_duplicates("time", keep=keep)
         assert_equal(expected, result)
 
-        with pytest.raises(ValueError, match="['space'] not found"):
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Dimensions ('space',) not found in data dimensions ('time',)"
+            ),
+        ):
             ds.drop_duplicates("space", keep=keep)
 
 
