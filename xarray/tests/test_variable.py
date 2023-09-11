@@ -196,7 +196,7 @@ class VariableSubclassobjects(ABC):
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_float(self):
-        for value, dtype in [(0.5, np.float_), (np.float32(0.5), np.float32)]:
+        for value, dtype in [(0.5, float), (np.float32(0.5), np.float32)]:
             x = self.cls(["x"], [value])
             self._assertIndexedLikeNDArray(x, value, dtype)
 
@@ -1127,9 +1127,9 @@ class TestVariable(VariableSubclassobjects):
         assert v.dtype == np.dtype("U3")
         assert v.values == "foo"
 
-        v = Variable([], np.string_("foo"))
+        v = Variable([], np.bytes_("foo"))
         assert v.dtype == np.dtype("S3")
-        assert v.values == bytes("foo", "ascii")
+        assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp("2000-01-01"))
@@ -1466,10 +1466,10 @@ class TestVariable(VariableSubclassobjects):
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
-        v = Variable([], np.string_("asdf"))
+        v = Variable([], np.bytes_("asdf"))
         assert_identical(v[()], v)
 
-        v = Variable([], np.unicode_("asdf"))
+        v = Variable([], np.str_("asdf"))
         assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
@@ -1810,7 +1810,7 @@ class TestVariable(VariableSubclassobjects):
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
-        d[0, 0] = np.NaN
+        d[0, 0] = np.nan
 
         v = Variable(["x", "y"], d)
         actual = v.quantile(q, dim=dim, skipna=skipna)
@@ -2719,7 +2719,7 @@ class TestAsCompatibleData:
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
-        Variable("x", [1, 2, np.NaN]) > 0
+        Variable("x", [1, 2, np.nan]) > 0
 
 
 class TestBackendIndexing:
