@@ -10,12 +10,12 @@ from xarray.core import dtypes
     "args, expected",
     [
         ([bool], bool),
-        ([bool, np.string_], np.object_),
+        ([bool, np.bytes_], np.object_),
         ([np.float32, np.float64], np.float64),
-        ([np.float32, np.string_], np.object_),
-        ([np.unicode_, np.int64], np.object_),
-        ([np.unicode_, np.unicode_], np.unicode_),
-        ([np.bytes_, np.unicode_], np.object_),
+        ([np.float32, np.bytes_], np.object_),
+        ([np.str_, np.int64], np.object_),
+        ([np.str_, np.str_], np.str_),
+        ([np.bytes_, np.str_], np.object_),
     ],
 )
 def test_result_type(args, expected) -> None:

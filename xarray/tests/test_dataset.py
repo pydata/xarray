@@ -15,6 +15,12 @@ import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
 
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import xarray as xr
 from xarray import (
     DataArray,
@@ -118,7 +124,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                 ),
                 "unicode_var": xr.DataArray(
                     unicode_var, coords=[time1], dims=["time"]
-                ).astype(np.unicode_),
+                ).astype(np.str_),
                 "datetime_var": xr.DataArray(
                     datetime_var, coords=[time1], dims=["time"]
                 ),
@@ -141,7 +147,7 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
                 ),
                 "unicode_var": xr.DataArray(
                     unicode_var[:nt2], coords=[time2], dims=["time"]
-                ).astype(np.unicode_),
+                ).astype(np.str_),
                 "datetime_var": xr.DataArray(
                     datetime_var_to_append, coords=[time2], dims=["time"]
                 ),
@@ -2432,10 +2438,10 @@ class TestDataset:
         b = Dataset({"foo": ("x", [1, 2])}, coords={"x": ["b", "c"]})
 
         expected_a = Dataset(
-            {"foo": ("x", [0, 1, np.NaN])}, coords={"x": ["a", "b", "c"]}
+            {"foo": ("x", [0, 1, np.nan])}, coords={"x": ["a", "b", "c"]}
         )
         expected_b = Dataset(
-            {"foo": ("x", [np.NaN, 1, 2])}, coords={"x": ["a", "b", "c"]}
+            {"foo": ("x", [np.nan, 1, 2])}, coords={"x": ["a", "b", "c"]}
         )
 
         actual_a, actual_b = xr.align(a, b, join="outer")
@@ -5505,7 +5511,7 @@ class TestDataset:
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     def test_quantile(self, q, skipna) -> None:
         ds = create_test_data(seed=123)
-        ds.var1.data[0, 0] = np.NaN
+        ds.var1.data[0, 0] = np.nan
 
         for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim, skipna=skipna)
@@ -6378,7 +6384,7 @@ class TestDataset:
         with warnings.catch_warnings(record=True) as ws:
             ds.var1.polyfit("dim2", 10, full=False)
             assert len(ws) == 1
-            assert ws[0].category == np.RankWarning
+            assert ws[0].category == RankWarning
             ds.var1.polyfit("dim2", 10, full=True)
             assert len(ws) == 1
 
@@ -6705,7 +6711,7 @@ def test_dir_unicode(ds) -> None:
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
-        Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
+        Dataset(data_vars={"x": ("y", [1, 2, np.nan])}) > 0
 
 
 @pytest.mark.filterwarnings("error")

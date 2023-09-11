@@ -814,7 +814,7 @@ class DatasetIOBase:
     def test_dropna(self) -> None:
         # regression test for GH:issue:1694
         a = np.random.randn(4, 3)
-        a[1, 1] = np.NaN
+        a[1, 1] = np.nan
         in_memory = xr.Dataset(
             {"a": (("y", "x"), a)}, coords={"y": np.arange(4), "x": np.arange(3)}
         )

@@ -24,6 +24,13 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
+
 import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
@@ -8785,9 +8792,9 @@ class Dataset(
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
-                    warnings.simplefilter("ignore", np.RankWarning)
+                    warnings.simplefilter("ignore", RankWarning)
                 else:  # Raise only once per variable
-                    warnings.simplefilter("once", np.RankWarning)
+                    warnings.simplefilter("once", RankWarning)
 
                 coeffs, residuals = duck_array_ops.least_squares(
                     lhs, rhs.data, rcond=rcond, skipna=skipna_da
@@ -9077,8 +9084,8 @@ class Dataset(
         >>> array2 = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
@@ -9174,8 +9181,8 @@ class Dataset(
         >>> array2 = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
