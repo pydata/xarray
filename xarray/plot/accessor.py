@@ -179,7 +179,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.step(self._da, *args, **kwargs)
 
     @overload
-    def scatter(
+    def scatter(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -306,7 +306,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.scatter(self._da, *args, **kwargs)
 
     @overload
-    def imshow(
+    def imshow(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -430,7 +430,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.imshow(self._da, *args, **kwargs)
 
     @overload
-    def contour(
+    def contour(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -554,7 +554,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.contour(self._da, *args, **kwargs)
 
     @overload
-    def contourf(
+    def contourf(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -678,7 +678,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.contourf(self._da, *args, **kwargs)
 
     @overload
-    def pcolormesh(
+    def pcolormesh(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -945,7 +945,7 @@ class DatasetPlotAccessor:
         )
 
     @overload
-    def scatter(
+    def scatter(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -1072,7 +1072,7 @@ class DatasetPlotAccessor:
         return dataset_plot.scatter(self._ds, *args, **kwargs)
 
     @overload
-    def quiver(
+    def quiver(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -1187,7 +1187,7 @@ class DatasetPlotAccessor:
         return dataset_plot.quiver(self._ds, *args, **kwargs)
 
     @overload
-    def streamplot(
+    def streamplot(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,

@@ -1110,7 +1110,7 @@ def _add_labels(
 
 
 @overload
-def scatter(
+def scatter(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     x: Hashable | None = None,
@@ -1669,7 +1669,7 @@ def _plot2d(plotfunc):
 
 
 @overload
-def imshow(
+def imshow(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -1888,7 +1888,7 @@ def imshow(
 
 
 @overload
-def contour(
+def contour(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -2024,7 +2024,7 @@ def contour(
 
 
 @overload
-def contourf(
+def contourf(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -2160,7 +2160,7 @@ def contourf(
 
 
 @overload
-def pcolormesh(
+def pcolormesh(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,

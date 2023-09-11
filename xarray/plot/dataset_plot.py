@@ -321,7 +321,7 @@ def _dsplot(plotfunc):
 
 
 @overload
-def quiver(
+def quiver(  # type: ignore[misc]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -475,7 +475,7 @@ def quiver(
 
 
 @overload
-def streamplot(
+def streamplot(  # type: ignore[misc]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -749,7 +749,7 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
 
 
 @overload
-def scatter(
+def scatter(  # type: ignore[misc]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
