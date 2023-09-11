@@ -20,6 +20,7 @@ from xarray import (
 )
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
+    _numpy_to_netcdf_timeunit,
     _should_cftime_be_used,
     cftime_to_nptime,
     decode_cf_datetime,
@@ -1197,35 +1198,57 @@ def test_contains_cftime_lazy() -> None:
 
 
 @pytest.mark.parametrize(
-    "time, dtype, fill_value",
+    "timestr, timeunit, dtype, fill_value, use_encoding",
     [
+        ("1677-09-21T00:12:43.145224193", "ns", np.int64, 20, True),
+        ("1970-09-21T00:12:44.145224808", "ns", np.float64, 1e30, True),
         (
-            np.datetime64("1677-09-21T00:12:43.145224193", "ns"),
-            np.int64,
-            20,
-        ),
-        (
-            np.datetime64("1970-09-21T00:12:44.145224808", "ns"),
-            np.float64,
-            1e30,
-        ),
-        (
-            np.datetime64("1677-09-21T00:12:43.145225216", "ns"),
+            "1677-09-21T00:12:43.145225216",
+            "ns",
             np.float64,
             -9.223372036854776e18,
+            True,
         ),
+        ("1677-09-21T00:12:43.145224193", "ns", np.int64, None, False),
+        ("1677-09-21T00:12:43.145225", "us", np.int64, None, False),
+        ("1970-01-01T00:00:01.000001", "us", np.int64, None, False),
     ],
 )
 def test_roundtrip_datetime64_nanosecond_precision(
-    time: np.datetime64, dtype: np.typing.DTypeLike, fill_value: int | float
+    timestr: str,
+    timeunit: str,
+    dtype: np.typing.DTypeLike,
+    fill_value: int | float | None,
+    use_encoding: bool,
 ) -> None:
     # test for GH7817
-    times = [np.datetime64("1970-01-01", "ns"), np.datetime64("NaT"), time]
-    encoding = dict(dtype=dtype, _FillValue=fill_value)
+    time = np.datetime64(timestr, timeunit)
+    times = [np.datetime64("1970-01-01", timeunit), np.datetime64("NaT"), time]
+
+    if use_encoding:
+        encoding = dict(dtype=dtype, _FillValue=fill_value)
+    else:
+        encoding = {}
+
     var = Variable(["time"], times, encoding=encoding)
+    assert var.dtype == np.dtype("<M8[ns]")
 
     encoded_var = conventions.encode_cf_variable(var)
+    assert (
+        encoded_var.attrs["units"]
+        == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"
+    )
+    assert encoded_var.attrs["calendar"] == "proleptic_gregorian"
+    assert encoded_var.data.dtype == dtype
+
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    assert decoded_var.dtype == np.dtype("<M8[ns]")
+    assert (
+        decoded_var.encoding["units"]
+        == f"{_numpy_to_netcdf_timeunit(timeunit)} since 1970-01-01 00:00:00"
+    )
+    assert decoded_var.encoding["dtype"] == dtype
+    assert decoded_var.encoding["calendar"] == "proleptic_gregorian"
     assert_identical(var, decoded_var)
 
 

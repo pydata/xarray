@@ -123,6 +123,18 @@ def _netcdf_to_numpy_timeunit(units: str) -> str:
     }[units]
 
 
+def _numpy_to_netcdf_timeunit(units: str) -> str:
+    return {
+        "ns": "nanoseconds",
+        "us": "microseconds",
+        "ms": "milliseconds",
+        "s": "seconds",
+        "m": "minutes",
+        "h": "hours",
+        "D": "days",
+    }[units]
+
+
 def _ensure_padded_year(ref_date: str) -> str:
     # Reference dates without a padded year (e.g. since 1-1-1 or since 2-3-4)
     # are ambiguous (is it YMD or DMY?). This can lead to some very odd
