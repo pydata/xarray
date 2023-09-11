@@ -552,6 +552,9 @@ def test_inline_variable_array_repr_custom_repr() -> None:
         def __array_function__(self, *args, **kwargs):
             return NotImplemented
 
+        def __array_ufunc__(self, *args, **kwargs):
+            return NotImplemented
+
         @property
         def shape(self) -> tuple[int, ...]:
             return self.value.shape
