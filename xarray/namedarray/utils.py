@@ -1,10 +1,22 @@
 from __future__ import annotations
 
 import importlib
+import sys
 import typing
 from collections.abc import Iterator, Mapping
 
 import numpy as np
+
+
+if typing.TYPE_CHECKING:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+
+    # temporary placeholder for indicating an array api compliant type.
+    # hopefully in the future we can narrow this down more
+    T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
 
 K = typing.TypeVar("K")
 V = typing.TypeVar("V")
@@ -64,7 +76,7 @@ def is_dask_collection(x: typing.Any) -> bool:
     return False
 
 
-def is_duck_array(value: typing.Any) -> bool:
+def is_duck_array(value: typing.Any) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (

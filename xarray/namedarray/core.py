@@ -18,11 +18,11 @@ from xarray.namedarray.utils import (
     to_0d_object_array,
 )
 
-# temporary placeholder for indicating an array api compliant type.
-# hopefully in the future we can narrow this down more
-T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
+if typing.TYPE_CHECKING:
 
-T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
+    from xarray.namedarray.util import T_DuckArray
+
+    T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
 
 
 # TODO: Add tests!
@@ -31,7 +31,7 @@ def as_compatible_data(
 ) -> T_DuckArray:
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
-        return data
+        return typing.cast(T_DuckArray, data)
 
     # TODO : check scalar
     if is_duck_array(data):
