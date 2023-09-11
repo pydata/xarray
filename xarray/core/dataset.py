@@ -7481,7 +7481,7 @@ class Dataset(
             else:
                 variables[k] = f(v, *args, **kwargs)
                 if keep_attrs:
-                    variables[k].attrs = v._attrs
+                    variables[k]._attrs = v._attrs
         attrs = self._attrs if keep_attrs else None
         return self._replace_with_new_dims(variables, attrs=attrs)
 
