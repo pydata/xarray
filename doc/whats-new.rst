@@ -70,6 +70,9 @@ Bug fixes
   special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()`
   (:issue:`7928`, :pull:`8084`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer results in an error.
+  (:issue:`7552`, :pull:`8174`).
+  By `Wiktor Kraśnicki <https://github.com/wkrasnicki>`_.
 
 Documentation
 ~~~~~~~~~~~~~
