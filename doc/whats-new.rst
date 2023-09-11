@@ -36,6 +36,9 @@ Breaking changes
   extracts and add the indexes from another :py:class:`Coordinates` object
   passed via ``coords`` (:pull:`8107`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Static typing of `xlim` and `ylim` arguments in plotting functions now must
+  be `tuple[float, float]` to align with matplotlib requirements. (:issue:`7802`, :pull:`8030`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
 ~~~~~~~~~~~~
