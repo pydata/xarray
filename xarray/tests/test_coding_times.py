@@ -1223,7 +1223,7 @@ def test_roundtrip_datetime64_nanosecond_precision(
 ) -> None:
     # test for GH7817
     time = np.datetime64(timestr, timeunit)
-    times = [np.datetime64("1970-01-01", timeunit), np.datetime64("NaT"), time]
+    times = [np.datetime64("1970-01-01T00:00:00", timeunit), np.datetime64("NaT"), time]
 
     if use_encoding:
         encoding = dict(dtype=dtype, _FillValue=fill_value)
@@ -1317,3 +1317,20 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
         encoded_var = conventions.encode_cf_variable(var)
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_allclose(var, decoded_var)
+
+
+def test_roundtrip_float_times() -> None:
+    fill_value = 20.0
+    t0 = "2000-01-01 12:00:00"
+    times = [np.datetime64(t0, "ns"), np.datetime64("NaT", "ns")]
+
+    var = Variable(
+        ["time"], times, encoding=dict(dtype=np.float64, _FillValue=fill_value)
+    )
+
+    encoded_var = conventions.encode_cf_variable(var)
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+
+    assert_identical(var, decoded_var)
+    assert decoded_var.encoding["units"] == f"days since {t0}"
+    assert decoded_var.encoding["_FillValue"] == fill_value
