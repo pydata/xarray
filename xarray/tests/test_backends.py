@@ -13,7 +13,7 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from contextlib import ExitStack
 from io import BytesIO
 from os import listdir
@@ -1535,6 +1535,83 @@ class NetCDF4Base(NetCDFBase):
             assert_array_equal(
                 ds["x"].encoding["chunksizes"], actual["x"].encoding["chunksizes"]
             )
+
+    def test_preferred_chunks_is_present(self) -> None:
+        ds = Dataset({"x": [1, 2, 3]})
+        chunksizes = (2,)
+        ds.variables["x"].encoding = {"chunksizes": chunksizes}
+
+        with self.roundtrip(ds) as actual:
+            assert actual["x"].encoding["preferred_chunks"] == {"x": 2}
+
+    @requires_dask
+    def test_auto_chunking_is_based_on_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+
+        with dask.config.set({"array.chunk-size": "100KiB"}):
+            with self.chunked_roundtrip(
+                (1, y_size, x_size),
+                (1, y_chunksize, x_chunksize),
+                open_kwargs={"chunks": "auto"},
+            ) as ds:
+                t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
+                assert all(np.asanyarray(y_chunks) == y_chunksize)
+                # Check that the chunk size is a multiple of the file chunk size
+                assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
+
+    @requires_dask
+    def test_base_chunking_uses_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+
+        with self.chunked_roundtrip(
+            (1, y_size, x_size),
+            (1, y_chunksize, x_chunksize),
+            open_kwargs={"chunks": {}},
+        ) as ds:
+            for chunksizes, expected in zip(
+                ds["image"].data.chunks, (1, y_chunksize, x_chunksize)
+            ):
+                assert all(np.asanyarray(chunksizes) == expected)
+
+    @contextlib.contextmanager
+    def chunked_roundtrip(
+        self,
+        array_shape: tuple[int, int, int],
+        chunk_sizes: tuple[int, int, int],
+        open_kwargs: dict[str, Any] | None = None,
+    ) -> Generator[Dataset, None, None]:
+        t_size, y_size, x_size = array_shape
+        t_chunksize, y_chunksize, x_chunksize = chunk_sizes
+
+        image = xr.DataArray(
+            np.arange(t_size * x_size * y_size, dtype=np.int16).reshape(
+                (t_size, y_size, x_size)
+            ),
+            dims=["t", "y", "x"],
+        )
+        image.encoding = {"chunksizes": (t_chunksize, y_chunksize, x_chunksize)}
+        dataset = xr.Dataset(dict(image=image))
+
+        with self.roundtrip(dataset, open_kwargs=open_kwargs) as ds:
+            yield ds
+
+    def test_preferred_chunks_are_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+
+        with self.chunked_roundtrip(
+            (1, y_size, x_size), (1, y_chunksize, x_chunksize)
+        ) as ds:
+            assert ds["image"].encoding["preferred_chunks"] == {
+                "t": 1,
+                "y": y_chunksize,
+                "x": x_chunksize,
+            }
 
     def test_encoding_chunksizes_unlimited(self) -> None:
         # regression test for GH1225
