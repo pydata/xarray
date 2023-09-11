@@ -59,9 +59,9 @@ class EncodedStringCoder(VariableCoder):
         if contains_unicode and (encode_as_char or not self.allows_unicode):
             if "_FillValue" in attrs:
                 raise NotImplementedError(
-                    "variable {!r} has a _FillValue specified, but "
+                    f"variable {name!r} has a _FillValue specified, but "
                     "_FillValue is not yet supported on unicode strings: "
-                    "https://github.com/pydata/xarray/issues/1647".format(name)
+                    "https://github.com/pydata/xarray/issues/1647"
                 )
 
             string_encoding = encoding.pop("_Encoding", "utf-8")
@@ -100,7 +100,7 @@ def ensure_fixed_length_bytes(var):
     dims, data, attrs, encoding = unpack_for_encoding(var)
     if check_vlen_dtype(data.dtype) == bytes:
         # TODO: figure out how to handle this with dask
-        data = np.asarray(data, dtype=np.string_)
+        data = np.asarray(data, dtype=np.bytes_)
     return Variable(dims, data, attrs, encoding)
 
 
@@ -151,7 +151,7 @@ def bytes_to_char(arr):
 def _numpy_bytes_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible."""
     # ensure the array is contiguous
-    arr = np.array(arr, copy=False, order="C", dtype=np.string_)
+    arr = np.array(arr, copy=False, order="C", dtype=np.bytes_)
     return arr.reshape(arr.shape + (1,)).view("S1")
 
 
@@ -168,7 +168,7 @@ def char_to_bytes(arr):
 
     if not size:
         # can't make an S0 dtype
-        return np.zeros(arr.shape[:-1], dtype=np.string_)
+        return np.zeros(arr.shape[:-1], dtype=np.bytes_)
 
     if is_chunked_array(arr):
         chunkmanager = get_chunked_array_type(arr)
@@ -176,7 +176,7 @@ def char_to_bytes(arr):
         if len(arr.chunks[-1]) > 1:
             raise ValueError(
                 "cannot stacked dask character array with "
-                "multiple chunks in the last dimension: {}".format(arr)
+                f"multiple chunks in the last dimension: {arr}"
             )
 
         dtype = np.dtype("S" + str(arr.shape[-1]))

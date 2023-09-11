@@ -64,6 +64,7 @@ module = [
   "sparse.*",
   "toolz.*",
   "zarr.*",
+  "numpy.exceptions.*",  # remove once support for `numpy<2.0` has been dropped
 ]
 
 [[tool.mypy.overrides]]
