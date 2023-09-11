@@ -26,6 +26,7 @@ New Features
   different collections of coordinates prior to assign them to a Dataset or
   DataArray (:pull:`8102`) at once.
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -112,7 +113,6 @@ New Features
   with a dimension. Examples include output from finite volume models like FVCOM.
   (:issue:`2233`, :pull:`7989`)
   By `Deepak Cherian <https://github.com/dcherian>`_ and `Benoit Bovy <https://github.com/benbovy>`_.
-- Provide `preferred_chunks` for data read from netcdf files (:pull:`7948`)
 - When outputting :py:class:`Dataset` objects as Zarr via :py:meth:`Dataset.to_zarr`,
   user can now specify that chunks that will contain no valid data will not be written.
   Originally, this could be done by specifying ``"write_empty_chunks": True`` in the
