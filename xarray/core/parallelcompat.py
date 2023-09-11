@@ -256,9 +256,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
     @abstractmethod
-    def from_array(
-        self, data: np.ndarray, chunks: T_Chunks, **kwargs
-    ) -> T_ChunkedArray:
+    def from_array(self, data: Any, chunks: T_Chunks, **kwargs) -> T_ChunkedArray:
         """
         Create a chunked array from a non-chunked numpy-like array.
 
