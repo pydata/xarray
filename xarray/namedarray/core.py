@@ -20,7 +20,7 @@ from xarray.namedarray.utils import (
 
 if typing.TYPE_CHECKING:
 
-    from xarray.namedarray.util import T_DuckArray
+    from xarray.namedarray.utils import T_DuckArray
 
     T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
 
