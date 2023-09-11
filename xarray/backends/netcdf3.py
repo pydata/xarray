@@ -93,21 +93,11 @@ def _maybe_prepare_times(var):
     # replaces np.iinfo(np.int64).min with _FillValue or np.nan
     # this keeps backwards compatibility
 
-    # should we import this from coding.times here?
-    time_strings = [
-        "days",
-        "hours",
-        "minutes",
-        "seconds",
-        "milliseconds",
-        "microseconds",
-        "since",
-    ]
     data = var.data
     if data.dtype.kind in "iu":
         units = var.attrs.get("units", None)
         if units is not None:
-            if any(tstr in units for tstr in time_strings):
+            if coding.variables._is_time_like(units):
                 mask = data == np.iinfo(np.int64).min
                 if mask.any():
                     data = np.where(mask, var.attrs.get("_FillValue", np.nan), data)
