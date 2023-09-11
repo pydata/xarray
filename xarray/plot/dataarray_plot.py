@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import warnings
 from collections.abc import Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
     from matplotlib.image import AxesImage
+    from matplotlib.patches import Polygon
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
     from numpy.typing import ArrayLike
 
@@ -656,7 +657,7 @@ def hist(
     xlim: tuple[float, float] | None = None,
     ylim: tuple[float, float] | None = None,
     **kwargs: Any,
-) -> tuple[np.ndarray, np.ndarray, BarContainer]:
+) -> tuple[np.ndarray, np.ndarray, BarContainer | Polygon]:
     """
     Histogram of DataArray.
 
@@ -707,14 +708,17 @@ def hist(
     no_nan = np.ravel(darray.to_numpy())
     no_nan = no_nan[pd.notnull(no_nan)]
 
-    primitive = ax.hist(no_nan, **kwargs)
+    n, bins, patches = cast(
+        tuple[np.ndarray, np.ndarray, Union["BarContainer", "Polygon"]],
+        ax.hist(no_nan, **kwargs),
+    )
 
     ax.set_title(darray._title_for_slice())
     ax.set_xlabel(label_from_attrs(darray))
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
-    return primitive
+    return n, bins, patches
 
 
 def _plot1d(plotfunc):

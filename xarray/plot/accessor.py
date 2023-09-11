@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
     from matplotlib.image import AxesImage
+    from matplotlib.patches import Polygon
     from matplotlib.quiver import Quiver
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
     from numpy.typing import ArrayLike
@@ -47,7 +48,9 @@ class DataArrayPlotAccessor:
         return dataarray_plot.plot(self._da, **kwargs)
 
     @functools.wraps(dataarray_plot.hist)
-    def hist(self, *args, **kwargs) -> tuple[np.ndarray, np.ndarray, BarContainer]:
+    def hist(
+        self, *args, **kwargs
+    ) -> tuple[np.ndarray, np.ndarray, BarContainer | Polygon]:
         return dataarray_plot.hist(self._da, *args, **kwargs)
 
     @overload

@@ -895,8 +895,11 @@ class TestPlotHistogram(PlotTestCase):
         self.pass_in_axis(self.darray.plot.hist)
 
     def test_primitive_returned(self) -> None:
-        h = self.darray.plot.hist()
-        assert isinstance(h[-1][0], mpl.patches.Rectangle)
+        n, bins, patches = self.darray.plot.hist()
+        assert isinstance(n, np.ndarray)
+        assert isinstance(bins, np.ndarray)
+        assert isinstance(patches, mpl.container.BarContainer)
+        assert isinstance(patches[0], mpl.patches.Rectangle)
 
     @pytest.mark.slow
     def test_plot_nans(self) -> None:
