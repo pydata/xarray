@@ -1583,7 +1583,7 @@ class NetCDF4Base(NetCDFBase):
         array_shape: tuple[int, int, int],
         chunk_sizes: tuple[int, int, int],
         open_kwargs: dict[str, Any] | None = None,
-    ) -> Generator[Dataset]:
+    ) -> Generator[Dataset, None, None]:
         t_size, y_size, x_size = array_shape
         t_chunksize, y_chunksize, x_chunksize = chunk_sizes
 
