@@ -218,8 +218,8 @@ def _decode_datetime_with_pandas(
 ) -> np.ndarray:
     if not _is_standard_calendar(calendar):
         raise OutOfBoundsDatetime(
-            "Cannot decode times from a non-standard calendar, {!r}, using "
-            "pandas.".format(calendar)
+            f"Cannot decode times from a non-standard calendar, {calendar!r}, using "
+            "pandas."
         )
 
     delta, ref_date = _unpack_netcdf_time_units(units)
@@ -452,8 +452,8 @@ def cftime_to_nptime(times, raise_on_invalid: bool = True) -> np.ndarray:
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
-                    "Cannot convert date {} to a date in the "
-                    "standard calendar.  Reason: {}.".format(t, e)
+                    f"Cannot convert date {t} to a date in the "
+                    f"standard calendar.  Reason: {e}."
                 )
             else:
                 dt = "NaT"
@@ -467,7 +467,7 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
     Useful to convert between calendars in numpy and cftime or between cftime calendars.
 
     If raise_on_valid is True (default), invalid dates trigger a ValueError.
-    Otherwise, the invalid element is replaced by np.NaN for cftime types and np.NaT for np.datetime64.
+    Otherwise, the invalid element is replaced by np.nan for cftime types and np.NaT for np.datetime64.
     """
     if date_type in (pd.Timestamp, np.datetime64) and not is_np_datetime_like(
         times.dtype
@@ -485,13 +485,11 @@ def convert_times(times, date_type, raise_on_invalid: bool = True) -> np.ndarray
         except ValueError as e:
             if raise_on_invalid:
                 raise ValueError(
-                    "Cannot convert date {} to a date in the "
-                    "{} calendar.  Reason: {}.".format(
-                        t, date_type(2000, 1, 1).calendar, e
-                    )
+                    f"Cannot convert date {t} to a date in the "
+                    f"{date_type(2000, 1, 1).calendar} calendar.  Reason: {e}."
                 )
             else:
-                dt = np.NaN
+                dt = np.nan
 
         new[i] = dt
     return new

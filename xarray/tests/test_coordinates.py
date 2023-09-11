@@ -103,6 +103,11 @@ class TestCoordinates:
         del coords["x"]
         assert "x" not in coords
 
+        with pytest.raises(
+            KeyError, match="'nonexistent' is not in coordinate variables"
+        ):
+            del coords["nonexistent"]
+
     def test_update(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})
 
@@ -123,6 +128,16 @@ class TestCoordinates:
 
         assert coords.identical(coords)
         assert not coords.identical("not_a_coords")
+
+    def test_assign(self) -> None:
+        coords = Coordinates(coords={"x": [0, 1, 2]})
+        expected = Coordinates(coords={"x": [0, 1, 2], "y": [3, 4]})
+
+        actual = coords.assign(y=[3, 4])
+        assert_identical(actual, expected)
+
+        actual = coords.assign({"y": [3, 4]})
+        assert_identical(actual, expected)
 
     def test_copy(self) -> None:
         no_index_coords = Coordinates({"foo": ("x", [1, 2, 3])})

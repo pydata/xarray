@@ -307,7 +307,7 @@ class Index:
     def equals(self: T_Index, other: T_Index) -> bool:
         """Compare this index with another index of the same type.
 
-        Implemenation is optional but required in order to support alignment.
+        Implementation is optional but required in order to support alignment.
 
         Parameters
         ----------
@@ -1203,12 +1203,12 @@ class PandasMultiIndex(PandasIndex):
             coord_name, label = next(iter(labels.items()))
 
             if is_dict_like(label):
-                invalid_levels = [
+                invalid_levels = tuple(
                     name for name in label if name not in self.index.names
-                ]
+                )
                 if invalid_levels:
                     raise ValueError(
-                        f"invalid multi-index level names {invalid_levels}"
+                        f"multi-index level names {invalid_levels} not found in indexes {tuple(self.index.names)}"
                     )
                 return self.sel(label)
 
