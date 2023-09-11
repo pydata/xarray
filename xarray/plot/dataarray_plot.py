@@ -264,7 +264,9 @@ def plot(
     --------
     xarray.DataArray.squeeze
     """
-    darray = darray.squeeze().compute()
+    darray = darray.squeeze(
+        d for d, s in darray.sizes.items() if s == 1 and d not in (row, col, hue)
+    ).compute()
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
