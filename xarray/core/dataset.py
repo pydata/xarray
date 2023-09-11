@@ -5284,7 +5284,7 @@ class Dataset(
             if missing_sample_dims:
                 raise ValueError(
                     "Variables in the dataset must contain all ``sample_dims`` "
-                    f"({sample_dims!r}) but '{key}' misses {missing_sample_dims}"
+                    f"({sample_dims!r}) but '{key}' misses {tuple(missing_sample_dims)}"
                 )
 
         def stack_dataarray(da):
