@@ -1626,6 +1626,8 @@ def _plot2d(plotfunc):
             ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
             if plotfunc.__name__ == "surface":
+                import mpl_toolkits
+
                 assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
                 ax.set_zlabel(label_from_attrs(darray))
 
