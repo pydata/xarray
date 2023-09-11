@@ -13,9 +13,9 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
-    # temporary placeholder for indicating an array api compliant type.
-    # hopefully in the future we can narrow this down more
-    T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
+# temporary placeholder for indicating an array api compliant type.
+# hopefully in the future we can narrow this down more
+T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
 
 K = typing.TypeVar("K")
 V = typing.TypeVar("V")

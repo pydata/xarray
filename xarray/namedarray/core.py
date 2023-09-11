@@ -13,14 +13,13 @@ from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import Default, _default
 from xarray.namedarray.utils import (
     Frozen,
+    T_DuckArray,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
 
 if typing.TYPE_CHECKING:
-    from xarray.namedarray.utils import T_DuckArray
-
     T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
