@@ -363,7 +363,7 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in "SU":
-            values = values.astype(object)
+            values = astype(values, object)
 
         func = None
         if skipna or (skipna is None and values.dtype.kind in "cfO"):
