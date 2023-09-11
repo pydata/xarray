@@ -6,6 +6,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
+from xarray.core import duck_array_ops
 from xarray.tests import (
     assert_allclose,
     assert_equal,
@@ -272,21 +273,21 @@ class TestCoarsenConstruct:
         expected = xr.Dataset(attrs={"foo": "bar"})
         expected["vart"] = (
             ("year", "month"),
-            ds.vart.data.reshape((-1, 12)),
+            duck_array_ops.reshape(ds.vart.data, (-1, 12)),
             {"a": "b"},
         )
         expected["varx"] = (
             ("x", "x_reshaped"),
-            ds.varx.data.reshape((-1, 5)),
+            duck_array_ops.reshape(ds.varx.data, (-1, 5)),
             {"a": "b"},
         )
         expected["vartx"] = (
             ("x", "x_reshaped", "year", "month"),
-            ds.vartx.data.reshape(2, 5, 4, 12),
+            duck_array_ops.reshape(ds.vartx.data, (2, 5, 4, 12)),
             {"a": "b"},
         )
         expected["vary"] = ds.vary
-        expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
+        expected.coords["time"] = (("year", "month"), duck_array_ops.reshape(ds.time.data, (-1, 12)))
 
         with raise_if_dask_computes():
             actual = ds.coarsen(time=12, x=5).construct(
