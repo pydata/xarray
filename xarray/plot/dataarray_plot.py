@@ -782,9 +782,9 @@ def _plot1d(plotfunc):
         Specify tick locations for x-axes.
     yticks : ArrayLike or None, optional
         Specify tick locations for y-axes.
-    xlim : ArrayLike or None, optional
+    xlim : tuple[float, float] or None, optional
         Specify x-axes limits.
-    ylim : ArrayLike or None, optional
+    ylim : tuple[float, float] or None, optional
         Specify y-axes limits.
     cmap : matplotlib colormap name or colormap, optional
         The mapping from data values to color space. Either a
@@ -869,8 +869,8 @@ def _plot1d(plotfunc):
         yscale: ScaleOptions = None,
         xticks: ArrayLike | None = None,
         yticks: ArrayLike | None = None,
-        xlim: ArrayLike | None = None,
-        ylim: ArrayLike | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
         cmap: str | Colormap | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
