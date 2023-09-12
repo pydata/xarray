@@ -307,7 +307,7 @@ def plot(
 
 
 @overload
-def line(  # type: ignore[misc]  # None is hashable :(
+def line(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     row: None = None,  # no wrap -> primitive
@@ -538,7 +538,7 @@ def line(
 
 
 @overload
-def step(  # type: ignore[misc]  # None is hashable :(
+def step(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     where: Literal["pre", "post", "mid"] = "pre",
@@ -1114,7 +1114,7 @@ def _add_labels(
 
 
 @overload
-def scatter(  # type: ignore[misc]  # None is hashable :(
+def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     x: Hashable | None = None,
@@ -1673,7 +1673,7 @@ def _plot2d(plotfunc):
 
 
 @overload
-def imshow(  # type: ignore[misc]  # None is hashable :(
+def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -1892,7 +1892,7 @@ def imshow(
 
 
 @overload
-def contour(  # type: ignore[misc]  # None is hashable :(
+def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -2028,7 +2028,7 @@ def contour(
 
 
 @overload
-def contourf(  # type: ignore[misc]  # None is hashable :(
+def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -2164,7 +2164,7 @@ def contourf(
 
 
 @overload
-def pcolormesh(  # type: ignore[misc]  # None is hashable :(
+def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
