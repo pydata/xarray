@@ -2,13 +2,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Hashable, Iterable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    NoReturn,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 
 import numpy as np
 

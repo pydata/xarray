@@ -680,7 +680,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
     def _adjust_fig_for_guide(self, guide) -> None:
         # Draw the plot to set the bounding boxes correctly
-        renderer = self.fig.canvas.get_renderer()  # type: ignore[attr-defined]
+        if hasattr(self.fig.canvas, "get_renderer"):
+            renderer = self.fig.canvas.get_renderer()
+        else:
+            raise RuntimeError("MPL backend has no renderer")
         self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
