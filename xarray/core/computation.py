@@ -416,25 +416,34 @@ def apply_dict_of_variables_vfunc(
 
     result_vars = {}
     for name, variable_args in zip(names, grouped_by_name):
-        # TODO: is this a reasonable to check for missing core dims? We check for a dims
-        # property to protect against the case where a numpy array is passed in.
-        if hasattr(variable_args[0], "dims") and set(
-            signature.all_input_core_dims
-        ) - set(variable_args[0].dims):
-            if missing_core_dim == "raise":
-                raise ValueError(
-                    f"Missing core dimension on {name!r}. Either add the core dimension, or set `missing_core_dim` to `copy` or `drop`."
-                )
-            elif missing_core_dim == "copy":
-                # TODO: is it correct to copy the first variable here?
-                result_vars[name] = variable_args[0]
-            elif missing_core_dim == "drop":
-                pass
-            else:
-                raise ValueError(
-                    f"Invalid value for `missing_core_dim`: {missing_core_dim!r}"
-                )
-        else:
+        for core_dims, variable_arg in zip(signature.input_core_dims, variable_args):
+            # (if there's a more elegant way to do this than using a temporary, that'd
+            # be nice. But we need to have context of the specific object failing in
+            # order to produce a good error message; and need to copy the variable if
+            # necessary, skipping the intended evaluation of `func`.)
+            all_vars_have_all_core_dims = True
+            # Check whether all the dims are on the variable. Note that we need the
+            # `hasattr` to check for a dims property, to protect against the case where
+            # a numpy array is passed in.
+            if hasattr(variable_arg, "dims") and set(core_dims) - set(
+                variable_arg.dims
+            ):
+                if missing_core_dim == "raise":
+                    raise ValueError(
+                        f"Missing core dimension(s) {set(core_dims) - set(variable_arg.dims)} on `{name}` (object below). "
+                        "Either add the core dimension, or set `missing_core_dim` to `copy` or `drop`."
+                        f"\n\n{variable_arg}"
+                    )
+                elif missing_core_dim == "copy":
+                    result_vars[name] = variable_args[0]
+                    all_vars_have_all_core_dims = False
+                elif missing_core_dim == "drop":
+                    all_vars_have_all_core_dims = False
+                else:
+                    raise ValueError(
+                        f"Invalid value for `missing_core_dim`: {missing_core_dim!r}"
+                    )
+        if all_vars_have_all_core_dims:
             result_vars[name] = func(*variable_args)
 
     if signature.num_outputs > 1:
