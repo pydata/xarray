@@ -273,28 +273,28 @@ def test_apply_missing_dims() -> None:
     variable = xr.Variable(["x", "y"], array)
     variable_no_y = xr.Variable(["x", "z"], array)
 
-    dataset = xr.Dataset({"x_y": variable, "x_z": variable_no_y})
+    ds = xr.Dataset({"x_y": variable, "x_z": variable_no_y})
 
     # Check the standard stuff works OK
     assert_identical(
-        add_one(dataset[["x_y"]], core_dims=[["y"]], missing_core_dim="raise"),
-        dataset[["x_y"]] + 1,
+        add_one(ds[["x_y"]], core_dims=[["y"]], missing_core_dim="raise"),
+        ds[["x_y"]] + 1,
     )
 
     # `raise` — should raise on a missing dim
     with pytest.raises(ValueError):
-        add_one(dataset, core_dims=[["y"]], missing_core_dim="raise"),
+        add_one(ds, core_dims=[["y"]], missing_core_dim="raise"),
 
     # `drop` — should drop the var with the missing dim
     assert_identical(
-        add_one(dataset, core_dims=[["y"]], missing_core_dim="drop"),
-        (dataset + 1).drop_vars("x_z"),
+        add_one(ds, core_dims=[["y"]], missing_core_dim="drop"),
+        (ds + 1).drop_vars("x_z"),
     )
 
     # `copy` — should not add one to the missing with `copy`
-    copy_result = add_one(dataset, core_dims=[["y"]], missing_core_dim="copy")
-    assert_identical(copy_result["x_y"], (dataset + 1)["x_y"])
-    assert_identical(copy_result["x_z"], dataset["x_z"])
+    copy_result = add_one(ds, core_dims=[["y"]], missing_core_dim="copy")
+    assert_identical(copy_result["x_y"], (ds + 1)["x_y"])
+    assert_identical(copy_result["x_z"], ds["x_z"])
 
     ## Multiple args
 
@@ -310,12 +310,12 @@ def test_apply_missing_dims() -> None:
     # Check the standard stuff works OK
     assert_identical(
         sum_add(
-            dataset[["x_y"]],
-            dataset[["x_y"]],
+            ds[["x_y"]],
+            ds[["x_y"]],
             core_dims=[["x", "y"], ["x", "y"]],
             missing_core_dim="raise",
         ),
-        dataset[["x_y"]].sum() * 2,
+        ds[["x_y"]].sum() * 2,
     )
 
     # `raise` — should raise on a missing dim
@@ -323,8 +323,8 @@ def test_apply_missing_dims() -> None:
         ValueError, match=r".*Missing core dimension\(s\) \{'y'\} on `x_z`.*"
     ):
         sum_add(
-            dataset[["x_z"]],
-            dataset[["x_z"]],
+            ds[["x_z"]],
+            ds[["x_z"]],
             core_dims=[["x", "y"], ["x", "z"]],
             missing_core_dim="raise",
         )
@@ -334,8 +334,8 @@ def test_apply_missing_dims() -> None:
         ValueError, match=r".*Missing core dimension\(s\) \{'y'\} on `x_z`.*"
     ):
         sum_add(
-            dataset[["x_z"]],
-            dataset[["x_z"]],
+            ds[["x_z"]],
+            ds[["x_z"]],
             core_dims=[["x", "z"], ["x", "y"]],
             missing_core_dim="raise",
         )
@@ -343,24 +343,36 @@ def test_apply_missing_dims() -> None:
     # `drop` — should drop the var with the missing dim
     assert_identical(
         sum_add(
-            dataset[["x_z"]],
-            dataset[["x_z"]],
+            ds[["x_z"]],
+            ds[["x_z"]],
             core_dims=[["x", "y"], ["x", "y"]],
             missing_core_dim="drop",
         ),
-        dataset[[]],
+        ds[[]],
     )
 
     # `copy` — should drop the var with the missing dim
     assert_identical(
         sum_add(
-            dataset[["x_z"]],
-            dataset[["x_z"]],
+            ds[["x_z"]],
+            ds[["x_z"]],
             core_dims=[["x", "y"], ["x", "y"]],
             missing_core_dim="copy",
         ),
-        dataset[["x_z"]],
+        ds[["x_z"]],
     )
+
+    # TODO: need to add tests for passing in datasets with multiple vars
+    # ## Multiple vars per arg
+    # assert_identical(
+    #     sum_add(
+    #         ds,
+    #         ds,
+    #         core_dims=[["x", "z"], ["x", "y"]],
+    #         missing_core_dim="drop",
+    #     ),
+    #     ds,
+    # )
 
 
 @requires_dask
