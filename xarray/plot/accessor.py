@@ -54,7 +54,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.hist(self._da, *args, **kwargs)
 
     @overload
-    def line(  # type: ignore[misc]  # None is hashable :(
+    def line(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         row: None = None,  # no wrap -> primitive
@@ -139,7 +139,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.line(self._da, *args, **kwargs)
 
     @overload
-    def step(  # type: ignore[misc]  # None is hashable :(
+    def step(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         where: Literal["pre", "post", "mid"] = "pre",
@@ -182,7 +182,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.step(self._da, *args, **kwargs)
 
     @overload
-    def scatter(  # type: ignore[misc]  # None is hashable :(
+    def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -309,7 +309,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.scatter(self._da, *args, **kwargs)
 
     @overload
-    def imshow(  # type: ignore[misc]  # None is hashable :(
+    def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -433,7 +433,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.imshow(self._da, *args, **kwargs)
 
     @overload
-    def contour(  # type: ignore[misc]  # None is hashable :(
+    def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -557,7 +557,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.contour(self._da, *args, **kwargs)
 
     @overload
-    def contourf(  # type: ignore[misc]  # None is hashable :(
+    def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -681,7 +681,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.contourf(self._da, *args, **kwargs)
 
     @overload
-    def pcolormesh(  # type: ignore[misc]  # None is hashable :(
+    def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -948,7 +948,7 @@ class DatasetPlotAccessor:
         )
 
     @overload
-    def scatter(  # type: ignore[misc]  # None is hashable :(
+    def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -1075,7 +1075,7 @@ class DatasetPlotAccessor:
         return dataset_plot.scatter(self._ds, *args, **kwargs)
 
     @overload
-    def quiver(  # type: ignore[misc]  # None is hashable :(
+    def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -1190,7 +1190,7 @@ class DatasetPlotAccessor:
         return dataset_plot.quiver(self._ds, *args, **kwargs)
 
     @overload
-    def streamplot(  # type: ignore[misc]  # None is hashable :(
+    def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
