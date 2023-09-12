@@ -841,6 +841,27 @@ class TestDataArray:
         )
         da[dict(x=ind)] = value  # should not raise
 
+    def test_setitem_vectorized(self) -> None:
+        # Regression test for GH:7030
+        # Positional indexing
+        v = xr.DataArray(np.r_[:120].reshape(2, 3, 4, 5), dims=["a", "b", "c", "d"])
+        b = xr.DataArray([[0, 0], [1, 0]], dims=["u", "v"])
+        c = xr.DataArray([[0, 1], [2, 3]], dims=["u", "v"])
+        w = xr.DataArray([-1, -2], dims=["u"])
+        index = dict(b=b, c=c)
+        v[index] = w
+        assert (v[index] == w).all()
+
+        # Indexing with coordinates
+        v = xr.DataArray(np.r_[:120].reshape(2, 3, 4, 5), dims=["a", "b", "c", "d"])
+        v.coords["b"] = [2, 4, 6]
+        b = xr.DataArray([[2, 2], [4, 2]], dims=["u", "v"])
+        c = xr.DataArray([[0, 1], [2, 3]], dims=["u", "v"])
+        w = xr.DataArray([-1, -2], dims=["u"])
+        index = dict(b=b, c=c)
+        v.loc[index] = w
+        assert (v.loc[index] == w).all()
+
     def test_contains(self) -> None:
         data_array = DataArray([1, 2])
         assert 1 in data_array
