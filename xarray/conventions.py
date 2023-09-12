@@ -48,10 +48,6 @@ if TYPE_CHECKING:
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
-def _var_as_tuple(var: Variable) -> T_VarTuple:
-    return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
-
-
 def _infer_dtype(array, name: T_Name = None) -> np.dtype:
     """Given an object array with no missing values, infer its dtype from its
     first element
@@ -106,7 +102,7 @@ def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
 def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == "O":
-        dims, data, attrs, encoding = _var_as_tuple(var)
+        dims, data, attrs, encoding = variables.unpack_for_encoding(var)
 
         # leave vlen dtypes unchanged
         if strings.check_vlen_dtype(data.dtype) is not None:
