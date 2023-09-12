@@ -336,7 +336,7 @@ def line(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def line(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
@@ -358,13 +358,13 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def line(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
@@ -386,14 +386,14 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 # This function signature should not change so that it can use
 # matplotlib format strings
 def line(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     row: Hashable | None = None,
     col: Hashable | None = None,
@@ -415,7 +415,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> list[Line3D] | FacetGrid[DataArray]:
+) -> list[Line3D] | FacetGrid[T_DataArray]:
     """
     Line plot of DataArray values.
 
@@ -1157,7 +1157,7 @@ def scatter(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def scatter(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -1193,13 +1193,13 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def scatter(
-    darray: DataArray,
+    darray: T_DataArray,
     *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -1235,7 +1235,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
@@ -1715,7 +1715,7 @@ def imshow(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def imshow(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -1750,13 +1750,13 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def imshow(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -1791,7 +1791,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
@@ -1934,7 +1934,7 @@ def contour(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def contour(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -1969,13 +1969,13 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def contour(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2010,7 +2010,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
@@ -2070,7 +2070,7 @@ def contourf(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def contourf(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2105,13 +2105,13 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def contourf(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2146,7 +2146,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
@@ -2206,7 +2206,7 @@ def pcolormesh(  # type: ignore[misc]  # None is hashable :(
 
 @overload
 def pcolormesh(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2241,13 +2241,13 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def pcolormesh(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2282,7 +2282,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
@@ -2393,7 +2393,7 @@ def surface(
 
 @overload
 def surface(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2428,13 +2428,13 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
 @overload
 def surface(
-    darray: DataArray,
+    darray: T_DataArray,
     x: Hashable | None = None,
     y: Hashable | None = None,
     *,
@@ -2469,7 +2469,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[DataArray]:
+) -> FacetGrid[T_DataArray]:
     ...
 
 
