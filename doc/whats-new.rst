@@ -26,6 +26,7 @@ New Features
   different collections of coordinates prior to assign them to a Dataset or
   DataArray (:pull:`8102`) at once.
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -50,6 +51,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug where empty attrs would generate inconsistent tokens (:issue:`6970`, :pull:`8101`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
   (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
@@ -65,6 +68,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 .. _whats-new.2023.08.0:
 
@@ -145,6 +150,8 @@ Breaking changes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the internal design of xarray objects.
+  (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
   :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
@@ -882,7 +889,7 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix side effects on index coordinate metadata after aligning objects. (:issue:`6852`, :pull:`6857`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`. (:issue:`6839`, :pull:`6843`)
+- Make FacetGrid.set_titles send kwargs correctly using `handle.update(kwargs)`. (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 - Fix bug where index variables would be changed inplace. (:issue:`6931`, :pull:`6938`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
@@ -4745,7 +4752,7 @@ Bug fixes
 - Corrected a bug with incorrect coordinates for non-georeferenced geotiff
   files (:issue:`1686`). Internally, we now use the rasterio coordinate
   transform tool instead of doing the computations ourselves. A
-  ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
+  ``parse_coordinates`` kwarg has been added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 - The colors of discrete colormaps are now the same regardless if `seaborn`
