@@ -1766,7 +1766,8 @@ class TestContour(Common2dMixin, PlotTestCase):
         assert self._color_as_tuple(colors[1]) == (1.0, 0.0, 0.0)
         assert self._color_as_tuple(colors[2]) == (1.0, 1.0, 1.0)
         # the last color is now under "over"
-        assert self._color_as_tuple(cmap._rgba_over) == (0.0, 0.0, 1.0)  # type: ignore[attr-defined]
+        assert hasattr(cmap, "_rgba_over")
+        assert self._color_as_tuple(cmap._rgba_over) == (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self) -> None:
         with pytest.raises(ValueError):
@@ -2160,8 +2161,10 @@ class TestFacetGrid(PlotTestCase):
         fg: xplt.FacetGrid = ds.plot.scatter(x="a", y="a", row="x", hue="a")
         cbar = fg.cbar
         assert cbar is not None
-        assert cbar.vmin == 0  # type: ignore[attr-defined]
-        assert cbar.vmax == 3  # type: ignore[attr-defined]
+        assert hasattr(cbar, "vmin")
+        assert cbar.vmin == 0
+        assert hasattr(cbar, "vmax")
+        assert cbar.vmax == 3
 
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
@@ -2785,7 +2788,8 @@ class TestDatasetScatterPlots(PlotTestCase):
         axes = pc.axes
         assert axes is not None
         # should make a discrete legend
-        assert axes.legend_ is not None  # type:ignore[attr-defined]
+        assert hasattr(axes, "legend_")
+        assert axes.legend_ is not None
 
     def test_legend_labels(self) -> None:
         # regression test for #4126: incorrect legend labels
