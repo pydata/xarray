@@ -22,6 +22,7 @@ except ImportError:
 
 import xarray as xr
 from xarray import (
+    Coordinates,
     DataArray,
     Dataset,
     IndexVariable,
@@ -34,7 +35,6 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
@@ -86,7 +86,8 @@ class TestDataArray:
         self.mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x")
+        self.mindex_coords = Coordinates.from_pandas_multiindex(self.mindex, "x")
+        self.mda = DataArray([0, 1, 2, 3], coords=self.mindex_coords, dims="x")
 
     def test_repr(self) -> None:
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
@@ -123,7 +124,8 @@ class TestDataArray:
             [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
             names=("level_1", "level_2"),
         )
-        mda_long = DataArray(list(range(32)), coords={"x": mindex_long}, dims="x")
+        coords = Coordinates.from_pandas_multiindex(mindex_long, "x")
+        mda_long = DataArray(list(range(32)), coords=coords, dims="x")
         expected = dedent(
             """\
             <xarray.DataArray (x: 32)>
@@ -410,10 +412,17 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"conflicting sizes for dim"):
             DataArray([1, 2], coords={"x": [0, 1], "y": ("x", [1])}, dims="x")
 
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            DataArray(np.random.rand(4, 4), [("x", self.mindex), ("y", self.mindex)])
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            DataArray(np.random.rand(4, 4), [("x", self.mindex), ("level_1", range(4))])
+        with pytest.warns(
+            FutureWarning, match=r".*MultiIndex.*no longer be implicitly promoted"
+        ):
+            with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+                DataArray(
+                    np.random.rand(4, 4), [("x", self.mindex), ("y", self.mindex)]
+                )
+            with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+                DataArray(
+                    np.random.rand(4, 4), [("x", self.mindex), ("level_1", range(4))]
+                )
 
         with pytest.raises(ValueError, match=r"matching the dimension size"):
             DataArray(data, coords={"x": 0}, dims=["x", "y"])
@@ -1321,7 +1330,8 @@ class TestDataArray:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
         )
-        mdata = DataArray(range(8), [("x", mindex)])
+        mindex_coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        mdata = DataArray(range(8), coords=mindex_coords)
 
         def test_sel(
             lab_indexer, pos_indexer, replaced_idx=False, renamed_dim=None
@@ -1551,7 +1561,8 @@ class TestDataArray:
 
         # non-dimension index coordinate
         midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("lvl1", "lvl2"))
-        data = DataArray([1, 2, 3, 4], coords={"x": midx}, dims="x", name="foo")
+        mindex_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        data = DataArray([1, 2, 3, 4], coords=mindex_coords, dims="x", name="foo")
         with pytest.raises(ValueError, match=r"cannot remove index"):
             data.reset_coords("lvl1")
 
@@ -1908,9 +1919,13 @@ class TestDataArray:
 
         # multiindex case
         idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        idx_coords = Coordinates.from_pandas_multiindex(idx, "y")
         array = DataArray(np.random.randn(3), {"y": ("x", idx)}, "x")
-        expected = DataArray(array.values, {"y": idx}, "y")
-        actual = array.swap_dims({"x": "y"})
+        expected = DataArray(array.values, idx_coords, "y")
+        with pytest.warns(
+            FutureWarning, match=r".*MultiIndex.*no longer be implicitly promoted"
+        ):
+            actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             assert actual.xindexes[dim_name].equals(expected.xindexes[dim_name])
@@ -2159,7 +2174,8 @@ class TestDataArray:
 
     def test_reorder_levels(self) -> None:
         midx = self.mindex.reorder_levels(["level_2", "level_1"])
-        expected = DataArray(self.mda.values, coords={"x": midx}, dims="x")
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        expected = DataArray(self.mda.values, coords=midx_coords, dims="x")
 
         obj = self.mda.reorder_levels(x=["level_2", "level_1"])
         assert_identical(obj, expected)
@@ -2496,7 +2512,10 @@ class TestDataArray:
         df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]
         expected = DataArray(s.unstack(), name="foo")
-        actual = DataArray(s, dims="z").unstack("z")
+        with pytest.warns(
+            FutureWarning, match=r".*MultiIndex.*no longer be implicitly promoted"
+        ):
+            actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
     @pytest.mark.filterwarnings("error")
@@ -2515,7 +2534,10 @@ class TestDataArray:
     def test_stack_nonunique_consistency(self, da) -> None:
         da = da.isel(time=0, drop=True)  # 2D
         actual = da.stack(z=["a", "x"])
-        expected = DataArray(da.to_pandas().stack(), dims="z")
+        with pytest.warns(
+            FutureWarning, match=r".*MultiIndex.*no longer be implicitly promoted"
+        ):
+            expected = DataArray(da.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
     def test_to_unstacked_dataset_raises_value_error(self) -> None:
@@ -3300,8 +3322,10 @@ class TestDataArray:
         arr_np = np.random.randn(4, 3)
 
         mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+        coords = Coordinates.from_pandas_multiindex(mindex, "MI")
+        coords["C"] = [5, 6, 7]
 
-        arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
+        arr = DataArray(arr_np, coords, name="foo")
 
         actual = arr.to_dataframe()
         assert_array_equal(actual["foo"].values, arr_np.flatten())
@@ -3315,8 +3339,10 @@ class TestDataArray:
         arr_np = np.random.randn(4, 0)
 
         mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+        coords = Coordinates.from_pandas_multiindex(mindex, "MI")
+        coords["C"] = []
 
-        arr = DataArray(arr_np, [("MI", mindex), ("C", [])], name="foo")
+        arr = DataArray(arr_np, coords, name="foo")
 
         actual = arr.to_dataframe()
         assert len(actual) == 0

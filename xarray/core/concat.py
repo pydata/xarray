@@ -8,6 +8,7 @@ import pandas as pd
 
 from xarray.core import dtypes, utils
 from xarray.core.alignment import align, reindex_variables
+from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.merge import (
@@ -648,29 +649,34 @@ def _dataset_concat(
             # preserves original variable order
             result_vars[name] = result_vars.pop(name)
 
-    result = type(datasets[0])(result_vars, attrs=result_attrs)
+    result_coords = Coordinates(
+        coords={k: v for k, v in result_vars.items() if k in coord_names},
+        indexes=result_indexes,
+    )
+    result_data_vars = {k: v for k, v in result_vars.items() if k not in result_coords}
+    result = type(datasets[0])(
+        result_data_vars, coords=result_coords, attrs=result_attrs
+    )
 
     absent_coord_names = coord_names - set(result.variables)
     if absent_coord_names:
         raise ValueError(
             f"Variables {absent_coord_names!r} are coordinates in some datasets but not others."
         )
-    result = result.set_coords(coord_names)
     result.encoding = result_encoding
 
     result = result.drop_vars(unlabeled_dims, errors="ignore")
 
     if index is not None:
-        # add concat index / coordinate last to ensure that its in the final Dataset
+        # add concat index / coordinate last to ensure that it is in the final Dataset
         if dim_var is not None:
             index_vars = index.create_variables({dim: dim_var})
         else:
             index_vars = index.create_variables()
-        result[dim] = index_vars[dim]
-        result_indexes[dim] = index
-
-    # TODO: add indexes at Dataset creation (when it is supported)
-    result = result._overwrite_indexes(result_indexes)
+        index_coords = Coordinates._construct_direct(
+            coords=index_vars, indexes={k: index for k in index_vars}
+        )
+        result = result.assign_coords(index_coords)
 
     return result
 

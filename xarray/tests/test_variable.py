@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
+from xarray import Coordinates, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
@@ -2376,7 +2376,8 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_to_index_multiindex_level(self):
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        ds = Dataset(coords={"x": midx})
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        ds = Dataset(coords=midx_coords)
         assert ds.one.variable.to_index().equals(midx.get_level_values("one"))
 
     def test_multiindex_default_level_names(self):

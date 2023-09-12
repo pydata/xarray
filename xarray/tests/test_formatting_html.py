@@ -24,7 +24,8 @@ def multiindex():
     mindex = pd.MultiIndex.from_product(
         [["a", "b"], [1, 2]], names=("level_1", "level_2")
     )
-    return xr.Dataset({}, {"x": mindex})
+    mindex_coords = xr.Coordinates.from_pandas_multiindex(mindex, "x")
+    return xr.Dataset({}, mindex_coords)
 
 
 @pytest.fixture

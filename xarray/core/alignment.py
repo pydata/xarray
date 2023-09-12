@@ -937,14 +937,21 @@ def reindex_like(
 
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
-    common_coords = {}
+    from xarray.core.coordinates import Coordinates
+
+    common_coords = Coordinates()
     dims_map = {}
     for arg in args:
         for dim in arg.dims:
             if dim not in common_coords and dim not in exclude:
                 dims_map[dim] = arg.sizes[dim]
                 if dim in arg._indexes:
-                    common_coords.update(arg.xindexes.get_all_coords(dim))
+                    idx = arg._indexes[dim]
+                    idx_vars = arg.xindexes.get_all_coords(dim)
+                    coords = Coordinates._construct_direct(
+                        idx_vars, {k: idx for k in idx_vars}
+                    )
+                    common_coords.update(coords)
 
     return dims_map, common_coords
 
@@ -967,7 +974,7 @@ def _broadcast_helper(
 
     def _broadcast_array(array: T_DataArray) -> T_DataArray:
         data = _set_dims(array.variable)
-        coords = dict(array.coords)
+        coords = array.coords.copy()
         coords.update(common_coords)
         return array.__class__(
             data, coords, data.dims, name=array.name, attrs=array.attrs
@@ -975,7 +982,7 @@ def _broadcast_helper(
 
     def _broadcast_dataset(ds: T_Dataset) -> T_Dataset:
         data_vars = {k: _set_dims(ds.variables[k]) for k in ds.data_vars}
-        coords = dict(ds.coords)
+        coords = ds.coords.copy()
         coords.update(common_coords)
         return ds.__class__(data_vars, coords, ds.attrs)
 

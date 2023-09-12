@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, Variable
+from xarray import Coordinates, DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.testing import assert_chunks_equal
@@ -650,8 +650,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
         arr = DataArray(data, dims=("w", "x", "y"))
         stacked = arr.stack(z=("x", "y"))
-        z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)], names=["x", "y"])
-        expected = DataArray(data.reshape(2, -1), {"z": z}, dims=["w", "z"])
+        midx = pd.MultiIndex.from_product(
+            [np.arange(3), np.arange(4)], names=["x", "y"]
+        )
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "z")
+        expected = DataArray(data.reshape(2, -1), coords=midx_coords, dims=["w", "z"])
         assert stacked.data.chunks == expected.data.chunks
         self.assertLazyAndEqual(expected, stacked)
 

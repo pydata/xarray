@@ -362,7 +362,8 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("a_quite_long_level_name", "level_2")
         )
-        data = Dataset({}, {"x": mindex})
+        mindex_coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        data = Dataset({}, mindex_coords)
         expected = dedent(
             """\
             <xarray.Dataset>
@@ -636,9 +637,14 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            Dataset({}, {"x": mindex, "y": mindex})
-            Dataset({}, {"x": mindex, "level_1": range(4)})
+
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted",
+        ):
+            with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+                Dataset({}, {"x": mindex, "y": mindex})
+                Dataset({}, {"x": mindex, "level_1": range(4)})
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
@@ -1615,19 +1621,20 @@ class TestDataset:
 
     def test_sel_dataarray_mindex(self) -> None:
         midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         mds = xr.Dataset(
             {"var": (("x", "y"), np.random.rand(6, 3))},
-            coords={"x": midx, "y": range(3)},
+            coords=midx_coords.merge({"y": range(3)}).coords,
         )
 
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims="x"))
-        actual_sel = mds.sel(x=DataArray(midx[:3], dims="x"))
+        actual_sel = mds.sel(x=DataArray(np.array(midx[:3]), dims="x"))
         assert actual_isel["x"].dims == ("x",)
         assert actual_sel["x"].dims == ("x",)
         assert_identical(actual_isel, actual_sel)
 
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims="z"))
-        actual_sel = mds.sel(x=Variable("z", midx[:3]))
+        actual_sel = mds.sel(x=Variable("z", np.array(midx[:3])))
         assert actual_isel["x"].dims == ("z",)
         assert actual_sel["x"].dims == ("z",)
         assert_identical(actual_isel, actual_sel)
@@ -1735,7 +1742,8 @@ class TestDataset:
 
     def test_sel_drop_mindex(self) -> None:
         midx = pd.MultiIndex.from_arrays([["a", "a"], [1, 2]], names=("foo", "bar"))
-        data = Dataset(coords={"x": midx})
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        data = Dataset(coords=midx_coords)
 
         actual = data.sel(foo="a", drop=True)
         assert "foo" not in actual.coords
@@ -1959,7 +1967,8 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
         )
-        mdata = Dataset(data_vars={"var": ("x", range(8))}, coords={"x": mindex})
+        mindex_coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        mdata = Dataset(data_vars={"var": ("x", range(8))}, coords=mindex_coords)
 
         def test_sel(
             lab_indexer, pos_indexer, replaced_idx=False, renamed_dim=None
@@ -2805,7 +2814,8 @@ class TestDataset:
 
         # test index corrupted
         mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
-        ds = Dataset(coords={"x": mindex})
+        mindex_coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        ds = Dataset(coords=mindex_coords)
 
         with pytest.raises(ValueError, match=".*would corrupt the following index.*"):
             ds.drop_indexes("a")
@@ -3091,8 +3101,12 @@ class TestDataset:
 
     def test_rename_multiindex(self) -> None:
         mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
-        original = Dataset({}, {"x": mindex})
-        expected = Dataset({}, {"x": mindex.rename(["a", "c"])})
+        original_coords = Coordinates.from_pandas_multiindex(mindex, "x")
+        original = Dataset({}, original_coords)
+        expected_coords = Coordinates.from_pandas_multiindex(
+            mindex.rename(["a", "c"]), "x"
+        )
+        expected = Dataset({}, expected_coords)
 
         actual = original.rename({"b": "c"})
         assert_identical(expected, actual)
@@ -3202,10 +3216,17 @@ class TestDataset:
         assert_identical(expected, actual)
 
         # handle multiindex case
-        idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
-        original = Dataset({"x": [1, 2, 3], "y": ("x", idx), "z": 42})
-        expected = Dataset({"z": 42}, {"x": ("y", [1, 2, 3]), "y": idx})
-        actual = original.swap_dims({"x": "y"})
+        midx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
+        midx_coords = xr.Coordinates.from_pandas_multiindex(midx, "y")
+
+        original = Dataset({"x": [1, 2, 3], "y": ("x", midx), "z": 42})
+        expected_coords = midx_coords.assign({"x": ("y", [1, 2, 3])})
+        expected = Dataset({"z": 42}, expected_coords)
+        with pytest.warns(
+            FutureWarning,
+            match=".*`pandas.MultiIndex`.*no longer be implicitly promoted",
+        ):
+            actual = original.swap_dims({"x": "y"})
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
@@ -3437,14 +3458,18 @@ class TestDataset:
         four = [3, 4, 3, 4]
 
         mindex_12 = pd.MultiIndex.from_arrays([one, two], names=["one", "two"])
+        mindex_12_coords = Coordinates.from_pandas_multiindex(mindex_12, "x")
         mindex_34 = pd.MultiIndex.from_arrays([three, four], names=["three", "four"])
+        mindex_34_coords = Coordinates.from_pandas_multiindex(mindex_34, "x")
 
         ds = xr.Dataset(
-            coords={"x": mindex_12, "three": ("x", three), "four": ("x", four)}
+            coords=mindex_12_coords.merge(
+                {"three": ("x", three), "four": ("x", four)}
+            ).coords
         )
         actual = ds.set_index(x=["three", "four"])
         expected = xr.Dataset(
-            coords={"x": mindex_34, "one": ("x", one), "two": ("x", two)}
+            coords=mindex_34_coords.merge({"one": ("x", one), "two": ("x", two)}).coords
         )
         assert_identical(actual, expected)
 
@@ -3496,7 +3521,8 @@ class TestDataset:
         # check that multi-index dimension or level coordinates are dropped, converted
         # from IndexVariable to Variable or renamed to dimension as expected
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("foo", "bar"))
-        ds = xr.Dataset(coords={"x": midx})
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        ds = xr.Dataset(coords=midx_coords)
         reset = ds.reset_index(arg, drop=drop)
 
         for name in dropped:
@@ -3510,7 +3536,8 @@ class TestDataset:
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
         midx = mindex.reorder_levels(["level_2", "level_1"])
-        expected = Dataset({}, coords={"x": midx})
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        expected = Dataset({}, coords=midx_coords)
 
         # check attrs propagated
         ds["level_1"].attrs["foo"] = "bar"
@@ -3578,7 +3605,7 @@ class TestDataset:
         exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
         expected = Dataset(
             data_vars={"b": ("z", [0, 1, 2, 3])},
-            coords={"z": exp_index},
+            coords=Coordinates.from_pandas_multiindex(exp_index, "z"),
         )
         # check attrs propagated
         ds["x"].attrs["foo"] = "bar"
@@ -3602,7 +3629,7 @@ class TestDataset:
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
         expected = Dataset(
             data_vars={"b": ("z", [0, 2, 1, 3])},
-            coords={"z": exp_index},
+            coords=Coordinates.from_pandas_multiindex(exp_index, "z"),
         )
         expected["x"].attrs["foo"] = "bar"
 
@@ -3633,9 +3660,10 @@ class TestDataset:
     def test_stack_multi_index(self) -> None:
         # multi-index on a dimension to stack is discarded too
         midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("lvl1", "lvl2"))
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds = xr.Dataset(
             data_vars={"b": (("x", "y"), [[0, 1], [2, 3], [4, 5], [6, 7]])},
-            coords={"x": midx, "y": [0, 1]},
+            coords=midx_coords.merge({"y": [0, 1]}).coords,
         )
         expected = Dataset(
             data_vars={"b": ("z", [0, 1, 2, 3, 4, 5, 6, 7])},
@@ -3662,7 +3690,7 @@ class TestDataset:
         exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["xx", "y"])
         expected = Dataset(
             data_vars={"b": ("z", [0, 1, 2, 3])},
-            coords={"z": exp_index},
+            coords=Coordinates.from_pandas_multiindex(exp_index, "z"),
         )
 
         actual = ds.stack(z=["x", "y"])
@@ -3671,7 +3699,10 @@ class TestDataset:
 
     def test_unstack(self) -> None:
         index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
-        ds = Dataset(data_vars={"b": ("z", [0, 1, 2, 3])}, coords={"z": index})
+        ds = Dataset(
+            data_vars={"b": ("z", [0, 1, 2, 3])},
+            coords=Coordinates.from_pandas_multiindex(index, "z"),
+        )
         expected = Dataset(
             {"b": (("x", "y"), [[0, 1], [2, 3]]), "x": [0, 1], "y": ["a", "b"]}
         )
@@ -3739,9 +3770,12 @@ class TestDataset:
         mindex = pd.MultiIndex.from_arrays(
             [np.arange(3), np.arange(3)], names=["a", "b"]
         )
+        mindex_coords = Coordinates.from_pandas_multiindex(mindex, "z")
         ds_eye = Dataset(
             {"var": (("z", "foo", "bar"), np.ones((3, 4, 5)))},
-            coords={"z": mindex, "foo": np.arange(4), "bar": np.arange(5)},
+            coords=mindex_coords.merge(
+                {"foo": np.arange(4), "bar": np.arange(5)}
+            ).coords,
         )
         actual3 = ds_eye.unstack(sparse=True, fill_value=0)
         assert isinstance(actual3["var"].data, sparse_array_type)
@@ -6252,10 +6286,12 @@ class TestDataset:
         # test pandas.MultiIndex
         indices = (("b", 1), ("b", 0), ("a", 1), ("a", 0))
         midx = pd.MultiIndex.from_tuples(indices, names=["one", "two"])
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         ds_midx = Dataset(
             {
                 "A": DataArray(
-                    [[1, 2], [3, 4], [5, 6], [7, 8]], [("x", midx), ("y", [1, 0])]
+                    [[1, 2], [3, 4], [5, 6], [7, 8]],
+                    coords=midx_coords.merge({"y": [1, 0]}).coords,
                 ),
                 "B": DataArray([[5, 6], [7, 8], [9, 10], [11, 12]], dims=["x", "y"]),
             }
@@ -6264,11 +6300,12 @@ class TestDataset:
         midx_reversed = pd.MultiIndex.from_tuples(
             tuple(reversed(indices)), names=["one", "two"]
         )
+        midx_reversed_coords = Coordinates.from_pandas_multiindex(midx_reversed, "x")
         expected = Dataset(
             {
                 "A": DataArray(
                     [[7, 8], [5, 6], [3, 4], [1, 2]],
-                    [("x", midx_reversed), ("y", [1, 0])],
+                    coords=midx_reversed_coords.merge({"y": [1, 0]}).coords,
                 ),
                 "B": DataArray([[11, 12], [9, 10], [7, 8], [5, 6]], dims=["x", "y"]),
             }

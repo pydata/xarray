@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, Variable
+from xarray import Coordinates, DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
 from xarray.tests import (
     InaccessibleArray,
@@ -1080,7 +1080,8 @@ class TestDataArrayGroupBy:
         self.mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        self.mda = DataArray([0, 1, 2, 3], coords={"x": self.mindex}, dims="x")
+        self.mindex_coords = Coordinates.from_pandas_multiindex(self.mindex, "x")
+        self.mda = DataArray([0, 1, 2, 3], coords=self.mindex_coords, dims="x")
 
         self.da = self.dv.copy()
         self.da.coords["abc"] = ("y", np.array(["a"] * 9 + ["c"] + ["b"] * 10))
@@ -1095,14 +1096,16 @@ class TestDataArrayGroupBy:
         arr = xr.DataArray(data, dims=dims, coords={"y": y_vals})
         actual1 = arr.stack(z=dims).groupby("z").first()
         midx1 = pd.MultiIndex.from_product([[0, 1], [2, 3]], names=dims)
-        expected1 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx1})
+        midx1_coords = Coordinates.from_pandas_multiindex(midx1, "z")
+        expected1 = xr.DataArray(data_flat, dims=["z"], coords=midx1_coords)
         assert_equal(actual1, expected1)
 
         # GH: 3287.  Note that y coord values are not in sorted order.
         arr = xr.DataArray(data, dims=dims, coords={"y": y_vals[::-1]})
         actual2 = arr.stack(z=dims).groupby("z").first()
         midx2 = pd.MultiIndex.from_product([[0, 1], [3, 2]], names=dims)
-        expected2 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx2})
+        midx2_coords = Coordinates.from_pandas_multiindex(midx2, "z")
+        expected2 = xr.DataArray(data_flat, dims=["z"], coords=midx2_coords)
         assert_equal(actual2, expected2)
 
     def test_groupby_iter(self):
@@ -2356,7 +2359,9 @@ def test_groupby_binary_op_regression() -> None:
 def test_groupby_multiindex_level() -> None:
     # GH6836
     midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
-    mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
+    coords = Coordinates.from_pandas_multiindex(midx, "x")
+    coords["y"] = range(3)
+    mda = xr.DataArray(np.random.rand(6, 3), coords=coords)
     groups = mda.groupby("one").groups
     assert groups == {"a": [0, 1], "b": [2, 3], "c": [4, 5]}
 

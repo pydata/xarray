@@ -955,31 +955,11 @@ def create_coords_with_default_indexes(
     indexes: dict[Hashable, Index] = {}
     variables: dict[Hashable, Variable] = {}
 
-    # promote any pandas multi-index in data_vars as coordinates
-    coords_promoted: dict[Hashable, Any] = {}
-    pd_mindex_keys: list[Hashable] = []
-
-    for k, v in all_variables.items():
-        if isinstance(v, pd.MultiIndex):
-            coords_promoted[k] = v
-            pd_mindex_keys.append(k)
-        elif k in coords:
-            coords_promoted[k] = v
-
-    if pd_mindex_keys:
-        pd_mindex_keys_fmt = ",".join([f"'{k}'" for k in pd_mindex_keys])
-        emit_user_level_warning(
-            f"the `pandas.MultiIndex` object(s) passed as {pd_mindex_keys_fmt} coordinate(s) or "
-            "data variable(s) will no longer be implicitly promoted and wrapped into "
-            "multiple indexed coordinates in the future "
-            "(i.e., one coordinate for each multi-index level + one dimension coordinate). "
-            "If you want to keep this behavior, you need to first wrap it explicitly using "
-            "`mindex_coords = xarray.Coordinates.from_pandas_multiindex(mindex_obj, 'dim')` "
-            "and pass it as coordinates, e.g., `xarray.Dataset(coords=mindex_coords)`, "
-            "`dataset.assign_coords(mindex_coords)` or `dataarray.assign_coords(mindex_coords)`.",
-            FutureWarning,
-        )
-
+    coords_promoted: dict[Hashable, Any] = {
+        k: v
+        for k, v in all_variables.items()
+        if k in coords or isinstance(v, pd.MultiIndex)
+    }
     dataarray_coords: list[DataArrayCoordinates] = []
 
     for name, obj in coords_promoted.items():
