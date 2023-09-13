@@ -856,6 +856,7 @@ class DataArray(
             obj = self[key]
             if isinstance(value, DataArray):
                 assert_coordinate_consistent(value, obj.coords.variables)
+                value = value.variable
             # DataArray key -> Variable key
             key = {
                 k: v.variable if isinstance(v, DataArray) else v
