@@ -49,9 +49,6 @@ if TYPE_CHECKING:
 # string used by netCDF4.
 _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
 
-# according to https://github.com/DennisHeimbigner/netcdf-c/blob/ef94285ac13b011613bb5e905d49b63d2a3bb076/libsrc4/nc4type.c#L486
-DEFAULT_HDF_ENUM_FILL_VALUE = 0
-DEFAULT_UNDEFINED_ENUM_MEANING = "_UNDEFINED"
 NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
@@ -124,31 +121,6 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             )
             raise IndexError(msg)
         return array
-
-
-    def replace_mask(self, mask, replacing_value):
-        ds = self.datastore._acquire(needs_lock=True)
-        variable = ds.variables[self.variable_name]
-        variable[mask] = replacing_value
-
-
-
-class NetCDF4EnumedArrayWrapper(NetCDF4ArrayWrapper):
-    __slots__ = ()
-
-    def get_array(self, needs_lock=True):
-        ds = self.datastore._acquire(needs_lock)
-        variable = ds.variables[self.variable_name]
-        with suppress(AttributeError):
-            variable.set_auto_chartostring(False)
-        return variable
-
-    def unmask(self):
-        ds = self.datastore._acquire(needs_lock=True)
-        variable = ds.variables[self.variable_name]
-        variable.set_auto_maskandscale(False)
-
-
 
 
 def _encode_nc4_variable(var):
@@ -444,29 +416,8 @@ class NetCDF4DataStore(WritableCFDataStore):
         enum_meaning = None
         enum_name = None
         if isinstance(var.datatype, netCDF4.EnumType):
-            # Workaround for poorly generated variables:
-            # When creating a variable typed by an enum
-            # va_va = self._acquire()[name][:] # get masked array
-            # old_fill_value = va_va.fill_value
-            # mask = va_va.mask
             enum_meaning = var.datatype.enum_dict
             enum_name = var.datatype.name
-            # Add a meaning to fill_value value if missing
-            # fill_value = list(var.datatype.enum_dict.values())[0]
-            # fill_value = attributes.get("_FillValue", DEFAULT_HDF_ENUM_FILL_VALUE)
-            # attributes["_FillValue"] = fill_value
-            # masked_data = indexing.LazilyIndexedArray(NetCDF4EnumedArrayWrapper(name, self))
-            # masked_data.array.replace_mask(fill_value)
-            # masked_data.array.unmask()
-            # va_va[mask] = fill_value
-            # filtered_reversed_enum_meaning = {
-            #     v: k 
-            #     for k, v in enum_meaning.items() 
-            #     if v == fill_value
-            #     }
-            # # TODO: manage fill_value, see todo comment taged with [enum][missing_value] below
-            # if filtered_reversed_enum_meaning.get(fill_value) is None:
-            #     enum_meaning[DEFAULT_UNDEFINED_ENUM_MEANING] = fill_value
             attributes["enum_name"] = enum_name
             attributes["enum_meaning"] = enum_meaning
         data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
@@ -575,18 +526,6 @@ class NetCDF4DataStore(WritableCFDataStore):
             del attrs["enum_name"]
             del attrs["enum_meaning"]
             fill_value = None
-            # TODO [enum][missing_value]: 
-            #       What should we do with fill+value on enum ?
-            #       On one hand it makes sens to ensure fill_value is a valid enum 
-            #       value.
-            #       On the other hand, HDF and netCDF4 does not enforce this. 
-            #       In fact with the current netcdf4 we can end up with variables that 
-            #       can be created but not read by ncdump if we set fill_value to a 
-            #       value outside the enum range but we can also have clunky files
-            #       with fill_value set to None, that are readable even though 
-            #       the default fill_value is outside the enum range too.
-            #       Also, HDF considers the value associated with 0 to be the missing 
-            #       value *verify this claim).
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
