@@ -1321,16 +1321,21 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
 
 def test_roundtrip_float_times() -> None:
     fill_value = 20.0
-    t0 = "2000-01-01 12:00:00"
-    times = [np.datetime64(t0, "ns"), np.datetime64("NaT", "ns")]
+    times = [np.datetime64("2000-01-01 12:00:00", "ns"), np.datetime64("NaT", "ns")]
 
+    units = "days since 2000-01-01"
     var = Variable(
-        ["time"], times, encoding=dict(dtype=np.float64, _FillValue=fill_value)
+        ["time"],
+        times,
+        encoding=dict(dtype=np.float64, _FillValue=fill_value, units=units),
     )
 
     encoded_var = conventions.encode_cf_variable(var)
-    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    np.testing.assert_array_equal(encoded_var, np.array([0.5, 20.0]))
+    assert encoded_var.attrs["units"] == units
+    assert encoded_var.attrs["_FillValue"] == fill_value
 
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
-    assert decoded_var.encoding["units"] == f"days since {t0}"
+    assert decoded_var.encoding["units"] == units
     assert decoded_var.encoding["_FillValue"] == fill_value
