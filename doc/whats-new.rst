@@ -26,6 +26,7 @@ New Features
   different collections of coordinates prior to assign them to a Dataset or
   DataArray (:pull:`8102`) at once.
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -59,6 +60,9 @@ Bug fixes
   names were not updated properly internally (:issue:`7405`, :issue:`7588`,
   :pull:`8104`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fix bug where :py:class:`DataArray` instances on the right-hand side
+  of :py:meth:`DataArray.__setitem__` lose dimension names.
+  (:issue:`7030`, :pull:`8067`) By `Darsh Ranjan <https://github.com/dranjan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
