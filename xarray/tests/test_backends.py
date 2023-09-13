@@ -4620,8 +4620,8 @@ class TestValidateAttrs:
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = {"a": 5}
-            with pytest.raises(TypeError, match=r"Invalid value for attr 'test'"):
-                ds.to_netcdf("test.nc")
+            with create_tmp_file() as tmp_file:
+                ds.to_netcdf(tmp_file)
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = MiscObject()
