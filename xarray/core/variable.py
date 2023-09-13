@@ -7,12 +7,12 @@ import numbers
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
@@ -566,7 +566,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._dims, self.data, self._attrs))
+        return normalize_token((type(self), self._dims, self.data, self.attrs))
 
     def __dask_graph__(self):
         if is_duck_dask_array(self._data):
@@ -759,18 +759,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     if k.ndim > 1:
                         raise IndexError(
                             "Unlabeled multi-dimensional array cannot be "
-                            "used for indexing: {}".format(k)
+                            f"used for indexing: {k}"
                         )
                 if k.dtype.kind == "b":
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
-                            "Boolean array size {:d} is used to index array "
-                            "with shape {:s}.".format(len(k), str(self.shape))
+                            f"Boolean array size {len(k):d} is used to index array "
+                            f"with shape {str(self.shape):s}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
-                            "{}-dimensional boolean indexing is "
-                            "not supported. ".format(k.ndim)
+                            f"{k.ndim}-dimensional boolean indexing is "
+                            "not supported. "
                         )
                     if is_duck_dask_array(k.data):
                         raise KeyError(
@@ -783,9 +783,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            "on {:s} but the target dimension is {:s}.".format(
-                                str(k.dims), dim
-                            )
+                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
                         )
 
     def _broadcast_indexes_outer(self, key):
@@ -1837,15 +1835,20 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
+        create_template: Callable
         if fill_value is dtypes.NA:
             is_missing_values = math.prod(new_shape) > math.prod(self.shape)
             if is_missing_values:
                 dtype, fill_value = dtypes.maybe_promote(self.dtype)
+
+                create_template = partial(np.full_like, fill_value=fill_value)
             else:
                 dtype = self.dtype
                 fill_value = dtypes.get_fill_value(dtype)
+                create_template = np.empty_like
         else:
             dtype = self.dtype
+            create_template = partial(np.full_like, fill_value=fill_value)
 
         if sparse:
             # unstacking a dense multitindexed array to a sparse array
@@ -1868,12 +1871,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             )
 
         else:
-            data = np.full_like(
-                self.data,
-                fill_value=fill_value,
-                shape=new_shape,
-                dtype=dtype,
-            )
+            data = create_template(self.data, shape=new_shape, dtype=dtype)
 
             # Indexer is a list of lists of locations. Each list is the locations
             # on the new dimension. This is robust to the data being sparse; in that
@@ -2119,7 +2117,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             for var in variables:
                 if var.dims != first_var_dims:
                     raise ValueError(
-                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var_dims)}"
+                        f"Variable has dimensions {tuple(var.dims)} but first Variable has dimensions {tuple(first_var_dims)}"
                     )
 
         return cls(dims, data, attrs, encoding, fastpath=True)
@@ -2198,15 +2196,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             desired quantile lies between two data points. The options sorted by their R
             type as summarized in the H&F paper [1]_ are:
 
-                1. "inverted_cdf" (*)
-                2. "averaged_inverted_cdf" (*)
-                3. "closest_observation" (*)
-                4. "interpolated_inverted_cdf" (*)
-                5. "hazen" (*)
-                6. "weibull" (*)
+                1. "inverted_cdf"
+                2. "averaged_inverted_cdf"
+                3. "closest_observation"
+                4. "interpolated_inverted_cdf"
+                5. "hazen"
+                6. "weibull"
                 7. "linear"  (default)
-                8. "median_unbiased" (*)
-                9. "normal_unbiased" (*)
+                8. "median_unbiased"
+                9. "normal_unbiased"
 
             The first three methods are discontiuous.  The following discontinuous
             variations of the default "linear" (7.) option are also available:
@@ -2219,8 +2217,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
             was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
-
-            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
@@ -2289,14 +2285,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
 
-        if Version(np.__version__) >= Version("1.22.0"):
-            kwargs = {"q": q, "axis": axis, "method": method}
-        else:
-            if method not in ("linear", "lower", "higher", "midpoint", "nearest"):
-                raise ValueError(
-                    f"Interpolation method '{method}' requires numpy >= 1.22 or is not supported."
-                )
-            kwargs = {"q": q, "axis": axis, "interpolation": method}
+        kwargs = {"q": q, "axis": axis, "method": method}
 
         result = apply_ufunc(
             _wrapper,
@@ -2559,8 +2548,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
-                    "{} is invalid for boundary. Valid option is 'exact', "
-                    "'trim' and 'pad'".format(boundary[d])
+                    f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
+                    "'trim' and 'pad'"
                 )
 
         shape = []

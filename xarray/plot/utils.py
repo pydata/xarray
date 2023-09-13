@@ -1131,7 +1131,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:
+        if type(num) == int:  # noqa: E721
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
@@ -1461,7 +1461,7 @@ class _Normalize(Sequence):
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
-        Normalize the values so they're inbetween self._width.
+        Normalize the values so they're in between self._width.
         """
         if self._width is None:
             return y
@@ -1473,7 +1473,7 @@ class _Normalize(Sequence):
             # Use default with if y is constant:
             widths = xdefault + 0 * y
         else:
-            # Normalize inbetween xmin and xmax:
+            # Normalize in between xmin and xmax:
             k = (y - np.min(y)) / diff_maxy_miny
             widths = xmin + k * (xmax - xmin)
         return widths
@@ -1821,8 +1821,8 @@ def _guess_coords_to_plot(
     )
 
     # If dims_plot[k] isn't defined then fill with one of the available dims, unless
-    # one of related mpl kwargs has been used. This should have similiar behaviour as
-    # * plt.plot(x, y) -> Multple lines with different colors if y is 2d.
+    # one of related mpl kwargs has been used. This should have similar behaviour as
+    # * plt.plot(x, y) -> Multiple lines with different colors if y is 2d.
     # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
     for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
         if coords_to_plot.get(k, None) is None and all(

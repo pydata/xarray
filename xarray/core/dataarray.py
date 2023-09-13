@@ -856,6 +856,7 @@ class DataArray(
             obj = self[key]
             if isinstance(value, DataArray):
                 assert_coordinate_consistent(value, obj.coords.variables)
+                value = value.variable
             # DataArray key -> Variable key
             key = {
                 k: v.variable if isinstance(v, DataArray) else v
@@ -2234,8 +2235,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2362,8 +2362,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
@@ -2904,9 +2903,9 @@ class DataArray(
             b        (x) int64 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a', 0.0),
-                    ('a', 1.0),
-                    ('a', 2.0),
+        MultiIndex([('a',   0),
+                    ('a',   1),
+                    ('a',   2),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
@@ -4325,7 +4324,7 @@ class DataArray(
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
-                    "'{dims_data}'".format(dims_data=str(e.args[0]))
+                    f"'{str(e.args[0])}'"
                 )
         try:
             data = d["data"]
@@ -4465,7 +4464,7 @@ class DataArray(
                [2, 2]])
         Dimensions without coordinates: X, Y
 
-        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against eachother have the same values, dimensions, and coordinates.
+        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against each other have the same values, dimensions, and coordinates.
 
         >>> a.equals(b)
         False
@@ -5036,15 +5035,15 @@ class DataArray(
             desired quantile lies between two data points. The options sorted by their R
             type as summarized in the H&F paper [1]_ are:
 
-                1. "inverted_cdf" (*)
-                2. "averaged_inverted_cdf" (*)
-                3. "closest_observation" (*)
-                4. "interpolated_inverted_cdf" (*)
-                5. "hazen" (*)
-                6. "weibull" (*)
+                1. "inverted_cdf"
+                2. "averaged_inverted_cdf"
+                3. "closest_observation"
+                4. "interpolated_inverted_cdf"
+                5. "hazen"
+                6. "weibull"
                 7. "linear"  (default)
-                8. "median_unbiased" (*)
-                9. "normal_unbiased" (*)
+                8. "median_unbiased"
+                9. "normal_unbiased"
 
             The first three methods are discontiuous. The following discontinuous
             variations of the default "linear" (7.) option are also available:
@@ -5057,8 +5056,6 @@ class DataArray(
             See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
             was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
-
-            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
@@ -5195,9 +5192,10 @@ class DataArray(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+        datetime_unit : {"W", "D", "h", "m", "s", "ms", \
                          "us", "ns", "ps", "fs", "as", None}, optional
-            Unit to compute gradient. Only valid for datetime coordinate.
+            Unit to compute gradient. Only valid for datetime coordinate. "Y" and "M" are not available as
+            datetime_unit.
 
         Returns
         -------
@@ -5775,8 +5773,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
@@ -5871,8 +5869,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},

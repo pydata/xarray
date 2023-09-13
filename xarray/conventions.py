@@ -75,20 +75,18 @@ def _infer_dtype(array, name: T_Name = None) -> np.dtype:
         return dtype
 
     raise ValueError(
-        "unable to infer dtype on variable {!r}; xarray "
-        "cannot serialize arbitrary Python objects".format(name)
+        f"unable to infer dtype on variable {name!r}; xarray "
+        "cannot serialize arbitrary Python objects"
     )
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
     if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
         raise NotImplementedError(
-            "variable {!r} is a MultiIndex, which cannot yet be "
+            f"variable {name!r} is a MultiIndex, which cannot yet be "
             "serialized to netCDF files. Instead, either use reset_index() "
             "to convert MultiIndex levels into coordinate variables instead "
-            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html.".format(
-                name
-            )
+            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
         )
 
 
@@ -114,11 +112,11 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
 
         if is_duck_dask_array(data):
             warnings.warn(
-                "variable {} has data in the form of a dask array with "
+                f"variable {name} has data in the form of a dask array with "
                 "dtype=object, which means it is being loaded into memory "
                 "to determine a data type that can be safely stored on disk. "
                 "To avoid this, coerce this variable to a fixed-size dtype "
-                "with astype() before saving it.".format(name),
+                "with astype() before saving it.",
                 SerializationWarning,
             )
             data = data.compute()
@@ -635,9 +633,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     for name in list(non_dim_coord_names):
         if isinstance(name, str) and " " in name:
             warnings.warn(
-                "coordinate {!r} has a space in its name, which means it "
+                f"coordinate {name!r} has a space in its name, which means it "
                 "cannot be marked as a coordinate on disk and will be "
-                "saved as a data variable instead".format(name),
+                "saved as a data variable instead",
                 SerializationWarning,
                 stacklevel=6,
             )
@@ -694,7 +692,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         if not coords_str and variable_coordinates[name]:
             coordinates_text = " ".join(
                 str(coord_name)
-                for coord_name in variable_coordinates[name]
+                for coord_name in sorted(variable_coordinates[name])
                 if coord_name not in not_technically_coordinates
             )
             if coordinates_text:
@@ -719,7 +717,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 SerializationWarning,
             )
         else:
-            attributes["coordinates"] = " ".join(map(str, global_coordinates))
+            attributes["coordinates"] = " ".join(sorted(map(str, global_coordinates)))
 
     return variables, attributes
 
