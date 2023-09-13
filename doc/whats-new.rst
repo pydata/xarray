@@ -63,6 +63,10 @@ Bug fixes
 - Fix bug where :py:class:`DataArray` instances on the right-hand side
   of :py:meth:`DataArray.__setitem__` lose dimension names.
   (:issue:`7030`, :pull:`8067`) By `Darsh Ranjan <https://github.com/dranjan>`_.
+- Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) lead to varying
+  issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
+  :issue:`1064`, :pull:`7827`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -73,6 +77,8 @@ Internal Changes
 
 - Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution (:pull:`7827`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2023.08.0:
 
