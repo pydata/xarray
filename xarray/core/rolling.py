@@ -4,7 +4,7 @@ import functools
 import itertools
 import math
 import warnings
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
@@ -475,7 +475,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
 
-        dim: Sequence[Hashable] = list(rolling_dim.values())
+        dim = list(rolling_dim.values())
         result = windows.reduce(func, dim=dim, keep_attrs=keep_attrs, **kwargs)
 
         # Find valid windows based on count.
@@ -493,7 +493,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
-        dim: Sequence[Hashable] = list(rolling_dim.values())
+        dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
