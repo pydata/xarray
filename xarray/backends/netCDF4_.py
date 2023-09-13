@@ -409,10 +409,10 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def open_store_variable(self, name: str, var):
         import netCDF4
-        
+
         dimensions = var.dimensions
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
-        
+
         enum_meaning = None
         enum_name = None
         if isinstance(var.datatype, netCDF4.EnumType):
@@ -518,7 +518,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         enum = None
         if attrs.get("enum_meaning") is not None:
             enum = self.ds.createEnumType(
-                variable.dtype, 
+                variable.dtype,
                 attrs["enum_name"],
                 attrs["enum_meaning"],
             )
