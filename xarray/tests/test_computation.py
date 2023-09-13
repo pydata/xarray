@@ -1784,7 +1784,10 @@ def test_output_wrong_number() -> None:
     def tuple3x(x):
         return (x, x, x)
 
-    with pytest.raises(ValueError, match=r"number of outputs"):
+    with pytest.raises(
+        ValueError,
+        match=r"number of outputs.*Result is not a tuple of 2 elements:\n\n\[0 1 2 3 4 5 6 7 8 9\]",
+    ):
         apply_ufunc(identity, variable, output_core_dims=[(), ()])
 
     with pytest.raises(ValueError, match=r"number of outputs"):
@@ -1800,7 +1803,10 @@ def test_output_wrong_dims() -> None:
     def remove_dim(x):
         return x[..., 0]
 
-    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
+    with pytest.raises(
+        ValueError,
+        match=r"unexpected number of dimensions.*The data returned was:\n\n.*array\(\[\[0",
+    ):
         apply_ufunc(add_dim, variable, output_core_dims=[("y", "z")])
 
     with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
