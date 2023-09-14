@@ -475,9 +475,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
 
-        result = windows.reduce(
-            func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
-        )
+        dim = list(rolling_dim.values())
+        result = windows.reduce(func, dim=dim, keep_attrs=keep_attrs, **kwargs)
 
         # Find valid windows based on count.
         counts = self._counts(keep_attrs=False)
@@ -494,6 +493,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
+        dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
@@ -501,7 +501,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
-            .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
+            .sum(dim=dim, skipna=False, keep_attrs=keep_attrs)
         )
         return counts
 

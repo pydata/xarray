@@ -1402,14 +1402,14 @@ def _cov_corr(
     ) / (valid_count)
 
     if method == "cov":
-        return cov  # type: ignore[return-value]
+        return cov
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr  # type: ignore[return-value]
+        return corr
 
 
 def cross(
