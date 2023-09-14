@@ -72,6 +72,7 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer results in an error.
 - Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments.
+- Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
   (:issue:`7552`, :pull:`8174`).
   By `Wiktor Kraśnicki <https://github.com/wkrasnicki>`_.
 
