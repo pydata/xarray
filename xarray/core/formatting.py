@@ -10,7 +10,6 @@ from collections.abc import Collection, Hashable
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
