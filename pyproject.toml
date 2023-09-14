@@ -1,3 +1,52 @@
+[project]
+authors = [
+  {name = "xarray Developers", email = "xarray@googlegroups.com"},
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering",
+]
+description = "N-D labeled arrays and datasets in Python"
+dynamic = ["version"]
+license = {text = "Apache-2.0"}
+name = "xarray"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+  "numpy>=1.21",
+  "packaging>=21.3",
+  "pandas>=1.4",
+]
+
+[project.optional-dependencies]
+accel = ["scipy", "bottleneck", "numbagg", "flox"]
+complete = ["xarray[accel,io,parallel,viz]"]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+parallel = ["dask[complete]"]
+viz = ["matplotlib", "seaborn", "nc-time-axis"]
+
+[tool.setuptools]
+packages = ["xarray"]
+
+[project.entry-points."xarray.chunkmanagers"]
+dask = "xarray.core.daskmanager:DaskManager"
+
+[project.urls]
+Documentation = "https://docs.xarray.dev"
+SciPy2015-talk = "https://www.youtube.com/watch?v=X0pAhJgySxk"
+homepage = "https://xarray.dev/"
+issue-tracker = "https://github.com/pydata/xarray/issues"
+source-code = "https://github.com/pydata/xarray"
+
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
@@ -6,7 +55,7 @@ requires = [
 ]
 
 [tool.setuptools_scm]
-fallback_version = "999"
+fallback_version = "9999"
 
 [tool.coverage.run]
 omit = [
@@ -64,7 +113,7 @@ module = [
   "sparse.*",
   "toolz.*",
   "zarr.*",
-  "numpy.exceptions.*",  # remove once support for `numpy<2.0` has been dropped
+  "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
 ]
 
 [[tool.mypy.overrides]]
@@ -72,32 +121,43 @@ ignore_errors = true
 module = []
 
 [tool.ruff]
-target-version = "py39"
 builtins = ["ellipsis"]
 exclude = [
-    ".eggs",
-    "doc",
-    "_typed_ops.pyi",
+  ".eggs",
+  "doc",
+  "_typed_ops.pyi",
 ]
+target-version = "py39"
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
 ignore = [
-    "E402",
-    "E501",
-    "E731",
+  "E402",
+  "E501",
+  "E731",
 ]
 select = [
-    # Pyflakes
-    "F",
-    # Pycodestyle
-    "E",
-    "W",
-    # isort
-    "I",
-    # Pyupgrade
-    "UP",
+  "F", # Pyflakes
+  "E", # Pycodestyle
+  "W",
+  "I", # isort
+  "UP", # Pyupgrade
 ]
 
 [tool.ruff.isort]
 known-first-party = ["xarray"]
+
+[tool.pytest.ini-options]
+filterwarnings = [
+  "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+]
+markers = [
+  "flaky: flaky tests",
+  "network: tests requiring a network connection",
+  "slow: slow tests",
+]
+python_files = "test_*.py"
+testpaths = ["xarray/tests", "properties"]
+
+[tool.aliases]
+test = "pytest"
