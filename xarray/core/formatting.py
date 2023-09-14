@@ -16,14 +16,12 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
+from xarray.core.coordinates import AbstractCoordinates
 from xarray.core.duck_array_ops import array_equiv
 from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.pycompat import array_type
 from xarray.core.utils import is_duck_array
-
-if TYPE_CHECKING:
-    from xarray.core.coordinates import Coordinates
 
 
 def pretty_print(x, numchars: int):
@@ -402,7 +400,7 @@ attrs_repr = functools.partial(
 )
 
 
-def coords_repr(coords: Coordinates, col_width=None, max_rows=None):
+def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
