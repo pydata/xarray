@@ -13,7 +13,7 @@ class MultiIndexSeries:
             [
                 list("abcdefhijk"),
                 list("abcdefhijk"),
-                pd.date_range(start="2000-01-01", periods=1000, freq="B"),
+                pd.date_range(start="2000-01-01", periods=1000, freq="D"),
             ]
         )
         series = pd.Series(data, index)
