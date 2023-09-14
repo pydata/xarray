@@ -74,11 +74,25 @@ def _access_through_series(values, name):
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
     elif name == "isocalendar":
+        # special NaT-handling can be removed when
+        # https://github.com/pandas-dev/pandas/issues/54657 is resolved
+        field_values = values_as_series.dt.isocalendar()
+        # test for <NA> and apply needed dtype
+        hasna = any(field_values.year.isnull())
+        if hasna:
+            field_values = np.dstack(
+                [
+                    getattr(field_values, name).astype(np.float64, copy=False).values
+                    for name in ["year", "week", "day"]
+                ]
+            )
+        else:
+            field_values = np.array(field_values, dtype=np.int64)
         # isocalendar returns iso- year, week, and weekday -> reshape
-        field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
         return field_values.T.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
+
     return field_values.reshape(values.shape)
 
 
@@ -110,7 +124,7 @@ def _get_date_field(values, name, dtype):
         from dask.array import map_blocks
 
         new_axis = chunks = None
-        # isocalendar adds adds an axis
+        # isocalendar adds an axis
         if name == "isocalendar":
             chunks = (3,) + values.chunksize
             new_axis = 0
@@ -119,7 +133,12 @@ def _get_date_field(values, name, dtype):
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
-        return access_method(values, name).astype(dtype, copy=False)
+        out = access_method(values, name)
+        # cast only for integer types to keep float64 in presence of NaT
+        # see https://github.com/pydata/xarray/issues/7928
+        if np.issubdtype(out.dtype, np.integer):
+            out = out.astype(dtype, copy=False)
+        return out
 
 
 def _round_through_series_or_index(values, name, freq):
