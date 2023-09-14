@@ -380,7 +380,7 @@ class TestDataset:
 
     def test_repr_period_index(self) -> None:
         data = create_test_data(seed=456)
-        data.coords["time"] = pd.period_range("2000-01-01", periods=20, freq="B")
+        data.coords["time"] = pd.period_range("2000-01-01", periods=20, freq="D")
 
         # check that creating the repr doesn't raise an error #GH645
         repr(data)
