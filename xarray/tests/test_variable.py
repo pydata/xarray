@@ -338,10 +338,10 @@ class VariableSubclassobjects(ABC):
         assert v[0].values == v.values[0]
 
     def test_pandas_period_index(self):
-        v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="B"))
+        v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="D"))
         v = v.load()  # for dask-based Variable
-        assert v[0] == pd.Period("2000", freq="B")
-        assert "Period('2000-01-03', 'B')" in repr(v)
+        assert v[0] == pd.Period("2000", freq="D")
+        assert "Period('2000-01-01', 'D')" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
     def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:

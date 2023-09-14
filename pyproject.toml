@@ -137,9 +137,8 @@ ignore = [
   "E731",
 ]
 select = [
-  # Pyflakes
-  "F", # Pycodestyle
-  "E",
+  "F", # Pyflakes
+  "E", # Pycodestyle
   "W", # isort
   "I", # Pyupgrade
   "UP",
