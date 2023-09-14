@@ -139,9 +139,9 @@ ignore = [
 select = [
   "F", # Pyflakes
   "E", # Pycodestyle
-  "W", # isort
-  "I", # Pyupgrade
-  "UP",
+  "W",
+  "I", # isort
+  "UP", # Pyupgrade
 ]
 
 [tool.ruff.isort]
