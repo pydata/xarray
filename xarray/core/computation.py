@@ -659,6 +659,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
+    from xarray.core.formatting import short_array_repr
     from xarray.core.variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -768,7 +769,8 @@ def apply_variable_ufunc(
         raise ValueError(
             f"applied function does not have the number of "
             f"outputs specified in the ufunc signature. "
-            f"Result is not a tuple of {signature.num_outputs} elements:\n\n{result_data}"
+            f"Result is not a tuple of {signature.num_outputs} elements:\n\n"
+            f"{short_array_repr(result_data)}"
         )
 
     objs = _all_of_type(args, Variable)
@@ -784,8 +786,8 @@ def apply_variable_ufunc(
             raise ValueError(
                 "applied function returned data with an unexpected "
                 f"number of dimensions. Received {data.ndim} dimension(s) but "
-                f"expected {len(dims)} dimensions with names: {dims!r}. The data returned "
-                f"was:\n\n{data!r}"
+                f"expected {len(dims)} dimensions with names {dims!r}, from:\n\n"
+                f"{short_array_repr(data)}"
             )
 
         var = Variable(dims, data, fastpath=True)
@@ -796,7 +798,8 @@ def apply_variable_ufunc(
                     f"changed by applied function from {dim_sizes[dim]} to {new_size}. Only "
                     "dimensions specified in ``exclude_dims`` with "
                     "xarray.apply_ufunc are allowed to change size. "
-                    "The data returned was:\n\n{data!r}"
+                    "The data returned was:\n\n"
+                    f"{short_array_repr(data)}"
                 )
 
         var.attrs = attrs
