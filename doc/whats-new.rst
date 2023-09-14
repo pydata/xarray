@@ -26,7 +26,10 @@ New Features
   different collections of coordinates prior to assign them to a Dataset or
   DataArray (:pull:`8102`) at once.
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`)
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Improved static typing of reduction methods (:pull:`6746`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
