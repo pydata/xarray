@@ -1971,24 +1971,24 @@ class ZarrBase(CFEncodedBase):
 
         # Using chunks = None should return non-chunked arrays
         open_kwargs: dict[str, Any] = {"chunks": None}
-        with pytest.warns(UserWarning, match="The specified chunks separate"):
-            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
-                for k, v in actual.variables.items():
-                    # only index variables should be in memory
-                    assert v._in_memory == (k in actual.dims)
-                    # there should be no chunks
-                    assert v.chunks is None
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                assert v._in_memory == (k in actual.dims)
+                # there should be no chunks
+                assert v.chunks is None
 
         # uniform arrays
         for i in range(2, 6):
             rechunked = original.chunk(chunks=i)
             open_kwargs = {"chunks": i}
-            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
-                for k, v in actual.variables.items():
-                    # only index variables should be in memory
-                    assert v._in_memory == (k in actual.dims)
-                    # chunk size should be the same as rechunked
-                    assert v.chunks == rechunked[k].chunks
+            with pytest.warns(UserWarning, match="The specified chunks separate"):
+                with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+                    for k, v in actual.variables.items():
+                        # only index variables should be in memory
+                        assert v._in_memory == (k in actual.dims)
+                        # chunk size should be the same as rechunked
+                        assert v.chunks == rechunked[k].chunks
 
         chunks = {"dim1": 2, "dim2": 3, "dim3": 5}
         rechunked = original.chunk(chunks=chunks)
@@ -1997,17 +1997,18 @@ class ZarrBase(CFEncodedBase):
             "chunks": chunks,
             "backend_kwargs": {"overwrite_encoded_chunks": True},
         }
-        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
-            for k, v in actual.variables.items():
-                assert v.chunks == rechunked[k].chunks
-
-            with self.roundtrip(actual) as auto:
-                # encoding should have changed
+        with pytest.warns(UserWarning, match="The specified chunks separate"):
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
                 for k, v in actual.variables.items():
                     assert v.chunks == rechunked[k].chunks
 
-                assert_identical(actual, auto)
-                assert_identical(actual.load(), auto.load())
+                with self.roundtrip(actual) as auto:
+                    # encoding should have changed
+                    for k, v in actual.variables.items():
+                        assert v.chunks == rechunked[k].chunks
+
+                    assert_identical(actual, auto)
+                    assert_identical(actual.load(), auto.load())
 
     @requires_dask
     def test_warning_on_bad_chunks(self) -> None:
