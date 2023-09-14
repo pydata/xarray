@@ -77,7 +77,7 @@ Internal Changes
 
 - Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
-- Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution (:pull:`7827`).
+- Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution in arrays that contain missing values (:pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2023.08.0:
