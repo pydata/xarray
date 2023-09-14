@@ -350,7 +350,7 @@ def assert_and_return_exact_match(all_keys):
         if keys != first_keys:
             raise ValueError(
                 "exact match required for all data variable names, "
-                f"but {keys!r} != {first_keys!r}"
+                f"but {list(keys)} != {list(first_keys)}: {set(keys) ^ set(first_keys)} are not in both."
             )
     return first_keys
 
@@ -399,6 +399,24 @@ def _unpack_dict_tuples(
     return out
 
 
+def _check_core_dims(signature, variable_args, name):
+    for core_dims, variable_arg in zip(signature.input_core_dims, variable_args):
+        # Check whether all the dims are on the variable. Note that we need the
+        # `hasattr` to check for a dims property, to protect against the case where
+        # a numpy array is passed in.
+        if hasattr(variable_arg, "dims") and set(core_dims) - set(variable_arg.dims):
+            # Slightly awkward design, of returning the error message. But we want to
+            # give a detailed error message, which requires inspecting the variable in
+            # the inner loop.
+            return (
+                f"Missing core dimension(s) {set(core_dims) - set(variable_arg.dims)} on `{name}`. "
+                "Either add the core dimension, or set `missing_core_dim` to `copy` or `drop`. "
+                "The object:"
+                f"\n\n{variable_arg}"
+            )
+    return True
+
+
 def apply_dict_of_variables_vfunc(
     func,
     *args,
@@ -416,35 +434,20 @@ def apply_dict_of_variables_vfunc(
 
     result_vars = {}
     for name, variable_args in zip(names, grouped_by_name):
-        for core_dims, variable_arg in zip(signature.input_core_dims, variable_args):
-            # (if there's a more elegant way to do this than using a temporary, that'd
-            # be nice. But we need to have context of the specific object failing in
-            # order to produce a good error message; and need to copy the variable if
-            # necessary, skipping the intended evaluation of `func`.)
-            all_vars_have_all_core_dims = True
-            # Check whether all the dims are on the variable. Note that we need the
-            # `hasattr` to check for a dims property, to protect against the case where
-            # a numpy array is passed in.
-            if hasattr(variable_arg, "dims") and set(core_dims) - set(
-                variable_arg.dims
-            ):
-                if missing_core_dim == "raise":
-                    raise ValueError(
-                        f"Missing core dimension(s) {set(core_dims) - set(variable_arg.dims)} on `{name}` (object below). "
-                        "Either add the core dimension, or set `missing_core_dim` to `copy` or `drop`."
-                        f"\n\n{variable_arg}"
-                    )
-                elif missing_core_dim == "copy":
-                    result_vars[name] = variable_args[0]
-                    all_vars_have_all_core_dims = False
-                elif missing_core_dim == "drop":
-                    all_vars_have_all_core_dims = False
-                else:
-                    raise ValueError(
-                        f"Invalid value for `missing_core_dim`: {missing_core_dim!r}"
-                    )
-        if all_vars_have_all_core_dims:
+        core_dim_check = _check_core_dims(signature, variable_args, name)
+        if core_dim_check is True:
             result_vars[name] = func(*variable_args)
+        else:
+            if missing_core_dim == "raise":
+                raise ValueError(core_dim_check)
+            elif missing_core_dim == "copy":
+                result_vars[name] = variable_args[0]
+            elif missing_core_dim == "drop":
+                pass
+            else:
+                raise ValueError(
+                    f"Invalid value for `missing_core_dim`: {missing_core_dim!r}"
+                )
 
     if signature.num_outputs > 1:
         return _unpack_dict_tuples(result_vars, signature.num_outputs)
@@ -637,17 +640,9 @@ def broadcast_compat_data(
         return data
 
     set_old_dims = set(old_dims)
-    missing_core_dims = [d for d in core_dims if d not in set_old_dims]
-    if missing_core_dims:
-        raise ValueError(
-            "operand to apply_ufunc has required core dimensions {}, but "
-            "some of these dimensions are absent on an input variable: {}".format(
-                list(core_dims), missing_core_dims
-            )
-        )
-
     set_new_dims = set(new_dims)
     unexpected_dims = [d for d in old_dims if d not in set_new_dims]
+
     if unexpected_dims:
         raise ValueError(
             "operand to apply_ufunc encountered unexpected "

@@ -300,7 +300,7 @@ def test_apply_missing_dims() -> None:
 
     def sum_add(a, b, core_dims, missing_core_dim):
         return apply_ufunc(
-            lambda a, b: a.sum() + b.sum(),
+            lambda a, b, axis=None: a.sum(axis) + b.sum(axis),
             a,
             b,
             input_core_dims=core_dims,
@@ -362,17 +362,59 @@ def test_apply_missing_dims() -> None:
         ds[["x_z"]],
     )
 
-    # TODO: need to add tests for passing in datasets with multiple vars
-    # ## Multiple vars per arg
-    # assert_identical(
-    #     sum_add(
-    #         ds,
-    #         ds,
-    #         core_dims=[["x", "z"], ["x", "y"]],
-    #         missing_core_dim="drop",
-    #     ),
-    #     ds,
-    # )
+    ## Multiple vars per arg
+    assert_identical(
+        sum_add(
+            ds[["x_y", "x_y"]],
+            ds[["x_y", "x_y"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            missing_core_dim="raise",
+        ),
+        ds[["x_y", "x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            ds,
+            ds,
+            core_dims=[["x", "y"], ["x", "y"]],
+            missing_core_dim="drop",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            # The first one has the wrong dims — using `z` for the `x_t` var
+            ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
+            ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            missing_core_dim="drop",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
+            # The second one has the wrong dims — using `z` for the `x_t` var (seems
+            # duplicative but this was a bug in the initial impl...)
+            ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            missing_core_dim="drop",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
+            ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            missing_core_dim="copy",
+        ),
+        ds.drop_vars("x_z").assign(x_y=30, x_t=ds["x_y"]),
+    )
 
 
 @requires_dask
