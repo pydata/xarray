@@ -186,7 +186,7 @@ def _prepare_plot1d_data(
     # dimensions so the plotter can plot anything:
     if darray.ndim > 1:
         # When stacking dims the lines will continue connecting. For floats
-        # this can be solved by adding a nan element inbetween the flattening
+        # this can be solved by adding a nan element in between the flattening
         # points:
         dims_T = []
         if np.issubdtype(darray.dtype, np.floating):
@@ -486,8 +486,8 @@ def line(
     if ndims > 2:
         raise ValueError(
             "Line plots are for 1- or 2-dimensional DataArrays. "
-            "Passed DataArray has {ndims} "
-            "dimensions".format(ndims=ndims)
+            f"Passed DataArray has {ndims} "
+            "dimensions"
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
@@ -789,7 +789,7 @@ def _plot1d(plotfunc):
         be either ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging
         dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a
@@ -1325,7 +1325,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a

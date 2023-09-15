@@ -22,6 +22,7 @@
    Coordinates.to_dataset
    Coordinates.to_index
    Coordinates.update
+   Coordinates.assign
    Coordinates.merge
    Coordinates.copy
    Coordinates.equals
@@ -39,8 +40,9 @@
    core.coordinates.DatasetCoordinates.to_dataset
    core.coordinates.DatasetCoordinates.to_index
    core.coordinates.DatasetCoordinates.update
+   core.coordinates.DatasetCoordinates.assign
    core.coordinates.DatasetCoordinates.merge
-   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DatasetCoordinates.copy
    core.coordinates.DatasetCoordinates.equals
    core.coordinates.DatasetCoordinates.identical
 
@@ -79,6 +81,7 @@
    core.coordinates.DataArrayCoordinates.to_dataset
    core.coordinates.DataArrayCoordinates.to_index
    core.coordinates.DataArrayCoordinates.update
+   core.coordinates.DataArrayCoordinates.assign
    core.coordinates.DataArrayCoordinates.merge
    core.coordinates.DataArrayCoordinates.copy
    core.coordinates.DataArrayCoordinates.equals

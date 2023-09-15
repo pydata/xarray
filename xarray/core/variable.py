@@ -7,6 +7,7 @@ import numbers
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
 
 import numpy as np
@@ -565,7 +566,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._dims, self.data, self._attrs))
+        return normalize_token((type(self), self._dims, self.data, self.attrs))
 
     def __dask_graph__(self):
         if is_duck_dask_array(self._data):
@@ -758,18 +759,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     if k.ndim > 1:
                         raise IndexError(
                             "Unlabeled multi-dimensional array cannot be "
-                            "used for indexing: {}".format(k)
+                            f"used for indexing: {k}"
                         )
                 if k.dtype.kind == "b":
                     if self.shape[self.get_axis_num(dim)] != len(k):
                         raise IndexError(
-                            "Boolean array size {:d} is used to index array "
-                            "with shape {:s}.".format(len(k), str(self.shape))
+                            f"Boolean array size {len(k):d} is used to index array "
+                            f"with shape {str(self.shape):s}."
                         )
                     if k.ndim > 1:
                         raise IndexError(
-                            "{}-dimensional boolean indexing is "
-                            "not supported. ".format(k.ndim)
+                            f"{k.ndim}-dimensional boolean indexing is "
+                            "not supported. "
                         )
                     if is_duck_dask_array(k.data):
                         raise KeyError(
@@ -782,9 +783,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
                             "same dimension to the indexed array. Indexer is "
-                            "on {:s} but the target dimension is {:s}.".format(
-                                str(k.dims), dim
-                            )
+                            f"on {str(k.dims):s} but the target dimension is {dim:s}."
                         )
 
     def _broadcast_indexes_outer(self, key):
@@ -1836,15 +1835,20 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
+        create_template: Callable
         if fill_value is dtypes.NA:
             is_missing_values = math.prod(new_shape) > math.prod(self.shape)
             if is_missing_values:
                 dtype, fill_value = dtypes.maybe_promote(self.dtype)
+
+                create_template = partial(np.full_like, fill_value=fill_value)
             else:
                 dtype = self.dtype
                 fill_value = dtypes.get_fill_value(dtype)
+                create_template = np.empty_like
         else:
             dtype = self.dtype
+            create_template = partial(np.full_like, fill_value=fill_value)
 
         if sparse:
             # unstacking a dense multitindexed array to a sparse array
@@ -1867,12 +1871,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             )
 
         else:
-            data = np.full_like(
-                self.data,
-                fill_value=fill_value,
-                shape=new_shape,
-                dtype=dtype,
-            )
+            data = create_template(self.data, shape=new_shape, dtype=dtype)
 
             # Indexer is a list of lists of locations. Each list is the locations
             # on the new dimension. This is robust to the data being sparse; in that
@@ -2118,7 +2117,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             for var in variables:
                 if var.dims != first_var_dims:
                     raise ValueError(
-                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var_dims)}"
+                        f"Variable has dimensions {tuple(var.dims)} but first Variable has dimensions {tuple(first_var_dims)}"
                     )
 
         return cls(dims, data, attrs, encoding, fastpath=True)
@@ -2549,8 +2548,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
-                    "{} is invalid for boundary. Valid option is 'exact', "
-                    "'trim' and 'pad'".format(boundary[d])
+                    f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
+                    "'trim' and 'pad'"
                 )
 
         shape = []

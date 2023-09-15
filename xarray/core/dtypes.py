@@ -40,7 +40,7 @@ NINF = AlwaysLessThan()
 PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
     (np.number, np.character),  # numpy promotes to character
     (np.bool_, np.character),  # numpy promotes to character
-    (np.bytes_, np.unicode_),  # numpy promotes to unicode
+    (np.bytes_, np.str_),  # numpy promotes to unicode
 )
 
 

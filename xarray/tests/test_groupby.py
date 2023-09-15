@@ -232,11 +232,11 @@ def test_da_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     array = xr.DataArray(
-        data=[np.NaN, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+        data=[np.nan, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
         actual = array.groupby("x").quantile(0.5, skipna=skipna)
@@ -346,12 +346,12 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     ds = xr.Dataset(
-        data_vars={"a": ("x", [np.NaN, 2, 3, 4, 5, 6])},
+        data_vars={"a": ("x", [np.nan, 2, 3, 4, 5, 6])},
         coords={"x": [1, 1, 1, 2, 2, 2]},
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.Dataset(
             data_vars={"a": ("x", e)}, coords={"quantile": 0.5, "x": [1, 2]}
@@ -728,7 +728,7 @@ def test_groupby_dataset_iter() -> None:
 def test_groupby_dataset_errors() -> None:
     data = create_test_data()
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(np.arange(10))
+        data.groupby(np.arange(10))  # type: ignore[arg-type,unused-ignore]
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
