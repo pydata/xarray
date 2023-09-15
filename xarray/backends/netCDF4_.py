@@ -321,6 +321,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         "_group",
         "_manager",
         "_mode",
+        "enum_map",
     )
 
     def __init__(
@@ -348,6 +349,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
+        self.enum_map = {}
 
     @classmethod
     def open(
@@ -412,21 +414,23 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         dimensions = var.dimensions
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
-
-        enum_meaning = None
+        encoding = {}
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
+        enum_dict = None
         enum_name = None
         if isinstance(var.datatype, netCDF4.EnumType):
-            enum_meaning = var.datatype.enum_dict
+            enum_dict = var.datatype.enum_dict
             enum_name = var.datatype.name
-            attributes["enum_name"] = enum_name
-            attributes["enum_meaning"] = enum_meaning
-        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
-        # if enum_meaning is not None:
-        #     data.array.replace_mask(mask=mask, replacing_value=fill_value)
-
+            encoding["enum"] = enum_name
+            attributes["flag_values"] = enum_dict.key()
+            attributes["flag_meanings"] = enum_dict.values()
+            if self.enum_map.get("enum_name") is None: 
+                self.enum_map["enum_name"] = [name]
+            else:
+                self.enum_map["enum_name"].append(name)
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
-        encoding = {}
+        
         filters = var.filters()
         if filters is not None:
             encoding.update(filters)
@@ -493,39 +497,34 @@ class NetCDF4DataStore(WritableCFDataStore):
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
         _ensure_no_forward_slash_in_name(name)
-
-        datatype = _get_datatype(
-            variable, self.format, raise_on_invalid_encoding=check_encoding
-        )
         attrs = variable.attrs.copy()
-
         fill_value = attrs.pop("_FillValue", None)
-
-        if datatype is str and fill_value is not None:
-            raise NotImplementedError(
-                "netCDF4 does not yet support setting a fill value for "
-                "variable-length strings "
-                "(https://github.com/Unidata/netcdf4-python/issues/730). "
-                f"Either remove '_FillValue' from encoding on variable {name!r} "
-                "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type."
-            )
-
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
-
-        enum = None
-        if attrs.get("enum_meaning") is not None:
-            enum = self.ds.createEnumType(
+        if encoding.get("enum") is not None:
+            enum_dict = {k:v for k,v in zip(attrs["flag_values"], attrs["flag_meanings"])}
+            datatype = self.ds.createEnumType(
                 variable.dtype,
-                attrs["enum_name"],
-                attrs["enum_meaning"],
+                encoding["enum"],
+                enum_dict,
             )
-            datatype = enum
-            del attrs["enum_name"]
-            del attrs["enum_meaning"]
-            fill_value = None
+            del attrs["flag_values"]
+            del attrs["flag_meanings"]
+        else:
+            datatype = _get_datatype(
+            variable, self.format, raise_on_invalid_encoding=check_encoding
+            )
+            if datatype is str and fill_value is not None:
+                raise NotImplementedError(
+                    "netCDF4 does not yet support setting a fill value for "
+                    "variable-length strings "
+                    "(https://github.com/Unidata/netcdf4-python/issues/730). "
+                    f"Either remove '_FillValue' from encoding on variable {name!r} "
+                    "or set {'dtype': 'S1'} in encoding to use the fixed width "
+                    "NC_CHAR type."
+                )
+
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
