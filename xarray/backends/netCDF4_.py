@@ -256,6 +256,7 @@ def _extract_nc4_variable_encoding(
         "_FillValue",
         "dtype",
         "compression",
+        "enum",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
@@ -420,8 +421,8 @@ class NetCDF4DataStore(WritableCFDataStore):
             enum_dict = var.datatype.enum_dict
             enum_name = var.datatype.name
             encoding["enum"] = enum_name
-            attributes["flag_values"] = enum_dict.key()
-            attributes["flag_meanings"] = enum_dict.values()
+            attributes["flag_values"] = tuple(enum_dict.keys())
+            attributes["flag_meanings"] = tuple(enum_dict.values())
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
 
