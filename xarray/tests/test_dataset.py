@@ -410,6 +410,7 @@ class TestDataset:
         class Array:
             def __init__(self):
                 self.shape = (2,)
+                self.ndim = 1
                 self.dtype = np.dtype(np.float64)
 
             def __array_function__(self, *args, **kwargs):
