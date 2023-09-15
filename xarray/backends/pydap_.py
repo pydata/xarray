@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
-from packaging.version import Version
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -19,9 +21,14 @@ from xarray.core.utils import (
     close_on_error,
     is_dict_like,
     is_remote_uri,
-    module_available,
 )
 from xarray.core.variable import Variable
+
+if TYPE_CHECKING:
+    import os
+    from io import BufferedIOBase
+
+    from xarray.core.dataset import Dataset
 
 
 class PydapArrayWrapper(BackendArray):
@@ -46,6 +53,7 @@ class PydapArrayWrapper(BackendArray):
         # downloading coordinate data twice
         array = getattr(self.array, "array", self.array)
         result = robust_getitem(array, key, catch=ValueError)
+        result = np.asarray(result)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
         if result.ndim + len(axis) != array.ndim and axis:
@@ -114,11 +122,10 @@ class PydapDataStore(AbstractDataStore):
             "output_grid": output_grid or True,
             "timeout": timeout,
         }
-        if Version(pydap.lib.__version__) >= Version("3.3.0"):
-            if verify is not None:
-                kwargs.update({"verify": verify})
-            if user_charset is not None:
-                kwargs.update({"user_charset": user_charset})
+        if verify is not None:
+            kwargs.update({"verify": verify})
+        if user_charset is not None:
+            kwargs.update({"user_charset": user_charset})
         ds = pydap.client.open_url(**kwargs)
         return cls(ds)
 
@@ -154,21 +161,24 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     backends.PydapDataStore
     """
 
-    available = module_available("pydap")
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
-    def open_dataset(
+    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
         self,
-        filename_or_obj,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        *,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
         decode_coords=True,
-        drop_variables=None,
+        drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         application=None,
@@ -177,7 +187,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         timeout=None,
         verify=None,
         user_charset=None,
-    ):
+    ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
             application=application,
@@ -203,4 +213,4 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             return ds
 
 
-BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint
+BACKEND_ENTRYPOINTS["pydap"] = ("pydap", PydapBackendEntrypoint)

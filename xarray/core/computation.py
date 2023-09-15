@@ -8,17 +8,8 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import (
-    TYPE_CHECKING,
-    AbstractSet,
-    Any,
-    Callable,
-    Literal,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, overload
 
 import numpy as np
 
@@ -29,7 +20,8 @@ from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.parallelcompat import get_chunked_array_type
+from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar
 from xarray.core.variable import Variable
@@ -211,7 +203,7 @@ def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
 def build_output_coords_and_indexes(
     args: Iterable[Any],
     signature: _UFuncSignature,
-    exclude_dims: AbstractSet = frozenset(),
+    exclude_dims: Set = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
@@ -524,15 +516,16 @@ def apply_groupby_func(func, *args):
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
     assert groupbys, "must have at least one groupby to iterate over"
     first_groupby = groupbys[0]
-    if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
+    (grouper,) = first_groupby.groupers
+    if any(not grouper.group.equals(gb.groupers[0].group) for gb in groupbys[1:]):
         raise ValueError(
             "apply_ufunc can only perform operations over "
             "multiple GroupBy objects at once if they are all "
             "grouped the same way"
         )
 
-    grouped_dim = first_groupby._group.name
-    unique_values = first_groupby._unique_coord.values
+    grouped_dim = grouper.name
+    unique_values = grouper.unique_coord.values
 
     iterators = []
     for arg in args:
@@ -561,7 +554,7 @@ def apply_groupby_func(func, *args):
 
 
 def unified_dim_sizes(
-    variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
+    variables: Iterable[Variable], exclude_dims: Set = frozenset()
 ) -> dict[Hashable, int]:
     dim_sizes: dict[Hashable, int] = {}
 
@@ -666,6 +659,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
+    from xarray.core.formatting import short_array_repr
     from xarray.core.variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -683,16 +677,18 @@ def apply_variable_ufunc(
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
-    if any(is_duck_dask_array(array) for array in input_data):
+    if any(is_chunked_array(array) for array in input_data):
         if dask == "forbidden":
             raise ValueError(
-                "apply_ufunc encountered a dask array on an "
-                "argument, but handling for dask arrays has not "
+                "apply_ufunc encountered a chunked array on an "
+                "argument, but handling for chunked arrays has not "
                 "been enabled. Either set the ``dask`` argument "
                 "or load your data into memory first with "
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
+            chunkmanager = get_chunked_array_type(*input_data)
+
             numpy_func = func
 
             if dask_gufunc_kwargs is None:
@@ -705,7 +701,7 @@ def apply_variable_ufunc(
                 for n, (data, core_dims) in enumerate(
                     zip(input_data, signature.input_core_dims)
                 ):
-                    if is_duck_dask_array(data):
+                    if is_chunked_array(data):
                         # core dimensions cannot span multiple chunks
                         for axis, dim in enumerate(core_dims, start=-len(core_dims)):
                             if len(data.chunks[axis]) != 1:
@@ -713,7 +709,7 @@ def apply_variable_ufunc(
                                     f"dimension {dim} on {n}th function argument to "
                                     "apply_ufunc with dask='parallelized' consists of "
                                     "multiple chunks, but is also a core dimension. To "
-                                    "fix, either rechunk into a single dask array chunk along "
+                                    "fix, either rechunk into a single array chunk along "
                                     f"this dimension, i.e., ``.chunk(dict({dim}=-1))``, or "
                                     "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
                                     "but beware that this may significantly increase memory usage."
@@ -740,9 +736,7 @@ def apply_variable_ufunc(
                     )
 
             def func(*arrays):
-                import dask.array as da
-
-                res = da.apply_gufunc(
+                res = chunkmanager.apply_gufunc(
                     numpy_func,
                     signature.to_gufunc_string(exclude_dims),
                     *arrays,
@@ -757,8 +751,7 @@ def apply_variable_ufunc(
             pass
         else:
             raise ValueError(
-                "unknown setting for dask array handling in "
-                "apply_ufunc: {}".format(dask)
+                "unknown setting for chunked array handling in " f"apply_ufunc: {dask}"
             )
     else:
         if vectorize:
@@ -774,11 +767,10 @@ def apply_variable_ufunc(
         not isinstance(result_data, tuple) or len(result_data) != signature.num_outputs
     ):
         raise ValueError(
-            "applied function does not have the number of "
-            "outputs specified in the ufunc signature. "
-            "Result is not a tuple of {} elements: {!r}".format(
-                signature.num_outputs, result_data
-            )
+            f"applied function does not have the number of "
+            f"outputs specified in the ufunc signature. "
+            f"Result is not a tuple of {signature.num_outputs} elements:\n\n"
+            f"{short_array_repr(result_data)}"
         )
 
     objs = _all_of_type(args, Variable)
@@ -792,21 +784,22 @@ def apply_variable_ufunc(
         data = as_compatible_data(data)
         if data.ndim != len(dims):
             raise ValueError(
-                "applied function returned data with unexpected "
+                "applied function returned data with an unexpected "
                 f"number of dimensions. Received {data.ndim} dimension(s) but "
-                f"expected {len(dims)} dimensions with names: {dims!r}"
+                f"expected {len(dims)} dimensions with names {dims!r}, from:\n\n"
+                f"{short_array_repr(data)}"
             )
 
         var = Variable(dims, data, fastpath=True)
         for dim, new_size in var.sizes.items():
             if dim in dim_sizes and new_size != dim_sizes[dim]:
                 raise ValueError(
-                    "size of dimension {!r} on inputs was unexpectedly "
-                    "changed by applied function from {} to {}. Only "
+                    f"size of dimension '{dim}' on inputs was unexpectedly "
+                    f"changed by applied function from {dim_sizes[dim]} to {new_size}. Only "
                     "dimensions specified in ``exclude_dims`` with "
-                    "xarray.apply_ufunc are allowed to change size.".format(
-                        dim, dim_sizes[dim], new_size
-                    )
+                    "xarray.apply_ufunc are allowed to change size. "
+                    "The data returned was:\n\n"
+                    f"{short_array_repr(data)}"
                 )
 
         var.attrs = attrs
@@ -820,7 +813,7 @@ def apply_variable_ufunc(
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
-    if any(is_duck_dask_array(arg) for arg in args):
+    if any(is_chunked_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -846,7 +839,7 @@ def apply_ufunc(
     *args: Any,
     input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
-    exclude_dims: AbstractSet = frozenset(),
+    exclude_dims: Set = frozenset(),
     vectorize: bool = False,
     join: JoinOptions = "exact",
     dataset_join: str = "exact",
@@ -1294,7 +1287,7 @@ def cov(
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray is supported."
-            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+            f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
 
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
@@ -1372,7 +1365,7 @@ def corr(da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None) -> T_DataArray:
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray is supported."
-            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+            f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
 
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
@@ -1410,14 +1403,14 @@ def _cov_corr(
     ) / (valid_count)
 
     if method == "cov":
-        return cov  # type: ignore[return-value]
+        return cov
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr  # type: ignore[return-value]
+        return corr
 
 
 def cross(
@@ -1715,7 +1708,7 @@ def dot(
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
-            "Given {}.".format([type(arr) for arr in arrays])
+            f"Given {[type(arr) for arr in arrays]}."
         )
 
     if len(arrays) == 0:
@@ -1968,7 +1961,7 @@ def polyval(
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."
         )
-    if not np.issubdtype(coeffs[degree_dim].dtype, int):
+    if not np.issubdtype(coeffs[degree_dim].dtype, np.integer):
         raise ValueError(
             f"Dimension `{degree_dim}` should be of integer dtype. Received {coeffs[degree_dim].dtype} instead."
         )
@@ -2021,7 +2014,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
             )
         elif x.dtype.kind == "m":
             # timedeltas
-            return x.astype(float)
+            return duck_array_ops.astype(x, dtype=float)
         return x
 
     if isinstance(data, Dataset):
@@ -2054,9 +2047,13 @@ def _calc_idxminmax(
         raise ValueError("Must supply 'dim' argument for multidimensional arrays")
 
     if dim not in array.dims:
-        raise KeyError(f'Dimension "{dim}" not in dimension')
+        raise KeyError(
+            f"Dimension {dim!r} not found in array dimensions {array.dims!r}"
+        )
     if dim not in array.coords:
-        raise KeyError(f'Dimension "{dim}" does not have coordinates')
+        raise KeyError(
+            f"Dimension {dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
+        )
 
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"
@@ -2069,12 +2066,11 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
-    # Handle dask arrays.
-    if is_duck_dask_array(array.data):
-        import dask.array
-
+    # Handle chunked arrays (e.g. dask).
+    if is_chunked_array(array.data):
+        chunkmanager = get_chunked_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
-        dask_coord = dask.array.from_array(array[dim].data, chunks=chunks[dim])
+        dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
         res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
         # we need to attach back the dim name
         res.name = dim
@@ -2161,16 +2157,14 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     if not unify_chunks_args:
         return objects
 
-    # Run dask.array.core.unify_chunks
-    from dask.array.core import unify_chunks
-
-    _, dask_data = unify_chunks(*unify_chunks_args)
-    dask_data_iter = iter(dask_data)
+    chunkmanager = get_chunked_array_type(*[arg for arg in unify_chunks_args])
+    _, chunked_data = chunkmanager.unify_chunks(*unify_chunks_args)
+    chunked_data_iter = iter(chunked_data)
     out: list[Dataset | DataArray] = []
     for obj, ds in zip(objects, datasets):
         for k, v in ds._variables.items():
             if v.chunks is not None:
-                ds._variables[k] = v.copy(data=next(dask_data_iter))
+                ds._variables[k] = v.copy(data=next(chunked_data_iter))
         out.append(obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds)
 
     return tuple(out)

@@ -1666,7 +1666,10 @@ def test_output_wrong_number() -> None:
     def tuple3x(x):
         return (x, x, x)
 
-    with pytest.raises(ValueError, match=r"number of outputs"):
+    with pytest.raises(
+        ValueError,
+        match=r"number of outputs.*Result is not a tuple of 2 elements:\n\narray\(\[0",
+    ):
         apply_ufunc(identity, variable, output_core_dims=[(), ()])
 
     with pytest.raises(ValueError, match=r"number of outputs"):
@@ -1682,7 +1685,10 @@ def test_output_wrong_dims() -> None:
     def remove_dim(x):
         return x[..., 0]
 
-    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
+    with pytest.raises(
+        ValueError,
+        match=r"unexpected number of dimensions.*from:\n\n.*array\(\[\[0",
+    ):
         apply_ufunc(add_dim, variable, output_core_dims=[("y", "z")])
 
     with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
@@ -2091,6 +2097,36 @@ def test_where_attrs() -> None:
             xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
             xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
             id="timedelta",
+        ),
+        pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray(
+                [2, 3, 4],
+                dims="degree",
+                coords={"degree": np.array([0, 1, 2], dtype=np.int64)},
+            ),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            id="int64-degree",
+        ),
+        pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray(
+                [2, 3, 4],
+                dims="degree",
+                coords={"degree": np.array([0, 1, 2], dtype=np.int32)},
+            ),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            id="int32-degree",
+        ),
+        pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray(
+                [2, 3, 4],
+                dims="degree",
+                coords={"degree": np.array([0, 1, 2], dtype=np.uint8)},
+            ),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            id="uint8-degree",
         ),
     ],
 )

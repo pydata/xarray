@@ -57,7 +57,12 @@ from xarray.coding.times import (
     format_cftime_datetime,
 )
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
-from xarray.core.pdcompat import NoDefault, count_not_none, no_default
+from xarray.core.pdcompat import (
+    NoDefault,
+    count_not_none,
+    nanosecond_precision_timestamp,
+    no_default,
+)
 from xarray.core.utils import emit_user_level_warning
 
 try:
@@ -100,7 +105,7 @@ class BaseCFTimeOffset:
         if not isinstance(n, int):
             raise TypeError(
                 "The provided multiple 'n' must be an integer. "
-                "Instead a value of type {!r} was provided.".format(type(n))
+                f"Instead a value of type {type(n)!r} was provided."
             )
         self.n = n
 
@@ -348,13 +353,13 @@ def _validate_month(month, default_month):
         raise TypeError(
             "'self.month' must be an integer value between 1 "
             "and 12.  Instead, it was set to a value of "
-            "{!r}".format(result_month)
+            f"{result_month!r}"
         )
     elif not (1 <= result_month <= 12):
         raise ValueError(
             "'self.month' must be an integer value between 1 "
             "and 12.  Instead, it was set to a value of "
-            "{!r}".format(result_month)
+            f"{result_month!r}"
         )
     return result_month
 
@@ -766,7 +771,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
         raise TypeError(
             "date_str_or_date must be a string or a "
             "subclass of cftime.datetime. Instead got "
-            "{!r}.".format(date_str_or_date)
+            f"{date_str_or_date!r}."
         )
 
 
@@ -1267,7 +1272,7 @@ def date_range_like(source, calendar, use_cftime=None):
     if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
         isinstance(source, DataArray)
         and (source.ndim != 1)
-        or not _contains_datetime_like_objects(source)
+        or not _contains_datetime_like_objects(source.variable)
     ):
         raise ValueError(
             "'source' must be a 1D array of datetime objects for inferring its range."
@@ -1286,8 +1291,10 @@ def date_range_like(source, calendar, use_cftime=None):
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
-        source_start = pd.Timestamp(source_start)
-        source_end = pd.Timestamp(source_end)
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
+        source_start = nanosecond_precision_timestamp(source_start)
+        source_end = nanosecond_precision_timestamp(source_end)
     else:
         if isinstance(source, CFTimeIndex):
             source_calendar = source.calendar

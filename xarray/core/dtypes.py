@@ -37,11 +37,11 @@ NINF = AlwaysLessThan()
 # instead of following NumPy's own type-promotion rules. These type promotion
 # rules match pandas instead. For reference, see the NumPy type hierarchy:
 # https://numpy.org/doc/stable/reference/arrays.scalars.html
-PROMOTE_TO_OBJECT = [
-    {np.number, np.character},  # numpy promotes to character
-    {np.bool_, np.character},  # numpy promotes to character
-    {np.bytes_, np.unicode_},  # numpy promotes to unicode
-]
+PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
+    (np.number, np.character),  # numpy promotes to character
+    (np.bool_, np.character),  # numpy promotes to character
+    (np.bytes_, np.str_),  # numpy promotes to unicode
+)
 
 
 def maybe_promote(dtype):
@@ -74,7 +74,10 @@ def maybe_promote(dtype):
     else:
         dtype = object
         fill_value = np.nan
-    return np.dtype(dtype), fill_value
+
+    dtype = np.dtype(dtype)
+    fill_value = dtype.type(fill_value)
+    return dtype, fill_value
 
 
 NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
@@ -156,7 +159,9 @@ def is_datetime_like(dtype):
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def result_type(*arrays_and_dtypes):
+def result_type(
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:

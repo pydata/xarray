@@ -48,7 +48,11 @@ class TestOps:
     def setUp(self):
         self.x = array(
             [
-                [[nan, nan, 2.0, nan], [nan, 5.0, 6.0, nan], [8.0, 9.0, 10.0, nan]],
+                [
+                    [nan, nan, 2.0, nan],
+                    [nan, 5.0, 6.0, nan],
+                    [8.0, 9.0, 10.0, nan],
+                ],
                 [
                     [nan, 13.0, 14.0, 15.0],
                     [nan, 17.0, 18.0, nan],
@@ -126,6 +130,29 @@ class TestOps:
     @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
+
+
+@requires_dask
+class TestDaskOps(TestOps):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        import dask.array
+
+        self.x = dask.array.from_array(
+            [
+                [
+                    [nan, nan, 2.0, nan],
+                    [nan, 5.0, 6.0, nan],
+                    [8.0, 9.0, 10.0, nan],
+                ],
+                [
+                    [nan, 13.0, 14.0, 15.0],
+                    [nan, 17.0, 18.0, nan],
+                    [nan, 21.0, nan, nan],
+                ],
+            ],
+            chunks=(2, 1, 2),
+        )
 
 
 def test_cumsum_1d():

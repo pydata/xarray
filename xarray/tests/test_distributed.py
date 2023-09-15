@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
-from packaging.version import Version
 
 if TYPE_CHECKING:
     import dask
@@ -35,17 +34,13 @@ from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
     has_scipy,
-    requires_cfgrib,
     requires_cftime,
     requires_netCDF4,
-    requires_rasterio,
     requires_zarr,
 )
 from xarray.tests.test_backends import (
     ON_WINDOWS,
     create_tmp_file,
-    create_tmp_geotiff,
-    open_example_dataset,
 )
 from xarray.tests.test_dataset import create_test_data
 
@@ -198,36 +193,6 @@ def test_dask_distributed_zarr_integration_test(
                     assert_allclose(original, computed)
 
 
-@requires_rasterio
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_rasterio_integration_test(loop) -> None:
-    with create_tmp_geotiff() as (tmp_file, expected):
-        with cluster() as (s, [a, b]):
-            with pytest.warns(DeprecationWarning), Client(s["address"], loop=loop):
-                da_tiff = xr.open_rasterio(tmp_file, chunks={"band": 1})
-                assert isinstance(da_tiff.data, da.Array)
-                actual = da_tiff.compute()
-                assert_allclose(actual, expected)
-
-
-@requires_cfgrib
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_dask_distributed_cfgrib_integration_test(loop) -> None:
-    with cluster() as (s, [a, b]):
-        with Client(s["address"], loop=loop):
-            with open_example_dataset(
-                "example.grib", engine="cfgrib", chunks={"time": 1}
-            ) as ds:
-                with open_example_dataset("example.grib", engine="cfgrib") as expected:
-                    assert isinstance(ds["t"].data, da.Array)
-                    actual = ds.compute()
-                    assert_allclose(actual, expected)
-
-
-@pytest.mark.xfail(
-    condition=Version(distributed.__version__) < Version("2022.02.0"),
-    reason="https://github.com/dask/distributed/pull/5739",
-)
 @gen_cluster(client=True)
 async def test_async(c, s, a, b) -> None:
     x = create_test_data()
@@ -260,10 +225,6 @@ def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
-@pytest.mark.xfail(
-    condition=Version(distributed.__version__) < Version("2022.02.0"),
-    reason="https://github.com/dask/distributed/pull/5739",
-)
 @gen_cluster(client=True)
 async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):

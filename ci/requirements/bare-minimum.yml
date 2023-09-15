@@ -10,6 +10,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - pytest-xdist
-  - numpy=1.21
+  - pytest-timeout
+  - numpy=1.22
   - packaging=21.3
   - pandas=1.4

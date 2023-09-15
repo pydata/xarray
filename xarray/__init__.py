@@ -7,7 +7,6 @@ from xarray.backends.api import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.rasterio_ import open_rasterio
 from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -27,16 +26,19 @@ from xarray.core.computation import (
     where,
 )
 from xarray.core.concat import concat
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.extensions import (
     register_dataarray_accessor,
     register_dataset_accessor,
 )
+from xarray.core.indexes import Index
+from xarray.core.indexing import IndexSelResult
 from xarray.core.merge import Context, MergeError, merge
 from xarray.core.options import get_options, set_options
 from xarray.core.parallel import map_blocks
-from xarray.core.variable import Coordinate, IndexVariable, Variable, as_variable
+from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.util.print_versions import show_versions
 
 try:
@@ -50,7 +52,7 @@ try:
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
-    __version__ = "999"
+    __version__ = "9999"
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
@@ -85,7 +87,6 @@ __all__ = (
     "open_dataarray",
     "open_dataset",
     "open_mfdataset",
-    "open_rasterio",
     "open_zarr",
     "polyval",
     "register_dataarray_accessor",
@@ -100,8 +101,11 @@ __all__ = (
     "CFTimeIndex",
     "Context",
     "Coordinate",
+    "Coordinates",
     "DataArray",
     "Dataset",
+    "Index",
+    "IndexSelResult",
     "IndexVariable",
     "Variable",
     # Exceptions

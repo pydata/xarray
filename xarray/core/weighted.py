@@ -198,10 +198,11 @@ class Weighted(Generic[T_Xarray]):
             dims = [dim] if dim else []
         else:
             dims = list(dim)
-        missing_dims = set(dims) - set(self.obj.dims) - set(self.weights.dims)
+        all_dims = set(self.obj.dims).union(set(self.weights.dims))
+        missing_dims = set(dims) - all_dims
         if missing_dims:
             raise ValueError(
-                f"{self.__class__.__name__} does not contain the dimensions: {missing_dims}"
+                f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
             )
 
     @staticmethod
@@ -238,7 +239,10 @@ class Weighted(Generic[T_Xarray]):
         # (and not 2); GH4074
         if self.weights.dtype == bool:
             sum_of_weights = self._reduce(
-                mask, self.weights.astype(int), dim=dim, skipna=False
+                mask,
+                duck_array_ops.astype(self.weights, dtype=int),
+                dim=dim,
+                skipna=False,
             )
         else:
             sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)

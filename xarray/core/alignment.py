@@ -5,13 +5,12 @@ import operator
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, cast
 
 import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes
-from xarray.core.common import DataWithCoords
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -20,15 +19,14 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
+from xarray.core.types import T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import JoinOptions, T_DataArray, T_Dataset, T_DataWithCoords
-
-DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
+    from xarray.core.types import JoinOptions, T_DataArray, T_Dataset
 
 
 def reindex_variables(
@@ -92,7 +90,7 @@ NormalizedIndexes = dict[MatchingIndexKey, Index]
 NormalizedIndexVars = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
-class Aligner(Generic[DataAlignable]):
+class Aligner(Generic[T_Alignable]):
     """Implements all the complex logic for the re-indexing and alignment of Xarray
     objects.
 
@@ -105,8 +103,8 @@ class Aligner(Generic[DataAlignable]):
 
     """
 
-    objects: tuple[DataAlignable, ...]
-    results: tuple[DataAlignable, ...]
+    objects: tuple[T_Alignable, ...]
+    results: tuple[T_Alignable, ...]
     objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
     join: str
     exclude_dims: frozenset[Hashable]
@@ -127,7 +125,7 @@ class Aligner(Generic[DataAlignable]):
 
     def __init__(
         self,
-        objects: Iterable[DataAlignable],
+        objects: Iterable[T_Alignable],
         join: str = "inner",
         indexes: Mapping[Any, Any] | None = None,
         exclude_dims: Iterable = frozenset(),
@@ -510,7 +508,7 @@ class Aligner(Generic[DataAlignable]):
 
     def _get_indexes_and_vars(
         self,
-        obj: DataAlignable,
+        obj: T_Alignable,
         matching_indexes: dict[MatchingIndexKey, Index],
     ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
         new_indexes = {}
@@ -533,13 +531,13 @@ class Aligner(Generic[DataAlignable]):
 
     def _reindex_one(
         self,
-        obj: DataAlignable,
+        obj: T_Alignable,
         matching_indexes: dict[MatchingIndexKey, Index],
-    ) -> DataAlignable:
+    ) -> T_Alignable:
         new_indexes, new_variables = self._get_indexes_and_vars(obj, matching_indexes)
         dim_pos_indexers = self._get_dim_pos_indexers(matching_indexes)
 
-        new_obj = obj._reindex_callback(
+        return obj._reindex_callback(
             self,
             dim_pos_indexers,
             new_variables,
@@ -548,8 +546,6 @@ class Aligner(Generic[DataAlignable]):
             self.exclude_dims,
             self.exclude_vars,
         )
-        new_obj.encoding = obj.encoding
-        return new_obj
 
     def reindex_all(self) -> None:
         self.results = tuple(
@@ -574,18 +570,20 @@ class Aligner(Generic[DataAlignable]):
 
         if self.join == "override":
             self.override_indexes()
+        elif self.join == "exact" and not self.copy:
+            self.results = self.objects
         else:
             self.reindex_all()
 
 
 def align(
-    *objects: DataAlignable,
+    *objects: T_Alignable,
     join: JoinOptions = "inner",
     copy: bool = True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-) -> tuple[DataAlignable, ...]:
+) -> tuple[T_Alignable, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -799,6 +797,7 @@ def deep_align(
 
     This function is not public API.
     """
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -806,7 +805,7 @@ def deep_align(
         indexes = {}
 
     def is_alignable(obj):
-        return isinstance(obj, (DataArray, Dataset))
+        return isinstance(obj, (Coordinates, DataArray, Dataset))
 
     positions = []
     keys = []
@@ -840,7 +839,7 @@ def deep_align(
         elif raise_on_invalid:
             raise ValueError(
                 "object to align is neither an xarray.Dataset, "
-                "an xarray.DataArray nor a dictionary: {!r}".format(variables)
+                f"an xarray.DataArray nor a dictionary: {variables!r}"
             )
         else:
             out.append(variables)
@@ -864,7 +863,7 @@ def deep_align(
 
 
 def reindex(
-    obj: DataAlignable,
+    obj: T_Alignable,
     indexers: Mapping[Any, Any],
     method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
@@ -872,7 +871,7 @@ def reindex(
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
     exclude_vars: Iterable[Hashable] = frozenset(),
-) -> DataAlignable:
+) -> T_Alignable:
     """Re-index either a Dataset or a DataArray.
 
     Not public API.
@@ -903,13 +902,13 @@ def reindex(
 
 
 def reindex_like(
-    obj: DataAlignable,
+    obj: T_Alignable,
     other: Dataset | DataArray,
     method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
-) -> DataAlignable:
+) -> T_Alignable:
     """Re-index either a Dataset or a DataArray like another Dataset/DataArray.
 
     Not public API.
@@ -951,8 +950,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
 
 
 def _broadcast_helper(
-    arg: T_DataWithCoords, exclude, dims_map, common_coords
-) -> T_DataWithCoords:
+    arg: T_Alignable, exclude, dims_map, common_coords
+) -> T_Alignable:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -982,16 +981,16 @@ def _broadcast_helper(
 
     # remove casts once https://github.com/python/mypy/issues/12800 is resolved
     if isinstance(arg, DataArray):
-        return cast("T_DataWithCoords", _broadcast_array(arg))
+        return cast(T_Alignable, _broadcast_array(arg))
     elif isinstance(arg, Dataset):
-        return cast("T_DataWithCoords", _broadcast_dataset(arg))
+        return cast(T_Alignable, _broadcast_dataset(arg))
     else:
         raise ValueError("all input must be Dataset or DataArray objects")
 
 
 # TODO: this typing is too restrictive since it cannot deal with mixed
 # DataArray and Dataset types...? Is this a problem?
-def broadcast(*args: T_DataWithCoords, exclude=None) -> tuple[T_DataWithCoords, ...]:
+def broadcast(*args: T_Alignable, exclude=None) -> tuple[T_Alignable, ...]:
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 

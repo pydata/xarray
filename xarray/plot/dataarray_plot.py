@@ -186,7 +186,7 @@ def _prepare_plot1d_data(
     # dimensions so the plotter can plot anything:
     if darray.ndim > 1:
         # When stacking dims the lines will continue connecting. For floats
-        # this can be solved by adding a nan element inbetween the flattening
+        # this can be solved by adding a nan element in between the flattening
         # points:
         dims_T = []
         if np.issubdtype(darray.dtype, np.floating):
@@ -486,8 +486,8 @@ def line(
     if ndims > 2:
         raise ValueError(
             "Line plots are for 1- or 2-dimensional DataArrays. "
-            "Passed DataArray has {ndims} "
-            "dimensions".format(ndims=ndims)
+            f"Passed DataArray has {ndims} "
+            "dimensions"
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
@@ -530,7 +530,7 @@ def line(
     if np.issubdtype(xplt.dtype, np.datetime64):
         for xlabels in ax.get_xticklabels():
             xlabels.set_rotation(30)
-            xlabels.set_ha("right")
+            xlabels.set_horizontalalignment("right")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
@@ -733,15 +733,6 @@ def _plot1d(plotfunc):
         If specified plot 3D and use this coordinate for *z* axis.
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
-    hue_style: {'discrete', 'continuous'} or None, optional
-        How to use the ``hue`` variable:
-
-        - ``'continuous'`` -- continuous color scale
-          (default for numeric ``hue`` variables)
-        - ``'discrete'`` -- a color for each unique value,
-          using the default color cycle
-          (default for non-numeric ``hue`` variables)
-
     markersize: Hashable or None, optional
         scatter only. Variable by which to vary size of scattered points.
     linewidth: Hashable or None, optional
@@ -798,7 +789,7 @@ def _plot1d(plotfunc):
         be either ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging
         dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a
@@ -934,6 +925,19 @@ def _plot1d(plotfunc):
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
+
+        if hue_style is not None:
+            # TODO: Not used since 2022.10. Deprecated since 2023.07.
+            warnings.warn(
+                (
+                    "hue_style is no longer used for plot1d plots "
+                    "and the argument will eventually be removed. "
+                    "Convert numbers to string for a discrete hue "
+                    "and use add_legend or add_colorbar to control which guide to display."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
@@ -1099,7 +1103,7 @@ def _add_labels(
             # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
             for labels in getattr(ax, f"get_{axis}ticklabels")():
                 labels.set_rotation(30)
-                labels.set_ha("right")
+                labels.set_horizontalalignment("right")
 
 
 @overload
@@ -1321,7 +1325,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a
@@ -1639,7 +1643,7 @@ def _plot2d(plotfunc):
         if np.issubdtype(xplt.dtype, np.datetime64):
             for xlabels in ax.get_xticklabels():
                 xlabels.set_rotation(30)
-                xlabels.set_ha("right")
+                xlabels.set_horizontalalignment("right")
 
         return primitive
 
@@ -2293,27 +2297,23 @@ def pcolormesh(
         else:
             infer_intervals = True
 
-    if (
-        infer_intervals
-        and not np.issubdtype(x.dtype, str)
-        and (
-            (np.shape(x)[0] == np.shape(z)[1])
-            or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
-        )
+    if any(np.issubdtype(k.dtype, str) for k in (x, y)):
+        # do not infer intervals if any axis contains str ticks, see #6775
+        infer_intervals = False
+
+    if infer_intervals and (
+        (np.shape(x)[0] == np.shape(z)[1])
+        or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
     ):
-        if len(x.shape) == 1:
+        if x.ndim == 1:
             x = _infer_interval_breaks(x, check_monotonic=True, scale=xscale)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1, scale=xscale)
             x = _infer_interval_breaks(x, axis=0, scale=xscale)
 
-    if (
-        infer_intervals
-        and not np.issubdtype(y.dtype, str)
-        and (np.shape(y)[0] == np.shape(z)[0])
-    ):
-        if len(y.shape) == 1:
+    if infer_intervals and (np.shape(y)[0] == np.shape(z)[0]):
+        if y.ndim == 1:
             y = _infer_interval_breaks(y, check_monotonic=True, scale=yscale)
         else:
             # we have to infer the intervals on both axes

@@ -297,6 +297,7 @@ def test_concat_multiple_datasets_with_multiple_missing_variables() -> None:
     assert_identical(actual, expected)
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
 def test_concat_type_of_missing_fill() -> None:
     datasets = create_typed_datasets(2, seed=123)
     expected1 = concat(datasets, dim="day", fill_value=dtypes.NA)
@@ -537,8 +538,7 @@ class TestConcatDataset:
         actual = concat(objs, dim="x", data_vars="minimal")
         assert_identical(data, actual)
 
-    def test_concat_data_vars(self):
-        # TODO: annotating this func fails
+    def test_concat_data_vars(self) -> None:
         data = Dataset({"foo": ("x", np.random.randn(10))})
         objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
         for data_vars in ["minimal", "different", "all", [], ["foo"]]:
@@ -614,8 +614,11 @@ class TestConcatDataset:
         with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with pytest.raises(ValueError, match=r"are not coordinates"):
+        with pytest.raises(ValueError, match=r"are not found in the coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
+
+        with pytest.raises(ValueError, match=r"are not found in the data variables"):
+            concat([data, data], "new_dim", data_vars=["not_found"])
 
         with pytest.raises(ValueError, match=r"global attributes not"):
             # call deepcopy seperately to get unique attrs
