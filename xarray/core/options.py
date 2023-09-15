@@ -26,6 +26,7 @@ if TYPE_CHECKING:
         "display_default_indexes",
         "enable_cftimeindex",
         "file_cache_maxsize",
+        "future_no_mindex_dim_coord",
         "keep_attrs",
         "warn_for_unclosed_files",
         "use_bottleneck",
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
         display_default_indexes: Literal["default", True, False]
         enable_cftimeindex: bool
         file_cache_maxsize: int
+        future_no_mindex_dim_coord: bool
         keep_attrs: Literal["default", True, False]
         warn_for_unclosed_files: bool
         use_bottleneck: bool
@@ -70,6 +72,7 @@ OPTIONS: T_Options = {
     "display_default_indexes": False,
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
+    "future_no_mindex_dim_coord": False,
     "keep_attrs": "default",
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
@@ -98,6 +101,7 @@ _VALIDATORS = {
     "display_default_indexes": lambda choice: choice in [True, False, "default"],
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
+    "future_no_mindex_dim_coord": lambda value: isinstance(value, bool),
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
@@ -218,6 +222,10 @@ class set_options:
         global least-recently-usage cached. This should be smaller than
         your system's per-process file descriptor limit, e.g.,
         ``ulimit -n`` on Linux.
+    future_no_mindex_dim_coord : bool, default: False
+        If True, no dimension coordinate with tuple values is be created
+        for a pandas multi-index. This is currently deactivated but
+        it will be the default behavior in the future.
     keep_attrs : {"default", True, False}
         Whether to keep attributes on xarray Datasets/dataarrays after
         operations. Can be

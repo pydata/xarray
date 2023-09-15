@@ -5011,6 +5011,15 @@ class Dataset(
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
+        warnings.warn(
+            "The `reorder_levels` method will be removed in the future, "
+            "when dimension coordinates with a PandasMultiIndex are removed.\n"
+            "Instead of `ds.reorder_levels(x=['two', 'one'])`, you could do:\n"
+            "`new_midx = ds.xindexes['one'].index.reorder_levels(['two', 'one'])`\n"
+            "`ds.assign_coords(xr.Coordinates.from_pandas_multiindex(new_midx, 'x'))`",
+            FutureWarning,
+            stacklevel=2,
+        )
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
         indexes = dict(self._indexes)
@@ -5135,7 +5144,8 @@ class Dataset(
 
             if len(product_vars) == len(dims):
                 idx = index_cls.stack(product_vars, new_dim)
-                new_indexes[new_dim] = idx
+                if not OPTIONS["future_no_mindex_dim_coord"]:
+                    new_indexes[new_dim] = idx
                 new_indexes.update({k: idx for k in product_vars})
                 idx_vars = idx.create_variables(product_vars)
                 # keep consistent multi-index coordinate order
@@ -5779,7 +5789,7 @@ class Dataset(
         for var in names:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
-                idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+                idx_coord_names = set(self.xindexes.get_all_coords(var))
                 idx_other_names = idx_coord_names - set(names)
                 other_names.update(idx_other_names)
         if other_names:
