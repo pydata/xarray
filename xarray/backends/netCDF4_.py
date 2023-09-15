@@ -424,7 +424,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             attributes["flag_meanings"] = enum_dict.values()
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
-        
+
         filters = var.filters()
         if filters is not None:
             encoding.update(filters)
@@ -497,7 +497,9 @@ class NetCDF4DataStore(WritableCFDataStore):
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
         if encoding.get("enum") is not None:
-            enum_dict = {k:v for k,v in zip(attrs["flag_values"], attrs["flag_meanings"])}
+            enum_dict = {
+                k: v for k, v in zip(attrs["flag_values"], attrs["flag_meanings"])
+            }
             datatype = self.ds.createEnumType(
                 variable.dtype,
                 encoding["enum"],
@@ -507,7 +509,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             del attrs["flag_meanings"]
         else:
             datatype = _get_datatype(
-            variable, self.format, raise_on_invalid_encoding=check_encoding
+                variable, self.format, raise_on_invalid_encoding=check_encoding
             )
             if datatype is str and fill_value is not None:
                 raise NotImplementedError(
