@@ -447,7 +447,7 @@ class DataVariables(Mapping[Any, "DataArray"]):
 
     def __getitem__(self, key: Hashable) -> DataArray:
         if key not in self._dataset._coord_names:
-            return  self._dataset[key]
+            return self._dataset[key]
         raise KeyError(key)
 
     def __repr__(self) -> str:
