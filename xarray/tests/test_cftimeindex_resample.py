@@ -169,7 +169,7 @@ def test_closed_label_defaults(freq, expected) -> None:
 @pytest.mark.parametrize(
     "calendar", ["gregorian", "noleap", "all_leap", "360_day", "julian"]
 )
-def test_calendars(calendar) -> None:
+def test_calendars(calendar: str) -> None:
     # Limited testing for non-standard calendars
     freq, closed, label, base = "8001T", None, None, 17
     loffset = datetime.timedelta(hours=12)
