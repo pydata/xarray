@@ -93,7 +93,9 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 
 
 @pytest.mark.parametrize("fill_value", [None, np.nan, 47.11])
-@pytest.mark.parametrize("method", ["nearest", "zero", "slinear", "quadratic", "cubic"])
+@pytest.mark.parametrize(
+    "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+)
 @requires_scipy
 def test_interpolate_pd_compat(method, fill_value) -> None:
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
