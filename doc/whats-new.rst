@@ -80,6 +80,8 @@ Internal Changes
 
 - Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2023.08.0:
 
