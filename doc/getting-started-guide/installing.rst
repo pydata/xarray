@@ -135,13 +135,13 @@ We also maintain other dependency sets for different subsets of functionality::
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
 installation steps are excluded. To know which dependencies would be
-installed, take a look at the ``[options.extras_require]`` section in
-``setup.cfg``:
+installed, take a look at the ``[project.optional-dependencies]`` section in
+``pyproject.toml``:
 
-.. literalinclude:: ../../setup.cfg
-   :language: ini
-   :start-at: [options.extras_require]
-   :end-before: [options.package_data]
+.. literalinclude:: ../../pyproject.toml
+   :language: toml
+   :start-at: [project.optional-dependencies]
+   :end-before: [build-system]
 
 Development versions
 --------------------
