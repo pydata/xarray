@@ -659,6 +659,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
+    from xarray.core.formatting import short_array_repr
     from xarray.core.variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -766,11 +767,10 @@ def apply_variable_ufunc(
         not isinstance(result_data, tuple) or len(result_data) != signature.num_outputs
     ):
         raise ValueError(
-            "applied function does not have the number of "
-            "outputs specified in the ufunc signature. "
-            "Result is not a tuple of {} elements: {!r}".format(
-                signature.num_outputs, result_data
-            )
+            f"applied function does not have the number of "
+            f"outputs specified in the ufunc signature. "
+            f"Result is not a tuple of {signature.num_outputs} elements:\n\n"
+            f"{short_array_repr(result_data)}"
         )
 
     objs = _all_of_type(args, Variable)
@@ -784,21 +784,22 @@ def apply_variable_ufunc(
         data = as_compatible_data(data)
         if data.ndim != len(dims):
             raise ValueError(
-                "applied function returned data with unexpected "
+                "applied function returned data with an unexpected "
                 f"number of dimensions. Received {data.ndim} dimension(s) but "
-                f"expected {len(dims)} dimensions with names: {dims!r}"
+                f"expected {len(dims)} dimensions with names {dims!r}, from:\n\n"
+                f"{short_array_repr(data)}"
             )
 
         var = Variable(dims, data, fastpath=True)
         for dim, new_size in var.sizes.items():
             if dim in dim_sizes and new_size != dim_sizes[dim]:
                 raise ValueError(
-                    "size of dimension {!r} on inputs was unexpectedly "
-                    "changed by applied function from {} to {}. Only "
+                    f"size of dimension '{dim}' on inputs was unexpectedly "
+                    f"changed by applied function from {dim_sizes[dim]} to {new_size}. Only "
                     "dimensions specified in ``exclude_dims`` with "
-                    "xarray.apply_ufunc are allowed to change size.".format(
-                        dim, dim_sizes[dim], new_size
-                    )
+                    "xarray.apply_ufunc are allowed to change size. "
+                    "The data returned was:\n\n"
+                    f"{short_array_repr(data)}"
                 )
 
         var.attrs = attrs
