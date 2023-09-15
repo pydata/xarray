@@ -175,7 +175,7 @@ class TestDataArrayRolling:
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
-    def test_rolling_construct(self, center, window) -> None:
+    def test_rolling_construct(self, center: bool, window: int) -> None:
         s = pd.Series(np.arange(10))
         da = DataArray.from_series(s)
 
@@ -610,7 +610,7 @@ class TestDatasetRolling:
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
-    def test_rolling_construct(self, center, window) -> None:
+    def test_rolling_construct(self, center: bool, window: int) -> None:
         df = pd.DataFrame(
             {
                 "x": np.random.randn(20),
@@ -633,12 +633,22 @@ class TestDatasetRolling:
             df_rolling["x"][::2].values, ds_rolling_mean["x"].values
         )
         np.testing.assert_allclose(df_rolling.index[::2], ds_rolling_mean["index"])
+
         # with fill_value
         ds_rolling_mean = ds_rolling.construct("window", stride=2, fill_value=0.0).mean(
             "window"
         )
         assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim="vars").all()
         assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
+
+        # with stride and no index (https://github.com/pydata/xarray/issues/7021)
+        ds_noidx_rolling = ds.drop_vars("index").rolling(index=window, center=center)
+        ds_noidx_rolling_mean = ds_noidx_rolling.construct("window", stride=2).mean(
+            "window"
+        )
+        np.testing.assert_allclose(
+            df_rolling["x"][::2].values, ds_noidx_rolling_mean["x"].values
+        )
 
     @pytest.mark.slow
     @pytest.mark.parametrize("ds", (1, 2), indirect=True)
