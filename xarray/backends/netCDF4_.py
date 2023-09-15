@@ -321,7 +321,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         "_group",
         "_manager",
         "_mode",
-        "enum_map",
     )
 
     def __init__(
@@ -349,7 +348,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
-        self.enum_map = {}
 
     @classmethod
     def open(
@@ -424,10 +422,6 @@ class NetCDF4DataStore(WritableCFDataStore):
             encoding["enum"] = enum_name
             attributes["flag_values"] = enum_dict.key()
             attributes["flag_meanings"] = enum_dict.values()
-            if self.enum_map.get("enum_name") is None: 
-                self.enum_map["enum_name"] = [name]
-            else:
-                self.enum_map["enum_name"].append(name)
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
         
