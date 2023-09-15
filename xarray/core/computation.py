@@ -434,8 +434,8 @@ def apply_dict_of_variables_vfunc(
 
     result_vars = {}
     for name, variable_args in zip(names, grouped_by_name):
-        core_dim_check = _check_core_dims(signature, variable_args, name)
-        if core_dim_check is True:
+        core_dim_present = _check_core_dims(signature, variable_args, name)
+        if core_dim_present is True:
             result_vars[name] = func(*variable_args)
         else:
             if missing_core_dim == "raise":
