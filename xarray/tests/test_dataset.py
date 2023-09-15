@@ -415,6 +415,9 @@ class TestDataset:
             def __array_function__(self, *args, **kwargs):
                 pass
 
+            def __array_namespace__(self, *args, **kwargs):
+                pass
+
             def __repr__(self):
                 return "Custom\nArray"
 
