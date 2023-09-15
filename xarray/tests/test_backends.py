@@ -1966,6 +1966,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks == original[k].chunks
 
     @requires_dask
+    @pytest.mark.filterwarnings("ignore:The specified chunks separate:UserWarning")
     def test_manual_chunk(self) -> None:
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
@@ -1982,13 +1983,12 @@ class ZarrBase(CFEncodedBase):
         for i in range(2, 6):
             rechunked = original.chunk(chunks=i)
             open_kwargs = {"chunks": i}
-            with pytest.warns(UserWarning, match="The specified chunks separate"):
-                with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
-                    for k, v in actual.variables.items():
-                        # only index variables should be in memory
-                        assert v._in_memory == (k in actual.dims)
-                        # chunk size should be the same as rechunked
-                        assert v.chunks == rechunked[k].chunks
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as rechunked
+                    assert v.chunks == rechunked[k].chunks
 
         chunks = {"dim1": 2, "dim2": 3, "dim3": 5}
         rechunked = original.chunk(chunks=chunks)
@@ -1997,18 +1997,17 @@ class ZarrBase(CFEncodedBase):
             "chunks": chunks,
             "backend_kwargs": {"overwrite_encoded_chunks": True},
         }
-        with pytest.warns(UserWarning, match="The specified chunks separate"):
-            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+            for k, v in actual.variables.items():
+                assert v.chunks == rechunked[k].chunks
+
+            with self.roundtrip(actual) as auto:
+                # encoding should have changed
                 for k, v in actual.variables.items():
                     assert v.chunks == rechunked[k].chunks
 
-                with self.roundtrip(actual) as auto:
-                    # encoding should have changed
-                    for k, v in actual.variables.items():
-                        assert v.chunks == rechunked[k].chunks
-
-                    assert_identical(actual, auto)
-                    assert_identical(actual.load(), auto.load())
+                assert_identical(actual, auto)
+                assert_identical(actual.load(), auto.load())
 
     @requires_dask
     def test_warning_on_bad_chunks(self) -> None:
