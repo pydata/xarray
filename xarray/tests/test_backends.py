@@ -1626,6 +1626,28 @@ class NetCDF4Base(NetCDFBase):
                 with self.roundtrip(ds):
                     pass
 
+    @requires_netCDF4
+    def test_encoding_enum__no_fill_value(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                v = nc.createVariable(
+                    "clouds",
+                    cloud_type,
+                    "time",
+                    fill_value=None,
+                )
+                v[:] = 1
+            with open_dataset(tmp_file) as ds:
+                assert list(ds.clouds.attrs.get("flag_meanings")) == list(
+                    cloud_type_dict.keys()
+                )
+                assert list(ds.clouds.attrs.get("flag_values")) == list(
+                    cloud_type_dict.values()
+                )
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
@@ -4620,8 +4642,8 @@ class TestValidateAttrs:
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = {"a": 5}
-            with create_tmp_file() as tmp_file:
-                ds.to_netcdf(tmp_file)
+            with pytest.raises(TypeError, match=r"Invalid value for attr 'test'"):
+                ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = MiscObject()

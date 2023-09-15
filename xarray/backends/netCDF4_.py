@@ -421,8 +421,8 @@ class NetCDF4DataStore(WritableCFDataStore):
             enum_dict = var.datatype.enum_dict
             enum_name = var.datatype.name
             encoding["enum"] = enum_name
-            attributes["flag_values"] = tuple(enum_dict.keys())
-            attributes["flag_meanings"] = tuple(enum_dict.values())
+            attributes["flag_values"] = tuple(enum_dict.values())
+            attributes["flag_meanings"] = tuple(enum_dict.keys())
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
 
@@ -499,7 +499,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         )
         if encoding.get("enum") is not None:
             enum_dict = {
-                k: v for k, v in zip(attrs["flag_values"], attrs["flag_meanings"])
+                k: v for k, v in zip(attrs["flag_meanings"], attrs["flag_values"])
             }
             datatype = self.ds.createEnumType(
                 variable.dtype,
