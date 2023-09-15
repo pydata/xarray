@@ -260,13 +260,13 @@ def test_apply_two_outputs() -> None:
 def test_apply_missing_dims() -> None:
     ## Single arg
 
-    def add_one(a, core_dims, missing_core_dim):
+    def add_one(a, core_dims, on_missing_core_dim):
         return apply_ufunc(
             lambda x: x + 1,
             a,
             input_core_dims=core_dims,
             output_core_dims=core_dims,
-            missing_core_dim=missing_core_dim,
+            on_missing_core_dim=on_missing_core_dim,
         )
 
     array = np.arange(6).reshape(2, 3)
@@ -277,34 +277,34 @@ def test_apply_missing_dims() -> None:
 
     # Check the standard stuff works OK
     assert_identical(
-        add_one(ds[["x_y"]], core_dims=[["y"]], missing_core_dim="raise"),
+        add_one(ds[["x_y"]], core_dims=[["y"]], on_missing_core_dim="raise"),
         ds[["x_y"]] + 1,
     )
 
     # `raise` — should raise on a missing dim
     with pytest.raises(ValueError):
-        add_one(ds, core_dims=[["y"]], missing_core_dim="raise"),
+        add_one(ds, core_dims=[["y"]], on_missing_core_dim="raise"),
 
     # `drop` — should drop the var with the missing dim
     assert_identical(
-        add_one(ds, core_dims=[["y"]], missing_core_dim="drop"),
+        add_one(ds, core_dims=[["y"]], on_missing_core_dim="drop"),
         (ds + 1).drop_vars("x_z"),
     )
 
     # `copy` — should not add one to the missing with `copy`
-    copy_result = add_one(ds, core_dims=[["y"]], missing_core_dim="copy")
+    copy_result = add_one(ds, core_dims=[["y"]], on_missing_core_dim="copy")
     assert_identical(copy_result["x_y"], (ds + 1)["x_y"])
     assert_identical(copy_result["x_z"], ds["x_z"])
 
     ## Multiple args
 
-    def sum_add(a, b, core_dims, missing_core_dim):
+    def sum_add(a, b, core_dims, on_missing_core_dim):
         return apply_ufunc(
             lambda a, b, axis=None: a.sum(axis) + b.sum(axis),
             a,
             b,
             input_core_dims=core_dims,
-            missing_core_dim=missing_core_dim,
+            on_missing_core_dim=on_missing_core_dim,
         )
 
     # Check the standard stuff works OK
@@ -313,31 +313,33 @@ def test_apply_missing_dims() -> None:
             ds[["x_y"]],
             ds[["x_y"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="raise",
+            on_missing_core_dim="raise",
         ),
         ds[["x_y"]].sum() * 2,
     )
 
     # `raise` — should raise on a missing dim
     with pytest.raises(
-        ValueError, match=r".*Missing core dimension\(s\) \{'y'\} on `x_z`.*"
+        ValueError,
+        match=r".*Missing core dims from `x_z`.*\n\nMissing \{'y'\} on.*\n.*<xarray.Variable \(x: 2, z: ",
     ):
         sum_add(
             ds[["x_z"]],
             ds[["x_z"]],
             core_dims=[["x", "y"], ["x", "z"]],
-            missing_core_dim="raise",
+            on_missing_core_dim="raise",
         )
 
     # `raise` on a missing dim on a non-first arg
     with pytest.raises(
-        ValueError, match=r".*Missing core dimension\(s\) \{'y'\} on `x_z`.*"
+        ValueError,
+        match=r".*Missing core dims from `x_z`.*\n\nMissing \{'y'\} on.*\n.*<xarray.Variable \(x: 2, z: ",
     ):
         sum_add(
             ds[["x_z"]],
             ds[["x_z"]],
             core_dims=[["x", "z"], ["x", "y"]],
-            missing_core_dim="raise",
+            on_missing_core_dim="raise",
         )
 
     # `drop` — should drop the var with the missing dim
@@ -346,7 +348,7 @@ def test_apply_missing_dims() -> None:
             ds[["x_z"]],
             ds[["x_z"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="drop",
+            on_missing_core_dim="drop",
         ),
         ds[[]],
     )
@@ -357,7 +359,7 @@ def test_apply_missing_dims() -> None:
             ds[["x_z"]],
             ds[["x_z"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="copy",
+            on_missing_core_dim="copy",
         ),
         ds[["x_z"]],
     )
@@ -368,7 +370,7 @@ def test_apply_missing_dims() -> None:
             ds[["x_y", "x_y"]],
             ds[["x_y", "x_y"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="raise",
+            on_missing_core_dim="raise",
         ),
         ds[["x_y", "x_y"]].sum() * 2,
     )
@@ -378,7 +380,7 @@ def test_apply_missing_dims() -> None:
             ds,
             ds,
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="drop",
+            on_missing_core_dim="drop",
         ),
         ds[["x_y"]].sum() * 2,
     )
@@ -389,7 +391,7 @@ def test_apply_missing_dims() -> None:
             ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
             ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="drop",
+            on_missing_core_dim="drop",
         ),
         ds[["x_y"]].sum() * 2,
     )
@@ -401,7 +403,7 @@ def test_apply_missing_dims() -> None:
             # duplicative but this was a bug in the initial impl...)
             ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="drop",
+            on_missing_core_dim="drop",
         ),
         ds[["x_y"]].sum() * 2,
     )
@@ -411,7 +413,7 @@ def test_apply_missing_dims() -> None:
             ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
             ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
             core_dims=[["x", "y"], ["x", "y"]],
-            missing_core_dim="copy",
+            on_missing_core_dim="copy",
         ),
         ds.drop_vars("x_z").assign(x_y=30, x_t=ds["x_y"]),
     )

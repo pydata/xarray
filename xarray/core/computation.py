@@ -400,20 +400,26 @@ def _unpack_dict_tuples(
 
 
 def _check_core_dims(signature, variable_args, name):
+    """
+    Chcek if an arg has all the core dims required by the signature.
+
+    Slightly awkward design, of returning the error message. But we want to
+    give a detailed error message, which requires inspecting the variable in
+    the inner loop.
+    """
+    missing = []
     for core_dims, variable_arg in zip(signature.input_core_dims, variable_args):
         # Check whether all the dims are on the variable. Note that we need the
         # `hasattr` to check for a dims property, to protect against the case where
         # a numpy array is passed in.
         if hasattr(variable_arg, "dims") and set(core_dims) - set(variable_arg.dims):
-            # Slightly awkward design, of returning the error message. But we want to
-            # give a detailed error message, which requires inspecting the variable in
-            # the inner loop.
-            return (
-                f"Missing core dimension(s) {set(core_dims) - set(variable_arg.dims)} on `{name}`. "
-                "Either add the core dimension, or set `missing_core_dim` to `copy` or `drop`. "
-                "The object:"
-                f"\n\n{variable_arg}"
-            )
+            missing += [[variable_arg, core_dims]]
+    if missing:
+        message = f"Missing core dims from `{name}` on variable(s):\n\n"
+        for variable_arg, core_dims in missing:
+            message += f"Missing {set(core_dims) - set(variable_arg.dims)} on\n{variable_arg}\n\n"
+        message += "Either add the core dimension, or if passing a dataset alternatively pass `on_missing_core_dim` as `copy` or `drop`. "
+        return message
     return True
 
 
@@ -423,7 +429,7 @@ def apply_dict_of_variables_vfunc(
     signature: _UFuncSignature,
     join="inner",
     fill_value=None,
-    missing_core_dim: MissingCoreDimOptions = "raise",
+    on_missing_core_dim: MissingCoreDimOptions = "raise",
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
@@ -438,15 +444,15 @@ def apply_dict_of_variables_vfunc(
         if core_dim_present is True:
             result_vars[name] = func(*variable_args)
         else:
-            if missing_core_dim == "raise":
+            if on_missing_core_dim == "raise":
                 raise ValueError(core_dim_present)
-            elif missing_core_dim == "copy":
+            elif on_missing_core_dim == "copy":
                 result_vars[name] = variable_args[0]
-            elif missing_core_dim == "drop":
+            elif on_missing_core_dim == "drop":
                 pass
             else:
                 raise ValueError(
-                    f"Invalid value for `missing_core_dim`: {missing_core_dim!r}"
+                    f"Invalid value for `on_missing_core_dim`: {on_missing_core_dim!r}"
                 )
 
     if signature.num_outputs > 1:
@@ -480,7 +486,7 @@ def apply_dataset_vfunc(
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
-    missing_core_dim: MissingCoreDimOptions = "raise",
+    on_missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Dataset | tuple[Dataset, ...]:
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -512,7 +518,7 @@ def apply_dataset_vfunc(
         signature=signature,
         join=dataset_join,
         fill_value=fill_value,
-        missing_core_dim=missing_core_dim,
+        on_missing_core_dim=on_missing_core_dim,
     )
 
     out: Dataset | tuple[Dataset, ...]
@@ -888,7 +894,7 @@ def apply_ufunc(
     output_sizes: Mapping[Any, int] | None = None,
     meta: Any = None,
     dask_gufunc_kwargs: dict[str, Any] | None = None,
-    missing_core_dim: MissingCoreDimOptions = "raise",
+    on_missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -1230,7 +1236,7 @@ def apply_ufunc(
             dataset_join=dataset_join,
             fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
-            missing_core_dim=missing_core_dim,
+            on_missing_core_dim=on_missing_core_dim,
         )
     # feed DataArray apply_variable_ufunc through apply_dataarray_vfunc
     elif any(isinstance(a, DataArray) for a in args):
