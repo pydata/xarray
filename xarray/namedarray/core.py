@@ -12,7 +12,6 @@ from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import Default, _default
 from xarray.namedarray.utils import (
-    Frozen,
     T_DuckArray,
     is_duck_array,
     is_duck_dask_array,
@@ -288,7 +287,7 @@ class NamedArray:
         xarray.unify_chunks
         """
         if hasattr(self._data, "chunks"):
-            return Frozen(dict(zip(self.dims, self.data.chunks)))
+            return dict(zip(self.dims, self.data.chunks))
         else:
             return {}
 
