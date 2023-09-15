@@ -147,7 +147,8 @@ select = [
 [tool.ruff.isort]
 known-first-party = ["xarray"]
 
-[tool.pytest.ini-options]
+[tool.pytest.ini_options]
+addopts = '--strict-markers'
 filterwarnings = [
   "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
 ]
