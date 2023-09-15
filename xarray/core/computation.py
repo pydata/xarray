@@ -439,7 +439,7 @@ def apply_dict_of_variables_vfunc(
             result_vars[name] = func(*variable_args)
         else:
             if missing_core_dim == "raise":
-                raise ValueError(core_dim_check)
+                raise ValueError(core_dim_present)
             elif missing_core_dim == "copy":
                 result_vars[name] = variable_args[0]
             elif missing_core_dim == "drop":
