@@ -172,7 +172,7 @@ def _validate_attrs(dataset, invalid_netcdf=False):
     `invalid_netcdf=True`.
     """
 
-    valid_types = (str, Number, np.ndarray, np.number, list, tuple, dict)
+    valid_types = (str, Number, np.ndarray, np.number, list, tuple)
     if invalid_netcdf:
         valid_types += (np.bool_,)
 
