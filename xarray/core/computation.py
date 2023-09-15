@@ -1008,6 +1008,8 @@ def apply_ufunc(
         :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the
         ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
         a future version.
+    on_missing_core_dim : {"raise", "copy", "drop"}, default: "raise"
+        How to handle missing core dimensions on input variables.
 
     Returns
     -------
