@@ -2564,7 +2564,7 @@ class DataArray(
                 raise ValueError("dims should not contain duplicate values.")
             dim = dict.fromkeys(dim, 1)
         elif dim is not None and not isinstance(dim, Mapping):
-            dim = {cast(Hashable, dim): 1}
+            dim = {dim: 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
@@ -4362,7 +4362,7 @@ class DataArray(
         temp_name = "__temporary_name"
         df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
-        result = cast(DataArray, ds[temp_name])
+        result = ds[temp_name]
         result.name = series.name
         return result
 

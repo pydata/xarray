@@ -1043,9 +1043,7 @@ def _plot1d(plotfunc):
             else:
                 hueplt_norm_values: list[np.ndarray | None]
                 if hueplt_norm.data is not None:
-                    hueplt_norm_values = list(
-                        cast("DataArray", hueplt_norm.data).to_numpy()
-                    )
+                    hueplt_norm_values = list(hueplt_norm.data.to_numpy())
                 else:
                     hueplt_norm_values = [hueplt_norm.data]
 

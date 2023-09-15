@@ -8,7 +8,7 @@ from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defi
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning
+    from numpy.exceptions import RankWarning  # type: ignore
 except ImportError:
     from numpy import RankWarning
 
