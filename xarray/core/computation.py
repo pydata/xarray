@@ -770,7 +770,8 @@ def apply_variable_ufunc(
         raise ValueError(
             f"applied function does not have the number of "
             f"outputs specified in the ufunc signature. "
-            f"Received a {type(result_data)} with {len(result_data)} elements instead:\n\n"
+            f"Received a {type(result_data)} with {len(result_data)} elements. "
+            f"Expected a tuple of {signature.num_outputs} elements:\n\n"
             f"{limit_lines(result_data, limit=10)}"
         )
 
