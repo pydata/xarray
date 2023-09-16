@@ -26,7 +26,10 @@ New Features
   different collections of coordinates prior to assign them to a Dataset or
   DataArray (:pull:`8102`) at once.
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`)
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Improved static typing of reduction methods (:pull:`6746`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -66,6 +69,9 @@ Bug fixes
 - Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) led to varying
   issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
   :issue:`1064`, :pull:`7827`).
+- Return ``float64`` in presence of ``NaT`` in :py:class:`~core.accessor_dt.DatetimeAccessor` and
+  special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()`
+  (:issue:`7928`, :pull:`8084`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
