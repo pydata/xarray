@@ -17,7 +17,7 @@ from pandas.core.indexes.datetimes import DatetimeIndex
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning  # type: ignore
+    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
     from numpy import RankWarning
 
