@@ -167,7 +167,14 @@ class PlotTestCase:
 
     def contourf_called(self, plotmethod):
         plotmethod()
-        paths = plt.gca().findobj(mpl.collections.PathCollection)
+
+        # Compatible with mpl before (PathCollection) and after (QuadContourSet) 3.8
+        def matchfunc(x):
+            return isinstance(
+                x, (mpl.collections.PathCollection, mpl.contour.QuadContourSet)
+            )
+
+        paths = plt.gca().findobj(matchfunc)
         return len(paths) > 0
 
 
