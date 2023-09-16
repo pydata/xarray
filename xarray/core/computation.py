@@ -415,7 +415,7 @@ def _check_core_dims(signature, variable_args, name):
         if hasattr(variable_arg, "dims") and set(core_dims) - set(variable_arg.dims):
             missing += [[variable_arg, core_dims]]
     if missing:
-        message = f"Missing core dims from `{name}` on variable(s):\n\n"
+        message = f"Missing core dims on some variables named `{name}`:\n\n"
         for variable_arg, core_dims in missing:
             message += f"Missing {set(core_dims) - set(variable_arg.dims)} on\n{variable_arg}\n\n"
         message += "Either add the core dimension, or if passing a dataset alternatively pass `on_missing_core_dim` as `copy` or `drop`. "
