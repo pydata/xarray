@@ -200,7 +200,6 @@ def _prepare_plot1d_data(
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
-        print("to_transpose", dims_T)
         darray = darray.transpose(..., *dims_T)
 
         # Array is now ready to be stacked:
