@@ -71,9 +71,11 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
     assert_no_index_corrupted,
+    chunk_indexes,
     create_default_index_implicit,
     filter_indexes_from_coords,
     isel_indexes,
+    load_indexes,
     remove_unused_levels_categories,
     roll_indexes,
 )
@@ -821,6 +823,11 @@ class Dataset(
         --------
         dask.compute
         """
+        # apply Index.load, collect new indexes and variables and replace the existing ones
+        # new index variables may still be lazy: load them here after
+        indexes, index_variables = load_indexes(self.xindexes, kwargs)
+        self.coords._update_coords(index_variables, indexes)
+
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
             k: v._data for k, v in self.variables.items() if is_chunked_array(v._data)
@@ -2646,21 +2653,36 @@ class Dataset(
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
-        variables = {
-            k: _maybe_chunk(
-                k,
-                v,
-                chunks,
-                token,
-                lock,
-                name_prefix,
-                inline_array=inline_array,
-                chunked_array_type=chunkmanager,
-                from_array_kwargs=from_array_kwargs.copy(),
-            )
-            for k, v in self.variables.items()
-        }
-        return self._replace(variables)
+        # apply Index.chunk, collect new indexes and variables
+        indexes, index_variables = chunk_indexes(
+            self.xindexes,
+            chunks,
+            name_prefix=name_prefix,
+            token=token,
+            lock=lock,
+            inline_array=inline_array,
+            chunked_array_type=chunkmanager,
+            from_array_kwargs=from_array_kwargs,
+        )
+
+        variables = {}
+        for k, v in self.variables.items():
+            if k in index_variables:
+                variables[k] = index_variables[k]
+            else:
+                variables[k] = _maybe_chunk(
+                    k,
+                    v,
+                    chunks,
+                    token,
+                    lock,
+                    name_prefix,
+                    inline_array=inline_array,
+                    chunked_array_type=chunkmanager,
+                    from_array_kwargs=from_array_kwargs.copy(),
+                )
+
+        return self._replace(variables=variables, indexes=indexes)
 
     def _validate_indexers(
         self, indexers: Mapping[Any, Any], missing_dims: ErrorOptionsWithWarn = "raise"

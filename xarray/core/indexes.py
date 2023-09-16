@@ -4,7 +4,7 @@ import collections.abc
 import copy
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from xarray.core.indexing import (
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
 )
+from xarray.core.parallelcompat import ChunkManagerEntrypoint
 from xarray.core.utils import (
     Frozen,
     emit_user_level_warning,
@@ -54,8 +55,6 @@ class Index:
     corresponding operation on a :py:meth:`Dataset` or :py:meth:`DataArray`
     either will raise a ``NotImplementedError`` or will simply drop/pass/copy
     the index from/to the result.
-
-    Do not use this class directly for creating index objects.
     """
 
     @classmethod
@@ -320,6 +319,55 @@ class Index:
             ``True`` if the indexes are equal, ``False`` otherwise.
         """
         raise NotImplementedError()
+
+    def load(self, **kwargs) -> Index | None:
+        """Method called when calling :py:meth:`Dataset.load` or
+        :py:meth:`Dataset.compute` (or DataArray equivalent methods).
+
+        The default implementation will simply drop the index by returning
+        ``None``.
+
+        Possible re-implementations in subclasses are:
+
+        - For an index with coordinate data fully in memory like a ``PandasIndex``:
+          return itself
+        - For an index with lazy coordinate data (e.g., a dask array):
+          return an index object of another type like ``PandasIndex``
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.compute``.
+        """
+        return None
+
+    def chunk(
+        self,
+        chunks: Literal["auto"] | Mapping[Any, None | tuple[int, ...]],
+        name_prefix: str = "xarray-",
+        token: str | None = None,
+        lock: bool = False,
+        inline_array: bool = False,
+        chunked_array_type: ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
+    ) -> Index | None:
+        """Method called when calling :py:meth:`Dataset.chunk` or
+        :py:meth:`Dataset.chunk` (or DataArray equivalent methods).
+
+        The default implementation will simply drop the index by returning
+        ``None``.
+
+        Possible re-implementations in subclasses are:
+
+        - For an index with coordinate data fully in memory like a ``PandasIndex``:
+          return itself (do not chunk)
+        - For an index with lazy coordinate data (e.g., a dask array):
+          rebuild the index with an internal lookup structure that is
+          in sync with the new chunks
+
+        For more details about the parameters, see :py:meth:`Dataset.chunk`.
+        """
+        return None
 
     def roll(self: T_Index, shifts: Mapping[Any, int]) -> T_Index | None:
         """Roll this index by an offset along one or more dimensions.
@@ -820,6 +868,23 @@ class PandasIndex(Index):
             )
 
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
+
+    def load(self: T_PandasIndex, **kwargs) -> T_PandasIndex:
+        # both index and coordinate(s) already loaded in-memory
+        return self
+
+    def chunk(
+        self: T_PandasIndex,
+        chunks: Literal["auto"] | Mapping[Any, None | tuple[int, ...]],
+        name_prefix: str = "xarray-",
+        token: str | None = None,
+        lock: bool = False,
+        inline_array: bool = False,
+        chunked_array_type: ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
+    ) -> T_PandasIndex:
+        # skip chunk
+        return self
 
     def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
         shift = shifts[self.dim] % self.index.shape[0]
@@ -1764,19 +1829,46 @@ def indexes_all_equal(
     return not not_equal
 
 
-def _apply_indexes(
+def _apply_index_method(
     indexes: Indexes[Index],
-    args: Mapping[Any, Any],
-    func: str,
+    method_name: str,
+    dim_args: Mapping | None = None,
+    kwargs: Mapping | None = None,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    """Utility function that applies a given Index method to an Indexes
+    collection and that returns new collections of indexes and coordinate
+    variables.
+
+    Index method calls and arguments are filtered according to ``dim_args`` if
+    it is not None. Otherwise, the method is called unconditionally for each
+    index.
+
+    ``kwargs`` is passed to every call of the index method.
+
+    """
+    if kwargs is None:
+        kwargs = {}
+
     new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes.items()}
     new_index_variables: dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():
-        index_dims = {d for var in index_vars.values() for d in var.dims}
-        index_args = {k: v for k, v in args.items() if k in index_dims}
-        if index_args:
-            new_index = getattr(index, func)(index_args)
+        func = getattr(index, method_name)
+
+        if dim_args is None:
+            new_index = func(**kwargs)
+            skip_index = False
+        else:
+            index_dims = {d for var in index_vars.values() for d in var.dims}
+            index_args = {k: v for k, v in dim_args.items() if k in index_dims}
+            if index_args:
+                new_index = func(index_args, **kwargs)
+                skip_index = False
+            else:
+                new_index = None
+                skip_index = True
+
+        if not skip_index:
             if new_index is not None:
                 new_indexes.update({k: new_index for k in index_vars})
                 new_index_vars = new_index.create_variables(index_vars)
@@ -1790,16 +1882,31 @@ def _apply_indexes(
 
 def isel_indexes(
     indexes: Indexes[Index],
-    indexers: Mapping[Any, Any],
+    indexers: Mapping,
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    return _apply_indexes(indexes, indexers, "isel")
+    return _apply_index_method(indexes, "isel", dim_args=indexers)
 
 
 def roll_indexes(
     indexes: Indexes[Index],
     shifts: Mapping[Any, int],
 ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
-    return _apply_indexes(indexes, shifts, "roll")
+    return _apply_index_method(indexes, "roll", dim_args=shifts)
+
+
+def load_indexes(
+    indexes: Indexes[Index],
+    kwargs: Mapping,
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    return _apply_index_method(indexes, "load", kwargs=kwargs)
+
+
+def chunk_indexes(
+    indexes: Indexes[Index],
+    chunks: Mapping,
+    **kwargs,
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    return _apply_index_method(indexes, "chunk", dim_args=chunks, kwargs=kwargs)
 
 
 def filter_indexes_from_coords(
