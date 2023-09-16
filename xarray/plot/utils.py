@@ -31,9 +31,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.ticker import FuncFormatter
     from matplotlib.typing import ColorType, LineStyleType
-
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
     from numpy.typing import ArrayLike
 
     from xarray.core.dataarray import DataArray
