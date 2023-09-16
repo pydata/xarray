@@ -765,7 +765,6 @@ class DatasetRolling(Rolling["Dataset"]):
         strides = self._mapping_to_list(stride, default=1)
 
         dataset = {}
-        coords = self.obj.coords.copy()
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on self.dim
             dims = [d for d in self.dim if d in da.dims]
@@ -786,8 +785,10 @@ class DatasetRolling(Rolling["Dataset"]):
             if not keep_attrs:
                 dataset[key].attrs = {}
 
-            # If striding need to update coords as well
-            coords.update(dataset[key].coords)
+        # Need to stride coords as well. TODO: is there a better way?
+        coords = self.obj.isel(
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
+        ).coords
 
         attrs = self.obj.attrs if keep_attrs else {}
 
