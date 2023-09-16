@@ -501,7 +501,7 @@ def _get_interpolator(
             )
         elif method == "barycentric":
             interp_class = _import_interpolant("BarycentricInterpolator", method)
-        elif method == "krog":
+        elif method in ["krogh", "krog"]:
             interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
             interp_class = _import_interpolant("PchipInterpolator", method)
