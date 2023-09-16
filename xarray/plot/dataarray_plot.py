@@ -200,6 +200,7 @@ def _prepare_plot1d_data(
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
+        print("to_transpose", dims_T)
         darray = darray.transpose(..., *dims_T)
 
         # Array is now ready to be stacked:
@@ -1271,7 +1272,7 @@ def lines(
     plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
     plts_or_none = [plts_dict[v] for v in axis_order]
     plts = [p for p in plts_or_none if p is not None]
-    primitive = _line(*[p.to_numpy().ravel() for p in plts], **kwargs)
+    primitive = _line(ax, *[p.to_numpy().ravel() for p in plts], **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive

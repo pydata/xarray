@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -27,8 +27,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import Colormap, Normalize
     from matplotlib.ticker import FuncFormatter
+    from matplotlib.typing import ColorType, LineStyleType
+
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
     from numpy.typing import ArrayLike
 
     from xarray.core.dataarray import DataArray
@@ -1836,24 +1841,74 @@ def _guess_coords_to_plot(
     return coords_to_plot
 
 
+@overload
 def _line(
     self,
-    x,
-    y,
-    s=None,
-    c=None,
-    linestyle=None,
-    cmap=None,
-    norm=None,
-    vmin=None,
-    vmax=None,
-    alpha=None,
-    linewidths=None,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: None = None,
+    s: float | ArrayLike | None = None,
+    c: Sequence[ColorType] | ColorType | None = None,
+    linestyle: LineStyleType | None = None,
+    cmap: str | Colormap | None = None,
+    norm: str | Normalize | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    alpha: float | None = None,
+    linewidths: float | Sequence[float] | None = None,
     *,
-    edgecolors=None,
-    plotnonfinite=False,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
+    plotnonfinite: bool = False,
+    data=None,
     **kwargs,
-):
+) -> LineCollection:
+    ...
+
+
+@overload
+def _line(
+    self,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: float | ArrayLike = None,
+    s: float | ArrayLike | None = None,
+    c: Sequence[ColorType] | ColorType | None = None,
+    linestyle: LineStyleType | None = None,
+    cmap: str | Colormap | None = None,
+    norm: str | Normalize | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    alpha: float | None = None,
+    linewidths: float | Sequence[float] | None = None,
+    *,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
+    plotnonfinite: bool = False,
+    data=None,
+    **kwargs,
+) -> Line3DCollection:
+    ...
+
+
+def _line(
+    self,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: float | ArrayLike | None = None,
+    s: float | ArrayLike | None = None,
+    c: Sequence[ColorType] | ColorType | None = None,
+    linestyle: LineStyleType | None = None,
+    cmap: str | Colormap | None = None,
+    norm: str | Normalize | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    alpha: float | None = None,
+    linewidths: float | Sequence[float] | None = None,
+    *,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
+    plotnonfinite: bool = False,
+    data=None,
+    **kwargs,
+) -> LineCollection | Line3DCollection:
     """
     ax.scatter-like wrapper for LineCollection.
 
@@ -1865,7 +1920,6 @@ def _line(
     rcParams = plt.matplotlib.rcParams
 
     # Handle z inputs:
-    z = kwargs.pop("z", None)
     if z is not None:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
