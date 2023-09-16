@@ -321,7 +321,7 @@ def test_apply_missing_dims() -> None:
     # `raise` — should raise on a missing dim
     with pytest.raises(
         ValueError,
-        match=r".*Missing core dims from `x_z`.*\n\nMissing \{'y'\} on.*\n.*<xarray.Variable \(x: 2, z: ",
+        match=r".*Missing core dims \{'y'\} from arg number 1 on a variable named `x_z`:\n.*<xarray.Variable \(x: 2, z: ",
     ):
         sum_add(
             ds[["x_z"]],
@@ -333,7 +333,7 @@ def test_apply_missing_dims() -> None:
     # `raise` on a missing dim on a non-first arg
     with pytest.raises(
         ValueError,
-        match=r".*Missing core dims from `x_z`.*\n\nMissing \{'y'\} on.*\n.*<xarray.Variable \(x: 2, z: ",
+        match=r".*Missing core dims \{'y'\} from arg number 2 on a variable named `x_z`:\n.*<xarray.Variable \(x: 2, z: ",
     ):
         sum_add(
             ds[["x_z"]],

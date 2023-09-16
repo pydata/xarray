@@ -408,16 +408,18 @@ def _check_core_dims(signature, variable_args, name):
     the inner loop.
     """
     missing = []
-    for core_dims, variable_arg in zip(signature.input_core_dims, variable_args):
+    for i, (core_dims, variable_arg) in enumerate(
+        zip(signature.input_core_dims, variable_args)
+    ):
         # Check whether all the dims are on the variable. Note that we need the
         # `hasattr` to check for a dims property, to protect against the case where
         # a numpy array is passed in.
         if hasattr(variable_arg, "dims") and set(core_dims) - set(variable_arg.dims):
-            missing += [[variable_arg, core_dims]]
+            missing += [[i, variable_arg, core_dims]]
     if missing:
-        message = f"Missing core dims on some variables named `{name}`:\n\n"
-        for variable_arg, core_dims in missing:
-            message += f"Missing {set(core_dims) - set(variable_arg.dims)} on\n{variable_arg}\n\n"
+        message = ""
+        for i, variable_arg, core_dims in missing:
+            message += f"Missing core dims {set(core_dims) - set(variable_arg.dims)} from arg number {i + 1} on a variable named `{name}`:\n{variable_arg}\n\n"
         message += "Either add the core dimension, or if passing a dataset alternatively pass `on_missing_core_dim` as `copy` or `drop`. "
         return message
     return True
