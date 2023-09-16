@@ -659,6 +659,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
+    from xarray.core.formatting import short_array_repr
     from xarray.core.variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -766,11 +767,10 @@ def apply_variable_ufunc(
         not isinstance(result_data, tuple) or len(result_data) != signature.num_outputs
     ):
         raise ValueError(
-            "applied function does not have the number of "
-            "outputs specified in the ufunc signature. "
-            "Result is not a tuple of {} elements: {!r}".format(
-                signature.num_outputs, result_data
-            )
+            f"applied function does not have the number of "
+            f"outputs specified in the ufunc signature. "
+            f"Result is not a tuple of {signature.num_outputs} elements:\n\n"
+            f"{short_array_repr(result_data)}"
         )
 
     objs = _all_of_type(args, Variable)
@@ -784,21 +784,22 @@ def apply_variable_ufunc(
         data = as_compatible_data(data)
         if data.ndim != len(dims):
             raise ValueError(
-                "applied function returned data with unexpected "
+                "applied function returned data with an unexpected "
                 f"number of dimensions. Received {data.ndim} dimension(s) but "
-                f"expected {len(dims)} dimensions with names: {dims!r}"
+                f"expected {len(dims)} dimensions with names {dims!r}, from:\n\n"
+                f"{short_array_repr(data)}"
             )
 
         var = Variable(dims, data, fastpath=True)
         for dim, new_size in var.sizes.items():
             if dim in dim_sizes and new_size != dim_sizes[dim]:
                 raise ValueError(
-                    "size of dimension {!r} on inputs was unexpectedly "
-                    "changed by applied function from {} to {}. Only "
+                    f"size of dimension '{dim}' on inputs was unexpectedly "
+                    f"changed by applied function from {dim_sizes[dim]} to {new_size}. Only "
                     "dimensions specified in ``exclude_dims`` with "
-                    "xarray.apply_ufunc are allowed to change size.".format(
-                        dim, dim_sizes[dim], new_size
-                    )
+                    "xarray.apply_ufunc are allowed to change size. "
+                    "The data returned was:\n\n"
+                    f"{short_array_repr(data)}"
                 )
 
         var.attrs = attrs
@@ -1286,7 +1287,7 @@ def cov(
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray is supported."
-            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+            f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
 
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
@@ -1364,7 +1365,7 @@ def corr(da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None) -> T_DataArray:
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray is supported."
-            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+            f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
 
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
@@ -1402,14 +1403,14 @@ def _cov_corr(
     ) / (valid_count)
 
     if method == "cov":
-        return cov  # type: ignore[return-value]
+        return cov
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr  # type: ignore[return-value]
+        return corr
 
 
 def cross(
@@ -1707,7 +1708,7 @@ def dot(
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
-            "Given {}.".format([type(arr) for arr in arrays])
+            f"Given {[type(arr) for arr in arrays]}."
         )
 
     if len(arrays) == 0:
@@ -2046,9 +2047,13 @@ def _calc_idxminmax(
         raise ValueError("Must supply 'dim' argument for multidimensional arrays")
 
     if dim not in array.dims:
-        raise KeyError(f'Dimension "{dim}" not in dimension')
+        raise KeyError(
+            f"Dimension {dim!r} not found in array dimensions {array.dims!r}"
+        )
     if dim not in array.coords:
-        raise KeyError(f'Dimension "{dim}" does not have coordinates')
+        raise KeyError(
+            f"Dimension {dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
+        )
 
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"

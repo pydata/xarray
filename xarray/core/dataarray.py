@@ -23,7 +23,12 @@ from xarray.core.alignment import (
 from xarray.core.arithmetic import DataArrayArithmetic
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.computation import unify_chunks
-from xarray.core.coordinates import DataArrayCoordinates, assert_coordinate_consistent
+from xarray.core.coordinates import (
+    Coordinates,
+    DataArrayCoordinates,
+    assert_coordinate_consistent,
+    create_coords_with_default_indexes,
+)
 from xarray.core.dataset import Dataset
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -34,7 +39,7 @@ from xarray.core.indexes import (
     isel_indexes,
 )
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
-from xarray.core.merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
     Default,
@@ -42,6 +47,7 @@ from xarray.core.utils import (
     ReprObject,
     _default,
     either_dict_or_kwargs,
+    emit_user_level_warning,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -103,9 +109,35 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
+def _check_coords_dims(shape, coords, dims):
+    sizes = dict(zip(dims, shape))
+    for k, v in coords.items():
+        if any(d not in dims for d in v.dims):
+            raise ValueError(
+                f"coordinate {k} has dimensions {v.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dims}"
+            )
+
+        for d, s in zip(v.dims, v.shape):
+            if s != sizes[d]:
+                raise ValueError(
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
+                )
+
+        if k in sizes and v.shape != (sizes[k],):
+            raise ValueError(
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
+            )
+
+
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> tuple[dict[Hashable, Variable], tuple[Hashable, ...]]:
+) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
     if (
@@ -143,40 +175,22 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError(f"dimension {d} is not a string")
 
-    new_coords: dict[Hashable, Variable] = {}
+    new_coords: Mapping[Hashable, Any]
 
-    if utils.is_dict_like(coords):
-        for k, v in coords.items():
-            new_coords[k] = as_variable(v, name=k)
-    elif coords is not None:
-        for dim, coord in zip(dims, coords):
-            var = as_variable(coord, name=dim)
-            var.dims = (dim,)
-            new_coords[dim] = var.to_index_variable()
+    if isinstance(coords, Coordinates):
+        new_coords = coords
+    else:
+        new_coords = {}
+        if utils.is_dict_like(coords):
+            for k, v in coords.items():
+                new_coords[k] = as_variable(v, name=k)
+        elif coords is not None:
+            for dim, coord in zip(dims, coords):
+                var = as_variable(coord, name=dim)
+                var.dims = (dim,)
+                new_coords[dim] = var.to_index_variable()
 
-    sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
-        if any(d not in dims for d in v.dims):
-            raise ValueError(
-                f"coordinate {k} has dimensions {v.dims}, but these "
-                "are not a subset of the DataArray "
-                f"dimensions {dims}"
-            )
-
-        for d, s in zip(v.dims, v.shape):
-            if s != sizes[d]:
-                raise ValueError(
-                    f"conflicting sizes for dimension {d!r}: "
-                    f"length {sizes[d]} on the data but length {s} on "
-                    f"coordinate {k!r}"
-                )
-
-        if k in sizes and v.shape != (sizes[k],):
-            raise ValueError(
-                f"coordinate {k!r} is a DataArray dimension, but "
-                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
-                "matching the dimension size"
-            )
+    _check_coords_dims(shape, new_coords, dims)
 
     return new_coords, dims
 
@@ -265,7 +279,7 @@ class DataArray(
         or pandas object, attempts are made to use this array's
         metadata to fill in other unspecified arguments. A view of the
         array's data is used instead of a copy if possible.
-    coords : sequence or dict of array_like, optional
+    coords : sequence or dict of array_like or :py:class:`~xarray.Coordinates`, optional
         Coordinates (tick labels) to use for indexing along each
         dimension. The following notations are accepted:
 
@@ -285,6 +299,10 @@ class DataArray(
         - mapping {coord name: (dimension name, array-like)}
         - mapping {coord name: (tuple of dimension names, array-like)}
 
+        Alternatively, a :py:class:`~xarray.Coordinates` object may be used in
+        order to explicitly pass indexes (e.g., a multi-index or any custom
+        Xarray index) or to bypass the creation of a default index for any
+        :term:`Dimension coordinate` included in that object.
     dims : Hashable or sequence of Hashable, optional
         Name(s) of the data dimension(s). Must be either a Hashable
         (only for 1D data) or a sequence of Hashables with length equal
@@ -296,6 +314,11 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
+    indexes : py:class:`~xarray.Indexes` or dict-like, optional
+        For internal use only. For passing indexes objects to the
+        new DataArray, use the ``coords`` argument instead with a
+        :py:class:`~xarray.Coordinate` object (both coordinate variables
+        and indexes will be extracted from the latter).
 
     Examples
     --------
@@ -385,7 +408,7 @@ class DataArray(
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
-        indexes: dict[Hashable, Index] | None = None,
+        indexes: Mapping[Any, Index] | None = None,
         fastpath: bool = False,
     ) -> None:
         if fastpath:
@@ -394,10 +417,11 @@ class DataArray(
             assert attrs is None
             assert indexes is not None
         else:
-            # TODO: (benbovy - explicit indexes) remove
-            # once it becomes part of the public interface
             if indexes is not None:
-                raise ValueError("Providing explicit indexes is not supported yet")
+                raise ValueError(
+                    "Explicitly passing indexes via the `indexes` argument is not supported "
+                    "when `fastpath=False`. Use the `coords` argument instead."
+                )
 
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
@@ -421,17 +445,18 @@ class DataArray(
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
-            indexes, coords = _create_indexes_from_coords(coords)
+
+            if not isinstance(coords, Coordinates):
+                coords = create_coords_with_default_indexes(coords)
+            indexes = dict(coords.xindexes)
+            coords = {k: v.copy() for k, v in coords.variables.items()}
 
         # These fully describe a DataArray
         self._variable = variable
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
-
-        # TODO(shoyer): document this argument, once it becomes part of the
-        # public interface.
-        self._indexes = indexes
+        self._indexes = indexes  # type: ignore[assignment]
 
         self._close = None
 
@@ -499,7 +524,7 @@ class DataArray(
     def _overwrite_indexes(
         self: T_DataArray,
         indexes: Mapping[Any, Index],
-        coords: Mapping[Any, Variable] | None = None,
+        variables: Mapping[Any, Variable] | None = None,
         drop_coords: list[Hashable] | None = None,
         rename_dims: Mapping[Any, Any] | None = None,
     ) -> T_DataArray:
@@ -507,8 +532,8 @@ class DataArray(
         if not indexes:
             return self
 
-        if coords is None:
-            coords = {}
+        if variables is None:
+            variables = {}
         if drop_coords is None:
             drop_coords = []
 
@@ -517,7 +542,7 @@ class DataArray(
         new_indexes = dict(self._indexes)
 
         for name in indexes:
-            new_coords[name] = coords[name]
+            new_coords[name] = variables[name]
             new_indexes[name] = indexes[name]
 
         for name in drop_coords:
@@ -831,6 +856,7 @@ class DataArray(
             obj = self[key]
             if isinstance(value, DataArray):
                 assert_coordinate_consistent(value, obj.coords.variables)
+                value = value.variable
             # DataArray key -> Variable key
             key = {
                 k: v.variable if isinstance(v, DataArray) else v
@@ -905,12 +931,20 @@ class DataArray(
 
     @property
     def xindexes(self) -> Indexes:
-        """Mapping of xarray Index objects used for label based indexing."""
+        """Mapping of :py:class:`~xarray.indexes.Index` objects
+        used for label based indexing.
+        """
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
     def coords(self) -> DataArrayCoordinates:
-        """Dictionary-like container of coordinate arrays."""
+        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
+        coordinate variables.
+
+        See Also
+        --------
+        Coordinates
+        """
         return DataArrayCoordinates(self)
 
     @overload
@@ -1802,7 +1836,11 @@ class DataArray(
             exclude_dims,
             exclude_vars,
         )
-        return self._from_temp_dataset(reindexed)
+
+        da = self._from_temp_dataset(reindexed)
+        da.encoding = self.encoding
+
+        return da
 
     def reindex_like(
         self: T_DataArray,
@@ -2197,8 +2235,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2325,8 +2362,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
@@ -2867,9 +2903,9 @@ class DataArray(
             b        (x) int64 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a', 0.0),
-                    ('a', 1.0),
-                    ('a', 2.0),
+        MultiIndex([('a',   0),
+                    ('a',   1),
+                    ('a',   2),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
@@ -4288,7 +4324,7 @@ class DataArray(
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
-                    "'{dims_data}'".format(dims_data=str(e.args[0]))
+                    f"'{str(e.args[0])}'"
                 )
         try:
             data = d["data"]
@@ -4331,15 +4367,43 @@ class DataArray(
         return result
 
     def to_cdms2(self) -> cdms2_Variable:
-        """Convert this array into a cdms2.Variable"""
+        """Convert this array into a cdms2.Variable
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        .. _xcdat: https://github.com/xCDAT/xcdat
+        """
         from xarray.convert import to_cdms2
+
+        emit_user_level_warning(
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
+            DeprecationWarning,
+        )
 
         return to_cdms2(self)
 
     @classmethod
     def from_cdms2(cls, variable: cdms2_Variable) -> DataArray:
-        """Convert a cdms2.Variable into an xarray.DataArray"""
+        """Convert a cdms2.Variable into an xarray.DataArray
+
+        .. deprecated:: 2023.06.0
+            The `cdms2`_ library has been deprecated. Please consider using the
+            `xcdat`_ library instead.
+
+        .. _cdms2: https://github.com/CDAT/cdms
+        .. _xcdat: https://github.com/xCDAT/xcdat
+        """
         from xarray.convert import from_cdms2
+
+        emit_user_level_warning(
+            "The cdms2 library has been deprecated."
+            " Please consider using the xcdat library instead.",
+            DeprecationWarning,
+        )
 
         return from_cdms2(variable)
 
@@ -4400,7 +4464,7 @@ class DataArray(
                [2, 2]])
         Dimensions without coordinates: X, Y
 
-        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against eachother have the same values, dimensions, and coordinates.
+        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against each other have the same values, dimensions, and coordinates.
 
         >>> a.equals(b)
         False
@@ -4647,11 +4711,7 @@ class DataArray(
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}{unit}".format(
-                        dim=dim,
-                        v=format_item(coord.values),
-                        unit=_get_units_from_attrs(coord),
-                    )
+                    f"{dim} = {format_item(coord.values)}{_get_units_from_attrs(coord)}"
                 )
 
         title = ", ".join(one_dims)
@@ -4975,15 +5035,15 @@ class DataArray(
             desired quantile lies between two data points. The options sorted by their R
             type as summarized in the H&F paper [1]_ are:
 
-                1. "inverted_cdf" (*)
-                2. "averaged_inverted_cdf" (*)
-                3. "closest_observation" (*)
-                4. "interpolated_inverted_cdf" (*)
-                5. "hazen" (*)
-                6. "weibull" (*)
+                1. "inverted_cdf"
+                2. "averaged_inverted_cdf"
+                3. "closest_observation"
+                4. "interpolated_inverted_cdf"
+                5. "hazen"
+                6. "weibull"
                 7. "linear"  (default)
-                8. "median_unbiased" (*)
-                9. "normal_unbiased" (*)
+                8. "median_unbiased"
+                9. "normal_unbiased"
 
             The first three methods are discontiuous. The following discontinuous
             variations of the default "linear" (7.) option are also available:
@@ -4996,8 +5056,6 @@ class DataArray(
             See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
             was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
-
-            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
@@ -5134,9 +5192,10 @@ class DataArray(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+        datetime_unit : {"W", "D", "h", "m", "s", "ms", \
                          "us", "ns", "ps", "fs", "as", None}, optional
-            Unit to compute gradient. Only valid for datetime coordinate.
+            Unit to compute gradient. Only valid for datetime coordinate. "Y" and "M" are not available as
+            datetime_unit.
 
         Returns
         -------
@@ -5475,6 +5534,7 @@ class DataArray(
         numpy.polyfit
         numpy.polyval
         xarray.polyval
+        DataArray.curvefit
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
@@ -5713,8 +5773,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
@@ -5809,8 +5869,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
@@ -6129,9 +6189,10 @@ class DataArray(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, Any] | None = None,
-        bounds: dict[str, Any] | None = None,
+        p0: dict[str, float | DataArray] | None = None,
+        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
+        errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         """
@@ -6161,17 +6222,25 @@ class DataArray(
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like or None, optional
             Optional dictionary of parameter names to initial guesses passed to the
-            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
-            be assigned initial values following the default scipy behavior.
-        bounds : dict-like or None, optional
-            Optional dictionary of parameter names to bounding values passed to the
-            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
-            will be unbounded following the default scipy behavior.
+            `curve_fit` `p0` arg. If the values are DataArrays, they will be appropriately
+            broadcast to the coordinates of the array. If none or only some parameters are
+            passed, the rest will be assigned initial values following the default scipy
+            behavior.
+        bounds : dict-like, optional
+            Optional dictionary of parameter names to tuples of bounding values passed to the
+            `curve_fit` `bounds` arg. If any of the bounds are DataArrays, they will be
+            appropriately broadcast to the coordinates of the array. If none or only some
+            parameters are passed, the rest will be unbounded following the default scipy
+            behavior.
         param_names : sequence of Hashable or None, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
+            raise an exception. If 'ignore', the coefficients and covariances for the
+            coordinates where the fitting failed will be NaN.
         **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -6184,6 +6253,86 @@ class DataArray(
                 The coefficients of the best fit.
             [var]_curvefit_covariance
                 The covariance matrix of the coefficient estimates.
+
+        Examples
+        --------
+        Generate some exponentially decaying data, where the decay constant and amplitude are
+        different for different values of the coordinate ``x``:
+
+        >>> rng = np.random.default_rng(seed=0)
+        >>> def exp_decay(t, time_constant, amplitude):
+        ...     return np.exp(-t / time_constant) * amplitude
+        ...
+        >>> t = np.linspace(0, 10, 11)
+        >>> da = xr.DataArray(
+        ...     np.stack(
+        ...         [
+        ...             exp_decay(t, 1, 0.1),
+        ...             exp_decay(t, 2, 0.2),
+        ...             exp_decay(t, 3, 0.3),
+        ...         ]
+        ...     )
+        ...     + rng.normal(size=(3, t.size)) * 0.01,
+        ...     coords={"x": [0, 1, 2], "time": t},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 3, time: 11)>
+        array([[ 0.1012573 ,  0.0354669 ,  0.01993775,  0.00602771, -0.00352513,
+                 0.00428975,  0.01328788,  0.009562  , -0.00700381, -0.01264187,
+                -0.0062282 ],
+               [ 0.20041326,  0.09805582,  0.07138797,  0.03216692,  0.01974438,
+                 0.01097441,  0.00679441,  0.01015578,  0.01408826,  0.00093645,
+                 0.01501222],
+               [ 0.29334805,  0.21847449,  0.16305984,  0.11130396,  0.07164415,
+                 0.04744543,  0.03602333,  0.03129354,  0.01074885,  0.01284436,
+                 0.00910995]])
+        Coordinates:
+          * x        (x) int64 0 1 2
+          * time     (time) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0
+
+        Fit the exponential decay function to the data along the ``time`` dimension:
+
+        >>> fit_result = da.curvefit("time", exp_decay)
+        >>> fit_result["curvefit_coefficients"].sel(
+        ...     param="time_constant"
+        ... )  # doctest: +NUMBER
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([1.0569203, 1.7354963, 2.9421577])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'time_constant'
+        >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([0.1005489 , 0.19631423, 0.30003579])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'amplitude'
+
+        An initial guess can also be given with the ``p0`` arg (although it does not make much
+        of a difference in this simple example). To have a different guess for different
+        coordinate points, the guess can be a DataArray. Here we use the same initial guess
+        for the amplitude but different guesses for the time constant:
+
+        >>> fit_result = da.curvefit(
+        ...     "time",
+        ...     exp_decay,
+        ...     p0={
+        ...         "amplitude": 0.2,
+        ...         "time_constant": xr.DataArray([1, 2, 3], coords=[da.x]),
+        ...     },
+        ... )
+        >>> fit_result["curvefit_coefficients"].sel(param="time_constant")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([1.0569213 , 1.73550052, 2.94215733])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'time_constant'
+        >>> fit_result["curvefit_coefficients"].sel(param="amplitude")
+        <xarray.DataArray 'curvefit_coefficients' (x: 3)>
+        array([0.10054889, 0.1963141 , 0.3000358 ])
+        Coordinates:
+          * x        (x) int64 0 1 2
+            param    <U13 'amplitude'
 
         See Also
         --------
@@ -6198,6 +6347,7 @@ class DataArray(
             p0=p0,
             bounds=bounds,
             param_names=param_names,
+            errors=errors,
             kwargs=kwargs,
         )
 

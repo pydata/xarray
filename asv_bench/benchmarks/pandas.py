@@ -13,7 +13,7 @@ class MultiIndexSeries:
             [
                 list("abcdefhijk"),
                 list("abcdefhijk"),
-                pd.date_range(start="2000-01-01", periods=1000, freq="B"),
+                pd.date_range(start="2000-01-01", periods=1000, freq="D"),
             ]
         )
         series = pd.Series(data, index)
@@ -29,19 +29,20 @@ class MultiIndexSeries:
 class ToDataFrame:
     def setup(self, *args, **kwargs):
         xp = kwargs.get("xp", np)
+        nvars = kwargs.get("nvars", 1)
         random_kws = kwargs.get("random_kws", {})
         method = kwargs.get("method", "to_dataframe")
 
         dim1 = 10_000
         dim2 = 10_000
+
+        var = xr.Variable(
+            dims=("dim1", "dim2"), data=xp.random.random((dim1, dim2), **random_kws)
+        )
+        data_vars = {f"long_name_{v}": (("dim1", "dim2"), var) for v in range(nvars)}
+
         ds = xr.Dataset(
-            {
-                "x": xr.DataArray(
-                    data=xp.random.random((dim1, dim2), **random_kws),
-                    dims=["dim1", "dim2"],
-                    coords={"dim1": np.arange(0, dim1), "dim2": np.arange(0, dim2)},
-                )
-            }
+            data_vars, coords={"dim1": np.arange(0, dim1), "dim2": np.arange(0, dim2)}
         )
         self.to_frame = getattr(ds, method)
 
@@ -58,4 +59,6 @@ class ToDataFrameDask(ToDataFrame):
 
         import dask.array as da
 
-        super().setup(xp=da, random_kws=dict(chunks=5000), method="to_dask_dataframe")
+        super().setup(
+            xp=da, random_kws=dict(chunks=5000), method="to_dask_dataframe", nvars=500
+        )

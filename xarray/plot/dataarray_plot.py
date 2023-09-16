@@ -187,7 +187,7 @@ def _prepare_plot1d_data(
     # dimensions so the plotter can plot anything:
     if darray.ndim > 1:
         # When stacking dims the lines will continue connecting. For floats
-        # this can be solved by adding a nan element inbetween the flattening
+        # this can be solved by adding a nan element in between the flattening
         # points:
         dims_T = []
         if np.issubdtype(darray.dtype, np.floating):
@@ -487,8 +487,8 @@ def line(
     if ndims > 2:
         raise ValueError(
             "Line plots are for 1- or 2-dimensional DataArrays. "
-            "Passed DataArray has {ndims} "
-            "dimensions".format(ndims=ndims)
+            f"Passed DataArray has {ndims} "
+            "dimensions"
         )
 
     # The allargs dict passed to _easy_facetgrid above contains args
@@ -734,15 +734,6 @@ def _plot1d(plotfunc):
         If specified plot 3D and use this coordinate for *z* axis.
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
-    hue_style: {'discrete', 'continuous'} or None, optional
-        How to use the ``hue`` variable:
-
-        - ``'continuous'`` -- continuous color scale
-          (default for numeric ``hue`` variables)
-        - ``'discrete'`` -- a color for each unique value,
-          using the default color cycle
-          (default for non-numeric ``hue`` variables)
-
     markersize: Hashable or None, optional
         scatter only. Variable by which to vary size of scattered points.
     linewidth: Hashable or None, optional
@@ -799,7 +790,7 @@ def _plot1d(plotfunc):
         be either ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging
         dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a
@@ -935,6 +926,19 @@ def _plot1d(plotfunc):
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
+
+        if hue_style is not None:
+            # TODO: Not used since 2022.10. Deprecated since 2023.07.
+            warnings.warn(
+                (
+                    "hue_style is no longer used for plot1d plots "
+                    "and the argument will eventually be removed. "
+                    "Convert numbers to string for a discrete hue "
+                    "and use add_legend or add_colorbar to control which guide to display."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
@@ -1492,7 +1496,7 @@ def _plot2d(plotfunc):
         The mapping from data values to color space. If not provided, this
         will be either be ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a

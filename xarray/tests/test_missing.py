@@ -104,7 +104,8 @@ def test_interpolate_pd_compat():
         for dim in ["time", "x"]:
             actual = da.interpolate_na(method=method, dim=dim, fill_value=np.nan)
             expected = df.interpolate(
-                method=method, axis=da.get_axis_num(dim), fill_value=(np.nan, np.nan)
+                method=method,
+                axis=da.get_axis_num(dim),
             )
             # Note, Pandas does some odd things with the left/right fill_value
             # for the linear methods. This next line inforces the xarray
@@ -140,7 +141,8 @@ def test_interpolate_pd_compat_non_uniform_index():
                 method="linear", dim=dim, use_coordinate=True, fill_value=np.nan
             )
             expected = df.interpolate(
-                method=method, axis=da.get_axis_num(dim), fill_value=np.nan
+                method=method,
+                axis=da.get_axis_num(dim),
             )
 
             # Note, Pandas does some odd things with the left/right fill_value

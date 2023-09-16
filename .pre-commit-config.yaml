@@ -1,4 +1,6 @@
 # https://pre-commit.com/
+ci:
+    autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
@@ -14,15 +16,15 @@ repos:
       - id: absolufy-imports
         name: absolufy-imports
         files: ^xarray/
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.267'
+    rev: 'v0.0.287'
     hooks:
       - id: ruff
         args: ["--fix"]
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.7.0
     hooks:
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
@@ -30,10 +32,10 @@ repos:
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==23.3.0"]
+        additional_dependencies: ["black==23.7.0"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.5.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -47,7 +49,7 @@ repos:
             types-pkg_resources,
             types-PyYAML,
             types-pytz,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
             numpy,
           ]
   - repo: https://github.com/citation-file-format/cff-converter-python

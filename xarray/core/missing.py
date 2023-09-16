@@ -66,9 +66,7 @@ class BaseInterpolator:
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self):
-        return "{type}: method={method}".format(
-            type=self.__class__.__name__, method=self.method
-        )
+        return f"{self.__class__.__name__}: method={self.method}"
 
 
 class NumpyInterpolator(BaseInterpolator):
@@ -732,7 +730,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
         # scipy.interpolate.interp1d always forces to float.
         # Use the same check for blockwise as well:
         if not issubclass(var.dtype.type, np.inexact):
-            dtype = np.float_
+            dtype = float
         else:
             dtype = var.dtype
 

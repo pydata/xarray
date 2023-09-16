@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_array_equal, mock
+from xarray.tests import assert_allclose, assert_array_equal, mock
 from xarray.tests import assert_identical as assert_identical_
 
 
@@ -16,16 +16,16 @@ def assert_identical(a, b):
         assert_array_equal(a, b)
 
 
-def test_unary():
-    args = [
-        0,
-        np.zeros(2),
+@pytest.mark.parametrize(
+    "a",
+    [
         xr.Variable(["x"], [0, 0]),
         xr.DataArray([0, 0], dims="x"),
         xr.Dataset({"y": ("x", [0, 0])}),
-    ]
-    for a in args:
-        assert_identical(a + 1, np.cos(a))
+    ],
+)
+def test_unary(a):
+    assert_allclose(a + 1, np.cos(a))
 
 
 def test_binary():

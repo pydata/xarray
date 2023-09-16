@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Literal, Union
@@ -110,9 +109,9 @@ def _infer_concat_order_from_coords(datasets):
                     ascending = False
                 else:
                     raise ValueError(
-                        "Coordinate variable {} is neither "
+                        f"Coordinate variable {dim} is neither "
                         "monotonically increasing nor "
-                        "monotonically decreasing on all datasets".format(dim)
+                        "monotonically decreasing on all datasets"
                     )
 
                 # Assume that any two datasets whose coord along dim starts
@@ -222,10 +221,8 @@ def _combine_nd(
     n_dims = len(example_tile_id)
     if len(concat_dims) != n_dims:
         raise ValueError(
-            "concat_dims has length {} but the datasets "
-            "passed are nested in a {}-dimensional structure".format(
-                len(concat_dims), n_dims
-            )
+            f"concat_dims has length {len(concat_dims)} but the datasets "
+            f"passed are nested in a {n_dims}-dimensional structure"
         )
 
     # Each iteration of this loop reduces the length of the tile_ids tuples
@@ -647,13 +644,12 @@ def _combine_single_variable_hypercube(
         if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
             raise ValueError(
                 "Resulting object does not have monotonic"
-                " global indexes along dimension {}".format(dim)
+                f" global indexes along dimension {dim}"
             )
 
     return concatenated
 
 
-# TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions = "no_conflicts",
@@ -662,7 +658,6 @@ def combine_by_coords(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
-    datasets: Iterable[Dataset] | None = None,
 ) -> Dataset | DataArray:
     """
 
@@ -759,8 +754,6 @@ def combine_by_coords(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-
-    datasets : Iterable of Datasets
 
     Returns
     -------
@@ -918,14 +911,6 @@ def combine_by_coords(
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
 
-    # TODO remove after version 0.21, see PR4696
-    if datasets is not None:
-        warnings.warn(
-            "The datasets argument has been renamed to `data_objects`."
-            " From 0.21 on passing a value for datasets will raise an error."
-        )
-        data_objects = datasets
-
     if not data_objects:
         return Dataset()
 
@@ -970,10 +955,9 @@ def combine_by_coords(
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together
-        concatenated_grouped_by_data_vars = []
-        for vars, datasets_with_same_vars in grouped_by_vars:
-            concatenated = _combine_single_variable_hypercube(
-                list(datasets_with_same_vars),
+        concatenated_grouped_by_data_vars = tuple(
+            _combine_single_variable_hypercube(
+                tuple(datasets_with_same_vars),
                 fill_value=fill_value,
                 data_vars=data_vars,
                 coords=coords,
@@ -981,7 +965,8 @@ def combine_by_coords(
                 join=join,
                 combine_attrs=combine_attrs,
             )
-            concatenated_grouped_by_data_vars.append(concatenated)
+            for vars, datasets_with_same_vars in grouped_by_vars
+        )
 
     return merge(
         concatenated_grouped_by_data_vars,
