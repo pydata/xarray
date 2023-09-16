@@ -134,7 +134,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]:
         ...
 
-    @functools.wraps(dataarray_plot.line, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.line, assigned=("__doc__",))
     def line(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
         return dataarray_plot.line(self._da, *args, **kwargs)
 
@@ -177,7 +177,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]:
         ...
 
-    @functools.wraps(dataarray_plot.step, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.step, assigned=("__doc__",))
     def step(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
         return dataarray_plot.step(self._da, *args, **kwargs)
 
@@ -304,7 +304,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]:
         ...
 
-    @functools.wraps(dataarray_plot.scatter, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.scatter, assigned=("__doc__",))
     def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
         return dataarray_plot.scatter(self._da, *args, **kwargs)
 
@@ -428,7 +428,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]:
         ...
 
-    @functools.wraps(dataarray_plot.imshow, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.imshow, assigned=("__doc__",))
     def imshow(self, *args, **kwargs) -> AxesImage | FacetGrid[DataArray]:
         return dataarray_plot.imshow(self._da, *args, **kwargs)
 
@@ -552,7 +552,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]:
         ...
 
-    @functools.wraps(dataarray_plot.contour, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.contour, assigned=("__doc__",))
     def contour(self, *args, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
         return dataarray_plot.contour(self._da, *args, **kwargs)
 
@@ -676,7 +676,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid:
         ...
 
-    @functools.wraps(dataarray_plot.contourf, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.contourf, assigned=("__doc__",))
     def contourf(self, *args, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
         return dataarray_plot.contourf(self._da, *args, **kwargs)
 
@@ -800,7 +800,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]:
         ...
 
-    @functools.wraps(dataarray_plot.pcolormesh, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.pcolormesh, assigned=("__doc__",))
     def pcolormesh(self, *args, **kwargs) -> QuadMesh | FacetGrid[DataArray]:
         return dataarray_plot.pcolormesh(self._da, *args, **kwargs)
 
@@ -924,7 +924,7 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid:
         ...
 
-    @functools.wraps(dataarray_plot.surface, assigned=("__doc__"))
+    @functools.wraps(dataarray_plot.surface, assigned=("__doc__",))
     def surface(self, *args, **kwargs) -> Poly3DCollection:
         return dataarray_plot.surface(self._da, *args, **kwargs)
 
@@ -1070,7 +1070,7 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[Dataset]:
         ...
 
-    @functools.wraps(dataset_plot.scatter, assigned=("__doc__"))
+    @functools.wraps(dataset_plot.scatter, assigned=("__doc__",))
     def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[Dataset]:
         return dataset_plot.scatter(self._ds, *args, **kwargs)
 
@@ -1185,7 +1185,7 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[Dataset]:
         ...
 
-    @functools.wraps(dataset_plot.quiver, assigned=("__doc__"))
+    @functools.wraps(dataset_plot.quiver, assigned=("__doc__",))
     def quiver(self, *args, **kwargs) -> Quiver | FacetGrid[Dataset]:
         return dataset_plot.quiver(self._ds, *args, **kwargs)
 
@@ -1300,6 +1300,6 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[Dataset]:
         ...
 
-    @functools.wraps(dataset_plot.streamplot, assigned=("__doc__"))
+    @functools.wraps(dataset_plot.streamplot, assigned=("__doc__",))
     def streamplot(self, *args, **kwargs) -> LineCollection | FacetGrid[Dataset]:
         return dataset_plot.streamplot(self._ds, *args, **kwargs)
