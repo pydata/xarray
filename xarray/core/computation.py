@@ -772,7 +772,7 @@ def apply_variable_ufunc(
             f"outputs specified in the ufunc signature. "
             f"Received a {type(result_data)} with {len(result_data)} elements. "
             f"Expected a tuple of {signature.num_outputs} elements:\n\n"
-            f"{limit_lines(result_data, limit=10)}"
+            f"{limit_lines(repr(result_data), limit=10)}"
         )
 
     objs = _all_of_type(args, Variable)
