@@ -80,6 +80,33 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     assert_identical(actual, expected)
 
 
+def test_decode_cf_variable_with_mismatched_coordinates() -> None:
+    # tests for decoding mismatched coordinates attributes
+    # see GH #1809
+    zeros1 = np.zeros((1, 5, 3))
+    orig = Dataset(
+        {
+            "XLONG": (["x", "y"], zeros1.squeeze(0), {}),
+            "XLAT": (["x", "y"], zeros1.squeeze(0), {}),
+            "foo": (["time", "x", "y"], zeros1, {"coordinates": "XTIME XLONG XLAT"}),
+            "time": ("time", [0.0], {"units": "hours since 2017-01-01"}),
+        }
+    )
+    k = "foo"
+    missing_coord_names = ["XTIME"]
+    existing_coord_names = ["XLONG", "XLAT"]
+    msg = f"Mismatched ``coordinates`` attribute on variable {k!r}. Coordinate(s): {missing_coord_names!r} missing in dataset."
+    with pytest.raises(ValueError) as e:
+        decoded = conventions.decode_cf(orig, decode_coords="coordinates_strict")
+        assert e.value.args[0] == msg
+    msg = " ".join([msg, f"Decoding with new ``coordinates``: {existing_coord_names}."])
+    with pytest.warns(UserWarning) as w:
+        decoded = conventions.decode_cf(orig)
+        assert w[0].message.args[0] == msg
+        assert decoded["foo"].encoding["coordinates"] == "XLONG XLAT"
+        assert list(decoded.coords.keys()) == ["XLONG", "XLAT", "time"]
+
+
 @requires_cftime
 class TestEncodeCFVariable:
     def test_incompatible_attributes(self) -> None:

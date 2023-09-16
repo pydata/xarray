@@ -438,15 +438,23 @@ def decode_cf_variables(
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}")
-        if decode_coords in [True, "coordinates", "all"]:
+        if decode_coords in [True, "coordinates", "all", "coordinates_strict"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
-                coord_str = var_attrs["coordinates"]
-                var_coord_names = coord_str.split()
-                if all(k in variables for k in var_coord_names):
-                    new_vars[k].encoding["coordinates"] = coord_str
-                    del var_attrs["coordinates"]
-                    coord_names.update(var_coord_names)
+                var_coord_names = var_attrs["coordinates"].split()
+                existing_coord_names = [c for c in var_coord_names if c in variables]
+                missing_coord_names = [c for c in var_coord_names if c not in variables]
+                if missing_coord_names:
+                    msg = f"Mismatched ``coordinates`` attribute on variable {k!r}. Coordinate(s): {missing_coord_names!r} missing in dataset."
+                    if isinstance(decode_coords, str) and "strict" in decode_coords:
+                        raise ValueError(msg)
+                    else:
+                        from xarray.core.utils import emit_user_level_warning
+                        emit_user_level_warning(" ".join([msg,  f"Decoding with new ``coordinates``: {existing_coord_names}."]))
+
+                new_vars[k].encoding["coordinates"] = " ".join(existing_coord_names)
+                del var_attrs["coordinates"]
+                coord_names.update(existing_coord_names)
 
         if decode_coords == "all":
             for attr_name in CF_RELATED_DATA:
