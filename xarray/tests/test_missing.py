@@ -117,8 +117,8 @@ def test_interpolate_pd_compat():
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["barycentric", "krog", "pchip", "spline", "akima"])
-def test_scipy_methods_function(method):
+@pytest.mark.parametrize("method", ["barycentric", "krogh", "pchip", "spline", "akima"])
+def test_scipy_methods_function(method) -> None:
     # Note: Pandas does some wacky things with these methods and the full
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
