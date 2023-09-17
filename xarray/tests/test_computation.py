@@ -1830,7 +1830,7 @@ def test_output_wrong_number() -> None:
 
     with pytest.raises(
         ValueError,
-        match=r"number of outputs.*Result is not a tuple of 2 elements:\n\narray\(\[0",
+        match=r"number of outputs.* Received a <class 'numpy.ndarray'> with 10 elements. Expected a tuple of 2 elements:\n\narray\(\[0",
     ):
         apply_ufunc(identity, variable, output_core_dims=[(), ()])
 
