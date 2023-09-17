@@ -1907,7 +1907,8 @@ def _line(
     support it directly, just like PatchCollection doesn't either.
 
     """
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
+
     rcParams = plt.matplotlib.rcParams
 
     # Handle z inputs:
