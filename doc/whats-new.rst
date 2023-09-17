@@ -30,6 +30,10 @@ New Features
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Improved static typing of reduction methods (:pull:`6746`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added `on_missing_core_dims` to :py:meth:`apply_ufunc` to allow for copying or
+  dropping a :py:class:`Dataset`'s variables with missing core dimensions.
+  (:pull:`8138`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
