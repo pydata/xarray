@@ -185,18 +185,32 @@ def _prepare_plot1d_data(
     """
     # If there are more than 1 dimension in the array than stack all the
     # dimensions so the plotter can plot anything:
-    if darray.ndim > 1:
+    if darray.ndim >= 2:
         # When stacking dims the lines will continue connecting. For floats
         # this can be solved by adding a nan element in between the flattening
         # points:
         dims_T = []
         if np.issubdtype(darray.dtype, np.floating):
-            for v in ["z", "x"]:
-                dim = coords_to_plot.get(v, None)
-                if (dim is not None) and (dim in darray.dims):
-                    darray_nan = np.nan * darray.isel({dim: -1})
-                    darray = concat([darray, darray_nan], dim=dim)
-                    dims_T.append(coords_to_plot[v])
+            i = 0
+            for v in ("z", "x"):
+                coord = coords_to_plot.get(v, None)
+                if coord is not None:
+                    if coord in darray.dims:
+                        # Dimension coordinate:
+                        d = coord
+                    else:
+                        # Coordinate with multiple dimensions:
+                        c = darray[coord]
+                        dims_filt = dict.fromkeys(c.dims)
+                        for k in dims_filt.keys() & set(dims_T):
+                            dims_filt.pop(k)
+
+                        d = tuple(dims_filt.keys())[i]
+
+                    darray_nan = np.nan * darray.isel({d: -1})
+                    darray = concat([darray, darray_nan], dim=d)
+                    dims_T.append(d)
+                    i += 1
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
