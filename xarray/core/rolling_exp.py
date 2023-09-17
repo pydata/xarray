@@ -12,7 +12,10 @@ from xarray.core.types import T_DataWithCoords
 
 
 def _get_alpha(
-    com: float | None, span: float | None, halflife: float | None, alpha: float | None
+    com: float | None = None,
+    span: float | None = None,
+    halflife: float | None = None,
+    alpha: float | None = None,
 ) -> float:
     # pandas defines in terms of com (converting to alpha in the algo)
     # so use its function to get a com and then convert to alpha
