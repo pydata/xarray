@@ -215,6 +215,21 @@ def _apply_mask(
     return np.where(condition, decoded_fill_value, data)
 
 
+def _is_time_like(units):
+    # test for time-like
+    time_strings = [
+        "since",
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
+    return any(tstr in str(units) for tstr in time_strings)
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -236,19 +251,32 @@ class CFMaskCoder(VariableCoder):
                 f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
+        # special case DateTime to properly handle NaT
+        is_time_like = _is_time_like(attrs.get("units"))
+
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
-                data = duck_array_ops.fillna(data, fill_value)
+                if is_time_like and data.dtype.kind in "iu":
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
 
         if mv_exists:
             # Ensure missing_value is cast to same dtype as data's
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and not fv_exists:
-                data = duck_array_ops.fillna(data, fill_value)
+                if is_time_like and data.dtype.kind in "iu":
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
@@ -275,7 +303,11 @@ class CFMaskCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-            dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+            # special case DateTime to properly handle NaT
+            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
+                dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
+            else:
+                dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
 
             if encoded_fill_values:
                 transform = partial(
