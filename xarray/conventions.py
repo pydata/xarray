@@ -16,6 +16,7 @@ from xarray.core.common import (
     contains_cftime_datetimes,
 )
 from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
 
 CF_RELATED_DATA = (
@@ -442,21 +443,24 @@ def decode_cf_variables(
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
                 var_coord_names = var_attrs["coordinates"].split()
-                existing_coord_names = [c for c in var_coord_names if c in variables]
-                missing_coord_names = [c for c in var_coord_names if c not in variables]
-                if missing_coord_names:
-                    msg = f"Mismatched ``coordinates`` attribute on variable {k!r}. Coordinate(s): {missing_coord_names!r} missing in dataset."
+                if missing_coord_names := set(var_coord_names) - set(variables):
+                    # need to preserve order here
+                    var_coord_names = [c for c in var_coord_names if c in variables]
+                    msg = (
+                        f"Mismatched ``coordinates`` attribute on variable {k!r}. "
+                        f"Coordinate(s): {list(missing_coord_names)!r} missing in dataset."
+                    )
                     if isinstance(decode_coords, str) and "strict" in decode_coords:
                         raise ValueError(msg)
                     else:
-                        from xarray.core.utils import emit_user_level_warning
-
-                       msg_solution = f"Decoding with new ``coordinates``: {existing_coord_names}."
+                        msg_solution = (
+                            f"Decoding with new ``coordinates``: {var_coord_names}."
+                        )
                         emit_user_level_warning(" ".join([msg, msg_solution]))
 
-                new_vars[k].encoding["coordinates"] = " ".join(existing_coord_names)
+                new_vars[k].encoding["coordinates"] = " ".join(var_coord_names)
                 del var_attrs["coordinates"]
-                coord_names.update(existing_coord_names)
+                coord_names.update(var_coord_names)
 
         if decode_coords == "all":
             for attr_name in CF_RELATED_DATA:
