@@ -87,7 +87,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None) -> Variable | IndexVariable:
+def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
