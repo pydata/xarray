@@ -3,14 +3,16 @@
 For internal xarray development use only.
 
 Usage:
-    python xarray/util/generate_ops.py --module > xarray/core/_typed_ops.py
-    python xarray/util/generate_ops.py --stubs > xarray/core/_typed_ops.pyi
+    python xarray/util/generate_ops.py > xarray/core/_typed_ops.py
 
 """
 # Note: the comments in https://github.com/pydata/xarray/pull/4904 provide some
 # background to some of the design choices made here.
 
-import sys
+from __future__ import annotations
+
+from collections.abc import Iterator
+from typing import Union
 
 BINOPS_EQNE = (("__eq__", "nputils.array_eq"), ("__ne__", "nputils.array_ne"))
 BINOPS_CMP = (
@@ -74,155 +76,119 @@ OTHER_UNARY_METHODS = (
     ("conjugate", "ops.conjugate"),
 )
 
+
+required_method_binary = """
+    def _binary_op(
+        self, other: {other_type}, f: Callable, reflexive: bool = False
+    ) -> {return_type}:
+        raise NotImplementedError"""
 template_binop = """
-    def {method}(self, other):
+    def {method}(self, other: {other_type}) -> {return_type}:{type_override}
         return self._binary_op(other, {func})"""
 template_reflexive = """
-    def {method}(self, other):
+    def {method}(self, other: {other_type}) -> {return_type}:
         return self._binary_op(other, {func}, reflexive=True)"""
+
+required_method_inplace = """
+    def _inplace_binary_op(self, other: {other_type}, f: Callable) -> Self:
+        raise NotImplementedError"""
 template_inplace = """
-    def {method}(self, other):
+    def {method}(self, other: {other_type}) -> Self:
         return self._inplace_binary_op(other, {func})"""
+
+required_method_unary = """
+    def _unary_op(self, f: Callable, *args: Any, **kwargs: Any) -> Self:
+        raise NotImplementedError"""
 template_unary = """
-    def {method}(self):
+    def {method}(self) -> Self:
         return self._unary_op({func})"""
 template_other_unary = """
-    def {method}(self, *args, **kwargs):
+    def {method}(self, *args: Any, **kwargs: Any) -> Self:
         return self._unary_op({func}, *args, **kwargs)"""
-required_method_unary = """
-    def _unary_op(self, f, *args, **kwargs):
-        raise NotImplementedError"""
-required_method_binary = """
-    def _binary_op(self, other, f, reflexive=False):
-        raise NotImplementedError"""
-required_method_inplace = """
-    def _inplace_binary_op(self, other, f):
-        raise NotImplementedError"""
-
-# For some methods we override return type `bool` defined by base class `object`.
-OVERRIDE_TYPESHED = {"override": "  # type: ignore[override]"}
-NO_OVERRIDE = {"override": ""}
-
-# Note: in some of the overloads below the return value in reality is NotImplemented,
-# which cannot accurately be expressed with type hints,e.g. Literal[NotImplemented]
-# or type(NotImplemented) are not allowed and NoReturn has a different meaning.
-# In such cases we are lending the type checkers a hand by specifying the return type
-# of the corresponding reflexive method on `other` which will be called instead.
-stub_ds = """\
-    def {method}(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...{override}"""
-stub_da = """\
-    @overload{override}
-    def {method}(self, other: T_Dataset) -> T_Dataset: ...
-    @overload
-    def {method}(self, other: "DatasetGroupBy") -> "Dataset": ...
-    @overload
-    def {method}(self: T_DataArray, other: DaCompatible) -> T_DataArray: ..."""
-stub_var = """\
-    @overload{override}
-    def {method}(self, other: T_Dataset) -> T_Dataset: ...
-    @overload
-    def {method}(self, other: T_DataArray) -> T_DataArray: ...
-    @overload
-    def {method}(self: T_Variable, other: VarCompatible) -> T_Variable: ..."""
-stub_dsgb = """\
-    @overload{override}
-    def {method}(self, other: T_Dataset) -> T_Dataset: ...
-    @overload
-    def {method}(self, other: "DataArray") -> "Dataset": ...
-    @overload
-    def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
-stub_dagb = """\
-    @overload{override}
-    def {method}(self, other: T_Dataset) -> T_Dataset: ...
-    @overload
-    def {method}(self, other: T_DataArray) -> T_DataArray: ...
-    @overload
-    def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
-stub_unary = """\
-    def {method}(self: {self_type}) -> {self_type}: ..."""
-stub_other_unary = """\
-    def {method}(self: {self_type}, *args, **kwargs) -> {self_type}: ..."""
-stub_required_unary = """\
-    def _unary_op(self, f, *args, **kwargs): ..."""
-stub_required_binary = """\
-    def _binary_op(self, other, f, reflexive=...): ..."""
-stub_required_inplace = """\
-    def _inplace_binary_op(self, other, f): ..."""
 
 
-def unops(self_type):
-    extra_context = {"self_type": self_type}
+# # For some methods we override return type `bool` defined by base class `object`.
+# OVERRIDE_TYPESHED = {"override": "  # type: ignore[override]"}
+# NO_OVERRIDE = {"override": ""}
+
+
+FuncType = tuple[tuple[Union[str, None], Union[str, None]], ...]
+OpsType = tuple[FuncType, str, dict[str, str]]
+
+
+def binops(
+    other_type: str, return_type: str = "Self", type_ignore_eq: str = "override"
+) -> list[OpsType]:
+    type_override_eq = f"  # type:ignore[{type_ignore_eq}]" if type_ignore_eq else ""
+    extras = {"other_type": other_type, "return_type": return_type, "type_override": ""}
     return [
-        ([(None, None)], required_method_unary, stub_required_unary, {}),
-        (UNARY_OPS, template_unary, stub_unary, extra_context),
-        (OTHER_UNARY_METHODS, template_other_unary, stub_other_unary, extra_context),
+        ([(None, None)], required_method_binary, extras),
+        (BINOPS_NUM + BINOPS_CMP, template_binop, extras),
+        (
+            BINOPS_EQNE,
+            template_binop,
+            {
+                "other_type": other_type,
+                "return_type": return_type,
+                "type_override": type_override_eq,
+            },
+        ),
+        (BINOPS_REFLEXIVE, template_reflexive, extras),
     ]
 
 
-def binops(stub=""):
+def inplace(other_type: str) -> list[OpsType]:
+    extras = {"other_type": other_type}
     return [
-        ([(None, None)], required_method_binary, stub_required_binary, {}),
-        (BINOPS_NUM + BINOPS_CMP, template_binop, stub, NO_OVERRIDE),
-        (BINOPS_EQNE, template_binop, stub, OVERRIDE_TYPESHED),
-        (BINOPS_REFLEXIVE, template_reflexive, stub, NO_OVERRIDE),
+        ([(None, None)], required_method_inplace, extras),
+        (BINOPS_INPLACE, template_inplace, extras),
     ]
 
 
-def inplace():
+def unops() -> list[OpsType]:
     return [
-        ([(None, None)], required_method_inplace, stub_required_inplace, {}),
-        (BINOPS_INPLACE, template_inplace, "", {}),
+        ([(None, None)], required_method_unary, {}),
+        (UNARY_OPS, template_unary, {}),
+        (OTHER_UNARY_METHODS, template_other_unary, {}),
     ]
 
 
 ops_info = {}
-ops_info["DatasetOpsMixin"] = binops(stub_ds) + inplace() + unops("T_Dataset")
-ops_info["DataArrayOpsMixin"] = binops(stub_da) + inplace() + unops("T_DataArray")
-ops_info["VariableOpsMixin"] = binops(stub_var) + inplace() + unops("T_Variable")
-ops_info["DatasetGroupByOpsMixin"] = binops(stub_dsgb)
-ops_info["DataArrayGroupByOpsMixin"] = binops(stub_dagb)
+ops_info["DatasetOpsMixin"] = (
+    binops(other_type="DsCompatible") + inplace(other_type="DsCompatible") + unops()
+)
+ops_info["DataArrayOpsMixin"] = (
+    binops(other_type="DaCompatible") + inplace(other_type="DaCompatible") + unops()
+)
+ops_info["VariableOpsMixin"] = (
+    binops(other_type="VarCompatible") + inplace(other_type="VarCompatible") + unops()
+)
+ops_info["DatasetGroupByOpsMixin"] = binops(
+    other_type="GroupByCompatible", return_type='"Dataset"'
+)
+ops_info["DataArrayGroupByOpsMixin"] = binops(
+    other_type="T_Xarray", return_type="T_Xarray"
+)
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
 import operator
+from typing import TYPE_CHECKING, Any, Callable
 
-from . import nputils, ops'''
-
-STUBFILE_PREAMBLE = '''\
-"""Stub file for mixin classes with arithmetic operators."""
-# This file was generated using xarray.util.generate_ops. Do not edit manually.
-
-from typing import NoReturn, TypeVar, overload
-
-import numpy as np
-from numpy.typing import ArrayLike
-
-from .dataarray import DataArray
-from .dataset import Dataset
-from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
-from .types import (
+from xarray.core import nputils, ops
+from xarray.core.types import (
     DaCompatible,
     DsCompatible,
-    GroupByIncompatible,
-    ScalarOrArray,
+    GroupByCompatible,
+    Self,
+    T_Xarray,
     VarCompatible,
 )
-from .variable import Variable
 
-try:
-    from dask.array import Array as DaskArray
-except ImportError:
-    DaskArray = np.ndarray  # type: ignore
-
-# DatasetOpsMixin etc. are parent classes of Dataset etc.
-# Because of https://github.com/pydata/xarray/issues/5755, we redefine these. Generally
-# we use the ones in `types`. (We're open to refining this, and potentially integrating
-# the `py` & `pyi` files to simplify them.)
-T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
-T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
-T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")'''
+if TYPE_CHECKING:
+    from xarray.core.dataset import Dataset'''
 
 
 CLASS_PREAMBLE = """{newline}
@@ -233,35 +199,29 @@ COPY_DOCSTRING = """\
     {method}.__doc__ = {func}.__doc__"""
 
 
-def render(ops_info, is_module):
+def render(ops_info: dict[str, list[OpsType]]) -> Iterator[str]:
     """Render the module or stub file."""
-    yield MODULE_PREAMBLE if is_module else STUBFILE_PREAMBLE
+    yield MODULE_PREAMBLE
 
     for cls_name, method_blocks in ops_info.items():
-        yield CLASS_PREAMBLE.format(cls_name=cls_name, newline="\n" * is_module)
-        yield from _render_classbody(method_blocks, is_module)
+        yield CLASS_PREAMBLE.format(cls_name=cls_name, newline="\n")
+        yield from _render_classbody(method_blocks)
 
 
-def _render_classbody(method_blocks, is_module):
-    for method_func_pairs, method_template, stub_template, extra in method_blocks:
-        template = method_template if is_module else stub_template
+def _render_classbody(method_blocks: list[OpsType]) -> Iterator[str]:
+    for method_func_pairs, method_template, extra in method_blocks:
+        template = method_template
         if template:
             for method, func in method_func_pairs:
                 yield template.format(method=method, func=func, **extra)
 
-    if is_module:
-        yield ""
-        for method_func_pairs, *_ in method_blocks:
-            for method, func in method_func_pairs:
-                if method and func:
-                    yield COPY_DOCSTRING.format(method=method, func=func)
+    yield ""
+    for method_func_pairs, *_ in method_blocks:
+        for method, func in method_func_pairs:
+            if method and func:
+                yield COPY_DOCSTRING.format(method=method, func=func)
 
 
 if __name__ == "__main__":
-    option = sys.argv[1].lower() if len(sys.argv) == 2 else None
-    if option not in {"--module", "--stubs"}:
-        raise SystemExit(f"Usage: {sys.argv[0]} --module | --stubs")
-    is_module = option == "--module"
-
-    for line in render(ops_info, is_module):
+    for line in render(ops_info):
         print(line)

@@ -93,7 +93,7 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import QuantileMethods, T_Dataset
+from xarray.core.types import QuantileMethods, Self, T_Dataset
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -698,7 +698,7 @@ class Dataset(
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
     # related to https://github.com/python/mypy/issues/9319?
-    def __eq__(self: T_Dataset, other: DsCompatible) -> T_Dataset:  # type: ignore[override]
+    def __eq__(self, other: DsCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
     @classmethod

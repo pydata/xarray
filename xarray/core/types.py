@@ -162,10 +162,10 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
-DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
-DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
-GroupByIncompatible = Union["Variable", "GroupBy"]
+DaCompatible = Union["DataArray", "DataArrayGroupBy", "VarCompatible"]
+DsCompatible = Union["Dataset", "GroupBy", "DaCompatible"]
+GroupByCompatible = Union["Dataset", "DataArray"]
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
