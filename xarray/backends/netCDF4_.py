@@ -501,11 +501,15 @@ class NetCDF4DataStore(WritableCFDataStore):
             enum_dict = {
                 k: v for k, v in zip(attrs["flag_meanings"], attrs["flag_values"])
             }
-            datatype = self.ds.createEnumType(
-                variable.dtype,
-                encoding["enum"],
-                enum_dict,
-            )
+            enum_name = encoding["enum"]
+            if enum_name in self.ds.enumtypes:
+                datatype = self.ds.enumtypes[enum_name]
+            else:
+                datatype = self.ds.createEnumType(
+                    variable.dtype,
+                    enum_name,
+                    enum_dict,
+                )
             del attrs["flag_values"]
             del attrs["flag_meanings"]
         else:
