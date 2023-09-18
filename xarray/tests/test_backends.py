@@ -54,7 +54,6 @@ from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import array_type
 from xarray.tests import (
-    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -526,7 +525,6 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual["x"].encoding["_Encoding"] == "ascii"
 
-    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self) -> None:
         times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
         expected = Dataset({"t": ("t", times), "t0": times[0]})
