@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Literal, Union
 
 import numpy as np
 import pandas as pd
@@ -378,7 +378,9 @@ def decode_cf_variables(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: bool = True,
+    decode_coords: Literal[
+        True, "coordinates", "all", "coordinates_strict", "all_strict"
+    ] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
@@ -437,7 +439,13 @@ def decode_cf_variables(
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}")
-        if decode_coords in [True, "coordinates", "all", "coordinates_strict"]:
+        if decode_coords in [
+            True,
+            "coordinates",
+            "all",
+            "coordinates_strict",
+            "all_strict",
+        ]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
                 var_coord_names = var_attrs["coordinates"].split()
@@ -504,7 +512,9 @@ def decode_cf(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: bool = True,
+    decode_coords: Literal[
+        True, "coordinates", "all", "coordinates_strict", "all_strict"
+    ] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
@@ -525,14 +535,17 @@ def decode_cf(
     decode_times : bool, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
-    decode_coords : bool or {"coordinates", "all"}, optional
+    decode_coords : bool or {"coordinates", "coordinates_strict", "all", "all_strict"}, optional
         Controls which variables are set as coordinate variables:
 
-        - "coordinates" or True: Set variables referred to in the
+        - "coordinates"/"coordinates_strict" or True: Set variables referred to in the
           ``'coordinates'`` attribute of the datasets or individual variables
           as coordinate variables.
-        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+        - "all"/"all_strict": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+        When using the "strict"-forms an error is raised, if ``coordinates``-items are
+        missing from the dataset, otherwise a warning is issued and only the
+        available ``coordinates`items are handled.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
