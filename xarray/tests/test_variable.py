@@ -2619,10 +2619,10 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         series = pd.Series(times_s)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual: T_DuckArray = as_compatible_data(series)
+            actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual, series.values)
-        assert actual.dtype == np.dtype("datetime64[ns]")
+        np.testing.assert_array_equal(actual2, series.values)
+        assert actual2.dtype == np.dtype("datetime64[ns]")
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
