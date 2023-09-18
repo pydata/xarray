@@ -772,18 +772,13 @@ class TestDatasetRollingExp:
         # discard attrs
         result = ds.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
-        # TODO: from #8114 — this arguably should be empty, but `apply_ufunc` doesn't do
-        # that at the moment. We should change in `apply_func` rather than
-        # special-case it here.
-        #
-        # assert result.z1.attrs == {}
+        assert result.z1.attrs == {}
 
         # test discard attrs using global option
         with set_options(keep_attrs=False):
             result = ds.rolling_exp(time=10).mean()
         assert result.attrs == {}
-        # See above
-        # assert result.z1.attrs == {}
+        assert result.z1.attrs == {}
 
         # keyword takes precedence over global option
         with set_options(keep_attrs=False):
@@ -794,8 +789,7 @@ class TestDatasetRollingExp:
         with set_options(keep_attrs=True):
             result = ds.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
-        # See above
-        # assert result.z1.attrs == {}
+        assert result.z1.attrs == {}
 
         with pytest.warns(
             UserWarning,
