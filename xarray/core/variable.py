@@ -367,7 +367,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
-        self._attrs = None
+        self._attrs: dict[Any, Any] | None = None
         self._encoding = None
         if attrs is not None:
             self.attrs = attrs
