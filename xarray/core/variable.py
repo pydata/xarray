@@ -232,7 +232,7 @@ def _possibly_convert_datetime_or_timedelta_index(data):
 
 
 def as_compatible_data(
-    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
+    data: T_DuckArray | ArrayLike, fastpath: bool = False
 ) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
@@ -341,7 +341,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def __init__(
         self,
         dims,
-        data: T_DuckArray | np.typing.ArrayLike,
+        data: T_DuckArray | ArrayLike,
         attrs=None,
         encoding=None,
         fastpath=False,
@@ -420,7 +420,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self: T_Variable) -> T_DuckArray:
+    def data(self: T_Variable):
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -439,12 +439,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             return self.values
 
     @data.setter
-    def data(self: T_Variable, data: T_DuckArray | np.typing.ArrayLike) -> None:
+    def data(self: T_Variable, data: T_DuckArray | ArrayLike) -> None:
         data = as_compatible_data(data)
-        if data.shape != self.shape:
+        if data.shape != self.shape:  # type: ignore[attr-defined]
             raise ValueError(
                 f"replacement data must match the Variable's shape. "
-                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
+                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"  # type: ignore[attr-defined]
             )
         self._data = data
 
@@ -1006,7 +1006,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(encoding={})
 
     def copy(
-        self: T_Variable, deep: bool = True, data: ArrayLike | None = None
+        self: T_Variable, deep: bool = True, data: T_DuckArray | ArrayLike | None = None
     ) -> T_Variable:
         """Returns a copy of this object.
 
@@ -1068,15 +1068,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _copy(
         self: T_Variable,
         deep: bool = True,
-        data: ArrayLike | None = None,
+        data: T_DuckArray | ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
     ) -> T_Variable:
         if data is None:
-            ndata = self._data
+            data_old = self._data
 
-            if isinstance(ndata, indexing.MemoryCachedArray):
+            if isinstance(data_old, indexing.MemoryCachedArray):
                 # don't share caching between copies
-                ndata = indexing.MemoryCachedArray(ndata.array)
+                ndata = indexing.MemoryCachedArray(data_old.array)
+            else:
+                ndata = data_old
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
