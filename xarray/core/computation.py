@@ -433,7 +433,6 @@ def apply_dict_of_variables_vfunc(
     join="inner",
     fill_value=None,
     on_missing_core_dim: MissingCoreDimOptions = "raise",
-    keep_attrs="override",
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
@@ -446,7 +445,7 @@ def apply_dict_of_variables_vfunc(
     for name, variable_args in zip(names, grouped_by_name):
         core_dim_present = _check_core_dims(signature, variable_args, name)
         if core_dim_present is True:
-            result_vars[name] = func(*variable_args, keep_attrs=keep_attrs)
+            result_vars[name] = func(*variable_args)
         else:
             if on_missing_core_dim == "raise":
                 raise ValueError(core_dim_present)
@@ -523,7 +522,6 @@ def apply_dataset_vfunc(
         join=dataset_join,
         fill_value=fill_value,
         on_missing_core_dim=on_missing_core_dim,
-        keep_attrs=keep_attrs,
     )
 
     out: Dataset | tuple[Dataset, ...]
