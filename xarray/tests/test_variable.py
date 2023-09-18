@@ -2619,7 +2619,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         series = pd.Series(times_s)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(series)
+            actual: T_DuckArray = as_compatible_data(series)
 
         np.testing.assert_array_equal(actual, series.values)
         assert actual.dtype == np.dtype("datetime64[ns]")
