@@ -84,6 +84,9 @@ Bug fixes
   issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
   :issue:`1064`, :pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
+  (:issue:`6528`, :pull:`8114`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
