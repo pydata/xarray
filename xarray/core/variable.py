@@ -246,7 +246,7 @@ def as_compatible_data(
     """
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
-        return _maybe_wrap_data(data)
+        return cast("T_DuckArray", _maybe_wrap_data(data))
 
     from xarray.core.dataarray import DataArray
 
@@ -255,7 +255,7 @@ def as_compatible_data(
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
-        return _maybe_wrap_data(data)
+        return cast("T_DuckArray", _maybe_wrap_data(data))
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
@@ -282,7 +282,7 @@ def as_compatible_data(
     if not isinstance(data, np.ndarray) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
-        return data
+        return cast("T_DuckArray", data)
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
@@ -420,7 +420,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self) -> T_DuckArray:
+    def data(self: T_Variable) -> T_DuckArray:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -439,7 +439,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             return self.values
 
     @data.setter
-    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
+    def data(self: T_Variable, data: T_DuckArray | np.typing.ArrayLike) -> None:
         data = as_compatible_data(data)
         if data.shape != self.shape:
             raise ValueError(
