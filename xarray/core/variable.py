@@ -143,7 +143,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
     elif isinstance(obj, (set, dict)):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
-        data = as_compatible_data(obj)
+        data: T_DuckArray = as_compatible_data(obj)
         if data.ndim != 1:
             raise MissingDimensionsError(
                 f"cannot set variable {name!r} with {data.ndim!r}-dimensional data "
@@ -164,7 +164,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
     return obj
 
 
-def _maybe_wrap_data(data: T_DuckArray) -> T_DuckArray:
+def _maybe_wrap_data(data):
     """
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
