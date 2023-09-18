@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
+        T_DuckArray,
         T_Variable,
     )
 
@@ -163,7 +164,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
     return obj
 
 
-def _maybe_wrap_data(data):
+def _maybe_wrap_data(data: T_DuckArray) -> T_DuckArray:
     """
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
@@ -230,7 +231,9 @@ def _possibly_convert_datetime_or_timedelta_index(data):
         return data
 
 
-def as_compatible_data(data, fastpath: bool = False):
+def as_compatible_data(
+    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
+) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
@@ -335,7 +338,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     __slots__ = ("_dims", "_data", "_attrs", "_encoding")
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data: T_DuckArray | np.typing.ArrayLike,
+        attrs=None,
+        encoding=None,
+        fastpath=False,
+    ):
         """
         Parameters
         ----------
@@ -355,7 +365,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Well-behaved code to serialize a Variable should ignore
             unrecognized encoding items.
         """
-        self._data = as_compatible_data(data, fastpath=fastpath)
+        self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
         self._attrs = None
         self._encoding = None
@@ -410,7 +420,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self) -> Any:
+    def data(self) -> T_DuckArray:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -429,7 +439,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             return self.values
 
     @data.setter
-    def data(self, data):
+    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
         data = as_compatible_data(data)
         if data.shape != self.shape:
             raise ValueError(
