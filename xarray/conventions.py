@@ -451,14 +451,8 @@ def decode_cf_variables(
                     else:
                         from xarray.core.utils import emit_user_level_warning
 
-                        emit_user_level_warning(
-                            " ".join(
-                                [
-                                    msg,
-                                    f"Decoding with new ``coordinates``: {existing_coord_names}.",
-                                ]
-                            )
-                        )
+                       msg_solution = f"Decoding with new ``coordinates``: {existing_coord_names}."
+                        emit_user_level_warning(" ".join([msg, msg_solution]))
 
                 new_vars[k].encoding["coordinates"] = " ".join(existing_coord_names)
                 del var_attrs["coordinates"]
