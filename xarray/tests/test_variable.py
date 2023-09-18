@@ -28,6 +28,7 @@ from xarray.core.indexing import (
 from xarray.core.pycompat import array_type
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
+from xarray.core.types import T_DuckArray
 from xarray.tests import (
     assert_allclose,
     assert_array_equal,
@@ -44,6 +45,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+
 
 dask_array_type = array_type("dask")
 
@@ -2610,7 +2612,7 @@ class TestAsCompatibleData:
         times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(times_s)
+            actual: T_DuckArray = as_compatible_data(times_s)
         assert actual.array == times_s
         assert actual.array.dtype == pd.DatetimeTZDtype("ns", tz)
 
