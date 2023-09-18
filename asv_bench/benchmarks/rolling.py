@@ -115,6 +115,11 @@ class DataArrayRollingMemory(RollingMemory):
             roll = self.ds.var3.rolling(t=100)
             getattr(roll, func)()
 
+    @parameterized(["stride"], ([None, 5, 50]))
+    def peakmem_1drolling_construct(self, stride):
+        self.ds.var2.rolling(t=100).construct("w", stride=stride)
+        self.ds.var3.rolling(t=100).construct("w", stride=stride)
+
 
 class DatasetRollingMemory(RollingMemory):
     @parameterized(["func", "use_bottleneck"], (["sum", "max", "mean"], [True, False]))
@@ -128,3 +133,7 @@ class DatasetRollingMemory(RollingMemory):
         with xr.set_options(use_bottleneck=use_bottleneck):
             roll = self.ds.rolling(t=100)
             getattr(roll, func)()
+
+    @parameterized(["stride"], ([None, 5, 50]))
+    def peakmem_1drolling_construct(self, stride):
+        self.ds.rolling(t=100).construct("w", stride=stride)
