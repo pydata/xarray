@@ -777,6 +777,11 @@ class CFDatetimeCoder(VariableCoder):
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
 
+            # drop dtype in encoding if encoded as float64
+            # to prevent unnecessary casts, see GH #1064
+            if np.issubdtype(data.dtype, np.float64):
+                encoding.pop("dtype", None)
+
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
             return variable
@@ -809,6 +814,11 @@ class CFTimedeltaCoder(VariableCoder):
 
             data, units = encode_cf_timedelta(data, encoding.pop("units", None))
             safe_setitem(attrs, "units", units, name=name)
+
+            # drop dtype in encoding if encoded as float64
+            # to prevent unnecessary casts, see GH #1064
+            if np.issubdtype(data.dtype, np.float64):
+                encoding.pop("dtype", None)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
