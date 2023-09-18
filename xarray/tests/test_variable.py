@@ -2722,6 +2722,57 @@ def test_raise_no_warning_for_nan_in_binary_ops():
         Variable("x", [1, 2, np.nan]) > 0
 
 
+def test_typed_ops_types() -> None:
+    """Tests for type checking of typed_ops on Variable"""
+
+    var = Variable(dims=["t"], data=[1, 2, 3])
+
+    _int: int = 1
+    _list = [1, 2, 3]
+    _ndarray = np.array([1, 2, 3])
+
+    # __add__ as an example of binary ops
+    var = var + _int
+    var = var + _list
+    var = var + _ndarray
+    var = var + var
+    assert isinstance(var, Variable)
+
+    # __radd__ as an example of reflexive binary ops
+    var = _int + var
+    var = _list + var
+    # var = _ndarray + var  # numpy is too dominant here :/
+    assert isinstance(var, Variable)
+
+    # __eq__ as an example of cmp ops
+    var = var == _int
+    var = var == _list
+    var = var == _ndarray
+    # var = _int == var
+    # var = _list == var
+    var = _ndarray == var
+    assert isinstance(var, Variable)
+
+    # __lt__ as another example of cmp ops
+    var = var < _int
+    var = var < _list
+    var = var < _ndarray
+    var = _int > var
+    var = _list > var
+    # var = _ndarray > var
+    assert isinstance(var, Variable)
+
+    # __iadd__ as an example of inplace binary ops
+    var += _int
+    var += _list
+    var += _ndarray
+    assert isinstance(var, Variable)
+
+    # __neg__ as an example of unary ops
+    var = -var
+    assert isinstance(var, Variable)
+
+
 class TestBackendIndexing:
     """Make sure all the array wrappers can be indexed."""
 
