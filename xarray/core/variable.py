@@ -1260,11 +1260,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             inline_array=inline_array,
         )
 
-        data = self._data
-        if chunkmanager.is_chunked_array(data):
-            data = chunkmanager.rechunk(data, chunks)  # type: ignore[arg-type]
+        data_old = self._data
+        if chunkmanager.is_chunked_array(data_old):
+            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
-            if isinstance(data, indexing.ExplicitlyIndexed):
+            if isinstance(data_old, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
                 # that can't handle general array indexing. For example, in netCDF4 you
                 # can do "outer" indexing along two dimensions independent, which works
@@ -1273,20 +1273,22 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                data = indexing.ImplicitToExplicitIndexingAdapter(
-                    data, indexing.OuterIndexer
+                ndata = indexing.ImplicitToExplicitIndexingAdapter(
+                    data_old, indexing.OuterIndexer
                 )
+            else:
+                ndata = data_old
 
             if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(data.shape))
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
 
-            data = chunkmanager.from_array(
-                data,
+            data_chunked = chunkmanager.from_array(
+                ndata,
                 chunks,  # type: ignore[arg-type]
                 **_from_array_kwargs,
             )
 
-        return self._replace(data=data)
+        return self._replace(data=data_chunked)
 
     def to_numpy(self) -> np.ndarray:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
