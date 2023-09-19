@@ -87,6 +87,8 @@ Bug fixes
 - ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
   (:issue:`6528`, :pull:`8114`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fixed a bug where datetime64/timedelta64 encoded as float64 are recast to int64 with precision loss (:issue:`1064`, :pull:`8201`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
