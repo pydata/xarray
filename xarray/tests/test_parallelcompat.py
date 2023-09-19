@@ -12,7 +12,7 @@ from xarray.core.parallelcompat import (
     guess_chunkmanager,
     list_chunkmanagers,
 )
-from xarray.core.types import T_Chunks, T_NormalizedChunks
+from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 from xarray.tests import has_dask, requires_dask
 
 
@@ -76,7 +76,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
-        self, data: np.ndarray, chunks: T_Chunks, **kwargs
+        self, data: T_DuckArray | np.typing.ArrayLike, chunks: T_Chunks, **kwargs
     ) -> DummyChunkedArray:
         from dask import array as da
 

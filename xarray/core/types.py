@@ -161,6 +161,10 @@ T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
+# Temporary placeholder for indicating an array api compliant type.
+# hopefully in the future we can narrow this down more:
+T_DuckArray = TypeVar("T_DuckArray", bound=Any)
+
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
