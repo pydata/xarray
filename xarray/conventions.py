@@ -445,9 +445,11 @@ def decode_cf_variables(
                 var_coord_names = [
                     c for c in var_attrs["coordinates"].split() if c in variables
                 ]
-                new_vars[k].encoding["coordinates"] = " ".join(var_coord_names)
-                del var_attrs["coordinates"]
-                coord_names.update(var_coord_names)
+                # only decode if there is at least one variable matching a coordinate
+                if var_coord_names:
+                    new_vars[k].encoding["coordinates"] = " ".join(var_coord_names)
+                    del var_attrs["coordinates"]
+                    coord_names.update(var_coord_names)
 
         if decode_coords == "all":
             for attr_name in CF_RELATED_DATA:
