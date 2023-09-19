@@ -2407,3 +2407,25 @@ def test_groupby_math_auto_chunk():
     )
     actual = da.chunk(x=1, y=2).groupby("label") - sub
     assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
+
+
+@requires_flox
+def test_gappy_resample():
+    # GH8090
+    dates = (("1988-12-01", "1990-11-30"), ("2000-12-01", "2001-11-30"))
+    times = [xr.date_range(*d, freq="D") for d in dates]
+
+    da = xr.concat(
+        [
+            xr.DataArray(np.random.rand(len(t)), coords={"time": t}, dims="time")
+            for t in times
+        ],
+        dim="time",
+    ).chunk(time=100)
+
+    with xr.set_options(use_flox=True):
+        actual = (da > 0.5).resample(time="AS-DEC").any(dim="time")
+
+    with xr.set_options(use_flox=False):
+        expected = (da > 0.5).resample(time="AS-DEC").any(dim="time")
+    assert_identical(expected, actual)

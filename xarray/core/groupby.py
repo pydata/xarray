@@ -965,6 +965,7 @@ class GroupBy(Generic[T_Xarray]):
         obj = self._original_obj
         (grouper,) = self.groupers
         isbin = isinstance(grouper, ResolvedBinGrouper)
+        isresample = isinstance(grouper, ResolvedTimeResampleGrouper)
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
@@ -1018,15 +1019,13 @@ class GroupBy(Generic[T_Xarray]):
         if any(d not in grouper.group.dims and d not in obj.dims for d in parsed_dim):
             raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        if kwargs["func"] not in ["all", "any", "count"]:
-            kwargs.setdefault("fill_value", np.nan)
-        if isbin and kwargs["func"] == "count":
+        kwargs.setdefault("fill_value", np.nan)
+        if (isbin or isresample) and kwargs["func"] == "count":
             # This is an annoying hack. Xarray returns np.nan
             # when there are no observations in a bin, instead of 0.
             # We can fake that here by forcing min_count=1.
             # note min_count makes no sense in the xarray world
             # as a kwarg for count, so this should be OK
-            kwargs.setdefault("fill_value", np.nan)
             kwargs.setdefault("min_count", 1)
 
         output_index = grouper.full_index
