@@ -12,6 +12,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
+from xarray.core.indexing import IndexedCoordinateArray
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -272,9 +273,11 @@ def _assert_indexes_invariants_checks(
     }
 
     index_vars = {
-        k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
+        k
+        for k, v in possible_coord_variables.items()
+        if isinstance(v, IndexVariable) or isinstance(v._data, IndexedCoordinateArray)
     }
-    assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+    assert indexes.keys() == index_vars, (set(indexes), index_vars)
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -340,9 +343,14 @@ def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
         da.dims,
         {k: v.dims for k, v in da._coords.items()},
     )
-    assert all(
-        isinstance(v, IndexVariable) for (k, v) in da._coords.items() if v.dims == (k,)
-    ), {k: type(v) for k, v in da._coords.items()}
+
+    if check_default_indexes:
+        assert all(
+            isinstance(v, IndexVariable)
+            for (k, v) in da._coords.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in da._coords.items()}
+
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 

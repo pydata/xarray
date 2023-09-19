@@ -11,6 +11,7 @@ import pandas as pd
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.indexing import (
+    IndexedCoordinateArray,
     IndexSelResult,
     PandasIndexingAdapter,
     PandasMultiIndexingAdapter,
@@ -1332,6 +1333,29 @@ class PandasMultiIndex(PandasIndex):
         )
 
 
+def create_index_variables(
+    index: Index, variables: Mapping[Any, Variable] | None = None
+) -> IndexVars:
+    """Create index coordinate variables and wrap their data in order to prevent
+    modifying their values in-place.
+
+    """
+    # - IndexVariable already has safety guards that prevent updating its values
+    #   (it is a special case for PandasIndex that will likely be removed, eventually)
+    # - For Variable objects: wrap their data.
+    from xarray.core.variable import IndexVariable
+
+    index_vars = index.create_variables(variables)
+
+    for var in index_vars.values():
+        if not isinstance(var, IndexVariable) and not isinstance(
+            var._data, IndexedCoordinateArray
+        ):
+            var._data = IndexedCoordinateArray(var._data)
+
+    return index_vars
+
+
 def create_default_index_implicit(
     dim_variable: Variable,
     all_variables: Mapping | Iterable[Hashable] | None = None,
@@ -1349,7 +1373,13 @@ def create_default_index_implicit(
         all_variables = {k: None for k in all_variables}
 
     name = dim_variable.dims[0]
-    array = getattr(dim_variable._data, "array", None)
+    data = dim_variable._data
+    if isinstance(data, PandasIndexingAdapter):
+        array = data.array
+    elif isinstance(data, IndexedCoordinateArray):
+        array = getattr(data.array, "array", None)
+    else:
+        array = None
     index: PandasIndex
 
     if isinstance(array, pd.MultiIndex):
@@ -1631,7 +1661,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
                 convert_new_idx = False
 
             new_idx = idx._copy(deep=deep, memo=memo)
-            idx_vars = idx.create_variables(coords)
+            idx_vars = create_index_variables(idx, coords)
 
             if convert_new_idx:
                 new_idx = cast(PandasIndex, new_idx).index
@@ -1779,7 +1809,7 @@ def _apply_indexes(
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
                 new_indexes.update({k: new_index for k in index_vars})
-                new_index_vars = new_index.create_variables(index_vars)
+                new_index_vars = create_index_variables(new_index, index_vars)
                 new_index_variables.update(new_index_vars)
             else:
                 for k in index_vars:

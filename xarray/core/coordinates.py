@@ -298,7 +298,7 @@ class Coordinates(AbstractCoordinates):
         else:
             variables = {}
             for name, data in coords.items():
-                var = as_variable(data, name=name)
+                var = as_variable(data, name=name, auto_convert=False)
                 if var.dims == (name,) and indexes is None:
                     index, index_vars = create_default_index_implicit(var, list(coords))
                     default_indexes.update({k: index for k in index_vars})
@@ -986,9 +986,12 @@ def create_coords_with_default_indexes(
         if isinstance(obj, DataArray):
             dataarray_coords.append(obj.coords)
 
-        variable = as_variable(obj, name=name)
+        variable = as_variable(obj, name=name, auto_convert=False)
 
         if variable.dims == (name,):
+            # still needed to convert to IndexVariable first due to some
+            # pandas multi-index edge cases.
+            variable = variable.to_index_variable()
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
             indexes.update({k: idx for k in idx_vars})
             variables.update(idx_vars)

@@ -1470,6 +1470,35 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
 
+class IndexedCoordinateArray(ExplicitlyIndexedNDArrayMixin):
+    """Wrap an Xarray indexed coordinate array to make sure it keeps
+    synced with its index.
+
+    """
+
+    __slots__ = ("array",)
+
+    def __init__(self, array):
+        self.array = as_indexable(array)
+
+    def get_duck_array(self):
+        return self.array.get_duck_array()
+
+    def __getitem__(self, key):
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
+
+    def transpose(self, order):
+        return self.array.transpose(order)
+
+    def __setitem__(self, key, value):
+        raise TypeError(
+            "cannot modify the values of an indexed coordinate in-place "
+            "as it may corrupt its index. "
+            "Please use DataArray.assign_coords, Dataset.assign_coords "
+            "or Dataset.assign as appropriate."
+        )
+
+
 class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 

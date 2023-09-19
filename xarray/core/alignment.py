@@ -16,6 +16,7 @@ from xarray.core.indexes import (
     Indexes,
     PandasIndex,
     PandasMultiIndex,
+    create_index_variables,
     indexes_all_equal,
     safe_cast_to_index,
 )
@@ -425,7 +426,7 @@ class Aligner(Generic[T_Alignable]):
                     elif self.join == "right":
                         joined_index_vars = matching_index_vars[-1]
                     else:
-                        joined_index_vars = joined_index.create_variables()
+                        joined_index_vars = create_index_variables(joined_index)
                 else:
                     joined_index = matching_indexes[0]
                     joined_index_vars = matching_index_vars[0]
