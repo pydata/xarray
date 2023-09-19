@@ -1031,7 +1031,7 @@ class DataWithCoords(AttrAccessMixin):
         """Filter elements from this object according to a condition.
         
         Returns elements from 'DataArray', where 'cond' is True, 
-        otherwise fill in 'other' or 'drop'.
+        otherwise fill in 'other'.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
