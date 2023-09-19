@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, cast, overload
 
 import numpy as np
 import pandas as pd
-from typing_extensions import Self
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
@@ -46,6 +45,7 @@ if TYPE_CHECKING:
         DatetimeLike,
         DTypeLikeSave,
         ScalarOrArray,
+        Self,
         SideOptions,
         T_Chunks,
         T_Variable,
@@ -848,7 +848,7 @@ class DataWithCoords(AttrAccessMixin):
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return rolling_exp.RollingExp(cast(T_Xarray, self), window, window_type)
+        return rolling_exp.RollingExp(cast("T_Xarray", self), window, window_type)
 
     def _resample(
         self,
