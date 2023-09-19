@@ -14,6 +14,7 @@ import pandas as pd
 from xarray.core.indexes import PandasMultiIndex
 from xarray.core.options import OPTIONS
 from xarray.core.pycompat import DuckArrayModule
+from xarray.core.types import T_Xarray
 from xarray.core.utils import is_scalar, module_available
 
 nc_time_axis_available = module_available("nc_time_axis")
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
     from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
     from xarray.core.types import AspectOptions, ScaleOptions
 
     try:
@@ -312,7 +312,7 @@ def _determine_cmap_params(
 
 
 def _infer_xy_labels_3d(
-    darray: DataArray | Dataset,
+    darray: T_Xarray,
     x: Hashable | None,
     y: Hashable | None,
     rgb: Hashable | None,
@@ -374,7 +374,7 @@ def _infer_xy_labels_3d(
 
 
 def _infer_xy_labels(
-    darray: DataArray | Dataset,
+    darray: T_Xarray,
     x: Hashable | None,
     y: Hashable | None,
     imshow: bool = False,
@@ -413,9 +413,7 @@ def _infer_xy_labels(
 
 
 # TODO: Can by used to more than x or y, rename?
-def _assert_valid_xy(
-    darray: DataArray | Dataset, xy: Hashable | None, name: str
-) -> None:
+def _assert_valid_xy(darray: T_Xarray, xy: Hashable | None, name: str) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """

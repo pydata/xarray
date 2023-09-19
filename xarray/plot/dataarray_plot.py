@@ -360,7 +360,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -388,7 +388,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -417,7 +417,7 @@ def line(
     add_legend: bool = True,
     _labels: bool = True,
     **kwargs: Any,
-) -> list[Line3D] | FacetGrid[T_DataArray]:
+) -> list[Line3D] | FacetGrid[DataArray]:
     """
     Line plot of DataArray values.
 
@@ -1193,7 +1193,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -1235,7 +1235,7 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -1750,7 +1750,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -1791,7 +1791,7 @@ def imshow(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -1969,7 +1969,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2010,7 +2010,7 @@ def contour(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2105,7 +2105,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2146,7 +2146,7 @@ def contourf(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2241,7 +2241,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2282,7 +2282,7 @@ def pcolormesh(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2428,7 +2428,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
@@ -2469,7 +2469,7 @@ def surface(
     ylim: ArrayLike | None = None,
     norm: Normalize | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArray]:
+) -> FacetGrid[DataArray]:
     ...
 
 
