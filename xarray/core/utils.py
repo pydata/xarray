@@ -73,7 +73,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -253,7 +253,7 @@ def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
-def is_duck_array(value: Any) -> bool:
+def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (
@@ -1124,19 +1124,19 @@ def iterate_nested(nested_list):
             yield item
 
 
-def contains_only_dask_or_numpy(obj) -> bool:
-    """Returns True if xarray object contains only numpy or dask arrays.
+def contains_only_chunked_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
-    from xarray.core.pycompat import is_duck_dask_array
+    from xarray.core.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
         [
-            isinstance(var.data, np.ndarray) or is_duck_dask_array(var.data)
+            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
             for var in obj.variables.values()
         ]
     )

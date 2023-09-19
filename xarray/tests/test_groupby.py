@@ -12,6 +12,7 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
 from xarray.tests import (
+    InaccessibleArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -137,6 +138,18 @@ def test_groupby_input_mutation() -> None:
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_indexvariable(use_flox: bool) -> None:
+    # regression test for GH7919
+    array = xr.DataArray([1, 2, 3], [("x", [2, 2, 1])])
+    iv = xr.IndexVariable(dims="x", data=pd.Index(array.x.values))
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby(iv).sum()
+    actual = array.groupby(iv).sum()
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize(
     "obj",
     [
@@ -219,11 +232,11 @@ def test_da_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     array = xr.DataArray(
-        data=[np.NaN, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+        data=[np.nan, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
         actual = array.groupby("x").quantile(0.5, skipna=skipna)
@@ -333,12 +346,12 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     ds = xr.Dataset(
-        data_vars={"a": ("x", [np.NaN, 2, 3, 4, 5, 6])},
+        data_vars={"a": ("x", [np.nan, 2, 3, 4, 5, 6])},
         coords={"x": [1, 1, 1, 2, 2, 2]},
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.Dataset(
             data_vars={"a": ("x", e)}, coords={"quantile": 0.5, "x": [1, 2]}
@@ -715,7 +728,7 @@ def test_groupby_dataset_iter() -> None:
 def test_groupby_dataset_errors() -> None:
     data = create_test_data()
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(np.arange(10))
+        data.groupby(np.arange(10))  # type: ignore[arg-type,unused-ignore]
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
@@ -2380,3 +2393,17 @@ def test_min_count_error(use_flox: bool) -> None:
     with xr.set_options(use_flox=use_flox):
         with pytest.raises(TypeError):
             da.groupby("labels").mean(min_count=1)
+
+
+@requires_dask
+def test_groupby_math_auto_chunk():
+    da = xr.DataArray(
+        [[1, 2, 3], [1, 2, 3], [1, 2, 3]],
+        dims=("y", "x"),
+        coords={"label": ("x", [2, 2, 1])},
+    )
+    sub = xr.DataArray(
+        InaccessibleArray(np.array([1, 2])), dims="label", coords={"label": [1, 2]}
+    )
+    actual = da.chunk(x=1, y=2).groupby("label") - sub
+    assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
