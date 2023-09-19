@@ -156,7 +156,8 @@ T_Index = TypeVar("T_Index", bound="Index")
 
 # `T_Xarray` is a type variable that can be either "DataArray" or "Dataset". When used
 # in a function definition, all inputs and outputs annotated with `T_Xarray` must be of
-# the same concrete type, either "DataArray" or "Dataset".
+# the same concrete type, either "DataArray" or "Dataset". This is generally preferred
+# over `T_DataArrayOrSet`, given the type system can determine the exact type.
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 
 # `T_DataArrayOrSet` is a type variable that is bounded to either "DataArray" or
