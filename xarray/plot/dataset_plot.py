@@ -103,7 +103,7 @@ def _dsplot(plotfunc):
         be either ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging
         dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a
@@ -321,7 +321,7 @@ def _dsplot(plotfunc):
 
 
 @overload
-def quiver(
+def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -475,7 +475,7 @@ def quiver(
 
 
 @overload
-def streamplot(
+def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -632,7 +632,6 @@ def streamplot(
         du = du.transpose(ydim, xdim)
         dv = dv.transpose(ydim, xdim)
 
-    args = [dx.values, dy.values, du.values, dv.values]
     hue = kwargs.pop("hue")
     cmap_params = kwargs.pop("cmap_params")
 
@@ -646,7 +645,9 @@ def streamplot(
             )
 
     kwargs.pop("hue_style")
-    hdl = ax.streamplot(*args, **kwargs, **cmap_params)
+    hdl = ax.streamplot(
+        dx.values, dy.values, du.values, dv.values, **kwargs, **cmap_params
+    )
 
     # Return .lines so colorbar creation works properly
     return hdl.lines
@@ -748,7 +749,7 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
 
 
 @overload
-def scatter(
+def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,

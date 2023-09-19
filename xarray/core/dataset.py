@@ -24,6 +24,13 @@ from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from numpy import RankWarning
+
 import pandas as pd
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
@@ -79,10 +86,7 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import (
-    get_chunked_array_type,
-    guess_chunkmanager,
-)
+from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
     array_type,
     is_chunked_array,
@@ -443,7 +447,7 @@ class DataVariables(Mapping[Any, "DataArray"]):
 
     def __getitem__(self, key: Hashable) -> DataArray:
         if key not in self._dataset._coord_names:
-            return cast("DataArray", self._dataset[key])
+            return self._dataset[key]
         raise KeyError(key)
 
     def __repr__(self) -> str:
@@ -3726,7 +3730,7 @@ class Dataset(
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
         method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
+            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation. Additional keyword
@@ -3735,7 +3739,7 @@ class Dataset(
               are passed to :py:func:`scipy.interpolate.interp1d`. If
               ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
 
         assume_sorted : bool, default: False
@@ -4002,7 +4006,7 @@ class Dataset(
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
         method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
+            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation. Additional keyword
@@ -4011,7 +4015,7 @@ class Dataset(
               are passed to :py:func:`scipy.interpolate.interp1d`. If
               ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
 
         assume_sorted : bool, default: False
@@ -5275,34 +5279,31 @@ class Dataset(
 
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
-        for variable in self:
-            dims = self[variable].dims
-            dims_include_sample_dims = set(sample_dims) <= set(dims)
-            if not dims_include_sample_dims:
+        for key, da in self.data_vars.items():
+            missing_sample_dims = set(sample_dims) - set(da.dims)
+            if missing_sample_dims:
                 raise ValueError(
-                    "All variables in the dataset must contain the "
-                    f"dimensions {dims}."
+                    "Variables in the dataset must contain all ``sample_dims`` "
+                    f"({sample_dims!r}) but '{key}' misses {sorted(map(str, missing_sample_dims))}"
                 )
 
-        def ensure_stackable(val):
-            assign_coords = {variable_dim: val.name}
-            for dim in stacking_dims:
-                if dim not in val.dims:
-                    assign_coords[dim] = None
+        def stack_dataarray(da):
+            # add missing dims/ coords and the name of the variable
 
-            expand_dims = set(stacking_dims).difference(set(val.dims))
-            expand_dims.add(variable_dim)
-            # must be list for .expand_dims
-            expand_dims = list(expand_dims)
+            missing_stack_coords = {variable_dim: da.name}
+            for dim in set(stacking_dims) - set(da.dims):
+                missing_stack_coords[dim] = None
+
+            missing_stack_dims = list(missing_stack_coords)
 
             return (
-                val.assign_coords(**assign_coords)
-                .expand_dims(expand_dims)
+                da.assign_coords(**missing_stack_coords)
+                .expand_dims(missing_stack_dims)
                 .stack({new_dim: (variable_dim,) + stacking_dims})
             )
 
         # concatenate the arrays
-        stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
+        stackable_vars = [stack_dataarray(da) for da in self.data_vars.values()]
         data_array = concat(stackable_vars, dim=new_dim)
 
         if name is not None:
@@ -6370,7 +6371,7 @@ class Dataset(
         dim : Hashable or None, optional
             Specifies the dimension along which to interpolate.
         method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
+            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation. Additional keyword
@@ -6379,7 +6380,7 @@ class Dataset(
               are passed to :py:func:`scipy.interpolate.interp1d`. If
               ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
 
         use_coordinate : bool or Hashable, default: True
@@ -8791,9 +8792,9 @@ class Dataset(
 
             with warnings.catch_warnings():
                 if full:  # Copy np.polyfit behavior
-                    warnings.simplefilter("ignore", np.RankWarning)
+                    warnings.simplefilter("ignore", RankWarning)
                 else:  # Raise only once per variable
-                    warnings.simplefilter("once", np.RankWarning)
+                    warnings.simplefilter("once", RankWarning)
 
                 coeffs, residuals = duck_array_ops.least_squares(
                     lhs, rhs.data, rcond=rcond, skipna=skipna_da
@@ -9083,8 +9084,8 @@ class Dataset(
         >>> array2 = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
@@ -9180,8 +9181,8 @@ class Dataset(
         >>> array2 = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
