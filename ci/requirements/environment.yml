@@ -21,7 +21,7 @@ dependencies:
   - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
-  - netcdf4>=1.6.1
+  - netcdf4
   - numba
   - numbagg
   - numexpr
