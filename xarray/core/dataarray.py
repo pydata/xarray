@@ -856,6 +856,7 @@ class DataArray(
             obj = self[key]
             if isinstance(value, DataArray):
                 assert_coordinate_consistent(value, obj.coords.variables)
+                value = value.variable
             # DataArray key -> Variable key
             key = {
                 k: v.variable if isinstance(v, DataArray) else v
@@ -2234,8 +2235,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2362,8 +2362,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. "
-                "Given {}.".format(self.dtype)
+                "interp only works for a numeric type array. " f"Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
@@ -2565,7 +2564,7 @@ class DataArray(
                 raise ValueError("dims should not contain duplicate values.")
             dim = dict.fromkeys(dim, 1)
         elif dim is not None and not isinstance(dim, Mapping):
-            dim = {cast(Hashable, dim): 1}
+            dim = {dim: 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
         ds = self._to_temp_dataset().expand_dims(dim, axis)
@@ -2904,9 +2903,9 @@ class DataArray(
             b        (x) int64 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a', 0.0),
-                    ('a', 1.0),
-                    ('a', 2.0),
+        MultiIndex([('a',   0),
+                    ('a',   1),
+                    ('a',   2),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
@@ -3381,7 +3380,7 @@ class DataArray(
         dim : Hashable or None, optional
             Specifies the dimension along which to interpolate.
         method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
-            "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
+            "barycentric", "krogh", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation. Additional keyword
@@ -3390,7 +3389,7 @@ class DataArray(
               are passed to :py:func:`scipy.interpolate.interp1d`. If
               ``method='polynomial'``, the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
+            - 'barycentric', 'krogh', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
 
         use_coordinate : bool or str, default: True
@@ -4325,7 +4324,7 @@ class DataArray(
             except KeyError as e:
                 raise ValueError(
                     "cannot convert dict when coords are missing the key "
-                    "'{dims_data}'".format(dims_data=str(e.args[0]))
+                    f"'{str(e.args[0])}'"
                 )
         try:
             data = d["data"]
@@ -4363,7 +4362,7 @@ class DataArray(
         temp_name = "__temporary_name"
         df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
-        result = cast(DataArray, ds[temp_name])
+        result = ds[temp_name]
         result.name = series.name
         return result
 
@@ -4465,7 +4464,7 @@ class DataArray(
                [2, 2]])
         Dimensions without coordinates: X, Y
 
-        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against eachother have the same values, dimensions, and coordinates.
+        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against each other have the same values, dimensions, and coordinates.
 
         >>> a.equals(b)
         False
@@ -5193,9 +5192,10 @@ class DataArray(
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+        datetime_unit : {"W", "D", "h", "m", "s", "ms", \
                          "us", "ns", "ps", "fs", "as", None}, optional
-            Unit to compute gradient. Only valid for datetime coordinate.
+            Unit to compute gradient. Only valid for datetime coordinate. "Y" and "M" are not available as
+            datetime_unit.
 
         Returns
         -------
@@ -5773,8 +5773,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
@@ -5869,8 +5869,8 @@ class DataArray(
         >>> array = xr.DataArray(
         ...     [
         ...         [2.0, 1.0, 2.0, 0.0, -2.0],
-        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...         [-4.0, np.nan, 2.0, np.nan, -2.0],
+        ...         [np.nan, np.nan, 1.0, np.nan, np.nan],
         ...     ],
         ...     dims=["y", "x"],
         ...     coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},

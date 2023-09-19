@@ -22,7 +22,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -44,7 +44,7 @@ jobs:
       PYTHON_VERSION: "3.10"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -92,7 +92,7 @@ jobs:
       PYTHON_VERSION: "3.10"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -123,7 +123,7 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
@@ -146,7 +146,7 @@ jobs:
       PYTHON_VERSION: "3.9"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -177,7 +177,7 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report xarray/
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
@@ -205,7 +205,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 

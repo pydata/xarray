@@ -14,6 +14,96 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.08.1:
+
+v2023.08.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Added the :py:meth:`Coordinates.assign` method that can be used to combine
+  different collections of coordinates prior to assign them to a Dataset or
+  DataArray (:pull:`8102`) at once.
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Improved static typing of reduction methods (:pull:`6746`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added `on_missing_core_dims` to :py:meth:`apply_ufunc` to allow for copying or
+  dropping a :py:class:`Dataset`'s variables with missing core dimensions.
+  (:pull:`8138`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The :py:class:`Coordinates` constructor now creates a (pandas) index by
+  default for each dimension coordinate. To keep the previous behavior (no index
+  created), pass an empty dictionary to ``indexes``. The constructor now also
+  extracts and add the indexes from another :py:class:`Coordinates` object
+  passed via ``coords`` (:pull:`8107`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Static typing of ``xlim`` and ``ylim`` arguments in plotting functions now must
+  be ``tuple[float, float]`` to align with matplotlib requirements. (:issue:`7802`, :pull:`8030`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Deprecate passing a :py:class:`pandas.MultiIndex` object directly to the
+  :py:class:`Dataset` and :py:class:`DataArray` constructors as well as to
+  :py:meth:`Dataset.assign` and :py:meth:`Dataset.assign_coords`.
+  A new Xarray :py:class:`Coordinates` object has to be created first using
+  :py:meth:`Coordinates.from_pandas_multiindex` (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix bug where empty attrs would generate inconsistent tokens (:issue:`6970`, :pull:`8101`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+- Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
+  (and improved warnings for deprecated features) for pandas multi-indexes (:pull:`8094`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fixed a bug in :py:func:`merge` with ``compat='minimal'`` where the coordinate
+  names were not updated properly internally (:issue:`7405`, :issue:`7588`,
+  :pull:`8104`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fix bug where :py:class:`DataArray` instances on the right-hand side
+  of :py:meth:`DataArray.__setitem__` lose dimension names.
+  (:issue:`7030`, :pull:`8067`) By `Darsh Ranjan <https://github.com/dranjan>`_.
+- Return ``float64`` in presence of ``NaT`` in :py:class:`~core.accessor_dt.DatetimeAccessor` and
+  special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()`
+  (:issue:`7928`, :pull:`8084`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
+  (:issue:`7552`, :pull:`8174`).
+  By `Wiktor Kraśnicki <https://github.com/wkrasnicki>`_.
+- Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) led to varying
+  issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
+  :issue:`1064`, :pull:`7827`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
+  (:issue:`6528`, :pull:`8114`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
+- Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution in arrays that contain missing values (:pull:`7827`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Transition ``.rolling_exp`` functions to use `.apply_ufunc` internally rather
+  than `.reduce`, as the start of a broader effort to move non-reducing
+  functions away from ```.reduce``, (:pull:`8114`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 .. _whats-new.2023.08.0:
 
 v2023.08.0 (Aug 18, 2023)
@@ -90,10 +180,11 @@ Breaking changes
    numbagg                    0.1    0.2.1
   ===================== =========  ========
 
-
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the internal design of xarray objects.
+  (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
   :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
@@ -831,7 +922,7 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix side effects on index coordinate metadata after aligning objects. (:issue:`6852`, :pull:`6857`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`. (:issue:`6839`, :pull:`6843`)
+- Make FacetGrid.set_titles send kwargs correctly using `handle.update(kwargs)`. (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 - Fix bug where index variables would be changed inplace. (:issue:`6931`, :pull:`6938`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
@@ -4694,7 +4785,7 @@ Bug fixes
 - Corrected a bug with incorrect coordinates for non-georeferenced geotiff
   files (:issue:`1686`). Internally, we now use the rasterio coordinate
   transform tool instead of doing the computations ourselves. A
-  ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
+  ``parse_coordinates`` kwarg has been added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 - The colors of discrete colormaps are now the same regardless if `seaborn`

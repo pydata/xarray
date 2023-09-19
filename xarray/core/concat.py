@@ -391,17 +391,20 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
             else:
                 raise ValueError(f"unexpected value for {subset}: {opt}")
         else:
-            invalid_vars = [k for k in opt if k not in getattr(datasets[0], subset)]
+            valid_vars = tuple(getattr(datasets[0], subset))
+            invalid_vars = [k for k in opt if k not in valid_vars]
             if invalid_vars:
                 if subset == "coords":
                     raise ValueError(
-                        "some variables in coords are not coordinates on "
-                        f"the first dataset: {invalid_vars}"
+                        f"the variables {invalid_vars} in coords are not "
+                        f"found in the coordinates of the first dataset {valid_vars}"
                     )
                 else:
+                    # note: data_vars are not listed in the error message here,
+                    # because there may be lots of them
                     raise ValueError(
-                        "some variables in data_vars are not data variables "
-                        f"on the first dataset: {invalid_vars}"
+                        f"the variables {invalid_vars} in data_vars are not "
+                        f"found in the data variables of the first dataset"
                     )
             concat_over.update(opt)
 
