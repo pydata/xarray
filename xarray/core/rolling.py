@@ -8,13 +8,12 @@ from collections.abc import Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 
 import numpy as np
-from typing_extensions import Self
 
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
+from xarray.core.types import CoarsenBoundaryOptions, Self, SideOptions, T_Xarray
 from xarray.core.utils import either_dict_or_kwargs
 
 try:
