@@ -73,7 +73,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -253,7 +253,7 @@ def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
-def is_duck_array(value: Any) -> bool:
+def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (
