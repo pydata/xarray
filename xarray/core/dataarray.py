@@ -256,6 +256,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    Generic[T_DuckArray],
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
