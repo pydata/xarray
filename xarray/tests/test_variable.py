@@ -2727,50 +2727,48 @@ def test_typed_ops_types() -> None:
 
     var = Variable(dims=["t"], data=[1, 2, 3])
 
+    def _test(var: Variable) -> None:
+        # mypy checks the input type
+        assert isinstance(var, Variable)
+
     _int: int = 1
     _list = [1, 2, 3]
     _ndarray = np.array([1, 2, 3])
 
     # __add__ as an example of binary ops
-    var = var + _int
-    var = var + _list
-    var = var + _ndarray
-    var = var + var
-    assert isinstance(var, Variable)
+    _test(var + _int)
+    _test(var + _list)
+    _test(var + _ndarray)
+    _test(var + var)
 
     # __radd__ as an example of reflexive binary ops
-    var = _int + var
-    var = _list + var
-    # var = _ndarray + var  # numpy is too dominant here :/
-    assert isinstance(var, Variable)
+    _test(_int + var)
+    _test(_list + var)
+    _test(_ndarray + var)
 
     # __eq__ as an example of cmp ops
-    var = var == _int
-    var = var == _list
-    var = var == _ndarray
-    # var = _int == var
-    # var = _list == var
-    var = _ndarray == var
-    assert isinstance(var, Variable)
+    _test(var == _int)
+    _test(var == _list)
+    _test(var == _ndarray)
+    _test(_int == var)  # type: ignore[arg-type]
+    _test(_list == var)  # type: ignore[arg-type]
+    _test(_ndarray == var)
 
     # __lt__ as another example of cmp ops
-    var = var < _int
-    var = var < _list
-    var = var < _ndarray
-    var = _int > var
-    var = _list > var
-    # var = _ndarray > var
-    assert isinstance(var, Variable)
+    _test(var < _int)
+    _test(var < _list)
+    _test(var < _ndarray)
+    _test(_int > var)
+    _test(_list > var)
+    _test(_ndarray > var)  # type: ignore[arg-type]
 
     # __iadd__ as an example of inplace binary ops
     var += _int
     var += _list
     var += _ndarray
-    assert isinstance(var, Variable)
 
     # __neg__ as an example of unary ops
-    var = -var
-    assert isinstance(var, Variable)
+    _test(-var)
 
 
 class TestBackendIndexing:
