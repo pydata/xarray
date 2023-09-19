@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from xarray.backends.common import BackendEntrypoint
     from xarray.core.alignment import Aligner
-    from xarray.core.common import AbstractArray, DataWithCoords
+    from xarray.core.common import AbstractArray
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
