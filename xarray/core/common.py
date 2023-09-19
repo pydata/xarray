@@ -46,7 +46,6 @@ if TYPE_CHECKING:
         DTypeLikeSave,
         ScalarOrArray,
         SideOptions,
-        Self,
         T_Chunks,
         T_DataWithCoords,
         T_Variable,
@@ -811,11 +810,11 @@ class DataWithCoords(AttrAccessMixin):
             return func(self, *args, **kwargs)
 
     def rolling_exp(
-        self,
+        self: T_DataWithCoords,
         window: Mapping[Any, int] | None = None,
         window_type: str = "span",
         **window_kwargs,
-    ) -> RollingExp[Self]:
+    ) -> RollingExp[T_DataWithCoords]:
         """
         Exponentially-weighted moving window.
         Similar to EWM in pandas
