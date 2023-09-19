@@ -32,6 +32,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
+from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     InaccessibleArray,
     ReturnItem,
@@ -7094,6 +7095,8 @@ def test_nD_coord_dataarray() -> None:
             "y": ("y", np.arange(4)),
         },
     )
+    _assert_internal_invariants(da, check_default_indexes=True)
+
     da2 = DataArray(np.ones(4), dims=("y"), coords={"y": ("y", np.arange(4))})
     da3 = DataArray(np.ones(4), dims=("z"))
 
@@ -7109,5 +7112,6 @@ def test_nD_coord_dataarray() -> None:
     assert_identical(actual, expected)
 
     da4 = DataArray(np.ones((2, 4)), coords={"x": 0}, dims=["x", "y"])
+    _assert_internal_invariants(da4, check_default_indexes=True)
     assert "x" not in da4.xindexes
     assert "x" in da4.coords
