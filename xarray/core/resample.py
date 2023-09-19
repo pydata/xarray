@@ -4,14 +4,12 @@ import warnings
 from collections.abc import Hashable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from typing_extensions import Self
-
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
     DatasetResampleAggregations,
 )
 from xarray.core.groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
-from xarray.core.types import Dims, InterpOptions, T_Xarray
+from xarray.core.types import Dims, InterpOptions, Self, T_Xarray
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray

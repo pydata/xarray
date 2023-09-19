@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overlo
 
 import numpy as np
 import pandas as pd
-from typing_extensions import Self
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -101,6 +100,7 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        Self,
         SideOptions,
         T_DataArray,
         T_Xarray,

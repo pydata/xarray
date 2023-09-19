@@ -33,7 +33,6 @@ from typing import (
 )
 
 import numpy as np
-from typing_extensions import Self
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -156,6 +155,7 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        Self,
         SideOptions,
         T_Xarray,
     )
