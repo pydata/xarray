@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, Generic
 
 import numpy as np
 import pandas as pd
@@ -37,6 +37,7 @@ from xarray.core.pycompat import (
     is_chunked_array,
     is_duck_dask_array,
 )
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import (
     Frozen,
     NdimSizeLenMixin,
@@ -66,7 +67,6 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
-        T_DuckArray,
         T_Variable,
     )
 
@@ -315,7 +315,9 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
+class Variable(
+    AbstractArray, NdimSizeLenMixin, VariableArithmetic, Generic[T_DuckArray]
+):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -420,7 +422,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self: T_Variable):
+    def data(self: T_Variable) -> T_DuckArray:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -1298,17 +1300,16 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
             chunkmanager = get_chunked_array_type(data)
-            data, *_ = chunkmanager.compute(data)
+            data_loaded, *_ = chunkmanager.compute(data)
         if isinstance(data, array_type("cupy")):
-            data = data.get()
+            data_loaded = data.get()
         # pint has to be imported dynamically as pint imports xarray
         if isinstance(data, array_type("pint")):
-            data = data.magnitude
+            data_loaded = data.magnitude
         if isinstance(data, array_type("sparse")):
-            data = data.todense()
-        data = np.asarray(data)
+            data_loaded = data.todense()
 
-        return data
+        return np.asarray(data_loaded)
 
     def as_numpy(self: T_Variable) -> T_Variable:
         """Coerces wrapped data into a numpy array, returning a Variable."""
@@ -2776,7 +2777,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             result_flat_indices.data, reduce_shape
         )
 
-        result = {
+        result: dict[Any, Variable] = {
             d: Variable(dims=result_dims, data=i)
             for d, i in zip(dim, result_unravelled_indices)
         }
