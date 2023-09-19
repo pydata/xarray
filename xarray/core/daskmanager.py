@@ -12,7 +12,7 @@ from xarray.core.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.core.pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
-    from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks
+    from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks, T_DuckArray
 
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
@@ -64,7 +64,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )
 
-    def compute(self, *data: DaskArray, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(self, *data: DaskArray, **kwargs) -> tuple[T_DuckArray, ...]:
         from dask.array import compute
 
         return compute(*data, **kwargs)
