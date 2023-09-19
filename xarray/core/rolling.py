@@ -793,12 +793,13 @@ class DatasetRolling(Rolling["Dataset"]):
 
 
 class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
-    """A object that implements the coarsen.
+    """An object that implements the coarsen operation.
 
     See Also
     --------
     Dataset.coarsen
     DataArray.coarsen
+    Variable.coarsen
     """
 
     __slots__ = (
@@ -821,21 +822,27 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         coord_func: str | Callable | Mapping[Any, str | Callable],
     ) -> None:
         """
-        Moving window object.
+        Coarsening object.
 
         Parameters
         ----------
         obj : Dataset or DataArray
             Object to window.
         windows : mapping of hashable to int
-            A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            A mapping from the name of the dimension to create the coarsened block along (e.g. `time`) to the size of
+            the coarsened block.
         boundary : {"exact", "trim", "pad"}
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of window size. If 'trim', the excess indexes are trimmed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : function (name) or mapping from coordinate name to function (name).
+        coord_func : function, str name of function, or mapping from coordinate name to function or str name of func.
+            Function to use to reduce the coordinate values of one block down to a single new label.
+
+            Can be specified as a custom function, either by passing a callable (e.g. ``np.max``) or passing a string
+            name of a reduction function supplied by xarray (e.g. ``'min'``). If passed as a callable it should be a
+            valid argument to xarray's ``.reduce`` method. The advantage of specifying as a string is automatic handling
+            of NaNs and non-numpy array types. Default is to use "mean" for all coarsened dimensions.
 
         Returns
         -------
