@@ -337,6 +337,10 @@ def reshape(array, shape):
     return xp.reshape(array, shape)
 
 
+def ravel(array):
+    return reshape(array, (-1,))
+
+
 @contextlib.contextmanager
 def _ignore_warnings_if(condition):
     if condition:
