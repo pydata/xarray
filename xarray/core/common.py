@@ -1029,8 +1029,8 @@ class DataWithCoords(AttrAccessMixin):
         self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False
     ) -> T_DataWithCoords:
         """Filter elements from this object according to a condition.
-        
-        Returns elements from 'DataArray', where 'cond' is True, 
+
+        Returns elements from 'DataArray', where 'cond' is True,
         otherwise fill in 'other'.
 
         This operation follows the normal broadcasting and alignment rules that
