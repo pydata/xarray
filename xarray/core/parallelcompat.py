@@ -25,7 +25,7 @@ from xarray.core.pycompat import is_chunked_array
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_Chunks, T_NormalizedChunks
+    from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 
 
 @functools.lru_cache(maxsize=1)
@@ -256,7 +256,9 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
     @abstractmethod
-    def from_array(self, data: Any, chunks: T_Chunks, **kwargs) -> T_ChunkedArray:
+    def from_array(
+        self, data: T_DuckArray | np.typing.ArrayLike, chunks: T_Chunks, **kwargs
+    ) -> T_ChunkedArray:
         """
         Create a chunked array from a non-chunked numpy-like array.
 

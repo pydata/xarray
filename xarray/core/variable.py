@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -62,6 +62,7 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
+        T_DuckArray,
         T_Variable,
     )
 
@@ -82,7 +83,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None) -> Variable | IndexVariable:
+def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
@@ -138,7 +139,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
     elif isinstance(obj, (set, dict)):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
-        data = as_compatible_data(obj)
+        data: T_DuckArray = as_compatible_data(obj)
         if data.ndim != 1:
             raise MissingDimensionsError(
                 f"cannot set variable {name!r} with {data.ndim!r}-dimensional data "
@@ -226,7 +227,9 @@ def _possibly_convert_datetime_or_timedelta_index(data):
         return data
 
 
-def as_compatible_data(data, fastpath: bool = False):
+def as_compatible_data(
+    data: T_DuckArray | ArrayLike, fastpath: bool = False
+) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
@@ -239,7 +242,7 @@ def as_compatible_data(data, fastpath: bool = False):
     """
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
-        return _maybe_wrap_data(data)
+        return cast("T_DuckArray", _maybe_wrap_data(data))
 
     from xarray.core.dataarray import DataArray
 
@@ -248,7 +251,7 @@ def as_compatible_data(data, fastpath: bool = False):
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
-        return _maybe_wrap_data(data)
+        return cast("T_DuckArray", _maybe_wrap_data(data))
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
@@ -275,7 +278,7 @@ def as_compatible_data(data, fastpath: bool = False):
     if not isinstance(data, np.ndarray) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
-        return data
+        return cast("T_DuckArray", data)
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
@@ -331,7 +334,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     __slots__ = ("_dims", "_data", "_attrs", "_encoding")
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data: T_DuckArray | ArrayLike,
+        attrs=None,
+        encoding=None,
+        fastpath=False,
+    ):
         """
         Parameters
         ----------
@@ -369,7 +379,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         )
 
     @property
-    def data(self) -> Any:
+    def data(self: T_Variable):
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -388,7 +398,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return self.values
 
     @data.setter
-    def data(self, data):
+    def data(self: T_Variable, data: T_DuckArray | ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
@@ -879,7 +889,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _copy(
         self: T_Variable,
         deep: bool = True,
-        data: ArrayLike | None = None,
+        data: T_DuckArray | ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
     ) -> T_Variable:
         if data is None:
@@ -896,9 +906,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
