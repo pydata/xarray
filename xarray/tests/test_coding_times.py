@@ -1212,6 +1212,7 @@ def test_contains_cftime_lazy() -> None:
         ("1677-09-21T00:12:43.145224193", "ns", np.int64, None, False),
         ("1677-09-21T00:12:43.145225", "us", np.int64, None, False),
         ("1970-01-01T00:00:01.000001", "us", np.int64, None, False),
+        ("1677-09-21T00:21:52.901038080", "ns", np.float32, 20.0, True),
     ],
 )
 def test_roundtrip_datetime64_nanosecond_precision(
@@ -1261,7 +1262,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
     ]
     units = "days since 1970-01-10T01:01:00"
     needed_units = "hours"
-    encoding = dict(_FillValue=20, units=units)
+    encoding = dict(dtype=np.int64, _FillValue=20, units=units)
     var = Variable(["time"], times, encoding=encoding)
     wmsg = (
         f"Times can't be serialized faithfully with requested units {units!r}. "
@@ -1269,6 +1270,9 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
     )
     with pytest.warns(UserWarning, match=wmsg):
         encoded_var = conventions.encode_cf_variable(var)
+    assert encoded_var.dtype == np.float64
+    assert encoded_var.attrs["units"] == units
+    assert encoded_var.attrs["_FillValue"] == 20.0
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)

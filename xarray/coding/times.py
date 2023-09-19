@@ -780,7 +780,9 @@ class CFDatetimeCoder(VariableCoder):
             # drop dtype in encoding if encoded as float64
             # to prevent unnecessary casts, see GH #1064
             encoding_dtype = encoding.get("dtype", data.dtype)
-            if np.issubdtype(data.dtype, np.float64) and encoding_dtype.kind in "iu":
+            if np.issubdtype(data.dtype, np.float64) and np.issubdtype(
+                encoding_dtype, np.integer
+            ):
                 encoding.pop("dtype", None)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
