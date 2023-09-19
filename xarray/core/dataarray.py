@@ -12,7 +12,6 @@ from typing import (
     NoReturn,
     cast,
     overload,
-    Generic,
 )
 
 import numpy as np
