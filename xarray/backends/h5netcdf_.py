@@ -6,8 +6,6 @@ import os
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
-from packaging.version import Version
-
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
@@ -20,6 +18,7 @@ from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_wri
 from xarray.backends.netCDF4_ import (
     BaseNetCDF4Array,
     _encode_nc4_variable,
+    _ensure_no_forward_slash_in_name,
     _extract_nc4_variable_encoding,
     _get_datatype,
     _nc4_require_group,
@@ -199,6 +198,8 @@ class H5NetCDFStore(WritableCFDataStore):
             "fletcher32": var.fletcher32,
             "shuffle": var.shuffle,
         }
+        if var.chunks:
+            encoding["preferred_chunks"] = dict(zip(var.dimensions, var.chunks))
         # Convert h5py-style compression options to NetCDF4-Python
         # style, if possible
         if var.compression == "gzip":
@@ -232,30 +233,17 @@ class H5NetCDFStore(WritableCFDataStore):
         return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
-        import h5netcdf
-
-        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
-            return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
-        else:
-            return self.ds.dimensions
+        return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
     def get_encoding(self):
-        import h5netcdf
-
-        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
-            return {
-                "unlimited_dims": {
-                    k for k, v in self.ds.dimensions.items() if v.isunlimited()
-                }
+        return {
+            "unlimited_dims": {
+                k for k, v in self.ds.dimensions.items() if v.isunlimited()
             }
-        else:
-            return {
-                "unlimited_dims": {
-                    k for k, v in self.ds.dimensions.items() if v is None
-                }
-            }
+        }
 
     def set_dimension(self, name, length, is_unlimited=False):
+        _ensure_no_forward_slash_in_name(name)
         if is_unlimited:
             self.ds.dimensions[name] = None
             self.ds.resize_dimension(name, length)
@@ -273,6 +261,7 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5py
 
+        _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
 

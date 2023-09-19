@@ -1,7 +1,7 @@
 # xarray: N-D labeled arrays and datasets
 
 [![CI](https://github.com/pydata/xarray/workflows/CI/badge.svg?branch=main)](https://github.com/pydata/xarray/actions?query=workflow%3ACI)
-[![Code coverage](https://codecov.io/gh/pydata/xarray/branch/main/graph/badge.svg)](https://codecov.io/gh/pydata/xarray)
+[![Code coverage](https://codecov.io/gh/pydata/xarray/branch/main/graph/badge.svg?flag=unittests)](https://codecov.io/gh/pydata/xarray)
 [![Docs](https://readthedocs.org/projects/xray/badge/?version=latest)](https://docs.xarray.dev/)
 [![Benchmarked with asv](https://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat)](https://pandas.pydata.org/speed/xarray/)
 [![Available on pypi](https://img.shields.io/pypi/v/xarray.svg)](https://pypi.python.org/pypi/xarray/)
@@ -108,7 +108,7 @@ Thanks to our many contributors!
 
 ## License
 
-Copyright 2014-2019, xarray Developers
+Copyright 2014-2023, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License"); you
 may not use this file except in compliance with the License. You may
@@ -125,12 +125,12 @@ limitations under the License.
 Xarray bundles portions of pandas, NumPy and Seaborn, all of which are
 available under a "3-clause BSD" license:
 
-- pandas: setup.py, xarray/util/print_versions.py
-- NumPy: xarray/core/npcompat.py
-- Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
+- pandas: `setup.py`, `xarray/util/print_versions.py`
+- NumPy: `xarray/core/npcompat.py`
+- Seaborn: `_determine_cmap_params` in `xarray/core/plot/utils.py`
 
 Xarray also bundles portions of CPython, which is available under the
-"Python Software Foundation License" in xarray/core/pycompat.py.
+"Python Software Foundation License" in `xarray/core/pycompat.py`.
 
 Xarray uses icons from the icomoon package (free version), which is
 available under the "CC BY 4.0" license.

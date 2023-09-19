@@ -4,8 +4,8 @@ from collections.abc import Mapping
 from typing import Any, Generic
 
 import numpy as np
-from packaging.version import Version
 
+from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
 from xarray.core.pycompat import is_duck_dask_array
@@ -36,10 +36,6 @@ def move_exp_nansum(array, *, axis, alpha):
     if is_duck_dask_array(array):
         raise TypeError("rolling_exp is not currently supported for dask-like arrays")
     import numbagg
-
-    # numbagg <= 0.2.0 did not have a __version__ attribute
-    if Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.0"):
-        raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
 
     return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 
@@ -133,9 +129,18 @@ class RollingExp(Generic[T_DataWithCoords]):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
-        return self.obj.reduce(
-            move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
-        )
+        dim_order = self.obj.dims
+
+        return apply_ufunc(
+            move_exp_nanmean,
+            self.obj,
+            input_core_dims=[[self.dim]],
+            kwargs=dict(alpha=self.alpha, axis=-1),
+            output_core_dims=[[self.dim]],
+            exclude_dims={self.dim},
+            keep_attrs=keep_attrs,
+            on_missing_core_dim="copy",
+        ).transpose(*dim_order)
 
     def sum(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
         """
@@ -160,6 +165,15 @@ class RollingExp(Generic[T_DataWithCoords]):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
-        return self.obj.reduce(
-            move_exp_nansum, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
-        )
+        dim_order = self.obj.dims
+
+        return apply_ufunc(
+            move_exp_nansum,
+            self.obj,
+            input_core_dims=[[self.dim]],
+            kwargs=dict(alpha=self.alpha, axis=-1),
+            output_core_dims=[[self.dim]],
+            exclude_dims={self.dim},
+            keep_attrs=keep_attrs,
+            on_missing_core_dim="copy",
+        ).transpose(*dim_order)
