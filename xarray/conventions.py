@@ -439,31 +439,12 @@ def decode_cf_variables(
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}")
-        if decode_coords in [
-            True,
-            "coordinates",
-            "all",
-            "coordinates_strict",
-            "all_strict",
-        ]:
+        if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
-                var_coord_names = var_attrs["coordinates"].split()
-                if missing_coord_names := set(var_coord_names) - set(variables):
-                    # need to preserve order here
-                    var_coord_names = [c for c in var_coord_names if c in variables]
-                    msg = (
-                        f"Mismatched ``coordinates`` attribute on variable {k!r}. "
-                        f"Coordinate(s): {list(missing_coord_names)!r} missing in dataset."
-                    )
-                    if isinstance(decode_coords, str) and "strict" in decode_coords:
-                        raise ValueError(msg)
-                    else:
-                        msg_solution = (
-                            f"Decoding with new ``coordinates``: {var_coord_names}."
-                        )
-                        emit_user_level_warning(" ".join([msg, msg_solution]))
-
+                var_coord_names = [
+                    c for c in var_attrs["coordinates"].split() if c in variables
+                ]
                 new_vars[k].encoding["coordinates"] = " ".join(var_coord_names)
                 del var_attrs["coordinates"]
                 coord_names.update(var_coord_names)

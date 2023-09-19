@@ -92,19 +92,14 @@ def test_decode_cf_variable_with_mismatched_coordinates() -> None:
             "time": ("time", [0.0], {"units": "hours since 2017-01-01"}),
         }
     )
-    k = "foo"
-    missing_coord_names = ["XTIME"]
-    existing_coord_names = ["XLONG", "XLAT"]
-    msg = f"Mismatched ``coordinates`` attribute on variable {k!r}. Coordinate(s): {missing_coord_names!r} missing in dataset."
-    with pytest.raises(ValueError) as e:
-        decoded = conventions.decode_cf(orig, decode_coords="coordinates_strict")
-        assert e.value.args[0] == msg
-    msg = " ".join([msg, f"Decoding with new ``coordinates``: {existing_coord_names}."])
-    with pytest.warns(UserWarning) as w:
-        decoded = conventions.decode_cf(orig)
-        assert w[0].message.args[0] == msg
-        assert decoded["foo"].encoding["coordinates"] == "XLONG XLAT"
-        assert list(decoded.coords.keys()) == ["XLONG", "XLAT", "time"]
+    decoded = conventions.decode_cf(orig, decode_coords=True)
+    assert decoded["foo"].encoding["coordinates"] == "XLONG XLAT"
+    assert list(decoded.coords.keys()) == ["XLONG", "XLAT", "time"]
+
+    decoded = conventions.decode_cf(orig, decode_coords=False)
+    assert decoded["foo"].encoding.get("coordinates") is None
+    assert decoded["foo"].attrs.get("coordinates") == "XTIME XLONG XLAT"
+    assert list(decoded.coords.keys()) == ["time"]
 
 
 @requires_cftime
