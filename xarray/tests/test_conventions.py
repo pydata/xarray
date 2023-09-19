@@ -93,11 +93,11 @@ def test_decode_cf_variable_with_mismatched_coordinates() -> None:
         }
     )
     decoded = conventions.decode_cf(orig, decode_coords=True)
-    assert decoded["foo"].encoding["coordinates"] == "XLONG XLAT"
+    assert decoded["foo"].encoding["coordinates"] == "XTIME XLONG XLAT"
     assert list(decoded.coords.keys()) == ["XLONG", "XLAT", "time"]
 
     decoded = conventions.decode_cf(orig, decode_coords=False)
-    assert decoded["foo"].encoding.get("coordinates") is None
+    assert "coordinates" not in decoded["foo"].encoding
     assert decoded["foo"].attrs.get("coordinates") == "XTIME XLONG XLAT"
     assert list(decoded.coords.keys()) == ["time"]
 

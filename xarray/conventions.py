@@ -445,7 +445,7 @@ def decode_cf_variables(
                 ]
                 # only decode if there is at least one variable matching a coordinate
                 if var_coord_names:
-                    new_vars[k].encoding["coordinates"] = " ".join(var_coord_names)
+                    new_vars[k].encoding["coordinates"] = var_attrs["coordinates"]
                     del var_attrs["coordinates"]
                     coord_names.update(var_coord_names)
 
@@ -514,17 +514,14 @@ def decode_cf(
     decode_times : bool, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
-    decode_coords : bool or {"coordinates", "coordinates_strict", "all", "all_strict"}, optional
+    decode_coords : bool or {"coordinates", "all"}, optional
         Controls which variables are set as coordinate variables:
 
-        - "coordinates"/"coordinates_strict" or True: Set variables referred to in the
+        - "coordinates" or True: Set variables referred to in the
           ``'coordinates'`` attribute of the datasets or individual variables
           as coordinate variables.
-        - "all"/"all_strict": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
-        When using the "strict"-forms an error is raised, if ``coordinates``-items are
-        missing from the dataset, otherwise a warning is issued and only the
-        available ``coordinates`items are handled.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
