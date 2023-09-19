@@ -25,7 +25,7 @@ from xarray.core.pycompat import is_chunked_array
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
+    from xarray.core.types import T_Chunks, T_NormalizedChunks, T_DuckArray
 
 
 @functools.lru_cache(maxsize=1)
@@ -313,9 +313,9 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return data.rechunk(chunks, **kwargs)  # type: ignore[attr-defined]
 
     @abstractmethod
-    def compute(self, *data: T_ChunkedArray | Any, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(self, *data: T_ChunkedArray | Any, **kwargs) -> tuple[T_DuckArray, ...]:
         """
-        Computes one or more chunked arrays, returning them as eager numpy arrays.
+        Computes one or more chunked arrays, returning them as eager arrays.
 
         Called anytime something needs to computed, including multiple arrays at once.
         Used by `.compute`, `.persist`, `.values`.
@@ -324,7 +324,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         ----------
         *data : object
             Any number of objects. If an object is an instance of the chunked array type, it is computed
-            and the in-memory result returned as a numpy array. All other types should be passed through unchanged.
+            and the in-memory result returned as a array. All other types should be passed through unchanged.
 
         Returns
         -------
