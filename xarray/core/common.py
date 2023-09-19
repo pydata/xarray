@@ -382,7 +382,7 @@ class DataWithCoords(AttrAccessMixin):
     __slots__ = ("_close",)
 
     def squeeze(
-        self: Self,
+        self,
         dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
         axis: int | Iterable[int] | None = None,
