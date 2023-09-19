@@ -17,6 +17,17 @@ class TestCoordinates:
         expected = Dataset(coords={"foo": ("x", [0, 1, 2])})
         assert_identical(coords.to_dataset(), expected)
 
+    def test_init_default_index(self) -> None:
+        coords = Coordinates(coords={"x": [1, 2]})
+        expected = Dataset(coords={"x": [1, 2]})
+        assert_identical(coords.to_dataset(), expected)
+        assert "x" in coords.xindexes
+
+    def test_init_no_default_index(self) -> None:
+        # dimension coordinate with no default index (explicit)
+        coords = Coordinates(coords={"x": [1, 2]}, indexes={})
+        assert "x" not in coords.xindexes
+
     def test_init_from_coords(self) -> None:
         expected = Dataset(coords={"foo": ("x", [0, 1, 2])})
         coords = Coordinates(coords=expected.coords)
@@ -25,10 +36,19 @@ class TestCoordinates:
         # test variables copied
         assert coords.variables["foo"] is not expected.variables["foo"]
 
-        # default index
-        expected = Dataset(coords={"x": ("x", [0, 1, 2])})
-        coords = Coordinates(coords=expected.coords, indexes=expected.xindexes)
+        # test indexes are extracted
+        expected = Dataset(coords={"x": [0, 1, 2]})
+        coords = Coordinates(coords=expected.coords)
         assert_identical(coords.to_dataset(), expected)
+        assert expected.xindexes == coords.xindexes
+
+        # coords + indexes not supported
+        with pytest.raises(
+            ValueError, match="passing both.*Coordinates.*indexes.*not allowed"
+        ):
+            coords = Coordinates(
+                coords=expected.coords, indexes={"x": PandasIndex([0, 1, 2], "x")}
+            )
 
     def test_init_empty(self) -> None:
         coords = Coordinates()
@@ -60,37 +80,36 @@ class TestCoordinates:
             assert_identical(expected[name], coords.variables[name])
 
     def test_dims(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
         assert coords.dims == {"x": 3}
 
     def test_sizes(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
         assert coords.sizes == {"x": 3}
 
     def test_dtypes(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
         assert coords.dtypes == {"x": int}
 
     def test_getitem(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
         assert_identical(
             coords["x"],
             DataArray([0, 1, 2], coords={"x": [0, 1, 2]}, name="x"),
         )
 
     def test_delitem(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
         del coords["x"]
         assert "x" not in coords
 
+        with pytest.raises(
+            KeyError, match="'nonexistent' is not in coordinate variables"
+        ):
+            del coords["nonexistent"]
+
     def test_update(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
 
         coords.update({"y": ("y", [4, 5, 6])})
         assert "y" in coords
@@ -99,18 +118,26 @@ class TestCoordinates:
         assert_identical(coords["y"], expected)
 
     def test_equals(self):
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
 
         assert coords.equals(coords)
-        assert not coords.equals("no_a_coords")
+        assert not coords.equals("not_a_coords")
 
     def test_identical(self):
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
 
         assert coords.identical(coords)
-        assert not coords.identical("no_a_coords")
+        assert not coords.identical("not_a_coords")
+
+    def test_assign(self) -> None:
+        coords = Coordinates(coords={"x": [0, 1, 2]})
+        expected = Coordinates(coords={"x": [0, 1, 2], "y": [3, 4]})
+
+        actual = coords.assign(y=[3, 4])
+        assert_identical(actual, expected)
+
+        actual = coords.assign({"y": [3, 4]})
+        assert_identical(actual, expected)
 
     def test_copy(self) -> None:
         no_index_coords = Coordinates({"foo": ("x", [1, 2, 3])})
@@ -129,8 +156,7 @@ class TestCoordinates:
         assert source_ndarray(v0.data) is not source_ndarray(v1.data)
 
     def test_align(self) -> None:
-        _ds = Dataset(coords={"x": [0, 1, 2]})
-        coords = Coordinates(coords=_ds.coords, indexes=_ds.xindexes)
+        coords = Coordinates(coords={"x": [0, 1, 2]})
 
         left = coords
 
