@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Hashable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
