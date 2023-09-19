@@ -43,10 +43,6 @@ def as_compatible_data(
         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
         return typing.cast(T_DuckArray, data)
 
-    # if not isinstance(data, np.ndarray) and (
-    #     hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
-    # ):
-    #     return typing.cast(T_DuckArray, data)
     if isinstance(data, tuple):
         data = to_0d_object_array(data)
 
