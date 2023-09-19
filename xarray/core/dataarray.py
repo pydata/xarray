@@ -41,6 +41,7 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.types import T_DataArrayOrSet
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -1844,7 +1845,7 @@ class DataArray(
 
     def reindex_like(
         self: T_DataArray,
-        other: DataArray | Dataset,
+        other: T_Xarray,
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
@@ -2248,7 +2249,7 @@ class DataArray(
 
     def interp_like(
         self: T_DataArray,
-        other: DataArray | Dataset,
+        other: T_DataArrayOrSet,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
@@ -5375,7 +5376,7 @@ class DataArray(
         func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] | None = None,
-        template: DataArray | Dataset | None = None,
+        template: T_Xarray | None = None,
     ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.

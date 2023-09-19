@@ -30,9 +30,7 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
             raise ValueError(f"Chunk sizes along dimension {dim!r} are not equal.")
 
 
-def check_result_variables(
-    result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
-):
+def check_result_variables(result: T_Xarray, expected: Mapping[str, Any], kind: str):
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":
@@ -105,7 +103,7 @@ def make_meta(obj):
 
 
 def infer_template(
-    func: Callable[..., T_Xarray], obj: DataArray | Dataset, *args, **kwargs
+    func: Callable[..., T_Xarray], obj: T_Xarray, *args, **kwargs
 ) -> T_Xarray:
     """Infer return object by running the function on meta objects."""
     meta_args = [make_meta(arg) for arg in (obj,) + args]

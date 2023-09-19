@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import Self, T_DataArray
+from xarray.core.types import Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -915,9 +915,7 @@ def drop_indexed_coords(
     return Coordinates._construct_direct(coords=new_variables, indexes=new_indexes)
 
 
-def assert_coordinate_consistent(
-    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
-) -> None:
+def assert_coordinate_consistent(obj: T_Xarray, coords: Mapping[Any, Variable]) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 
     obj: DataArray or Dataset

@@ -19,13 +19,11 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
-from xarray.core.types import T_Alignable
+from xarray.core.types import T_Alignable, T_Xarray
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
-    from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
     from xarray.core.types import JoinOptions, T_DataArray, T_Dataset, T_DuckArray
 
 
@@ -903,7 +901,7 @@ def reindex(
 
 def reindex_like(
     obj: T_Alignable,
-    other: Dataset | DataArray,
+    other: T_Xarray,
     method: str | None = None,
     tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,

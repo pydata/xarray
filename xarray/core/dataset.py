@@ -3398,7 +3398,7 @@ class Dataset(
 
     def reindex_like(
         self: T_Dataset,
-        other: Dataset | DataArray,
+        other: T_Xarray,
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
@@ -8545,7 +8545,7 @@ class Dataset(
         func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] | None = None,
-        template: DataArray | Dataset | None = None,
+        template: T_Xarray | None = None,
     ) -> T_Xarray:
         """
         Apply a function to each block of this Dataset.
