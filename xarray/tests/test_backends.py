@@ -54,7 +54,6 @@ from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import array_type
 from xarray.tests import (
-    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -526,7 +525,6 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual["x"].encoding["_Encoding"] == "ascii"
 
-    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self) -> None:
         times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
         expected = Dataset({"t": ("t", times), "t0": times[0]})
@@ -1966,7 +1964,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks == original[k].chunks
 
     @requires_dask
-    @pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+    @pytest.mark.filterwarnings("ignore:The specified chunks separate:UserWarning")
     def test_manual_chunk(self) -> None:
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
@@ -3086,8 +3084,9 @@ class TestH5NetCDFData(NetCDF4Base):
     def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": True}
-        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_equal(expected, actual)
+        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
@@ -3101,14 +3100,14 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:You are writing invalid netcdf features")
     def test_numpy_bool_(self) -> None:
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
         expected = Dataset({"x": ("y", np.ones(5), {"numpy_bool": np.bool_(True)})})
         save_kwargs = {"invalid_netcdf": True}
-        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_identical(expected, actual)
+        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_identical(expected, actual)
 
     def test_cross_engine_read_write_netcdf4(self) -> None:
         # Drop dim3, because its labels include strings. These appear to be
@@ -5193,7 +5192,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
-@pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+@pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consintency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
     dask_arr = da.from_array(

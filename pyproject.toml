@@ -75,6 +75,8 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 exclude = 'xarray/util/generate_.*\.py'
 files = "xarray"
 show_error_codes = true
+show_error_context = true
+warn_redundant_casts = true
 warn_unused_ignores = true
 
 # Most of the numerical computing stack doesn't have type annotations yet.
@@ -116,10 +118,6 @@ module = [
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
 ]
 
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = []
-
 [tool.ruff]
 builtins = ["ellipsis"]
 exclude = [
@@ -147,7 +145,8 @@ select = [
 [tool.ruff.isort]
 known-first-party = ["xarray"]
 
-[tool.pytest.ini-options]
+[tool.pytest.ini_options]
+addopts = '--strict-markers'
 filterwarnings = [
   "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
 ]
