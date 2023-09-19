@@ -1300,16 +1300,16 @@ class Variable(
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
             chunkmanager = get_chunked_array_type(data)
-            data_loaded, *_ = chunkmanager.compute(data)
+            data, *_ = chunkmanager.compute(data)
         if isinstance(data, array_type("cupy")):
-            data_loaded = data.get()
+            data = data.get()
         # pint has to be imported dynamically as pint imports xarray
         if isinstance(data, array_type("pint")):
-            data_loaded = data.magnitude
+            data = data.magnitude
         if isinstance(data, array_type("sparse")):
-            data_loaded = data.todense()
+            data = data.todense()
 
-        return np.asarray(data_loaded)
+        return np.asarray(data)
 
     def as_numpy(self: T_Variable) -> T_Variable:
         """Coerces wrapped data into a numpy array, returning a Variable."""
