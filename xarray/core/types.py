@@ -156,8 +156,15 @@ T_Index = TypeVar("T_Index", bound="Index")
 
 T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
 
-# Maybe we rename this to T_Data or something less Fortran-y?
+# Use `T_Xarray` for most functions, when the return type matches the input type — for
+# example `ds.where(cond)` returns a `Dataset` when `ds` is a `Dataset`, and
+# `da.where(cond)` returns a `DataArray` when `da` is a `DataArray`.
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
+
+# Use `T_DataWithCoords` for:
+# - functions that return either `DataArray` or `Dataset`, and
+#   we're not sure which one it will be
+# - directly with `DataWithCoords`
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
