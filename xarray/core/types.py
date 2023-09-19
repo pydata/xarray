@@ -154,11 +154,8 @@ T_Coordinates = TypeVar("T_Coordinates", bound="Coordinates")
 T_Array = TypeVar("T_Array", bound="AbstractArray")
 T_Index = TypeVar("T_Index", bound="Index")
 
-T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
+T_Xarray = TypeVar("T_Xarray", bound=Union["DataArray", "Dataset"])
 
-# Maybe we rename this to T_Data or something less Fortran-y?
-T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
-T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]

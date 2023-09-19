@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar, cast
 import numpy as np
 
 from xarray.core.formatting import format_item
-from xarray.core.types import HueStyleOptions, T_DataArrayOrSet
+from xarray.core.types import HueStyleOptions, T_Xarray
 from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
@@ -59,7 +59,7 @@ def _nicetitle(coord, value, maxchar, template):
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
-class FacetGrid(Generic[T_DataArrayOrSet]):
+class FacetGrid(Generic[T_Xarray]):
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
@@ -100,7 +100,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         sometimes the rightmost grid positions in the bottom row.
     """
 
-    data: T_DataArrayOrSet
+    data: T_Xarray
     name_dicts: np.ndarray
     fig: Figure
     axs: np.ndarray
@@ -125,7 +125,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
     def __init__(
         self,
-        data: T_DataArrayOrSet,
+        data: T_Xarray,
         col: Hashable | None = None,
         row: Hashable | None = None,
         col_wrap: int | None = None,
@@ -1009,7 +1009,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
 
 def _easy_facetgrid(
-    data: T_DataArrayOrSet,
+    data: T_Xarray,
     plotfunc: Callable,
     kind: Literal["line", "dataarray", "dataset", "plot1d"],
     x: Hashable | None = None,
@@ -1025,7 +1025,7 @@ def _easy_facetgrid(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
-) -> FacetGrid[T_DataArrayOrSet]:
+) -> FacetGrid[T_Xarray]:
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 

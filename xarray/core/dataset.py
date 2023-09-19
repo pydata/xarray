@@ -21,9 +21,19 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    cast,
+    overload,
+)
 
 import numpy as np
+from typing_extensions import Self
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -1114,13 +1124,13 @@ class Dataset(
         return obj
 
     def _replace_with_new_dims(
-        self: T_Dataset,
+        self: Self,
         variables: dict[Hashable, Variable],
         coord_names: set | None = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
         indexes: dict[Hashable, Index] | None = None,
         inplace: bool = False,
-    ) -> T_Dataset:
+    ) -> Self:
         """Replace variables with recalculated dimensions."""
         dims = calculate_dimensions(variables)
         return self._replace(

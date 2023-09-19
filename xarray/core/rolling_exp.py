@@ -9,7 +9,7 @@ from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import T_DataWithCoords
+from xarray.core.types import T_Xarray
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -73,7 +73,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-class RollingExp(Generic[T_DataWithCoords]):
+class RollingExp(Generic[T_Xarray]):
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -97,16 +97,16 @@ class RollingExp(Generic[T_DataWithCoords]):
 
     def __init__(
         self,
-        obj: T_DataWithCoords,
+        obj: T_Xarray,
         windows: Mapping[Any, int | float],
         window_type: str = "span",
     ):
-        self.obj: T_DataWithCoords = obj
+        self.obj: T_Xarray = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
+    def mean(self, keep_attrs: bool | None = None) -> T_Xarray:
         """
         Exponentially weighted moving average.
 
@@ -142,7 +142,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             on_missing_core_dim="copy",
         ).transpose(*dim_order)
 
-    def sum(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
+    def sum(self, keep_attrs: bool | None = None) -> T_Xarray:
         """
         Exponentially weighted moving sum.
 

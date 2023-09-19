@@ -358,14 +358,17 @@ def map_blocks(
 
     if template is None:
         # infer template by providing zero-shaped arrays
-        template = infer_template(func, aligned[0], *args, **kwargs)
-        template_indexes = set(template._indexes)
+        template_inferred = infer_template(func, aligned[0], *args, **kwargs)
+        template = template_inferred
+        template_indexes = set(template_inferred._indexes)
         preserved_indexes = template_indexes & set(input_indexes)
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template._indexes[k] for k in new_indexes})
+        indexes.update({k: template_inferred._indexes[k] for k in new_indexes})
         output_chunks: Mapping[Hashable, tuple[int, ...]] = {
-            dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
+            dim: input_chunks[dim]
+            for dim in template_inferred.dims
+            if dim in input_chunks
         }
 
     else:

@@ -5,9 +5,10 @@ import itertools
 import math
 import warnings
 from collections.abc import Hashable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast
 
 import numpy as np
+from typing_extensions import Self
 
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
@@ -193,7 +194,7 @@ class Rolling(Generic[T_Xarray]):
         keep_attrs = self._get_keep_attrs(keep_attrs)
         rolling_count = self._counts(keep_attrs=keep_attrs)
         enough_periods = rolling_count >= self.min_periods
-        return rolling_count.where(enough_periods)
+        return cast(T_Xarray, rolling_count.where(enough_periods))
 
     count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="count")
 
@@ -878,7 +879,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         )
 
     def construct(
-        self,
+        self: Self,
         window_dim=None,
         keep_attrs=None,
         **window_dim_kwargs,
@@ -956,8 +957,10 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         reshaped = Dataset()
         if isinstance(self.obj, DataArray):
             obj = self.obj._to_temp_dataset()
-        else:
+        elif isinstance(self.obj, Dataset):
             obj = self.obj
+        else:
+            raise TypeError
 
         reshaped.attrs = obj.attrs if keep_attrs else {}
 
@@ -978,10 +981,13 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             self.obj.coords
         )
         result = reshaped.set_coords(should_be_coords)
+
         if isinstance(self.obj, DataArray):
-            return self.obj._from_temp_dataset(result)
+            return cast(T_Xarray, self.obj._from_temp_dataset(result))
+        elif isinstance(self.obj, Dataset):
+            return cast(T_Xarray, result)
         else:
-            return result
+            raise TypeError
 
 
 class DataArrayCoarsen(Coarsen["DataArray"]):

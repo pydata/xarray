@@ -6,9 +6,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
+from typing_extensions import Self
+
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
-from xarray.core.types import Dims, Self
+from xarray.core.types import Dims
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:

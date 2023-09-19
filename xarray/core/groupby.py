@@ -12,6 +12,7 @@ from typing import (
     Generic,
     Literal,
     Union,
+    cast,
 )
 
 import numpy as np
@@ -256,7 +257,7 @@ T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
 
 def _ensure_1d(
     group: T_Group, obj: T_Xarray
-) -> tuple[T_Group, T_Xarray, Hashable | None, list[Hashable],]:
+) -> tuple[T_Group, T_Xarray, str | None, list[Hashable]]:
     # 1D cases: do nothing
     if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
         return group, obj, None, []
@@ -271,7 +272,7 @@ def _ensure_1d(
         inserted_dims = [dim for dim in group.dims if dim not in group.coords]
         newgroup = group.stack({stacked_dim: orig_dims})
         newobj = obj.stack({stacked_dim: orig_dims})
-        return newgroup, newobj, stacked_dim, inserted_dims
+        return newgroup, cast(T_Xarray, newobj), stacked_dim, inserted_dims
 
     raise TypeError(
         f"group must be DataArray, IndexVariable or _DummyGroup, got {type(group)!r}."
@@ -800,7 +801,10 @@ class GroupBy(Generic[T_Xarray]):
         """
         Get DataArray or Dataset corresponding to a particular group label.
         """
-        return self._obj.isel({self._group_dim: self.groups[key]})
+        return cast(
+            T_Xarray,
+            self._obj.isel(indexers={self._group_dim: self.groups[key]}),
+        )
 
     def __len__(self) -> int:
         (grouper,) = self.groupers
@@ -822,7 +826,7 @@ class GroupBy(Generic[T_Xarray]):
     def _iter_grouped(self) -> Iterator[T_Xarray]:
         """Iterate over each element in this group"""
         for indices in self._group_indices:
-            yield self._obj.isel({self._group_dim: indices})
+            yield cast(T_Xarray, self._obj.isel({self._group_dim: indices}))
 
     def _infer_concat_args(self, applied_example):
         (grouper,) = self.groupers

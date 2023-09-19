@@ -5,10 +5,11 @@ from collections.abc import Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, Union, cast, overload
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
@@ -47,8 +48,8 @@ if TYPE_CHECKING:
         ScalarOrArray,
         SideOptions,
         T_Chunks,
-        T_DataWithCoords,
         T_Variable,
+        T_Xarray,
     )
     from xarray.core.variable import Variable
 
@@ -381,11 +382,11 @@ class DataWithCoords(AttrAccessMixin):
     __slots__ = ("_close",)
 
     def squeeze(
-        self: T_DataWithCoords,
+        self: Self,
         dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
         axis: int | Iterable[int] | None = None,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """Return a new object with squeezed data.
 
         Parameters
@@ -411,15 +412,15 @@ class DataWithCoords(AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **{d: 0 for d in dims})
+        return self.isel(drop=drop, indexers={d: 0 for d in dims})
 
     def clip(
-        self: T_DataWithCoords,
+        self: Self,
         min: ScalarOrArray | None = None,
         max: ScalarOrArray | None = None,
         *,
         keep_attrs: bool | None = None,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """
         Return an array whose values are limited to ``[min, max]``.
         At least one of max or min must be given.
@@ -472,10 +473,10 @@ class DataWithCoords(AttrAccessMixin):
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(
-        self: T_DataWithCoords,
+        self: Self,
         coords: Mapping[Any, Any] | None = None,
         **coords_kwargs: Any,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -620,9 +621,7 @@ class DataWithCoords(AttrAccessMixin):
         data.coords.update(results)
         return data
 
-    def assign_attrs(
-        self: T_DataWithCoords, *args: Any, **kwargs: Any
-    ) -> T_DataWithCoords:
+    def assign_attrs(self: Self, *args: Any, **kwargs: Any) -> Self:
         """Assign new attrs to this object.
 
         Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
@@ -810,11 +809,11 @@ class DataWithCoords(AttrAccessMixin):
             return func(self, *args, **kwargs)
 
     def rolling_exp(
-        self: T_DataWithCoords,
+        self: Self,
         window: Mapping[Any, int] | None = None,
         window_type: str = "span",
         **window_kwargs,
-    ) -> RollingExp[T_DataWithCoords]:
+    ) -> RollingExp[T_Xarray]:
         """
         Exponentially-weighted moving window.
         Similar to EWM in pandas
@@ -849,7 +848,7 @@ class DataWithCoords(AttrAccessMixin):
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return rolling_exp.RollingExp(self, window, window_type)
+        return rolling_exp.RollingExp(cast(T_Xarray, self), window, window_type)
 
     def _resample(
         self,
@@ -1062,8 +1061,8 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def where(
-        self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False
-    ) -> T_DataWithCoords:
+        self: Self, cond: Any, other: Any = dtypes.NA, drop: bool = False
+    ) -> Self:
         """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1178,8 +1177,8 @@ class DataWithCoords(AttrAccessMixin):
             for dim in cond.sizes.keys():
                 indexers[dim] = _get_indexer(dim)
 
-            self = self.isel(**indexers)
-            cond = cond.isel(**indexers)
+            self = self.isel(indexers=indexers)
+            cond = cond.isel(indexers=indexers)
 
         return ops.where_method(self, cond, other)
 
@@ -1205,9 +1204,7 @@ class DataWithCoords(AttrAccessMixin):
             self._close()
         self._close = None
 
-    def isnull(
-        self: T_DataWithCoords, keep_attrs: bool | None = None
-    ) -> T_DataWithCoords:
+    def isnull(self: Self, keep_attrs: bool | None = None) -> Self:
         """Test each value in the array for whether it is a missing value.
 
         Parameters
@@ -1250,9 +1247,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(
-        self: T_DataWithCoords, keep_attrs: bool | None = None
-    ) -> T_DataWithCoords:
+    def notnull(self: Self, keep_attrs: bool | None = None) -> Self:
         """Test each value in the array for whether it is not a missing value.
 
         Parameters
@@ -1295,7 +1290,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def isin(self: T_DataWithCoords, test_elements: Any) -> T_DataWithCoords:
+    def isin(self: Self, test_elements: Any) -> Self:
         """Tests each value in the array for whether it is in test elements.
 
         Parameters
@@ -1344,7 +1339,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def astype(
-        self: T_DataWithCoords,
+        self: Self,
         dtype,
         *,
         order=None,
@@ -1352,7 +1347,7 @@ class DataWithCoords(AttrAccessMixin):
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """
         Copy of the xarray object, with data cast to a specified type.
         Leaves coordinate dtype unchanged.
@@ -1419,7 +1414,7 @@ class DataWithCoords(AttrAccessMixin):
             dask="allowed",
         )
 
-    def __enter__(self: T_DataWithCoords) -> T_DataWithCoords:
+    def __enter__(self: Self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:

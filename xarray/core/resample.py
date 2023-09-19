@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
+
+from typing_extensions import Self
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -63,10 +65,10 @@ class Resample(GroupBy[T_Xarray]):
         obj = self._obj
         for k, v in obj.coords.items():
             if k != self._dim and self._dim in v.dims:
-                obj = obj.drop_vars(k)
+                obj = cast(T_Xarray, obj.drop_vars(k))
         return obj
 
-    def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def pad(self: Self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
 
         Parameters
@@ -85,13 +87,18 @@ class Resample(GroupBy[T_Xarray]):
         """
         obj = self._drop_coords()
         (grouper,) = self.groupers
-        return obj.reindex(
-            {self._dim: grouper.full_index}, method="pad", tolerance=tolerance
+        return cast(
+            T_Xarray,
+            obj.reindex(
+                {self._dim: grouper.full_index}, method="pad", tolerance=tolerance
+            ),
         )
 
     ffill = pad
 
-    def backfill(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
+    def backfill(
+        self: Self, tolerance: float | Iterable[float] | None = None
+    ) -> T_Xarray:
         """Backward fill new values at up-sampled frequency.
 
         Parameters
@@ -110,8 +117,11 @@ class Resample(GroupBy[T_Xarray]):
         """
         obj = self._drop_coords()
         (grouper,) = self.groupers
-        return obj.reindex(
-            {self._dim: grouper.full_index}, method="backfill", tolerance=tolerance
+        return cast(
+            T_Xarray,
+            obj.reindex(
+                {self._dim: grouper.full_index}, method="backfill", tolerance=tolerance
+            ),
         )
 
     bfill = backfill
@@ -136,8 +146,11 @@ class Resample(GroupBy[T_Xarray]):
         """
         obj = self._drop_coords()
         (grouper,) = self.groupers
-        return obj.reindex(
-            {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
+        return cast(
+            T_Xarray,
+            obj.reindex(
+                {self._dim: grouper.full_index}, method="nearest", tolerance=tolerance
+            ),
         )
 
     def interpolate(self, kind: InterpOptions = "linear") -> T_Xarray:
@@ -174,11 +187,14 @@ class Resample(GroupBy[T_Xarray]):
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         obj = self._drop_coords()
         (grouper,) = self.groupers
-        return obj.interp(
-            coords={self._dim: grouper.full_index},
-            assume_sorted=True,
-            method=kind,
-            kwargs={"bounds_error": False},
+        return cast(
+            T_Xarray,
+            obj.interp(
+                coords={self._dim: grouper.full_index},
+                assume_sorted=True,
+                method=kind,
+                kwargs={"bounds_error": False},
+            ),
         )
 
 

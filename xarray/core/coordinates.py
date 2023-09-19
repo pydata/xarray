@@ -527,7 +527,7 @@ class Coordinates(AbstractCoordinates):
     def __setitem__(self, key: Hashable, value: Any) -> None:
         self.update({key: value})
 
-    def update(self, other: Mapping[Any, Any]) -> None:
+    def update(self: Self, other: Mapping[Any, Any]) -> None:
         """Update this Coordinates variables with other coordinate variables."""
 
         if not len(other):

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overlo
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Self
 
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -2986,14 +2987,12 @@ class DataArray(
     def T(self: T_DataArray) -> T_DataArray:
         return self.transpose()
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def drop_vars(
-        self,
+        self: Self,
         names: Hashable | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
-    ) -> DataArray:
+    ) -> Self:
         """Returns an array with dropped variables.
 
         Parameters
