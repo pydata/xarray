@@ -154,18 +154,20 @@ T_Coordinates = TypeVar("T_Coordinates", bound="Coordinates")
 T_Array = TypeVar("T_Array", bound="AbstractArray")
 T_Index = TypeVar("T_Index", bound="Index")
 
-T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
-
-# Use `T_Xarray` for most functions, when the return type matches the input type — for
-# example `ds.where(cond)` returns a `Dataset` when `ds` is a `Dataset`, and
-# `da.where(cond)` returns a `DataArray` when `da` is a `DataArray`.
+# `T_Xarray` is a type variable that can be either "DataArray" or "Dataset". When used
+# in a function definition, all inputs and outputs annotated with `T_Xarray` must be of
+# the same concrete type, either "DataArray" or "Dataset".
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 
-# Use `T_DataWithCoords` for:
-# - functions that return either `DataArray` or `Dataset`, and
-#   we're not sure which one it will be
-# - directly with `DataWithCoords`
+# `T_DataArrayOrSet` is a type variable that is bounded to either "DataArray" or
+# "Dataset". Use it for functions that might return either type, but where the exact
+# type cannot be determined statically using the type system.
+T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
+
+# For working directly with `DataWithCoords`. It will only allow using methods defined
+# on `DataWithCoords`.
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
+
 T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
 # Temporary placeholder for indicating an array api compliant type.
