@@ -5,10 +5,10 @@ import xarray as xr
 
 from . import parameterized, randn, requires_dask
 
-nx = 300
+nx = 3000
 long_nx = 30000
 ny = 200
-nt = 100
+nt = 1000
 window = 20
 
 randn_xy = randn((nx, ny), frac_nan=0.1)
