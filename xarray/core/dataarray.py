@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Generic,
     Literal,
     NoReturn,
     cast,
@@ -49,6 +50,7 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -110,7 +112,6 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         SideOptions,
         T_DataArray,
-        T_DuckArray,
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
