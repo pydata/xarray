@@ -30,7 +30,7 @@ from xarray.coding.times import (
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
-from xarray.testing import assert_allclose, assert_equal, assert_identical
+from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     FirstElementAccessibleArray,
     arm_xfail,
@@ -1311,12 +1311,16 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
         f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
         f"Resolution of {needed_units!r} needed. "
     )
-    encoding = dict(_FillValue=20, units=units)
+    encoding = dict(dtype=np.int64, _FillValue=20, units=units)
     var = Variable(["time"], timedelta_values, encoding=encoding)
     with pytest.warns(UserWarning, match=wmsg):
         encoded_var = conventions.encode_cf_variable(var)
+    assert encoded_var.dtype == np.float64
+    assert encoded_var.attrs["units"] == units
+    assert encoded_var.attrs["_FillValue"] == 20.0
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
-    assert_allclose(var, decoded_var)
+    assert_identical(var, decoded_var)
+    assert decoded_var.encoding["dtype"] == np.float64
 
 
 def test_roundtrip_float_times() -> None:
