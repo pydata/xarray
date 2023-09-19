@@ -86,6 +86,9 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fixed a bug where mismatched ``coordinates`` silently failed to decode variable (:issue:`1809`, :pull:`8195`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
+  (:issue:`6528`, :pull:`8114`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -98,6 +101,10 @@ Internal Changes
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution in arrays that contain missing values (:pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Transition ``.rolling_exp`` functions to use `.apply_ufunc` internally rather
+  than `.reduce`, as the start of a broader effort to move non-reducing
+  functions away from ```.reduce``, (:pull:`8114`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2023.08.0:
 
