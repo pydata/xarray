@@ -378,9 +378,7 @@ def decode_cf_variables(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: Literal[
-        True, "coordinates", "all", "coordinates_strict", "all_strict"
-    ] = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
@@ -495,9 +493,7 @@ def decode_cf(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: Literal[
-        True, "coordinates", "all", "coordinates_strict", "all_strict"
-    ] = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
