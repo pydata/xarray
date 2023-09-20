@@ -27,11 +27,7 @@ if TYPE_CHECKING:
     from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 
 
-class _ChunkedArray(Generic[T_DuckArray]):
-    ...
-
-
-T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray)
+T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 
 @functools.lru_cache(maxsize=1)
