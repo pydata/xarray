@@ -9,10 +9,15 @@ from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
 from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import T_DataWithCoords
+from xarray.core.types import T_DataWithCoords, T_DuckArray
 
 
-def _get_alpha(com=None, span=None, halflife=None, alpha=None):
+def _get_alpha(
+    com: float | None = None,
+    span: float | None = None,
+    halflife: float | None = None,
+    alpha: float | None = None,
+) -> float:
     # pandas defines in terms of com (converting to alpha in the algo)
     # so use its function to get a com and then convert to alpha
 
@@ -20,7 +25,7 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
     return 1 / (1 + com)
 
 
-def move_exp_nanmean(array, *, axis, alpha):
+def move_exp_nanmean(array: T_DuckArray, *, axis: int, alpha: float) -> np.ndarray:
     if is_duck_dask_array(array):
         raise TypeError("rolling_exp is not currently support for dask-like arrays")
     import numbagg
@@ -32,7 +37,7 @@ def move_exp_nanmean(array, *, axis, alpha):
         return numbagg.move_exp_nanmean(array, axis=axis, alpha=alpha)
 
 
-def move_exp_nansum(array, *, axis, alpha):
+def move_exp_nansum(array: T_DuckArray, *, axis: int, alpha: float) -> np.ndarray:
     if is_duck_dask_array(array):
         raise TypeError("rolling_exp is not currently supported for dask-like arrays")
     import numbagg
@@ -40,7 +45,12 @@ def move_exp_nansum(array, *, axis, alpha):
     return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 
 
-def _get_center_of_mass(comass, span, halflife, alpha):
+def _get_center_of_mass(
+    comass: float | None,
+    span: float | None,
+    halflife: float | None,
+    alpha: float | None,
+) -> float:
     """
     Vendored from pandas.core.window.common._get_center_of_mass
 
