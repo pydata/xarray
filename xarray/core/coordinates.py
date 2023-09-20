@@ -565,7 +565,9 @@ class Coordinates(AbstractCoordinates):
 
         self._update_coords(coords, indexes)
 
-    def assign(self, coords: Mapping | None = None, **coords_kwargs: Any) -> Self:
+    def assign(
+        self, coords: Mapping | None = None, **coords_kwargs: Any
+    ) -> Coordinates:
         """Assign new coordinates (and indexes) to a Coordinates object, returning
         a new object with all the original coordinates in addition to the new ones.
 
@@ -654,7 +656,7 @@ class Coordinates(AbstractCoordinates):
         self,
         deep: bool = False,
         memo: dict[int, Any] | None = None,
-    ) -> Self:
+    ) -> Coordinates:
         """Return a copy of this Coordinates object."""
         # do not copy indexes (may corrupt multi-coordinate indexes)
         # TODO: disable variables deepcopy? it may also be problematic when they
@@ -662,7 +664,9 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return type(self)._construct_direct(
+        # Currently this requires using the concrete type of `Coordinates`, rather than
+        # `Self`, ref #8216
+        return Coordinates._construct_direct(
             coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
         )
 

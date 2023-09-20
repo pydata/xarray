@@ -2045,7 +2045,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
-        # We need to return `Variable` rather than the type of `self` at the moment, ref #8216
+        # We need to return `Variable` rather than the type of `self` at the moment, ref
+        # #8216
         return Variable(dims, data, attrs=attrs)
 
     @classmethod
