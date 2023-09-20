@@ -567,7 +567,7 @@ class TestDataArray:
 
     def test_equals_failures(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
-        assert not orig.equals(np.arange(5))  # type: ignore[arg-type]
+        assert not orig.equals(np.arange(5))  # type: ignore[type-var]
         assert not orig.identical(123)  # type: ignore
         assert not orig.broadcast_equals({1: 2})  # type: ignore
 
