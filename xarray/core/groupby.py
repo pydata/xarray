@@ -36,8 +36,8 @@ from xarray.core.options import _get_keep_attrs
 from xarray.core.pycompat import integer_types
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
-    either_dict_or_kwargs,
     Frozen,
+    either_dict_or_kwargs,
     hashable,
     is_scalar,
     maybe_wrap_array,
