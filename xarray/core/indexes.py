@@ -4,7 +4,7 @@ import collections.abc
 import copy
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import numpy as np
 import pandas as pd
