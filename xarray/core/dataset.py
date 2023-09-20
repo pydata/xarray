@@ -93,7 +93,7 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import QuantileMethods, T_DataArray, T_Dataset
+from xarray.core.types import QuantileMethods, T_Dataset
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -3335,10 +3335,7 @@ class Dataset(
         # Currently requires a `cast` and returns `Dataset` rather than `Self`, haven't
         # worked through exactly why
         return _broadcast_helper(
-            cast("Dataset", args[1]),
-            exclude,
-            dims_map,
-            common_coords
+            cast("Dataset", args[1]), exclude, dims_map, common_coords
         )
 
     def _reindex_callback(
