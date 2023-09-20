@@ -24,7 +24,7 @@ from xarray.core.utils import (
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import ErrorOptions, JoinOptions, Self, T_Index
+    from xarray.core.types import ErrorOptions, JoinOptions, Self
     from xarray.core.variable import Variable
 
 
@@ -89,7 +89,7 @@ class Index:
     @classmethod
     def concat(
         cls,
-        indexes: Sequence[T_Index],
+        indexes: Sequence[Self],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
     ) -> Self:
@@ -670,8 +670,7 @@ class PandasIndex(Index):
     @classmethod
     def concat(
         cls,
-        # Currently only compatible with PandasIndex, which fails the Liskov substitution principle
-        indexes: Sequence[Self],  # type: ignore[override]
+        indexes: Sequence[Self],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
     ) -> Self:
@@ -799,8 +798,7 @@ class PandasIndex(Index):
 
     def join(
         self,
-        # Currently only compatible with PandasIndex, which fails the Liskov substitution principle
-        other: Self,  # type: ignore[override]
+        other: Self,
         how: str = "inner",
     ) -> Self:
         if how == "outer":
@@ -812,8 +810,7 @@ class PandasIndex(Index):
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
-    # Currently only compatible with PandasIndex, which fails the Liskov substitution principle
-    def reindex_like(  # type: ignore[override]
+    def reindex_like(
         self,
         other: Self,
         method=None,
@@ -969,12 +966,12 @@ class PandasMultiIndex(PandasIndex):
         return obj
 
     @classmethod
-    def concat(  # type: ignore[override]
+    def concat(
         cls,
-        indexes: Sequence[PandasMultiIndex],
+        indexes: Sequence[Self],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
-    ) -> PandasMultiIndex:
+    ) -> Self:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
         if not indexes:
