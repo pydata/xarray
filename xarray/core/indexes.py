@@ -811,10 +811,7 @@ class PandasIndex(Index):
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def reindex_like(
-        self,
-        other: Self,
-        method=None,
-        tolerance=None
+        self, other: Self, method=None, tolerance=None
     ) -> dict[Hashable, Any]:
         if not self.index.is_unique:
             raise ValueError(
