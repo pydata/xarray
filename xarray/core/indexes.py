@@ -302,7 +302,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other: T_Index) -> bool:
+    def equals(self, other: Self) -> bool:
         """Compare this index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
