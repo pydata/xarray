@@ -146,7 +146,6 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
-        Self,
         SideOptions,
         T_Xarray,
     )
