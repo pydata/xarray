@@ -50,7 +50,7 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.types import T_DataArray
+from xarray.core.types import DaCompatible, T_DataArray, T_DataArrayOrSet
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -1739,9 +1739,9 @@ class DataArray(
 
     def broadcast_like(
         self,
-        other: DataArray | Dataset,
+        other: T_DataArrayOrSet,
         exclude: Iterable[Hashable] | None = None,
-    ) -> DataArray:
+    ) -> Self:
         """Broadcast this DataArray against another Dataset or DataArray.
 
         This is equivalent to xr.broadcast(other, self)[1]
@@ -1811,11 +1811,7 @@ class DataArray(
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        # Currently requires a `cast` and returns `DataArray` rather than `Self`, haven't
-        # worked through exactly why
-        return _broadcast_helper(
-            cast(DataArray, args[1]), exclude, dims_map, common_coords
-        )
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
     def _reindex_callback(
         self,
@@ -1854,7 +1850,7 @@ class DataArray(
 
     def reindex_like(
         self,
-        other: DataArray | Dataset,
+        other: T_DataArrayOrSet,
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
@@ -2258,7 +2254,7 @@ class DataArray(
 
     def interp_like(
         self,
-        other: DataArray | Dataset,
+        other: T_Xarray,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
@@ -2379,8 +2375,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def rename(
         self,
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
@@ -2484,8 +2478,6 @@ class DataArray(
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def expand_dims(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
@@ -2580,8 +2572,6 @@ class DataArray(
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
         self,
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
@@ -2645,8 +2635,6 @@ class DataArray(
         ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def reset_index(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
@@ -2812,8 +2800,6 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def unstack(
         self,
         dim: Dims = None,
@@ -2996,8 +2982,6 @@ class DataArray(
     def T(self) -> Self:
         return self.transpose()
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def drop_vars(
         self,
         names: Hashable | Iterable[Hashable],
@@ -3657,7 +3641,7 @@ class DataArray(
 
         return bfill(self, dim, limit=limit)
 
-    def combine_first(self, other: T_DataArray) -> Self:
+    def combine_first(self, other: Self) -> Self:
         """Combine two DataArray objects, with union of coordinates.
 
         This operation follows the normal broadcasting and alignment rules of
@@ -4426,7 +4410,7 @@ class DataArray(
 
         return from_iris(cube)
 
-    def _all_compat(self, other: T_DataArray, compat_str: str) -> bool:
+    def _all_compat(self, other: Self, compat_str: str) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
 
         def compat(x, y):
@@ -4436,7 +4420,7 @@ class DataArray(
             self, other
         )
 
-    def broadcast_equals(self, other: T_DataArray) -> bool:
+    def broadcast_equals(self, other: Self) -> bool:
         """Two DataArrays are broadcast equal if they are equal after
         broadcasting them against each other such that they have the same
         dimensions.
@@ -4485,7 +4469,7 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def equals(self, other: T_DataArray) -> bool:
+    def equals(self, other: Self) -> bool:
         """True if two DataArrays have the same dimensions, coordinates and
         values; otherwise False.
 
@@ -4547,7 +4531,7 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def identical(self, other: T_DataArray) -> bool:
+    def identical(self, other: Self) -> bool:
         """Like equals, but also checks the array name and attributes, and
         attributes on all coordinates.
 
@@ -4618,10 +4602,10 @@ class DataArray(
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
 
-    def __matmul__(self, obj: T_DataArray) -> Self:
+    def __matmul__(self, obj: T_Xarray) -> T_Xarray:
         return self.dot(obj)
 
-    def __rmatmul__(self, other: T_DataArray) -> Self:
+    def __rmatmul__(self, other: T_Xarray) -> T_Xarray:
         # currently somewhat duplicative, as only other DataArrays are
         # compatible with matmul
         return computation.dot(other, self)
@@ -4643,17 +4627,17 @@ class DataArray(
 
     def _binary_op(
         self,
-        other: Any,
+        other: T_Xarray,
         f: Callable,
         reflexive: bool = False,
-    ) -> Self:
+    ) -> T_Xarray:
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, (Dataset, GroupBy)):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
-            self, other = align(self, other, join=align_type, copy=False)  # type: ignore
+            self, other = align(self, other, join=align_type, copy=False)
         other_variable = getattr(other, "variable", other)
         other_coords = getattr(other, "coords", None)
 
@@ -4899,9 +4883,9 @@ class DataArray(
 
     def dot(
         self,
-        other: T_DataArray,
+        other: T_Xarray,
         dims: Dims = None,
-    ) -> Self:
+    ) -> T_Xarray:
         """Perform dot product of two DataArrays along their shared dims.
 
         Equivalent to taking taking tensordot over all shared dims.
@@ -4951,8 +4935,6 @@ class DataArray(
 
         return computation.dot(self, other, dims=dims)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def sortby(
         self,
         variables: Hashable | DataArray | Sequence[Hashable | DataArray],
@@ -5242,8 +5224,6 @@ class DataArray(
         ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
@@ -5298,8 +5278,6 @@ class DataArray(
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def cumulative_integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
@@ -5906,8 +5884,6 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
         dim: Dims = None,
@@ -6008,8 +5984,6 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
-    # change type of self and return to T_DataArray once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
         dim: Dims = None,

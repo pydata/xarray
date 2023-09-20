@@ -93,7 +93,7 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import QuantileMethods, Self, T_Dataset
+from xarray.core.types import QuantileMethods, Self, T_DataArrayOrSet, T_Dataset
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -1677,7 +1677,7 @@ class Dataset(
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore[assignment]
 
-    def _all_compat(self, other: Dataset, compat_str: str) -> bool:
+    def _all_compat(self, other: Self, compat_str: str) -> bool:
         """Helper function for equals and identical"""
 
         # some stores (e.g., scipy) do not seem to preserve order, so don't
@@ -1689,7 +1689,7 @@ class Dataset(
             self._variables, other._variables, compat=compat
         )
 
-    def broadcast_equals(self, other: Dataset) -> bool:
+    def broadcast_equals(self, other: Self) -> bool:
         """Two Datasets are broadcast equal if they are equal after
         broadcasting all variables against each other.
 
@@ -1756,7 +1756,7 @@ class Dataset(
         except (TypeError, AttributeError):
             return False
 
-    def equals(self, other: Dataset) -> bool:
+    def equals(self, other: Self) -> bool:
         """Two Datasets are equal if they have matching variables and
         coordinates, all of which are equal.
 
@@ -1837,7 +1837,7 @@ class Dataset(
         except (TypeError, AttributeError):
             return False
 
-    def identical(self, other: Dataset) -> bool:
+    def identical(self, other: Self) -> bool:
         """Like equals, but also checks all dataset attributes and the
         attributes on all variables and coordinates.
 
@@ -3309,9 +3309,9 @@ class Dataset(
 
     def broadcast_like(
         self,
-        other: Dataset | DataArray,
+        other: T_DataArrayOrSet,
         exclude: Iterable[Hashable] | None = None,
-    ) -> Dataset:
+    ) -> Self:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
@@ -3331,11 +3331,7 @@ class Dataset(
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        # Currently requires a `cast` and returns `Dataset` rather than `Self`, haven't
-        # worked through exactly why
-        return _broadcast_helper(
-            cast("Dataset", args[1]), exclude, dims_map, common_coords
-        )
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
     def _reindex_callback(
         self,
@@ -3400,7 +3396,7 @@ class Dataset(
 
     def reindex_like(
         self,
-        other: Dataset | DataArray,
+        other: T_Xarray,
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
@@ -3985,7 +3981,7 @@ class Dataset(
 
     def interp_like(
         self,
-        other: Dataset | DataArray,
+        other: T_Xarray,
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
@@ -4403,8 +4399,6 @@ class Dataset(
 
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
-    # change type of self and return to T_Dataset once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def expand_dims(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
@@ -4600,8 +4594,6 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    # change type of self and return to T_Dataset once
-    # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
         self,
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
@@ -6624,7 +6616,7 @@ class Dataset(
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
 
-    def combine_first(self, other: T_Dataset) -> Self:
+    def combine_first(self, other: Self) -> Self:
         """Combine two Datasets, default to data_vars of self.
 
         The new coordinates follow the normal broadcasting and alignment rules
