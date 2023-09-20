@@ -147,6 +147,7 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
+        T_DuckArray,
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
@@ -212,7 +213,7 @@ def _get_virtual_variable(
         data = getattr(ref_var.dt, var_name).data
     else:
         data = getattr(ref_var, var_name).data
-    virtual_var = Variable(ref_var.dims, data)
+    virtual_var: Variable = Variable(ref_var.dims, data)
 
     return ref_name, var_name, virtual_var
 
@@ -829,7 +830,9 @@ class Dataset(
             chunkmanager = get_chunked_array_type(*lazy_data.values())
 
             # evaluate all the chunked arrays simultaneously
-            evaluated_data = chunkmanager.compute(*lazy_data.values(), **kwargs)
+            evaluated_data: T_DuckArray = chunkmanager.compute(
+                *lazy_data.values(), **kwargs
+            )
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
