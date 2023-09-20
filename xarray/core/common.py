@@ -222,7 +222,7 @@ class AbstractArray:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
-    def sizes(self: Any) -> dict[Hashable, int]:
+    def sizes(self: Any) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -231,7 +231,7 @@ class AbstractArray:
         --------
         Dataset.sizes
         """
-        return dict(zip(self.dims, self.shape))
+        return Frozen(dict(zip(self.dims, self.shape)))
 
 
 class AttrAccessMixin:
