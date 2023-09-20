@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
+from typing import Generic
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,7 @@ from xarray.core.indexing import (
     VectorizedIndexer,
 )
 from xarray.core.pycompat import array_type
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
@@ -196,7 +198,7 @@ class VariableSubclassobjects(ABC):
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_float(self):
-        for value, dtype in [(0.5, np.float_), (np.float32(0.5), np.float32)]:
+        for value, dtype in [(0.5, float), (np.float32(0.5), np.float32)]:
             x = self.cls(["x"], [value])
             self._assertIndexedLikeNDArray(x, value, dtype)
 
@@ -338,10 +340,10 @@ class VariableSubclassobjects(ABC):
         assert v[0].values == v.values[0]
 
     def test_pandas_period_index(self):
-        v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="B"))
+        v = self.cls(["x"], pd.period_range(start="2000", periods=20, freq="D"))
         v = v.load()  # for dask-based Variable
-        assert v[0] == pd.Period("2000", freq="B")
-        assert "Period('2000-01-03', 'B')" in repr(v)
+        assert v[0] == pd.Period("2000", freq="D")
+        assert "Period('2000-01-01', 'D')" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
     def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
@@ -1127,9 +1129,9 @@ class TestVariable(VariableSubclassobjects):
         assert v.dtype == np.dtype("U3")
         assert v.values == "foo"
 
-        v = Variable([], np.string_("foo"))
+        v = Variable([], np.bytes_("foo"))
         assert v.dtype == np.dtype("S3")
-        assert v.values == bytes("foo", "ascii")
+        assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp("2000-01-01"))
@@ -1466,10 +1468,10 @@ class TestVariable(VariableSubclassobjects):
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
-        v = Variable([], np.string_("asdf"))
+        v = Variable([], np.bytes_("asdf"))
         assert_identical(v[()], v)
 
-        v = Variable([], np.unicode_("asdf"))
+        v = Variable([], np.str_("asdf"))
         assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
@@ -1810,7 +1812,7 @@ class TestVariable(VariableSubclassobjects):
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
-        d[0, 0] = np.NaN
+        d[0, 0] = np.nan
 
         v = Variable(["x", "y"], d)
         actual = v.quantile(q, dim=dim, skipna=skipna)
@@ -2529,7 +2531,7 @@ class TestIndexVariable(VariableSubclassobjects):
         assert a.dims == ("x",)
 
 
-class TestAsCompatibleData:
+class TestAsCompatibleData(Generic[T_DuckArray]):
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
@@ -2604,23 +2606,23 @@ class TestAsCompatibleData:
 
     @requires_pandas_version_two
     def test_tz_datetime(self) -> None:
-        tz = pytz.timezone("US/Eastern")
+        tz = pytz.timezone("America/New_York")
         times_ns = pd.date_range("2000", periods=1, tz=tz)
 
         times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(times_s)
+            actual: T_DuckArray = as_compatible_data(times_s)
         assert actual.array == times_s
         assert actual.array.dtype == pd.DatetimeTZDtype("ns", tz)
 
         series = pd.Series(times_s)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(series)
+            actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual, series.values)
-        assert actual.dtype == np.dtype("datetime64[ns]")
+        np.testing.assert_array_equal(actual2, series.values)
+        assert actual2.dtype == np.dtype("datetime64[ns]")
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
@@ -2719,7 +2721,7 @@ class TestAsCompatibleData:
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():
-        Variable("x", [1, 2, np.NaN]) > 0
+        Variable("x", [1, 2, np.nan]) > 0
 
 
 class TestBackendIndexing:
@@ -2904,9 +2906,11 @@ class TestNumpyCoercion:
         (pd.date_range("2000", periods=1), False),
         (datetime(2000, 1, 1), False),
         (np.array([datetime(2000, 1, 1)]), False),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")), False),
+        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), False),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
             False,
         ),
     ],
@@ -2929,7 +2933,7 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("US/Eastern")
+            "ns", pytz.timezone("America/New_York")
         )
 
 
@@ -2941,12 +2945,14 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         (pd.date_range("2000", periods=1), "datetime64[s]"),
         (pd.Series(pd.date_range("2000", periods=1)), "datetime64[s]"),
         (
-            pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern")),
-            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+            pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")),
+            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
         (
-            pd.Series(pd.date_range("2000", periods=1, tz=pytz.timezone("US/Eastern"))),
-            pd.DatetimeTZDtype("s", pytz.timezone("US/Eastern")),
+            pd.Series(
+                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+            ),
+            pd.DatetimeTZDtype("s", pytz.timezone("America/New_York")),
         ),
     ]
     for data, dtype in cases:
@@ -2960,7 +2966,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
         assert var._data.array.dtype == pd.DatetimeTZDtype(
-            "ns", pytz.timezone("US/Eastern")
+            "ns", pytz.timezone("America/New_York")
         )
 
 

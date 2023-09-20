@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
+        T_DuckArray,
         T_Variable,
     )
 
@@ -86,7 +87,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None) -> Variable | IndexVariable:
+def as_variable(obj: T_DuckArray | Any, name=None) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
@@ -142,7 +143,7 @@ def as_variable(obj, name=None) -> Variable | IndexVariable:
     elif isinstance(obj, (set, dict)):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
-        data = as_compatible_data(obj)
+        data: T_DuckArray = as_compatible_data(obj)
         if data.ndim != 1:
             raise MissingDimensionsError(
                 f"cannot set variable {name!r} with {data.ndim!r}-dimensional data "
@@ -230,7 +231,9 @@ def _possibly_convert_datetime_or_timedelta_index(data):
         return data
 
 
-def as_compatible_data(data, fastpath: bool = False):
+def as_compatible_data(
+    data: T_DuckArray | ArrayLike, fastpath: bool = False
+) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
     - If data does not have the necessary attributes, convert it to ndarray.
@@ -243,7 +246,7 @@ def as_compatible_data(data, fastpath: bool = False):
     """
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
-        return _maybe_wrap_data(data)
+        return cast("T_DuckArray", _maybe_wrap_data(data))
 
     from xarray.core.dataarray import DataArray
 
@@ -252,7 +255,7 @@ def as_compatible_data(data, fastpath: bool = False):
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         data = _possibly_convert_datetime_or_timedelta_index(data)
-        return _maybe_wrap_data(data)
+        return cast("T_DuckArray", _maybe_wrap_data(data))
 
     if isinstance(data, tuple):
         data = utils.to_0d_object_array(data)
@@ -279,7 +282,7 @@ def as_compatible_data(data, fastpath: bool = False):
     if not isinstance(data, np.ndarray) and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
-        return data
+        return cast("T_DuckArray", data)
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
@@ -335,7 +338,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     __slots__ = ("_dims", "_data", "_attrs", "_encoding")
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data: T_DuckArray | ArrayLike,
+        attrs=None,
+        encoding=None,
+        fastpath=False,
+    ):
         """
         Parameters
         ----------
@@ -355,9 +365,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Well-behaved code to serialize a Variable should ignore
             unrecognized encoding items.
         """
-        self._data = as_compatible_data(data, fastpath=fastpath)
+        self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
         self._dims = self._parse_dimensions(dims)
-        self._attrs = None
+        self._attrs: dict[Any, Any] | None = None
         self._encoding = None
         if attrs is not None:
             self.attrs = attrs
@@ -410,7 +420,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self) -> Any:
+    def data(self: T_Variable):
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -429,12 +439,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             return self.values
 
     @data.setter
-    def data(self, data):
+    def data(self: T_Variable, data: T_DuckArray | ArrayLike) -> None:
         data = as_compatible_data(data)
-        if data.shape != self.shape:
+        if data.shape != self.shape:  # type: ignore[attr-defined]
             raise ValueError(
                 f"replacement data must match the Variable's shape. "
-                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
+                f"replacement data has shape {data.shape}; Variable has shape {self.shape}"  # type: ignore[attr-defined]
             )
         self._data = data
 
@@ -566,7 +576,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # around NetCDF and the like
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._dims, self.data, self._attrs))
+        return normalize_token((type(self), self._dims, self.data, self.attrs))
 
     def __dask_graph__(self):
         if is_duck_dask_array(self._data):
@@ -996,7 +1006,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(encoding={})
 
     def copy(
-        self: T_Variable, deep: bool = True, data: ArrayLike | None = None
+        self: T_Variable, deep: bool = True, data: T_DuckArray | ArrayLike | None = None
     ) -> T_Variable:
         """Returns a copy of this object.
 
@@ -1058,24 +1068,26 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _copy(
         self: T_Variable,
         deep: bool = True,
-        data: ArrayLike | None = None,
+        data: T_DuckArray | ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
     ) -> T_Variable:
         if data is None:
-            ndata = self._data
+            data_old = self._data
 
-            if isinstance(ndata, indexing.MemoryCachedArray):
+            if isinstance(data_old, indexing.MemoryCachedArray):
                 # don't share caching between copies
-                ndata = indexing.MemoryCachedArray(ndata.array)
+                ndata = indexing.MemoryCachedArray(data_old.array)
+            else:
+                ndata = data_old
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -1248,11 +1260,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             inline_array=inline_array,
         )
 
-        data = self._data
-        if chunkmanager.is_chunked_array(data):
-            data = chunkmanager.rechunk(data, chunks)  # type: ignore[arg-type]
+        data_old = self._data
+        if chunkmanager.is_chunked_array(data_old):
+            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
         else:
-            if isinstance(data, indexing.ExplicitlyIndexed):
+            if isinstance(data_old, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
                 # that can't handle general array indexing. For example, in netCDF4 you
                 # can do "outer" indexing along two dimensions independent, which works
@@ -1261,20 +1273,22 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                data = indexing.ImplicitToExplicitIndexingAdapter(
-                    data, indexing.OuterIndexer
+                ndata = indexing.ImplicitToExplicitIndexingAdapter(
+                    data_old, indexing.OuterIndexer
                 )
+            else:
+                ndata = data_old
 
             if utils.is_dict_like(chunks):
-                chunks = tuple(chunks.get(n, s) for n, s in enumerate(data.shape))
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
 
-            data = chunkmanager.from_array(
-                data,
+            data_chunked = chunkmanager.from_array(
+                ndata,
                 chunks,  # type: ignore[arg-type]
                 **_from_array_kwargs,
             )
 
-        return self._replace(data=data)
+        return self._replace(data=data_chunked)
 
     def to_numpy(self) -> np.ndarray:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
@@ -2117,7 +2131,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             for var in variables:
                 if var.dims != first_var_dims:
                     raise ValueError(
-                        f"Variable has dimensions {list(var.dims)} but first Variable has dimensions {list(first_var_dims)}"
+                        f"Variable has dimensions {tuple(var.dims)} but first Variable has dimensions {tuple(first_var_dims)}"
                     )
 
         return cls(dims, data, attrs, encoding, fastpath=True)

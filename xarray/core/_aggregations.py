@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
-from xarray.core.types import Dims
+from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         raise NotImplementedError()
 
     def count(
@@ -39,7 +39,7 @@ class DatasetAggregations:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -111,7 +111,7 @@ class DatasetAggregations:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -183,7 +183,7 @@ class DatasetAggregations:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -256,7 +256,7 @@ class DatasetAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -343,7 +343,7 @@ class DatasetAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -430,7 +430,7 @@ class DatasetAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -522,7 +522,7 @@ class DatasetAggregations:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -629,7 +629,7 @@ class DatasetAggregations:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -736,7 +736,7 @@ class DatasetAggregations:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -840,7 +840,7 @@ class DatasetAggregations:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -943,7 +943,7 @@ class DatasetAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -1034,7 +1034,7 @@ class DatasetAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
 
@@ -1127,7 +1127,7 @@ class DatasetAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """
         Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
 
@@ -1226,7 +1226,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         raise NotImplementedError()
 
     def count(
@@ -1235,7 +1235,7 @@ class DataArrayAggregations:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -1301,7 +1301,7 @@ class DataArrayAggregations:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -1367,7 +1367,7 @@ class DataArrayAggregations:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -1434,7 +1434,7 @@ class DataArrayAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -1513,7 +1513,7 @@ class DataArrayAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -1592,7 +1592,7 @@ class DataArrayAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -1676,7 +1676,7 @@ class DataArrayAggregations:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -1773,7 +1773,7 @@ class DataArrayAggregations:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -1870,7 +1870,7 @@ class DataArrayAggregations:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -1964,7 +1964,7 @@ class DataArrayAggregations:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -2057,7 +2057,7 @@ class DataArrayAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -2140,7 +2140,7 @@ class DataArrayAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
 
@@ -2229,7 +2229,7 @@ class DataArrayAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """
         Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
 

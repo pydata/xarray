@@ -102,6 +102,14 @@ class Rolling(Generic[T_Xarray]):
         self.center = self._mapping_to_list(center, default=False)
         self.obj: T_Xarray = obj
 
+        missing_dims = tuple(dim for dim in self.dim if dim not in self.obj.dims)
+        if missing_dims:
+            # NOTE: we raise KeyError here but ValueError in Coarsen.
+            raise KeyError(
+                f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
+                f"dimensions {tuple(self.obj.dims)}"
+            )
+
         # attributes
         if min_periods is not None and min_periods <= 0:
             raise ValueError("min_periods must be greater than zero or None")
@@ -467,9 +475,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
 
-        result = windows.reduce(
-            func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
-        )
+        dim = list(rolling_dim.values())
+        result = windows.reduce(func, dim=dim, keep_attrs=keep_attrs, **kwargs)
 
         # Find valid windows based on count.
         counts = self._counts(keep_attrs=False)
@@ -486,6 +493,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
+        dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
@@ -493,7 +501,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
-            .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
+            .sum(dim=dim, skipna=False, keep_attrs=keep_attrs)
         )
         return counts
 
@@ -564,7 +572,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             and not is_duck_dask_array(self.obj.data)
             and self.ndim == 1
         ):
-            # TODO: renable bottleneck with dask after the issues
+            # TODO: re-enable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
             return self._bottleneck_reduce(
@@ -624,8 +632,7 @@ class DatasetRolling(Rolling["Dataset"]):
         xarray.DataArray.groupby
         """
         super().__init__(obj, windows, min_periods, center)
-        if any(d not in self.obj.dims for d in self.dim):
-            raise KeyError(self.dim)
+
         # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
@@ -778,11 +785,14 @@ class DatasetRolling(Rolling["Dataset"]):
             if not keep_attrs:
                 dataset[key].attrs = {}
 
+        # Need to stride coords as well. TODO: is there a better way?
+        coords = self.obj.isel(
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
+        ).coords
+
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
-            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
-        )
+        return Dataset(dataset, coords=coords, attrs=attrs)
 
 
 class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
@@ -839,10 +849,11 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         self.side = side
         self.boundary = boundary
 
-        absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
-        if absent_dims:
+        missing_dims = tuple(dim for dim in windows.keys() if dim not in self.obj.dims)
+        if missing_dims:
             raise ValueError(
-                f"Dimensions {absent_dims!r} not found in {self.obj.__class__.__name__}."
+                f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
+                f"dimensions {tuple(self.obj.dims)}"
             )
         if not utils.is_dict_like(coord_func):
             coord_func = {d: coord_func for d in self.obj.dims}  # type: ignore[misc]

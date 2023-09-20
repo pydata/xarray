@@ -471,7 +471,7 @@ class StringAccessor(Generic[T_DataArray]):
         ... )
         >>> values_2 = np.array(3.4)
         >>> values_3 = ""
-        >>> values_4 = np.array("test", dtype=np.unicode_)
+        >>> values_4 = np.array("test", dtype=np.str_)
 
         Determine the separator to use
 

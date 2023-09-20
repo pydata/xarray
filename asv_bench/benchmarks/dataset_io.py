@@ -527,7 +527,7 @@ class IOReadSingleFile(IOSingleNetCDF):
 class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
         """
-        The custom backend does the bare mininum to be considered a lazy backend. But
+        The custom backend does the bare minimum to be considered a lazy backend. But
         the data in it is still in memory so slow file reading shouldn't affect the
         results.
         """
