@@ -287,6 +287,18 @@ class NamedArray:
         else:
             return {}
 
+    @property
+    def sizes(self: typing.Any) -> dict[Hashable, int]:
+        """Ordered mapping from dimension names to lengths.
+
+        Immutable.
+
+        See Also
+        --------
+        Dataset.sizes
+        """
+        return dict(zip(self.dims, self.shape))
+
     def _replace(
         self: T_NamedArray, dims=_default, data=_default, attrs=_default
     ) -> T_NamedArray:
