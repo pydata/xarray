@@ -22,7 +22,6 @@ import numpy as np
 
 from xarray.core.pycompat import is_chunked_array
 
-
 if TYPE_CHECKING:
     from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 
