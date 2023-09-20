@@ -504,8 +504,7 @@ def _dataset_concat(
 
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
-        # TODO: Overriding type because .expand_dims has incorrect typing:
-        datasets = [cast(T_Dataset, ds.expand_dims(dim)) for ds in datasets]
+        datasets = [ds.expand_dims(dim) for ds in datasets]
 
     # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
@@ -708,8 +707,7 @@ def _dataarray_concat(
             if compat == "identical":
                 raise ValueError("array names not identical")
             else:
-                # TODO: Overriding type because .rename has incorrect typing:
-                arr = cast(T_DataArray, arr.rename(name))
+                arr = arr.rename(name)
         datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(

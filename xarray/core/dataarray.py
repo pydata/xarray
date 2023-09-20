@@ -4,7 +4,16 @@ import datetime
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from os import PathLike
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    NoReturn,
+    cast,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -100,6 +109,7 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        Self,
         SideOptions,
         T_DataArray,
         T_Xarray,
@@ -213,13 +223,13 @@ def _check_data_shape(data, coords, dims):
     return data
 
 
-class _LocIndexer:
+class _LocIndexer(Generic[T_DataArray]):
     __slots__ = ("data_array",)
 
-    def __init__(self, data_array: DataArray):
+    def __init__(self, data_array: T_DataArray):
         self.data_array = data_array
 
-    def __getitem__(self, key) -> DataArray:
+    def __getitem__(self, key) -> T_DataArray:
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
@@ -1080,13 +1090,13 @@ class DataArray(
         func, args = self._to_temp_dataset().__dask_postpersist__()
         return self._dask_finalize, (self.name, func) + args
 
-    @staticmethod
-    def _dask_finalize(results, name, func, *args, **kwargs) -> DataArray:
+    @classmethod
+    def _dask_finalize(cls, results, name, func, *args, **kwargs) -> Self:
         ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         indexes = ds._indexes
-        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
+        return cls(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def load(self: T_DataArray, **kwargs) -> T_DataArray:
         """Manually trigger loading of this array's data from disk or a
@@ -1471,13 +1481,13 @@ class DataArray(
         return self._replace(variable=variable, coords=coords, indexes=indexes)
 
     def sel(
-        self: T_DataArray,
+        self,
         indexers: Mapping[Any, Any] | None = None,
         method: str | None = None,
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any,
-    ) -> T_DataArray:
+    ) -> Self:
         """Return a new DataArray whose data is given by selecting index
         labels along the specified dimension(s).
 
@@ -2375,7 +2385,7 @@ class DataArray(
         self,
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
-    ) -> DataArray:
+    ) -> Self:
         """Returns a new DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
@@ -2481,7 +2491,7 @@ class DataArray(
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
-    ) -> DataArray:
+    ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape. The new object is a
         view into the underlying array, not a copy.
@@ -2577,7 +2587,7 @@ class DataArray(
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> DataArray:
+    ) -> Self:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -2641,7 +2651,7 @@ class DataArray(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
         drop: bool = False,
-    ) -> DataArray:
+    ) -> Self:
         """Reset the specified index(es) or multi-index level(s).
 
         This legacy method is specific to pandas (multi-)indexes and
@@ -2809,7 +2819,7 @@ class DataArray(
         dim: Dims = None,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> DataArray:
+    ) -> Self:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -2993,7 +3003,7 @@ class DataArray(
         names: Hashable | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
-    ) -> DataArray:
+    ) -> Self:
         """Returns an array with dropped variables.
 
         Parameters
@@ -3716,7 +3726,7 @@ class DataArray(
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
-    def to_pandas(self) -> DataArray | pd.Series | pd.DataFrame:
+    def to_pandas(self) -> Self | pd.Series | pd.DataFrame:
         """Convert this array into a pandas object with the same shape.
 
         The type of the returned object depends on the number of DataArray
@@ -4387,7 +4397,7 @@ class DataArray(
         return to_cdms2(self)
 
     @classmethod
-    def from_cdms2(cls, variable: cdms2_Variable) -> DataArray:
+    def from_cdms2(cls, variable: cdms2_Variable) -> Self:
         """Convert a cdms2.Variable into an xarray.DataArray
 
         .. deprecated:: 2023.06.0
@@ -4414,7 +4424,7 @@ class DataArray(
         return to_iris(self)
 
     @classmethod
-    def from_iris(cls, cube: iris_Cube) -> DataArray:
+    def from_iris(cls, cube: iris_Cube) -> Self:
         """Convert a iris.cube.Cube into an xarray.DataArray"""
         from xarray.convert import from_iris
 
@@ -4951,7 +4961,7 @@ class DataArray(
         self,
         variables: Hashable | DataArray | Sequence[Hashable | DataArray],
         ascending: bool = True,
-    ) -> DataArray:
+    ) -> Self:
         """Sort object by labels or values (along an axis).
 
         Sorts the dataarray, either along specified dimensions,
@@ -5242,7 +5252,7 @@ class DataArray(
         self,
         coord: Hashable | Sequence[Hashable] = None,
         datetime_unit: DatetimeUnitOptions = None,
-    ) -> DataArray:
+    ) -> Self:
         """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -5298,7 +5308,7 @@ class DataArray(
         self,
         coord: Hashable | Sequence[Hashable] = None,
         datetime_unit: DatetimeUnitOptions = None,
-    ) -> DataArray:
+    ) -> Self:
         """Integrate cumulatively along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -5356,7 +5366,7 @@ class DataArray(
         ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    def unify_chunks(self) -> DataArray:
+    def unify_chunks(self) -> Self:
         """Unify chunk size along all chunked dimensions of this DataArray.
 
         Returns
@@ -5714,7 +5724,7 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> DataArray:
+    ) -> Self:
         """Return the coordinate label of the minimum value along a dimension.
 
         Returns a new `DataArray` named after the dimension with the values of
@@ -5810,7 +5820,7 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> DataArray:
+    ) -> Self:
         """Return the coordinate label of the maximum value along a dimension.
 
         Returns a new `DataArray` named after the dimension with the values of
@@ -5908,7 +5918,7 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> DataArray | dict[Hashable, DataArray]:
+    ) -> Self | dict[Hashable, DataArray]:
         """Index or indices of the minimum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -6010,7 +6020,7 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> DataArray | dict[Hashable, DataArray]:
+    ) -> Self | dict[Hashable, DataArray]:
         """Index or indices of the maximum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -6437,7 +6447,7 @@ class DataArray(
         align_on: str | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
-    ) -> DataArray:
+    ) -> Self:
         """Convert the DataArray to another calendar.
 
         Only converts the individual timestamps, does not modify any data except
@@ -6557,7 +6567,7 @@ class DataArray(
         self,
         target: pd.DatetimeIndex | CFTimeIndex | DataArray,
         dim: str = "time",
-    ) -> DataArray:
+    ) -> Self:
         """Interpolates the DataArray to another calendar based on decimal year measure.
 
         Each timestamp in `source` and `target` are first converted to their decimal

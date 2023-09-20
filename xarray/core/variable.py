@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
+        Self,
         T_DuckArray,
         T_Variable,
     )
@@ -1179,7 +1180,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
-    ) -> Variable:
+    ) -> Self:
         """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1636,7 +1637,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self,
         *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Variable:
+    ) -> Self:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1681,7 +1682,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(dims=dims, data=data)
 
     @property
-    def T(self) -> Variable:
+    def T(self) -> Self:
         return self.transpose()
 
     def set_dims(self, dims, shape=None):
@@ -1789,9 +1790,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once_full(
-        self, dims: Mapping[Any, int], old_dim: Hashable
-    ) -> Variable:
+    def _unstack_once_full(self, dims: Mapping[Any, int], old_dim: Hashable) -> Self:
         """
         Unstacks the variable without needing an index.
 
@@ -1824,7 +1823,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_data = reordered.data.reshape(new_shape)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
-        return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
+        return type(self)(
+            new_dims, new_data, self._attrs, self._encoding, fastpath=True
+        )
 
     def _unstack_once(
         self,
@@ -1832,7 +1833,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dim: Hashable,
         fill_value=dtypes.NA,
         sparse: bool = False,
-    ) -> Variable:
+    ) -> Self:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
@@ -1961,7 +1962,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs,
-    ) -> Variable:
+    ) -> Self:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -2044,7 +2045,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
-        return Variable(dims, data, attrs=attrs)
+        return type(self)(dims, data, attrs=attrs)
 
     @classmethod
     def concat(
@@ -2193,7 +2194,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
         interpolation: QuantileMethods | None = None,
-    ) -> Variable:
+    ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.

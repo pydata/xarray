@@ -146,6 +146,7 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        Self,
         SideOptions,
         T_Xarray,
     )
@@ -3988,7 +3989,7 @@ class Dataset(
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
         method_non_numeric: str = "nearest",
-    ) -> Dataset:
+    ) -> Self:
         """Interpolate this object onto the coordinates of another object,
         filling the out of range values with NaN.
 
@@ -4408,7 +4409,7 @@ class Dataset(
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
-    ) -> Dataset:
+    ) -> Self:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.  The new object is a
         view into the underlying array, not a copy.
@@ -4605,7 +4606,7 @@ class Dataset(
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> Dataset:
+    ) -> Self:
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
