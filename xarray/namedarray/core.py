@@ -289,7 +289,7 @@ class NamedArray:
             return {}
 
     @property
-    def sizes(self: typing.Any) -> dict[Hashable, int]:
+    def sizes(self: T_NamedArray) -> dict[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.

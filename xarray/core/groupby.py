@@ -37,6 +37,7 @@ from xarray.core.pycompat import integer_types
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
     either_dict_or_kwargs,
+    Frozen,
     hashable,
     is_scalar,
     maybe_wrap_array,
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.resample_cftime import CFTimeGrouper
     from xarray.core.types import DatetimeLike, SideOptions
-    from xarray.core.utils import Frozen
 
     GroupKey = Any
     GroupIndex = Union[int, slice, list[int]]
@@ -757,9 +757,9 @@ class GroupBy(Generic[T_Xarray]):
         Dataset.sizes
         """
         if self._sizes is None:
-            self._sizes = self._obj.isel(
-                {self._group_dim: self._group_indices[0]}
-            ).sizes
+            self._sizes = Frozen(
+                self._obj.isel({self._group_dim: self._group_indices[0]}).sizes
+            )
 
         return self._sizes
 
