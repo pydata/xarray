@@ -58,8 +58,9 @@ class NamedArray:
         dims: DimsInput,
         data: T_DuckArray | np.typing.ArrayLike,
         attrs: dict | None = None,
+        fastpath: bool = False,
     ):
-        self._data: T_DuckArray = as_compatible_data(data)
+        self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
         self._dims: Dims = self._parse_dimensions(dims)
         self._attrs: dict | None = dict(attrs) if attrs else None
 
