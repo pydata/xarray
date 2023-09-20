@@ -262,7 +262,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
-    def join(self, other: T_Index, how: JoinOptions = "inner") -> Self:
+    def join(self, other: Self, how: JoinOptions = "inner") -> Self:
         """Return a new index from the combination of this index with another
         index of the same type.
 
