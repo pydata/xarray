@@ -5914,7 +5914,7 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> Self | dict[Hashable, DataArray]:
+    ) -> Self | dict[Hashable, Self]:
         """Index or indices of the minimum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
