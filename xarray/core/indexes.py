@@ -284,7 +284,7 @@ class Index:
             f"{self!r} doesn't support alignment with inner/outer join method"
         )
 
-    def reindex_like(self, other: T_Index) -> dict[Hashable, Any]:
+    def reindex_like(self, other: Self) -> dict[Hashable, Any]:
         """Query the index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
