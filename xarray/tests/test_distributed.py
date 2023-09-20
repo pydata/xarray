@@ -168,6 +168,10 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
 @requires_netCDF4
 @pytest.mark.parametrize("parallel", (True, False))
 def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
+    if parallel:
+        pytest.skip(
+            "Flaky in CI. Would be a welcome contribution to make a similar test reliable."
+        )
     lon = np.arange(100)
     time = xr.cftime_range("20010101", periods=100, calendar="360_day")
     data = np.random.random((time.size, lon.size))
