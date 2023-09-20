@@ -662,8 +662,16 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return self._construct_direct(
-            coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+
+        # TODO: getting an error with `self._construct_direct`, possibly because of how
+        # a subclass implements `_construct_direct`. (This was originally the same
+        # runtime code, but we switched the type definitions in #8216, which
+        # necessitates the cast.)
+        return cast(
+            Self,
+            Coordinates._construct_direct(
+                coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+            ),
         )
 
 
