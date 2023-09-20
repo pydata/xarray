@@ -93,7 +93,7 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import QuantileMethods, T_Dataset
+from xarray.core.types import QuantileMethods, Self, T_Dataset
 from xarray.core.utils import (
     Default,
     Frozen,
