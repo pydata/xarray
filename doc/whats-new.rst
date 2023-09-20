@@ -74,9 +74,12 @@ Bug fixes
   of :py:meth:`DataArray.__setitem__` lose dimension names.
   (:issue:`7030`, :pull:`8067`) By `Darsh Ranjan <https://github.com/dranjan>`_.
 - Return ``float64`` in presence of ``NaT`` in :py:class:`~core.accessor_dt.DatetimeAccessor` and
-  special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()`
+  special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar`
   (:issue:`7928`, :pull:`8084`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix :py:meth:`~core.rolling.DatasetRolling.construct` with stride on Datasets without indexes.
+  (:issue:`7021`, :pull:`7578`).
+  By `Amrest Chinkamol <https://github.com/p4perf4ce>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
 - Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
   (:issue:`7552`, :pull:`8174`).
   By `Wiktor Kraśnicki <https://github.com/wkrasnicki>`_.
@@ -84,6 +87,9 @@ Bug fixes
   issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
   :issue:`1064`, :pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
+  (:issue:`6528`, :pull:`8114`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -96,6 +102,10 @@ Internal Changes
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution in arrays that contain missing values (:pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Transition ``.rolling_exp`` functions to use `.apply_ufunc` internally rather
+  than `.reduce`, as the start of a broader effort to move non-reducing
+  functions away from ```.reduce``, (:pull:`8114`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2023.08.0:
 

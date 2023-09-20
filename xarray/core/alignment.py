@@ -26,7 +26,7 @@ from xarray.core.variable import Variable, as_compatible_data, calculate_dimensi
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import JoinOptions, T_DataArray, T_Dataset
+    from xarray.core.types import JoinOptions, T_DataArray, T_Dataset, T_DuckArray
 
 
 def reindex_variables(
@@ -173,7 +173,7 @@ class Aligner(Generic[T_Alignable]):
 
     def _normalize_indexes(
         self,
-        indexes: Mapping[Any, Any],
+        indexes: Mapping[Any, Any | T_DuckArray],
     ) -> tuple[NormalizedIndexes, NormalizedIndexVars]:
         """Normalize the indexes/indexers used for re-indexing or alignment.
 
@@ -194,7 +194,7 @@ class Aligner(Generic[T_Alignable]):
                         f"Indexer has dimensions {idx.dims} that are different "
                         f"from that to be indexed along '{k}'"
                     )
-                data = as_compatible_data(idx)
+                data: T_DuckArray = as_compatible_data(idx)
                 pd_idx = safe_cast_to_index(data)
                 pd_idx.name = k
                 if isinstance(pd_idx, pd.MultiIndex):
