@@ -4667,7 +4667,7 @@ class DataArray(
 
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _inplace_binary_op(self, other: Any, f: Callable) -> Self:
+    def _inplace_binary_op(self, other: DaCompatible, f: Callable) -> Self:
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, GroupBy):
