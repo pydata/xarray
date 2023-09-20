@@ -814,7 +814,7 @@ class PandasIndex(Index):
         self,
         other: Self,
         method=None,
-        tolerance=None,
+        tolerance=None
     ) -> dict[Hashable, Any]:
         if not self.index.is_unique:
             raise ValueError(
