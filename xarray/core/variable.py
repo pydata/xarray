@@ -1962,7 +1962,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs,
-    ) -> Self:
+    ) -> Variable:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -2045,7 +2045,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
-        return type(self)(dims, data, attrs=attrs)
+        # We need to return `Variable` rather than the type of `self` at the moment, ref #8216
+        return Variable(dims, data, attrs=attrs)
 
     @classmethod
     def concat(
