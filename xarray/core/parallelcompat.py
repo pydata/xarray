@@ -16,17 +16,23 @@ from typing import (
     Callable,
     Generic,
     TypeVar,
+    Protocol,
 )
 
 import numpy as np
 
 from xarray.core.pycompat import is_chunked_array
+from xarray.core.types import T_DuckArray
+
+
+class _ChunkedArray(Protocol[T_DuckArray]):
+    ...
+
+
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray)
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
-
-
-T_ChunkedArray = TypeVar("T_ChunkedArray")
+    from xarray.core.types import T_Chunks, T_NormalizedChunks
 
 
 @functools.lru_cache(maxsize=1)
