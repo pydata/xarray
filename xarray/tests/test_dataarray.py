@@ -4011,7 +4011,7 @@ class TestDataArray:
         assert_equal(expected5, actual5)
 
         with pytest.raises(NotImplementedError):
-            da.dot(dm3.to_dataset(name="dm"))  # type: ignore
+            da.dot(dm3.to_dataset(name="dm"))
         with pytest.raises(TypeError):
             da.dot(dm3.values)  # type: ignore
 

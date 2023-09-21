@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import Self, T_DataArray
+from xarray.core.types import Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -425,7 +425,7 @@ class Coordinates(AbstractCoordinates):
         # redirect to DatasetCoordinates.__delitem__
         del self._data.coords[key]
 
-    def equals(self, other: Coordinates) -> bool:
+    def equals(self, other: Self) -> bool:
         """Two Coordinates objects are equal if they have matching variables,
         all of which are equal.
 
@@ -437,7 +437,7 @@ class Coordinates(AbstractCoordinates):
             return False
         return self.to_dataset().equals(other.to_dataset())
 
-    def identical(self, other: Coordinates) -> bool:
+    def identical(self, other: Self) -> bool:
         """Like equals, but also checks all variable attributes.
 
         See Also
@@ -565,9 +565,7 @@ class Coordinates(AbstractCoordinates):
 
         self._update_coords(coords, indexes)
 
-    def assign(
-        self, coords: Mapping | None = None, **coords_kwargs: Any
-    ) -> Coordinates:
+    def assign(self, coords: Mapping | None = None, **coords_kwargs: Any) -> Self:
         """Assign new coordinates (and indexes) to a Coordinates object, returning
         a new object with all the original coordinates in addition to the new ones.
 
@@ -656,7 +654,7 @@ class Coordinates(AbstractCoordinates):
         self,
         deep: bool = False,
         memo: dict[int, Any] | None = None,
-    ) -> Coordinates:
+    ) -> Self:
         """Return a copy of this Coordinates object."""
         # do not copy indexes (may corrupt multi-coordinate indexes)
         # TODO: disable variables deepcopy? it may also be problematic when they
@@ -664,8 +662,16 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return Coordinates._construct_direct(
-            coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+
+        # TODO: getting an error with `self._construct_direct`, possibly because of how
+        # a subclass implements `_construct_direct`. (This was originally the same
+        # runtime code, but we switched the type definitions in #8216, which
+        # necessitates the cast.)
+        return cast(
+            Self,
+            Coordinates._construct_direct(
+                coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+            ),
         )
 
 
@@ -915,9 +921,7 @@ def drop_indexed_coords(
     return Coordinates._construct_direct(coords=new_variables, indexes=new_indexes)
 
 
-def assert_coordinate_consistent(
-    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
-) -> None:
+def assert_coordinate_consistent(obj: T_Xarray, coords: Mapping[Any, Variable]) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 
     obj: DataArray or Dataset
