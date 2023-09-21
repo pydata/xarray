@@ -6808,8 +6808,8 @@ def test_typed_ops_types() -> None:
     _test(ds == _ndarray)
     _test(ds == _var)
     _test(ds == _da)
-    _test(_int == ds)  # type: ignore[arg-type]
-    _test(_list == ds)  # type: ignore[arg-type]
+    _test(_int == ds)  # type: ignore[arg-type]  # typeshed problem
+    _test(_list == ds)  # type: ignore[arg-type]  # typeshed problem
     _test(_ndarray == ds)
     _test(_var == ds)
     _test(_da == ds)
@@ -6822,7 +6822,7 @@ def test_typed_ops_types() -> None:
     _test(ds < _da)
     _test(_int > ds)
     _test(_list > ds)
-    _test(_ndarray > ds)  # type: ignore[arg-type]
+    _test(_ndarray > ds)  # type: ignore[arg-type]  # numpy problem
     _test(_var > ds)
     _test(_da > ds)
 

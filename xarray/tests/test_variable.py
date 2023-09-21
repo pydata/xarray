@@ -2746,14 +2746,14 @@ def test_typed_ops_types() -> None:
     # __radd__ as an example of reflexive binary ops
     _test(_int + var)
     _test(_list + var)
-    _test(_ndarray + var)  # type: ignore[arg-type]
+    _test(_ndarray + var)  # type: ignore[arg-type]  # numpy problem
 
     # __eq__ as an example of cmp ops
     _test(var == _int)
     _test(var == _list)
     _test(var == _ndarray)
-    _test(_int == var)  # type: ignore[arg-type]
-    _test(_list == var)  # type: ignore[arg-type]
+    _test(_int == var)  # type: ignore[arg-type]  # typeshed problem
+    _test(_list == var)  # type: ignore[arg-type]  # typeshed problem
     _test(_ndarray == var)
 
     # __lt__ as another example of cmp ops
@@ -2762,7 +2762,7 @@ def test_typed_ops_types() -> None:
     _test(var < _ndarray)
     _test(_int > var)
     _test(_list > var)
-    _test(_ndarray > var)  # type: ignore[arg-type]
+    _test(_ndarray > var)  # type: ignore[arg-type]  # numpy problem
 
     # __iadd__ as an example of inplace binary ops
     var += _int
