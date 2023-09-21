@@ -68,6 +68,8 @@ if TYPE_CHECKING:
         PadReflectOptions,
         QuantileMethods,
         T_Variable,
+        Self,
+        T_DuckArray,
     )
 
 NON_NANOSECOND_WARNING = (
@@ -422,7 +424,7 @@ class Variable(
         )
 
     @property
-    def data(self: T_Variable) -> T_DuckArray:
+    def data(self) -> T_DuckArray:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -441,7 +443,7 @@ class Variable(
             return self.values
 
     @data.setter
-    def data(self: T_Variable, data: T_DuckArray | ArrayLike) -> None:
+    def data(self, data: T_DuckArray | ArrayLike) -> None:
         data = as_compatible_data(data)
         if data.shape != self.shape:  # type: ignore[attr-defined]
             raise ValueError(
@@ -451,7 +453,7 @@ class Variable(
         self._data = data
 
     def astype(
-        self: T_Variable,
+        self,
         dtype,
         *,
         order=None,
@@ -459,7 +461,7 @@ class Variable(
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> T_Variable:
+    ) -> Self:
         """
         Copy of the Variable object, with data cast to a specified type.
 
@@ -885,7 +887,7 @@ class Variable(
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self: T_Variable, key) -> T_Variable:
+    def __getitem__(self, key) -> Self:
         """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
@@ -904,7 +906,7 @@ class Variable(
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self: T_Variable, dims, data) -> T_Variable:
+    def _finalize_indexing_result(self, dims, data) -> Self:
         """Used by IndexVariable to return IndexVariable objects when possible."""
         return self._replace(dims=dims, data=data)
 
@@ -1003,13 +1005,13 @@ class Variable(
         except ValueError:
             raise ValueError("encoding must be castable to a dictionary")
 
-    def reset_encoding(self: T_Variable) -> T_Variable:
+    def reset_encoding(self) -> Self:
         """Return a new Variable without encoding."""
         return self._replace(encoding={})
 
     def copy(
-        self: T_Variable, deep: bool = True, data: T_DuckArray | ArrayLike | None = None
-    ) -> T_Variable:
+        self, deep: bool = True, data: T_DuckArray | ArrayLike | None = None
+    ) -> Self:
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
@@ -1068,11 +1070,11 @@ class Variable(
         return self._copy(deep=deep, data=data)
 
     def _copy(
-        self: T_Variable,
+        self,
         deep: bool = True,
         data: T_DuckArray | ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
-    ) -> T_Variable:
+    ) -> Self:
         if data is None:
             data_old = self._data
 
@@ -1101,12 +1103,12 @@ class Variable(
         return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
     def _replace(
-        self: T_Variable,
+        self,
         dims=_default,
         data=_default,
         attrs=_default,
         encoding=_default,
-    ) -> T_Variable:
+    ) -> Self:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -1117,12 +1119,10 @@ class Variable(
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def __copy__(self: T_Variable) -> T_Variable:
+    def __copy__(self) -> Self:
         return self._copy(deep=False)
 
-    def __deepcopy__(
-        self: T_Variable, memo: dict[int, Any] | None = None
-    ) -> T_Variable:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
         return self._copy(deep=True, memo=memo)
 
     # mutable objects should not be hashable
@@ -1181,7 +1181,7 @@ class Variable(
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
         **chunks_kwargs: Any,
-    ) -> Variable:
+    ) -> Self:
         """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1311,7 +1311,7 @@ class Variable(
 
         return np.asarray(data)
 
-    def as_numpy(self: T_Variable) -> T_Variable:
+    def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
@@ -1346,11 +1346,11 @@ class Variable(
         return self.copy(deep=False)
 
     def isel(
-        self: T_Variable,
+        self,
         indexers: Mapping[Any, Any] | None = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
-    ) -> T_Variable:
+    ) -> Self:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -1637,7 +1637,7 @@ class Variable(
         self,
         *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Variable:
+    ) -> Self:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1682,7 +1682,7 @@ class Variable(
         return self._replace(dims=dims, data=data)
 
     @property
-    def T(self) -> Variable:
+    def T(self) -> Self:
         return self.transpose()
 
     def set_dims(self, dims, shape=None):
@@ -1790,9 +1790,7 @@ class Variable(
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once_full(
-        self, dims: Mapping[Any, int], old_dim: Hashable
-    ) -> Variable:
+    def _unstack_once_full(self, dims: Mapping[Any, int], old_dim: Hashable) -> Self:
         """
         Unstacks the variable without needing an index.
 
@@ -1825,7 +1823,9 @@ class Variable(
         new_data = reordered.data.reshape(new_shape)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
-        return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
+        return type(self)(
+            new_dims, new_data, self._attrs, self._encoding, fastpath=True
+        )
 
     def _unstack_once(
         self,
@@ -1833,7 +1833,7 @@ class Variable(
         dim: Hashable,
         fill_value=dtypes.NA,
         sparse: bool = False,
-    ) -> Variable:
+    ) -> Self:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
@@ -2045,6 +2045,8 @@ class Variable(
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
+        # We need to return `Variable` rather than the type of `self` at the moment, ref
+        # #8216
         return Variable(dims, data, attrs=attrs)
 
     @classmethod
@@ -2194,7 +2196,7 @@ class Variable(
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
         interpolation: QuantileMethods | None = None,
-    ) -> Variable:
+    ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
