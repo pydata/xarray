@@ -100,14 +100,15 @@ Internal Changes
 
 - Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
-- Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`)
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution in arrays that contain missing values (:pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Transition ``.rolling_exp`` functions to use `.apply_ufunc` internally rather
   than `.reduce`, as the start of a broader effort to move non-reducing
   functions away from ```.reduce``, (:pull:`8114`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2023.08.0:
 
