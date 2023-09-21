@@ -15,8 +15,8 @@ from typing import (
     Any,
     Callable,
     Generic,
-    TypeVar,
     Protocol,
+    TypeVar,
 )
 
 import numpy as np

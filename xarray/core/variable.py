@@ -67,7 +67,6 @@ if TYPE_CHECKING:
         PadModeOptions,
         PadReflectOptions,
         QuantileMethods,
-        T_Variable,
         Self,
         T_DuckArray,
     )
