@@ -27,19 +27,6 @@ dependencies = [
   "pandas>=1.4",
 ]
 
-[project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox"]
-complete = ["xarray[accel,io,parallel,viz]"]
-io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
-parallel = ["dask[complete]"]
-viz = ["matplotlib", "seaborn", "nc-time-axis"]
-
-[tool.setuptools]
-packages = ["xarray"]
-
-[project.entry-points."xarray.chunkmanagers"]
-dask = "xarray.core.daskmanager:DaskManager"
-
 [project.urls]
 Documentation = "https://docs.xarray.dev"
 SciPy2015-talk = "https://www.youtube.com/watch?v=X0pAhJgySxk"
@@ -47,12 +34,25 @@ homepage = "https://xarray.dev/"
 issue-tracker = "https://github.com/pydata/xarray/issues"
 source-code = "https://github.com/pydata/xarray"
 
+[project.entry-points."xarray.chunkmanagers"]
+dask = "xarray.core.daskmanager:DaskManager"
+
+[project.optional-dependencies]
+accel = ["scipy", "bottleneck", "numbagg", "flox"]
+complete = ["xarray[accel,io,parallel,viz]"]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+parallel = ["dask[complete]"]
+viz = ["matplotlib", "seaborn", "nc-time-axis"]
+
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
   "setuptools>=42",
   "setuptools-scm>=7",
 ]
+
+[tool.setuptools]
+packages = ["xarray"]
 
 [tool.setuptools_scm]
 fallback_version = "9999"
@@ -72,12 +72,15 @@ source = ["xarray"]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
+enable_error_code = "redundant-self"
 exclude = 'xarray/util/generate_.*\.py'
 files = "xarray"
 show_error_codes = true
+show_error_context = true
+warn_redundant_casts = true
 warn_unused_ignores = true
 
-# Most of the numerical computing stack doesn't have type annotations yet.
+# Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
@@ -116,9 +119,14 @@ module = [
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
 ]
 
+# Gradually we want to add more modules to this list, ratcheting up our total
+# coverage. Once a module is here, functions require annotations in order to
+# pass mypy. It would be especially useful to have tests here, because without
+# annotating test functions, we don't have a great way of testing our type
+# annotations — even with just `-> None` is sufficient for mypy to check them.
 [[tool.mypy.overrides]]
-ignore_errors = true
-module = []
+disallow_untyped_defs = true
+module = ["xarray.core.rolling_exp"]
 
 [tool.ruff]
 builtins = ["ellipsis"]
@@ -147,7 +155,8 @@ select = [
 [tool.ruff.isort]
 known-first-party = ["xarray"]
 
-[tool.pytest.ini-options]
+[tool.pytest.ini_options]
+addopts = '--strict-markers'
 filterwarnings = [
   "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
 ]

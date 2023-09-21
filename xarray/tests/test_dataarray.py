@@ -16,7 +16,7 @@ from packaging.version import Version
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning
+    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
     from numpy import RankWarning
 
@@ -4011,7 +4011,7 @@ class TestDataArray:
         assert_equal(expected5, actual5)
 
         with pytest.raises(NotImplementedError):
-            da.dot(dm3.to_dataset(name="dm"))  # type: ignore
+            da.dot(dm3.to_dataset(name="dm"))
         with pytest.raises(TypeError):
             da.dot(dm3.values)  # type: ignore
 

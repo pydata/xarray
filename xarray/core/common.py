@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         DatetimeLike,
         DTypeLikeSave,
         ScalarOrArray,
+        Self,
         SideOptions,
         T_Chunks,
         T_DataWithCoords,
@@ -381,11 +382,11 @@ class DataWithCoords(AttrAccessMixin):
     __slots__ = ("_close",)
 
     def squeeze(
-        self: T_DataWithCoords,
+        self,
         dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
         axis: int | Iterable[int] | None = None,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """Return a new object with squeezed data.
 
         Parameters
@@ -414,12 +415,12 @@ class DataWithCoords(AttrAccessMixin):
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def clip(
-        self: T_DataWithCoords,
+        self,
         min: ScalarOrArray | None = None,
         max: ScalarOrArray | None = None,
         *,
         keep_attrs: bool | None = None,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """
         Return an array whose values are limited to ``[min, max]``.
         At least one of max or min must be given.
@@ -472,10 +473,10 @@ class DataWithCoords(AttrAccessMixin):
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(
-        self: T_DataWithCoords,
+        self,
         coords: Mapping[Any, Any] | None = None,
         **coords_kwargs: Any,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -620,9 +621,7 @@ class DataWithCoords(AttrAccessMixin):
         data.coords.update(results)
         return data
 
-    def assign_attrs(
-        self: T_DataWithCoords, *args: Any, **kwargs: Any
-    ) -> T_DataWithCoords:
+    def assign_attrs(self, *args: Any, **kwargs: Any) -> Self:
         """Assign new attrs to this object.
 
         Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
@@ -1061,10 +1060,11 @@ class DataWithCoords(AttrAccessMixin):
             restore_coord_dims=restore_coord_dims,
         )
 
-    def where(
-        self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False
-    ) -> T_DataWithCoords:
+    def where(self, cond: Any, other: Any = dtypes.NA, drop: bool = False) -> Self:
         """Filter elements from this object according to a condition.
+
+        Returns elements from 'DataArray', where 'cond' is True,
+        otherwise fill in 'other'.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
@@ -1205,9 +1205,7 @@ class DataWithCoords(AttrAccessMixin):
             self._close()
         self._close = None
 
-    def isnull(
-        self: T_DataWithCoords, keep_attrs: bool | None = None
-    ) -> T_DataWithCoords:
+    def isnull(self, keep_attrs: bool | None = None) -> Self:
         """Test each value in the array for whether it is a missing value.
 
         Parameters
@@ -1250,9 +1248,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(
-        self: T_DataWithCoords, keep_attrs: bool | None = None
-    ) -> T_DataWithCoords:
+    def notnull(self, keep_attrs: bool | None = None) -> Self:
         """Test each value in the array for whether it is not a missing value.
 
         Parameters
@@ -1295,7 +1291,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def isin(self: T_DataWithCoords, test_elements: Any) -> T_DataWithCoords:
+    def isin(self, test_elements: Any) -> Self:
         """Tests each value in the array for whether it is in test elements.
 
         Parameters
@@ -1344,7 +1340,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def astype(
-        self: T_DataWithCoords,
+        self,
         dtype,
         *,
         order=None,
@@ -1352,7 +1348,7 @@ class DataWithCoords(AttrAccessMixin):
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> T_DataWithCoords:
+    ) -> Self:
         """
         Copy of the xarray object, with data cast to a specified type.
         Leaves coordinate dtype unchanged.
@@ -1419,7 +1415,7 @@ class DataWithCoords(AttrAccessMixin):
             dask="allowed",
         )
 
-    def __enter__(self: T_DataWithCoords) -> T_DataWithCoords:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:

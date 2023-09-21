@@ -88,13 +88,30 @@ def encode_nc3_attrs(attrs):
     return {k: encode_nc3_attr_value(v) for k, v in attrs.items()}
 
 
+def _maybe_prepare_times(var):
+    # checks for integer-based time-like and
+    # replaces np.iinfo(np.int64).min with _FillValue or np.nan
+    # this keeps backwards compatibility
+
+    data = var.data
+    if data.dtype.kind in "iu":
+        units = var.attrs.get("units", None)
+        if units is not None:
+            if coding.variables._is_time_like(units):
+                mask = data == np.iinfo(np.int64).min
+                if mask.any():
+                    data = np.where(mask, var.attrs.get("_FillValue", np.nan), data)
+    return data
+
+
 def encode_nc3_variable(var):
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
     ]:
         var = coder.encode(var)
-    data = coerce_nc3_dtype(var.data)
+    data = _maybe_prepare_times(var)
+    data = coerce_nc3_dtype(data)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 
