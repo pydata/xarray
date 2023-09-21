@@ -72,6 +72,7 @@ source = ["xarray"]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 
 [tool.mypy]
+enable_error_code = "redundant-self"
 exclude = 'xarray/util/generate_.*\.py'
 files = "xarray"
 show_error_codes = true
@@ -79,7 +80,7 @@ show_error_context = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 
-# Most of the numerical computing stack doesn't have type annotations yet.
+# Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
@@ -117,6 +118,15 @@ module = [
   "zarr.*",
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
 ]
+
+# Gradually we want to add more modules to this list, ratcheting up our total
+# coverage. Once a module is here, functions require annotations in order to
+# pass mypy. It would be especially useful to have tests here, because without
+# annotating test functions, we don't have a great way of testing our type
+# annotations — even with just `-> None` is sufficient for mypy to check them.
+[[tool.mypy.overrides]]
+disallow_untyped_defs = true
+module = ["xarray.core.rolling_exp"]
 
 [tool.ruff]
 builtins = ["ellipsis"]
