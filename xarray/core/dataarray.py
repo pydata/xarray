@@ -4625,25 +4625,22 @@ class DataArray(
             return da
 
     def _binary_op(
-        self,
-        other: T_Xarray,
-        f: Callable,
-        reflexive: bool = False,
-    ) -> T_Xarray:
+        self, other: DaCompatible, f: Callable, reflexive: bool = False
+    ) -> Self:
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, (Dataset, GroupBy)):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
-            self, other = align(self, other, join=align_type, copy=False)
-        other_variable = getattr(other, "variable", other)
+            self, other = align(self, other, join=align_type, copy=False)  # type: ignore[type-var,assignment]
+        other_variable_or_arraylike: DaCompatible = getattr(other, "variable", other)
         other_coords = getattr(other, "coords", None)
 
         variable = (
-            f(self.variable, other_variable)
+            f(self.variable, other_variable_or_arraylike)
             if not reflexive
-            else f(other_variable, self.variable)
+            else f(other_variable_or_arraylike, self.variable)
         )
         coords, indexes = self.coords._merge_raw(other_coords, reflexive)
         name = self._result_name(other)
