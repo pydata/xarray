@@ -107,7 +107,7 @@ class Alignable(Protocol):
         ...
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         ...
 
     @property
