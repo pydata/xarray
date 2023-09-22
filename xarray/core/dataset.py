@@ -28,7 +28,6 @@ from typing import (
     Callable,
     Generic,
     Literal,
-    Union,
     cast,
     overload,
 )
