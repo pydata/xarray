@@ -21,7 +21,17 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from os import PathLike
-from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    cast,
+    overload,
+    Union,
+)
 
 import numpy as np
 
@@ -124,7 +134,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
+    from xarray.core.merge import _MergeResult, CoercibleMapping, CoercibleValue
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -159,6 +169,9 @@ if TYPE_CHECKING:
         from dask.dataframe import DataFrame as DaskDataFrame
     except ImportError:
         DaskDataFrame = None  # type: ignore
+
+    DataVars = Mapping[Any, Any]
+    DataVarsInput = Union[DataVars, None]
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -404,7 +417,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
-def merge_data_and_coords(data_vars, coords):
+def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
     """Used in Dataset.__init__."""
     if isinstance(coords, Coordinates):
         coords = coords.copy()
@@ -666,7 +679,7 @@ class Dataset(
         self,
         # could make a VariableArgs to use more generally, and refine these
         # categories
-        data_vars: Mapping[Any, Any] | None = None,
+        data_vars: DataVars | None = None,
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
     ) -> None:
@@ -1220,9 +1233,7 @@ class Dataset(
         else:
             return replaced
 
-    def copy(
-        self, deep: bool = False, data: Mapping[Any, ArrayLike] | None = None
-    ) -> Self:
+    def copy(self, deep: bool = False, data: DataVars | None = None) -> Self:
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
@@ -1324,7 +1335,7 @@ class Dataset(
     def _copy(
         self,
         deep: bool = False,
-        data: Mapping[Any, ArrayLike] | None = None,
+        data: DataVars | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
