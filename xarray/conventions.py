@@ -443,10 +443,11 @@ def decode_cf_variables(
                 var_coord_names = [
                     c for c in var_attrs["coordinates"].split() if c in variables
                 ]
-                # only decode if there is at least one variable matching a coordinate
+                # propagate as is
+                new_vars[k].encoding["coordinates"] = var_attrs["coordinates"]
+                del var_attrs["coordinates"]
+                # but only use as coordinate if existing
                 if var_coord_names:
-                    new_vars[k].encoding["coordinates"] = var_attrs["coordinates"]
-                    del var_attrs["coordinates"]
                     coord_names.update(var_coord_names)
 
         if decode_coords == "all":
