@@ -1036,9 +1036,7 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
     units = f"{encoding_units} since 2000-01-01"
-    print(times, units)
     encoded, _units, _ = coding.times.encode_cf_datetime(times, units)
-    print(encoded, _units)
 
     numpy_timeunit = coding.times._netcdf_to_numpy_timeunit(encoding_units)
     encoding_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
