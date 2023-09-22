@@ -128,20 +128,13 @@ def _check_coords_dims(shape, coords, dims):
                 f"dimensions {dims}"
             )
 
-        for d, s in zip(v.dims, v.shape):
+        for d, s in v.sizes.items():
             if s != sizes[d]:
                 raise ValueError(
                     f"conflicting sizes for dimension {d!r}: "
                     f"length {sizes[d]} on the data but length {s} on "
                     f"coordinate {k!r}"
                 )
-
-        if k in sizes and v.shape != (sizes[k],):
-            raise ValueError(
-                f"coordinate {k!r} is a DataArray dimension, but "
-                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
-                "matching the dimension size"
-            )
 
 
 def _infer_coords_and_dims(
