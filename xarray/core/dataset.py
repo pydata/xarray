@@ -143,6 +143,7 @@ if TYPE_CHECKING:
         CoarsenBoundaryOptions,
         CombineAttrsOptions,
         CompatOptions,
+        DataVars,
         DatetimeLike,
         DatetimeUnitOptions,
         Dims,
@@ -169,9 +170,6 @@ if TYPE_CHECKING:
         from dask.dataframe import DataFrame as DaskDataFrame
     except ImportError:
         DaskDataFrame = None  # type: ignore
-
-    DataVars = Mapping[Any, Any]
-    DataVarsInput = Union[DataVars, None]
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
