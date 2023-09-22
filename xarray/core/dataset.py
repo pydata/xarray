@@ -28,9 +28,9 @@ from typing import (
     Callable,
     Generic,
     Literal,
+    Union,
     cast,
     overload,
-    Union,
 )
 
 import numpy as np
@@ -134,7 +134,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import _MergeResult, CoercibleMapping, CoercibleValue
+    from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
