@@ -731,6 +731,11 @@ def encode_cf_datetime(
                 units = new_units
                 time_delta = needed_time_delta
             else:
+                emit_user_level_warning(
+                    f"Times can't be serialized faithfully with requested units {units!r}. "
+                    f"Resolution of {needed_units!r} needed. "
+                    f"Serializing timeseries to floating point."
+                )
                 floor_division = False
 
         num = _division(time_deltas, time_delta, floor_division)
@@ -774,6 +779,11 @@ def encode_cf_timedelta(
             units = needed_units
             time_delta = needed_time_delta
         else:
+            emit_user_level_warning(
+                f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
+                f"Resolution of {needed_units!r} needed. "
+                f"Serializing timeseries to floating point."
+            )
             floor_division = False
     num = _division(time_deltas, time_delta, floor_division)
     num = num.values.reshape(timedeltas.shape)
