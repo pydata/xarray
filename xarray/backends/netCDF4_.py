@@ -233,13 +233,13 @@ def _force_native_endianness(var):
 
 
 def _extract_nc4_variable_encoding(
-    variable,
+    variable: Variable,
     raise_on_invalid=False,
     lsd_okay=True,
     h5py_okay=False,
     backend="netCDF4",
     unlimited_dims=None,
-):
+) -> dict[str, Any]:
     if unlimited_dims is None:
         unlimited_dims = ()
 
@@ -302,7 +302,7 @@ def _extract_nc4_variable_encoding(
     return encoding
 
 
-def _is_list_of_strings(value):
+def _is_list_of_strings(value) -> bool:
     arr = np.asarray(value)
     return arr.dtype.kind in ["U", "S"] and arr.size > 1
 
