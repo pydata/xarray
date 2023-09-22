@@ -656,8 +656,22 @@ def cast_to_int_if_safe(num) -> np.ndarray:
     return num
 
 
+def _division(deltas, delta, floor):
+    if floor:
+        # calculate int64 floor division
+        # to preserve integer dtype if possible (GH 4045, GH7817).
+        num = deltas // delta.astype(np.int64)
+        num = num.astype(np.int64, copy=False)
+    else:
+        num = deltas / delta
+    return num
+
+
 def encode_cf_datetime(
-    dates, units: str | None = None, calendar: str | None = None
+    dates,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
 ) -> tuple[np.ndarray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
@@ -689,6 +703,12 @@ def encode_cf_datetime(
         time_units, ref_date = _unpack_time_units_and_ref_date(units)
         time_delta = _time_units_to_timedelta64(time_units)
 
+        # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
+        # an OverflowError is raised if the ref_date is too far away from
+        # dates to be encoded (GH 2272).
+        dates_as_index = pd.DatetimeIndex(dates.ravel())
+        time_deltas = dates_as_index - ref_date
+
         # retrieve needed units to faithfully encode to int64
         needed_units, data_ref_date = _unpack_time_units_and_ref_date(data_units)
         if data_units != units:
@@ -697,26 +717,23 @@ def encode_cf_datetime(
             if ref_delta > np.timedelta64(0, "ns"):
                 needed_units = _infer_time_units_from_diff(ref_delta)
 
-        # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
-        # an OverflowError is raised if the ref_date is too far away from
-        # dates to be encoded (GH 2272).
-        dates_as_index = pd.DatetimeIndex(dates.ravel())
-        time_deltas = dates_as_index - ref_date
-
         # needed time delta to encode faithfully to int64
         needed_time_delta = _time_units_to_timedelta64(needed_units)
-        if time_delta <= needed_time_delta:
-            # calculate int64 floor division
-            # to preserve integer dtype if possible (GH 4045, GH7817).
-            num = time_deltas // time_delta.astype(np.int64)
-            num = num.astype(np.int64, copy=False)
-        else:
-            emit_user_level_warning(
-                f"Times can't be serialized faithfully with requested units {units!r}. "
-                f"Resolution of {needed_units!r} needed. "
-                f"Serializing timeseries to floating point."
-            )
-            num = time_deltas / time_delta
+
+        floor_division = True
+        if time_delta > needed_time_delta:
+            if np.issubdtype(dtype, np.integer):
+                new_units = f"{needed_units} since {format_timestamp(ref_date)}"
+                emit_user_level_warning(
+                    f"Times can't be serialized faithfully with requested units {units!r}. "
+                    f"Serializing with units {new_units!r} instead."
+                )
+                units = new_units
+                time_delta = needed_time_delta
+            else:
+                floor_division = False
+
+        num = _division(time_deltas, time_delta, floor_division)
         num = num.values.reshape(dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError, ValueError):
@@ -728,7 +745,9 @@ def encode_cf_datetime(
     return (num, units, calendar)
 
 
-def encode_cf_timedelta(timedeltas, units: str | None = None) -> tuple[np.ndarray, str]:
+def encode_cf_timedelta(
+    timedeltas, units: str | None = None, dtype: np.dtype | None = None
+) -> tuple[np.ndarray, str]:
     data_units = infer_timedelta_units(timedeltas)
 
     if units is None:
@@ -744,18 +763,19 @@ def encode_cf_timedelta(timedeltas, units: str | None = None) -> tuple[np.ndarra
 
     # needed time delta to encode faithfully to int64
     needed_time_delta = _time_units_to_timedelta64(needed_units)
-    if time_delta <= needed_time_delta:
-        # calculate int64 floor division
-        # to preserve integer dtype if possible
-        num = time_deltas // time_delta.astype(np.int64)
-        num = num.astype(np.int64, copy=False)
-    else:
-        emit_user_level_warning(
-            f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
-            f"Resolution of {needed_units!r} needed. "
-            f"Serializing timedeltas to floating point."
-        )
-        num = time_deltas / time_delta
+
+    floor_division = True
+    if time_delta > needed_time_delta:
+        if np.issubdtype(dtype, np.integer):
+            emit_user_level_warning(
+                f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
+                f"Serializing with units {needed_units!r} instead."
+            )
+            units = needed_units
+            time_delta = needed_time_delta
+        else:
+            floor_division = False
+    num = _division(time_deltas, time_delta, floor_division)
     num = num.values.reshape(timedeltas.shape)
     return (num, units)
 
@@ -772,18 +792,11 @@ class CFDatetimeCoder(VariableCoder):
 
             units = encoding.pop("units", None)
             calendar = encoding.pop("calendar", None)
-            (data, units, calendar) = encode_cf_datetime(data, units, calendar)
+            dtype = encoding.get("dtype", None)
+            (data, units, calendar) = encode_cf_datetime(data, units, calendar, dtype)
 
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
-
-            # drop dtype in encoding if encoded as float64
-            # to prevent unnecessary casts, see GH #1064
-            encoding_dtype = encoding.get("dtype", data.dtype)
-            if np.issubdtype(data.dtype, np.float64) and np.issubdtype(
-                encoding_dtype, np.integer
-            ):
-                encoding.pop("dtype", None)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:
@@ -815,16 +828,10 @@ class CFTimedeltaCoder(VariableCoder):
         if np.issubdtype(variable.data.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-            data, units = encode_cf_timedelta(data, encoding.pop("units", None))
+            data, units = encode_cf_timedelta(
+                data, encoding.pop("units", None), encoding.get("dtype", None)
+            )
             safe_setitem(attrs, "units", units, name=name)
-
-            # drop dtype in encoding if encoded as float64
-            # to prevent unnecessary casts, see GH #1064
-            encoding_dtype = encoding.get("dtype", data.dtype)
-            if np.issubdtype(data.dtype, np.float64) and np.issubdtype(
-                encoding_dtype, np.integer
-            ):
-                encoding.pop("dtype", None)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
         else:

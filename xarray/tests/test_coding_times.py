@@ -1036,7 +1036,9 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
     units = f"{encoding_units} since 2000-01-01"
-    encoded, _, _ = coding.times.encode_cf_datetime(times, units)
+    print(times, units)
+    encoded, _units, _ = coding.times.encode_cf_datetime(times, units)
+    print(encoded, _units)
 
     numpy_timeunit = coding.times._netcdf_to_numpy_timeunit(encoding_units)
     encoding_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
@@ -1261,18 +1263,18 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
         np.datetime64("1970-01-02T00:01:00", "ns"),
     ]
     units = "days since 1970-01-10T01:01:00"
-    needed_units = "hours"
+    needed_units = "hours since 1970-01-10T01:01:00"
     encoding = dict(dtype=np.int64, _FillValue=20, units=units)
     var = Variable(["time"], times, encoding=encoding)
     wmsg = (
         f"Times can't be serialized faithfully with requested units {units!r}. "
-        f"Resolution of {needed_units!r} needed. "
+        f"Serializing with units {needed_units!r} instead."
     )
     with pytest.warns(UserWarning, match=wmsg):
         encoded_var = conventions.encode_cf_variable(var)
-    assert encoded_var.dtype == np.float64
-    assert encoded_var.attrs["units"] == units
-    assert encoded_var.attrs["_FillValue"] == 20.0
+    assert encoded_var.dtype == np.int64
+    assert encoded_var.attrs["units"] == needed_units
+    assert encoded_var.attrs["_FillValue"] == 20
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
@@ -1313,18 +1315,18 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
     needed_units = "hours"
     wmsg = (
         f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
-        f"Resolution of {needed_units!r} needed. "
+        f"Serializing with units {needed_units!r} instead."
     )
     encoding = dict(dtype=np.int64, _FillValue=20, units=units)
     var = Variable(["time"], timedelta_values, encoding=encoding)
     with pytest.warns(UserWarning, match=wmsg):
         encoded_var = conventions.encode_cf_variable(var)
-    assert encoded_var.dtype == np.float64
-    assert encoded_var.attrs["units"] == units
-    assert encoded_var.attrs["_FillValue"] == 20.0
+    assert encoded_var.dtype == np.int64
+    assert encoded_var.attrs["units"] == needed_units
+    assert encoded_var.attrs["_FillValue"] == 20
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
-    assert decoded_var.encoding["dtype"] == np.float64
+    assert decoded_var.encoding["dtype"] == np.int64
 
 
 def test_roundtrip_float_times() -> None:
