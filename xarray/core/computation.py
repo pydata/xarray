@@ -893,7 +893,7 @@ def apply_ufunc(
     dataset_fill_value: object = _NO_FILL_VALUE,
     keep_attrs: bool | str | None = None,
     kwargs: Mapping | None = None,
-    dask: str = "forbidden",
+    dask: Literal["forbidden", "allowed", "parallelized"] = "forbidden",
     output_dtypes: Sequence | None = None,
     output_sizes: Mapping[Any, int] | None = None,
     meta: Any = None,
