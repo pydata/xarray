@@ -41,11 +41,7 @@ from xarray.core.parallel import map_blocks
 from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.util.print_versions import show_versions
 
-try:
-    from importlib.metadata import version as _version
-except ImportError:
-    # if the fallback library is missing, we are doomed.
-    from importlib_metadata import version as _version
+from importlib.metadata import version as _version
 
 try:
     __version__ = _version("xarray")
