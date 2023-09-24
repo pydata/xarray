@@ -725,15 +725,18 @@ def encode_cf_datetime(
             floor_division = False
             if dtype is None:
                 emit_user_level_warning(
-                    f"Times can't be serialized faithfully with requested units {units!r}. "
-                    f"Resolution of {needed_units!r} needed. "
-                    f"Serializing timeseries to floating point."
+                    f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
+                    f"Resolution of {needed_units!r} needed. Serializing timeseries to floating point instead."
+                    f"Set encoding['dtype'] to integer dtype to serialize to int64. "
+                    f"Set encoding['dtype'] to floating point dtype to silence this warning."
                 )
             elif np.issubdtype(dtype, np.integer):
                 new_units = f"{needed_units} since {format_timestamp(ref_date)}"
                 emit_user_level_warning(
-                    f"Times can't be serialized faithfully with requested units {units!r}. "
-                    f"Serializing with units {new_units!r} instead."
+                    f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
+                    f"Serializing with units {new_units!r} instead. "
+                    f"Set encoding['dtype'] to floating point dtype to serialize with units {units!r}. "
+                    f"Set encoding['units'] to {new_units!r} to silence this warning ."
                 )
                 units = new_units
                 time_delta = needed_time_delta
@@ -775,14 +778,17 @@ def encode_cf_timedelta(
         floor_division = False
         if dtype is None:
             emit_user_level_warning(
-                f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
-                f"Resolution of {needed_units!r} needed. "
-                f"Serializing timeseries to floating point."
+                f"Timedeltas can't be serialized faithfully to int64 with requested units {units!r}. "
+                f"Resolution of {needed_units!r} needed. Serializing timeseries to floating point instead. "
+                f"Set encoding['dtype'] to integer dtype to serialize to int64. "
+                f"Set encoding['dtype'] to floating point dtype to silence this warning."
             )
         elif np.issubdtype(dtype, np.integer):
             emit_user_level_warning(
                 f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
-                f"Serializing with units {needed_units!r} instead."
+                f"Serializing with units {needed_units!r} instead. "
+                f"Set encoding['dtype'] to floating point dtype to serialize with units {units!r}. "
+                f"Set encoding['units'] to {needed_units!r} to silence this warning ."
             )
             units = needed_units
             time_delta = needed_time_delta
