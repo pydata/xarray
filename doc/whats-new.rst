@@ -90,7 +90,7 @@ Bug fixes
 - ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
   (:issue:`6528`, :pull:`8114`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Override the user-provided encoding units for datetime64/timedelta64 values to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
+- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
