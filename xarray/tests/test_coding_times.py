@@ -1270,14 +1270,16 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
         encoded_var = conventions.encode_cf_variable(var)
     assert encoded_var.dtype == np.float64
     assert encoded_var.attrs["units"] == units
-    assert encoded_var.attrs["_FillValue"] == 20.
+    assert encoded_var.attrs["_FillValue"] == 20.0
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
 
     encoding = dict(dtype="int64", _FillValue=20, units=units)
     var = Variable(["time"], times, encoding=encoding)
-    with pytest.warns(UserWarning, match=f"Serializing with units {new_units!r} instead."):
+    with pytest.warns(
+        UserWarning, match=f"Serializing with units {new_units!r} instead."
+    ):
         encoded_var = conventions.encode_cf_variable(var)
     assert encoded_var.dtype == np.int64
     assert encoded_var.attrs["units"] == new_units
@@ -1292,11 +1294,10 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
         encoded_var = conventions.encode_cf_variable(var)
     assert encoded_var.dtype == np.float64
     assert encoded_var.attrs["units"] == units
-    assert encoded_var.attrs["_FillValue"] == 20.
+    assert encoded_var.attrs["_FillValue"] == 20.0
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
-
 
     encoding = dict(dtype="int64", _FillValue=20, units=new_units)
     var = Variable(["time"], times, encoding=encoding)
@@ -1308,6 +1309,7 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
+
 
 @pytest.mark.parametrize(
     "dtype, fill_value",
