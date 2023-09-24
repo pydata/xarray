@@ -1261,22 +1261,53 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
         np.datetime64("1970-01-02T00:01:00", "ns"),
     ]
     units = "days since 1970-01-10T01:01:00"
-    needed_units = "hours since 1970-01-10T01:01:00"
-    encoding = dict(dtype=np.int64, _FillValue=20, units=units)
+    needed_units = "hours"
+    new_units = f"{needed_units} since 1970-01-10T01:01:00"
+
+    encoding = dict(dtype=None, _FillValue=20, units=units)
     var = Variable(["time"], times, encoding=encoding)
-    wmsg = (
-        f"Times can't be serialized faithfully with requested units {units!r}. "
-        f"Serializing with units {needed_units!r} instead."
-    )
-    with pytest.warns(UserWarning, match=wmsg):
+    with pytest.warns(UserWarning, match=f"Resolution of {needed_units!r} needed."):
+        encoded_var = conventions.encode_cf_variable(var)
+    assert encoded_var.dtype == np.float64
+    assert encoded_var.attrs["units"] == units
+    assert encoded_var.attrs["_FillValue"] == 20.
+
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    assert_identical(var, decoded_var)
+
+    encoding = dict(dtype="int64", _FillValue=20, units=units)
+    var = Variable(["time"], times, encoding=encoding)
+    with pytest.warns(UserWarning, match=f"Serializing with units {new_units!r} instead."):
         encoded_var = conventions.encode_cf_variable(var)
     assert encoded_var.dtype == np.int64
-    assert encoded_var.attrs["units"] == needed_units
+    assert encoded_var.attrs["units"] == new_units
     assert encoded_var.attrs["_FillValue"] == 20
 
     decoded_var = conventions.decode_cf_variable("foo", encoded_var)
     assert_identical(var, decoded_var)
 
+    encoding = dict(dtype="float64", _FillValue=20, units=units)
+    var = Variable(["time"], times, encoding=encoding)
+    with pytest.warns(None):
+        encoded_var = conventions.encode_cf_variable(var)
+    assert encoded_var.dtype == np.float64
+    assert encoded_var.attrs["units"] == units
+    assert encoded_var.attrs["_FillValue"] == 20.
+
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    assert_identical(var, decoded_var)
+
+
+    encoding = dict(dtype="int64", _FillValue=20, units=new_units)
+    var = Variable(["time"], times, encoding=encoding)
+    with pytest.warns(None):
+        encoded_var = conventions.encode_cf_variable(var)
+    assert encoded_var.dtype == np.int64
+    assert encoded_var.attrs["units"] == new_units
+    assert encoded_var.attrs["_FillValue"] == 20
+
+    decoded_var = conventions.decode_cf_variable("foo", encoded_var)
+    assert_identical(var, decoded_var)
 
 @pytest.mark.parametrize(
     "dtype, fill_value",

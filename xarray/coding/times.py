@@ -726,7 +726,7 @@ def encode_cf_datetime(
             if dtype is None:
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
-                    f"Resolution of {needed_units!r} needed. Serializing timeseries to floating point instead."
+                    f"Resolution of {needed_units!r} needed. Serializing times to floating point instead. "
                     f"Set encoding['dtype'] to integer dtype to serialize to int64. "
                     f"Set encoding['dtype'] to floating point dtype to silence this warning."
                 )
