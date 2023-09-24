@@ -29,7 +29,7 @@ from typing import (
     Generic,
     Literal,
     cast,
-    overload,
+    overload
 )
 
 import numpy as np
