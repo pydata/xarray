@@ -268,9 +268,12 @@ class TestDecodeCF:
         assert_identical(expected, actual)
 
     def test_invalid_coordinates(self) -> None:
-        # regression test for GH308
+        # regression test for GH308, GH1809
         original = Dataset({"foo": ("t", [1, 2], {"coordinates": "invalid"})})
+        decoded = Dataset({"foo": ("t", [1, 2], {}, {"coordinates": "invalid"})})
         actual = conventions.decode_cf(original)
+        assert_identical(decoded, actual)
+        actual = conventions.decode_cf(original, decode_coords=False)
         assert_identical(original, actual)
 
     def test_decode_coordinates(self) -> None:
