@@ -24,8 +24,10 @@ import numpy as np
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.types import T_DuckArray
 
+T_DuckArray_co = TypeVar("T_DuckArray_co", bound=Any, covariant=True)
 
-class _ChunkedArray(Protocol[T_DuckArray]):
+
+class _ChunkedArray(Protocol[T_DuckArray_co]):
     ...
 
 
@@ -154,7 +156,7 @@ def get_chunked_array_type(*args) -> ChunkManagerEntrypoint:
         return selected[0]
 
 
-class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
+class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray[T_DuckArray]]):
     """
     Interface between a particular parallel computing framework and xarray.
 
