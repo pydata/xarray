@@ -108,6 +108,9 @@ Internal Changes
   than `.reduce`, as the start of a broader effort to move non-reducing
   functions away from ```.reduce``, (:pull:`8114`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2023.08.0:
 
