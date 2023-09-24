@@ -6552,63 +6552,6 @@ def test_raise_no_warning_for_nan_in_binary_ops() -> None:
         xr.DataArray([1, 2, np.nan]) > 0
 
 
-def test_typed_ops_types() -> None:
-    """Tests for type checking of typed_ops on DataArray"""
-
-    da = DataArray([1, 2, 3], dims=["t"])
-
-    def _test(da: DataArray) -> None:
-        # mypy checks the input type
-        assert isinstance(da, DataArray)
-
-    _int: int = 1
-    _list = [1, 2, 3]
-    _ndarray = np.array([1, 2, 3])
-    _var = Variable(dims=["t"], data=[1, 2, 3])
-
-    # __add__ as an example of binary ops
-    _test(da + _int)
-    _test(da + _list)
-    _test(da + _ndarray)
-    _test(da + _var)
-    _test(da + da)
-
-    # __radd__ as an example of reflexive binary ops
-    _test(_int + da)
-    _test(_list + da)
-    _test(_ndarray + da)  # type: ignore[arg-type]  # numpy problem
-    _test(_var + da)
-
-    # __eq__ as an example of cmp ops
-    _test(da == _int)
-    _test(da == _list)
-    _test(da == _ndarray)
-    _test(da == _var)
-    _test(_int == da)  # type: ignore[arg-type]  # typeshed problem
-    _test(_list == da)  # type: ignore[arg-type]  # typeshed problem
-    _test(_ndarray == da)
-    _test(_var == da)
-
-    # __lt__ as another example of cmp ops
-    _test(da < _int)
-    _test(da < _list)
-    _test(da < _ndarray)
-    _test(da < _var)
-    _test(_int > da)
-    _test(_list > da)
-    _test(_ndarray > da)  # type: ignore[arg-type]  # numpy problem
-    _test(_var > da)
-
-    # __iadd__ as an example of inplace binary ops
-    da += _int
-    da += _list
-    da += _ndarray
-    da += _var
-
-    # __neg__ as an example of unary ops
-    _test(-da)
-
-
 @pytest.mark.filterwarnings("error")
 def test_no_warning_for_all_nan() -> None:
     _ = xr.DataArray([np.nan, np.nan]).mean()

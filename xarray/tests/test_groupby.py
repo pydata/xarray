@@ -1616,43 +1616,6 @@ class TestDataArrayGroupBy:
         actual = a.groupby("b").fillna(DataArray([0, 2], dims="b"))
         assert_identical(expected, actual)
 
-    def test_typed_ops_types(self) -> None:
-        """Tests for type checking of typed_ops on DataArrayGroupBy"""
-
-        da = xr.DataArray([1, 2, 3], coords={"x": ("t", [1, 2, 2])}, dims=["t"])
-        grp = da.groupby("x")
-
-        def _testda(da: DataArray) -> None:
-            # mypy checks the input type
-            assert isinstance(da, DataArray)
-
-        def _testds(ds: Dataset) -> None:
-            # mypy checks the input type
-            assert isinstance(ds, Dataset)
-
-        _da = xr.DataArray([5, 6], coords={"x": [1, 2]}, dims="x")
-        _ds = _da.to_dataset(name="a")
-
-        # __add__ as an example of binary ops
-        _testda(grp + _da)
-        _testds(grp + _ds)
-
-        # __radd__ as an example of reflexive binary ops
-        _testda(_da + grp)
-        _testds(_ds + grp)
-
-        # __eq__ as an example of cmp ops
-        _testda(grp == _da)
-        _testda(_da == grp)
-        _testds(grp == _ds)
-        _testds(_ds == grp)
-
-        # __lt__ as another example of cmp ops
-        _testda(grp < _da)
-        _testda(_da > grp)
-        _testds(grp < _ds)
-        _testds(_ds > grp)
-
 
 class TestDataArrayResample:
     @pytest.mark.parametrize("use_cftime", [True, False])
@@ -2444,37 +2407,3 @@ def test_groupby_math_auto_chunk():
     )
     actual = da.chunk(x=1, y=2).groupby("label") - sub
     assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
-
-
-def test_datasetgroupy_typed_ops_types() -> None:
-    """Tests for type checking of typed_ops on DatasetGroupBy"""
-
-    ds = xr.Dataset({"a": ("t", [1, 2, 3])}, coords={"x": ("t", [1, 2, 2])})
-    grp = ds.groupby("x")
-
-    def _test(ds: Dataset) -> None:
-        # mypy checks the input type
-        assert isinstance(ds, Dataset)
-
-    _da = xr.DataArray([5, 6], coords={"x": [1, 2]}, dims="x")
-    _ds = _da.to_dataset(name="a")
-
-    # __add__ as an example of binary ops
-    _test(grp + _da)
-    _test(grp + _ds)
-
-    # __radd__ as an example of reflexive binary ops
-    _test(_da + grp)
-    _test(_ds + grp)
-
-    # __eq__ as an example of cmp ops
-    _test(grp == _da)
-    _test(_da == grp)
-    _test(grp == _ds)
-    _test(_ds == grp)
-
-    # __lt__ as another example of cmp ops
-    _test(grp < _da)
-    _test(_da > grp)
-    _test(grp < _ds)
-    _test(_ds > grp)

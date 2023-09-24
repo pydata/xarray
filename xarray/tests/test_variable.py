@@ -2724,55 +2724,6 @@ def test_raise_no_warning_for_nan_in_binary_ops():
         Variable("x", [1, 2, np.nan]) > 0
 
 
-def test_typed_ops_types() -> None:
-    """Tests for type checking of typed_ops on Variable"""
-
-    var = Variable(dims=["t"], data=[1, 2, 3])
-
-    def _test(var: Variable) -> None:
-        # mypy checks the input type
-        assert isinstance(var, Variable)
-
-    _int: int = 1
-    _list = [1, 2, 3]
-    _ndarray = np.array([1, 2, 3])
-
-    # __add__ as an example of binary ops
-    _test(var + _int)
-    _test(var + _list)
-    _test(var + _ndarray)
-    _test(var + var)
-
-    # __radd__ as an example of reflexive binary ops
-    _test(_int + var)
-    _test(_list + var)
-    _test(_ndarray + var)  # type: ignore[arg-type]  # numpy problem
-
-    # __eq__ as an example of cmp ops
-    _test(var == _int)
-    _test(var == _list)
-    _test(var == _ndarray)
-    _test(_int == var)  # type: ignore[arg-type]  # typeshed problem
-    _test(_list == var)  # type: ignore[arg-type]  # typeshed problem
-    _test(_ndarray == var)
-
-    # __lt__ as another example of cmp ops
-    _test(var < _int)
-    _test(var < _list)
-    _test(var < _ndarray)
-    _test(_int > var)
-    _test(_list > var)
-    _test(_ndarray > var)  # type: ignore[arg-type]  # numpy problem
-
-    # __iadd__ as an example of inplace binary ops
-    var += _int
-    var += _list
-    var += _ndarray
-
-    # __neg__ as an example of unary ops
-    _test(-var)
-
-
 class TestBackendIndexing:
     """Make sure all the array wrappers can be indexed."""
 
