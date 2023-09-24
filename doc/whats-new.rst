@@ -14,10 +14,24 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.08.1:
+.. _whats-new.2023.09.0:
 
-v2023.08.1 (unreleased)
------------------------
+v2023.09.0 (Sep XX, 2023)
+-------------------------
+
+This release continues work on the new :py:class:`xarray.Coordinates` object, allows to provide `preferred_chunks` when
+reading from netcdf files, enables :py:func:`xarray.apply_ufunc` to handle missing core dimensions and fixes several bugs.
+
+Thanks to the 24 contributors to this release: Alexander Fischer, Amrest Chinkamol, Benoit Bovy, Darsh Ranjan, Deepak Cherian,
+Gianfranco Costamagna, Gregorio L. Trevisan, Illviljan, Joe Hamman, JR, Justus Magin, Kai Mühlbauer, Kian-Meng Ang, Kyle Sunden,
+Martin Raspaud, Mathias Hauser, Mattia Almansi, Maximilian Roos, András Gunyhó, Michael Niklas, Richard Kleijn, Riulinchen,
+Tom Nicholas, Wiktor Kraśnicki.
+
+We welcome the following new contributors to Xarray!: Alexander Fischer, Darsh Ranjan, Gianfranco Costamagna, Gregorio L. Trevisan,
+Kian-Meng Ang and Wiktor Kraśnicki.
+
+
+We welcome
 
 New Features
 ~~~~~~~~~~~~
@@ -90,7 +104,8 @@ Bug fixes
 - ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
   (:issue:`6528`, :pull:`8114`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
+- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each
+other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
