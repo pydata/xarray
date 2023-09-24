@@ -1290,7 +1290,8 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
 
     encoding = dict(dtype="float64", _FillValue=20, units=units)
     var = Variable(["time"], times, encoding=encoding)
-    with pytest.warns(None):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         encoded_var = conventions.encode_cf_variable(var)
     assert encoded_var.dtype == np.float64
     assert encoded_var.attrs["units"] == units
@@ -1301,7 +1302,8 @@ def test_roundtrip_datetime64_nanosecond_precision_warning() -> None:
 
     encoding = dict(dtype="int64", _FillValue=20, units=new_units)
     var = Variable(["time"], times, encoding=encoding)
-    with pytest.warns(None):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
         encoded_var = conventions.encode_cf_variable(var)
     assert encoded_var.dtype == np.int64
     assert encoded_var.attrs["units"] == new_units
