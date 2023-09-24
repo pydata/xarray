@@ -186,6 +186,9 @@ OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None
 T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
+DataVars = Mapping[Any, Any]
+
+
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
 

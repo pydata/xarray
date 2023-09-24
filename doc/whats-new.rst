@@ -90,6 +90,8 @@ Bug fixes
 - ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
   (:issue:`6528`, :pull:`8114`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -106,6 +108,9 @@ Internal Changes
   than `.reduce`, as the start of a broader effort to move non-reducing
   functions away from ```.reduce``, (:pull:`8114`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 .. _whats-new.2023.08.0:
 

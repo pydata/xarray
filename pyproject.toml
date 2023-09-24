@@ -96,7 +96,6 @@ module = [
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
-  "importlib_metadata.*",
   "iris.*",
   "matplotlib.*",
   "mpl_toolkits.*",
