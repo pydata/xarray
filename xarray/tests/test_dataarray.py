@@ -6577,7 +6577,7 @@ def test_typed_ops_types() -> None:
     _test(_int + da)
     _test(_list + da)
     _test(_ndarray + da)  # type: ignore[arg-type]  # numpy problem
-    _test(_var + da)  # type: ignore[arg-type]
+    _test(_var + da)
 
     # __eq__ as an example of cmp ops
     _test(da == _int)
@@ -6587,7 +6587,7 @@ def test_typed_ops_types() -> None:
     _test(_int == da)  # type: ignore[arg-type]  # typeshed problem
     _test(_list == da)  # type: ignore[arg-type]  # typeshed problem
     _test(_ndarray == da)
-    _test(_var == da)  # type: ignore[arg-type]
+    _test(_var == da)
 
     # __lt__ as another example of cmp ops
     _test(da < _int)
@@ -6597,7 +6597,7 @@ def test_typed_ops_types() -> None:
     _test(_int > da)
     _test(_list > da)
     _test(_ndarray > da)  # type: ignore[arg-type]  # numpy problem
-    _test(_var > da)  # type: ignore[arg-type]
+    _test(_var > da)
 
     # __iadd__ as an example of inplace binary ops
     da += _int

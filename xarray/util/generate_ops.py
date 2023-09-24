@@ -11,8 +11,8 @@ Usage:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Union
+from collections.abc import Iterator, Sequence
+from typing import Optional
 
 BINOPS_EQNE = (("__eq__", "nputils.array_eq"), ("__ne__", "nputils.array_ne"))
 BINOPS_CMP = (
@@ -83,8 +83,17 @@ required_method_binary = """
     ) -> {return_type}:
         raise NotImplementedError"""
 template_binop = """
-    def {method}(self, other: {other_type}) -> {return_type}:{type_override}
+    def {method}(self, other: {other_type}) -> {return_type}:{type_ignore}
         return self._binary_op(other, {func})"""
+template_binop_overload = """
+    @overload{overload_type_ignore}
+    def {method}(self, other: {overload_type}) -> NoReturn:
+        ...
+
+    @overload
+    def {method}(self, other: {other_type}) -> {return_type}:
+        ...
+"""
 template_reflexive = """
     def {method}(self, other: {other_type}) -> {return_type}:
         return self._binary_op(other, {func}, reflexive=True)"""
@@ -93,7 +102,7 @@ required_method_inplace = """
     def _inplace_binary_op(self, other: {other_type}, f: Callable) -> Self:
         raise NotImplementedError"""
 template_inplace = """
-    def {method}(self, other: {other_type}) -> Self:
+    def {method}(self, other: {other_type}) -> Self:{type_ignore}
         return self._inplace_binary_op(other, {func})"""
 
 required_method_unary = """
@@ -106,42 +115,87 @@ template_other_unary = """
     def {method}(self, *args: Any, **kwargs: Any) -> Self:
         return self._unary_op({func}, *args, **kwargs)"""
 
+# For some methods we override return type `bool` defined by base class `object`.
+# We need to add "# type: ignore[override]"
+# Keep an eye out for:
+# https://discuss.python.org/t/make-type-hints-for-eq-of-primitives-less-strict/34240
+# The type ignores might not be neccesary anymore at some point.
+#
+# We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
+# In reality this returns NotImplementes, but this is not a valid type in python 3.9.
+# Therefore, we use NoReturn which mypy seems to recognise!
+# TODO: change once python 3.10 is the minimum.
+#
+# Mypy seems to require that __iadd__ and __add__ have the same signature.
+# This requires some extra type: ignores[misc] in the inplace methods :/
 
-# # For some methods we override return type `bool` defined by base class `object`.
-# OVERRIDE_TYPESHED = {"override": "  # type: ignore[override]"}
-# NO_OVERRIDE = {"override": ""}
+
+def _type_ignore(ignore: str) -> str:
+    return f"  # type:ignore[{ignore}]" if ignore else ""
 
 
-FuncType = tuple[tuple[Union[str, None], Union[str, None]], ...]
+FuncType = Sequence[tuple[Optional[str], Optional[str]]]
 OpsType = tuple[FuncType, str, dict[str, str]]
 
 
 def binops(
     other_type: str, return_type: str = "Self", type_ignore_eq: str = "override"
 ) -> list[OpsType]:
-    type_override_eq = f"  # type:ignore[{type_ignore_eq}]" if type_ignore_eq else ""
-    extras = {"other_type": other_type, "return_type": return_type, "type_override": ""}
+    extras = {"other_type": other_type, "return_type": return_type}
     return [
         ([(None, None)], required_method_binary, extras),
-        (BINOPS_NUM + BINOPS_CMP, template_binop, extras),
+        (BINOPS_NUM + BINOPS_CMP, template_binop, extras | {"type_ignore": ""}),
         (
             BINOPS_EQNE,
             template_binop,
-            {
-                "other_type": other_type,
-                "return_type": return_type,
-                "type_override": type_override_eq,
+            extras | {"type_ignore": _type_ignore(type_ignore_eq)},
+        ),
+        (BINOPS_REFLEXIVE, template_reflexive, extras),
+    ]
+
+
+def binops_overload(
+    other_type: str,
+    overload_type: str,
+    return_type: str = "Self",
+    type_ignore_eq: str = "override",
+) -> list[OpsType]:
+    extras = {"other_type": other_type, "return_type": return_type}
+    return [
+        ([(None, None)], required_method_binary, extras),
+        (
+            BINOPS_NUM + BINOPS_CMP,
+            template_binop_overload + template_binop,
+            extras
+            | {
+                "overload_type": overload_type,
+                "type_ignore": "",
+                "overload_type_ignore": "",
+            },
+        ),
+        (
+            BINOPS_EQNE,
+            template_binop_overload + template_binop,
+            extras
+            | {
+                "overload_type": overload_type,
+                "type_ignore": "",
+                "overload_type_ignore": _type_ignore(type_ignore_eq),
             },
         ),
         (BINOPS_REFLEXIVE, template_reflexive, extras),
     ]
 
 
-def inplace(other_type: str) -> list[OpsType]:
+def inplace(other_type: str, type_ignore: str = "") -> list[OpsType]:
     extras = {"other_type": other_type}
     return [
         ([(None, None)], required_method_inplace, extras),
-        (BINOPS_INPLACE, template_inplace, extras),
+        (
+            BINOPS_INPLACE,
+            template_inplace,
+            extras | {"type_ignore": _type_ignore(type_ignore)},
+        ),
     ]
 
 
@@ -161,10 +215,12 @@ ops_info["DataArrayOpsMixin"] = (
     binops(other_type="DaCompatible") + inplace(other_type="DaCompatible") + unops()
 )
 ops_info["VariableOpsMixin"] = (
-    binops(other_type="VarCompatible") + inplace(other_type="VarCompatible") + unops()
+    binops_overload(other_type="VarCompatible", overload_type="T_DataArray")
+    + inplace(other_type="VarCompatible", type_ignore="misc")
+    + unops()
 )
 ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="GroupByCompatible", return_type='"Dataset"'
+    other_type="GroupByCompatible", return_type="Dataset"
 )
 ops_info["DataArrayGroupByOpsMixin"] = binops(
     other_type="T_Xarray", return_type="T_Xarray"
@@ -174,8 +230,10 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
+from __future__ import annotations
+
 import operator
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, NoReturn, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (
@@ -183,6 +241,7 @@ from xarray.core.types import (
     DsCompatible,
     GroupByCompatible,
     Self,
+    T_DataArray,
     T_Xarray,
     VarCompatible,
 )
@@ -209,8 +268,7 @@ def render(ops_info: dict[str, list[OpsType]]) -> Iterator[str]:
 
 
 def _render_classbody(method_blocks: list[OpsType]) -> Iterator[str]:
-    for method_func_pairs, method_template, extra in method_blocks:
-        template = method_template
+    for method_func_pairs, template, extra in method_blocks:
         if template:
             for method, func in method_func_pairs:
                 yield template.format(method=method, func=func, **extra)
