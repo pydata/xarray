@@ -51,6 +51,11 @@ def as_compatible_data(
 
 
 class NamedArray:
+
+    """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
+    Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
+    rather than axis order."""
+
     __slots__ = ("_dims", "_data", "_attrs")
 
     def __init__(
@@ -60,6 +65,37 @@ class NamedArray:
         attrs: dict | None = None,
         fastpath: bool = False,
     ):
+        """
+        Parameters
+        ----------
+        dims : str or iterable of str
+            Name(s) of the dimension(s).
+        data : T_DuckArray or np.typing.ArrayLike
+            The actual data that populates the array. Should match the shape specified by `dims`.
+        attrs : dict, optional
+            A dictionary containing any additional information or attributes you want to store with the array.
+            Default is None, meaning no attributes will be stored.
+        fastpath : bool, optional
+            A flag to indicate if certain validations should be skipped for performance reasons.
+            Should only be True if you are certain about the integrity of the input data.
+            Default is False.
+
+        Raises
+        ------
+        ValueError
+            If the `dims` length does not match the number of data dimensions (ndim).
+
+        Example
+        -------
+        >>> na = NamedArray("time", np.array([1, 2, 3]), attrs={"units": "seconds"})
+        >>> na.dims
+        ('time',)
+        >>> na.data
+        array([1, 2, 3])
+        >>> na.attrs
+        {'units': 'seconds'}
+
+        """
         self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
         self._dims: Dims = self._parse_dimensions(dims)
         self._attrs: dict | None = dict(attrs) if attrs else None
@@ -109,7 +145,14 @@ class NamedArray:
     @property
     def shape(self: T_NamedArray) -> tuple[int, ...]:
         """
-        Tuple of array dimensions.
+
+
+        Returns
+        -------
+        shape : tuple of ints
+                  Tuple of array dimensions.
+
+
 
         See Also
         --------
@@ -132,7 +175,7 @@ class NamedArray:
 
     @property
     def dims(self: T_NamedArray) -> Dims:
-        """Tuple of dimension names with which this variable is associated."""
+        """Tuple of dimension names with which this NamedArray is associated."""
         return self._dims
 
     @dims.setter
@@ -150,7 +193,7 @@ class NamedArray:
 
     @property
     def attrs(self: T_NamedArray) -> dict[typing.Any, typing.Any]:
-        """Dictionary of local attributes on this variable."""
+        """Dictionary of local attributes on this NamedArray."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
@@ -162,21 +205,16 @@ class NamedArray:
     def _check_shape(self, new_data: T_DuckArray) -> None:
         if new_data.shape != self.shape:
             raise ValueError(
-                f"replacement data must match the Variable's shape. "
-                f"replacement data has shape {new_data.shape}; Variable has shape {self.shape}"
+                f"replacement data must match the {self.__class__.__name__}'s shape. "
+                f"replacement data has shape {new_data.shape}; {self.__class__.__name__} has shape {self.shape}"
             )
 
     @property
     def data(self: T_NamedArray):
         """
-        The Variable's data as an array. The underlying array type
+        The NamedArray's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
 
-        See Also
-        --------
-        Variable.to_numpy
-        Variable.as_numpy
-        Variable.values
         """
 
         return self._data
@@ -190,7 +228,7 @@ class NamedArray:
     @property
     def real(self: T_NamedArray) -> T_NamedArray:
         """
-        The real part of the variable.
+        The real part of the NamedArray.
 
         See Also
         --------
@@ -201,7 +239,7 @@ class NamedArray:
     @property
     def imag(self: T_NamedArray) -> T_NamedArray:
         """
-        The imaginary part of the variable.
+        The imaginary part of the NamedArray.
 
         See Also
         --------
@@ -254,13 +292,13 @@ class NamedArray:
     @property
     def chunks(self: T_NamedArray) -> tuple[tuple[int, ...], ...] | None:
         """
-        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        Tuple of block lengths for this NamedArray's data, in order of dimensions, or None if
         the underlying data is not a dask array.
 
         See Also
         --------
-        Variable.chunk
-        Variable.chunksizes
+        NamedArray.chunk
+        NamedArray.chunksizes
         xarray.unify_chunks
         """
         return getattr(self._data, "chunks", None)
@@ -270,17 +308,17 @@ class NamedArray:
         self: T_NamedArray,
     ) -> typing.Mapping[typing.Any, tuple[int, ...]]:
         """
-        Mapping from dimension names to block lengths for this variable's data, or None if
+        Mapping from dimension names to block lengths for this namedArray's data, or None if
         the underlying data is not a dask array.
         Cannot be modified directly, but can be modified by calling .chunk().
 
-        Differs from variable.chunks because it returns a mapping of dimensions to chunk shapes
+        Differs from NamedArray.chunks because it returns a mapping of dimensions to chunk shapes
         instead of a tuple of chunk shapes.
 
         See Also
         --------
-        Variable.chunk
-        Variable.chunks
+        NamedArray.chunk
+        NamedArray.chunks
         xarray.unify_chunks
         """
         if hasattr(self._data, "chunks"):
@@ -290,14 +328,7 @@ class NamedArray:
 
     @property
     def sizes(self: T_NamedArray) -> dict[Hashable, int]:
-        """Ordered mapping from dimension names to lengths.
-
-        Immutable.
-
-        See Also
-        --------
-        Dataset.sizes
-        """
+        """Ordered mapping from dimension names to lengths."""
         return dict(zip(self.dims, self.shape))
 
     def _replace(
@@ -363,25 +394,25 @@ class NamedArray:
 
         Returns
         -------
-        object : Variable
-            New object with dimensions, attributes, encodings, and optionally
+        object : NamedArray
+            New object with dimensions, attributes, and optionally
             data copied from original.
 
         Examples
         --------
         Shallow copy versus deep copy
 
-        >>> var = xr.Variable(data=[1, 2, 3], dims="x")
+        >>> var = xr.NamedArray(data=[1, 2, 3], dims="x")
         >>> var.copy()
-        <xarray.Variable (x: 3)>
+        <xarray.NamedArray (x: 3)>
         array([1, 2, 3])
         >>> var_0 = var.copy(deep=False)
         >>> var_0[0] = 7
         >>> var_0
-        <xarray.Variable (x: 3)>
+        <xarray.NamedArray (x: 3)>
         array([7, 2, 3])
         >>> var
-        <xarray.Variable (x: 3)>
+        <xarray.NamedArray (x: 3)>
         array([7, 2, 3])
 
         Changing the data using the ``data`` argument maintains the
@@ -389,10 +420,10 @@ class NamedArray:
         object is unaffected.
 
         >>> var.copy(data=[0.1, 0.2, 0.3])
-        <xarray.Variable (x: 3)>
+        <xarray.NamedArray (x: 3)>
         array([0.1, 0.2, 0.3])
         >>> var
-        <xarray.Variable (x: 3)>
+        <xarray.NamedArray (x: 3)>
         array([7, 2, 3])
 
         See Also
@@ -402,7 +433,7 @@ class NamedArray:
         return self._copy(deep=deep, data=data)
 
     def _nonzero(self: T_NamedArray) -> tuple[T_NamedArray, ...]:
-        """Equivalent numpy's nonzero but returns a tuple of Variables."""
+        """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)
