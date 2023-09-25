@@ -17,6 +17,7 @@ def random_inputs() -> np.ndarray:
         ([1, 2, 3], np.array([1, 2, 3])),
         (np.array([4, 5, 6]), np.array([4, 5, 6])),
         (NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3])),
+        (2, np.array(2)),
     ],
 )
 def test_as_compatible_data(
@@ -35,8 +36,7 @@ def test_as_compatible_data_with_masked_array() -> None:
 def test_as_compatible_data_with_0d_object() -> None:
     data = np.empty((), dtype=object)
     data[()] = (10, 12, 12)
-    output = as_compatible_data(data)
-    assert np.array_equal(output, data)
+    np.array_equal(as_compatible_data(data), data)
 
 
 def test_as_compatible_data_with_explicitly_indexed(random_inputs) -> None:

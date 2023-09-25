@@ -32,8 +32,6 @@ def as_compatible_data(
         # can't use fastpath (yet) for scalars
         return typing.cast(T_DuckArray, data)
 
-    # TODO : check scalar
-
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
@@ -92,15 +90,6 @@ class NamedArray:
         ValueError
             If the `dims` length does not match the number of data dimensions (ndim).
 
-        Example
-        -------
-        >>> na = NamedArray("time", np.array([1, 2, 3]), attrs={"units": "seconds"})
-        >>> na.dims
-        ('time',)
-        >>> na.data
-        array([1, 2, 3])
-        >>> na.attrs
-        {'units': 'seconds'}
 
         """
         self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
@@ -404,25 +393,6 @@ class NamedArray:
         object : NamedArray
             New object with dimensions, attributes, and optionally
             data copied from original.
-
-        Examples
-        --------
-        Shallow copy versus deep copy
-
-        >>> var = xr.namedarray.core.NamedArray(data=[1, 2, 3], dims="x")
-        >>> var.copy()
-        >>> var_0 = var.copy(deep=False)
-        >>> var_0[0] = 7
-        >>> var_0
-        >>> var
-
-
-        Changing the data using the ``data`` argument maintains the
-        structure of the original object, but with the new data. Original
-        object is unaffected.
-
-        >>> var.copy(data=[0.1, 0.2, 0.3])
-        >>> var
 
 
         """
