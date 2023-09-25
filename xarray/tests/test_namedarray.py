@@ -7,7 +7,7 @@ from xarray.namedarray.utils import T_DuckArray
 
 @pytest.fixture
 def random_inputs() -> np.ndarray:
-    return np.arange(3*4*5, dtype=np.float32).reshape((3, 4, 5))
+    return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
 
 
 @pytest.mark.parametrize(
@@ -17,7 +17,9 @@ def random_inputs() -> np.ndarray:
         (np.array([4, 5, 6]), np.array([4, 5, 6])),
     ],
 )
-def test_as_compatible_data(input_data: T_DuckArray, expected_output: T_DuckArray) -> None:
+def test_as_compatible_data(
+    input_data: T_DuckArray, expected_output: T_DuckArray
+) -> None:
     output: T_DuckArray = as_compatible_data(input_data)
     assert np.array_equal(output, expected_output)
 
