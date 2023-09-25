@@ -99,6 +99,8 @@ Bug fixes
 - Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) led to varying issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
   :issue:`1064`, :pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fixed a bug where inaccurate ``coordinates`` silently failed to decode variable (:issue:`1809`, :pull:`8195`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
 - ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
   (:issue:`6528`, :pull:`8114`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
