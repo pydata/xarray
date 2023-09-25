@@ -107,6 +107,9 @@ Bug fixes
 - In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each
 other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Static typing of dunder ops methods (like :py:meth:`DataArray.__eq__`) has been fixed.
+  Remaining issues are upstream problems (:issue:`7780`, :pull:`8204`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
