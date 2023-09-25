@@ -406,7 +406,7 @@ class TestFormatting:
                 "var2": ("x", np.array([3, 4], dtype="int64")),
             },
             coords={
-                "x": np.array(["a", "b"], dtype="U1"),
+                "x": ("x", np.array(["a", "b"], dtype="U1"), {"foo": "bar"}),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
             attrs={"units": "m", "description": "desc"},
@@ -415,7 +415,11 @@ class TestFormatting:
         ds_b = xr.Dataset(
             data_vars={"var1": ("x", np.array([1, 2], dtype="int64"))},
             coords={
-                "x": ("x", np.array(["a", "c"], dtype="U1"), {"source": 0}),
+                "x": (
+                    "x",
+                    np.array(["a", "c"], dtype="U1"),
+                    {"source": 0, "foo": "baz"},
+                ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
             attrs={"units": "kg"},

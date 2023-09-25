@@ -783,9 +783,9 @@ def _diff_mapping_repr(
         try:
             # compare xarray variable
             if not callable(compat):
-                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+                compatible = getattr(a_mapping[k].variable, compat)(b_mapping[k].variable)
             else:
-                compatible = compat(a_mapping[k], b_mapping[k])
+                compatible = compat(a_mapping[k].variable, b_mapping[k].variable)
             is_variable = True
         except AttributeError:
             # compare attribute value
@@ -804,10 +804,18 @@ def _diff_mapping_repr(
 
             if compat == "identical" and is_variable:
                 attrs_summary = []
+                a_attrs = a_mapping[k].attrs
+                b_attrs = b_mapping[k].attrs
 
+                attrs_to_print = set(a_attrs) ^ set(b_attrs)
+                for attr in set(a_attrs) & set(b_attrs):
+                    if a_attrs[attr] != b_attrs[attr]:
+                        attrs_to_print.update(attr)
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
+                        summarize_attr(ak, av)
+                        for ak, av in m[k].attrs.items()
+                        if ak in attrs_to_print
                     )
                     attrs_summary.append(attr_s)
 
