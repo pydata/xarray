@@ -156,7 +156,7 @@ def get_chunked_array_type(*args) -> ChunkManagerEntrypoint:
         return selected[0]
 
 
-class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray[T_DuckArray]]):
+class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     """
     Interface between a particular parallel computing framework and xarray.
 
