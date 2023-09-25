@@ -15,6 +15,7 @@ def random_inputs() -> np.ndarray:
     [
         ([1, 2, 3], np.array([1, 2, 3])),
         (np.array([4, 5, 6]), np.array([4, 5, 6])),
+        (NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3])),
     ],
 )
 def test_as_compatible_data(
@@ -22,6 +23,19 @@ def test_as_compatible_data(
 ) -> None:
     output: T_DuckArray = as_compatible_data(input_data)
     assert np.array_equal(output, expected_output)
+
+
+def test_as_compatible_data_with_masked_array():
+    masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])
+    with pytest.raises(NotImplementedError):
+        as_compatible_data(masked_array)
+
+
+def test_as_compatible_data_with_0d_object():
+    data = np.empty((), dtype=object)
+    data[()] = (10, 12, 12)
+    output = as_compatible_data(data)
+    assert np.array_equal(output, data)
 
 
 def test_properties() -> None:
@@ -70,6 +84,20 @@ def test_0d_string(data, dtype: np.typing.DTypeLike) -> None:
     assert named_array.ndim == 0
     assert named_array.size == 1
     assert named_array.dtype == dtype
+
+
+def test_0d_object() -> None:
+    named_array = NamedArray([], (10, 12, 12))
+    expected_data = np.empty((), dtype=object)
+    expected_data[()] = (10, 12, 12)
+    assert np.array_equal(named_array.data, expected_data)
+
+    assert named_array.dims == ()
+    assert named_array.sizes == {}
+    assert named_array.attrs == {}
+    assert named_array.ndim == 0
+    assert named_array.size == 1
+    assert named_array.dtype == np.dtype("O")
 
 
 def test_0d_datetime() -> None:

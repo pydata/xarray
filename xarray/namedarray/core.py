@@ -33,17 +33,19 @@ def as_compatible_data(
         return typing.cast(T_DuckArray, data)
 
     # TODO : check scalar
-    if is_duck_array(data):
-        return data
-    if isinstance(data, NamedArray):
-        raise data.data
+
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
             # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
         else:
-            data = np.asarray(data)
+            return np.asarray(data)
+    if is_duck_array(data):
+        return data
+    if isinstance(data, NamedArray):
+        return data.data
+
     if isinstance(data, ExplicitlyIndexed):
         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
         return typing.cast(T_DuckArray, data)
