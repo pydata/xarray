@@ -160,6 +160,8 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     if isinstance(x, (np.timedelta64, timedelta)):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
+        if hasattr(x, "dtype"):
+            x = x.item()
         return repr(x) if quote_strings else x
     elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
         return f"{x.item():.4}"
