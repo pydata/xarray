@@ -36,9 +36,14 @@ def as_compatible_data(
     if is_duck_array(data):
         return data
     if isinstance(data, NamedArray):
-        raise ValueError
+        raise data.data
     if isinstance(data, np.ma.MaskedArray):
-        raise ValueError
+        mask = np.ma.getmaskarray(data)
+        if mask.any():
+            # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
+            raise NotImplementedError("MaskedArray is not supported yet")
+        else:
+            data = np.asarray(data)
     if isinstance(data, ExplicitlyIndexed):
         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
         return typing.cast(T_DuckArray, data)
@@ -150,7 +155,7 @@ class NamedArray:
         Returns
         -------
         shape : tuple of ints
-                  Tuple of array dimensions.
+                Tuple of array dimensions.
 
 
 
@@ -426,9 +431,6 @@ class NamedArray:
         <xarray.NamedArray (x: 3)>
         array([7, 2, 3])
 
-        See Also
-        --------
-        pandas.DataFrame.copy
         """
         return self._copy(deep=deep, data=data)
 
