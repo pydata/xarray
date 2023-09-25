@@ -6,8 +6,8 @@ from xarray.namedarray.utils import T_DuckArray
 
 
 @pytest.fixture
-def random_inputs():
-    return np.random.random((3, 4, 5)).astype(np.float32)
+def random_inputs() -> np.ndarray:
+    return np.arange(3*4*5, dtype=np.float32).reshape((3, 4, 5))
 
 
 @pytest.mark.parametrize(
@@ -17,12 +17,12 @@ def random_inputs():
         (np.array([4, 5, 6]), np.array([4, 5, 6])),
     ],
 )
-def test_as_compatible_data(input_data: T_DuckArray, expected_output: T_DuckArray):
+def test_as_compatible_data(input_data: T_DuckArray, expected_output: T_DuckArray) -> None:
     output: T_DuckArray = as_compatible_data(input_data)
     assert np.array_equal(output, expected_output)
 
 
-def test_properties():
+def test_properties() -> None:
     data = 0.5 * np.arange(10).reshape(2, 5)
     named_array = NamedArray(["x", "y"], data, {"key": "value"})
     assert named_array.dims == ("x", "y")
@@ -35,7 +35,7 @@ def test_properties():
     assert len(named_array) == 2
 
 
-def test_attrs():
+def test_attrs() -> None:
     named_array = NamedArray(["x", "y"], np.arange(10).reshape(2, 5))
     assert named_array.attrs == {}
     named_array.attrs["key"] = "value"
@@ -44,7 +44,7 @@ def test_attrs():
     assert named_array.attrs == {"key": "value2"}
 
 
-def test_data(random_inputs):
+def test_data(random_inputs) -> None:
     named_array = NamedArray(["x", "y", "z"], random_inputs)
     assert np.array_equal(named_array.data, random_inputs)
     with pytest.raises(ValueError):
@@ -59,7 +59,7 @@ def test_data(random_inputs):
         (np.bytes_("foo"), np.dtype("S3")),
     ],
 )
-def test_0d_string(data, dtype):
+def test_0d_string(data, dtype: np.typing.DTypeLike) -> None:
     named_array = NamedArray([], data)
     assert named_array.data == data
     assert named_array.dims == ()
@@ -70,7 +70,7 @@ def test_0d_string(data, dtype):
     assert named_array.dtype == dtype
 
 
-def test_0d_datetime():
+def test_0d_datetime() -> None:
     named_array = NamedArray([], np.datetime64("2000-01-01"))
     assert named_array.dtype == np.dtype("datetime64[D]")
 
@@ -89,7 +89,7 @@ def test_0d_datetime():
         (np.timedelta64(1, "as"), np.dtype("timedelta64[as]")),
     ],
 )
-def test_0d_timedelta(timedelta, expected_dtype):
+def test_0d_timedelta(timedelta, expected_dtype: np.dtype) -> None:
     named_array = NamedArray([], timedelta)
     assert named_array.dtype == expected_dtype
     assert named_array.data == timedelta
@@ -105,7 +105,7 @@ def test_0d_timedelta(timedelta, expected_dtype):
         ([], [], ("x",), True),
     ],
 )
-def test_dims_setter(dims, data_shape, new_dims, raises):
+def test_dims_setter(dims, data_shape, new_dims, raises: bool) -> None:
     named_array = NamedArray(dims, np.random.random(data_shape))
     assert named_array.dims == tuple(dims)
     if raises:
