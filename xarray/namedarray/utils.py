@@ -16,10 +16,6 @@ if typing.TYPE_CHECKING:
 # hopefully in the future we can narrow this down more
 T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
 
-K = typing.TypeVar("K")
-V = typing.TypeVar("V")
-T = typing.TypeVar("T")
-
 
 def module_available(module: str) -> bool:
     """Checks whether a module is installed without importing it.
