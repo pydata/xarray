@@ -80,6 +80,28 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     assert_identical(actual, expected)
 
 
+def test_decode_cf_variable_with_mismatched_coordinates() -> None:
+    # tests for decoding mismatched coordinates attributes
+    # see GH #1809
+    zeros1 = np.zeros((1, 5, 3))
+    orig = Dataset(
+        {
+            "XLONG": (["x", "y"], zeros1.squeeze(0), {}),
+            "XLAT": (["x", "y"], zeros1.squeeze(0), {}),
+            "foo": (["time", "x", "y"], zeros1, {"coordinates": "XTIME XLONG XLAT"}),
+            "time": ("time", [0.0], {"units": "hours since 2017-01-01"}),
+        }
+    )
+    decoded = conventions.decode_cf(orig, decode_coords=True)
+    assert decoded["foo"].encoding["coordinates"] == "XTIME XLONG XLAT"
+    assert list(decoded.coords.keys()) == ["XLONG", "XLAT", "time"]
+
+    decoded = conventions.decode_cf(orig, decode_coords=False)
+    assert "coordinates" not in decoded["foo"].encoding
+    assert decoded["foo"].attrs.get("coordinates") == "XTIME XLONG XLAT"
+    assert list(decoded.coords.keys()) == ["time"]
+
+
 @requires_cftime
 class TestEncodeCFVariable:
     def test_incompatible_attributes(self) -> None:
@@ -246,9 +268,12 @@ class TestDecodeCF:
         assert_identical(expected, actual)
 
     def test_invalid_coordinates(self) -> None:
-        # regression test for GH308
+        # regression test for GH308, GH1809
         original = Dataset({"foo": ("t", [1, 2], {"coordinates": "invalid"})})
+        decoded = Dataset({"foo": ("t", [1, 2], {}, {"coordinates": "invalid"})})
         actual = conventions.decode_cf(original)
+        assert_identical(decoded, actual)
+        actual = conventions.decode_cf(original, decode_coords=False)
         assert_identical(original, actual)
 
     def test_decode_coordinates(self) -> None:
