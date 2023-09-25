@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import Self, T_DataArray, T_Xarray
+from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -937,7 +937,7 @@ def assert_coordinate_consistent(obj: T_Xarray, coords: Mapping[Any, Variable]) 
 
 
 def create_coords_with_default_indexes(
-    coords: Mapping[Any, Any], data_vars: Mapping[Any, Any] | None = None
+    coords: Mapping[Any, Any], data_vars: DataVars | None = None
 ) -> Coordinates:
     """Returns a Coordinates object from a mapping of coordinates (arbitrary objects).
 

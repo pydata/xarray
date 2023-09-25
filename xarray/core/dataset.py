@@ -124,7 +124,7 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
-    from xarray.core.merge import CoercibleMapping, CoercibleValue
+    from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
@@ -133,6 +133,7 @@ if TYPE_CHECKING:
         CoarsenBoundaryOptions,
         CombineAttrsOptions,
         CompatOptions,
+        DataVars,
         DatetimeLike,
         DatetimeUnitOptions,
         Dims,
@@ -404,7 +405,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
-def merge_data_and_coords(data_vars, coords):
+def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
     """Used in Dataset.__init__."""
     if isinstance(coords, Coordinates):
         coords = coords.copy()
@@ -666,7 +667,7 @@ class Dataset(
         self,
         # could make a VariableArgs to use more generally, and refine these
         # categories
-        data_vars: Mapping[Any, Any] | None = None,
+        data_vars: DataVars | None = None,
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
     ) -> None:
@@ -1220,9 +1221,7 @@ class Dataset(
         else:
             return replaced
 
-    def copy(
-        self, deep: bool = False, data: Mapping[Any, ArrayLike] | None = None
-    ) -> Self:
+    def copy(self, deep: bool = False, data: DataVars | None = None) -> Self:
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
@@ -1324,7 +1323,7 @@ class Dataset(
     def _copy(
         self,
         deep: bool = False,
-        data: Mapping[Any, ArrayLike] | None = None,
+        data: DataVars | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -1476,13 +1475,20 @@ class Dataset(
     def __iter__(self) -> Iterator[Hashable]:
         return iter(self.data_vars)
 
-    def __array__(self, dtype=None):
-        raise TypeError(
-            "cannot directly convert an xarray.Dataset into a "
-            "numpy array. Instead, create an xarray.DataArray "
-            "first, either with indexing on the Dataset or by "
-            "invoking the `to_array()` method."
-        )
+    if TYPE_CHECKING:
+        # needed because __getattr__ is returning Any and otherwise
+        # this class counts as part of the SupportsArray Protocol
+        __array__ = None
+
+    else:
+
+        def __array__(self, dtype=None):
+            raise TypeError(
+                "cannot directly convert an xarray.Dataset into a "
+                "numpy array. Instead, create an xarray.DataArray "
+                "first, either with indexing on the Dataset or by "
+                "invoking the `to_array()` method."
+            )
 
     @property
     def nbytes(self) -> int:

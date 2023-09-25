@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupby import DataArrayGroupBy, GroupBy
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
@@ -176,16 +175,19 @@ T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 T_DuckArray = TypeVar("T_DuckArray", bound=Any)
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
-DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
-DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
-GroupByIncompatible = Union["Variable", "GroupBy"]
+DaCompatible = Union["DataArray", "VarCompatible"]
+DsCompatible = Union["Dataset", "DaCompatible"]
+GroupByCompatible = Union["Dataset", "DataArray"]
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
 T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
+
+DataVars = Mapping[Any, Any]
+
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
