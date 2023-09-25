@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+import xarray as xr
 from xarray.namedarray.core import NamedArray, as_compatible_data
 from xarray.namedarray.utils import T_DuckArray
 
@@ -25,17 +26,34 @@ def test_as_compatible_data(
     assert np.array_equal(output, expected_output)
 
 
-def test_as_compatible_data_with_masked_array():
+def test_as_compatible_data_with_masked_array() -> None:
     masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])
     with pytest.raises(NotImplementedError):
         as_compatible_data(masked_array)
 
 
-def test_as_compatible_data_with_0d_object():
+def test_as_compatible_data_with_0d_object() -> None:
     data = np.empty((), dtype=object)
     data[()] = (10, 12, 12)
     output = as_compatible_data(data)
     assert np.array_equal(output, data)
+
+
+def test_as_compatible_data_with_explicitly_indexed(random_inputs) -> None:
+    class CustomArray(xr.core.indexing.NDArrayMixin):
+        def __init__(self, array):
+            self.array = array
+
+    class CustomArrayIndexable(CustomArray, xr.core.indexing.ExplicitlyIndexed):
+        pass
+
+    array = CustomArray(random_inputs)
+    output = as_compatible_data(array)
+    assert isinstance(output, np.ndarray)
+
+    array = CustomArrayIndexable(random_inputs)
+    output = as_compatible_data(array)
+    assert isinstance(output, CustomArrayIndexable)
 
 
 def test_properties() -> None:

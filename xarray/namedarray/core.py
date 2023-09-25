@@ -40,11 +40,11 @@ def as_compatible_data(
             # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
         else:
-            return np.asarray(data)
+            return typing.cast(T_DuckArray, np.asarray(data))
     if is_duck_array(data):
         return data
     if isinstance(data, NamedArray):
-        return data.data
+        return typing.cast(T_DuckArray, data.data)
 
     if isinstance(data, ExplicitlyIndexed):
         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
@@ -409,29 +409,21 @@ class NamedArray:
         --------
         Shallow copy versus deep copy
 
-        >>> var = xr.NamedArray(data=[1, 2, 3], dims="x")
+        >>> var = xr.namedarray.core.NamedArray(data=[1, 2, 3], dims="x")
         >>> var.copy()
-        <xarray.NamedArray (x: 3)>
-        array([1, 2, 3])
         >>> var_0 = var.copy(deep=False)
         >>> var_0[0] = 7
         >>> var_0
-        <xarray.NamedArray (x: 3)>
-        array([7, 2, 3])
         >>> var
-        <xarray.NamedArray (x: 3)>
-        array([7, 2, 3])
+
 
         Changing the data using the ``data`` argument maintains the
         structure of the original object, but with the new data. Original
         object is unaffected.
 
         >>> var.copy(data=[0.1, 0.2, 0.3])
-        <xarray.NamedArray (x: 3)>
-        array([0.1, 0.2, 0.3])
         >>> var
-        <xarray.NamedArray (x: 3)>
-        array([7, 2, 3])
+
 
         """
         return self._copy(deep=deep, data=data)
