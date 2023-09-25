@@ -45,8 +45,7 @@ New Features
 - Improved static typing of reduction methods (:pull:`6746`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Added `on_missing_core_dims` to :py:meth:`apply_ufunc` to allow for copying or
-  dropping a :py:class:`Dataset`'s variables with missing core dimensions.
-  (:pull:`8138`)
+  dropping a :py:class:`Dataset`'s variables with missing core dimensions (:pull:`8138`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
@@ -85,8 +84,8 @@ Bug fixes
   :pull:`8104`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fix bug where :py:class:`DataArray` instances on the right-hand side
-  of :py:meth:`DataArray.__setitem__` lose dimension names.
-  (:issue:`7030`, :pull:`8067`) By `Darsh Ranjan <https://github.com/dranjan>`_.
+  of :py:meth:`DataArray.__setitem__` lose dimension names (:issue:`7030`, :pull:`8067`).
+  By `Darsh Ranjan <https://github.com/dranjan>`_.
 - Return ``float64`` in presence of ``NaT`` in :py:class:`~core.accessor_dt.DatetimeAccessor` and
   special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar`
   (:issue:`7928`, :pull:`8084`).
@@ -97,15 +96,13 @@ Bug fixes
 - Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
   (:issue:`7552`, :pull:`8174`).
   By `Wiktor Kraśnicki <https://github.com/wkrasnicki>`_.
-- Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) led to varying
-  issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
+- Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) led to varying issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
   :issue:`1064`, :pull:`7827`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
-  (:issue:`6528`, :pull:`8114`)
+  (:issue:`6528`, :pull:`8114`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each
-other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
+- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Static typing of dunder ops methods (like :py:meth:`DataArray.__eq__`) has been fixed.
   Remaining issues are upstream problems (:issue:`7780`, :pull:`8204`).
