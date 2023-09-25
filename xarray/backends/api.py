@@ -488,6 +488,9 @@ def open_dataset(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -691,6 +694,9 @@ def open_dataarray(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
