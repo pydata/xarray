@@ -1158,7 +1158,7 @@ class DataWithCoords(AttrAccessMixin):
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
                 )
 
-            self, cond = align(self, cond)  # type: ignore[assignment]
+            self, cond = align(self, cond)
 
             def _dataarray_indexer(dim: Hashable) -> DataArray:
                 return cond.any(dim=(d for d in cond.dims if d != dim))

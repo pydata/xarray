@@ -2328,9 +2328,9 @@ class TestDataset:
         assert np.isnan(left2["var3"][-2:]).all()
 
         with pytest.raises(ValueError, match=r"invalid value for join"):
-            align(left, right, join="foobar")  # type: ignore[arg-type]
+            align(left, right, join="foobar")  # type: ignore[call-overload]
         with pytest.raises(TypeError):
-            align(left, right, foo="bar")  # type: ignore[call-arg]
+            align(left, right, foo="bar")  # type: ignore[call-overload]
 
     def test_align_exact(self) -> None:
         left = xr.Dataset(coords={"x": [0, 1]})
