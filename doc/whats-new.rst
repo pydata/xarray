@@ -25,10 +25,10 @@ reading from netcdf files, enables :py:func:`xarray.apply_ufunc` to handle missi
 Thanks to the 24 contributors to this release: Alexander Fischer, Amrest Chinkamol, Benoit Bovy, Darsh Ranjan, Deepak Cherian,
 Gianfranco Costamagna, Gregorio L. Trevisan, Illviljan, Joe Hamman, JR, Justus Magin, Kai Mühlbauer, Kian-Meng Ang, Kyle Sunden,
 Martin Raspaud, Mathias Hauser, Mattia Almansi, Maximilian Roos, András Gunyhó, Michael Niklas, Richard Kleijn, Riulinchen,
-Tom Nicholas, Wiktor Kraśnicki.
+Tom Nicholas and Wiktor Kraśnicki.
 
 We welcome the following new contributors to Xarray!: Alexander Fischer, Amrest Chinkamol, Darsh Ranjan, Gianfranco Costamagna, Gregorio L. Trevisan,
-Kian-Meng Ang, Riulinchen, and Wiktor Kraśnicki.
+Kian-Meng Ang, Riulinchen and Wiktor Kraśnicki.
 
 New Features
 ~~~~~~~~~~~~
