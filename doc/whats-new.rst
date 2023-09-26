@@ -16,7 +16,7 @@ What's New
 
 .. _whats-new.2023.09.0:
 
-v2023.09.0 (Sep XX, 2023)
+v2023.09.0 (Sep 26, 2023)
 -------------------------
 
 This release continues work on the new :py:class:`xarray.Coordinates` object, allows to provide `preferred_chunks` when
@@ -27,11 +27,8 @@ Gianfranco Costamagna, Gregorio L. Trevisan, Illviljan, Joe Hamman, JR, Justus M
 Martin Raspaud, Mathias Hauser, Mattia Almansi, Maximilian Roos, András Gunyhó, Michael Niklas, Richard Kleijn, Riulinchen,
 Tom Nicholas, Wiktor Kraśnicki.
 
-We welcome the following new contributors to Xarray!: Alexander Fischer, Darsh Ranjan, Gianfranco Costamagna, Gregorio L. Trevisan,
-Kian-Meng Ang and Wiktor Kraśnicki.
-
-
-We welcome
+We welcome the following new contributors to Xarray!: Alexander Fischer, Amrest Chinkamol, Darsh Ranjan, Gianfranco Costamagna, Gregorio L. Trevisan,
+Kian-Meng Ang, Riulinchen, and Wiktor Kraśnicki.
 
 New Features
 ~~~~~~~~~~~~
@@ -42,8 +39,6 @@ New Features
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
-- Improved static typing of reduction methods (:pull:`6746`).
-  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Added `on_missing_core_dims` to :py:meth:`apply_ufunc` to allow for copying or
   dropping a :py:class:`Dataset`'s variables with missing core dimensions (:pull:`8138`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -74,6 +69,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Improved static typing of reduction methods (:pull:`6746`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Fix bug where empty attrs would generate inconsistent tokens (:issue:`6970`, :pull:`8101`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
@@ -113,6 +110,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Make documentation of :py:meth:`DataArray.where` clearer (:issue:`7767`, :pull:`7955`).
+  By `Riulinchen <https://github.com/Riulinchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -127,7 +126,6 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
 
 .. _whats-new.2023.08.0:
 
