@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 import pytest
@@ -51,7 +51,7 @@ class DummyChunkedArray(np.ndarray):
         return copied
 
 
-class DummyChunkManager(ChunkManagerEntrypoint):
+class DummyChunkManager(ChunkManagerEntrypoint[DummyChunkedArray]):
     """Mock-up of ChunkManager class for DummyChunkedArray"""
 
     def __init__(self):
@@ -85,7 +85,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
     def rechunk(self, data: DummyChunkedArray, chunks, **kwargs) -> DummyChunkedArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[np.ndarray, ...]:
+    def compute(self, *data: DummyChunkedArray, **kwargs) -> tuple[T_DuckArray, ...]:
         from dask.array import compute
 
         return compute(*data, **kwargs)
