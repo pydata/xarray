@@ -5,7 +5,7 @@ import operator
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Final, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -897,7 +897,7 @@ def deep_align(
     exclude: str | Iterable[Hashable] = frozenset(),
     raise_on_invalid: bool = True,
     fill_value=dtypes.NA,
-):
+) -> list[Any]:
     """Align objects for merging, recursing into dictionary values.
 
     This function is not public API.
@@ -912,12 +912,12 @@ def deep_align(
     def is_alignable(obj):
         return isinstance(obj, (Coordinates, DataArray, Dataset))
 
-    positions = []
-    keys = []
-    out = []
-    targets = []
-    no_key = object()
-    not_replaced = object()
+    positions: list[int] = []
+    keys: list[type[object] | Hashable] = []
+    out: list[Any] = []
+    targets: list[Alignable] = []
+    no_key: Final = object()
+    not_replaced: Final = object()
     for position, variables in enumerate(objects):
         if is_alignable(variables):
             positions.append(position)
@@ -962,7 +962,7 @@ def deep_align(
         if key is no_key:
             out[position] = aligned_obj
         else:
-            out[position][key] = aligned_obj  # type: ignore[index]  # maybe someone can fix this?
+            out[position][key] = aligned_obj
 
     return out
 
