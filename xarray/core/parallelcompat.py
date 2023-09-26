@@ -22,9 +22,7 @@ from typing import (
 import numpy as np
 
 from xarray.core.pycompat import is_chunked_array
-from xarray.core.types import T_DuckArray
-
-T_DuckArray_co = TypeVar("T_DuckArray_co", bound=Any, covariant=True)
+from xarray.core.types import T_DuckArray, T_DuckArray_co
 
 
 class _ChunkedArray(Protocol[T_DuckArray_co]):

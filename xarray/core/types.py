@@ -174,6 +174,7 @@ T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
 T_DuckArray = TypeVar("T_DuckArray", bound=Any)
+T_DuckArray_co = TypeVar("T_DuckArray_co", bound=Any, covariant=True)
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
