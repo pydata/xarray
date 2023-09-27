@@ -120,12 +120,19 @@ module = [
 
 # Gradually we want to add more modules to this list, ratcheting up our total
 # coverage. Once a module is here, functions require annotations in order to
-# pass mypy. It would be especially useful to have tests here, because without
-# annotating test functions, we don't have a great way of testing our type
-# annotations — even with just `-> None` is sufficient for mypy to check them.
+# pass mypy. It would be especially useful to have test files listed here,
+# because without them being checked, we don't have a great way of testing our
+# type annotations.
 [[tool.mypy.overrides]]
-disallow_untyped_defs = true
-module = ["xarray.core.rolling_exp"]
+check_untyped_defs = true
+module = [
+  "xarray.core.accessor_dt",
+  "xarray.core.accessor_str",
+  "xarray.core.alignment",
+  "xarray.core.rolling_exp",
+  "xarray.core.computation",
+  "xarray.indexes.*",
+]
 
 [tool.ruff]
 builtins = ["ellipsis"]
