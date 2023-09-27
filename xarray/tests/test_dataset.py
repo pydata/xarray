@@ -411,10 +411,14 @@ class TestDataset:
         class Array:
             def __init__(self):
                 self.shape = (2,)
+                self.ndim = 1
                 self.dtype = np.dtype(np.float64)
 
             def __array_function__(self, *args, **kwargs):
-                pass
+                return NotImplemented
+
+            def __array_ufunc__(self, *args, **kwargs):
+                return NotImplemented
 
             def __repr__(self):
                 return "Custom\nArray"
