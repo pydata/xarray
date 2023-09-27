@@ -44,7 +44,7 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 )
 
 
-def maybe_promote(dtype):
+def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, float]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
