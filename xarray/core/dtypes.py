@@ -8,7 +8,7 @@ import numpy as np
 from xarray.core import utils
 
 if TYPE_CHECKING:
-    from xarray.types import Scalar
+    from xarray.core.types import Scalar
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
