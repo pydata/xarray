@@ -64,7 +64,6 @@ if TYPE_CHECKING:
         PadReflectOptions,
         QuantileMethods,
         Self,
-        T_DuckArray,
     )
 
 NON_NANOSECOND_WARNING = (
