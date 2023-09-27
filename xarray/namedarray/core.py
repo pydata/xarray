@@ -4,7 +4,7 @@ import copy
 import math
 import sys
 import typing
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Mapping
 
 import numpy as np
 
@@ -12,18 +12,13 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import Default, _default
+from xarray.namedarray.arithmetic import NamedArrayArithmetic
+from xarray.namedarray.types import Dims, DimsInput, T_DuckArray
 from xarray.namedarray.utils import (
-    T_DuckArray,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
-
-if typing.TYPE_CHECKING:
-    T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
-    DimsInput = typing.Union[str, Iterable[Hashable]]
-    Dims = tuple[Hashable, ...]
-
 
 try:
     if sys.version_info >= (3, 11):
@@ -68,7 +63,7 @@ def as_compatible_data(
     return typing.cast(T_DuckArray, np.asarray(data))
 
 
-class NamedArray:
+class NamedArray(NamedArrayArithmetic):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
