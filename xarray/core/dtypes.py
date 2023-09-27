@@ -62,7 +62,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Scalar]:
     """
     # N.B. these casting rules should match pandas
     if np.issubdtype(dtype, np.floating):
-        fill_value = np.nan
+        fill_value: Scalar = np.nan
     elif np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
