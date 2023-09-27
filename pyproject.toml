@@ -129,6 +129,7 @@ module = ["xarray.core.rolling_exp"]
 
 # Use strict = true whenever namedarray has become standalone. In the meantime
 # don't forget to add all new files related to namedarray here:
+# ref: https://mypy.readthedocs.io/en/stable/existing_code.html#introduce-stricter-options
 [[tool.mypy.overrides]]
 # Start off with these
 warn_unused_configs = true
