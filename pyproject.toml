@@ -118,6 +118,17 @@ module = [
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
 ]
 
+# Gradually we want to add more modules to this list, ratcheting up our total
+# coverage. Once a module is here, functions require annotations in order to
+# pass mypy. It would be especially useful to have tests here, because without
+# annotating test functions, we don't have a great way of testing our type
+# annotations — even with just `-> None` is sufficient for mypy to check them.
+[[tool.mypy.overrides]]
+disallow_untyped_defs = true
+module = ["xarray.core.rolling_exp"]
+
+# Use strict = true whenever namedarray has become standalone. In the meantime
+# don't forget to add all new files related to namedarray here:
 [[tool.mypy.overrides]]
 # Start off with these
 warn_unused_configs = true
@@ -149,15 +160,6 @@ no_implicit_reexport = true
 warn_return_any = true
 
 module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
-
-# Gradually we want to add more modules to this list, ratcheting up our total
-# coverage. Once a module is here, functions require annotations in order to
-# pass mypy. It would be especially useful to have tests here, because without
-# annotating test functions, we don't have a great way of testing our type
-# annotations — even with just `-> None` is sufficient for mypy to check them.
-[[tool.mypy.overrides]]
-disallow_untyped_defs = true
-module = ["xarray.core.rolling_exp"]
 
 [tool.ruff]
 builtins = ["ellipsis"]
