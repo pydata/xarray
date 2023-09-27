@@ -118,6 +118,10 @@ module = [
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
 ]
 
+[[tool.mypy.overrides]]
+strict = true
+module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
+
 # Gradually we want to add more modules to this list, ratcheting up our total
 # coverage. Once a module is here, functions require annotations in order to
 # pass mypy. It would be especially useful to have tests here, because without
@@ -126,10 +130,6 @@ module = [
 [[tool.mypy.overrides]]
 disallow_untyped_defs = true
 module = ["xarray.core.rolling_exp"]
-
-[[tool.mypy.overrides]]
-strict = true
-module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
 [tool.ruff]
 builtins = ["ellipsis"]
