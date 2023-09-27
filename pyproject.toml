@@ -125,7 +125,7 @@ module = [
 # annotations — even with just `-> None` is sufficient for mypy to check them.
 [[tool.mypy.overrides]]
 disallow_untyped_defs = true
-module = ["xarray.core.rolling_exp"]
+module = ["xarray.core.rolling_exp", "xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
 [tool.ruff]
 builtins = ["ellipsis"]
