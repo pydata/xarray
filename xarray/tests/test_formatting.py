@@ -549,7 +549,7 @@ def test_inline_variable_array_repr_custom_repr() -> None:
 
             return formatted
 
-        def __array_function__(self, *args, **kwargs):
+        def __array_namespace__(self, *args, **kwargs):
             return NotImplemented
 
         @property

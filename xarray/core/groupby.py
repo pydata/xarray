@@ -699,7 +699,7 @@ class GroupBy(Generic[T_Xarray]):
 
     _groups: dict[GroupKey, GroupIndex] | None
     _dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None
-    _sizes: Frozen[Hashable, int] | None
+    _sizes: Mapping[Hashable, int] | None
 
     def __init__(
         self,
@@ -746,7 +746,7 @@ class GroupBy(Generic[T_Xarray]):
         self._sizes = None
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
