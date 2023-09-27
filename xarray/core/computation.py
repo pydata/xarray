@@ -8,12 +8,11 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence, Set
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Iterator,
     Literal,
     TypeVar,
     Union,
