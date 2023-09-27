@@ -62,26 +62,30 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Scalar]:
     """
     # N.B. these casting rules should match pandas
     if np.issubdtype(dtype, np.floating):
+        dtype_: np.typing.DTypeLike = dtype
         fill_value: Scalar = np.nan
     elif np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
+        dtype_ = dtype
     elif np.issubdtype(dtype, np.integer):
-        dtype = np.float32 if dtype.itemsize <= 2 else np.float64
+        dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
     elif np.issubdtype(dtype, np.complexfloating):
+        dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
+        dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
-        dtype = object
+        dtype_ = object
         fill_value = np.nan
 
-    dtype = np.dtype(dtype)
-    fill_value = dtype.type(fill_value)
-    return dtype, fill_value
+    dtype_out = np.dtype(dtype_)
+    fill_value = dtype_out.type(fill_value)
+    return dtype_out, fill_value
 
 
 NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
