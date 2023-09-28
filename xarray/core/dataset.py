@@ -1478,7 +1478,7 @@ class Dataset(
     if TYPE_CHECKING:
         # needed because __getattr__ is returning Any and otherwise
         # this class counts as part of the SupportsArray Protocol
-        __array__ = None
+        __array__ = None  # type: ignore[var-annotated,unused-ignore]
 
     else:
 

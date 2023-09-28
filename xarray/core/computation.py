@@ -571,7 +571,7 @@ def apply_groupby_func(func, *args):
     assert groupbys, "must have at least one groupby to iterate over"
     first_groupby = groupbys[0]
     (grouper,) = first_groupby.groupers
-    if any(not grouper.group.equals(gb.groupers[0].group) for gb in groupbys[1:]):  # type: ignore
+    if any(not grouper.group.equals(gb.groupers[0].group) for gb in groupbys[1:]):  # type: ignore[union-attr]
         raise ValueError(
             "apply_ufunc can only perform operations over "
             "multiple GroupBy objects at once if they are all "
@@ -583,8 +583,9 @@ def apply_groupby_func(func, *args):
 
     iterators = []
     for arg in args:
+        iterator: Iterator[Any]
         if isinstance(arg, GroupBy):
-            iterator: Iterator = (value for _, value in arg)
+            iterator = (value for _, value in arg)
         elif hasattr(arg, "dims") and grouped_dim in arg.dims:
             if isinstance(arg, Variable):
                 raise ValueError(
@@ -599,7 +600,7 @@ def apply_groupby_func(func, *args):
 
     applied: Iterator = (func(*zipped_args) for zipped_args in zip(*iterators))
     applied_example, applied = peek_at(applied)
-    combine = first_groupby._combine  # type: ignore
+    combine = first_groupby._combine  # type: ignore[attr-defined]
     if isinstance(applied_example, tuple):
         combined = tuple(combine(output) for output in zip(*applied))
     else:
