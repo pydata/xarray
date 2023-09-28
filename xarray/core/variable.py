@@ -1035,7 +1035,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         data_old = self._data
         if chunkmanager.is_chunked_array(data_old):
-            data_chunked = chunkmanager.rechunk(data_old, chunks)  # type: ignore[arg-type]
+            data_chunked = chunkmanager.rechunk(data_old, chunks)
         else:
             if isinstance(data_old, indexing.ExplicitlyIndexed):
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
@@ -1057,7 +1057,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
             data_chunked = chunkmanager.from_array(
                 ndata,
-                chunks,  # type: ignore[arg-type]
+                chunks,
                 **_from_array_kwargs,
             )
 
