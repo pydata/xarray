@@ -18,6 +18,7 @@ from xarray.tests import (
     assert_identical,
     requires_dask,
     requires_matplotlib,
+    requires_numbagg,
 )
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
@@ -3849,7 +3850,7 @@ class TestDataArray:
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
             method("rolling", y=3),
-            method("rolling_exp", y=3),
+            pytest.param(method("rolling_exp", y=3), mark=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
