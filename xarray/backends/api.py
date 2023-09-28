@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
-from glob import glob
 from io import BytesIO
 from numbers import Number
 from typing import (
@@ -21,7 +20,12 @@ import numpy as np
 
 from xarray import backends, conventions
 from xarray.backends import plugins
-from xarray.backends.common import AbstractDataStore, ArrayWriter, _normalize_path
+from xarray.backends.common import (
+    AbstractDataStore,
+    ArrayWriter,
+    _find_absolute_paths,
+    _normalize_path,
+)
 from xarray.backends.locks import _get_scheduler
 from xarray.core import indexing
 from xarray.core.combine import (
@@ -484,6 +488,9 @@ def open_dataset(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -687,6 +694,9 @@ def open_dataarray(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -926,7 +936,9 @@ def open_mfdataset(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     **kwargs : optional
-        Additional arguments passed on to :py:func:`xarray.open_dataset`.
+        Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
+        overview of some of the possible options, see the documentation of
+        :py:func:`xarray.open_dataset`
 
     Returns
     -------
@@ -961,43 +973,20 @@ def open_mfdataset(
     ...     "file_*.nc", concat_dim="time", preprocess=partial_func
     ... )  # doctest: +SKIP
 
+    It is also possible to use any argument to ``open_dataset`` together
+    with ``open_mfdataset``, such as for example ``drop_variables``:
+
+    >>> ds = xr.open_mfdataset(
+    ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
+    ... )  # doctest: +SKIP
+
     References
     ----------
 
     .. [1] https://docs.xarray.dev/en/stable/dask.html
     .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
-    if isinstance(paths, str):
-        if is_remote_uri(paths) and engine == "zarr":
-            try:
-                from fsspec.core import get_fs_token_paths
-            except ImportError as e:
-                raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
-                ) from e
-
-            fs, _, _ = get_fs_token_paths(
-                paths,
-                mode="rb",
-                storage_options=kwargs.get("backend_kwargs", {}).get(
-                    "storage_options", {}
-                ),
-                expand=False,
-            )
-            tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
-        elif is_remote_uri(paths):
-            raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs "
-                f"unless engine='zarr' is specified. Got paths: {paths}. "
-                "Instead, supply paths as an explicit list of strings."
-            )
-        else:
-            paths = sorted(glob(_normalize_path(paths)))
-    elif isinstance(paths, os.PathLike):
-        paths = [os.fspath(paths)]
-    else:
-        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
+    paths = _find_absolute_paths(paths, engine=engine, **kwargs)
 
     if not paths:
         raise OSError("no files to open")
@@ -1073,8 +1062,8 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                "{} is an invalid option for the keyword argument"
-                " ``combine``".format(combine)
+                f"{combine} is an invalid option for the keyword argument"
+                " ``combine``"
             )
     except ValueError:
         for ds in datasets:
@@ -1546,6 +1535,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore:
     ...
@@ -1569,6 +1559,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed:
     ...
@@ -1589,6 +1580,7 @@ def to_zarr(
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
+    write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
@@ -1682,6 +1674,7 @@ def to_zarr(
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
         zarr_version=zarr_version,
+        write_empty=write_empty_chunks,
     )
 
     if mode in ["a", "r+"]:

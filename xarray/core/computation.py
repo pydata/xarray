@@ -17,6 +17,7 @@ from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.alignment import align, deep_align
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
+from xarray.core.formatting import limit_lines
 from xarray.core.indexes import Index, filter_indexes_from_coords
 from xarray.core.merge import merge_attrs, merge_coordinates_without_align
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -32,6 +33,8 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import CombineAttrsOptions, JoinOptions
 
+    MissingCoreDimOptions = Literal["raise", "copy", "drop"]
+
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
@@ -42,6 +45,7 @@ def _first_of_type(args, kind):
     for arg in args:
         if isinstance(arg, kind):
             return arg
+
     raise ValueError("This should be unreachable.")
 
 
@@ -347,7 +351,7 @@ def assert_and_return_exact_match(all_keys):
         if keys != first_keys:
             raise ValueError(
                 "exact match required for all data variable names, "
-                f"but {keys!r} != {first_keys!r}"
+                f"but {list(keys)} != {list(first_keys)}: {set(keys) ^ set(first_keys)} are not in both."
             )
     return first_keys
 
@@ -376,7 +380,7 @@ def collect_dict_values(
     ]
 
 
-def _as_variables_or_variable(arg):
+def _as_variables_or_variable(arg) -> Variable | tuple[Variable]:
     try:
         return arg.variables
     except AttributeError:
@@ -396,8 +400,39 @@ def _unpack_dict_tuples(
     return out
 
 
+def _check_core_dims(signature, variable_args, name):
+    """
+    Chcek if an arg has all the core dims required by the signature.
+
+    Slightly awkward design, of returning the error message. But we want to
+    give a detailed error message, which requires inspecting the variable in
+    the inner loop.
+    """
+    missing = []
+    for i, (core_dims, variable_arg) in enumerate(
+        zip(signature.input_core_dims, variable_args)
+    ):
+        # Check whether all the dims are on the variable. Note that we need the
+        # `hasattr` to check for a dims property, to protect against the case where
+        # a numpy array is passed in.
+        if hasattr(variable_arg, "dims") and set(core_dims) - set(variable_arg.dims):
+            missing += [[i, variable_arg, core_dims]]
+    if missing:
+        message = ""
+        for i, variable_arg, core_dims in missing:
+            message += f"Missing core dims {set(core_dims) - set(variable_arg.dims)} from arg number {i + 1} on a variable named `{name}`:\n{variable_arg}\n\n"
+        message += "Either add the core dimension, or if passing a dataset alternatively pass `on_missing_core_dim` as `copy` or `drop`. "
+        return message
+    return True
+
+
 def apply_dict_of_variables_vfunc(
-    func, *args, signature: _UFuncSignature, join="inner", fill_value=None
+    func,
+    *args,
+    signature: _UFuncSignature,
+    join="inner",
+    fill_value=None,
+    on_missing_core_dim: MissingCoreDimOptions = "raise",
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
@@ -408,7 +443,20 @@ def apply_dict_of_variables_vfunc(
 
     result_vars = {}
     for name, variable_args in zip(names, grouped_by_name):
-        result_vars[name] = func(*variable_args)
+        core_dim_present = _check_core_dims(signature, variable_args, name)
+        if core_dim_present is True:
+            result_vars[name] = func(*variable_args)
+        else:
+            if on_missing_core_dim == "raise":
+                raise ValueError(core_dim_present)
+            elif on_missing_core_dim == "copy":
+                result_vars[name] = variable_args[0]
+            elif on_missing_core_dim == "drop":
+                pass
+            else:
+                raise ValueError(
+                    f"Invalid value for `on_missing_core_dim`: {on_missing_core_dim!r}"
+                )
 
     if signature.num_outputs > 1:
         return _unpack_dict_tuples(result_vars, signature.num_outputs)
@@ -441,6 +489,7 @@ def apply_dataset_vfunc(
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
+    on_missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Dataset | tuple[Dataset, ...]:
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -467,7 +516,12 @@ def apply_dataset_vfunc(
     args = tuple(getattr(arg, "data_vars", arg) for arg in args)
 
     result_vars = apply_dict_of_variables_vfunc(
-        func, *args, signature=signature, join=dataset_join, fill_value=fill_value
+        func,
+        *args,
+        signature=signature,
+        join=dataset_join,
+        fill_value=fill_value,
+        on_missing_core_dim=on_missing_core_dim,
     )
 
     out: Dataset | tuple[Dataset, ...]
@@ -595,17 +649,9 @@ def broadcast_compat_data(
         return data
 
     set_old_dims = set(old_dims)
-    missing_core_dims = [d for d in core_dims if d not in set_old_dims]
-    if missing_core_dims:
-        raise ValueError(
-            "operand to apply_ufunc has required core dimensions {}, but "
-            "some of these dimensions are absent on an input variable: {}".format(
-                list(core_dims), missing_core_dims
-            )
-        )
-
     set_new_dims = set(new_dims)
     unexpected_dims = [d for d in old_dims if d not in set_new_dims]
+
     if unexpected_dims:
         raise ValueError(
             "operand to apply_ufunc encountered unexpected "
@@ -659,6 +705,7 @@ def apply_variable_ufunc(
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
+    from xarray.core.formatting import short_array_repr
     from xarray.core.variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -766,11 +813,11 @@ def apply_variable_ufunc(
         not isinstance(result_data, tuple) or len(result_data) != signature.num_outputs
     ):
         raise ValueError(
-            "applied function does not have the number of "
-            "outputs specified in the ufunc signature. "
-            "Result is not a tuple of {} elements: {!r}".format(
-                signature.num_outputs, result_data
-            )
+            f"applied function does not have the number of "
+            f"outputs specified in the ufunc signature. "
+            f"Received a {type(result_data)} with {len(result_data)} elements. "
+            f"Expected a tuple of {signature.num_outputs} elements:\n\n"
+            f"{limit_lines(repr(result_data), limit=10)}"
         )
 
     objs = _all_of_type(args, Variable)
@@ -784,21 +831,22 @@ def apply_variable_ufunc(
         data = as_compatible_data(data)
         if data.ndim != len(dims):
             raise ValueError(
-                "applied function returned data with unexpected "
+                "applied function returned data with an unexpected "
                 f"number of dimensions. Received {data.ndim} dimension(s) but "
-                f"expected {len(dims)} dimensions with names: {dims!r}"
+                f"expected {len(dims)} dimensions with names {dims!r}, from:\n\n"
+                f"{short_array_repr(data)}"
             )
 
         var = Variable(dims, data, fastpath=True)
         for dim, new_size in var.sizes.items():
             if dim in dim_sizes and new_size != dim_sizes[dim]:
                 raise ValueError(
-                    "size of dimension {!r} on inputs was unexpectedly "
-                    "changed by applied function from {} to {}. Only "
+                    f"size of dimension '{dim}' on inputs was unexpectedly "
+                    f"changed by applied function from {dim_sizes[dim]} to {new_size}. Only "
                     "dimensions specified in ``exclude_dims`` with "
-                    "xarray.apply_ufunc are allowed to change size.".format(
-                        dim, dim_sizes[dim], new_size
-                    )
+                    "xarray.apply_ufunc are allowed to change size. "
+                    "The data returned was:\n\n"
+                    f"{short_array_repr(data)}"
                 )
 
         var.attrs = attrs
@@ -845,11 +893,12 @@ def apply_ufunc(
     dataset_fill_value: object = _NO_FILL_VALUE,
     keep_attrs: bool | str | None = None,
     kwargs: Mapping | None = None,
-    dask: str = "forbidden",
+    dask: Literal["forbidden", "allowed", "parallelized"] = "forbidden",
     output_dtypes: Sequence | None = None,
     output_sizes: Mapping[Any, int] | None = None,
     meta: Any = None,
     dask_gufunc_kwargs: dict[str, Any] | None = None,
+    on_missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -963,6 +1012,8 @@ def apply_ufunc(
         :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the
         ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
         a future version.
+    on_missing_core_dim : {"raise", "copy", "drop"}, default: "raise"
+        How to handle missing core dimensions on input variables.
 
     Returns
     -------
@@ -1191,6 +1242,7 @@ def apply_ufunc(
             dataset_join=dataset_join,
             fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
+            on_missing_core_dim=on_missing_core_dim,
         )
     # feed DataArray apply_variable_ufunc through apply_dataarray_vfunc
     elif any(isinstance(a, DataArray) for a in args):
@@ -1286,7 +1338,7 @@ def cov(
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray is supported."
-            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+            f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
 
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
@@ -1364,7 +1416,7 @@ def corr(da_a: T_DataArray, da_b: T_DataArray, dim: Dims = None) -> T_DataArray:
     if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray is supported."
-            "Given {}.".format([type(arr) for arr in [da_a, da_b]])
+            f"Given {[type(arr) for arr in [da_a, da_b]]}."
         )
 
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
@@ -1402,14 +1454,14 @@ def _cov_corr(
     ) / (valid_count)
 
     if method == "cov":
-        return cov  # type: ignore[return-value]
+        return cov
 
     else:
         # compute std + corr
         da_a_std = da_a.std(dim=dim)
         da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr  # type: ignore[return-value]
+        return corr
 
 
 def cross(
@@ -1707,7 +1759,7 @@ def dot(
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
-            "Given {}.".format([type(arr) for arr in arrays])
+            f"Given {[type(arr) for arr in arrays]}."
         )
 
     if len(arrays) == 0:
@@ -2046,9 +2098,13 @@ def _calc_idxminmax(
         raise ValueError("Must supply 'dim' argument for multidimensional arrays")
 
     if dim not in array.dims:
-        raise KeyError(f'Dimension "{dim}" not in dimension')
+        raise KeyError(
+            f"Dimension {dim!r} not found in array dimensions {array.dims!r}"
+        )
     if dim not in array.coords:
-        raise KeyError(f'Dimension "{dim}" does not have coordinates')
+        raise KeyError(
+            f"Dimension {dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
+        )
 
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"

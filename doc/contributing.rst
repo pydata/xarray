@@ -518,7 +518,7 @@ See the `Installation <https://docs.xarray.dev/en/stable/getting-started-guide/i
 See the `Quick Overview <https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html>`_
 
 Including figures and files
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Image files can be directly included in pages with the ``image::`` directive.
 

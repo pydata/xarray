@@ -193,11 +193,9 @@ class TestVariable(DaskTestCase):
 
     def test_repr(self):
         expected = dedent(
-            """\
+            f"""\
             <xarray.Variable (x: 4, y: 6)>
-            {!r}""".format(
-                self.lazy_var.data
-            )
+            {self.lazy_var.data!r}"""
         )
         assert expected == repr(self.lazy_var)
 
@@ -300,6 +298,17 @@ class TestVariable(DaskTestCase):
 
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
+
+    def test_tokenize_empty_attrs(self) -> None:
+        # Issue #6970
+        assert self.eager_var._attrs is None
+        expected = dask.base.tokenize(self.eager_var)
+        assert self.eager_var.attrs == self.eager_var._attrs == {}
+        assert (
+            expected
+            == dask.base.tokenize(self.eager_var)
+            == dask.base.tokenize(self.lazy_var.compute())
+        )
 
     @requires_pint
     def test_tokenize_duck_dask_array(self):
@@ -656,14 +665,12 @@ class TestDataArrayAndDataset(DaskTestCase):
         nonindex_coord = build_dask_array("coord")
         a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
         expected = dedent(
-            """\
+            f"""\
             <xarray.DataArray 'data' (x: 1)>
-            {!r}
+            {data!r}
             Coordinates:
                 y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x""".format(
-                data
-            )
+            Dimensions without coordinates: x"""
         )
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array

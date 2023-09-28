@@ -218,7 +218,46 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
-    def test_index_repr(self):
+    def test_index_repr(self) -> None:
+        from xarray.core.indexes import Index
+
+        class CustomIndex(Index):
+            names: tuple[str, ...]
+
+            def __init__(self, names: tuple[str, ...]):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        coord_names = ("x", "y")
+        index = CustomIndex(coord_names)
+        names = ("x",)
+
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in normal
+        assert len(normal.splitlines()) == len(names)
+        assert "CustomIndex" in normal
+
+        class IndexWithInlineRepr(CustomIndex):
+            def _repr_inline_(self, max_width: int):
+                return f"CustomIndex[{', '.join(self.names)}]"
+
+        index = IndexWithInlineRepr(coord_names)
+        inline = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in inline
+        assert index._repr_inline_(max_width=40) in inline
+
+    @pytest.mark.parametrize(
+        "names",
+        (
+            ("x",),
+            ("x", "y"),
+            ("x", "y", "z"),
+            ("x", "y", "z", "a"),
+        ),
+    )
+    def test_index_repr_grouping(self, names) -> None:
         from xarray.core.indexes import Index
 
         class CustomIndex(Index):
@@ -228,20 +267,20 @@ class TestFormatting:
             def __repr__(self):
                 return f"CustomIndex(coords={self.names})"
 
-        coord_names = ["x", "y"]
-        index = CustomIndex(coord_names)
-        name = "x"
+        index = CustomIndex(names)
 
-        normal = formatting.summarize_index(name, index, col_width=20)
-        assert name in normal
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert all(name in normal for name in names)
+        assert len(normal.splitlines()) == len(names)
         assert "CustomIndex" in normal
 
-        CustomIndex._repr_inline_ = (
-            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
-        )
-        inline = formatting.summarize_index(name, index, col_width=20)
-        assert name in inline
-        assert index._repr_inline_(max_width=40) in inline
+        hint_chars = [line[2] for line in normal.splitlines()]
+
+        if len(names) <= 1:
+            assert hint_chars == [" "]
+        else:
+            assert hint_chars[0] == "┌" and hint_chars[-1] == "└"
+            assert len(names) == 2 or hint_chars[1:-1] == ["│"] * (len(names) - 2)
 
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
@@ -510,7 +549,7 @@ def test_inline_variable_array_repr_custom_repr() -> None:
 
             return formatted
 
-        def __array_function__(self, *args, **kwargs):
+        def __array_namespace__(self, *args, **kwargs):
             return NotImplemented
 
         @property

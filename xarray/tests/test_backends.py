@@ -13,9 +13,10 @@ import sys
 import tempfile
 import uuid
 import warnings
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from contextlib import ExitStack
 from io import BytesIO
+from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -53,7 +54,6 @@ from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import array_type
 from xarray.tests import (
-    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -525,7 +525,6 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual["x"].encoding["_Encoding"] == "ascii"
 
-    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self) -> None:
         times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
         expected = Dataset({"t": ("t", times), "t0": times[0]})
@@ -813,7 +812,7 @@ class DatasetIOBase:
     def test_dropna(self) -> None:
         # regression test for GH:issue:1694
         a = np.random.randn(4, 3)
-        a[1, 1] = np.NaN
+        a[1, 1] = np.nan
         in_memory = xr.Dataset(
             {"a": (("y", "x"), a)}, coords={"y": np.arange(4), "x": np.arange(3)}
         )
@@ -1535,6 +1534,83 @@ class NetCDF4Base(NetCDFBase):
                 ds["x"].encoding["chunksizes"], actual["x"].encoding["chunksizes"]
             )
 
+    def test_preferred_chunks_is_present(self) -> None:
+        ds = Dataset({"x": [1, 2, 3]})
+        chunksizes = (2,)
+        ds.variables["x"].encoding = {"chunksizes": chunksizes}
+
+        with self.roundtrip(ds) as actual:
+            assert actual["x"].encoding["preferred_chunks"] == {"x": 2}
+
+    @requires_dask
+    def test_auto_chunking_is_based_on_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+
+        with dask.config.set({"array.chunk-size": "100KiB"}):
+            with self.chunked_roundtrip(
+                (1, y_size, x_size),
+                (1, y_chunksize, x_chunksize),
+                open_kwargs={"chunks": "auto"},
+            ) as ds:
+                t_chunks, y_chunks, x_chunks = ds["image"].data.chunks
+                assert all(np.asanyarray(y_chunks) == y_chunksize)
+                # Check that the chunk size is a multiple of the file chunk size
+                assert all(np.asanyarray(x_chunks) % x_chunksize == 0)
+
+    @requires_dask
+    def test_base_chunking_uses_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+
+        with self.chunked_roundtrip(
+            (1, y_size, x_size),
+            (1, y_chunksize, x_chunksize),
+            open_kwargs={"chunks": {}},
+        ) as ds:
+            for chunksizes, expected in zip(
+                ds["image"].data.chunks, (1, y_chunksize, x_chunksize)
+            ):
+                assert all(np.asanyarray(chunksizes) == expected)
+
+    @contextlib.contextmanager
+    def chunked_roundtrip(
+        self,
+        array_shape: tuple[int, int, int],
+        chunk_sizes: tuple[int, int, int],
+        open_kwargs: dict[str, Any] | None = None,
+    ) -> Generator[Dataset, None, None]:
+        t_size, y_size, x_size = array_shape
+        t_chunksize, y_chunksize, x_chunksize = chunk_sizes
+
+        image = xr.DataArray(
+            np.arange(t_size * x_size * y_size, dtype=np.int16).reshape(
+                (t_size, y_size, x_size)
+            ),
+            dims=["t", "y", "x"],
+        )
+        image.encoding = {"chunksizes": (t_chunksize, y_chunksize, x_chunksize)}
+        dataset = xr.Dataset(dict(image=image))
+
+        with self.roundtrip(dataset, open_kwargs=open_kwargs) as ds:
+            yield ds
+
+    def test_preferred_chunks_are_disk_chunk_sizes(self) -> None:
+        x_size = y_size = 1000
+        y_chunksize = y_size
+        x_chunksize = 10
+
+        with self.chunked_roundtrip(
+            (1, y_size, x_size), (1, y_chunksize, x_chunksize)
+        ) as ds:
+            assert ds["image"].encoding["preferred_chunks"] == {
+                "t": 1,
+                "y": y_chunksize,
+                "x": x_chunksize,
+            }
+
     def test_encoding_chunksizes_unlimited(self) -> None:
         # regression test for GH1225
         ds = Dataset({"x": [1, 2, 3], "y": ("x", [2, 3, 4])})
@@ -1610,6 +1686,20 @@ class NetCDF4Base(NetCDFBase):
         with self.roundtrip(ds) as actual:
             assert actual.encoding["unlimited_dims"] == set("y")
             assert_equal(ds, actual)
+
+    def test_raise_on_forward_slashes_in_names(self) -> None:
+        # test for forward slash in variable names and dimensions
+        # see GH 7943
+        data_vars: list[dict[str, Any]] = [
+            {"PASS/FAIL": (["PASSFAIL"], np.array([0]))},
+            {"PASS/FAIL": np.array([0])},
+            {"PASSFAIL": (["PASS/FAIL"], np.array([0]))},
+        ]
+        for dv in data_vars:
+            ds = Dataset(data_vars=dv)
+            with pytest.raises(ValueError, match="Forward slashes '/' are not allowed"):
+                with self.roundtrip(ds):
+                    pass
 
 
 @requires_netCDF4
@@ -1914,6 +2004,8 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
             save_kwargs = {"chunk_store": chunk_store}
             self.save(expected, store_target, **save_kwargs)
+            # the chunk store must have been populated with some entries
+            assert len(chunk_store) > 0
             open_kwargs = {"backend_kwargs": {"chunk_store": chunk_store}}
             with self.open(store_target, **open_kwargs) as ds:
                 assert_equal(ds, expected)
@@ -1937,7 +2029,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks == original[k].chunks
 
     @requires_dask
-    @pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+    @pytest.mark.filterwarnings("ignore:The specified chunks separate:UserWarning")
     def test_manual_chunk(self) -> None:
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
@@ -2714,6 +2806,86 @@ class TestZarrDirectoryStore(ZarrBase):
             yield group
 
 
+@requires_zarr
+class TestZarrWriteEmpty(TestZarrDirectoryStore):
+    @contextlib.contextmanager
+    def temp_dir(self) -> Iterator[tuple[str, str]]:
+        with tempfile.TemporaryDirectory() as d:
+            store = os.path.join(d, "test.zarr")
+            yield d, store
+
+    @contextlib.contextmanager
+    def roundtrip_dir(
+        self,
+        data,
+        store,
+        save_kwargs=None,
+        open_kwargs=None,
+        allow_cleanup_failure=False,
+    ) -> Iterator[Dataset]:
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
+
+        data.to_zarr(store, **save_kwargs, **self.version_kwargs)
+        with xr.open_dataset(
+            store, engine="zarr", **open_kwargs, **self.version_kwargs
+        ) as ds:
+            yield ds
+
+    @pytest.mark.parametrize("write_empty", [True, False])
+    def test_write_empty(self, write_empty: bool) -> None:
+        if not write_empty:
+            expected = ["0.1.0", "1.1.0"]
+        else:
+            expected = [
+                "0.0.0",
+                "0.0.1",
+                "0.1.0",
+                "0.1.1",
+                "1.0.0",
+                "1.0.1",
+                "1.1.0",
+                "1.1.1",
+            ]
+
+        ds = xr.Dataset(
+            data_vars={
+                "test": (
+                    ("Z", "Y", "X"),
+                    np.array([np.nan, np.nan, 1.0, np.nan]).reshape((1, 2, 2)),
+                )
+            }
+        )
+
+        if has_dask:
+            ds["test"] = ds["test"].chunk((1, 1, 1))
+            encoding = None
+        else:
+            encoding = {"test": {"chunks": (1, 1, 1)}}
+
+        with self.temp_dir() as (d, store):
+            ds.to_zarr(
+                store,
+                mode="w",
+                encoding=encoding,
+                write_empty_chunks=write_empty,
+            )
+
+            with self.roundtrip_dir(
+                ds,
+                store,
+                {"mode": "a", "append_dim": "Z", "write_empty_chunks": write_empty},
+            ) as a_ds:
+                expected_ds = xr.concat([ds, ds], dim="Z")
+
+                assert_identical(a_ds, expected_ds)
+
+                ls = listdir(os.path.join(store, "test"))
+                assert set(expected) == set([file for file in ls if file[0] != "."])
+
+
 class ZarrBaseV3(ZarrBase):
     zarr_version = 3
 
@@ -2977,8 +3149,9 @@ class TestH5NetCDFData(NetCDF4Base):
     def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": True}
-        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_equal(expected, actual)
+        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
@@ -2992,14 +3165,14 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:You are writing invalid netcdf features")
     def test_numpy_bool_(self) -> None:
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
         expected = Dataset({"x": ("y", np.ones(5), {"numpy_bool": np.bool_(True)})})
         save_kwargs = {"invalid_netcdf": True}
-        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_identical(expected, actual)
+        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_identical(expected, actual)
 
     def test_cross_engine_read_write_netcdf4(self) -> None:
         # Drop dim3, because its labels include strings. These appear to be
@@ -5084,7 +5257,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
-@pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+@pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consintency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
     dask_arr = da.from_array(

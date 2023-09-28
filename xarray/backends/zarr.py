@@ -368,6 +368,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_synchronizer",
         "_write_region",
         "_safe_chunks",
+        "_write_empty",
     )
 
     @classmethod
@@ -386,6 +387,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        write_empty: bool | None = None,
     ):
         import zarr
 
@@ -417,7 +419,7 @@ class ZarrStore(AbstractWritableDataStore):
             if consolidated is None:
                 consolidated = False
 
-        if chunk_store:
+        if chunk_store is not None:
             open_kwargs["chunk_store"] = chunk_store
             if consolidated is None:
                 consolidated = False
@@ -457,6 +459,7 @@ class ZarrStore(AbstractWritableDataStore):
             append_dim,
             write_region,
             safe_chunks,
+            write_empty,
         )
 
     def __init__(
@@ -467,6 +470,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        write_empty: bool | None = None,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -477,6 +481,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._append_dim = append_dim
         self._write_region = write_region
         self._safe_chunks = safe_chunks
+        self._write_empty = write_empty
 
     @property
     def ds(self):
@@ -648,6 +653,8 @@ class ZarrStore(AbstractWritableDataStore):
             dimensions.
         """
 
+        import zarr
+
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -665,7 +672,14 @@ class ZarrStore(AbstractWritableDataStore):
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
                 # and append_dim.
-                zarr_array = self.zarr_group[name]
+                if self._write_empty is not None:
+                    zarr_array = zarr.open(
+                        store=self.zarr_group.store,
+                        path=f"{self.zarr_group.name}/{name}",
+                        write_empty_chunks=self._write_empty,
+                    )
+                else:
+                    zarr_array = self.zarr_group[name]
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -679,8 +693,25 @@ class ZarrStore(AbstractWritableDataStore):
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
+
+                if self._write_empty is not None:
+                    if (
+                        "write_empty_chunks" in encoding
+                        and encoding["write_empty_chunks"] != self._write_empty
+                    ):
+                        raise ValueError(
+                            'Differing "write_empty_chunks" values in encoding and parameters'
+                            f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
+                        )
+                    else:
+                        encoding["write_empty_chunks"] = self._write_empty
+
                 zarr_array = self.zarr_group.create(
-                    name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
+                    name,
+                    shape=shape,
+                    dtype=dtype,
+                    fill_value=fill_value,
+                    **encoding,
                 )
                 zarr_array = _put_attrs(zarr_array, encoded_attrs)
 
@@ -812,7 +843,7 @@ def open_zarr(
         possible, otherwise defaulting to 2.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict, optional
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create

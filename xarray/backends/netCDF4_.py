@@ -194,11 +194,20 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
         return ds
 
 
+def _ensure_no_forward_slash_in_name(name):
+    if "/" in name:
+        raise ValueError(
+            f"Forward slashes '/' are not allowed in variable and dimension names (got {name!r}). "
+            "Forward slashes are used as hierarchy-separators for "
+            "HDF5-based files ('netcdf4'/'h5netcdf')."
+        )
+
+
 def _ensure_fill_value_valid(data, attributes):
     # work around for netCDF4/scipy issue where _FillValue has the wrong type:
     # https://github.com/Unidata/netcdf4-python/issues/271
     if data.dtype.kind == "S" and "_FillValue" in attributes:
-        attributes["_FillValue"] = np.string_(attributes["_FillValue"])
+        attributes["_FillValue"] = np.bytes_(attributes["_FillValue"])
 
 
 def _force_native_endianness(var):
@@ -423,6 +432,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             else:
                 encoding["contiguous"] = False
                 encoding["chunksizes"] = tuple(chunking)
+                encoding["preferred_chunks"] = dict(zip(var.dimensions, chunking))
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()
@@ -453,6 +463,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         }
 
     def set_dimension(self, name, length, is_unlimited=False):
+        _ensure_no_forward_slash_in_name(name)
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, size=dim_length)
 
@@ -476,6 +487,8 @@ class NetCDF4DataStore(WritableCFDataStore):
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
+        _ensure_no_forward_slash_in_name(name)
+
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )
@@ -536,7 +549,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
 
-    It can open ".nc", ".nc4", ".cdf" files and will be choosen
+    It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.
 
     Additionally it can open valid HDF5 files, see

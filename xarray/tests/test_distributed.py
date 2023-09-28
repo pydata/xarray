@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
-from packaging.version import Version
 
 if TYPE_CHECKING:
     import dask
@@ -127,7 +126,8 @@ def test_dask_distributed_write_netcdf_with_dimensionless_variables(
 
 @requires_cftime
 @requires_netCDF4
-def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
+@pytest.mark.parametrize("parallel", (True, False))
+def test_open_mfdataset_can_open_files_with_cftime_index(parallel, tmp_path):
     T = xr.cftime_range("20010101", "20010501", calendar="360_day")
     Lon = np.arange(100)
     data = np.random.random((T.size, Lon.size))
@@ -136,9 +136,59 @@ def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
     da.to_netcdf(file_path)
     with cluster() as (s, [a, b]):
         with Client(s["address"]):
-            for parallel in (False, True):
-                with xr.open_mfdataset(file_path, parallel=parallel) as tf:
-                    assert_identical(tf["test"], da)
+            with xr.open_mfdataset(file_path, parallel=parallel) as tf:
+                assert_identical(tf["test"], da)
+
+
+@requires_cftime
+@requires_netCDF4
+@pytest.mark.parametrize("parallel", (True, False))
+def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
+    lon = np.arange(100)
+    time = xr.cftime_range("20010101", periods=100, calendar="360_day")
+    data = np.random.random((time.size, lon.size))
+    da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
+
+    fnames = []
+    for i in range(0, 100, 10):
+        fname = tmp_path / f"test_{i}.nc"
+        da.isel(time=slice(i, i + 10)).to_netcdf(fname)
+        fnames.append(fname)
+
+    with cluster() as (s, [a, b]):
+        with Client(s["address"]):
+            with xr.open_mfdataset(
+                fnames, parallel=parallel, concat_dim="time", combine="nested"
+            ) as tf:
+                assert_identical(tf["test"], da)
+
+
+# TODO: move this to test_backends.py
+@requires_cftime
+@requires_netCDF4
+@pytest.mark.parametrize("parallel", (True, False))
+def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
+    if parallel:
+        pytest.skip(
+            "Flaky in CI. Would be a welcome contribution to make a similar test reliable."
+        )
+    lon = np.arange(100)
+    time = xr.cftime_range("20010101", periods=100, calendar="360_day")
+    data = np.random.random((time.size, lon.size))
+    da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
+
+    fnames = []
+    for i in range(0, 100, 10):
+        fname = tmp_path / f"test_{i}.nc"
+        da.isel(time=slice(i, i + 10)).to_netcdf(fname)
+        fnames.append(fname)
+
+    for get in [dask.threaded.get, dask.multiprocessing.get, dask.local.get_sync, None]:
+        with dask.config.set(scheduler=get):
+            with xr.open_mfdataset(
+                fnames, parallel=parallel, concat_dim="time", combine="nested"
+            ) as tf:
+                assert_identical(tf["test"], da)
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
@@ -194,10 +244,6 @@ def test_dask_distributed_zarr_integration_test(
                     assert_allclose(original, computed)
 
 
-@pytest.mark.xfail(
-    condition=Version(distributed.__version__) < Version("2022.02.0"),
-    reason="https://github.com/dask/distributed/pull/5739",
-)
 @gen_cluster(client=True)
 async def test_async(c, s, a, b) -> None:
     x = create_test_data()
@@ -230,10 +276,6 @@ def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
-@pytest.mark.xfail(
-    condition=Version(distributed.__version__) < Version("2022.02.0"),
-    reason="https://github.com/dask/distributed/pull/5739",
-)
 @gen_cluster(client=True)
 async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):

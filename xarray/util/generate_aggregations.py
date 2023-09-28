@@ -22,12 +22,13 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
-from xarray.core.types import Dims
-from xarray.core.utils import contains_only_dask_or_numpy, module_available
+from xarray.core.types import Dims, Self
+from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -49,7 +50,7 @@ class {obj}{cls}Aggregations:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> {obj}:
+    ) -> Self:
         raise NotImplementedError()"""
 
 GROUPBY_PREAMBLE = """
@@ -107,7 +108,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> {obj}:
+    ) -> Self:
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
@@ -185,6 +186,15 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
+_COUNT_SEE_ALSO = """
+        See Also
+        --------
+        pandas.DataFrame.{method}
+        dask.dataframe.DataFrame.{method}
+        {see_also_obj}.{method}
+        :ref:`{docref}`
+            User guide on {docref_description}."""
+
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
@@ -248,7 +258,7 @@ class Method:
         else:
             self.array_method = name
             self.np_example_array = """
-        ...     np.array([1, 2, 3, 1, 2, np.nan])"""
+        ...     np.array([1, 2, 3, 0, 2, np.nan])"""
 
 
 class AggregationGenerator:
@@ -311,7 +321,9 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        yield TEMPLATE_SEE_ALSO.format(
+        see_also = _COUNT_SEE_ALSO if method.name == "count" else TEMPLATE_SEE_ALSO
+        # Fixes broken links mentioned in #8055
+        yield see_also.format(
             **template_kwargs,
             docref=self.docref,
             docref_description=self.docref_description,
@@ -394,7 +406,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and contains_only_dask_or_numpy(self._obj)
+            and contains_only_chunked_or_numpy(self._obj)
         ):
             return self._flox_reduce(
                 func="{method.name}",

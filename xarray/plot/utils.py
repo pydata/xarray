@@ -47,14 +47,6 @@ _MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
 _LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
 
 
-def import_matplotlib_pyplot():
-    """import pyplot"""
-    # TODO: This function doesn't do anything (after #6109), remove it?
-    import matplotlib.pyplot as plt
-
-    return plt
-
-
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
@@ -505,28 +497,29 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
     return plt.axes(**subplot_kws)
 
 
-def _get_units_from_attrs(da) -> str:
+def _get_units_from_attrs(da: DataArray) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
-        units = units.format(str(da.data.units))
-    elif da.attrs.get("units"):
-        units = units.format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = units.format(da.attrs["unit"])
-    else:
-        units = ""
-    return units
+        return units.format(str(da.data.units))
+    if "units" in da.attrs:
+        return units.format(da.attrs["units"])
+    if "unit" in da.attrs:
+        return units.format(da.attrs["unit"])
+    return ""
 
 
-def label_from_attrs(da, extra: str = "") -> str:
+def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
+    if da is None:
+        return ""
+
     name: str = "{}"
-    if da.attrs.get("long_name"):
+    if "long_name" in da.attrs:
         name = name.format(da.attrs["long_name"])
-    elif da.attrs.get("standard_name"):
+    elif "standard_name" in da.attrs:
         name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
         name = name.format(da.name)
@@ -774,8 +767,8 @@ def _update_axes(
     yscale: ScaleOptions = None,
     xticks: ArrayLike | None = None,
     yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
 ) -> None:
     """
     Update axes with provided parameters
@@ -1131,7 +1124,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:
+        if type(num) == int:  # noqa: E721
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
@@ -1166,7 +1159,7 @@ def legend_elements(
 
 def _legend_add_subtitle(handles, labels, text):
     """Add a subtitle to legend handles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
@@ -1184,7 +1177,7 @@ def _legend_add_subtitle(handles, labels, text):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)
@@ -1438,6 +1431,16 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a).data_is_numeric
         True
+
+        >>> # TODO: Datetime should be numeric right?
+        >>> a = xr.DataArray(pd.date_range("2000-1-1", periods=4))
+        >>> _Normalize(a).data_is_numeric
+        False
+
+        # TODO: Timedelta should be numeric right?
+        >>> a = xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
+        >>> _Normalize(a).data_is_numeric
+        True
         """
         return self._data_is_numeric
 
@@ -1451,7 +1454,7 @@ class _Normalize(Sequence):
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
-        Normalize the values so they're inbetween self._width.
+        Normalize the values so they're in between self._width.
         """
         if self._width is None:
             return y
@@ -1463,7 +1466,7 @@ class _Normalize(Sequence):
             # Use default with if y is constant:
             widths = xdefault + 0 * y
         else:
-            # Normalize inbetween xmin and xmax:
+            # Normalize in between xmin and xmax:
             k = (y - np.min(y)) / diff_maxy_miny
             widths = xmin + k * (xmax - xmin)
         return widths
@@ -1630,7 +1633,7 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        plt = import_matplotlib_pyplot()
+        import matplotlib.pyplot as plt
 
         def _func(x: Any, pos: None | Any = None):
             return f"{self._lookup_arr([x])[0]}"
@@ -1811,8 +1814,8 @@ def _guess_coords_to_plot(
     )
 
     # If dims_plot[k] isn't defined then fill with one of the available dims, unless
-    # one of related mpl kwargs has been used. This should have similiar behaviour as
-    # * plt.plot(x, y) -> Multple lines with different colors if y is 2d.
+    # one of related mpl kwargs has been used. This should have similar behaviour as
+    # * plt.plot(x, y) -> Multiple lines with different colors if y is 2d.
     # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
     for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
         if coords_to_plot.get(k, None) is None and all(
