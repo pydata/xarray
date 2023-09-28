@@ -2548,7 +2548,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3849,23 +3848,21 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(
-                method("rolling", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
-                ),
-            ),
-            pytest.param(
-                method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numbagg functions are not supported by pint"
-                ),
-            ),
+            method("rolling", y=3),
+            method("rolling_exp", y=3),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
     def test_computation_objects(self, func, variant, dtype):
+        if variant == "data":
+            if func.name == "rolling_exp":
+                pytest.xfail(reason="numbagg functions are not supported by pint")
+            elif func.name == "rolling":
+                pytest.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                )
+
         unit = unit_registry.m
 
         variants = {

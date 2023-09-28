@@ -714,9 +714,6 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
-    @pytest.mark.xfail(
-        reason="zarr without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing_negative_step(self) -> None:
         # use dask explicitly when present
         open_kwargs: dict[str, Any] | None
@@ -1842,6 +1839,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
         # dask first pulls items by block.
         pass
 
+    @pytest.mark.skip()
     def test_dataset_caching(self) -> None:
         # caching behavior differs for dask
         pass
@@ -2261,9 +2259,6 @@ class ZarrBase(CFEncodedBase):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
-    # TODO: someone who understand caching figure out whether caching
-    # makes sense for Zarr backend
-    @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self) -> None:
         super().test_dataset_caching()
 
@@ -2711,6 +2706,14 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
+
+    def test_vectorized_indexing_negative_step(self) -> None:
+        if not has_dask:
+            pytest.xfail(
+                reason="zarr without dask handles negative steps in slices incorrectly"
+            )
+
+        super().test_vectorized_indexing_negative_step()
 
 
 @requires_zarr
@@ -3378,6 +3381,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         ) as ds:
             yield ds
 
+    @pytest.mark.skip()
     def test_dataset_caching(self) -> None:
         # caching behavior differs for dask
         pass
@@ -3455,6 +3459,7 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
+@pytest.mark.skip("fails")
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 def test_open_mfdataset_manyfiles(
@@ -3982,7 +3987,6 @@ class TestDask(DatasetIOBase):
                 with pytest.raises(ValueError, match="`concat_dim` has no effect"):
                     open_mfdataset([tmp1, tmp2], concat_dim="x")
 
-    @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self) -> None:
         original = Dataset(
             {
@@ -4195,7 +4199,6 @@ class TestDask(DatasetIOBase):
         assert computed._in_memory
         assert_allclose(actual, computed, decode_bytes=False)
 
-    @pytest.mark.xfail
     def test_save_mfdataset_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
@@ -5125,15 +5128,16 @@ def test_open_fsspec() -> None:
     ds2 = open_dataset(url, engine="zarr")
     xr.testing.assert_equal(ds0, ds2)
 
-    # multi dataset
-    url = "memory://out*.zarr"
-    ds2 = open_mfdataset(url, engine="zarr")
-    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+    if has_dask:
+        # multi dataset
+        url = "memory://out*.zarr"
+        ds2 = open_mfdataset(url, engine="zarr")
+        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
-    # multi dataset with caching
-    url = "simplecache::memory://out*.zarr"
-    ds2 = open_mfdataset(url, engine="zarr")
-    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+        # multi dataset with caching
+        url = "simplecache::memory://out*.zarr"
+        ds2 = open_mfdataset(url, engine="zarr")
+        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf

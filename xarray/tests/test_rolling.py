@@ -766,9 +766,6 @@ class TestDatasetRolling:
         )
         assert_allclose(actual, expected)
 
-    @pytest.mark.xfail(
-        reason="See https://github.com/pydata/xarray/pull/4369 or docstring"
-    )
     @pytest.mark.filterwarnings("error")
     @pytest.mark.parametrize("ds", (2,), indirect=True)
     @pytest.mark.parametrize("name", ("mean", "max"))
