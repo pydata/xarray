@@ -2641,15 +2641,13 @@ class Dataset(
                 category=FutureWarning,
             )
             chunks = {}
-
+        chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
-            # The ignore seems to be required because of the type change (though not
-            # completely sure, the message is somewhat confusing)
-            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore[arg-type]
+            chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        bad_dims = chunks.keys() - self.dims.keys()
+        bad_dims = chunks_mapping.keys() - self.dims.keys()
         if bad_dims:
             raise ValueError(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
@@ -2663,7 +2661,7 @@ class Dataset(
             k: _maybe_chunk(
                 k,
                 v,
-                chunks,
+                chunks_mapping,
                 token,
                 lock,
                 name_prefix,
