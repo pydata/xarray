@@ -93,7 +93,14 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import QuantileMethods, Self, T_DataArrayOrSet, T_Dataset
+from xarray.core.types import (
+    QuantileMethods,
+    Self,
+    T_ChunkDim,
+    T_Chunks,
+    T_DataArrayOrSet,
+    T_Dataset,
+)
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -1478,7 +1485,7 @@ class Dataset(
     if TYPE_CHECKING:
         # needed because __getattr__ is returning Any and otherwise
         # this class counts as part of the SupportsArray Protocol
-        __array__ = None
+        __array__ = None  # type: ignore[var-annotated,unused-ignore]
 
     else:
 
@@ -2569,16 +2576,14 @@ class Dataset(
 
     def chunk(
         self,
-        chunks: (
-            int | Literal["auto"] | Mapping[Any, None | int | str | tuple[int, ...]]
-        ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: None | int | str | tuple[int, ...],
+        **chunks_kwargs: T_ChunkDim,
     ) -> Self:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2637,8 +2642,9 @@ class Dataset(
             )
             chunks = {}
 
-        if isinstance(chunks, (Number, str, int)):
-            chunks = dict.fromkeys(self.dims, chunks)
+        if not isinstance(chunks, Mapping):
+            # We need to ignore since mypy doesn't recognize this can't be `None`
+            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore[arg-type]
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
