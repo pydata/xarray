@@ -3850,7 +3850,7 @@ class TestDataArray:
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
             method("rolling", y=3),
-            pytest.param(method("rolling_exp", y=3), mark=requires_numbagg),
+            pytest.param(method("rolling_exp", y=3), marks=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
