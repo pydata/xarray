@@ -46,7 +46,7 @@ def as_compatible_data(
         return typing.cast(T_DuckArray, data)
 
     if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)
+        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
         if mask.any():
             # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
