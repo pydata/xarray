@@ -9,9 +9,9 @@ from collections.abc import Hashable, Mapping
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
-from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import Default, _default
+from xarray.namedarray import dtypes
 from xarray.namedarray.arithmetic import NamedArrayArithmetic
 from xarray.namedarray.types import Dims, DimsInput, T_DuckArray
 from xarray.namedarray.utils import (
