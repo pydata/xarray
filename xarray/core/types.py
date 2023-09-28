@@ -183,8 +183,7 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
-# int, Literal["auto"], None, tuple[int, ...], tuple[tuple[int, ...], ...]
-# In some cases we don't allow `None`, which this doesn't take account of.
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
 T_Chunks: TypeAlias = Union[
