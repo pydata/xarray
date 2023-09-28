@@ -304,6 +304,8 @@ class CFMaskCoder(VariableCoder):
                 )
 
             # special case DateTime to properly handle NaT
+            dtype: np.typing.DTypeLike
+            decoded_fill_value: Any
             if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
                 dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
             else:
