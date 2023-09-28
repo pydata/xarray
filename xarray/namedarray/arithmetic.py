@@ -64,8 +64,8 @@ class NamedArrayOpsMixin:
 
 
 class NamedArrayArithmetic(
-    ImplementsArrayReduce,
-    IncludeReduceMethods,
+    # ImplementsArrayReduce,
+    # IncludeReduceMethods,
     IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
