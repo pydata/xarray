@@ -74,13 +74,17 @@ class NamedArray(typing.Generic[T_DuckArray]):
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
     rather than axis order."""
 
-    __slots__ = ("_dims", "_data", "_attrs")
+    __slots__ = ("_data", "_dims", "_attrs")
+
+    _data: T_DuckArray
+    _dims: Dims
+    _attrs: dict[typing.Any, typing.Any] | None
 
     def __init__(
         self,
         dims: DimsInput,
         data: T_DuckArray | np.typing.ArrayLike,
-        attrs: dict | None = None,
+        attrs: dict[typing.Any, typing.Any] | None = None,
         fastpath: bool = False,
     ):
         """
@@ -105,9 +109,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
 
 
         """
-        self._data: T_DuckArray = as_compatible_data(data, fastpath=fastpath)
-        self._dims: Dims = self._parse_dimensions(dims)
-        self._attrs: dict | None = dict(attrs) if attrs else None
+        self._data = as_compatible_data(data, fastpath=fastpath)
+        self._dims = self._parse_dimensions(dims)
+        self._attrs = dict(attrs) if attrs else None
 
     @property
     def ndim(self) -> int:
@@ -208,7 +212,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping) -> None:
+    def attrs(self, value: Mapping[typing.Any, typing.Any]) -> None:
         self._attrs = dict(value)
 
     def _check_shape(self, new_data: T_DuckArray) -> None:
