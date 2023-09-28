@@ -3,7 +3,7 @@ import pytest
 
 import xarray as xr
 from xarray.namedarray.core import NamedArray, as_compatible_data
-from xarray.namedarray.utils import T_DuckArray
+from xarray.namedarray.types import T_DuckArray
 
 
 @pytest.fixture

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, overlo
 
 import numpy as np
 
-from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core import dtypes, duck_array_ops
 from xarray.core.alignment import align, deep_align
 from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
@@ -26,6 +26,7 @@ from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar
 from xarray.core.variable import Variable
+from xarray.namedarray import utils
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates

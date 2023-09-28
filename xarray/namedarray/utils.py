@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import sys
 import typing
+from collections.abc import Hashable, Iterable
 
 import numpy as np
 
@@ -12,9 +13,7 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
-# temporary placeholder for indicating an array api compliant type.
-# hopefully in the future we can narrow this down more
-T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
+    from xarray.namedarray.types import T_DuckArray
 
 
 def module_available(module: str) -> bool:
@@ -66,3 +65,82 @@ def to_0d_object_array(value: typing.Any) -> np.ndarray:
     result = np.empty((), dtype=object)
     result[()] = value
     return result
+
+
+def _is_scalar(value, include_0d):
+    # TODO: figure out if the following is needed
+    # from xarray.core.variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+    NON_NUMPY_SUPPORTED_ARRAY_TYPES = ()
+
+    if include_0d:
+        include_0d = getattr(value, "ndim", None) == 0
+    return (
+        include_0d
+        or isinstance(value, (str, bytes))
+        or not (
+            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
+            or is_duck_array(value)
+        )
+    )
+
+
+# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
+# requiring typing_extensions as a required dependency to _run_ the code (it is required
+# to type-check).
+try:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+except ImportError:
+    if typing.TYPE_CHECKING:
+        raise
+    else:
+
+        def is_scalar(value: typing.Any, include_0d: bool = True) -> bool:
+            """Whether to treat a value as a scalar.
+
+            Any non-iterable, string, or 0-D array
+            """
+            return _is_scalar(value, include_0d)
+
+else:
+
+    def is_scalar(value: typing.Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+        """Whether to treat a value as a scalar.
+
+        Any non-iterable, string, or 0-D array
+        """
+        return _is_scalar(value, include_0d)
+
+
+def is_valid_numpy_dtype(dtype: typing.Any) -> bool:
+    try:
+        np.dtype(dtype)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return True
+
+
+class ReprObject:
+    """Object that prints as the given value, for use with sentinel values."""
+
+    __slots__ = ("_value",)
+
+    def __init__(self, value: str):
+        self._value = value
+
+    def __repr__(self) -> str:
+        return self._value
+
+    def __eq__(self, other) -> bool:
+        return self._value == other._value if isinstance(other, ReprObject) else False
+
+    def __hash__(self) -> int:
+        return hash((type(self), self._value))
+
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))

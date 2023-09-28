@@ -605,31 +605,6 @@ class NDArrayMixin(NdimSizeLenMixin):
         return f"{type(self).__name__}(array={self.array!r})"
 
 
-class ReprObject:
-    """Object that prints as the given value, for use with sentinel values."""
-
-    __slots__ = ("_value",)
-
-    def __init__(self, value: str):
-        self._value = value
-
-    def __repr__(self) -> str:
-        return self._value
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, ReprObject):
-            return self._value == other._value
-        return False
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._value))
-
-    def __dask_tokenize__(self):
-        from dask.base import normalize_token
-
-        return normalize_token((type(self), self._value))
-
-
 @contextlib.contextmanager
 def close_on_error(f):
     """Context manager to ensure that a file opened by xarray is closed if an
