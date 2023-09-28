@@ -61,7 +61,7 @@ def is_duck_dask_array(x: typing.Any) -> bool:
     return is_duck_array(x) and is_dask_collection(x)
 
 
-def to_0d_object_array(value: typing.Any) -> np.ndarray:
+def to_0d_object_array(value: typing.Any) -> np.ndarray[object]:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value
