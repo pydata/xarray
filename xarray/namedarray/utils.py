@@ -26,12 +26,14 @@ if typing.TYPE_CHECKING:
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DType = typing.TypeVar("T_DType", bound=np.dtype)
+T_DType_co = typing.TypeVar(
+    "T_DType", bound=np.dtype[np.typing.DTypeLike], covariant=True
+)
 
 
-class _Array(typing.Protocol[T_DType]):
+class _Array(typing.Protocol[T_DType_co]):
     @property
-    def dtype(self) -> T_DType:
+    def dtype(self) -> T_DType_co:
         ...
 
     @property
