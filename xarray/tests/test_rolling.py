@@ -766,6 +766,7 @@ class TestDatasetRolling:
         )
         assert_allclose(actual, expected)
 
+    @requires_dask
     @pytest.mark.filterwarnings("error")
     @pytest.mark.parametrize("ds", (2,), indirect=True)
     @pytest.mark.parametrize("name", ("mean", "max"))
