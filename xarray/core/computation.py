@@ -9,15 +9,7 @@ import operator
 import warnings
 from collections import Counter
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence, Set
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Literal,
-    TypeVar,
-    Union,
-    overload
-)
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, overload
 
 import numpy as np
 
