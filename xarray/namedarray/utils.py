@@ -24,11 +24,9 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
-# temporary placeholder for indicating an array api compliant type.
-# hopefully in the future we can narrow this down more
-T_DType_co = typing.TypeVar(
-    "T_DType_co", bound=np.dtype[np.typing.DTypeLike], covariant=True
-)
+
+# https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
+T_DType_co = typing.TypeVar("T_DType_co", bound=np.generic, covariant=True)
 
 
 class _Array(typing.Protocol[T_DType_co]):
@@ -49,6 +47,8 @@ class _Array(typing.Protocol[T_DType_co]):
         ...
 
 
+# temporary placeholder for indicating an array api compliant type.
+# hopefully in the future we can narrow this down more
 T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array)
 
 
