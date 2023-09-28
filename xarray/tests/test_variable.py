@@ -2338,7 +2338,6 @@ class TestVariableWithDask(VariableSubclassobjects):
     def test_multiindex(self):
         super().test_multiindex()
 
-    @pytest.mark.skip
     @pytest.mark.parametrize(
         "mode",
         [
