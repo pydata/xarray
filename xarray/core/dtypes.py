@@ -58,9 +58,11 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     fill_value : Valid missing value for the promoted dtype.
     """
     # N.B. these casting rules should match pandas
+    dtype_: np.typing.DTypeLike
+    fill_value: Any
     if np.issubdtype(dtype, np.floating):
-        dtype_: np.typing.DTypeLike = dtype
-        fill_value: Scalar = np.nan
+        dtype_ = dtype
+        fill_value = np.nan
     elif np.issubdtype(dtype, np.timedelta64):
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
