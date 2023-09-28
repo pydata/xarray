@@ -20,7 +20,7 @@ from xarray.namedarray.utils import (
 )
 
 if typing.TYPE_CHECKING:
-    T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
+    # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
 
