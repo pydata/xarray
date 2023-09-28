@@ -2634,21 +2634,20 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
-        if chunks is None and chunks_kwargs is None:
+        if chunks is None and not chunks_kwargs:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
             )
             chunks = {}
-
-        if not isinstance(chunks, Mapping):
-            # We need to ignore since mypy doesn't recognize this can't be `None`
-            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore[arg-type]
+        chunks_mapping: Mapping[Any, Any]
+        if not isinstance(chunks, Mapping) and chunks is not None:
+            chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        bad_dims = chunks.keys() - self.dims.keys()
+        bad_dims = chunks_mapping.keys() - self.dims.keys()
         if bad_dims:
             raise ValueError(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
@@ -2662,7 +2661,7 @@ class Dataset(
             k: _maybe_chunk(
                 k,
                 v,
-                chunks,
+                chunks_mapping,
                 token,
                 lock,
                 name_prefix,
