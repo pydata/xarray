@@ -2634,7 +2634,7 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
-        if chunks is None and chunks_kwargs is None:
+        if chunks is None and not chunks_kwargs:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
@@ -2642,8 +2642,9 @@ class Dataset(
             )
             chunks = {}
 
-        if not isinstance(chunks, Mapping):
-            # We need to ignore since mypy doesn't recognize this can't be `None`
+        if not isinstance(chunks, Mapping) and chunks is not None:
+            # The ignore seems to be required because of the type change (though not
+            # completely sure, the message is somewhat confusing)
             chunks = dict.fromkeys(self.dims, chunks)  # type: ignore[arg-type]
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
