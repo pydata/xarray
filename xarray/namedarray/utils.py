@@ -26,7 +26,7 @@ if typing.TYPE_CHECKING:
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DType = typing.TypeVar("T_DType", bounds=np.dtype)
+T_DType = typing.TypeVar("T_DType", bound=np.dtype)
 
 
 class _Array(typing.Protocol[T_DType]):
