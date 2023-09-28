@@ -27,7 +27,7 @@ if typing.TYPE_CHECKING:
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
 T_DType_co = typing.TypeVar(
-    "T_DType", bound=np.dtype[np.typing.DTypeLike], covariant=True
+    "T_DType_co", bound=np.dtype[np.typing.DTypeLike], covariant=True
 )
 
 
