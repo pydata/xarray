@@ -7,7 +7,7 @@ import pytest
 
 import xarray as xr
 from xarray.namedarray.core import NamedArray, as_compatible_data
-from xarray.namedarray.utils import T_DuckArray
+from xarray.namedarray.utils import Self, T_DuckArray
 
 
 @pytest.fixture
@@ -48,6 +48,22 @@ def test_as_compatible_data_with_explicitly_indexed(random_inputs) -> None:
     class CustomArray(xr.core.indexing.NDArrayMixin):
         def __init__(self, array):
             self.array = array
+
+        @property
+        def dtype(self) -> np.dtype[np.generic]:
+            raise NotImplementedError
+
+        @property
+        def shape(self) -> tuple[int, ...]:
+            raise NotImplementedError
+
+        @property
+        def real(self) -> Self:
+            raise NotImplementedError
+
+        @property
+        def imag(self) -> Self:
+            raise NotImplementedError
 
     class CustomArrayIndexable(CustomArray, xr.core.indexing.ExplicitlyIndexed):
         pass
@@ -148,8 +164,10 @@ def test_0d_datetime() -> None:
         (np.timedelta64(1, "as"), np.dtype("timedelta64[as]")),
     ],
 )
-def test_0d_timedelta(timedelta: np.timedelta, expected_dtype: np.timedelta64) -> None:
-    named_array: NamedArray[np.ndarray[Any, np.timedelta64]]
+def test_0d_timedelta(
+    timedelta: np.timedelta64, expected_dtype: np.dtype[np.timedelta64]
+) -> None:
+    named_array: NamedArray[np.ndarray[Any, np.dtype[np.timedelta64]]]
     named_array = NamedArray([], timedelta)
     assert named_array.dtype == expected_dtype
     assert named_array.data == timedelta
