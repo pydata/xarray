@@ -3457,7 +3457,6 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
-@pytest.mark.skip("fails")
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 def test_open_mfdataset_manyfiles(
