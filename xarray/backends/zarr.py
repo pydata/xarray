@@ -104,7 +104,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _squeeze_var_chunks(name, var_chunks):
+def _squeeze_var_chunks(var_chunks, name=None):
     if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
         raise ValueError(
             "Zarr requires uniform chunk sizes except for final chunk. "
@@ -144,7 +144,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
-        return _squeeze_var_chunks(name, var_chunks)
+        return _squeeze_var_chunks(var_chunks, None)
 
     # from here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
@@ -321,7 +321,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     var = coding.strings.ensure_fixed_length_bytes(var)
 
     if original_chunks and not var.chunks:
-        var.encoding.setdefault("chunks", _squeeze_var_chunks(name, original_chunks))
+        var.encoding.setdefault("chunks", _squeeze_var_chunks(original_chunks, name))
     return var
 
 
