@@ -49,7 +49,7 @@ class _Array(typing.Protocol[T_DType_co]):
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array[T_DType_co])
+T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array[np.generic])
 
 
 def module_available(module: str) -> bool:
