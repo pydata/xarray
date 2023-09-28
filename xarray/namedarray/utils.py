@@ -26,7 +26,7 @@ if typing.TYPE_CHECKING:
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
-T_DType_co = typing.TypeVar("T_DType_co", bound=np.generic, covariant=True)
+T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
 
 
 class _Array(typing.Protocol[T_DType_co]):
