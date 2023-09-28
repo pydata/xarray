@@ -144,7 +144,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
-        return _squeeze_var_chunks(var_chunks, None)
+        return _squeeze_var_chunks(var_chunks, name)
 
     # from here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
