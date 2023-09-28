@@ -7,9 +7,6 @@ import numpy as np
 
 from xarray.core import utils
 
-if TYPE_CHECKING:
-    from xarray.core.types import Scalar
-
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
 
@@ -48,7 +45,7 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 )
 
 
-def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Scalar]:
+def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters

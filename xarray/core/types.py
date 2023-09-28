@@ -188,8 +188,6 @@ T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
 
-Scalar = Union[bool, float, complex, str, np.datetime64, np.timedelta64, datetime.date]
-
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
 
