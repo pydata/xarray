@@ -16,7 +16,7 @@ from typing import (
     Literal,
     TypeVar,
     Union,
-    overload,
+    overload
 )
 
 import numpy as np
