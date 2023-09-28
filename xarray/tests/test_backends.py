@@ -5125,6 +5125,7 @@ def test_open_fsspec() -> None:
     ds2 = open_dataset(url, engine="zarr")
     xr.testing.assert_equal(ds0, ds2)
 
+    # open_mfdataset requires dask
     if has_dask:
         # multi dataset
         url = "memory://out*.zarr"
