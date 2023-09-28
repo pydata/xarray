@@ -16,13 +16,12 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from typing_extensions import TypeAlias
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import Self
+        from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self
+        from typing_extensions import Self, TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
