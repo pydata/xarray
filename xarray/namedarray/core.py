@@ -68,7 +68,7 @@ def as_compatible_data(
     return typing.cast(T_DuckArray, np.asarray(data))
 
 
-class NamedArray:
+class NamedArray(typing.Generic[T_DuckArray]):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
@@ -219,7 +219,7 @@ class NamedArray:
             )
 
     @property
-    def data(self):
+    def data(self) -> T_DuckArray:
         """
         The NamedArray's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
