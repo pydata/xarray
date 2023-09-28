@@ -53,7 +53,6 @@ from xarray.core.types import DaCompatible, T_DataArray, T_DataArrayOrSet
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
-    ReprObject,
     _default,
     either_dict_or_kwargs,
     emit_user_level_warning,
@@ -64,6 +63,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.utils import ReprObject
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 
