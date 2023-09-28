@@ -305,6 +305,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     out : Variable
         A variable which has been encoded as described above.
     """
+    original_chunks = var.chunks
 
     var = conventions.encode_cf_variable(var, name=name)
 
@@ -315,6 +316,8 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     var = coder.encode(var, name=name)
     var = coding.strings.ensure_fixed_length_bytes(var)
 
+    if original_chunks and not var.chunks:
+        var.encoding.setdefault("chunks", tuple(chunk[0] for chunk in original_chunks))
     return var
 
 

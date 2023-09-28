@@ -2712,6 +2712,14 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
 
+    @requires_dask
+    def test_chunked_datetime64(self) -> None:
+        original = create_test_data().astype("datetime64[ns]").chunk(1)
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+            for name, actual_var in actual.variables.items():
+                assert original[name].chunks == actual_var.chunks
+            assert original.chunks == actual.chunks
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
