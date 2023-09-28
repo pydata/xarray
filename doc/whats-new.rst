@@ -33,7 +33,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix bug where to zarr would modify chunks of datetime variables (:issue:`8230`, :pull:`8253`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Documentation
 ~~~~~~~~~~~~~
