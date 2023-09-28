@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import math
-import sys
 import typing
 from collections.abc import Hashable, Iterable, Mapping
 
