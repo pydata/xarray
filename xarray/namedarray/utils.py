@@ -6,6 +6,18 @@ import typing
 
 import numpy as np
 
+try:
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+except ImportError:
+    if typing.TYPE_CHECKING:
+        raise
+    else:
+        Self: typing.Any = None
+
+
 if typing.TYPE_CHECKING:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
@@ -14,7 +26,28 @@ if typing.TYPE_CHECKING:
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
+T_DType = typing.TypeVar("T_DType", bounds=np.dtype)
+
+
+class _Array(typing.Protocol[T_DType]):
+    @property
+    def dtype(self) -> T_DType:
+        ...
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        ...
+
+    @property
+    def real(self) -> Self:
+        ...
+
+    @property
+    def imag(self) -> Self:
+        ...
+
+
+T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array)
 
 
 def module_available(module: str) -> bool:

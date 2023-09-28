@@ -13,6 +13,7 @@ from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import Default, _default
 from xarray.namedarray.utils import (
+    Self,
     T_DuckArray,
     is_duck_array,
     is_duck_dask_array,
@@ -23,18 +24,6 @@ if typing.TYPE_CHECKING:
     # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
-
-
-try:
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
-except ImportError:
-    if typing.TYPE_CHECKING:
-        raise
-    else:
-        Self: typing.Any = None
 
 
 # TODO: Add tests!
@@ -144,7 +133,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
             raise TypeError("len() of unsized object") from exc
 
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self) -> np.dtype[typing.Any]:
         """
         Data-type of the array’s elements.
 
