@@ -111,6 +111,7 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         Self,
         SideOptions,
+        T_Chunks,
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
@@ -1288,13 +1289,7 @@ class DataArray(
 
     def chunk(
         self,
-        chunks: (
-            int
-            | Literal["auto"]
-            | tuple[int, ...]
-            | tuple[tuple[int, ...], ...]
-            | Mapping[Any, None | int | tuple[int, ...]]
-        ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
@@ -1362,7 +1357,7 @@ class DataArray(
 
         if isinstance(chunks, (float, str, int)):
             # ignoring type; unclear why it won't accept a Literal into the value.
-            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore
+            chunks = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
         else:
