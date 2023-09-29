@@ -104,6 +104,24 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
+def _squeeze_var_chunks(var_chunks, name=None):
+    if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
+        raise ValueError(
+            "Zarr requires uniform chunk sizes except for final chunk. "
+            f"Variable named {name!r} has incompatible dask chunks: {var_chunks!r}. "
+            "Consider rechunking using `chunk()`."
+        )
+    if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
+        raise ValueError(
+            "Final chunk of Zarr array must be the same size or smaller "
+            f"than the first. Variable named {name!r} has incompatible Dask chunks {var_chunks!r}."
+            "Consider either rechunking using `chunk()` or instead deleting "
+            "or modifying `encoding['chunks']`."
+        )
+    # return the first chunk for each dimension
+    return tuple(chunk[0] for chunk in var_chunks)
+
+
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     """
     Given encoding chunks (possibly None or []) and variable chunks
@@ -126,21 +144,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
-        if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
-            raise ValueError(
-                "Zarr requires uniform chunk sizes except for final chunk. "
-                f"Variable named {name!r} has incompatible dask chunks: {var_chunks!r}. "
-                "Consider rechunking using `chunk()`."
-            )
-        if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
-            raise ValueError(
-                "Final chunk of Zarr array must be the same size or smaller "
-                f"than the first. Variable named {name!r} has incompatible Dask chunks {var_chunks!r}."
-                "Consider either rechunking using `chunk()` or instead deleting "
-                "or modifying `encoding['chunks']`."
-            )
-        # return the first chunk for each dimension
-        return tuple(chunk[0] for chunk in var_chunks)
+        return _squeeze_var_chunks(var_chunks, name)
 
     # from here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
@@ -317,8 +321,8 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     var = coder.encode(var, name=name)
     var = coding.strings.ensure_fixed_length_bytes(var)
 
-    if original_chunks and not var.chunks:
-        var.encoding.setdefault("chunks", original_chunks)
+    if original_chunks and not var.chunks and "chunks" not in var.encoding:
+        var.encoding["chunks"] = _squeeze_var_chunks(original_chunks, name)
     return var
 
 
