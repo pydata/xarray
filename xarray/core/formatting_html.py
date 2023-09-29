@@ -53,9 +53,20 @@ def format_dims(dims, dims_with_index):
     return f"<ul class='xr-dim-list'>{dims_li}</ul>"
 
 
-def summarize_attrs(attrs):
+def summarize_attrs(attrs, max_lines=15, min_lines=10):
+    def attr_cropper(obj):
+        if type(obj) is str:
+            lines = str.splitlines(obj)
+            if len(lines) > max_lines:
+                return (
+                    escape("\n".join(lines[: min_lines // 2]))
+                    + f"\n<i>... (skipped {len(lines) - min_lines} lines)</i>\n"
+                    + escape("\n".join(lines[-min_lines // 2 :]))
+                )
+        return escape(str(obj))
+
     attrs_dl = "".join(
-        f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
+        f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{attr_cropper(v)}</dd>"
         for k, v in attrs.items()
     )
 
