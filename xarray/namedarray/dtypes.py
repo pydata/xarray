@@ -105,7 +105,7 @@ def get_fill_value(dtype: np.dtype) -> Any:
     return fill_value
 
 
-def get_pos_infinity(dtype: np.dtype, max_for_int: bool=False) -> float | complex:
+def get_pos_infinity(dtype: np.dtype, max_for_int: bool = False) -> float | complex:
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
@@ -133,7 +133,7 @@ def get_pos_infinity(dtype: np.dtype, max_for_int: bool=False) -> float | comple
     return INF
 
 
-def get_neg_infinity(dtype: np.dtype, min_for_int: bool =False) -> float | complex:
+def get_neg_infinity(dtype: np.dtype, min_for_int: bool = False) -> float | complex:
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
