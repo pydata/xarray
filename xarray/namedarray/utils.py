@@ -8,15 +8,16 @@ import numpy as np
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import Self
+        from typing import Self as _Self
     else:
-        from typing_extensions import Self
+        from typing_extensions import Self as _Self
 except ImportError:
     if typing.TYPE_CHECKING:
         raise
     else:
-        Self: typing.Any = None
+        _Self: typing.Any = None
 
+Self = _Self
 
 if typing.TYPE_CHECKING:
     if sys.version_info >= (3, 10):
@@ -27,6 +28,7 @@ if typing.TYPE_CHECKING:
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
+# T_DType = typing.TypeVar("T_DType", bound=np.dtype[np.generic])
 
 
 class _Array(typing.Protocol[T_DType_co]):
@@ -45,6 +47,11 @@ class _Array(typing.Protocol[T_DType_co]):
     @property
     def imag(self) -> Self:
         ...
+
+    # def __array__(
+    #     self, dtype: np.typing.DTypeLike = None
+    # ) -> np.ndarray[typing.Any, np.dtype[np.generic]]:
+    #     ...
 
 
 # temporary placeholder for indicating an array api compliant type.
