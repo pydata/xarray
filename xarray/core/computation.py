@@ -8,7 +8,7 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from collections.abc import Hashable, Iterable, Mapping, Sequence, Set
+from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence, Set
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, overload
 
 import numpy as np
@@ -163,7 +163,7 @@ class _UFuncSignature:
         if exclude_dims:
             exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
 
-            counter = Counter()
+            counter: Counter = Counter()
 
             def _enumerate(dim):
                 if dim in exclude_dims:
@@ -571,7 +571,7 @@ def apply_groupby_func(func, *args):
     assert groupbys, "must have at least one groupby to iterate over"
     first_groupby = groupbys[0]
     (grouper,) = first_groupby.groupers
-    if any(not grouper.group.equals(gb.groupers[0].group) for gb in groupbys[1:]):
+    if any(not grouper.group.equals(gb.groupers[0].group) for gb in groupbys[1:]):  # type: ignore[union-attr]
         raise ValueError(
             "apply_ufunc can only perform operations over "
             "multiple GroupBy objects at once if they are all "
@@ -583,6 +583,7 @@ def apply_groupby_func(func, *args):
 
     iterators = []
     for arg in args:
+        iterator: Iterator[Any]
         if isinstance(arg, GroupBy):
             iterator = (value for _, value in arg)
         elif hasattr(arg, "dims") and grouped_dim in arg.dims:
@@ -597,9 +598,9 @@ def apply_groupby_func(func, *args):
             iterator = itertools.repeat(arg)
         iterators.append(iterator)
 
-    applied = (func(*zipped_args) for zipped_args in zip(*iterators))
+    applied: Iterator = (func(*zipped_args) for zipped_args in zip(*iterators))
     applied_example, applied = peek_at(applied)
-    combine = first_groupby._combine
+    combine = first_groupby._combine  # type: ignore[attr-defined]
     if isinstance(applied_example, tuple):
         combined = tuple(combine(output) for output in zip(*applied))
     else:
