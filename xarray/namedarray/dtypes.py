@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Literal, TypeGuard
+import sys
+from typing import Any, Literal
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 import numpy as np
 
