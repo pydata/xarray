@@ -204,38 +204,56 @@ class TestEncodeCFVariable:
         assert attrs["coordinates"] == "bar baz"
 
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_emit_coordinates_attribute_in_attrs(self) -> None:
+    def test_omit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
             coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
         )
 
-        orig["a"].attrs["coordinates"] = None
+        orig["a"].attrs["coordinates"] = False
         enc, _ = conventions.encode_dataset_coordinates(orig)
 
-        # check coordinate attribute emitted for 'a'
+        # check coordinate attribute omitted for 'a'
         assert "coordinates" not in enc["a"].attrs
         assert "coordinates" not in enc["a"].encoding
 
-        # check coordinate attribute not emitted for 'b'
+        # check coordinate attribute not omitted for 'b'
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
     @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
-    def test_emit_coordinates_attribute_in_encoding(self) -> None:
+    def test_omit_coordinates_attribute_in_assign_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
             coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
         )
 
-        orig["a"].encoding["coordinates"] = None
+        orig["a"] = orig["a"].assign_attrs({"coordinates": False})
         enc, _ = conventions.encode_dataset_coordinates(orig)
 
-        # check coordinate attribute emitted for 'a'
+        # check coordinate attribute omitted for 'a'
         assert "coordinates" not in enc["a"].attrs
         assert "coordinates" not in enc["a"].encoding
 
-        # check coordinate attribute not emitted for 'b'
+        # check coordinate attribute not omitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
+
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+    def test_omit_coordinates_attribute_in_encoding(self) -> None:
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].encoding["coordinates"] = False
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute omitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not omitted for 'b'
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 

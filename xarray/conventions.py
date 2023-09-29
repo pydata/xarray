@@ -673,12 +673,12 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
 
-        # if coordinates set to None, don't write coordinates attribute
+        # if coordinates set to False, don't write coordinates attribute
         if (
             "coordinates" in attrs
-            and attrs.get("coordinates") is None
+            and attrs.get("coordinates") is False
             or "coordinates" in encoding
-            and encoding.get("coordinates") is None
+            and encoding.get("coordinates") is False
         ):
             # make sure "coordinates" is removed from attrs/encoding
             attrs.pop("coordinates", None)
