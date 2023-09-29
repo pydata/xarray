@@ -13,19 +13,19 @@ NA = utils.ReprObject("<NA>")
 
 @functools.total_ordering
 class AlwaysGreaterThan:
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> Literal[True]:
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, type(self))
 
 
 @functools.total_ordering
 class AlwaysLessThan:
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> Literal[True]:
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, type(self))
 
 
@@ -90,7 +90,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
 NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
-def get_fill_value(dtype):
+def get_fill_value(dtype: np.dtype) -> Any:
     """Return an appropriate fill value for this dtype.
 
     Parameters
@@ -105,7 +105,7 @@ def get_fill_value(dtype):
     return fill_value
 
 
-def get_pos_infinity(dtype, max_for_int=False):
+def get_pos_infinity(dtype: np.dtype, max_for_int: bool=False) -> float | complex:
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
@@ -133,7 +133,7 @@ def get_pos_infinity(dtype, max_for_int=False):
     return INF
 
 
-def get_neg_infinity(dtype, min_for_int=False):
+def get_neg_infinity(dtype: np.dtype, min_for_int: bool =False) -> float | complex:
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
@@ -161,7 +161,7 @@ def get_neg_infinity(dtype, min_for_int=False):
     return NINF
 
 
-def is_datetime_like(dtype):
+def is_datetime_like(dtype: dtype) -> TypeGuard[np.datetime64 | np.timedelta64]:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
