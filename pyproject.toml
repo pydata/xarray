@@ -119,13 +119,48 @@ module = [
 ]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
-# coverage. Once a module is here, functions require annotations in order to
-# pass mypy. It would be especially useful to have tests here, because without
-# annotating test functions, we don't have a great way of testing our type
-# annotations — even with just `-> None` is sufficient for mypy to check them.
+# coverage. Once a module is here, functions are checked by mypy regardless of
+# whether they have type annotations. It would be especially useful to have test
+# files listed here, because without them being checked, we don't have a great
+# way of testing our annotations.
 [[tool.mypy.overrides]]
-disallow_untyped_defs = true
-module = ["xarray.core.rolling_exp"]
+check_untyped_defs = true
+module = [
+  "xarray.core.accessor_dt",
+  "xarray.core.accessor_str",
+  "xarray.core.alignment",
+  "xarray.core.computation",
+  "xarray.core.rolling_exp",
+  "xarray.indexes.*",
+  "xarray.tests.*",
+]
+# This then excludes some modules from the above list. (So ideally we remove
+# from here in time...)
+[[tool.mypy.overrides]]
+check_untyped_defs = false
+module = [
+  "xarray.tests.test_coarsen",
+  "xarray.tests.test_coding_times",
+  "xarray.tests.test_combine",
+  "xarray.tests.test_computation",
+  "xarray.tests.test_concat",
+  "xarray.tests.test_coordinates",
+  "xarray.tests.test_dask",
+  "xarray.tests.test_dataarray",
+  "xarray.tests.test_duck_array_ops",
+  "xarray.tests.test_groupby",
+  "xarray.tests.test_indexing",
+  "xarray.tests.test_merge",
+  "xarray.tests.test_missing",
+  "xarray.tests.test_parallelcompat",
+  "xarray.tests.test_plot",
+  "xarray.tests.test_sparse",
+  "xarray.tests.test_ufuncs",
+  "xarray.tests.test_units",
+  "xarray.tests.test_utils",
+  "xarray.tests.test_variable",
+  "xarray.tests.test_weighted",
+]
 
 [tool.ruff]
 builtins = ["ellipsis"]

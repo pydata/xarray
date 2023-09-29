@@ -59,7 +59,7 @@ def test_as_compatible_data_with_explicitly_indexed(random_inputs) -> None:
 
 def test_properties() -> None:
     data = 0.5 * np.arange(10).reshape(2, 5)
-    named_array = NamedArray(["x", "y"], data, {"key": "value"})
+    named_array: NamedArray[np.ndarray] = NamedArray(["x", "y"], data, {"key": "value"})
     assert named_array.dims == ("x", "y")
     assert np.array_equal(named_array.data, data)
     assert named_array.attrs == {"key": "value"}
@@ -71,7 +71,9 @@ def test_properties() -> None:
 
 
 def test_attrs() -> None:
-    named_array = NamedArray(["x", "y"], np.arange(10).reshape(2, 5))
+    named_array: NamedArray[np.ndarray] = NamedArray(
+        ["x", "y"], np.arange(10).reshape(2, 5)
+    )
     assert named_array.attrs == {}
     named_array.attrs["key"] = "value"
     assert named_array.attrs == {"key": "value"}
@@ -80,7 +82,7 @@ def test_attrs() -> None:
 
 
 def test_data(random_inputs) -> None:
-    named_array = NamedArray(["x", "y", "z"], random_inputs)
+    named_array: NamedArray[np.ndarray] = NamedArray(["x", "y", "z"], random_inputs)
     assert np.array_equal(named_array.data, random_inputs)
     with pytest.raises(ValueError):
         named_array.data = np.random.random((3, 4)).astype(np.float64)
@@ -95,7 +97,7 @@ def test_data(random_inputs) -> None:
     ],
 )
 def test_0d_string(data, dtype: np.typing.DTypeLike) -> None:
-    named_array = NamedArray([], data)
+    named_array: NamedArray[np.ndarray] = NamedArray([], data)
     assert named_array.data == data
     assert named_array.dims == ()
     assert named_array.sizes == {}
@@ -106,7 +108,7 @@ def test_0d_string(data, dtype: np.typing.DTypeLike) -> None:
 
 
 def test_0d_object() -> None:
-    named_array = NamedArray([], (10, 12, 12))
+    named_array: NamedArray[np.ndarray] = NamedArray([], (10, 12, 12))
     expected_data = np.empty((), dtype=object)
     expected_data[()] = (10, 12, 12)
     assert np.array_equal(named_array.data, expected_data)
@@ -120,7 +122,7 @@ def test_0d_object() -> None:
 
 
 def test_0d_datetime() -> None:
-    named_array = NamedArray([], np.datetime64("2000-01-01"))
+    named_array: NamedArray[np.ndarray] = NamedArray([], np.datetime64("2000-01-01"))
     assert named_array.dtype == np.dtype("datetime64[D]")
 
 
@@ -139,7 +141,7 @@ def test_0d_datetime() -> None:
     ],
 )
 def test_0d_timedelta(timedelta, expected_dtype: np.dtype) -> None:
-    named_array = NamedArray([], timedelta)
+    named_array: NamedArray[np.ndarray] = NamedArray([], timedelta)
     assert named_array.dtype == expected_dtype
     assert named_array.data == timedelta
 
@@ -155,7 +157,7 @@ def test_0d_timedelta(timedelta, expected_dtype: np.dtype) -> None:
     ],
 )
 def test_dims_setter(dims, data_shape, new_dims, raises: bool) -> None:
-    named_array = NamedArray(dims, np.random.random(data_shape))
+    named_array: NamedArray[np.ndarray] = NamedArray(dims, np.random.random(data_shape))
     assert named_array.dims == tuple(dims)
     if raises:
         with pytest.raises(ValueError):
