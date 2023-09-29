@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any
+from typing import Any, Literal, TypeGuard
 
 import numpy as np
 
@@ -122,11 +122,7 @@ def get_pos_infinity(dtype: np.dtype, max_for_int: bool = False) -> float | comp
         return np.inf
 
     if issubclass(dtype.type, np.integer):
-        if max_for_int:
-            return np.iinfo(dtype).max
-        else:
-            return np.inf
-
+        return np.iinfo(dtype).max if max_for_int else np.inf
     if issubclass(dtype.type, np.complexfloating):
         return np.inf + 1j * np.inf
 
@@ -150,18 +146,14 @@ def get_neg_infinity(dtype: np.dtype, min_for_int: bool = False) -> float | comp
         return -np.inf
 
     if issubclass(dtype.type, np.integer):
-        if min_for_int:
-            return np.iinfo(dtype).min
-        else:
-            return -np.inf
-
+        return np.iinfo(dtype).min if min_for_int else -np.inf
     if issubclass(dtype.type, np.complexfloating):
         return -np.inf - 1j * np.inf
 
     return NINF
 
 
-def is_datetime_like(dtype: dtype) -> TypeGuard[np.datetime64 | np.timedelta64]:
+def is_datetime_like(dtype: np.dtype) -> TypeGuard[np.datetime64 | np.timedelta64]:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
