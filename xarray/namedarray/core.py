@@ -12,8 +12,8 @@ from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
     Default,
-    _default,
     T_DuckArray,
+    _default,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
