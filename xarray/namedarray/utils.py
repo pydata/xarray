@@ -17,8 +17,15 @@ if typing.TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
-else:
-    Self: typing.Any = None
+
+    try:
+        from dask.array import Array as DaskArray
+        from dask.types import DaskCollection
+    except ImportError:
+        DaskArray = np.ndarray  # type: ignore
+        DaskCollection: np.Any = np.ndarray  # type: ignore
+
+
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
 # T_DType = typing.TypeVar("T_DType", bound=np.dtype[np.generic])
@@ -78,11 +85,11 @@ def module_available(module: str) -> bool:
     return importlib.util.find_spec(module) is not None
 
 
-def is_dask_collection(x: typing.Any) -> bool:
+def is_dask_collection(x: typing.Any) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
-        from dask.base import is_dask_collection
+        from dask.typing import DaskCollection
 
-        return is_dask_collection(x)
+        return isinstance(x, DaskCollection)
     return False
 
 
@@ -100,7 +107,7 @@ def is_duck_array(value: typing.Any) -> TypeGuard[T_DuckArray]:
     )
 
 
-def is_duck_dask_array(x: typing.Any) -> bool:
+def is_duck_dask_array(x: typing.Any) -> TypeGuard[DaskArray]:
     return is_duck_array(x) and is_dask_collection(x)
 
 
