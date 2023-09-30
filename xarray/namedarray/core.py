@@ -25,12 +25,12 @@ if typing.TYPE_CHECKING:
     # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
+    DataInput = typing.Union[T_DuckArray, np.typing.ArrayLike]
+    AttrsInput = typing.Union[Mapping[typing.Any, typing.Any], None]
 
 
 # TODO: Add tests!
-def as_compatible_data(
-    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
-) -> T_DuckArray:
+def as_compatible_data(data: DataInput, fastpath: bool = False) -> T_DuckArray:
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return typing.cast(T_DuckArray, data)
@@ -73,8 +73,8 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def __init__(
         self,
         dims: DimsInput,
-        data: T_DuckArray | np.typing.ArrayLike,
-        attrs: dict[typing.Any, typing.Any] | None = None,
+        data: DataInput,
+        attrs: AttrsInput = None,
         fastpath: bool = False,
     ):
         """
@@ -223,7 +223,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         return self._data
 
     @data.setter
-    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
+    def data(self, data: DataInput) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
@@ -332,7 +332,12 @@ class NamedArray(typing.Generic[T_DuckArray]):
         """Ordered mapping from dimension names to lengths."""
         return dict(zip(self.dims, self.shape))
 
-    def _replace(self, dims=_default, data=_default, attrs=_default) -> Self:
+    def _replace(
+        self,
+        dims: DimsInput | Default = _default,
+        data: DataInput | Default = _default,
+        attrs: AttrsInput | Default = _default,
+    ) -> Self:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -344,7 +349,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def _copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | np.typing.ArrayLike | None = None,
+        data: DataInput | None = None,
         memo: dict[int, typing.Any] | None = None,
     ) -> Self:
         if data is None:
@@ -370,7 +375,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | np.typing.ArrayLike | None = None,
+        data: DataInput | None = None,
     ) -> Self:
         """Returns a copy of this object.
 
