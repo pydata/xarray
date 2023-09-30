@@ -1159,7 +1159,7 @@ class DataWithCoords(AttrAccessMixin):
         if drop:
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
-                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
+                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
 
             self, cond = align(self, cond)  # type: ignore[assignment]
