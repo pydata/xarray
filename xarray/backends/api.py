@@ -488,6 +488,9 @@ def open_dataset(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -691,6 +694,9 @@ def open_dataarray(
           as coordinate variables.
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables: str or iterable of str, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -930,7 +936,9 @@ def open_mfdataset(
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
     **kwargs : optional
-        Additional arguments passed on to :py:func:`xarray.open_dataset`.
+        Additional arguments passed on to :py:func:`xarray.open_dataset`. For an
+        overview of some of the possible options, see the documentation of
+        :py:func:`xarray.open_dataset`
 
     Returns
     -------
@@ -963,6 +971,13 @@ def open_mfdataset(
     >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
     >>> ds = xr.open_mfdataset(
     ...     "file_*.nc", concat_dim="time", preprocess=partial_func
+    ... )  # doctest: +SKIP
+
+    It is also possible to use any argument to ``open_dataset`` together
+    with ``open_mfdataset``, such as for example ``drop_variables``:
+
+    >>> ds = xr.open_mfdataset(
+    ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
     ... )  # doctest: +SKIP
 
     References
@@ -1047,8 +1062,8 @@ def open_mfdataset(
             )
         else:
             raise ValueError(
-                "{} is an invalid option for the keyword argument"
-                " ``combine``".format(combine)
+                f"{combine} is an invalid option for the keyword argument"
+                " ``combine``"
             )
     except ValueError:
         for ds in datasets:

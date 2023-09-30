@@ -198,10 +198,11 @@ class Weighted(Generic[T_Xarray]):
             dims = [dim] if dim else []
         else:
             dims = list(dim)
-        missing_dims = set(dims) - set(self.obj.dims) - set(self.weights.dims)
+        all_dims = set(self.obj.dims).union(set(self.weights.dims))
+        missing_dims = set(dims) - all_dims
         if missing_dims:
             raise ValueError(
-                f"{self.__class__.__name__} does not contain the dimensions: {missing_dims}"
+                f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
             )
 
     @staticmethod
@@ -323,6 +324,7 @@ class Weighted(Generic[T_Xarray]):
         def _get_h(n: float, q: np.ndarray, method: QUANTILE_METHODS) -> np.ndarray:
             """Return the interpolation parameter."""
             # Note that options are not yet exposed in the public API.
+            h: np.ndarray
             if method == "linear":
                 h = (n - 1) * q + 1
             elif method == "interpolated_inverted_cdf":

@@ -10,6 +10,7 @@ from collections.abc import Collection, Hashable
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,9 @@ from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.pycompat import array_type
 from xarray.core.utils import is_duck_array
+
+if TYPE_CHECKING:
+    from xarray.core.coordinates import AbstractCoordinates
 
 
 def pretty_print(x, numchars: int):
@@ -156,6 +160,8 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     if isinstance(x, (np.timedelta64, timedelta)):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
+        if hasattr(x, "dtype"):
+            x = x.item()
         return repr(x) if quote_strings else x
     elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
         return f"{x.item():.4}"
@@ -398,7 +404,7 @@ attrs_repr = functools.partial(
 )
 
 
-def coords_repr(coords, col_width=None, max_rows=None):
+def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
@@ -412,7 +418,7 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width=None):
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
