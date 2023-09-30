@@ -6,23 +6,6 @@ import typing
 
 import numpy as np
 
-try:
-    if sys.version_info >= (3, 11):
-        from typing import Self as _Self
-    else:
-        from typing_extensions import Self as _Self
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
-except ImportError:
-    if typing.TYPE_CHECKING:
-        raise
-    else:
-        _Self: typing.Any = None
-
-Self: TypeAlias = _Self
 
 if typing.TYPE_CHECKING:
     if sys.version_info >= (3, 10):
@@ -30,6 +13,10 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
