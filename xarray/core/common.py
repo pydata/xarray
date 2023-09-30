@@ -1074,7 +1074,7 @@ class DataWithCoords(AttrAccessMixin):
         cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
             If a callable, it must expect this object as its only parameter.
-        other : scalar, DataArray or Dataset, optional
+        other : scalar, DataArray, Dataset, or callable, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations are filled with NA. If a callable, it must
             expect this object as its only parameter.
@@ -1125,20 +1125,21 @@ class DataWithCoords(AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
-        >>> a.where(lambda x: x.x + x.y < 4, drop=True)
+        >>> a.where(lambda x: x.x + x.y < 4, lambda x: -x)
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[  0,   1,   2,   3,  -4],
+               [  5,   6,   7,  -8,  -9],
+               [ 10,  11, -12, -13, -14],
+               [ 15, -16, -17, -18, -19],
+               [-20, -21, -22, -23, -24]])
+        Dimensions without coordinates: x, y
+
+        >>> a.where(a.x + a.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 0.,  1.,  2.,  3.],
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
                [15., nan, nan, nan]])
-        Dimensions without coordinates: x, y
-
-        >>> a.where(a.x + a.y < 4, -1, drop=True)
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 0,  1,  2,  3],
-               [ 5,  6,  7, -1],
-               [10, 11, -1, -1],
-               [15, -1, -1, -1]])
         Dimensions without coordinates: x, y
 
         See Also
