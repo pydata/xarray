@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import Enum
+
 import importlib
 import sys
 import typing
@@ -49,6 +51,14 @@ class _Array(typing.Protocol[T_DType_co]):
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
 T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array[np.dtype[np.generic]])
+
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(Enum):
+    token: typing.Literal[0] = 0
+
+
+_default = Default.token
 
 
 def module_available(module: str) -> bool:
