@@ -1076,7 +1076,8 @@ class DataWithCoords(AttrAccessMixin):
             If a callable, it must expect this object as its only parameter.
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
-            By default, these locations filled with NA.
+            By default, these locations are filled with NA. If a callable, it must
+            expect this object as its only parameter.
         drop : bool, default: False
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result.
@@ -1151,6 +1152,8 @@ class DataWithCoords(AttrAccessMixin):
 
         if callable(cond):
             cond = cond(self)
+        if callable(other):
+            other = other(self)
 
         if drop:
             if not isinstance(cond, (Dataset, DataArray)):
