@@ -10300,3 +10300,18 @@ class Dataset(
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
         )
+
+    def drop_attrs(self) -> Self:
+        """
+        Removes all attributes from the Dataset and its variables.
+        """
+        # Remove attributes from the dataset
+        self = self.copy()
+
+        self.attrs = {}
+
+        # Remove attributes from each variable in the dataset
+        for var in self.variables:
+            self[var].attrs = {}
+
+        return self

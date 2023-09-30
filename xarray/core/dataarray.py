@@ -7097,3 +7097,13 @@ class DataArray(
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
+
+    def drop_attrs(self) -> Self:
+        """
+        Removes all attributes from the DataArray.
+        """
+        self = self.copy()
+
+        self.attrs = {}
+
+        return self
