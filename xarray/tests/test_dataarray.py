@@ -2717,6 +2717,14 @@ class TestDataArray:
         actual = arr.where(lambda x: x.y < 2, drop=True)
         assert_identical(actual, expected)
 
+    def test_where_other_lambda(self) -> None:
+        arr = DataArray(np.arange(4), dims="y")
+        expected = xr.concat(
+            [arr.sel(y=slice(2)), arr.sel(y=slice(2, None)) + 1], dim="y"
+        )
+        actual = arr.where(lambda x: x.y < 2, lambda x: x + 1)
+        assert_identical(actual, expected)
+
     def test_where_string(self) -> None:
         array = DataArray(["a", "b"])
         expected = DataArray(np.array(["a", np.nan], dtype=object))
