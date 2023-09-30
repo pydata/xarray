@@ -408,7 +408,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def _as_sparse(
         self,
         sparse_format: str | Default = _default,
-        fill_value=dtypes.NA,
+        fill_value: typing.Any = dtypes.NA,
     ) -> Self:
         """
         use sparse-array as backend.
