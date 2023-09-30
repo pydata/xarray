@@ -11,13 +11,18 @@ try:
         from typing import Self as _Self
     else:
         from typing_extensions import Self as _Self
+
+    if sys.version_info >= (3, 10):
+        from typing import TypeAlias
+    else:
+        from typing_extensions import TypeAlias
 except ImportError:
     if typing.TYPE_CHECKING:
         raise
     else:
         _Self: typing.Any = None
 
-Self = _Self
+Self: TypeAlias = _Self
 
 if typing.TYPE_CHECKING:
     if sys.version_info >= (3, 10):
