@@ -10,8 +10,9 @@ import numpy as np
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.core.utils import Default, _default
 from xarray.namedarray.utils import (
+    Default,
+    _default,
     T_DuckArray,
     is_duck_array,
     is_duck_dask_array,
