@@ -16,7 +16,8 @@ if typing.TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
-
+else:
+    Self: typing.Any = None
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
 # T_DType = typing.TypeVar("T_DType", bound=np.dtype[np.generic])
