@@ -11,7 +11,7 @@ from xarray.namedarray.utils import Self, T_DuckArray
 
 
 @pytest.fixture
-def random_inputs() -> np.ndarray[Any, np.float32]:
+def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
     return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
 
 
