@@ -11,7 +11,7 @@ from xarray.namedarray.utils import Self, T_DuckArray
 
 
 @pytest.fixture
-def random_inputs() -> np.ndarray:
+def random_inputs() -> np.ndarray[Any, np.float32]:
     return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
 
 
@@ -32,7 +32,7 @@ def test_as_compatible_data(
 
 
 def test_as_compatible_data_with_masked_array() -> None:
-    masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])
+    masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
     with pytest.raises(NotImplementedError):
         as_compatible_data(masked_array)
 
@@ -43,7 +43,9 @@ def test_as_compatible_data_with_0d_object() -> None:
     np.array_equal(as_compatible_data(data), data)
 
 
-def test_as_compatible_data_with_explicitly_indexed(random_inputs) -> None:
+def test_as_compatible_data_with_explicitly_indexed(
+    random_inputs: np.ndarray[Any, Any]
+) -> None:
     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
     class CustomArray(xr.core.indexing.NDArrayMixin):
         def __init__(self, array):
@@ -101,7 +103,7 @@ def test_attrs() -> None:
     assert named_array.attrs == {"key": "value2"}
 
 
-def test_data(random_inputs) -> None:
+def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
     named_array: NamedArray[np.ndarray[Any, Any]]
     named_array = NamedArray(["x", "y", "z"], random_inputs)
     assert np.array_equal(named_array.data, random_inputs)
