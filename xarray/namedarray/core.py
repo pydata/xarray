@@ -12,7 +12,6 @@ from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.utils import Default, _default
 from xarray.namedarray.utils import (
-    Self,
     T_DuckArray,
     is_duck_array,
     is_duck_dask_array,
@@ -20,6 +19,8 @@ from xarray.namedarray.utils import (
 )
 
 if typing.TYPE_CHECKING:
+    from xarray.namedarray.utils import Self
+
     # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
