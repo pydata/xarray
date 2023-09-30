@@ -147,7 +147,6 @@ def test_variable_property(prop):
                 ],
             ),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("conjugate"),
@@ -201,7 +200,6 @@ def test_variable_property(prop):
         param(
             do("reduce", func="sum", dim="x"),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("rolling_window", dim="x", window=2, window_dim="x_win"),
@@ -218,7 +216,7 @@ def test_variable_property(prop):
         param(
             do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
         ),
-        param(do("to_dict"), False, marks=xfail(reason="Coercion to dense")),
+        param(do("to_dict"), False),
         (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
     ],
     ids=repr,
@@ -237,7 +235,14 @@ def test_variable_method(func, sparse_output):
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
-        assert np.allclose(ret_s, ret_d, equal_nan=True)
+        if func.meth != "to_dict":
+            assert np.allclose(ret_s, ret_d)
+        else:
+            # pop the arrays from the dict
+            arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
+
+            assert np.allclose(arr_s, arr_d)
+            assert ret_s == ret_d
 
 
 @pytest.mark.parametrize(

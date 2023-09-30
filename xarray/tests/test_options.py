@@ -165,7 +165,6 @@ class TestAttrRetention:
         result = concat([ds1, ds2], dim="dim1")
         assert result.attrs == original_attrs
 
-    @pytest.mark.xfail
     def test_merge_attr_retention(self) -> None:
         da1 = create_test_dataarray_attrs(var="var1")
         da2 = create_test_dataarray_attrs(var="var2")
