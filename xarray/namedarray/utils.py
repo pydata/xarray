@@ -6,7 +6,6 @@ import typing
 
 import numpy as np
 
-
 if typing.TYPE_CHECKING:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
