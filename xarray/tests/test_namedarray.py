@@ -48,7 +48,7 @@ def test_as_compatible_data_with_explicitly_indexed(
 ) -> None:
     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
     class CustomArray(xr.core.indexing.NDArrayMixin):
-        def __init__(self, array):
+        def __init__(self, array: T_DuckArray) -> None:
             self.array = array
 
         @property
