@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.namedarray.core import NamedArray, as_compatible_data
-from xarray.namedarray.utils import Self, T_DuckArray
+from xarray.namedarray.utils import T_DuckArray
+
+if TYPE_CHECKING:
+    from xarray.namedarray.utils import Self
 
 
 @pytest.fixture
