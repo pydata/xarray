@@ -13,6 +13,11 @@ if typing.TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
     try:
         from dask.array import Array as DaskArray
         from dask.types import DaskCollection
@@ -20,19 +25,6 @@ if typing.TYPE_CHECKING:
         DaskArray = np.ndarray  # type: ignore
         DaskCollection: typing.Any = np.ndarray  # type: ignore
 
-
-try:
-    if sys.version_info >= (3, 11):
-        from typing import Self as _Self
-    else:
-        from typing_extensions import Self as _Self
-except ImportError:
-    if typing.TYPE_CHECKING:
-        raise
-    else:
-        _Self: typing.Any = None
-
-Self = _Self
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)

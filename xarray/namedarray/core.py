@@ -21,7 +21,7 @@ from xarray.namedarray.utils import (
 )
 
 if typing.TYPE_CHECKING:
-    from xarray.namedarray.utils import Self
+    from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
         from dask.typing import (

@@ -10,7 +10,7 @@ from xarray.namedarray.core import NamedArray, as_compatible_data
 from xarray.namedarray.utils import T_DuckArray
 
 if TYPE_CHECKING:
-    from xarray.namedarray.utils import Self
+    from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
 
 @pytest.fixture
