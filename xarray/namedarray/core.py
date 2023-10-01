@@ -29,6 +29,7 @@ if typing.TYPE_CHECKING:
             SchedulerGetCallable,
             PostComputeCallable,
             PostPersistCallable,
+            SchedulerGetCallable,
         )
     except ImportError:
         Graph: typing.Any  # typ: ignore[no-redef]
