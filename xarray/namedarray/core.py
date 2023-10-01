@@ -310,7 +310,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     @property
     def __dask_scheduler__(self) -> staticmethod[SchedulerGetCallable]:
         if is_duck_dask_array(self._data):
-            return self._data.__dask_scheduler__()
+            return self._data.__dask_scheduler__()  # type: ignore[no-any-return]
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
 
