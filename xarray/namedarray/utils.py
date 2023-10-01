@@ -57,7 +57,7 @@ class _Array(typing.Protocol[T_DType_co]):
     #     ...
 
 
-class _ChunkedArray(_Array):
+class _ChunkedArray(_Array, typing.Protocol[T_DType_co]):
     def chunks(self) -> tuple[tuple[int, ...], ...]:
         ...
 
