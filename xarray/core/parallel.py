@@ -443,7 +443,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index[dim]]
 
-                chunk_variable_task = (f"{name}-{gname}-{chunk[0]}",) + chunk_tuple
+                chunk_variable_task = (f"{name}-{gname}-{chunk[0]:r}",) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
