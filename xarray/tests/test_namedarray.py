@@ -74,7 +74,7 @@ def test_as_compatible_data_with_explicitly_indexed(
         pass
 
     array = CustomArray(random_inputs)
-    output = as_compatible_data(array)
+    output: T_DuckArray = as_compatible_data(array)
     assert isinstance(output, np.ndarray)
 
     array = CustomArrayIndexable(random_inputs)
