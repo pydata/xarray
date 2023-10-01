@@ -51,10 +51,8 @@ class _Array(typing.Protocol[T_DType_co]):
     def astype(self, dtype: np.typing.DTypeLike) -> Self:
         ...
 
-    # def __array__(
-    #     self, dtype: np.typing.DTypeLike = None
-    # ) -> np.ndarray[typing.Any, np.dtype[np.generic]]:
-    #     ...
+    def __array__(self) -> np.ndarray[typing.Any, T_DType_co]:
+        ...
 
 
 class _ChunkedArray(_Array[T_DType_co], typing.Protocol[T_DType_co]):
@@ -122,7 +120,7 @@ def is_duck_dask_array(x: T_DuckArray) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
-def is_chunked_duck_array(x: T_DuckArray) -> TypeGuard[T_ChunkedArray]:
+def is_chunked_duck_array(x: T_DuckArray | T_ChunkedArray) -> TypeGuard[T_ChunkedArray]:
     return hasattr(x, "chunks")
 
 
