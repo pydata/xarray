@@ -290,14 +290,13 @@ class NamedArray(typing.Generic[T_DuckArray]):
         if is_duck_dask_array(self._data):
             return self._data.__dask_keys__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     def __dask_layers__(self) -> typing.Sequence[str]:
         if is_duck_dask_array(self._data):
-            reveal_type(self._data)
             return self._data.__dask_layers__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     @property
     def __dask_optimize__(
@@ -306,39 +305,39 @@ class NamedArray(typing.Generic[T_DuckArray]):
         if is_duck_dask_array(self._data):
             return self._data.__dask_optimize__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     @property
     def __dask_scheduler__(self) -> staticmethod[SchedulerGetCallable]:
         if is_duck_dask_array(self._data):
             return self._data.__dask_scheduler__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     def __dask_postcompute__(
         self,
     ) -> tuple[PostComputeCallable, tuple[typing.Any, ...]]:
         if is_duck_dask_array(self._data):
-            array_func, array_args = self._data.__dask_postcompute__()
+            array_func, array_args = self._data.__dask_postcompute__()  # type: ignore[no-untyped-call]
             return self._dask_finalize, (array_func,) + array_args
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     def __dask_postpersist__(
         self,
     ) -> tuple[PostPersistCallable, tuple[typing.Any, ...]]:
         if is_duck_dask_array(self._data):
-            array_func, array_args = self._data.__dask_postpersist__()
+            array_func, array_args = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
             return self._dask_finalize, (array_func,) + array_args
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     def _dask_finalize(self, results, array_func, *args, **kwargs) -> Self:
         if is_duck_dask_array(self._data):
             data = array_func(results, *args, **kwargs)
             return type(self)(self._dims, data, attrs=self._attrs)
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array.")
+            raise AttributeError("Method requires self.data to be a dask array.")
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
