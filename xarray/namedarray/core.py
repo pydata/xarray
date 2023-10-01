@@ -31,11 +31,11 @@ if typing.TYPE_CHECKING:
             SchedulerGetCallable,
         )
     except ImportError:
-        Graph: typing.Any  # typ: ignore[no-redef]
-        NestedKeys: typing.Any  # typ: ignore[no-redef]
-        SchedulerGetCallable: typing.Any  # typ: ignore[no-redef]
-        PostComputeCallable: typing.Any  # typ: ignore[no-redef]
-        PostPersistCallable: typing.Any  # typ: ignore[no-redef]
+        Graph: typing.Any  # type: ignore[no-redef]
+        NestedKeys: typing.Any  # type: ignore[no-redef]
+        SchedulerGetCallable: typing.Any  # type: ignore[no-redef]
+        PostComputeCallable: typing.Any  # type: ignore[no-redef]
+        PostPersistCallable: typing.Any  # type: ignore[no-redef]
 
     # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
@@ -272,9 +272,8 @@ class NamedArray(typing.Generic[T_DuckArray]):
             # around NetCDF and the like
             from dask.base import normalize_token
 
-            return normalize_token(
-                (type(self), self._dims, self.data, self.attrs)
-            )  # type: ignore[no-any-return]
+            s, d, a, attrs = type(self), self._dims, self.data, self.attrs
+            return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
         else:
             raise NotImplementedError("Method requires self.data to be a dask array")
 
