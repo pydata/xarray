@@ -72,7 +72,7 @@ T_ChunkedArray = typing.TypeVar(
 
 # Singleton type, as per https://github.com/python/typing/pull/240
 class Default(Enum):
-    token: typing.Literal[0] = 0
+    token: typing.Final = 0
 
 
 _default = Default.token
