@@ -48,15 +48,26 @@ class _Array(typing.Protocol[T_DType_co]):
     def imag(self) -> Self:
         ...
 
+    def astype(self, dtype: np.typing.DTypeLike) -> Self:
+        ...
+
     # def __array__(
     #     self, dtype: np.typing.DTypeLike = None
     # ) -> np.ndarray[typing.Any, np.dtype[np.generic]]:
     #     ...
 
 
+class _ChunkedArray(_Array):
+    def chunks(self) -> tuple[tuple[int, ...], ...]:
+        ...
+
+
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
 T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array[np.dtype[np.generic]])
+T_ChunkedArray = typing.TypeVar(
+    "T_ChunkedArray", bound=_ChunkedArray[np.dtype[np.generic]]
+)
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -109,6 +120,10 @@ def is_duck_array(value: typing.Any) -> TypeGuard[T_DuckArray]:
 
 def is_duck_dask_array(x: typing.Any) -> TypeGuard[DaskArray]:
     return is_duck_array(x) and is_dask_collection(x)
+
+
+def is_chunked_duck_array(x: T_DuckArray) -> TypeGuard[T_ChunkedArray]:
+    return hasattr(x, "chunks")
 
 
 def to_0d_object_array(
