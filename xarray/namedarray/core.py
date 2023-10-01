@@ -14,6 +14,7 @@ from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
     _default,
+    is_chunked_duck_array,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -188,7 +189,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         the bytes consumed based on the ``size`` and ``dtype``.
         """
         if hasattr(self._data, "nbytes"):
-            return self._data.nbytes
+            return self._data.nbytes  # type: ignore[no-any-return]
         else:
             return self.size * self.dtype.itemsize
 
@@ -298,9 +299,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
             raise NotImplementedError("Method requires self.data to be a dask array")
 
     @property
-    def __dask_optimize__(
-        self,
-    ) -> typing.Callable[typing.Any, dict[typing.Any, typing.Any]]:
+    def __dask_optimize__(self) -> typing.Callable[..., dict[typing.Any, typing.Any]]:
         if is_duck_dask_array(self._data):
             return self._data.__dask_optimize__()
         else:
@@ -350,7 +349,10 @@ class NamedArray(typing.Generic[T_DuckArray]):
         NamedArray.chunksizes
         xarray.unify_chunks
         """
-        return getattr(self._data, "chunks", None)
+        if is_chunked_duck_array(self._data):
+            return self._data.chunks
+        else:
+            return None
 
     @property
     def chunksizes(
@@ -370,7 +372,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         NamedArray.chunks
         xarray.unify_chunks
         """
-        if hasattr(self._data, "chunks"):
+        if is_chunked_duck_array(self._data):
             return dict(zip(self.dims, self.data.chunks))
         else:
             return {}
