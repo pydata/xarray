@@ -267,7 +267,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         """
         return self._replace(data=self.data.imag)
 
-    def __dask_tokenize__(self) -> Hashable:
+    def __dask_tokenize__(self) -> Hashable | None:
         if is_duck_dask_array(self._data):
             # Use v.data, instead of v._data, in order to cope with the wrappers
             # around NetCDF and the like
@@ -276,7 +276,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
             s, d, a, attrs = type(self), self._dims, self.data, self.attrs
             return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
     def __dask_graph__(self) -> Graph | None:
         if is_duck_dask_array(self._data):
@@ -286,56 +286,58 @@ class NamedArray(typing.Generic[T_DuckArray]):
             # raise NotImplementedError("Method requires self.data to be a dask array")
             return None
 
-    def __dask_keys__(self) -> NestedKeys:
+    def __dask_keys__(self) -> NestedKeys | None:
         if is_duck_dask_array(self._data):
             return self._data.__dask_keys__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
-    def __dask_layers__(self) -> typing.Sequence[str]:
+    def __dask_layers__(self) -> typing.Sequence[str] | None:
         if is_duck_dask_array(self._data):
             return self._data.__dask_layers__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
     @property
-    def __dask_optimize__(self) -> typing.Callable[..., dict[typing.Any, typing.Any]]:
+    def __dask_optimize__(
+        self,
+    ) -> typing.Callable[..., dict[typing.Any, typing.Any]] | None:
         if is_duck_dask_array(self._data):
             return self._data.__dask_optimize__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
     @property
-    def __dask_scheduler__(self) -> staticmethod[SchedulerGetCallable]:
+    def __dask_scheduler__(self) -> staticmethod[SchedulerGetCallable] | None:
         if is_duck_dask_array(self._data):
             return self._data.__dask_scheduler__()
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
     def __dask_postcompute__(
         self,
-    ) -> tuple[PostComputeCallable, tuple[typing.Any, ...]]:
+    ) -> tuple[PostComputeCallable, tuple[typing.Any, ...]] | None:
         if is_duck_dask_array(self._data):
             array_func, array_args = self._data.__dask_postcompute__()
             return self._dask_finalize, (array_func,) + array_args
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
     def __dask_postpersist__(
         self,
-    ) -> tuple[PostPersistCallable, tuple[typing.Any, ...]]:
+    ) -> tuple[PostPersistCallable, tuple[typing.Any, ...]] | None:
         if is_duck_dask_array(self._data):
             array_func, array_args = self._data.__dask_postpersist__()
             return self._dask_finalize, (array_func,) + array_args
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
-    def _dask_finalize(self, results, array_func, *args, **kwargs) -> Self:
+    def _dask_finalize(self, results, array_func, *args, **kwargs) -> Self | None:
         if is_duck_dask_array(self._data):
             data = array_func(results, *args, **kwargs)
             return type(self)(self._dims, data, attrs=self._attrs)
         else:
-            raise NotImplementedError("Method requires self.data to be a dask array")
+            return None
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
@@ -350,7 +352,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
         xarray.unify_chunks
         """
         data = self._data
+        # reveal_type(data)
         if is_chunked_duck_array(data):
+            # reveal_type(data)
             return data.chunks
         else:
             return None
