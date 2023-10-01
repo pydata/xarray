@@ -76,16 +76,16 @@ def test_as_compatible_data_with_explicitly_indexed(
         def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
             raise NotImplementedError
 
-    class CustomArrayIndexable(CustomArray, xr.core.indexing.ExplicitlyIndexed):
+    class CustomArrayIndexable(xr.core.indexing.ExplicitlyIndexed, CustomArray):
         pass
 
     array = CustomArray(random_inputs)
-    output: T_DuckArray = as_compatible_data(array)
+    output: CustomArray = as_compatible_data(array)
     assert isinstance(output, np.ndarray)
 
-    array = CustomArrayIndexable(random_inputs)
-    output = as_compatible_data(array)
-    assert isinstance(output, CustomArrayIndexable)
+    array2 = CustomArrayIndexable(random_inputs)
+    output2: CustomArrayIndexable = as_compatible_data(array2)
+    assert isinstance(output2, CustomArrayIndexable)
 
 
 def test_properties() -> None:
