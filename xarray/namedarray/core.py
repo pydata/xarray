@@ -303,7 +303,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         self,
     ) -> typing.Callable[..., dict[typing.Any, typing.Any]]:
         if is_duck_dask_array(self._data):
-            return self._data.__dask_optimize__()
+            return self._data.__dask_optimize__()  # type: ignore[no-any-return]
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
 
@@ -332,12 +332,15 @@ class NamedArray(typing.Generic[T_DuckArray]):
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
 
-    def _dask_finalize(self, results, array_func, *args, **kwargs) -> Self:
-        if is_duck_dask_array(self._data):
-            data = array_func(results, *args, **kwargs)
-            return type(self)(self._dims, data, attrs=self._attrs)
-        else:
-            raise AttributeError("Method requires self.data to be a dask array.")
+    def _dask_finalize(
+        self,
+        results: T_DuckArray,
+        array_func: typing.Callable[..., T_DuckArray],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> Self:
+        data = array_func(results, *args, **kwargs)
+        return type(self)(self._dims, data, attrs=self._attrs)
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
