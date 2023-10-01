@@ -24,14 +24,18 @@ if typing.TYPE_CHECKING:
 
     try:
         from dask.typing import (
+            Graph,
+            NestedKeys,
             SchedulerGetCallable,
             PostComputeCallable,
             PostPersistCallable,
         )
     except ImportError:
-        SchedulerGetCallable: typing.Any
-        PostComputeCallable: typing.Any
-        PostPersistCallable: typing.Any
+        Graph: typing.Any  # typ: ignore[no-redef]
+        NestedKeys: typing.Any  # typ: ignore[no-redef]
+        SchedulerGetCallable: typing.Any  # typ: ignore[no-redef]
+        PostComputeCallable: typing.Any  # typ: ignore[no-redef]
+        PostPersistCallable: typing.Any  # typ: ignore[no-redef]
 
     # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = typing.Union[str, Iterable[Hashable]]
@@ -268,18 +272,21 @@ class NamedArray(typing.Generic[T_DuckArray]):
             # around NetCDF and the like
             from dask.base import normalize_token
 
-            return normalize_token((type(self), self._dims, self.data, self.attrs))
+            return normalize_token(
+                (type(self), self._dims, self.data, self.attrs)
+            )  # type: ignore[no-any-return]
         else:
             raise NotImplementedError("Method requires self.data to be a dask array")
 
-    def __dask_graph__(self) -> Mapping[typing.Any, typing.Any]:
+    def __dask_graph__(self) -> Graph:
         if is_duck_dask_array(self._data):
             return self._data.__dask_graph__()
         else:
+            # TODO: Should this method just raise instead?
             # raise NotImplementedError("Method requires self.data to be a dask array")
             return None
 
-    def __dask_keys__(self) -> list[Hashable]:
+    def __dask_keys__(self) -> NestedKeys:
         if is_duck_dask_array(self._data):
             return self._data.__dask_keys__()
         else:
