@@ -93,6 +93,7 @@ module = [
   "cftime.*",
   "cubed.*",
   "cupy.*",
+  "dask.types.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
