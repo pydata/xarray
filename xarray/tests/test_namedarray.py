@@ -71,10 +71,10 @@ def test_as_compatible_data_with_explicitly_indexed(
             raise NotImplementedError
 
         def astype(self, dtype: np.typing.DTypeLike) -> Self:
-            ...
+            raise NotImplementedError
 
         def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
-            ...
+            raise NotImplementedError
 
     class CustomArrayIndexable(CustomArray, xr.core.indexing.ExplicitlyIndexed):
         pass
