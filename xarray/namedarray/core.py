@@ -349,8 +349,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
         NamedArray.chunksizes
         xarray.unify_chunks
         """
-        if is_chunked_duck_array(self._data):
-            return self._data.chunks
+        data = self._data
+        if is_chunked_duck_array(data):
+            return data.chunks
         else:
             return None
 
@@ -372,8 +373,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
         NamedArray.chunks
         xarray.unify_chunks
         """
-        if is_chunked_duck_array(self._data):
-            return dict(zip(self.dims, self.data.chunks))
+        data = self._data
+        if is_chunked_duck_array(data):
+            return dict(zip(self.dims, data.chunks))
         else:
             return {}
 
