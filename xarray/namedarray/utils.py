@@ -22,8 +22,8 @@ if typing.TYPE_CHECKING:
         from dask.array import Array as DaskArray
         from dask.types import DaskCollection
     except ImportError:
-        DaskArray = np.ndarray  # type: ignore[no-redef]
-        DaskCollection: np.Any = np.ndarray  # type: ignore[no-redef]
+        DaskArray = np.ndarray  # type: ignore
+        DaskCollection: typing.Any = np.ndarray  # type: ignore
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
