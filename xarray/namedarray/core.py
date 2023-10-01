@@ -26,7 +26,6 @@ if typing.TYPE_CHECKING:
         from dask.typing import (
             Graph,
             NestedKeys,
-            SchedulerGetCallable,
             PostComputeCallable,
             PostPersistCallable,
             SchedulerGetCallable,
