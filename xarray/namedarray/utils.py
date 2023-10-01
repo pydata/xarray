@@ -51,7 +51,9 @@ class _Array(typing.Protocol[T_DType_co]):
     def astype(self, dtype: np.typing.DTypeLike) -> Self:
         ...
 
-    def __array__(self) -> np.ndarray[typing.Any, T_DType_co]:
+    # TODO: numpy doesn't use any inputs:
+    # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
+    def __array__(self, *args: typing.Any) -> np.ndarray[typing.Any, T_DType_co]:
         ...
 
 
