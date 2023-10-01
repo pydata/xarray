@@ -24,9 +24,9 @@ if typing.TYPE_CHECKING:
 
     try:
         from dask.typing import (
-            SchedulerGetCallable,
             PostComputeCallable,
             PostPersistCallable,
+            SchedulerGetCallable,
         )
     except ImportError:
         SchedulerGetCallable: typing.Any
