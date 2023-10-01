@@ -277,7 +277,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         else:
             raise NotImplementedError("Method requires self.data to be a dask array")
 
-    def __dask_graph__(self) -> Graph:
+    def __dask_graph__(self) -> Graph | None:
         if is_duck_dask_array(self._data):
             return self._data.__dask_graph__()
         else:
@@ -298,7 +298,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
             raise NotImplementedError("Method requires self.data to be a dask array")
 
     @property
-    def __dask_optimize__(self) -> typing.Callable:
+    def __dask_optimize__(
+        self,
+    ) -> typing.Callable[typing.Any, dict[typing.Any, typing.Any]]:
         if is_duck_dask_array(self._data):
             return self._data.__dask_optimize__()
         else:
