@@ -56,7 +56,7 @@ def test_as_compatible_data_with_explicitly_indexed(
 
         @property
         def dtype(self) -> np.dtype[np.generic]:
-            raise self.array.dtype
+            return self.array.dtype
 
         @property
         def shape(self) -> tuple[int, ...]:
@@ -76,7 +76,7 @@ def test_as_compatible_data_with_explicitly_indexed(
         def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
             raise NotImplementedError
 
-    class CustomArrayIndexable(xr.core.indexing.ExplicitlyIndexed, CustomArray):
+    class CustomArrayIndexable(CustomArray, xr.core.indexing.ExplicitlyIndexed):
         pass
 
     array = CustomArray(random_inputs)
