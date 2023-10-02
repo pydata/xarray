@@ -66,6 +66,7 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
@@ -967,9 +968,11 @@ class DataArray(
     ) -> Self:
         ...
 
+    @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
         self,
         names: Dims = None,
+        *,
         drop: bool = False,
     ) -> Self | Dataset:
         """Given names of coordinates, reset them to become variables.
@@ -1287,9 +1290,11 @@ class DataArray(
         all_variables = [self.variable] + [c.variable for c in self.coords.values()]
         return get_chunksizes(all_variables)
 
+    @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
         chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        *,
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
@@ -1724,9 +1729,11 @@ class DataArray(
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def broadcast_like(
         self,
         other: T_DataArrayOrSet,
+        *,
         exclude: Iterable[Hashable] | None = None,
     ) -> Self:
         """Broadcast this DataArray against another Dataset or DataArray.
@@ -1835,9 +1842,11 @@ class DataArray(
 
         return da
 
+    @_deprecate_positional_args("v2023.10.0")
     def reindex_like(
         self,
         other: T_DataArrayOrSet,
+        *,
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
@@ -2005,9 +2014,11 @@ class DataArray(
             fill_value=fill_value,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def reindex(
         self,
         indexers: Mapping[Any, Any] | None = None,
+        *,
         method: ReindexMethodOptions = None,
         tolerance: float | Iterable[float] | None = None,
         copy: bool = True,
@@ -4986,6 +4997,7 @@ class DataArray(
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,

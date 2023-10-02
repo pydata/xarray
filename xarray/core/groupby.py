@@ -43,6 +43,7 @@ from xarray.core.utils import (
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -1092,6 +1093,7 @@ class GroupBy(Generic[T_Xarray]):
         """
         return ops.fillna(self, value)
 
+    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
