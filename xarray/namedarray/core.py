@@ -12,6 +12,7 @@ from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
     Default,
+    T_ChunkedArray,
     T_DuckArray,
     _default,
     is_chunked_duck_array,
@@ -300,7 +301,7 @@ class NamedArray(Generic[T_DuckArray]):
         self,
     ) -> Callable[..., dict[Any, Any]]:
         if is_duck_dask_array(self._data):
-            return self._data.__dask_optimize__()  # type: ignore[no-any-return]
+            return self._data.__dask_optimize__  # type: ignore[no-any-return]
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
 
@@ -360,8 +361,10 @@ class NamedArray(Generic[T_DuckArray]):
         NamedArray.chunksizes
         xarray.unify_chunks
         """
-        data = self._data
+        data: T_DuckArray | T_ChunkedArray = self._data
+        # reveal_type(data)
         if is_chunked_duck_array(data):
+            # reveal_type(data)
             return data.chunks
         else:
             return None
