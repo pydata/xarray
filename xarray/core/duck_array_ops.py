@@ -16,8 +16,6 @@ from importlib import import_module
 
 import numpy as np
 import pandas as pd
-from numpy import all as array_all  # noqa: F401
-from numpy import any as array_any  # noqa: F401
 from numpy import (  # noqa: F401
     isclose,
     isnat,
@@ -319,7 +317,7 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
-            return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+            return bool(array_all(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True)))
     else:
         return lazy_equiv
 
@@ -333,7 +331,7 @@ def array_equiv(arr1, arr2):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | (isnull(arr1) & isnull(arr2))
-            return bool(flag_array.all())
+            return bool(array_all(flag_array))
     else:
         return lazy_equiv
 
@@ -349,7 +347,7 @@ def array_notnull_equiv(arr1, arr2):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | isnull(arr1) | isnull(arr2)
-            return bool(flag_array.all())
+            return bool(array_all(flag_array))
     else:
         return lazy_equiv
 
@@ -534,6 +532,16 @@ cumprod_1d = _create_nan_agg_method("cumprod", invariant_0d=True)
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
+
+
+def array_all(array, axis=None, keepdims=False):
+    xp = get_array_namespace(array)
+    return xp.all(array, axis=axis, keepdims=keepdims)
+
+
+def array_any(array, axis=None, keepdims=False):
+    xp = get_array_namespace(array)
+    return xp.any(array, axis=axis, keepdims=keepdims)
 
 
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
