@@ -96,7 +96,7 @@ def module_available(module: str) -> bool:
     return importlib.util.find_spec(module) is not None
 
 
-def is_dask_collection(x: typing.Any) -> TypeGuard[DaskCollection]:
+def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
         from dask.typing import DaskCollection
 
