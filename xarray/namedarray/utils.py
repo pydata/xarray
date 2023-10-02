@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import importlib
 import sys
-import typing
+from typing import TYPE_CHECKING, Any, TypeVar, Protocol, Final
 from enum import Enum
 
 import numpy as np
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
     else:
@@ -23,15 +23,15 @@ if typing.TYPE_CHECKING:
         from dask.types import DaskCollection
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
-        DaskCollection: typing.Any = np.ndarray  # type: ignore
+        DaskCollection: Any = np.ndarray  # type: ignore
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
-T_DType_co = typing.TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
-# T_DType = typing.TypeVar("T_DType", bound=np.dtype[np.generic])
+T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
+# T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
 
 
-class _Array(typing.Protocol[T_DType_co]):
+class _Array(Protocol[T_DType_co]):
     @property
     def dtype(self) -> T_DType_co:
         ...
@@ -53,26 +53,24 @@ class _Array(typing.Protocol[T_DType_co]):
 
     # TODO: numpy doesn't use any inputs:
     # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
-    def __array__(self) -> np.ndarray[typing.Any, T_DType_co]:
+    def __array__(self) -> np.ndarray[Any, T_DType_co]:
         ...
 
 
-class _ChunkedArray(_Array[T_DType_co], typing.Protocol[T_DType_co]):
+class _ChunkedArray(_Array[T_DType_co], Protocol[T_DType_co]):
     def chunks(self) -> tuple[tuple[int, ...], ...]:
         ...
 
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DuckArray = typing.TypeVar("T_DuckArray", bound=_Array[np.dtype[np.generic]])
-T_ChunkedArray = typing.TypeVar(
-    "T_ChunkedArray", bound=_ChunkedArray[np.dtype[np.generic]]
-)
+T_DuckArray = TypeVar("T_DuckArray", bound=_Array[np.dtype[np.generic]])
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray[np.dtype[np.generic]])
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
 class Default(Enum):
-    token: typing.Final = 0
+    token: Final = 0
 
 
 _default = Default.token
@@ -104,7 +102,7 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
-def is_duck_array(value: typing.Any) -> TypeGuard[T_DuckArray]:
+def is_duck_array(value: object) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (
@@ -128,7 +126,7 @@ def is_chunked_duck_array(x: T_DuckArray | T_ChunkedArray) -> TypeGuard[T_Chunke
 
 def to_0d_object_array(
     value: object,
-) -> np.ndarray[typing.Any, np.dtype[np.object_]]:
+) -> np.ndarray[Any, np.dtype[np.object_]]:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value

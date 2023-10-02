@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import math
-import typing
+from typing import TYPE_CHECKING, Any, Union, cast, Generic, Sequence, Callable
 from collections.abc import Hashable, Iterable, Mapping
 
 import numpy as np
@@ -20,7 +20,7 @@ from xarray.namedarray.utils import (
     to_0d_object_array,
 )
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
@@ -32,16 +32,16 @@ if typing.TYPE_CHECKING:
             SchedulerGetCallable,
         )
     except ImportError:
-        Graph: typing.Any  # type: ignore[no-redef]
-        NestedKeys: typing.Any  # type: ignore[no-redef]
-        SchedulerGetCallable: typing.Any  # type: ignore[no-redef]
-        PostComputeCallable: typing.Any  # type: ignore[no-redef]
-        PostPersistCallable: typing.Any  # type: ignore[no-redef]
+        Graph: Any  # type: ignore[no-redef]
+        NestedKeys: Any  # type: ignore[no-redef]
+        SchedulerGetCallable: Any  # type: ignore[no-redef]
+        PostComputeCallable: Any  # type: ignore[no-redef]
+        PostPersistCallable: Any  # type: ignore[no-redef]
 
     # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
-    DimsInput = typing.Union[str, Iterable[Hashable]]
+    DimsInput = Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
-    AttrsInput = typing.Union[Mapping[typing.Any, typing.Any], None]
+    AttrsInput = Union[Mapping[Any, Any], None]
 
 
 # TODO: Add tests!
@@ -50,7 +50,7 @@ def as_compatible_data(
 ) -> T_DuckArray:
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
-        return typing.cast(T_DuckArray, data)
+        return cast(T_DuckArray, data)
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
@@ -58,24 +58,24 @@ def as_compatible_data(
             # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
         else:
-            return typing.cast(T_DuckArray, np.asarray(data))
+            return cast(T_DuckArray, np.asarray(data))
     if is_duck_array(data):
         return data
     if isinstance(data, NamedArray):
-        return typing.cast(T_DuckArray, data.data)
+        return cast(T_DuckArray, data.data)
 
     if isinstance(data, ExplicitlyIndexed):
         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
-        return typing.cast(T_DuckArray, data)
+        return cast(T_DuckArray, data)
 
     if isinstance(data, tuple):
         data = to_0d_object_array(data)
 
     # validate whether the data is valid data types.
-    return typing.cast(T_DuckArray, np.asarray(data))
+    return cast(T_DuckArray, np.asarray(data))
 
 
-class NamedArray(typing.Generic[T_DuckArray]):
+class NamedArray(Generic[T_DuckArray]):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
@@ -85,7 +85,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
 
     _data: T_DuckArray
     _dims: Dims
-    _attrs: dict[typing.Any, typing.Any] | None
+    _attrs: dict[Any, Any] | None
 
     def __init__(
         self,
@@ -151,7 +151,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
             raise TypeError("len() of unsized object") from exc
 
     @property
-    def dtype(self) -> np.dtype[typing.Any]:
+    def dtype(self) -> np.dtype[Any]:
         """
         Data-type of the array’s elements.
 
@@ -212,14 +212,14 @@ class NamedArray(typing.Generic[T_DuckArray]):
         return dims
 
     @property
-    def attrs(self) -> dict[typing.Any, typing.Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of local attributes on this NamedArray."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[typing.Any, typing.Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
     def _check_shape(self, new_data: T_DuckArray) -> None:
@@ -292,7 +292,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
 
-    def __dask_layers__(self) -> typing.Sequence[str]:
+    def __dask_layers__(self) -> Sequence[str]:
         if is_duck_dask_array(self._data):
             return self._data.__dask_layers__()
         else:
@@ -301,7 +301,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     @property
     def __dask_optimize__(
         self,
-    ) -> typing.Callable[..., dict[typing.Any, typing.Any]]:
+    ) -> Callable[..., dict[Any, Any]]:
         if is_duck_dask_array(self._data):
             return self._data.__dask_optimize__()  # type: ignore[no-any-return]
         else:
@@ -316,7 +316,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
 
     def __dask_postcompute__(
         self,
-    ) -> tuple[PostComputeCallable, tuple[typing.Any, ...]]:
+    ) -> tuple[PostComputeCallable, tuple[Any, ...]]:
         if is_duck_dask_array(self._data):
             array_func, array_args = self._data.__dask_postcompute__()  # type: ignore[no-untyped-call]
             return self._dask_finalize, (array_func,) + array_args
@@ -326,14 +326,14 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def __dask_postpersist__(
         self,
     ) -> tuple[
-        typing.Callable[
-            [Graph, PostPersistCallable[typing.Any], typing.Any, typing.Any],
+        Callable[
+            [Graph, PostPersistCallable[Any], Any, Any],
             Self,
         ],
-        tuple[typing.Any, ...],
+        tuple[Any, ...],
     ]:
         if is_duck_dask_array(self._data):
-            a: tuple[PostPersistCallable[typing.Any], tuple[typing.Any, ...]]
+            a: tuple[PostPersistCallable[Any], tuple[Any, ...]]
             a = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
             array_func, array_args = a
 
@@ -344,9 +344,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def _dask_finalize(
         self,
         results: Graph,
-        array_func: PostPersistCallable[typing.Any],
-        *args: typing.Any,
-        **kwargs: typing.Any,
+        array_func: PostPersistCallable[Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> Self:
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
@@ -372,7 +372,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     @property
     def chunksizes(
         self,
-    ) -> typing.Mapping[typing.Any, tuple[int, ...]]:
+    ) -> Mapping[Any, tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this namedArray's data, or None if
         the underlying data is not a dask array.
@@ -416,7 +416,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         self,
         deep: bool = True,
         data: T_DuckArray | np.typing.ArrayLike | None = None,
-        memo: dict[int, typing.Any] | None = None,
+        memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
             ndata = self._data
@@ -435,7 +435,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def __copy__(self) -> Self:
         return self._copy(deep=False)
 
-    def __deepcopy__(self, memo: dict[int, typing.Any] | None = None) -> Self:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
         return self._copy(deep=True, memo=memo)
 
     def copy(
@@ -480,7 +480,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def _as_sparse(
         self,
         sparse_format: str | Default = _default,
-        fill_value: typing.Any = dtypes.NA,
+        fill_value: object = dtypes.NA,
     ) -> Self:
         """
         use sparse-array as backend.
