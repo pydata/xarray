@@ -56,11 +56,11 @@ def test_as_compatible_data_with_explicitly_indexed(
 
         @property
         def dtype(self) -> np.dtype[np.generic]:
-            raise NotImplementedError
+            raise self.array.dtype
 
         @property
         def shape(self) -> tuple[int, ...]:
-            raise NotImplementedError
+            return self.array.shape
 
         @property
         def real(self) -> Self:
