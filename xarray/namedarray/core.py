@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
 
 import numpy as np
 
