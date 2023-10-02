@@ -4411,11 +4411,9 @@ class Dataset(
 
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
-    @_deprecate_positional_args("v2023.10.0")
     def expand_dims(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        *,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
     ) -> Self:

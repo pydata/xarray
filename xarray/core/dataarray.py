@@ -2476,11 +2476,9 @@ class DataArray(
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
-    @_deprecate_positional_args("v2023.10.0")
     def expand_dims(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        *,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
     ) -> Self:
