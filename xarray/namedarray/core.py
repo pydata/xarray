@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     except ImportError:
         SparseArray: Any  # type: ignore[no-redef]
 
-    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
+    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[T_DuckArray]")
     DimsInput = Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
     AttrsInput = Union[Mapping[Any, Any], None]
