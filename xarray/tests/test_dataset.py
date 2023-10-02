@@ -3287,7 +3287,7 @@ class TestDataset:
             attrs={"key": "entry"},
         )
 
-        actual = original.expand_dims(["z"], [1])
+        actual = original.expand_dims(["z"], axis=[1])
         expected = Dataset(
             {
                 "x": original["x"].expand_dims("z", 1),
@@ -3306,7 +3306,7 @@ class TestDataset:
         assert_identical(original, roundtripped)
 
         # another test with a negative axis
-        actual = original.expand_dims(["z"], [-1])
+        actual = original.expand_dims(["z"], axis=[-1])
         expected = Dataset(
             {
                 "x": original["x"].expand_dims("z", -1),
