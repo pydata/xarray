@@ -3287,7 +3287,7 @@ class TestDataset:
             attrs={"key": "entry"},
         )
 
-        actual = original.expand_dims(["z"], axis=[1])
+        actual = original.expand_dims(["z"], [1])
         expected = Dataset(
             {
                 "x": original["x"].expand_dims("z", 1),
@@ -3306,7 +3306,7 @@ class TestDataset:
         assert_identical(original, roundtripped)
 
         # another test with a negative axis
-        actual = original.expand_dims(["z"], axis=[-1])
+        actual = original.expand_dims(["z"], [-1])
         expected = Dataset(
             {
                 "x": original["x"].expand_dims("z", -1),
@@ -5051,9 +5051,9 @@ class TestDataset:
         ):
             ds.dropna("foo")
         with pytest.raises(ValueError, match=r"invalid how"):
-            ds.dropna("a", how="somehow")  # type: ignore
+            ds.dropna("a", how="somehow")
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
-            ds.dropna("a", how=None)  # type: ignore
+            ds.dropna("a", how=None)
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
@@ -5985,7 +5985,7 @@ class TestDataset:
     def test_dataset_diff_exception_label_str(self) -> None:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"'label' argument has to"):
-            ds.diff("dim2", label="raise_me")  # type: ignore[arg-type]
+            ds.diff("dim2", label="raise_me")
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value) -> None:
