@@ -361,10 +361,8 @@ class NamedArray(Generic[T_DuckArray]):
         NamedArray.chunksizes
         xarray.unify_chunks
         """
-        data: T_DuckArray | T_ChunkedArray = self._data
-        # reveal_type(data)
+        data = self._data
         if is_chunked_duck_array(data):
-            # reveal_type(data)
             return data.chunks
         else:
             return None

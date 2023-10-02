@@ -58,6 +58,7 @@ class _Array(Protocol[T_DType_co]):
 
 
 class _ChunkedArray(_Array[T_DType_co], Protocol[T_DType_co]):
+    @property
     def chunks(self) -> tuple[tuple[int, ...], ...]:
         ...
 
@@ -120,7 +121,7 @@ def is_duck_dask_array(x: T_DuckArray) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
-def is_chunked_duck_array(x: T_DuckArray | T_ChunkedArray) -> TypeGuard[T_ChunkedArray]:
+def is_chunked_duck_array(x: T_DuckArray) -> TypeGuard[_ChunkedArray]:
     return hasattr(x, "chunks")
 
 
