@@ -308,9 +308,9 @@ class NamedArray(typing.Generic[T_DuckArray]):
             raise AttributeError("Method requires self.data to be a dask array.")
 
     @property
-    def __dask_scheduler__(self) -> staticmethod[SchedulerGetCallable]:
+    def __dask_scheduler__(self) -> SchedulerGetCallable:
         if is_duck_dask_array(self._data):
-            return self._data.__dask_scheduler__()  # type: ignore[no-any-return]
+            return self._data.__dask_scheduler__
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
 
@@ -325,9 +325,17 @@ class NamedArray(typing.Generic[T_DuckArray]):
 
     def __dask_postpersist__(
         self,
-    ) -> tuple[PostPersistCallable, tuple[typing.Any, ...]]:
+    ) -> tuple[
+        typing.Callable[
+            [T_DuckArray, PostPersistCallable, typing.Any, typing.Any], Self
+        ],
+        tuple[typing.Any, ...],
+    ]:
         if is_duck_dask_array(self._data):
-            array_func, array_args = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
+            a: tuple[PostPersistCallable, tuple[typing.Any, ...]]
+            a = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
+            array_func, array_args = a
+
             return self._dask_finalize, (array_func,) + array_args
         else:
             raise AttributeError("Method requires self.data to be a dask array.")
@@ -335,7 +343,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def _dask_finalize(
         self,
         results: T_DuckArray,
-        array_func: typing.Callable[..., T_DuckArray],
+        array_func: PostPersistCallable,
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> Self:
@@ -355,10 +363,12 @@ class NamedArray(typing.Generic[T_DuckArray]):
         xarray.unify_chunks
         """
         data = self._data
-        # reveal_type(data)
+        reveal_type(data)  #  note: Revealed type is "T_DuckArray`1"
         if is_chunked_duck_array(data):
-            # reveal_type(data)
-            return data.chunks
+            reveal_type(data)  #  note: Revealed type is "<nothing>"
+            return (
+                data.chunks
+            )  # error: <nothing> has no attribute "chunks"  [attr-defined]
         else:
             return None
 
