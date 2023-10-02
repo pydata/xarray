@@ -38,6 +38,11 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
+    try:
+        from sparse import SparseArray
+    except ImportError:
+        SparseArray: Any  # type: ignore[no-redef]
+
     T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
@@ -478,7 +483,7 @@ class NamedArray(Generic[T_DuckArray]):
         self,
         sparse_format: str | Default = _default,
         fill_value: np.typing.ArrayLike | Default = _default,
-    ) -> T_NamedArray:
+    ) -> T_NamedArray[SparseArray]:
         """
         use sparse-array as backend.
         """
@@ -500,7 +505,7 @@ class NamedArray(Generic[T_DuckArray]):
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self) -> T_NamedArray | Self:
+    def _to_dense(self) -> T_NamedArray[T_DuckArray] | Self:
         """
         Change backend from sparse to np.array
         """
