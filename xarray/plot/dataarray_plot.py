@@ -1348,7 +1348,7 @@ def _plot2d(plotfunc):
         `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
         Note: if ``cmap`` is a seaborn color palette and the plot type
         is not ``'contour'`` or ``'contourf'``, ``levels`` must also be specified.
-    center : float, optional
+    center : float or False, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
         diverging colormap.
