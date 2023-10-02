@@ -38,7 +38,7 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    # T_NamedArray = typing.TypeVar("T_NamedArray", bound="NamedArray")
+    # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
     AttrsInput = Union[Mapping[Any, Any], None]
@@ -480,7 +480,7 @@ class NamedArray(Generic[T_DuckArray]):
     def _as_sparse(
         self,
         sparse_format: str | Default = _default,
-        fill_value: object = dtypes.NA,
+        fill_value: np.typing.ArrayLike | Default = _default,
     ) -> Self:
         """
         use sparse-array as backend.
@@ -488,7 +488,7 @@ class NamedArray(Generic[T_DuckArray]):
         import sparse
 
         # TODO: what to do if dask-backended?
-        if fill_value is dtypes.NA:
+        if fill_value is _default:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = dtypes.result_type(self.dtype, fill_value)
