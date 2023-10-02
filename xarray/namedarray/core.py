@@ -327,7 +327,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
         self,
     ) -> tuple[
         typing.Callable[
-            [T_DuckArray, PostPersistCallable[typing.Any], typing.Any, typing.Any],
+            [Graph, PostPersistCallable[typing.Any], typing.Any, typing.Any],
             Self,
         ],
         tuple[typing.Any, ...],
@@ -343,7 +343,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
 
     def _dask_finalize(
         self,
-        results: T_DuckArray,
+        results: Graph,
         array_func: PostPersistCallable,
         *args: typing.Any,
         **kwargs: typing.Any,
