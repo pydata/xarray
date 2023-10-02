@@ -50,7 +50,7 @@ def test_as_compatible_data_with_explicitly_indexed(
     random_inputs: np.ndarray[Any, Any]
 ) -> None:
     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
-    class CustomArray(xr.core.indexing.NDArrayMixin):
+    class CustomArrayBase(xr.core.indexing.NDArrayMixin):
         def __init__(self, array: T_DuckArray) -> None:
             self.array = array
 
@@ -73,10 +73,11 @@ def test_as_compatible_data_with_explicitly_indexed(
         def astype(self, dtype: np.typing.DTypeLike) -> Self:
             raise NotImplementedError
 
+    class CustomArray(CustomArrayBase):
         def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
             return np.array(self.array)
 
-    class CustomArrayIndexable(CustomArray, xr.core.indexing.ExplicitlyIndexed):
+    class CustomArrayIndexable(CustomArrayBase, xr.core.indexing.ExplicitlyIndexed):
         pass
 
     array = CustomArray(random_inputs)

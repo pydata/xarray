@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union, cast
 
 import numpy as np
 
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
+    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
     DimsInput = Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
     AttrsInput = Union[Mapping[Any, Any], None]
@@ -479,7 +479,7 @@ class NamedArray(Generic[T_DuckArray]):
         self,
         sparse_format: str | Default = _default,
         fill_value: np.typing.ArrayLike | Default = _default,
-    ) -> Self:
+    ) -> T_NamedArray:
         """
         use sparse-array as backend.
         """
@@ -501,7 +501,7 @@ class NamedArray(Generic[T_DuckArray]):
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self) -> Self:
+    def _to_dense(self) -> T_NamedArray | Self:
         """
         Change backend from sparse to np.array
         """

@@ -121,7 +121,9 @@ def is_duck_dask_array(x: T_DuckArray) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
-def is_chunked_duck_array(x: T_DuckArray) -> TypeGuard[_ChunkedArray]:
+def is_chunked_duck_array(
+    x: T_DuckArray,
+) -> TypeGuard[_ChunkedArray[np.dtype[np.generic]]]:
     return hasattr(x, "chunks")
 
 
