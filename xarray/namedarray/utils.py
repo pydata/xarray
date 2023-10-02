@@ -127,7 +127,7 @@ def is_chunked_duck_array(x: T_DuckArray | T_ChunkedArray) -> TypeGuard[T_Chunke
 
 
 def to_0d_object_array(
-    value: typing.Any,
+    value: object,
 ) -> np.ndarray[typing.Any, np.dtype[np.object_]]:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
