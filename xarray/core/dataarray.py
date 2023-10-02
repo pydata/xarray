@@ -2798,6 +2798,7 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
@@ -3210,6 +3211,7 @@ class DataArray(
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
+    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
@@ -4707,6 +4709,7 @@ class DataArray(
 
         return title
 
+    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
@@ -5117,6 +5120,7 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
@@ -5693,6 +5697,7 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
@@ -5790,6 +5795,7 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable = None,
@@ -5887,6 +5893,7 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def argmin(
         self,
         dim: Dims = None,
@@ -5988,6 +5995,7 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
+    @_deprecate_positional_args("v2023.10.0")
     def argmax(
         self,
         dim: Dims = None,
@@ -6336,6 +6344,7 @@ class DataArray(
             kwargs=kwargs,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
