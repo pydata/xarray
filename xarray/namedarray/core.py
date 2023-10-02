@@ -38,11 +38,6 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    try:
-        from sparse import SparseArray
-    except ImportError:
-        SparseArray: Any  # type: ignore[no-redef]
-
     # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[T_DuckArray]")
     DimsInput = Union[str, Iterable[Hashable]]
     Dims = tuple[Hashable, ...]
