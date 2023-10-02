@@ -327,13 +327,13 @@ class NamedArray(typing.Generic[T_DuckArray]):
         self,
     ) -> tuple[
         typing.Callable[
-            [T_DuckArray, PostPersistCallable[..., typing.Any], typing.Any, typing.Any],
+            [T_DuckArray, PostPersistCallable[typing.Any], typing.Any, typing.Any],
             Self,
         ],
         tuple[typing.Any, ...],
     ]:
         if is_duck_dask_array(self._data):
-            a: tuple[PostPersistCallable[..., typing.Any], tuple[typing.Any, ...]]
+            a: tuple[PostPersistCallable[typing.Any], tuple[typing.Any, ...]]
             a = self._data.__dask_postpersist__()  # type: ignore[no-untyped-call]
             array_func, array_args = a
 
