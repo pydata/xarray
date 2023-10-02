@@ -344,7 +344,7 @@ class NamedArray(typing.Generic[T_DuckArray]):
     def _dask_finalize(
         self,
         results: Graph,
-        array_func: PostPersistCallable,
+        array_func: PostPersistCallable[typing.Any],
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> Self:
