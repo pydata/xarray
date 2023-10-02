@@ -268,15 +268,12 @@ class NamedArray(Generic[T_DuckArray]):
         return self._replace(data=self.data.imag)
 
     def __dask_tokenize__(self) -> Hashable | None:
-        if is_duck_dask_array(self._data):
-            # Use v.data, instead of v._data, in order to cope with the wrappers
-            # around NetCDF and the like
-            from dask.base import normalize_token
+        # Use v.data, instead of v._data, in order to cope with the wrappers
+        # around NetCDF and the like
+        from dask.base import normalize_token
 
-            s, d, a, attrs = type(self), self._dims, self.data, self.attrs
-            return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
-        else:
-            return None
+        s, d, a, attrs = type(self), self._dims, self.data, self.attrs
+        return normalize_token((s, d, a, attrs))  # type: ignore[no-any-return]
 
     def __dask_graph__(self) -> Graph | None:
         if is_duck_dask_array(self._data):
