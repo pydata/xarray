@@ -12,7 +12,6 @@ from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
     Default,
-    T_ChunkedArray,
     T_DuckArray,
     _default,
     is_chunked_duck_array,
