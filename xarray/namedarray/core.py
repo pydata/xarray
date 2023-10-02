@@ -364,12 +364,8 @@ class NamedArray(typing.Generic[T_DuckArray]):
         xarray.unify_chunks
         """
         data = self._data
-        reveal_type(data)  #  note: Revealed type is "T_DuckArray`1"
         if is_chunked_duck_array(data):
-            reveal_type(data)  #  note: Revealed type is "<nothing>"
-            return (
-                data.chunks
-            )  # error: <nothing> has no attribute "chunks"  [attr-defined]
+            return data.chunks
         else:
             return None
 
