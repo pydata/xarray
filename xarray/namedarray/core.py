@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import TYPE_CHECKING, Any, Union, cast, Generic, Sequence, Callable
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
 
 import numpy as np
 
