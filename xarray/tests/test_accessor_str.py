@@ -36,20 +36,21 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-# type: ignore[assignment]
+from __future__ import annotations
 
 import re
+from typing import Callable
 
 import numpy as np
 import pytest
 
 import xarray as xr
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
-from . import assert_equal, assert_identical, requires_dask
 
-
-@pytest.fixture(params=[np.str_, np.bytes_])
+@pytest.fixture(
+    params=[pytest.param(np.str_, id="str"), pytest.param(np.bytes_, id="bytes")]
+)
 def dtype(request):
     return request.param
 
@@ -278,22 +279,20 @@ def test_case_bytes() -> None:
 def test_case_str() -> None:
     # This string includes some unicode characters
     # that are common case management corner cases
-    value = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.unicode_)
+    value = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
 
-    exp_capitalized = xr.DataArray(["Some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.unicode_)
-    exp_lowered = xr.DataArray(["some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.unicode_)
-    exp_swapped = xr.DataArray(["soME WoRD ǆ SS ᾛ σς FFI⁵å ç ⅰ"]).astype(np.unicode_)
-    exp_titled = xr.DataArray(["Some Word ǅ Ss ᾛ Σς Ffi⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_uppered = xr.DataArray(["SOME WORD Ǆ SS ἫΙ ΣΣ FFI⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_casefolded = xr.DataArray(["some word ǆ ss ἣι σσ ffi⁵å ç ⅰ"]).astype(
-        np.unicode_
-    )
+    exp_capitalized = xr.DataArray(["Some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.str_)
+    exp_lowered = xr.DataArray(["some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(np.str_)
+    exp_swapped = xr.DataArray(["soME WoRD ǆ SS ᾛ σς FFI⁵å ç ⅰ"]).astype(np.str_)
+    exp_titled = xr.DataArray(["Some Word ǅ Ss ᾛ Σς Ffi⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_uppered = xr.DataArray(["SOME WORD Ǆ SS ἫΙ ΣΣ FFI⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_casefolded = xr.DataArray(["some word ǆ ss ἣι σσ ffi⁵å ç ⅰ"]).astype(np.str_)
 
-    exp_norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.unicode_)
-    exp_norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.unicode_)
-    exp_norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.unicode_)
+    exp_norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
+    exp_norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(np.str_)
+    exp_norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(np.str_)
     exp_norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(
-        np.unicode_
+        np.str_
     )
 
     res_capitalized = value.str.capitalize()
@@ -409,7 +408,7 @@ def test_replace_callable() -> None:
     # test broadcast
     values = xr.DataArray(["Foo Bar Baz"], dims=["x"])
     pat = r"(?P<first>\w+) (?P<middle>\w+) (?P<last>\w+)"
-    repl = xr.DataArray(
+    repl2 = xr.DataArray(
         [
             lambda m: m.group("first").swapcase(),
             lambda m: m.group("middle").swapcase(),
@@ -417,7 +416,7 @@ def test_replace_callable() -> None:
         ],
         dims=["Y"],
     )
-    result = values.str.replace(pat, repl)
+    result = values.str.replace(pat, repl2)
     exp = xr.DataArray([["fOO", "bAR", "bAZ"]], dims=["x", "Y"])
     assert result.dtype == exp.dtype
     assert_equal(result, exp)
@@ -438,11 +437,11 @@ def test_replace_unicode() -> None:
         [[b"abcd, \xc3\xa0".decode("utf-8"), b"BAcd,\xc3\xa0".decode("utf-8")]],
         dims=["X", "Y"],
     )
-    pat = xr.DataArray(
+    pat2 = xr.DataArray(
         [re.compile(r"(?<=\w),(?=\w)", flags=re.UNICODE), r"ab"], dims=["Y"]
     )
     repl = xr.DataArray([", ", "BA"], dims=["Y"])
-    result = values.str.replace(pat, repl)
+    result = values.str.replace(pat2, repl)
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
 
@@ -463,16 +462,16 @@ def test_replace_compiled_regex(dtype) -> None:
     assert_equal(result, expected)
 
     # broadcast
-    pat = xr.DataArray(
+    pat2 = xr.DataArray(
         [re.compile(dtype("BAD[_]*")), re.compile(dtype("AD[_]*"))], dims=["y"]
     )
-    result = values.str.replace(pat, "")
+    result = values.str.replace(pat2, "")
     expected = xr.DataArray([["foobar", "fooBbarB"]], dims=["x", "y"]).astype(dtype)
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
 
     repl = xr.DataArray(["", "spam"], dims=["y"]).astype(dtype)
-    result = values.str.replace(pat, repl, n=1)
+    result = values.str.replace(pat2, repl, n=1)
     expected = xr.DataArray([["foobarBAD", "fooBspambarBAD"]], dims=["x", "y"]).astype(
         dtype
     )
@@ -482,28 +481,28 @@ def test_replace_compiled_regex(dtype) -> None:
     # case and flags provided to str.replace will have no effect
     # and will produce warnings
     values = xr.DataArray(["fooBAD__barBAD__bad"]).astype(dtype)
-    pat = re.compile(dtype("BAD[_]*"))
+    pat3 = re.compile(dtype("BAD[_]*"))
 
     with pytest.raises(
         ValueError, match="Flags cannot be set when pat is a compiled regex."
     ):
-        result = values.str.replace(pat, "", flags=re.IGNORECASE)
+        result = values.str.replace(pat3, "", flags=re.IGNORECASE)
 
     with pytest.raises(
         ValueError, match="Case cannot be set when pat is a compiled regex."
     ):
-        result = values.str.replace(pat, "", case=False)
+        result = values.str.replace(pat3, "", case=False)
 
     with pytest.raises(
         ValueError, match="Case cannot be set when pat is a compiled regex."
     ):
-        result = values.str.replace(pat, "", case=True)
+        result = values.str.replace(pat3, "", case=True)
 
     # test with callable
     values = xr.DataArray(["fooBAD__barBAD"]).astype(dtype)
-    repl = lambda m: m.group(0).swapcase()
-    pat = re.compile(dtype("[a-z][A-Z]{2}"))
-    result = values.str.replace(pat, repl, n=2)
+    repl2 = lambda m: m.group(0).swapcase()
+    pat4 = re.compile(dtype("[a-z][A-Z]{2}"))
+    result = values.str.replace(pat4, repl2, n=2)
     expected = xr.DataArray(["foObaD__baRbaD"]).astype(dtype)
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
@@ -678,8 +677,10 @@ def test_extract_extractall_name_collision_raises(dtype) -> None:
 
 def test_extract_single_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re)
 
     value = xr.DataArray(
         [
@@ -704,8 +705,8 @@ def test_extract_single_case(dtype) -> None:
     res_str_dim = value.str.extract(pat=pat_str, dim="XX")
     res_str_none_case = value.str.extract(pat=pat_str, dim=None, case=True)
     res_str_dim_case = value.str.extract(pat=pat_str, dim="XX", case=True)
-    res_re_none = value.str.extract(pat=pat_re, dim=None)
-    res_re_dim = value.str.extract(pat=pat_re, dim="XX")
+    res_re_none = value.str.extract(pat=pat_compiled, dim=None)
+    res_re_dim = value.str.extract(pat=pat_compiled, dim="XX")
 
     assert res_str_none.dtype == targ_none.dtype
     assert res_str_dim.dtype == targ_dim.dtype
@@ -724,8 +725,10 @@ def test_extract_single_case(dtype) -> None:
 
 def test_extract_single_nocase(dtype) -> None:
     pat_str = r"(\w+)?_Xy_\d*"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re, flags=re.IGNORECASE)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -748,8 +751,8 @@ def test_extract_single_nocase(dtype) -> None:
 
     res_str_none = value.str.extract(pat=pat_str, dim=None, case=False)
     res_str_dim = value.str.extract(pat=pat_str, dim="XX", case=False)
-    res_re_none = value.str.extract(pat=pat_re, dim=None)
-    res_re_dim = value.str.extract(pat=pat_re, dim="XX")
+    res_re_none = value.str.extract(pat=pat_compiled, dim=None)
+    res_re_dim = value.str.extract(pat=pat_compiled, dim="XX")
 
     assert res_re_dim.dtype == targ_none.dtype
     assert res_str_dim.dtype == targ_dim.dtype
@@ -764,8 +767,10 @@ def test_extract_single_nocase(dtype) -> None:
 
 def test_extract_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re)
 
     value = xr.DataArray(
         [
@@ -788,7 +793,7 @@ def test_extract_multi_case(dtype) -> None:
     ).astype(dtype)
 
     res_str = value.str.extract(pat=pat_str, dim="XX")
-    res_re = value.str.extract(pat=pat_re, dim="XX")
+    res_re = value.str.extract(pat=pat_compiled, dim="XX")
     res_str_case = value.str.extract(pat=pat_str, dim="XX", case=True)
 
     assert res_str.dtype == expected.dtype
@@ -802,8 +807,10 @@ def test_extract_multi_case(dtype) -> None:
 
 def test_extract_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re, flags=re.IGNORECASE)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -826,7 +833,7 @@ def test_extract_multi_nocase(dtype) -> None:
     ).astype(dtype)
 
     res_str = value.str.extract(pat=pat_str, dim="XX", case=False)
-    res_re = value.str.extract(pat=pat_re, dim="XX")
+    res_re = value.str.extract(pat=pat_compiled, dim="XX")
 
     assert res_str.dtype == expected.dtype
     assert res_re.dtype == expected.dtype
@@ -845,17 +852,17 @@ def test_extract_broadcast(dtype) -> None:
         [r"(\w+)_Xy_(\d*)", r"(\w+)_xY_(\d*)"],
         dims=["Y"],
     ).astype(dtype)
-    pat_re = value.str._re_compile(pat=pat_str)
+    pat_compiled = value.str._re_compile(pat=pat_str)
 
-    expected = [
+    expected_list = [
         [["a", "0"], ["", ""]],
         [["", ""], ["ab", "10"]],
         [["abc", "01"], ["", ""]],
     ]
-    expected = xr.DataArray(expected, dims=["X", "Y", "Zz"]).astype(dtype)
+    expected = xr.DataArray(expected_list, dims=["X", "Y", "Zz"]).astype(dtype)
 
     res_str = value.str.extract(pat=pat_str, dim="Zz")
-    res_re = value.str.extract(pat=pat_re, dim="Zz")
+    res_re = value.str.extract(pat=pat_compiled, dim="Zz")
 
     assert res_str.dtype == expected.dtype
     assert res_re.dtype == expected.dtype
@@ -866,8 +873,10 @@ def test_extract_broadcast(dtype) -> None:
 
 def test_extractall_single_single_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -880,7 +889,7 @@ def test_extractall_single_single_case(dtype) -> None:
     ).astype(dtype)
 
     res_str = value.str.extractall(pat=pat_str, group_dim="XX", match_dim="YY")
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
     res_str_case = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=True
     )
@@ -896,8 +905,10 @@ def test_extractall_single_single_case(dtype) -> None:
 
 def test_extractall_single_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re, flags=re.I)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re, flags=re.I)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -912,7 +923,7 @@ def test_extractall_single_single_nocase(dtype) -> None:
     res_str = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=False
     )
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
 
     assert res_str.dtype == expected.dtype
     assert res_re.dtype == expected.dtype
@@ -923,8 +934,10 @@ def test_extractall_single_single_nocase(dtype) -> None:
 
 def test_extractall_single_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re)
 
     value = xr.DataArray(
         [
@@ -951,7 +964,7 @@ def test_extractall_single_multi_case(dtype) -> None:
     ).astype(dtype)
 
     res_str = value.str.extractall(pat=pat_str, group_dim="XX", match_dim="YY")
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
     res_str_case = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=True
     )
@@ -967,8 +980,10 @@ def test_extractall_single_multi_case(dtype) -> None:
 
 def test_extractall_single_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re, flags=re.I)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re, flags=re.I)
 
     value = xr.DataArray(
         [
@@ -1001,7 +1016,7 @@ def test_extractall_single_multi_nocase(dtype) -> None:
     res_str = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=False
     )
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
 
     assert res_str.dtype == expected.dtype
     assert res_re.dtype == expected.dtype
@@ -1012,8 +1027,10 @@ def test_extractall_single_multi_nocase(dtype) -> None:
 
 def test_extractall_multi_single_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1029,7 +1046,7 @@ def test_extractall_multi_single_case(dtype) -> None:
     ).astype(dtype)
 
     res_str = value.str.extractall(pat=pat_str, group_dim="XX", match_dim="YY")
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
     res_str_case = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=True
     )
@@ -1045,8 +1062,10 @@ def test_extractall_multi_single_case(dtype) -> None:
 
 def test_extractall_multi_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re, flags=re.I)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re, flags=re.I)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1064,7 +1083,7 @@ def test_extractall_multi_single_nocase(dtype) -> None:
     res_str = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=False
     )
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
 
     assert res_str.dtype == expected.dtype
     assert res_re.dtype == expected.dtype
@@ -1075,8 +1094,10 @@ def test_extractall_multi_single_nocase(dtype) -> None:
 
 def test_extractall_multi_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re)
 
     value = xr.DataArray(
         [
@@ -1107,7 +1128,7 @@ def test_extractall_multi_multi_case(dtype) -> None:
     ).astype(dtype)
 
     res_str = value.str.extractall(pat=pat_str, group_dim="XX", match_dim="YY")
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
     res_str_case = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=True
     )
@@ -1123,8 +1144,10 @@ def test_extractall_multi_multi_case(dtype) -> None:
 
 def test_extractall_multi_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = pat_str if dtype == np.unicode_ else bytes(pat_str, encoding="UTF-8")
-    pat_re = re.compile(pat_re, flags=re.I)
+    pat_re: str | bytes = (
+        pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
+    )
+    pat_compiled = re.compile(pat_re, flags=re.I)
 
     value = xr.DataArray(
         [
@@ -1157,7 +1180,7 @@ def test_extractall_multi_multi_nocase(dtype) -> None:
     res_str = value.str.extractall(
         pat=pat_str, group_dim="XX", match_dim="YY", case=False
     )
-    res_re = value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
+    res_re = value.str.extractall(pat=pat_compiled, group_dim="XX", match_dim="YY")
 
     assert res_str.dtype == expected.dtype
     assert res_re.dtype == expected.dtype
@@ -1178,12 +1201,12 @@ def test_extractall_broadcast(dtype) -> None:
     ).astype(dtype)
     pat_re = value.str._re_compile(pat=pat_str)
 
-    expected = [
+    expected_list = [
         [[["a", "0"]], [["", ""]]],
         [[["", ""]], [["ab", "10"]]],
         [[["abc", "01"]], [["", ""]]],
     ]
-    expected = xr.DataArray(expected, dims=["X", "Y", "ZX", "ZY"]).astype(dtype)
+    expected = xr.DataArray(expected_list, dims=["X", "Y", "ZX", "ZY"]).astype(dtype)
 
     res_str = value.str.extractall(pat=pat_str, group_dim="ZX", match_dim="ZY")
     res_re = value.str.extractall(pat=pat_re, group_dim="ZX", match_dim="ZY")
@@ -1204,10 +1227,10 @@ def test_findall_single_single_case(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [[["a"], [], ["abc"]], [["abcd"], [], ["abcdef"]]]
-    expected = [[[dtype(x) for x in y] for y in z] for z in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_list: list[list[list]] = [[["a"], [], ["abc"]], [["abcd"], [], ["abcdef"]]]
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str)
     res_re = value.str.findall(pat=pat_re)
@@ -1231,10 +1254,13 @@ def test_findall_single_single_nocase(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [[["a"], ["ab"], ["abc"]], [["abcd"], [], ["abcdef"]]]
-    expected = [[[dtype(x) for x in y] for y in z] for z in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_list: list[list[list]] = [
+        [["a"], ["ab"], ["abc"]],
+        [["abcd"], [], ["abcdef"]],
+    ]
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str, case=False)
     res_re = value.str.findall(pat=pat_re)
@@ -1262,7 +1288,7 @@ def test_findall_single_multi_case(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list: list[list[list]] = [
         [["a"], ["bab", "baab"], ["abc", "cbc"]],
         [
             ["abcd", "dcd", "dccd"],
@@ -1270,9 +1296,9 @@ def test_findall_single_multi_case(dtype) -> None:
             ["abcdef", "fef"],
         ],
     ]
-    expected = [[[dtype(x) for x in y] for y in z] for z in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str)
     res_re = value.str.findall(pat=pat_re)
@@ -1303,7 +1329,7 @@ def test_findall_single_multi_nocase(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list: list[list[list]] = [
         [
             ["a"],
             ["ab", "bab", "baab"],
@@ -1315,9 +1341,9 @@ def test_findall_single_multi_nocase(dtype) -> None:
             ["abcdef", "fef"],
         ],
     ]
-    expected = [[[dtype(x) for x in y] for y in z] for z in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str, case=False)
     res_re = value.str.findall(pat=pat_re)
@@ -1338,13 +1364,15 @@ def test_findall_multi_single_case(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list: list[list[list[list]]] = [
         [[["a", "0"]], [], [["abc", "01"]]],
         [[["abcd", ""]], [], [["abcdef", "101"]]],
     ]
-    expected = [[[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_dtype = [
+        [[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected_list
+    ]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str)
     res_re = value.str.findall(pat=pat_re)
@@ -1368,13 +1396,15 @@ def test_findall_multi_single_nocase(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list: list[list[list[list]]] = [
         [[["a", "0"]], [["ab", "10"]], [["abc", "01"]]],
         [[["abcd", ""]], [], [["abcdef", "101"]]],
     ]
-    expected = [[[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_dtype = [
+        [[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected_list
+    ]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str, case=False)
     res_re = value.str.findall(pat=pat_re)
@@ -1402,7 +1432,7 @@ def test_findall_multi_multi_case(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list: list[list[list[list]]] = [
         [
             [["a", "0"]],
             [["bab", "110"], ["baab", "1100"]],
@@ -1414,9 +1444,11 @@ def test_findall_multi_multi_case(dtype) -> None:
             [["abcdef", "101"], ["fef", "5543210"]],
         ],
     ]
-    expected = [[[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_dtype = [
+        [[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected_list
+    ]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str)
     res_re = value.str.findall(pat=pat_re)
@@ -1447,7 +1479,7 @@ def test_findall_multi_multi_nocase(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list: list[list[list[list]]] = [
         [
             [["a", "0"]],
             [["ab", "10"], ["bab", "110"], ["baab", "1100"]],
@@ -1459,9 +1491,11 @@ def test_findall_multi_multi_nocase(dtype) -> None:
             [["abcdef", "101"], ["fef", "5543210"]],
         ],
     ]
-    expected = [[[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_dtype = [
+        [[tuple(dtype(x) for x in y) for y in z] for z in w] for w in expected_list
+    ]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str, case=False)
     res_re = value.str.findall(pat=pat_re)
@@ -1485,10 +1519,10 @@ def test_findall_broadcast(dtype) -> None:
     ).astype(dtype)
     pat_re = value.str._re_compile(pat=pat_str)
 
-    expected = [[["a"], ["0"]], [[], []], [["abc"], ["01"]]]
-    expected = [[[dtype(x) for x in y] for y in z] for z in expected]
-    expected = np.array(expected, dtype=np.object_)
-    expected = xr.DataArray(expected, dims=["X", "Y"])
+    expected_list: list[list[list]] = [[["a"], ["0"]], [[], []], [["abc"], ["01"]]]
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected_list]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected = xr.DataArray(expected_np, dims=["X", "Y"])
 
     res_str = value.str.findall(pat=pat_str)
     res_re = value.str.findall(pat=pat_re)
@@ -1654,50 +1688,58 @@ def test_empty_str_methods() -> None:
     assert_equal(empty_str, empty.str.translate(table))
 
 
-def test_ismethods(dtype) -> None:
-    values = ["A", "b", "Xy", "4", "3A", "", "TT", "55", "-", "  "]
+@pytest.mark.parametrize(
+    ["func", "expected"],
+    [
+        pytest.param(
+            lambda x: x.str.isalnum(),
+            [True, True, True, True, True, False, True, True, False, False],
+            id="isalnum",
+        ),
+        pytest.param(
+            lambda x: x.str.isalpha(),
+            [True, True, True, False, False, False, True, False, False, False],
+            id="isalpha",
+        ),
+        pytest.param(
+            lambda x: x.str.isdigit(),
+            [False, False, False, True, False, False, False, True, False, False],
+            id="isdigit",
+        ),
+        pytest.param(
+            lambda x: x.str.islower(),
+            [False, True, False, False, False, False, False, False, False, False],
+            id="islower",
+        ),
+        pytest.param(
+            lambda x: x.str.isspace(),
+            [False, False, False, False, False, False, False, False, False, True],
+            id="isspace",
+        ),
+        pytest.param(
+            lambda x: x.str.istitle(),
+            [True, False, True, False, True, False, False, False, False, False],
+            id="istitle",
+        ),
+        pytest.param(
+            lambda x: x.str.isupper(),
+            [True, False, False, False, True, False, True, False, False, False],
+            id="isupper",
+        ),
+    ],
+)
+def test_ismethods(
+    dtype, func: Callable[[xr.DataArray], xr.DataArray], expected: list[bool]
+) -> None:
+    values = xr.DataArray(
+        ["A", "b", "Xy", "4", "3A", "", "TT", "55", "-", "  "]
+    ).astype(dtype)
 
-    exp_alnum = [True, True, True, True, True, False, True, True, False, False]
-    exp_alpha = [True, True, True, False, False, False, True, False, False, False]
-    exp_digit = [False, False, False, True, False, False, False, True, False, False]
-    exp_space = [False, False, False, False, False, False, False, False, False, True]
-    exp_lower = [False, True, False, False, False, False, False, False, False, False]
-    exp_upper = [True, False, False, False, True, False, True, False, False, False]
-    exp_title = [True, False, True, False, True, False, False, False, False, False]
+    expected_da = xr.DataArray(expected)
+    actual = func(values)
 
-    values = xr.DataArray(values).astype(dtype)
-
-    exp_alnum = xr.DataArray(exp_alnum)
-    exp_alpha = xr.DataArray(exp_alpha)
-    exp_digit = xr.DataArray(exp_digit)
-    exp_space = xr.DataArray(exp_space)
-    exp_lower = xr.DataArray(exp_lower)
-    exp_upper = xr.DataArray(exp_upper)
-    exp_title = xr.DataArray(exp_title)
-
-    res_alnum = values.str.isalnum()
-    res_alpha = values.str.isalpha()
-    res_digit = values.str.isdigit()
-    res_lower = values.str.islower()
-    res_space = values.str.isspace()
-    res_title = values.str.istitle()
-    res_upper = values.str.isupper()
-
-    assert res_alnum.dtype == exp_alnum.dtype
-    assert res_alpha.dtype == exp_alpha.dtype
-    assert res_digit.dtype == exp_digit.dtype
-    assert res_lower.dtype == exp_lower.dtype
-    assert res_space.dtype == exp_space.dtype
-    assert res_title.dtype == exp_title.dtype
-    assert res_upper.dtype == exp_upper.dtype
-
-    assert_equal(res_alnum, exp_alnum)
-    assert_equal(res_alpha, exp_alpha)
-    assert_equal(res_digit, exp_digit)
-    assert_equal(res_lower, exp_lower)
-    assert_equal(res_space, exp_space)
-    assert_equal(res_title, exp_title)
-    assert_equal(res_upper, exp_upper)
+    assert actual.dtype == expected_da.dtype
+    assert_equal(actual, expected_da)
 
 
 def test_isnumeric() -> None:
@@ -1705,13 +1747,9 @@ def test_isnumeric() -> None:
     # 0x2605: ★ not number
     # 0x1378: ፸ ETHIOPIC NUMBER SEVENTY
     # 0xFF13: ３ Em 3
-    values = ["A", "3", "¼", "★", "፸", "３", "four"]
-    exp_numeric = [False, True, True, False, True, True, False]
-    exp_decimal = [False, True, False, False, False, True, False]
-
-    values = xr.DataArray(values)
-    exp_numeric = xr.DataArray(exp_numeric)
-    exp_decimal = xr.DataArray(exp_decimal)
+    values = xr.DataArray(["A", "3", "¼", "★", "፸", "３", "four"])
+    exp_numeric = xr.DataArray([False, True, True, False, True, True, False])
+    exp_decimal = xr.DataArray([False, True, False, False, False, True, False])
 
     res_numeric = values.str.isnumeric()
     res_decimal = values.str.isdecimal()
@@ -2430,7 +2468,7 @@ def test_partition_whitespace(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    exp_part_dim = [
+    exp_part_dim_list = [
         [
             ["abc", " ", "def"],
             ["spam", " ", "eggs swallow"],
@@ -2443,7 +2481,7 @@ def test_partition_whitespace(dtype) -> None:
         ],
     ]
 
-    exp_rpart_dim = [
+    exp_rpart_dim_list = [
         [
             ["abc", " ", "def"],
             ["spam eggs", " ", "swallow"],
@@ -2456,8 +2494,10 @@ def test_partition_whitespace(dtype) -> None:
         ],
     ]
 
-    exp_part_dim = xr.DataArray(exp_part_dim, dims=["X", "Y", "ZZ"]).astype(dtype)
-    exp_rpart_dim = xr.DataArray(exp_rpart_dim, dims=["X", "Y", "ZZ"]).astype(dtype)
+    exp_part_dim = xr.DataArray(exp_part_dim_list, dims=["X", "Y", "ZZ"]).astype(dtype)
+    exp_rpart_dim = xr.DataArray(exp_rpart_dim_list, dims=["X", "Y", "ZZ"]).astype(
+        dtype
+    )
 
     res_part_dim = values.str.partition(dim="ZZ")
     res_rpart_dim = values.str.rpartition(dim="ZZ")
@@ -2478,7 +2518,7 @@ def test_partition_comma(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    exp_part_dim = [
+    exp_part_dim_list = [
         [
             ["abc", ", ", "def"],
             ["spam", ", ", "eggs, swallow"],
@@ -2491,7 +2531,7 @@ def test_partition_comma(dtype) -> None:
         ],
     ]
 
-    exp_rpart_dim = [
+    exp_rpart_dim_list = [
         [
             ["abc", ", ", "def"],
             ["spam, eggs", ", ", "swallow"],
@@ -2504,8 +2544,10 @@ def test_partition_comma(dtype) -> None:
         ],
     ]
 
-    exp_part_dim = xr.DataArray(exp_part_dim, dims=["X", "Y", "ZZ"]).astype(dtype)
-    exp_rpart_dim = xr.DataArray(exp_rpart_dim, dims=["X", "Y", "ZZ"]).astype(dtype)
+    exp_part_dim = xr.DataArray(exp_part_dim_list, dims=["X", "Y", "ZZ"]).astype(dtype)
+    exp_rpart_dim = xr.DataArray(exp_rpart_dim_list, dims=["X", "Y", "ZZ"]).astype(
+        dtype
+    )
 
     res_part_dim = values.str.partition(sep=", ", dim="ZZ")
     res_rpart_dim = values.str.rpartition(sep=", ", dim="ZZ")
@@ -2527,7 +2569,46 @@ def test_partition_empty(dtype) -> None:
     assert_equal(res, expected)
 
 
-def test_split_whitespace(dtype) -> None:
+@pytest.mark.parametrize(
+    ["func", "expected"],
+    [
+        pytest.param(
+            lambda x: x.str.split(dim=None),
+            [
+                [["abc", "def"], ["spam", "eggs", "swallow"], ["red_blue"]],
+                [["test0", "test1", "test2", "test3"], [], ["abra", "ka", "da", "bra"]],
+            ],
+            id="split_full",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(dim=None),
+            [
+                [["abc", "def"], ["spam", "eggs", "swallow"], ["red_blue"]],
+                [["test0", "test1", "test2", "test3"], [], ["abra", "ka", "da", "bra"]],
+            ],
+            id="rsplit_full",
+        ),
+        pytest.param(
+            lambda x: x.str.split(dim=None, maxsplit=1),
+            [
+                [["abc", "def"], ["spam", "eggs\tswallow"], ["red_blue"]],
+                [["test0", "test1\ntest2\n\ntest3"], [], ["abra", "ka\nda\tbra"]],
+            ],
+            id="split_1",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(dim=None, maxsplit=1),
+            [
+                [["abc", "def"], ["spam\t\teggs", "swallow"], ["red_blue"]],
+                [["test0\ntest1\ntest2", "test3"], [], ["abra  ka\nda", "bra"]],
+            ],
+            id="rsplit_1",
+        ),
+    ],
+)
+def test_split_whitespace_nodim(
+    dtype, func: Callable[[xr.DataArray], xr.DataArray], expected: xr.DataArray
+) -> None:
     values = xr.DataArray(
         [
             ["abc def", "spam\t\teggs\tswallow", "red_blue"],
@@ -2536,136 +2617,162 @@ def test_split_whitespace(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    exp_split_dim_full = [
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected_da = xr.DataArray(expected_np, dims=["X", "Y"])
+
+    actual = func(values)
+
+    assert actual.dtype == expected_da.dtype
+    assert_equal(actual, expected_da)
+
+
+@pytest.mark.parametrize(
+    ["func", "expected"],
+    [
+        pytest.param(
+            lambda x: x.str.split(dim="ZZ"),
+            [
+                [
+                    ["abc", "def", "", ""],
+                    ["spam", "eggs", "swallow", ""],
+                    ["red_blue", "", "", ""],
+                ],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    ["", "", "", ""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="split_full",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(dim="ZZ"),
+            [
+                [
+                    ["", "", "abc", "def"],
+                    ["", "spam", "eggs", "swallow"],
+                    ["", "", "", "red_blue"],
+                ],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    ["", "", "", ""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="rsplit_full",
+        ),
+        pytest.param(
+            lambda x: x.str.split(dim="ZZ", maxsplit=1),
+            [
+                [["abc", "def"], ["spam", "eggs\tswallow"], ["red_blue", ""]],
+                [["test0", "test1\ntest2\n\ntest3"], ["", ""], ["abra", "ka\nda\tbra"]],
+            ],
+            id="split_1",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(dim="ZZ", maxsplit=1),
+            [
+                [["abc", "def"], ["spam\t\teggs", "swallow"], ["", "red_blue"]],
+                [["test0\ntest1\ntest2", "test3"], ["", ""], ["abra  ka\nda", "bra"]],
+            ],
+            id="rsplit_1",
+        ),
+    ],
+)
+def test_split_whitespace_dim(
+    dtype, func: Callable[[xr.DataArray], xr.DataArray], expected: xr.DataArray
+) -> None:
+    values = xr.DataArray(
         [
-            ["abc", "def", "", ""],
-            ["spam", "eggs", "swallow", ""],
-            ["red_blue", "", "", ""],
+            ["abc def", "spam\t\teggs\tswallow", "red_blue"],
+            ["test0\ntest1\ntest2\n\ntest3", "", "abra  ka\nda\tbra"],
         ],
-        [
-            ["test0", "test1", "test2", "test3"],
-            ["", "", "", ""],
-            ["abra", "ka", "da", "bra"],
-        ],
-    ]
-
-    exp_rsplit_dim_full = [
-        [
-            ["", "", "abc", "def"],
-            ["", "spam", "eggs", "swallow"],
-            ["", "", "", "red_blue"],
-        ],
-        [
-            ["test0", "test1", "test2", "test3"],
-            ["", "", "", ""],
-            ["abra", "ka", "da", "bra"],
-        ],
-    ]
-
-    exp_split_dim_1 = [
-        [["abc", "def"], ["spam", "eggs\tswallow"], ["red_blue", ""]],
-        [["test0", "test1\ntest2\n\ntest3"], ["", ""], ["abra", "ka\nda\tbra"]],
-    ]
-
-    exp_rsplit_dim_1 = [
-        [["abc", "def"], ["spam\t\teggs", "swallow"], ["", "red_blue"]],
-        [["test0\ntest1\ntest2", "test3"], ["", ""], ["abra  ka\nda", "bra"]],
-    ]
-
-    exp_split_none_full = [
-        [["abc", "def"], ["spam", "eggs", "swallow"], ["red_blue"]],
-        [["test0", "test1", "test2", "test3"], [], ["abra", "ka", "da", "bra"]],
-    ]
-
-    exp_rsplit_none_full = [
-        [["abc", "def"], ["spam", "eggs", "swallow"], ["red_blue"]],
-        [["test0", "test1", "test2", "test3"], [], ["abra", "ka", "da", "bra"]],
-    ]
-
-    exp_split_none_1 = [
-        [["abc", "def"], ["spam", "eggs\tswallow"], ["red_blue"]],
-        [["test0", "test1\ntest2\n\ntest3"], [], ["abra", "ka\nda\tbra"]],
-    ]
-
-    exp_rsplit_none_1 = [
-        [["abc", "def"], ["spam\t\teggs", "swallow"], ["red_blue"]],
-        [["test0\ntest1\ntest2", "test3"], [], ["abra  ka\nda", "bra"]],
-    ]
-
-    exp_split_none_full = [
-        [[dtype(x) for x in y] for y in z] for z in exp_split_none_full
-    ]
-    exp_rsplit_none_full = [
-        [[dtype(x) for x in y] for y in z] for z in exp_rsplit_none_full
-    ]
-    exp_split_none_1 = [[[dtype(x) for x in y] for y in z] for z in exp_split_none_1]
-    exp_rsplit_none_1 = [[[dtype(x) for x in y] for y in z] for z in exp_rsplit_none_1]
-
-    exp_split_none_full = np.array(exp_split_none_full, dtype=np.object_)
-    exp_rsplit_none_full = np.array(exp_rsplit_none_full, dtype=np.object_)
-    exp_split_none_1 = np.array(exp_split_none_1, dtype=np.object_)
-    exp_rsplit_none_1 = np.array(exp_rsplit_none_1, dtype=np.object_)
-
-    exp_split_dim_full = xr.DataArray(exp_split_dim_full, dims=["X", "Y", "ZZ"]).astype(
-        dtype
-    )
-    exp_rsplit_dim_full = xr.DataArray(
-        exp_rsplit_dim_full, dims=["X", "Y", "ZZ"]
+        dims=["X", "Y"],
     ).astype(dtype)
-    exp_split_dim_1 = xr.DataArray(exp_split_dim_1, dims=["X", "Y", "ZZ"]).astype(dtype)
-    exp_rsplit_dim_1 = xr.DataArray(exp_rsplit_dim_1, dims=["X", "Y", "ZZ"]).astype(
-        dtype
-    )
 
-    exp_split_none_full = xr.DataArray(exp_split_none_full, dims=["X", "Y"])
-    exp_rsplit_none_full = xr.DataArray(exp_rsplit_none_full, dims=["X", "Y"])
-    exp_split_none_1 = xr.DataArray(exp_split_none_1, dims=["X", "Y"])
-    exp_rsplit_none_1 = xr.DataArray(exp_rsplit_none_1, dims=["X", "Y"])
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected_da = xr.DataArray(expected_np, dims=["X", "Y", "ZZ"]).astype(dtype)
 
-    res_split_dim_full = values.str.split(dim="ZZ")
-    res_rsplit_dim_full = values.str.rsplit(dim="ZZ")
-    res_split_dim_1 = values.str.split(dim="ZZ", maxsplit=1)
-    res_rsplit_dim_1 = values.str.rsplit(dim="ZZ", maxsplit=1)
-    res_split_dim_10 = values.str.split(dim="ZZ", maxsplit=10)
-    res_rsplit_dim_10 = values.str.rsplit(dim="ZZ", maxsplit=10)
+    actual = func(values)
 
-    res_split_none_full = values.str.split(dim=None)
-    res_rsplit_none_full = values.str.rsplit(dim=None)
-    res_split_none_1 = values.str.split(dim=None, maxsplit=1)
-    res_rsplit_none_1 = values.str.rsplit(dim=None, maxsplit=1)
-    res_split_none_10 = values.str.split(dim=None, maxsplit=10)
-    res_rsplit_none_10 = values.str.rsplit(dim=None, maxsplit=10)
-
-    assert res_split_dim_full.dtype == exp_split_dim_full.dtype
-    assert res_rsplit_dim_full.dtype == exp_rsplit_dim_full.dtype
-    assert res_split_dim_1.dtype == exp_split_dim_1.dtype
-    assert res_rsplit_dim_1.dtype == exp_rsplit_dim_1.dtype
-    assert res_split_dim_10.dtype == exp_split_dim_full.dtype
-    assert res_rsplit_dim_10.dtype == exp_rsplit_dim_full.dtype
-
-    assert res_split_none_full.dtype == exp_split_none_full.dtype
-    assert res_rsplit_none_full.dtype == exp_rsplit_none_full.dtype
-    assert res_split_none_1.dtype == exp_split_none_1.dtype
-    assert res_rsplit_none_1.dtype == exp_rsplit_none_1.dtype
-    assert res_split_none_10.dtype == exp_split_none_full.dtype
-    assert res_rsplit_none_10.dtype == exp_rsplit_none_full.dtype
-
-    assert_equal(res_split_dim_full, exp_split_dim_full)
-    assert_equal(res_rsplit_dim_full, exp_rsplit_dim_full)
-    assert_equal(res_split_dim_1, exp_split_dim_1)
-    assert_equal(res_rsplit_dim_1, exp_rsplit_dim_1)
-    assert_equal(res_split_dim_10, exp_split_dim_full)
-    assert_equal(res_rsplit_dim_10, exp_rsplit_dim_full)
-
-    assert_equal(res_split_none_full, exp_split_none_full)
-    assert_equal(res_rsplit_none_full, exp_rsplit_none_full)
-    assert_equal(res_split_none_1, exp_split_none_1)
-    assert_equal(res_rsplit_none_1, exp_rsplit_none_1)
-    assert_equal(res_split_none_10, exp_split_none_full)
-    assert_equal(res_rsplit_none_10, exp_rsplit_none_full)
+    assert actual.dtype == expected_da.dtype
+    assert_equal(actual, expected_da)
 
 
-def test_split_comma(dtype) -> None:
+@pytest.mark.parametrize(
+    ["func", "expected"],
+    [
+        pytest.param(
+            lambda x: x.str.split(sep=",", dim=None),
+            [
+                [["abc", "def"], ["spam", "", "eggs", "swallow"], ["red_blue"]],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    [""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="split_full",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(sep=",", dim=None),
+            [
+                [["abc", "def"], ["spam", "", "eggs", "swallow"], ["red_blue"]],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    [""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="rsplit_full",
+        ),
+        pytest.param(
+            lambda x: x.str.split(sep=",", dim=None, maxsplit=1),
+            [
+                [["abc", "def"], ["spam", ",eggs,swallow"], ["red_blue"]],
+                [["test0", "test1,test2,test3"], [""], ["abra", "ka,da,bra"]],
+            ],
+            id="split_1",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(sep=",", dim=None, maxsplit=1),
+            [
+                [["abc", "def"], ["spam,,eggs", "swallow"], ["red_blue"]],
+                [["test0,test1,test2", "test3"], [""], ["abra,ka,da", "bra"]],
+            ],
+            id="rsplit_1",
+        ),
+        pytest.param(
+            lambda x: x.str.split(sep=",", dim=None, maxsplit=10),
+            [
+                [["abc", "def"], ["spam", "", "eggs", "swallow"], ["red_blue"]],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    [""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="split_10",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(sep=",", dim=None, maxsplit=10),
+            [
+                [["abc", "def"], ["spam", "", "eggs", "swallow"], ["red_blue"]],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    [""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="rsplit_10",
+        ),
+    ],
+)
+def test_split_comma_nodim(
+    dtype, func: Callable[[xr.DataArray], xr.DataArray], expected: xr.DataArray
+) -> None:
     values = xr.DataArray(
         [
             ["abc,def", "spam,,eggs,swallow", "red_blue"],
@@ -2674,133 +2781,120 @@ def test_split_comma(dtype) -> None:
         dims=["X", "Y"],
     ).astype(dtype)
 
-    exp_split_dim_full = [
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected_da = xr.DataArray(expected_np, dims=["X", "Y"])
+
+    actual = func(values)
+
+    assert actual.dtype == expected_da.dtype
+    assert_equal(actual, expected_da)
+
+
+@pytest.mark.parametrize(
+    ["func", "expected"],
+    [
+        pytest.param(
+            lambda x: x.str.split(sep=",", dim="ZZ"),
+            [
+                [
+                    ["abc", "def", "", ""],
+                    ["spam", "", "eggs", "swallow"],
+                    ["red_blue", "", "", ""],
+                ],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    ["", "", "", ""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="split_full",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(sep=",", dim="ZZ"),
+            [
+                [
+                    ["", "", "abc", "def"],
+                    ["spam", "", "eggs", "swallow"],
+                    ["", "", "", "red_blue"],
+                ],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    ["", "", "", ""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="rsplit_full",
+        ),
+        pytest.param(
+            lambda x: x.str.split(sep=",", dim="ZZ", maxsplit=1),
+            [
+                [["abc", "def"], ["spam", ",eggs,swallow"], ["red_blue", ""]],
+                [["test0", "test1,test2,test3"], ["", ""], ["abra", "ka,da,bra"]],
+            ],
+            id="split_1",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(sep=",", dim="ZZ", maxsplit=1),
+            [
+                [["abc", "def"], ["spam,,eggs", "swallow"], ["", "red_blue"]],
+                [["test0,test1,test2", "test3"], ["", ""], ["abra,ka,da", "bra"]],
+            ],
+            id="rsplit_1",
+        ),
+        pytest.param(
+            lambda x: x.str.split(sep=",", dim="ZZ", maxsplit=10),
+            [
+                [
+                    ["abc", "def", "", ""],
+                    ["spam", "", "eggs", "swallow"],
+                    ["red_blue", "", "", ""],
+                ],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    ["", "", "", ""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="split_10",
+        ),
+        pytest.param(
+            lambda x: x.str.rsplit(sep=",", dim="ZZ", maxsplit=10),
+            [
+                [
+                    ["", "", "abc", "def"],
+                    ["spam", "", "eggs", "swallow"],
+                    ["", "", "", "red_blue"],
+                ],
+                [
+                    ["test0", "test1", "test2", "test3"],
+                    ["", "", "", ""],
+                    ["abra", "ka", "da", "bra"],
+                ],
+            ],
+            id="rsplit_10",
+        ),
+    ],
+)
+def test_split_comma_dim(
+    dtype, func: Callable[[xr.DataArray], xr.DataArray], expected: xr.DataArray
+) -> None:
+    values = xr.DataArray(
         [
-            ["abc", "def", "", ""],
-            ["spam", "", "eggs", "swallow"],
-            ["red_blue", "", "", ""],
+            ["abc,def", "spam,,eggs,swallow", "red_blue"],
+            ["test0,test1,test2,test3", "", "abra,ka,da,bra"],
         ],
-        [
-            ["test0", "test1", "test2", "test3"],
-            ["", "", "", ""],
-            ["abra", "ka", "da", "bra"],
-        ],
-    ]
-
-    exp_rsplit_dim_full = [
-        [
-            ["", "", "abc", "def"],
-            ["spam", "", "eggs", "swallow"],
-            ["", "", "", "red_blue"],
-        ],
-        [
-            ["test0", "test1", "test2", "test3"],
-            ["", "", "", ""],
-            ["abra", "ka", "da", "bra"],
-        ],
-    ]
-
-    exp_split_dim_1 = [
-        [["abc", "def"], ["spam", ",eggs,swallow"], ["red_blue", ""]],
-        [["test0", "test1,test2,test3"], ["", ""], ["abra", "ka,da,bra"]],
-    ]
-
-    exp_rsplit_dim_1 = [
-        [["abc", "def"], ["spam,,eggs", "swallow"], ["", "red_blue"]],
-        [["test0,test1,test2", "test3"], ["", ""], ["abra,ka,da", "bra"]],
-    ]
-
-    exp_split_none_full = [
-        [["abc", "def"], ["spam", "", "eggs", "swallow"], ["red_blue"]],
-        [["test0", "test1", "test2", "test3"], [""], ["abra", "ka", "da", "bra"]],
-    ]
-
-    exp_rsplit_none_full = [
-        [["abc", "def"], ["spam", "", "eggs", "swallow"], ["red_blue"]],
-        [["test0", "test1", "test2", "test3"], [""], ["abra", "ka", "da", "bra"]],
-    ]
-
-    exp_split_none_1 = [
-        [["abc", "def"], ["spam", ",eggs,swallow"], ["red_blue"]],
-        [["test0", "test1,test2,test3"], [""], ["abra", "ka,da,bra"]],
-    ]
-
-    exp_rsplit_none_1 = [
-        [["abc", "def"], ["spam,,eggs", "swallow"], ["red_blue"]],
-        [["test0,test1,test2", "test3"], [""], ["abra,ka,da", "bra"]],
-    ]
-
-    exp_split_none_full = [
-        [[dtype(x) for x in y] for y in z] for z in exp_split_none_full
-    ]
-    exp_rsplit_none_full = [
-        [[dtype(x) for x in y] for y in z] for z in exp_rsplit_none_full
-    ]
-    exp_split_none_1 = [[[dtype(x) for x in y] for y in z] for z in exp_split_none_1]
-    exp_rsplit_none_1 = [[[dtype(x) for x in y] for y in z] for z in exp_rsplit_none_1]
-
-    exp_split_none_full = np.array(exp_split_none_full, dtype=np.object_)
-    exp_rsplit_none_full = np.array(exp_rsplit_none_full, dtype=np.object_)
-    exp_split_none_1 = np.array(exp_split_none_1, dtype=np.object_)
-    exp_rsplit_none_1 = np.array(exp_rsplit_none_1, dtype=np.object_)
-
-    exp_split_dim_full = xr.DataArray(exp_split_dim_full, dims=["X", "Y", "ZZ"]).astype(
-        dtype
-    )
-    exp_rsplit_dim_full = xr.DataArray(
-        exp_rsplit_dim_full, dims=["X", "Y", "ZZ"]
+        dims=["X", "Y"],
     ).astype(dtype)
-    exp_split_dim_1 = xr.DataArray(exp_split_dim_1, dims=["X", "Y", "ZZ"]).astype(dtype)
-    exp_rsplit_dim_1 = xr.DataArray(exp_rsplit_dim_1, dims=["X", "Y", "ZZ"]).astype(
-        dtype
-    )
 
-    exp_split_none_full = xr.DataArray(exp_split_none_full, dims=["X", "Y"])
-    exp_rsplit_none_full = xr.DataArray(exp_rsplit_none_full, dims=["X", "Y"])
-    exp_split_none_1 = xr.DataArray(exp_split_none_1, dims=["X", "Y"])
-    exp_rsplit_none_1 = xr.DataArray(exp_rsplit_none_1, dims=["X", "Y"])
+    expected_dtype = [[[dtype(x) for x in y] for y in z] for z in expected]
+    expected_np = np.array(expected_dtype, dtype=np.object_)
+    expected_da = xr.DataArray(expected_np, dims=["X", "Y", "ZZ"]).astype(dtype)
 
-    res_split_dim_full = values.str.split(sep=",", dim="ZZ")
-    res_rsplit_dim_full = values.str.rsplit(sep=",", dim="ZZ")
-    res_split_dim_1 = values.str.split(sep=",", dim="ZZ", maxsplit=1)
-    res_rsplit_dim_1 = values.str.rsplit(sep=",", dim="ZZ", maxsplit=1)
-    res_split_dim_10 = values.str.split(sep=",", dim="ZZ", maxsplit=10)
-    res_rsplit_dim_10 = values.str.rsplit(sep=",", dim="ZZ", maxsplit=10)
+    actual = func(values)
 
-    res_split_none_full = values.str.split(sep=",", dim=None)
-    res_rsplit_none_full = values.str.rsplit(sep=",", dim=None)
-    res_split_none_1 = values.str.split(sep=",", dim=None, maxsplit=1)
-    res_rsplit_none_1 = values.str.rsplit(sep=",", dim=None, maxsplit=1)
-    res_split_none_10 = values.str.split(sep=",", dim=None, maxsplit=10)
-    res_rsplit_none_10 = values.str.rsplit(sep=",", dim=None, maxsplit=10)
-
-    assert res_split_dim_full.dtype == exp_split_dim_full.dtype
-    assert res_rsplit_dim_full.dtype == exp_rsplit_dim_full.dtype
-    assert res_split_dim_1.dtype == exp_split_dim_1.dtype
-    assert res_rsplit_dim_1.dtype == exp_rsplit_dim_1.dtype
-    assert res_split_dim_10.dtype == exp_split_dim_full.dtype
-    assert res_rsplit_dim_10.dtype == exp_rsplit_dim_full.dtype
-
-    assert res_split_none_full.dtype == exp_split_none_full.dtype
-    assert res_rsplit_none_full.dtype == exp_rsplit_none_full.dtype
-    assert res_split_none_1.dtype == exp_split_none_1.dtype
-    assert res_rsplit_none_1.dtype == exp_rsplit_none_1.dtype
-    assert res_split_none_10.dtype == exp_split_none_full.dtype
-    assert res_rsplit_none_10.dtype == exp_rsplit_none_full.dtype
-
-    assert_equal(res_split_dim_full, exp_split_dim_full)
-    assert_equal(res_rsplit_dim_full, exp_rsplit_dim_full)
-    assert_equal(res_split_dim_1, exp_split_dim_1)
-    assert_equal(res_rsplit_dim_1, exp_rsplit_dim_1)
-    assert_equal(res_split_dim_10, exp_split_dim_full)
-    assert_equal(res_rsplit_dim_10, exp_rsplit_dim_full)
-
-    assert_equal(res_split_none_full, exp_split_none_full)
-    assert_equal(res_rsplit_none_full, exp_rsplit_none_full)
-    assert_equal(res_split_none_1, exp_split_none_1)
-    assert_equal(res_rsplit_none_1, exp_rsplit_none_1)
-    assert_equal(res_split_none_10, exp_split_none_full)
-    assert_equal(res_rsplit_none_10, exp_rsplit_none_full)
+    assert actual.dtype == expected_da.dtype
+    assert_equal(actual, expected_da)
 
 
 def test_splitters_broadcast(dtype) -> None:
@@ -2889,7 +2983,7 @@ def test_get_dummies(dtype) -> None:
 
     vals_line = np.array(["a", "ab", "abc", "abcd", "ab~abc"]).astype(dtype)
     vals_comma = np.array(["a", "ab", "abc", "abcd", "ab|abc"]).astype(dtype)
-    expected = [
+    expected_list = [
         [
             [True, False, True, False, True],
             [False, True, False, False, False],
@@ -2901,8 +2995,8 @@ def test_get_dummies(dtype) -> None:
             [True, False, False, False, False],
         ],
     ]
-    expected = np.array(expected)
-    expected = xr.DataArray(expected, dims=["X", "Y", "ZZ"])
+    expected_np = np.array(expected_list)
+    expected = xr.DataArray(expected_np, dims=["X", "Y", "ZZ"])
     targ_line = expected.copy()
     targ_comma = expected.copy()
     targ_line.coords["ZZ"] = vals_line
@@ -2932,14 +3026,14 @@ def test_get_dummies_broadcast(dtype) -> None:
         dims=["Y"],
     ).astype(dtype)
 
-    expected = [
+    expected_list = [
         [[False, False, True], [True, True, False]],
         [[True, False, False], [True, False, False]],
         [[True, False, True], [True, True, False]],
         [[False, False, True], [True, False, False]],
     ]
-    expected = np.array(expected)
-    expected = xr.DataArray(expected, dims=["X", "Y", "ZZ"])
+    expected_np = np.array(expected_list)
+    expected = xr.DataArray(expected_np, dims=["X", "Y", "ZZ"])
     expected.coords["ZZ"] = np.array(["x", "x|x", "x~x"]).astype(dtype)
 
     res = values.str.get_dummies(dim="ZZ", sep=sep)
@@ -2973,17 +3067,17 @@ def test_splitters_empty_str(dtype) -> None:
         dims=["X", "Y", "ZZ"],
     ).astype(dtype)
 
-    targ_partition_none = [
+    targ_partition_none_list = [
         [["", "", ""], ["", "", ""], ["", "", ""]],
         [["", "", ""], ["", "", ""], ["", "", "", ""]],
     ]
-    targ_partition_none = [
-        [[dtype(x) for x in y] for y in z] for z in targ_partition_none
+    targ_partition_none_list = [
+        [[dtype(x) for x in y] for y in z] for z in targ_partition_none_list
     ]
-    targ_partition_none = np.array(targ_partition_none, dtype=np.object_)
-    del targ_partition_none[-1, -1][-1]
+    targ_partition_none_np = np.array(targ_partition_none_list, dtype=np.object_)
+    del targ_partition_none_np[-1, -1][-1]
     targ_partition_none = xr.DataArray(
-        targ_partition_none,
+        targ_partition_none_np,
         dims=["X", "Y"],
     )
 
@@ -3323,12 +3417,12 @@ def test_cat_multi() -> None:
 
     values_4 = ""
 
-    values_5 = np.array("", dtype=np.unicode_)
+    values_5 = np.array("", dtype=np.str_)
 
     sep = xr.DataArray(
         [" ", ", "],
         dims=["ZZ"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     expected = xr.DataArray(
         [
@@ -3344,7 +3438,7 @@ def test_cat_multi() -> None:
             ],
         ],
         dims=["X", "Y", "ZZ"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values_1.str.cat(values_2, values_3, values_4, values_5, sep=sep)
 
@@ -3465,7 +3559,7 @@ def test_format_scalar() -> None:
     values = xr.DataArray(
         ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3478,7 +3572,7 @@ def test_format_scalar() -> None:
     expected = xr.DataArray(
         ["1.X.None", "1,1.2,'test','test'", "'test'-X-None"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
 
@@ -3490,7 +3584,7 @@ def test_format_broadcast() -> None:
     values = xr.DataArray(
         ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3512,7 +3606,7 @@ def test_format_broadcast() -> None:
             ["'test'-X-None", "'test'-X-None"],
         ],
         dims=["X", "YY"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
 
@@ -3524,7 +3618,7 @@ def test_mod_scalar() -> None:
     values = xr.DataArray(
         ["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3533,7 +3627,7 @@ def test_mod_scalar() -> None:
     expected = xr.DataArray(
         ["1.1.2.2.3", "1,1.2,2.3", "1-1.2-2.3"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % (pos0, pos1, pos2)
 
@@ -3545,7 +3639,7 @@ def test_mod_dict() -> None:
     values = xr.DataArray(
         ["%(a)s.%(a)s.%(b)s", "%(b)s,%(c)s,%(b)s", "%(c)s-%(b)s-%(a)s"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     a = 1
     b = 1.2
@@ -3554,7 +3648,7 @@ def test_mod_dict() -> None:
     expected = xr.DataArray(
         ["1.1.1.2", "1.2,2.3,1.2", "2.3-1.2-1"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % {"a": a, "b": b, "c": c}
 
@@ -3566,7 +3660,7 @@ def test_mod_broadcast_single() -> None:
     values = xr.DataArray(
         ["%s_1", "%s_2", "%s_3"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos = xr.DataArray(
         ["2.3", "3.44444"],
@@ -3576,7 +3670,7 @@ def test_mod_broadcast_single() -> None:
     expected = xr.DataArray(
         [["2.3_1", "3.44444_1"], ["2.3_2", "3.44444_2"], ["2.3_3", "3.44444_3"]],
         dims=["X", "YY"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % pos
 
@@ -3588,7 +3682,7 @@ def test_mod_broadcast_multi() -> None:
     values = xr.DataArray(
         ["%s.%s.%s", "%s,%s,%s", "%s-%s-%s"],
         dims=["X"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     pos0 = 1
     pos1 = 1.2
@@ -3605,7 +3699,7 @@ def test_mod_broadcast_multi() -> None:
             ["1-1.2-2.3", "1-1.2-3.44444"],
         ],
         dims=["X", "YY"],
-    ).astype(np.unicode_)
+    ).astype(np.str_)
 
     res = values.str % (pos0, pos1, pos2)
 

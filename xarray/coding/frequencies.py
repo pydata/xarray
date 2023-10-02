@@ -39,13 +39,14 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 
-from ..core.common import _contains_datetime_like_objects
-from .cftime_offsets import _MONTH_ABBREVIATIONS
-from .cftimeindex import CFTimeIndex
+from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS
+from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.core.common import _contains_datetime_like_objects
 
 _ONE_MICRO = 1
 _ONE_MILLI = _ONE_MICRO * 1000
@@ -78,11 +79,12 @@ def infer_freq(index):
         If there are fewer than three values or the index is not 1D.
     """
     from xarray.core.dataarray import DataArray
+    from xarray.core.variable import Variable
 
     if isinstance(index, (DataArray, pd.Series)):
         if index.ndim != 1:
             raise ValueError("'index' must be 1D")
-        elif not _contains_datetime_like_objects(DataArray(index)):
+        elif not _contains_datetime_like_objects(Variable("dim", index)):
             raise ValueError("'index' must contain datetime-like objects")
         dtype = np.asarray(index).dtype
         if dtype == "datetime64[ns]":

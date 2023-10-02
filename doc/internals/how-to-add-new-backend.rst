@@ -16,6 +16,9 @@ If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
 
+You can see what backends are currently available in your working environment
+with :py:class:`~xarray.backends.list_engines()`.
+
 .. _RST backend_entrypoint:
 
 BackendEntrypoint subclassing
@@ -26,7 +29,9 @@ it should implement the following attributes and methods:
 
 - the ``open_dataset`` method (mandatory)
 - the ``open_dataset_parameters`` attribute (optional)
-- the ``guess_can_open`` method (optional).
+- the ``guess_can_open`` method (optional)
+- the ``description`` attribute (optional)
+- the ``url`` attribute (optional).
 
 This is what a ``BackendEntrypoint`` subclass should look like:
 
@@ -54,6 +59,10 @@ This is what a ``BackendEntrypoint`` subclass should look like:
             except TypeError:
                 return False
             return ext in {".my_format", ".my_fmt"}
+
+        description = "Use .my_format files in Xarray"
+
+        url = "https://link_to/your_backend/documentation"
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
 
@@ -119,7 +128,7 @@ should implement in its interface the following boolean keyword arguments, calle
 - ``decode_coords``
 
 Note: all the supported decoders shall be declared explicitly
-in backend ``open_dataset`` signature and adding a ``**kargs`` is not allowed.
+in backend ``open_dataset`` signature and adding a ``**kwargs`` is not allowed.
 
 These keyword arguments are explicitly defined in Xarray
 :py:func:`~xarray.open_dataset` signature. Xarray will pass them to the
@@ -167,6 +176,17 @@ that always returns ``False``.
 
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
 Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
+
+.. _RST properties:
+
+description and url
+^^^^^^^^^^^^^^^^^^^^
+
+``description`` is used to provide a short text description of the backend.
+``url`` is used to include a link to the backend's documentation or code.
+
+These attributes are surfaced when a user prints :py:class:`~xarray.backends.BackendEntrypoint`.
+If ``description`` or ``url`` are not defined, an empty string is returned.
 
 .. _RST decoders:
 
@@ -439,27 +459,25 @@ currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:
 
-Backend preferred chunks
-^^^^^^^^^^^^^^^^^^^^^^^^
+Preferred chunk sizes
+^^^^^^^^^^^^^^^^^^^^^
 
-The backend is not directly involved in `Dask <https://dask.org/>`__
-chunking, since it is internally managed by Xarray. However, the backend can
-define the preferred chunk size inside the variable’s encoding
-``var.encoding["preferred_chunks"]``. The ``preferred_chunks`` may be useful
-to improve performances with lazy loading. ``preferred_chunks`` shall be a
-dictionary specifying chunk size per dimension like
-``{“dim1”: 1000, “dim2”: 2000}``  or
-``{“dim1”: [1000, 100], “dim2”: [2000, 2000, 2000]]}``.
+To potentially improve performance with lazy loading, the backend may define for each
+variable the chunk sizes that it prefers---that is, sizes that align with how the
+variable is stored. (Note that the backend is not directly involved in `Dask
+<https://dask.org/>`__ chunking, because Xarray internally manages chunking.) To define
+the preferred chunk sizes, store a mapping within the variable's encoding under the key
+``"preferred_chunks"`` (that is, ``var.encoding["preferred_chunks"]``). The mapping's
+keys shall be the names of dimensions with preferred chunk sizes, and each value shall
+be the corresponding dimension's preferred chunk sizes expressed as either an integer
+(such as ``{"dim1": 1000, "dim2": 2000}``) or a tuple of integers (such as ``{"dim1":
+(1000, 100), "dim2": (2000, 2000, 2000)}``).
 
-The ``preferred_chunks`` is used by Xarray to define the chunk size in some
-special cases:
-
-- if ``chunks`` along a dimension is ``None`` or not defined
-- if ``chunks`` is ``"auto"``.
-
-In the first case Xarray uses the chunks size specified in
-``preferred_chunks``.
-In the second case Xarray accommodates ideal chunk sizes, preserving if
-possible the "preferred_chunks". The ideal chunk size is computed using
-:py:func:`dask.array.core.normalize_chunks`, setting
-``previous_chunks = preferred_chunks``.
+Xarray uses the preferred chunk sizes in some special cases of the ``chunks`` argument
+of the :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_mfdataset` functions.
+If ``chunks`` is a ``dict``, then for any dimensions missing from the keys or whose
+value is ``None``, Xarray sets the chunk sizes to the preferred sizes. If ``chunks``
+equals ``"auto"``, then Xarray seeks ideal chunk sizes informed by the preferred chunk
+sizes. Specifically, it determines the chunk sizes using
+:py:func:`dask.array.core.normalize_chunks` with the ``previous_chunks`` argument set
+according to the preferred chunk sizes.

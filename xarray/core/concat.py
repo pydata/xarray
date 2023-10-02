@@ -1,72 +1,76 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Union, overload
 
+import numpy as np
 import pandas as pd
 
-from . import dtypes, utils
-from .alignment import align
-from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, PandasIndex
-from .merge import (
+from xarray.core import dtypes, utils
+from xarray.core.alignment import align, reindex_variables
+from xarray.core.duck_array_ops import lazy_array_equiv
+from xarray.core.indexes import Index, PandasIndex
+from xarray.core.merge import (
     _VALID_COMPAT,
     collect_variables_and_indexes,
     merge_attrs,
     merge_collected,
 )
-from .variable import Variable
-from .variable import concat as concat_vars
+from xarray.core.types import T_DataArray, T_Dataset
+from xarray.core.variable import Variable
+from xarray.core.variable import concat as concat_vars
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        ConcatOptions,
+        JoinOptions,
+    )
 
-compat_options = Literal[
-    "identical", "equals", "broadcast_equals", "no_conflicts", "override"
-]
-concat_options = Literal["all", "minimal", "different"]
+    T_DataVars = Union[ConcatOptions, Iterable[Hashable]]
 
 
 @overload
 def concat(
-    objs: Iterable[Dataset],
-    dim: Hashable | DataArray | pd.Index,
-    data_vars: concat_options | list[Hashable] = "all",
-    coords: concat_options | list[Hashable] = "different",
-    compat: compat_options = "equals",
+    objs: Iterable[T_Dataset],
+    dim: Hashable | T_DataArray | pd.Index,
+    data_vars: T_DataVars = "all",
+    coords: ConcatOptions | list[Hashable] = "different",
+    compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
-) -> Dataset:
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
+) -> T_Dataset:
     ...
 
 
 @overload
 def concat(
-    objs: Iterable[DataArray],
-    dim: Hashable | DataArray | pd.Index,
-    data_vars: concat_options | list[Hashable] = "all",
-    coords: concat_options | list[Hashable] = "different",
-    compat: compat_options = "equals",
+    objs: Iterable[T_DataArray],
+    dim: Hashable | T_DataArray | pd.Index,
+    data_vars: T_DataVars = "all",
+    coords: ConcatOptions | list[Hashable] = "different",
+    compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
-) -> DataArray:
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
+) -> T_DataArray:
     ...
 
 
 def concat(
     objs,
     dim,
-    data_vars="all",
+    data_vars: T_DataVars = "all",
     coords="different",
-    compat="equals",
+    compat: CompatOptions = "equals",
     positions=None,
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -219,8 +223,8 @@ def concat(
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     try:
         first_obj, objs = utils.peek_at(objs)
@@ -233,17 +237,34 @@ def concat(
         )
 
     if isinstance(first_obj, DataArray):
-        f = _dataarray_concat
+        return _dataarray_concat(
+            objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+        )
     elif isinstance(first_obj, Dataset):
-        f = _dataset_concat
+        return _dataset_concat(
+            objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+        )
     else:
         raise TypeError(
             "can only concatenate xarray Dataset and DataArray "
             f"objects, got {type(first_obj)}"
         )
-    return f(
-        objs, dim, data_vars, coords, compat, positions, fill_value, join, combine_attrs
-    )
 
 
 def _calc_concat_dim_index(
@@ -253,7 +274,7 @@ def _calc_concat_dim_index(
     for concatenating along the new dimension.
 
     """
-    from .dataarray import DataArray
+    from xarray.core.dataarray import DataArray
 
     dim: Hashable | None
 
@@ -273,7 +294,7 @@ def _calc_concat_dim_index(
     return dim, index
 
 
-def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
+def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, compat):
     """
     Determine which dataset variables need to be concatenated in the result,
     """
@@ -361,24 +382,29 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
             elif opt == "all":
                 concat_over.update(
-                    set(getattr(datasets[0], subset)) - set(datasets[0].dims)
+                    set().union(
+                        *list(set(getattr(d, subset)) - set(d.dims) for d in datasets)
+                    )
                 )
             elif opt == "minimal":
                 pass
             else:
                 raise ValueError(f"unexpected value for {subset}: {opt}")
         else:
-            invalid_vars = [k for k in opt if k not in getattr(datasets[0], subset)]
+            valid_vars = tuple(getattr(datasets[0], subset))
+            invalid_vars = [k for k in opt if k not in valid_vars]
             if invalid_vars:
                 if subset == "coords":
                     raise ValueError(
-                        "some variables in coords are not coordinates on "
-                        f"the first dataset: {invalid_vars}"
+                        f"the variables {invalid_vars} in coords are not "
+                        f"found in the coordinates of the first dataset {valid_vars}"
                     )
                 else:
+                    # note: data_vars are not listed in the error message here,
+                    # because there may be lots of them
                     raise ValueError(
-                        "some variables in data_vars are not data variables "
-                        f"on the first dataset: {invalid_vars}"
+                        f"the variables {invalid_vars} in data_vars are not "
+                        f"found in the data variables of the first dataset"
                     )
             concat_over.update(opt)
 
@@ -389,19 +415,26 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
 def _parse_datasets(
-    datasets: Iterable[Dataset],
-) -> tuple[dict[Hashable, Variable], dict[Hashable, int], set[Hashable], set[Hashable]]:
-
+    datasets: list[T_Dataset],
+) -> tuple[
+    dict[Hashable, Variable],
+    dict[Hashable, int],
+    set[Hashable],
+    set[Hashable],
+    list[Hashable],
+]:
     dims: set[Hashable] = set()
     all_coord_names: set[Hashable] = set()
     data_vars: set[Hashable] = set()  # list of data_vars
     dim_coords: dict[Hashable, Variable] = {}  # maps dim name to variable
     dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
+    variables_order: dict[Hashable, Variable] = {}  # variables in order of appearance
 
     for ds in datasets:
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
+        variables_order.update(ds.variables)
 
         # preserves ordering of dimensions
         for dim in ds.dims:
@@ -412,25 +445,25 @@ def _parse_datasets(
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
 
-    return dim_coords, dims_sizes, all_coord_names, data_vars
+    return dim_coords, dims_sizes, all_coord_names, data_vars, list(variables_order)
 
 
 def _dataset_concat(
-    datasets: list[Dataset],
-    dim: str | DataArray | pd.Index,
-    data_vars: str | list[str],
+    datasets: list[T_Dataset],
+    dim: str | T_DataArray | pd.Index,
+    data_vars: T_DataVars,
     coords: str | list[str],
-    compat: str,
+    compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
-    fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
-) -> Dataset:
+    fill_value: Any = dtypes.NA,
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
+) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     datasets = list(datasets)
 
@@ -454,7 +487,9 @@ def _dataset_concat(
         align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
-    dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
+    dim_coords, dims_sizes, coord_names, data_names, vars_order = _parse_datasets(
+        datasets
+    )
     dim_names = set(dim_coords)
     unlabeled_dims = dim_names - coord_names
 
@@ -477,7 +512,7 @@ def _dataset_concat(
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (coord_names | data_names) - concat_over - dim_names
+    variables_to_merge = (coord_names | data_names) - concat_over - unlabeled_dims
 
     result_vars = {}
     result_indexes = {}
@@ -485,7 +520,7 @@ def _dataset_concat(
     if variables_to_merge:
         grouped = {
             k: v
-            for k, v in collect_variables_and_indexes(list(datasets)).items()
+            for k, v in collect_variables_and_indexes(datasets).items()
             if k in variables_to_merge
         }
         merged_vars, merged_indexes = merge_collected(
@@ -507,11 +542,11 @@ def _dataset_concat(
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
-    def ensure_common_dims(vars):
+    def ensure_common_dims(vars, concat_dim_lengths):
         # ensure each variable with the given name shares the same
         # dimensions and the same shape for all of them except along the
         # concat dimension
-        common_dims = tuple(pd.unique([d for v in vars for d in v.dims]))
+        common_dims = tuple(utils.OrderedSet(d for v in vars for d in v.dims))
         if dim not in common_dims:
             common_dims = (dim,) + common_dims
         for var, dim_len in zip(vars, concat_dim_lengths):
@@ -522,7 +557,7 @@ def _dataset_concat(
 
     # get the indexes to concatenate together, create a PandasIndex
     # for any scalar coordinate variable found with ``name`` matching ``dim``.
-    # TODO: depreciate concat a mix of scalar and dimensional indexed coodinates?
+    # TODO: depreciate concat a mix of scalar and dimensional indexed coordinates?
     # TODO: (benbovy - explicit indexes): check index types and/or coordinates
     # of all datasets?
     def get_indexes(name):
@@ -532,22 +567,49 @@ def _dataset_concat(
             elif name == dim:
                 var = ds._variables[name]
                 if not var.dims:
-                    yield PandasIndex([var.values.item()], dim)
+                    data = var.set_dims(dim).values
+                    yield PandasIndex(data, dim, coord_dtype=var.dtype)
+
+    # create concatenation index, needed for later reindexing
+    file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
+    concat_index = np.arange(file_start_indexes[-1])
+    concat_index_size = concat_index.size
+    variable_index_mask = np.ones(concat_index_size, dtype=bool)
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
-    for name in datasets[0].variables:
+    ndatasets = len(datasets)
+    for name in vars_order:
         if name in concat_over and name not in result_indexes:
-            try:
-                vars = ensure_common_dims([ds[name].variable for ds in datasets])
-            except KeyError:
-                raise ValueError(f"{name!r} is not present in all datasets.")
+            variables = []
+            # Initialize the mask to all True then set False if any name is missing in
+            # the datasets:
+            variable_index_mask.fill(True)
+            var_concat_dim_length = []
+            for i, ds in enumerate(datasets):
+                if name in ds.variables:
+                    variables.append(ds[name].variable)
+                    var_concat_dim_length.append(concat_dim_lengths[i])
+                else:
+                    # raise if coordinate not in all datasets
+                    if name in coord_names:
+                        raise ValueError(
+                            f"coordinate {name!r} not present in all datasets."
+                        )
 
-            # Try concatenate the indexes, concatenate the variables when no index
+                    # Mask out the indexes without the name:
+                    start = file_start_indexes[i]
+                    end = file_start_indexes[i + 1]
+                    variable_index_mask[slice(start, end)] = False
+
+            variable_index = concat_index[variable_index_mask]
+            vars = ensure_common_dims(variables, var_concat_dim_length)
+
+            # Try to concatenate the indexes, concatenate the variables when no index
             # is found on all datasets.
             indexes: list[Index] = list(get_indexes(name))
             if indexes:
-                if len(indexes) < len(datasets):
+                if len(indexes) < ndatasets:
                     raise ValueError(
                         f"{name!r} must have either an index or no index in all datasets, "
                         f"found {len(indexes)}/{len(datasets)} datasets with an index."
@@ -570,13 +632,22 @@ def _dataset_concat(
                 combined_var = concat_vars(
                     vars, dim, positions, combine_attrs=combine_attrs
                 )
+                # reindex if variable is not present in all datasets
+                if len(variable_index) < concat_index_size:
+                    combined_var = reindex_variables(
+                        variables={name: combined_var},
+                        dim_pos_indexers={
+                            dim: pd.Index(variable_index).get_indexer(concat_index)
+                        },
+                        fill_value=fill_value,
+                    )[name]
                 result_vars[name] = combined_var
 
         elif name in result_vars:
             # preserves original variable order
             result_vars[name] = result_vars.pop(name)
 
-    result = Dataset(result_vars, attrs=result_attrs)
+    result = type(datasets[0])(result_vars, attrs=result_attrs)
 
     absent_coord_names = coord_names - set(result.variables)
     if absent_coord_names:
@@ -604,17 +675,17 @@ def _dataset_concat(
 
 
 def _dataarray_concat(
-    arrays: Iterable[DataArray],
-    dim: str | DataArray | pd.Index,
-    data_vars: str | list[str],
+    arrays: Iterable[T_DataArray],
+    dim: str | T_DataArray | pd.Index,
+    data_vars: T_DataVars,
     coords: str | list[str],
-    compat: str,
+    compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
-) -> DataArray:
-    from .dataarray import DataArray
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
+) -> T_DataArray:
+    from xarray.core.dataarray import DataArray
 
     arrays = list(arrays)
 

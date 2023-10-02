@@ -1,14 +1,11 @@
-import pickle
+from __future__ import annotations
 
 import numpy as np
 import pytest
 
 import xarray as xr
-import xarray.ufuncs as xu
-
-from . import assert_array_equal
-from . import assert_identical as assert_identical_
-from . import assert_no_warnings, mock
+from xarray.tests import assert_allclose, assert_array_equal, mock
+from xarray.tests import assert_identical as assert_identical_
 
 
 def assert_identical(a, b):
@@ -19,16 +16,16 @@ def assert_identical(a, b):
         assert_array_equal(a, b)
 
 
-def test_unary():
-    args = [
-        0,
-        np.zeros(2),
+@pytest.mark.parametrize(
+    "a",
+    [
         xr.Variable(["x"], [0, 0]),
         xr.DataArray([0, 0], dims="x"),
         xr.Dataset({"y": ("x", [0, 0])}),
-    ]
-    for a in args:
-        assert_identical(a + 1, np.cos(a))
+    ],
+)
+def test_unary(a):
+    assert_allclose(a + 1, np.cos(a))
 
 
 def test_binary():
@@ -158,52 +155,3 @@ def test_gufuncs():
     fake_gufunc = mock.Mock(signature="(n)->()", autospec=np.sin)
     with pytest.raises(NotImplementedError, match=r"generalized ufuncs"):
         xarray_obj.__array_ufunc__(fake_gufunc, "__call__", xarray_obj)
-
-
-def test_xarray_ufuncs_deprecation():
-    with pytest.warns(FutureWarning, match="xarray.ufuncs"):
-        xu.cos(xr.DataArray([0, 1]))
-
-    with assert_no_warnings():
-        xu.angle(xr.DataArray([0, 1]))
-
-
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
-@pytest.mark.parametrize(
-    "name",
-    [
-        name
-        for name in dir(xu)
-        if (
-            not name.startswith("_")
-            and hasattr(np, name)
-            and name not in ["print_function", "absolute_import", "division"]
-        )
-    ],
-)
-def test_numpy_ufuncs(name, request):
-    x = xr.DataArray([1, 1])
-
-    np_func = getattr(np, name)
-    if hasattr(np_func, "nin") and np_func.nin == 2:
-        args = (x, x)
-    else:
-        args = (x,)
-
-    y = np_func(*args)
-
-    if name in ["angle", "iscomplex"]:
-        # these functions need to be handled with __array_function__ protocol
-        assert isinstance(y, np.ndarray)
-    elif name in ["frexp"]:
-        # np.frexp returns a tuple
-        assert not isinstance(y, xr.DataArray)
-    else:
-        assert isinstance(y, xr.DataArray)
-
-
-@pytest.mark.filterwarnings("ignore:xarray.ufuncs")
-def test_xarray_ufuncs_pickle():
-    a = 1.0
-    cos_pickled = pickle.loads(pickle.dumps(xu.cos))
-    assert_identical(cos_pickled(a), xu.cos(a))

@@ -6,10 +6,10 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.8 or later)
-- `numpy <https://www.numpy.org/>`__ (1.18 or later)
-- `packaging <https://packaging.pypa.io/en/latest/#>`__ (20.0 or later)
-- `pandas <https://pandas.pydata.org/>`__ (1.1 or later)
+- Python (3.9 or later)
+- `numpy <https://www.numpy.org/>`__ (1.22 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (21.3 or later)
+- `pandas <https://pandas.pydata.org/>`__ (1.4 or later)
 
 .. _optional-dependencies:
 
@@ -41,12 +41,8 @@ For netCDF and IO
 - `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
-- `rasterio <https://github.com/rasterio/rasterio>`__: for reading GeoTiffs and
-  other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
-- `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
-  *ECMWF ecCodes* library.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,7 +86,7 @@ Minimum dependency versions
 Xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
-- **Python:** 24 months
+- **Python:** 30 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
@@ -102,7 +98,7 @@ release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
-`<https://github.com/pydata/xarray/blob/main/ci/requirements/py38-min-all-deps.yml>`_
+`<https://github.com/pydata/xarray/blob/main/ci/requirements/min-all-deps.yml>`_
 
 .. _installation-instructions:
 
@@ -139,14 +135,23 @@ We also maintain other dependency sets for different subsets of functionality::
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
 installation steps are excluded. To know which dependencies would be
-installed, take a look at the ``[options.extras_require]`` section in
-``setup.cfg``:
+installed, take a look at the ``[project.optional-dependencies]`` section in
+``pyproject.toml``:
 
-.. literalinclude:: ../../setup.cfg
-   :language: ini
-   :start-at: [options.extras_require]
-   :end-before: [options.package_data]
+.. literalinclude:: ../../pyproject.toml
+   :language: toml
+   :start-at: [project.optional-dependencies]
+   :end-before: [build-system]
 
+Development versions
+--------------------
+To install the most recent development version, install from github::
+
+     $ python -m pip install git+https://github.com/pydata/xarray.git
+
+or from TestPyPI::
+
+     $ python -m pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --pre xarray
 
 Testing
 -------

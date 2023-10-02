@@ -1,5 +1,7 @@
 *.py[cod]
 __pycache__
+.env
+.venv
 
 # example caches from Hypothesis
 .hypothesis/
@@ -73,3 +75,7 @@ xarray/tests/data/*.grib.*.idx
 Icon*
 
 .ipynb_checkpoints
+doc/team-panel.txt
+doc/external-examples-gallery.txt
+doc/notebooks-examples-gallery.txt
+doc/videos-gallery.txt

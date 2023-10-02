@@ -1,6 +1,8 @@
 
-Extending xarray
-================
+.. _internals.accessors:
+
+Extending xarray using accessors
+================================
 
 .. ipython:: python
     :suppress:
@@ -8,30 +10,41 @@ Extending xarray
     import xarray as xr
 
 
-Xarray is designed as a general purpose library, and hence tries to avoid
+Xarray is designed as a general purpose library and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
 domain specific logic arises.
 
-One standard solution to this problem is to subclass Dataset and/or DataArray to
+.. _internals.accessors.composition:
+
+Composition over Inheritance
+----------------------------
+
+One potential solution to this problem is to subclass Dataset and/or DataArray to
 add domain specific functionality. However, inheritance is not very robust. It's
 easy to inadvertently use internal APIs when subclassing, which means that your
 code may break when xarray upgrades. Furthermore, many builtin methods will
 only return native xarray objects.
 
-The standard advice is to use `composition over inheritance`__, but
+The standard advice is to use :issue:`composition over inheritance <706>`, but
 reimplementing an API as large as xarray's on your own objects can be an onerous
 task, even if most methods are only forwarding to xarray implementations.
-
-__ https://github.com/pydata/xarray/issues/706
+(For an example of a project which took this approach of subclassing see `UXarray <https://github.com/UXARRAY/uxarray>`_).
 
 If you simply want the ability to call a function with the syntax of a
 method call, then the builtin :py:meth:`~xarray.DataArray.pipe` method (copied
 from pandas) may suffice.
 
+.. _internals.accessors.writing accessors:
+
+Writing Custom Accessors
+------------------------
+
 To resolve this issue for more complex cases, xarray has the
 :py:func:`~xarray.register_dataset_accessor` and
 :py:func:`~xarray.register_dataarray_accessor` decorators for adding custom
-"accessors" on xarray objects. Here's how you might use these decorators to
+"accessors" on xarray objects, thereby "extending" the functionality of your xarray object.
+
+Here's how you might use these decorators to
 write a custom "geo" accessor implementing a geography specific extension to
 xarray:
 
@@ -94,8 +107,8 @@ on ways to write new accessors and the philosophy behind the approach, see
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
-for an open source library. In the future, we will maintain a list of accessors
-and the libraries that implement them on this page.
+for an open source library. Existing open source accessors and the libraries
+that implement them are available in the list on the :ref:`ecosystem` page.
 
 To make documenting accessors with ``sphinx`` and ``sphinx.ext.autosummary``
 easier, you can use `sphinx-autosummary-accessors`_.

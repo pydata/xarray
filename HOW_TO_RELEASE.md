@@ -18,11 +18,16 @@ upstream        https://github.com/pydata/xarray (push)
      git switch main
      git pull upstream main
      ```
- 2. Add a list of contributors with:
+ 2. Add a list of contributors.
+    First fetch all previous release tags so we can see the version number of the last release was:
+    ```sh
+    git fetch upstream --tags
+    ```
+    This will return a list of all the contributors since the last release:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
-    This will return the number of contributors:
+    This will return the total number of contributors:
     ```sh
     git log "$(git tag --sort=v:refname | tail -1).." --format=%aN | sort -u | wc -l
     ```
@@ -54,12 +59,12 @@ upstream        https://github.com/pydata/xarray (push)
  10. This should automatically trigger an upload of the new build to PyPI via GitHub Actions.
     Check this has run [here](https://github.com/pydata/xarray/actions/workflows/pypi-release.yaml),
     and that the version number you expect is displayed [on PyPI](https://pypi.org/project/xarray/)
-11. Add a section for the next release {YYYY.MM.X+1} to doc/whats-new.rst:
+11. Add a section for the next release {YYYY.MM.X+1} to doc/whats-new.rst (we avoid doing this earlier so that it doesn't show up in the RTD build):
      ```rst
      .. _whats-new.YYYY.MM.X+1:
 
      vYYYY.MM.X+1 (unreleased)
-     ---------------------
+     -----------------------
 
      New Features
      ~~~~~~~~~~~~
@@ -92,7 +97,15 @@ upstream        https://github.com/pydata/xarray (push)
       ```
     You're done pushing to main!
 
-13. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
+13. Update the version available on pyodide:
+    - Open the PyPI page for [Xarray downloads](https://pypi.org/project/xarray/#files)
+    - Edit [`pyodide/packages/xarray/meta.yaml`](https://github.com/pyodide/pyodide/blob/main/packages/xarray/meta.yaml) to update the
+        - version number
+        - link to the wheel (under "Built Distribution" on the PyPI page)
+        - SHA256 hash (Click "Show Hashes" next to the link to the wheel)
+    - Open a pull request to pyodide
+
+14. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
       - pydata@googlegroups.com
@@ -111,4 +124,4 @@ upstream        https://github.com/pydata/xarray (push)
 
 As of 2022.03.0, we utilize the [CALVER](https://calver.org/) version system.
 Specifically, we have adopted the pattern `YYYY.MM.X`, where `YYYY` is a 4-digit
-year (e.g. `2022`), `MM` is a 2-digit zero-padded month (e.g. `01` for January), and `X` is the release number (starting at zero at the start of each month and incremented once for each additional release).
+year (e.g. `2022`), `0M` is a 2-digit zero-padded month (e.g. `01` for January), and `X` is the release number (starting at zero at the start of each month and incremented once for each additional release).

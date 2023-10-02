@@ -40,6 +40,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import annotations
 
+import math
 import re
 import warnings
 from datetime import timedelta
@@ -48,11 +49,14 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
+from xarray.coding.times import (
+    _STANDARD_CALENDARS,
+    cftime_to_nptime,
+    infer_calendar_name,
+)
+from xarray.core.common import _contains_cftime_datetimes
+from xarray.core.options import OPTIONS
 from xarray.core.utils import is_scalar
-
-from ..core.common import _contains_cftime_datetimes
-from ..core.options import OPTIONS
-from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 try:
     import cftime
@@ -224,12 +228,12 @@ def assert_all_valid_date_type(data):
         if not isinstance(sample, cftime.datetime):
             raise TypeError(
                 "CFTimeIndex requires cftime.datetime "
-                "objects. Got object of {}.".format(date_type)
+                f"objects. Got object of {date_type}."
             )
         if not all(isinstance(value, date_type) for value in data):
             raise TypeError(
                 "CFTimeIndex requires using datetime "
-                "objects of all the same type.  Got\n{}.".format(data)
+                f"objects of all the same type.  Got\n{data}."
             )
 
 
@@ -249,7 +253,7 @@ def format_times(
 ):
     """Format values of cftimeindex as pd.Index."""
     n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
-    n_rows = int(np.ceil(len(index) / n_per_row))
+    n_rows = math.ceil(len(index) / n_per_row)
 
     representation = ""
     for row in range(n_rows):
@@ -459,20 +463,16 @@ class CFTimeIndex(pd.Index):
         indexer = np.where(distance <= tolerance, indexer, -1)
         return indexer
 
-    def get_loc(self, key, method=None, tolerance=None):
+    def get_loc(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
         if isinstance(key, str):
             return self._get_string_slice(key)
         else:
-            return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
+            return super().get_loc(key)
 
-    def _maybe_cast_slice_bound(self, label, side, kind=None):
+    def _maybe_cast_slice_bound(self, label, side):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
-
-        Note that we have never used the kind argument in CFTimeIndex and it is
-        deprecated as of pandas version 1.3.0.  It exists only for compatibility
-        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
         """
         if not isinstance(label, str):
             return label
@@ -548,13 +548,12 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
-            from .cftime_offsets import to_offset
+            from xarray.coding.cftime_offsets import to_offset
 
             return self + n * to_offset(freq)
         else:
             raise TypeError(
-                "'freq' must be of type "
-                "str or datetime.timedelta, got {}.".format(freq)
+                "'freq' must be of type " f"str or datetime.timedelta, got {freq}."
             )
 
     def __add__(self, other):
@@ -609,7 +608,7 @@ class CFTimeIndex(pd.Index):
         ------
         ValueError
             If the CFTimeIndex contains dates that are not possible in the
-            standard calendar or outside the pandas.Timestamp-valid range.
+            standard calendar or outside the nanosecond-precision range.
 
         Warns
         -----
@@ -636,10 +635,10 @@ class CFTimeIndex(pd.Index):
         if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
                 "Converting a CFTimeIndex with dates from a non-standard "
-                "calendar, {!r}, to a pandas.DatetimeIndex, which uses dates "
+                f"calendar, {calendar!r}, to a pandas.DatetimeIndex, which uses dates "
                 "from the standard calendar.  This may lead to subtle errors "
                 "in operations that depend on the length of time between "
-                "dates.".format(calendar),
+                "dates.",
                 RuntimeWarning,
                 stacklevel=2,
             )
@@ -678,7 +677,7 @@ class CFTimeIndex(pd.Index):
     @property
     def asi8(self):
         """Convert to integers with units of microseconds since 1970-01-01."""
-        from ..core.resample_cftime import exact_cftime_datetime_difference
+        from xarray.core.resample_cftime import exact_cftime_datetime_difference
 
         epoch = self.date_type(1970, 1, 1)
         return np.array(
@@ -692,20 +691,20 @@ class CFTimeIndex(pd.Index):
     @property
     def calendar(self):
         """The calendar used by the datetimes in the index."""
-        from .times import infer_calendar_name
+        from xarray.coding.times import infer_calendar_name
 
         return infer_calendar_name(self)
 
     @property
     def freq(self):
         """The frequency used by the dates in the index."""
-        from .frequencies import infer_freq
+        from xarray.coding.frequencies import infer_freq
 
         return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
-        from .cftime_offsets import CFTIME_TICKS, to_offset
+        from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
 
         offset = to_offset(freq)
         if not isinstance(offset, CFTIME_TICKS):

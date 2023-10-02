@@ -1,24 +1,33 @@
+from __future__ import annotations
+
 import datetime as dt
 import warnings
+from collections.abc import Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Hashable, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, get_args
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
-from . import utils
-from .common import _contains_datetime_like_objects, ones_like
-from .computation import apply_ufunc
-from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array
-from .utils import OrderedSet, is_scalar
-from .variable import Variable, broadcast_variables
+from xarray.core import utils
+from xarray.core.common import _contains_datetime_like_objects, ones_like
+from xarray.core.computation import apply_ufunc
+from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.core.types import Interp1dOptions, InterpOptions
+from xarray.core.utils import OrderedSet, is_scalar
+from xarray.core.variable import Variable, broadcast_variables
+
+if TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 
-def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
+def _get_nan_block_lengths(
+    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
+):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -39,7 +48,7 @@ def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
         .where(valid)
         .bfill(dim=dim)
         .where(~valid, 0)
-        .fillna(index[-1] - valid_arange.max())
+        .fillna(index[-1] - valid_arange.max(dim=[dim]))
     )
 
     return nan_block_lengths
@@ -48,8 +57,8 @@ def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
 class BaseInterpolator:
     """Generic interpolator class for normalizing interpolation methods"""
 
-    cons_kwargs: Dict[str, Any]
-    call_kwargs: Dict[str, Any]
+    cons_kwargs: dict[str, Any]
+    call_kwargs: dict[str, Any]
     f: Callable
     method: str
 
@@ -57,9 +66,7 @@ class BaseInterpolator:
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self):
-        return "{type}: method={method}".format(
-            type=self.__class__.__name__, method=self.method
-        )
+        return f"{self.__class__.__name__}: method={self.method}"
 
 
 class NumpyInterpolator(BaseInterpolator):
@@ -71,7 +78,6 @@ class NumpyInterpolator(BaseInterpolator):
     """
 
     def __init__(self, xi, yi, method="linear", fill_value=None, period=None):
-
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
 
@@ -213,7 +219,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
 
 
 def get_clean_interp_index(
-    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+    arr, dim: Hashable, use_coordinate: str | bool = True, strict: bool = True
 ):
     """Return index to use for x values in interpolation or curve fitting.
 
@@ -299,12 +305,12 @@ def get_clean_interp_index(
 
 def interp_na(
     self,
-    dim: Hashable = None,
-    use_coordinate: Union[bool, str] = True,
-    method: str = "linear",
-    limit: int = None,
-    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
-    keep_attrs: bool = None,
+    dim: Hashable | None = None,
+    use_coordinate: bool | str = True,
+    method: InterpOptions = "linear",
+    limit: int | None = None,
+    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
+    keep_attrs: bool | None = None,
     **kwargs,
 ):
     """Interpolate values according to different methods."""
@@ -461,27 +467,19 @@ def _import_interpolant(interpolant, method):
         raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
-def _get_interpolator(method, vectorizeable_only=False, **kwargs):
+def _get_interpolator(
+    method: InterpOptions, vectorizeable_only: bool = False, **kwargs
+):
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
-    interp1d_methods = [
-        "linear",
-        "nearest",
-        "zero",
-        "slinear",
-        "quadratic",
-        "cubic",
-        "polynomial",
+    interp_class: type[NumpyInterpolator] | type[ScipyInterpolator] | type[
+        SplineInterpolator
     ]
-    valid_methods = interp1d_methods + [
-        "barycentric",
-        "krog",
-        "pchip",
-        "spline",
-        "akima",
-    ]
+
+    interp1d_methods = get_args(Interp1dOptions)
+    valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
 
     # prioritize scipy.interpolate
     if (
@@ -503,7 +501,7 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
             )
         elif method == "barycentric":
             interp_class = _import_interpolant("BarycentricInterpolator", method)
-        elif method == "krog":
+        elif method in ["krogh", "krog"]:
             interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
             interp_class = _import_interpolant("PchipInterpolator", method)
@@ -589,7 +587,7 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method, **kwargs):
+def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     """Make an interpolation of Variable
 
     Parameters
@@ -639,20 +637,21 @@ def interp(var, indexes_coords, method, **kwargs):
             var.transpose(*original_dims).data, x, destination, method, kwargs
         )
 
-        result = Variable(new_dims, interped, attrs=var.attrs)
+        result = Variable(new_dims, interped, attrs=var.attrs, fastpath=True)
 
         # dimension of the output array
-        out_dims = OrderedSet()
+        out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
                 out_dims.update(indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
-        result = result.transpose(*out_dims)
+        if len(out_dims) > 1:
+            result = result.transpose(*out_dims)
     return result
 
 
-def interp_func(var, x, new_x, method, kwargs):
+def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
     located in the last position.
@@ -693,8 +692,8 @@ def interp_func(var, x, new_x, method, kwargs):
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if is_duck_dask_array(var):
-        import dask.array as da
+    if is_chunked_array(var):
+        chunkmanager = get_chunked_array_type(var)
 
         ndim = var.ndim
         nconst = ndim - len(x)
@@ -709,45 +708,36 @@ def interp_func(var, x, new_x, method, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
-        args = (
-            var,
-            range(ndim),
-            *x_arginds,
-            *new_x_arginds,
-        )
+        args = (var, range(ndim), *x_arginds, *new_x_arginds)
 
-        _, rechunked = da.unify_chunks(*args)
+        _, rechunked = chunkmanager.unify_chunks(*args)
 
         args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
+        new_x0_chunks = new_x[0].chunks
+        new_x0_shape = new_x[0].shape
+        new_x0_chunks_is_not_none = new_x0_chunks is not None
         new_axes = {
-            ndim + i: new_x[0].chunks[i]
-            if new_x[0].chunks is not None
-            else new_x[0].shape[i]
+            ndim + i: new_x0_chunks[i] if new_x0_chunks_is_not_none else new_x0_shape[i]
             for i in range(new_x[0].ndim)
         }
 
         # if useful, re-use localize for each chunk of new_x
-        localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
+        localize = (method in ["linear", "nearest"]) and new_x0_chunks_is_not_none
 
         # scipy.interpolate.interp1d always forces to float.
         # Use the same check for blockwise as well:
         if not issubclass(var.dtype.type, np.inexact):
-            dtype = np.float_
+            dtype = float
         else:
             dtype = var.dtype
 
-        if dask_version < Version("2020.12"):
-            # Using meta and dtype at the same time doesn't work.
-            # Remove this whenever the minimum requirement for dask is 2020.12:
-            meta = None
-        else:
-            meta = var._meta
+        meta = var._meta
 
-        return da.blockwise(
-            _dask_aware_interpnd,
+        return chunkmanager.blockwise(
+            _chunked_aware_interpnd,
             out_ind,
             *args,
             interp_func=func,
@@ -790,8 +780,8 @@ def _interpnd(var, x, new_x, func, kwargs):
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 
-def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
-    """Wrapper for `_interpnd` through `blockwise`
+def _chunked_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
+    """Wrapper for `_interpnd` through `blockwise` for chunked arrays.
 
     The first half arrays in `coords` are original coordinates,
     the other half are destination coordinates

@@ -1,21 +1,29 @@
 """String formatting routines for __repr__.
 """
+from __future__ import annotations
+
 import contextlib
 import functools
+import math
 from collections import defaultdict
+from collections.abc import Collection, Hashable
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Collection, Hashable, Optional
+from reprlib import recursive_repr
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from .duck_array_ops import array_equiv
-from .indexing import MemoryCachedArray
-from .options import OPTIONS, _get_boolean_with_default
-from .pycompat import dask_array_type, sparse_array_type
-from .utils import is_duck_array
+from xarray.core.duck_array_ops import array_equiv
+from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
+from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.pycompat import array_type
+from xarray.core.utils import is_duck_array
+
+if TYPE_CHECKING:
+    from xarray.core.coordinates import AbstractCoordinates
 
 
 def pretty_print(x, numchars: int):
@@ -42,10 +50,10 @@ def wrap_indent(text, start="", length=None):
 
 
 def _get_indexer_at_least_n_items(shape, n_desired, from_end):
-    assert 0 < n_desired <= np.prod(shape)
+    assert 0 < n_desired <= math.prod(shape)
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
-    stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
+    stop = math.ceil(float(n_desired) / np.r_[1, cum_items][n_steps])
     indexer = (
         ((-1 if from_end else 0),) * (len(shape) - 1 - n_steps)
         + ((slice(-stop, None) if from_end else slice(stop)),)
@@ -110,9 +118,9 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    # Timestamp is only valid for 1678 to 2262
     try:
-        datetime_str = str(pd.Timestamp(t))
+        timestamp = pd.Timestamp(t)
+        datetime_str = timestamp.isoformat(sep=" ")
     except OutOfBoundsDatetime:
         datetime_str = str(t)
 
@@ -152,6 +160,8 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     if isinstance(x, (np.timedelta64, timedelta)):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
+        if hasattr(x, "dtype"):
+            x = x.item()
         return repr(x) if quote_strings else x
     elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
         return f"{x.item():.4}"
@@ -183,9 +193,7 @@ def format_array_flat(array, max_width: int):
     """
     # every item will take up at least two characters, but we always want to
     # print at least first and last items
-    max_possibly_relevant = min(
-        max(array.size, 1), max(int(np.ceil(max_width / 2.0)), 2)
-    )
+    max_possibly_relevant = min(max(array.size, 1), max(math.ceil(max_width / 2.0), 2))
     relevant_front_items = format_items(
         first_n_items(array, (max_possibly_relevant + 1) // 2)
     )
@@ -228,11 +236,11 @@ def format_array_flat(array, max_width: int):
     return pprint_str
 
 
-_KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}
-with contextlib.suppress(ImportError):
-    import sparse
-
-    _KNOWN_TYPE_REPRS[sparse.COO] = "sparse.COO"
+# mapping of tuple[modulename, classname] to repr
+_KNOWN_TYPE_REPRS = {
+    ("numpy", "ndarray"): "np.ndarray",
+    ("sparse._coo.core", "COO"): "sparse.COO",
+}
 
 
 def inline_dask_repr(array):
@@ -240,16 +248,14 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert isinstance(array, dask_array_type), array
+    assert isinstance(array, array_type("dask")), array
 
     chunksize = tuple(c[0] for c in array.chunks)
 
     if hasattr(array, "_meta"):
         meta = array._meta
-        if type(meta) in _KNOWN_TYPE_REPRS:
-            meta_repr = _KNOWN_TYPE_REPRS[type(meta)]
-        else:
-            meta_repr = type(meta).__name__
+        identifier = (type(meta).__module__, type(meta).__name__)
+        meta_repr = _KNOWN_TYPE_REPRS.get(identifier, ".".join(identifier))
         meta_string = f", meta={meta_repr}"
     else:
         meta_string = ""
@@ -259,6 +265,7 @@ def inline_dask_repr(array):
 
 def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
+    sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
     return "<{}: nnz={:d}, fill_value={!s}>".format(
         type(array).__name__, array.nnz, array.fill_value
@@ -269,21 +276,26 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    elif var._in_memory:
+    if var._in_memory:
         return format_array_flat(var, max_width)
-    elif isinstance(var._data, dask_array_type):
+    dask_array_type = array_type("dask")
+    if isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
-    elif isinstance(var._data, sparse_array_type):
+    sparse_array_type = array_type("sparse")
+    if isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "__array_function__"):
+    if hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
-    else:
-        # internal xarray array type
-        return "..."
+    # internal xarray array type
+    return "..."
 
 
 def summarize_variable(
-    name: Hashable, var, col_width: int, max_width: int = None, is_index: bool = False
+    name: Hashable,
+    var,
+    col_width: int,
+    max_width: int | None = None,
+    is_index: bool = False,
 ):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     variable = getattr(var, "variable", var)
@@ -384,7 +396,6 @@ data_vars_repr = functools.partial(
     expand_option_name="display_expand_data_vars",
 )
 
-
 attrs_repr = functools.partial(
     _mapping_repr,
     title="Attributes",
@@ -393,7 +404,7 @@ attrs_repr = functools.partial(
 )
 
 
-def coords_repr(coords, col_width=None, max_rows=None):
+def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
@@ -407,14 +418,69 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def indexes_repr(indexes):
-    summary = ["Indexes:"]
-    if indexes:
-        for k, v in indexes.items():
-            summary.append(wrap_indent(repr(v), f"{k}: "))
+def inline_index_repr(index: pd.Index, max_width=None):
+    if hasattr(index, "_repr_inline_"):
+        repr_ = index._repr_inline_(max_width=max_width)
     else:
-        summary += [EMPTY_REPR]
-    return "\n".join(summary)
+        # fallback for the `pandas.Index` subclasses from
+        # `Indexes.get_pandas_indexes` / `xr_obj.indexes`
+        repr_ = repr(index)
+
+    return repr_
+
+
+def summarize_index(
+    names: tuple[Hashable, ...],
+    index,
+    col_width: int,
+    max_width: int | None = None,
+) -> str:
+    if max_width is None:
+        max_width = OPTIONS["display_width"]
+
+    def prefixes(length: int) -> list[str]:
+        if length in (0, 1):
+            return [" "]
+
+        return ["┌"] + ["│"] * max(length - 2, 0) + ["└"]
+
+    preformatted = [
+        pretty_print(f"  {prefix} {name}", col_width)
+        for prefix, name in zip(prefixes(len(names)), names)
+    ]
+
+    head, *tail = preformatted
+    index_width = max_width - len(head)
+    repr_ = inline_index_repr(index, max_width=index_width)
+    return "\n".join([head + repr_] + [line.rstrip() for line in tail])
+
+
+def filter_nondefault_indexes(indexes, filter_indexes: bool):
+    from xarray.core.indexes import PandasIndex, PandasMultiIndex
+
+    if not filter_indexes:
+        return indexes
+
+    default_indexes = (PandasIndex, PandasMultiIndex)
+
+    return {
+        key: index
+        for key, index in indexes.items()
+        if not isinstance(index, default_indexes)
+    }
+
+
+def indexes_repr(indexes, max_rows: int | None = None) -> str:
+    col_width = _calculate_col_width(chain.from_iterable(indexes))
+
+    return _mapping_repr(
+        indexes,
+        "Indexes",
+        summarize_index,
+        "display_expand_indexes",
+        col_width=col_width,
+        max_rows=max_rows,
+    )
 
 
 def dim_summary(obj):
@@ -425,7 +491,7 @@ def dim_summary(obj):
 def _element_formatter(
     elements: Collection[Hashable],
     col_width: int,
-    max_rows: Optional[int] = None,
+    max_rows: int | None = None,
     delimiter: str = ", ",
 ) -> str:
     """
@@ -477,12 +543,12 @@ def _element_formatter(
     return "".join(out)
 
 
-def dim_summary_limited(obj, col_width: int, max_rows: Optional[int] = None) -> str:
+def dim_summary_limited(obj, col_width: int, max_rows: int | None = None) -> str:
     elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
     return _element_formatter(elements, col_width, max_rows)
 
 
-def unindexed_dims_repr(dims, coords, max_rows: Optional[int] = None):
+def unindexed_dims_repr(dims, coords, max_rows: int | None = None):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
         dims_start = "Dimensions without coordinates: "
@@ -515,12 +581,23 @@ def limit_lines(string: str, *, limit: int):
     return string
 
 
-def short_numpy_repr(array):
-    array = np.asarray(array)
+def short_array_repr(array):
+    from xarray.core.common import AbstractArray
+
+    if isinstance(array, ExplicitlyIndexed):
+        array = array.get_duck_array()
+    elif isinstance(array, AbstractArray):
+        array = array.data
+    if not is_duck_array(array):
+        array = np.asarray(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
-    options = {"precision": 6, "linewidth": OPTIONS["display_width"], "threshold": 200}
+    options = {
+        "precision": 6,
+        "linewidth": OPTIONS["display_width"],
+        "threshold": OPTIONS["display_values_threshold"],
+    }
     if array.ndim < 3:
         edgeitems = 3
     elif array.ndim == 3:
@@ -536,18 +613,25 @@ def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
-    elif array._in_memory or array.size < 1e5:
-        return short_numpy_repr(array)
+    elif array._in_memory:
+        return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
 
 
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
+
+
+@recursive_repr("<recursive array>")
 def array_repr(arr):
-    from .variable import Variable
+    from xarray.core.variable import Variable
 
     max_rows = OPTIONS["display_max_rows"]
 
@@ -586,12 +670,24 @@ def array_repr(arr):
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
+        display_default_indexes = _get_boolean_with_default(
+            "display_default_indexes", False
+        )
+
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
+
+        if xindexes:
+            summary.append(indexes_repr(xindexes, max_rows=max_rows))
+
     if arr.attrs:
-        summary.append(attrs_repr(arr.attrs))
+        summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
 
     return "\n".join(summary)
 
 
+@recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
     summary = [f"<xarray.{type(ds).__name__}>"]
 
@@ -611,6 +707,15 @@ def dataset_repr(ds):
 
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
 
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
+    if xindexes:
+        summary.append(indexes_repr(xindexes, max_rows=max_rows))
+
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
 
@@ -619,9 +724,7 @@ def dataset_repr(ds):
 
 def diff_dim_summary(a, b):
     if a.dims != b.dims:
-        return "Differing dimensions:\n    ({}) != ({})".format(
-            dim_summary(a), dim_summary(b)
-        )
+        return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
 
@@ -748,9 +851,7 @@ def _compat_to_str(compat):
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     summary.append(diff_dim_summary(a, b))
@@ -760,7 +861,7 @@ def diff_array_repr(a, b, compat):
         equiv = array_equiv
 
     if not equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)
@@ -781,9 +882,7 @@ def diff_array_repr(a, b, compat):
 
 def diff_dataset_repr(a, b, compat):
     summary = [
-        "Left and right {} objects are not {}".format(
-            type(a).__name__, _compat_to_str(compat)
-        )
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
     col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from textwrap import dedent
 
@@ -8,8 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-
-from . import requires_netCDF4
+from xarray.tests import requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -217,6 +218,70 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
+    def test_index_repr(self) -> None:
+        from xarray.core.indexes import Index
+
+        class CustomIndex(Index):
+            names: tuple[str, ...]
+
+            def __init__(self, names: tuple[str, ...]):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        coord_names = ("x", "y")
+        index = CustomIndex(coord_names)
+        names = ("x",)
+
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in normal
+        assert len(normal.splitlines()) == len(names)
+        assert "CustomIndex" in normal
+
+        class IndexWithInlineRepr(CustomIndex):
+            def _repr_inline_(self, max_width: int):
+                return f"CustomIndex[{', '.join(self.names)}]"
+
+        index = IndexWithInlineRepr(coord_names)
+        inline = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in inline
+        assert index._repr_inline_(max_width=40) in inline
+
+    @pytest.mark.parametrize(
+        "names",
+        (
+            ("x",),
+            ("x", "y"),
+            ("x", "y", "z"),
+            ("x", "y", "z", "a"),
+        ),
+    )
+    def test_index_repr_grouping(self, names) -> None:
+        from xarray.core.indexes import Index
+
+        class CustomIndex(Index):
+            def __init__(self, names):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        index = CustomIndex(names)
+
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert all(name in normal for name in names)
+        assert len(normal.splitlines()) == len(names)
+        assert "CustomIndex" in normal
+
+        hint_chars = [line[2] for line in normal.splitlines()]
+
+        if len(names) <= 1:
+            assert hint_chars == [" "]
+        else:
+            assert hint_chars[0] == "┌" and hint_chars[-1] == "└"
+            assert len(names) == 2 or hint_chars[1:-1] == ["│"] * (len(names) - 2)
+
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
             np.array([[1, 2, 3], [4, 5, 6]], dtype="int64"),
@@ -389,7 +454,10 @@ class TestFormatting:
     def test_array_repr(self) -> None:
         ds = xr.Dataset(coords={"foo": [1, 2, 3], "bar": [1, 2, 3]})
         ds[(1, 2)] = xr.DataArray([0], dims="test")
-        actual = formatting.array_repr(ds[(1, 2)])
+        ds_12 = ds[(1, 2)]
+
+        # Test repr function behaves correctly:
+        actual = formatting.array_repr(ds_12)
         expected = dedent(
             """\
         <xarray.DataArray (1, 2) (test: 1)>
@@ -397,6 +465,14 @@ class TestFormatting:
         Dimensions without coordinates: test"""
         )
 
+        assert actual == expected
+
+        # Test repr, str prints returns correctly as well:
+        assert repr(ds_12) == expected
+        assert str(ds_12) == expected
+
+        # f-strings (aka format(...)) by default should use the repr:
+        actual = f"{ds_12}"
         assert actual == expected
 
         with xr.set_options(display_expand_data=False):
@@ -418,6 +494,47 @@ class TestFormatting:
         with xr.set_options(display_expand_data=False):
             formatting.array_repr(var)
 
+    def test_array_repr_recursive(self) -> None:
+        # GH:issue:7111
+
+        # direct recurion
+        var = xr.Variable("x", [0, 1])
+        var.attrs["x"] = var
+        formatting.array_repr(var)
+
+        da = xr.DataArray([0, 1], dims=["x"])
+        da.attrs["x"] = da
+        formatting.array_repr(da)
+
+        # indirect recursion
+        var.attrs["x"] = da
+        da.attrs["x"] = var
+        formatting.array_repr(var)
+        formatting.array_repr(da)
+
+    @requires_dask
+    def test_array_scalar_format(self) -> None:
+        # Test numpy scalars:
+        var = xr.DataArray(np.array(0))
+        assert format(var, "") == repr(var)
+        assert format(var, "d") == "0"
+        assert format(var, ".2f") == "0.00"
+
+        # Test dask scalars, not supported however:
+        import dask.array as da
+
+        var = xr.DataArray(da.array(0))
+        assert format(var, "") == repr(var)
+        with pytest.raises(TypeError) as excinfo:
+            format(var, ".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
+        # Test numpy arrays raises:
+        var = xr.DataArray([0.1, 0.2])
+        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
+            format(var, ".2f")
+        assert "Using format_spec is only supported" in str(excinfo.value)
+
 
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
@@ -432,11 +549,11 @@ def test_inline_variable_array_repr_custom_repr() -> None:
 
             return formatted
 
-        def __array_function__(self, *args, **kwargs):
+        def __array_namespace__(self, *args, **kwargs):
             return NotImplemented
 
         @property
-        def shape(self):
+        def shape(self) -> tuple[int, ...]:
             return self.value.shape
 
         @property
@@ -464,7 +581,7 @@ def test_set_numpy_options() -> None:
     assert np.get_printoptions() == original_options
 
 
-def test_short_numpy_repr() -> None:
+def test_short_array_repr() -> None:
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -474,14 +591,19 @@ def test_short_numpy_repr() -> None:
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248, 599
-    # for short_numpy_repr: 1, 7, 24, 19, 25
+    # for short_array_repr: 1, 7, 24, 19, 25
     for array in cases:
-        num_lines = formatting.short_numpy_repr(array).count("\n") + 1
+        num_lines = formatting.short_array_repr(array).count("\n") + 1
         assert num_lines < 30
+
+    # threshold option (default: 200)
+    array2 = np.arange(100)
+    assert "..." not in formatting.short_array_repr(array2)
+    with xr.set_options(display_values_threshold=10):
+        assert "..." in formatting.short_array_repr(array2)
 
 
 def test_large_array_repr_length() -> None:
-
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
     result = repr(da).splitlines()
@@ -490,17 +612,28 @@ def test_large_array_repr_length() -> None:
 
 @requires_netCDF4
 def test_repr_file_collapsed(tmp_path) -> None:
-    arr = xr.DataArray(np.arange(300), dims="test")
-    arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
+    arr_to_store = xr.DataArray(np.arange(300, dtype=np.int64), dims="test")
+    arr_to_store.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
     with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
         display_expand_data=False
     ):
-        actual = formatting.array_repr(arr)
+        actual = repr(arr)
         expected = dedent(
             """\
         <xarray.DataArray (test: 300)>
-        array([  0,   1,   2, ..., 297, 298, 299])
+        [300 values with dtype=int64]
+        Dimensions without coordinates: test"""
+        )
+
+        assert actual == expected
+
+        arr_loaded = arr.compute()
+        actual = arr_loaded.__repr__()
+        expected = dedent(
+            """\
+        <xarray.DataArray (test: 300)>
+        0 1 2 3 4 5 6 7 8 9 10 11 12 ... 288 289 290 291 292 293 294 295 296 297 298 299
         Dimensions without coordinates: test"""
         )
 
@@ -519,7 +652,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for (v, _c) in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
@@ -530,7 +663,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     ds.attrs = attrs
 
     with xr.set_options(display_max_rows=display_max_rows):
-
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]
@@ -573,6 +705,21 @@ Attributes: ({n_attr})"""
         assert actual == expected
 
 
+def test__mapping_repr_recursive() -> None:
+    # GH:issue:7111
+
+    # direct recursion
+    ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+    ds.attrs["ds"] = ds
+    formatting.dataset_repr(ds)
+
+    # indirect recursion
+    ds2 = xr.Dataset({"b": ("y", [1, 2, 3])})
+    ds.attrs["ds"] = ds2
+    ds2.attrs["ds"] = ds
+    formatting.dataset_repr(ds2)
+
+
 def test__element_formatter(n_elements: int = 100) -> None:
     expected = """\
     Dimensions without coordinates: dim_0: 3, dim_1: 3, dim_2: 3, dim_3: 3,
@@ -599,3 +746,18 @@ def test__element_formatter(n_elements: int = 100) -> None:
     )
     actual = intro + values
     assert expected == actual
+
+
+def test_lazy_array_wont_compute() -> None:
+    from xarray.core.indexing import LazilyIndexedArray
+
+    class LazilyIndexedArrayNotComputable(LazilyIndexedArray):
+        def __array__(self, dtype=None):
+            raise NotImplementedError("Computing this array is not possible.")
+
+    arr = LazilyIndexedArrayNotComputable(np.array([1, 2]))
+    var = xr.DataArray(arr)
+
+    # These will crash if var.data are converted to numpy arrays:
+    var.__repr__()
+    var._repr_html_()

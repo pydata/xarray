@@ -61,6 +61,7 @@ Attributes
 
    Dataset.dims
    Dataset.sizes
+   Dataset.dtypes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
@@ -106,10 +107,12 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop_vars
+   Dataset.drop_indexes
    Dataset.drop_duplicates
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.reset_encoding
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
@@ -145,6 +148,7 @@ Indexing
    Dataset.reindex_like
    Dataset.set_index
    Dataset.reset_index
+   Dataset.set_xindex
    Dataset.reorder_levels
    Dataset.query
 
@@ -199,6 +203,7 @@ Aggregation
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset.count
    Dataset.idxmax
    Dataset.idxmin
    Dataset.max
@@ -244,17 +249,6 @@ Reshaping and reorganizing
    Dataset.sortby
    Dataset.broadcast_like
 
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   Dataset.plot.scatter
-   Dataset.plot.quiver
-   Dataset.plot.streamplot
-
 DataArray
 =========
 
@@ -291,7 +285,6 @@ ndarray attributes
    DataArray.shape
    DataArray.size
    DataArray.dtype
-   DataArray.nbytes
    DataArray.chunks
 
 
@@ -308,8 +301,10 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.reset_coords
+   DataArray.reset_encoding
    DataArray.copy
    DataArray.convert_calendar
    DataArray.interp_calendar
@@ -340,6 +335,7 @@ Indexing
    DataArray.reindex_like
    DataArray.set_index
    DataArray.reset_index
+   DataArray.set_xindex
    DataArray.reorder_levels
    DataArray.query
 
@@ -405,6 +401,7 @@ Aggregation
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray.count
    DataArray.idxmax
    DataArray.idxmin
    DataArray.max
@@ -588,8 +585,109 @@ Reshaping and reorganizing
    DataArray.sortby
    DataArray.broadcast_like
 
+IO / Conversion
+===============
+
+Dataset methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   load_dataset
+   open_dataset
+   open_mfdataset
+   open_zarr
+   save_mfdataset
+   Dataset.as_numpy
+   Dataset.from_dataframe
+   Dataset.from_dict
+   Dataset.to_array
+   Dataset.to_dataframe
+   Dataset.to_dask_dataframe
+   Dataset.to_dict
+   Dataset.to_netcdf
+   Dataset.to_pandas
+   Dataset.to_zarr
+   Dataset.chunk
+   Dataset.close
+   Dataset.compute
+   Dataset.filter_by_attrs
+   Dataset.info
+   Dataset.load
+   Dataset.persist
+   Dataset.unify_chunks
+
+DataArray methods
+-----------------
+
+.. autosummary::
+   :toctree: generated/
+
+   load_dataarray
+   open_dataarray
+   DataArray.as_numpy
+   DataArray.from_cdms2
+   DataArray.from_dict
+   DataArray.from_iris
+   DataArray.from_series
+   DataArray.to_cdms2
+   DataArray.to_dask_dataframe
+   DataArray.to_dataframe
+   DataArray.to_dataset
+   DataArray.to_dict
+   DataArray.to_index
+   DataArray.to_iris
+   DataArray.to_masked_array
+   DataArray.to_netcdf
+   DataArray.to_numpy
+   DataArray.to_pandas
+   DataArray.to_series
+   DataArray.to_zarr
+   DataArray.chunk
+   DataArray.close
+   DataArray.compute
+   DataArray.persist
+   DataArray.load
+   DataArray.unify_chunks
+
+Coordinates objects
+===================
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DatasetCoordinates.dtypes
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DataArrayCoordinates.dtypes
+
 Plotting
---------
+========
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
+   Dataset.plot.quiver
+   Dataset.plot.streamplot
+
+DataArray
+---------
 
 .. autosummary::
    :toctree: generated/
@@ -608,159 +706,31 @@ Plotting
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.scatter
    DataArray.plot.surface
 
-.. _api.ufuncs:
 
-Universal functions
-===================
-
-.. warning::
-
-   With recent versions of NumPy, Dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and Dask objects. This obviates the need
-   for the ``xarray.ufuncs`` module, which should not be used for new code
-   unless compatibility with versions of NumPy prior to v1.13 is
-   required. They will be removed once support for NumPy prior to
-   v1.17 is dropped.
-
-These functions are copied from NumPy, but extended to work on NumPy arrays,
-dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
-module:
-
-:py:attr:`~ufuncs.angle`
-:py:attr:`~ufuncs.arccos`
-:py:attr:`~ufuncs.arccosh`
-:py:attr:`~ufuncs.arcsin`
-:py:attr:`~ufuncs.arcsinh`
-:py:attr:`~ufuncs.arctan`
-:py:attr:`~ufuncs.arctan2`
-:py:attr:`~ufuncs.arctanh`
-:py:attr:`~ufuncs.ceil`
-:py:attr:`~ufuncs.conj`
-:py:attr:`~ufuncs.copysign`
-:py:attr:`~ufuncs.cos`
-:py:attr:`~ufuncs.cosh`
-:py:attr:`~ufuncs.deg2rad`
-:py:attr:`~ufuncs.degrees`
-:py:attr:`~ufuncs.exp`
-:py:attr:`~ufuncs.expm1`
-:py:attr:`~ufuncs.fabs`
-:py:attr:`~ufuncs.fix`
-:py:attr:`~ufuncs.floor`
-:py:attr:`~ufuncs.fmax`
-:py:attr:`~ufuncs.fmin`
-:py:attr:`~ufuncs.fmod`
-:py:attr:`~ufuncs.fmod`
-:py:attr:`~ufuncs.frexp`
-:py:attr:`~ufuncs.hypot`
-:py:attr:`~ufuncs.imag`
-:py:attr:`~ufuncs.iscomplex`
-:py:attr:`~ufuncs.isfinite`
-:py:attr:`~ufuncs.isinf`
-:py:attr:`~ufuncs.isnan`
-:py:attr:`~ufuncs.isreal`
-:py:attr:`~ufuncs.ldexp`
-:py:attr:`~ufuncs.log`
-:py:attr:`~ufuncs.log10`
-:py:attr:`~ufuncs.log1p`
-:py:attr:`~ufuncs.log2`
-:py:attr:`~ufuncs.logaddexp`
-:py:attr:`~ufuncs.logaddexp2`
-:py:attr:`~ufuncs.logical_and`
-:py:attr:`~ufuncs.logical_not`
-:py:attr:`~ufuncs.logical_or`
-:py:attr:`~ufuncs.logical_xor`
-:py:attr:`~ufuncs.maximum`
-:py:attr:`~ufuncs.minimum`
-:py:attr:`~ufuncs.nextafter`
-:py:attr:`~ufuncs.rad2deg`
-:py:attr:`~ufuncs.radians`
-:py:attr:`~ufuncs.real`
-:py:attr:`~ufuncs.rint`
-:py:attr:`~ufuncs.sign`
-:py:attr:`~ufuncs.signbit`
-:py:attr:`~ufuncs.sin`
-:py:attr:`~ufuncs.sinh`
-:py:attr:`~ufuncs.sqrt`
-:py:attr:`~ufuncs.square`
-:py:attr:`~ufuncs.tan`
-:py:attr:`~ufuncs.tanh`
-:py:attr:`~ufuncs.trunc`
-
-IO / Conversion
-===============
-
-Dataset methods
----------------
-
+Faceting
+--------
 .. autosummary::
    :toctree: generated/
 
-   open_dataset
-   load_dataset
-   open_mfdataset
-   open_rasterio
-   open_zarr
-   Dataset.to_netcdf
-   Dataset.to_pandas
-   Dataset.as_numpy
-   Dataset.to_zarr
-   save_mfdataset
-   Dataset.to_array
-   Dataset.to_dataframe
-   Dataset.to_dask_dataframe
-   Dataset.to_dict
-   Dataset.from_dataframe
-   Dataset.from_dict
-   Dataset.close
-   Dataset.compute
-   Dataset.persist
-   Dataset.load
-   Dataset.chunk
-   Dataset.unify_chunks
-   Dataset.filter_by_attrs
-   Dataset.info
+   plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.map_plot1d
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
 
-DataArray methods
------------------
 
-.. autosummary::
-   :toctree: generated/
-
-   open_dataarray
-   load_dataarray
-   DataArray.to_dataset
-   DataArray.to_netcdf
-   DataArray.to_pandas
-   DataArray.to_series
-   DataArray.to_dataframe
-   DataArray.to_numpy
-   DataArray.as_numpy
-   DataArray.to_index
-   DataArray.to_masked_array
-   DataArray.to_cdms2
-   DataArray.to_iris
-   DataArray.from_iris
-   DataArray.to_dict
-   DataArray.from_series
-   DataArray.from_cdms2
-   DataArray.from_dict
-   DataArray.close
-   DataArray.compute
-   DataArray.persist
-   DataArray.load
-   DataArray.chunk
-   DataArray.unify_chunks
-
-Coordinates objects
-===================
-
-.. autosummary::
-   :toctree: generated/
-
-   core.coordinates.DataArrayCoordinates
-   core.coordinates.DatasetCoordinates
 
 GroupBy objects
 ===============
@@ -786,6 +756,8 @@ Dataset
    DatasetGroupBy.all
    DatasetGroupBy.any
    DatasetGroupBy.count
+   DatasetGroupBy.cumsum
+   DatasetGroupBy.cumprod
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -815,6 +787,8 @@ DataArray
    DataArrayGroupBy.all
    DataArrayGroupBy.any
    DataArrayGroupBy.count
+   DataArrayGroupBy.cumsum
+   DataArrayGroupBy.cumprod
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median
@@ -860,6 +834,7 @@ DataArray
    :toctree: generated/
 
    DataArrayRolling
+   DataArrayRolling.__iter__
    DataArrayRolling.construct
    DataArrayRolling.reduce
    DataArrayRolling.argmax
@@ -944,6 +919,7 @@ Dataset
 
    DatasetWeighted
    DatasetWeighted.mean
+   DatasetWeighted.quantile
    DatasetWeighted.sum
    DatasetWeighted.std
    DatasetWeighted.var
@@ -958,6 +934,7 @@ DataArray
 
    DataArrayWeighted
    DataArrayWeighted.mean
+   DataArrayWeighted.quantile
    DataArrayWeighted.sum
    DataArrayWeighted.std
    DataArrayWeighted.var
@@ -1073,25 +1050,6 @@ Creating custom indexes
    date_range
    date_range_like
 
-Faceting
---------
-.. autosummary::
-   :toctree: generated/
-
-   plot.FacetGrid
-   plot.FacetGrid.add_colorbar
-   plot.FacetGrid.add_legend
-   plot.FacetGrid.add_quiverkey
-   plot.FacetGrid.map
-   plot.FacetGrid.map_dataarray
-   plot.FacetGrid.map_dataarray_line
-   plot.FacetGrid.map_dataset
-   plot.FacetGrid.set_axis_labels
-   plot.FacetGrid.set_ticks
-   plot.FacetGrid.set_titles
-   plot.FacetGrid.set_xlabels
-   plot.FacetGrid.set_ylabels
-
 Tutorial
 ========
 
@@ -1099,7 +1057,6 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
-   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
@@ -1128,17 +1085,27 @@ Advanced API
 .. autosummary::
    :toctree: generated/
 
+   Coordinates
    Dataset.variables
    DataArray.variable
    Variable
    IndexVariable
    as_variable
+   Index
+   IndexSelResult
    Context
    register_dataset_accessor
    register_dataarray_accessor
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+   backends.list_engines
+   backends.refresh_engines
+
+Default, pandas-backed indexes built-in Xarray:
+
+   indexes.PandasIndex
+   indexes.PandasMultiIndex
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
@@ -1149,11 +1116,27 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
+   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.ZarrStore
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+These BackendEntrypoints provide a basic interface to the most commonly
+used filetypes in the xarray universe.
+
+.. autosummary::
+   :toctree: generated/
+
+   backends.NetCDF4BackendEntrypoint
+   backends.H5netcdfBackendEntrypoint
+   backends.PseudoNetCDFBackendEntrypoint
+   backends.PydapBackendEntrypoint
+   backends.ScipyBackendEntrypoint
+   backends.StoreBackendEntrypoint
+   backends.ZarrBackendEntrypoint
 
 Deprecated / Pending Deprecation
 ================================

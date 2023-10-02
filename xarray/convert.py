@@ -5,12 +5,12 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
-from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
-from .conventions import decode_cf
-from .core import duck_array_ops
-from .core.dataarray import DataArray
-from .core.dtypes import get_fill_value
-from .core.pycompat import dask_array_type
+from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
+from xarray.conventions import decode_cf
+from xarray.core import duck_array_ops
+from xarray.core.dataarray import DataArray
+from xarray.core.dtypes import get_fill_value
+from xarray.core.pycompat import array_type
 
 cdms2_ignored_attrs = {"name", "tileIndex"}
 iris_forbidden_keys = {
@@ -115,10 +115,8 @@ def to_cdms2(dataarray, copy=True):
 
     # Curvilinear and unstructured grids
     if dataarray.name not in dataarray.coords:
-
         cdms2_axes = {}
         for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
-
             coord_array = dataarray.coords[coord_name].to_cdms2()
 
             cdms2_axis_cls = (
@@ -281,6 +279,7 @@ def from_iris(cube):
     cube_data = cube.core_data() if hasattr(cube, "core_data") else cube.data
 
     # Deal with dask and numpy masked arrays
+    dask_array_type = array_type("dask")
     if isinstance(cube_data, dask_array_type):
         from dask.array import ma as dask_ma
 

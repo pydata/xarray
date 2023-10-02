@@ -1,22 +1,28 @@
+from __future__ import annotations
+
+import datetime
+import operator
 import warnings
-from typing import Union
 
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
-
-from . import (
+from xarray.tests import (
+    InaccessibleArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     create_test_data,
+    has_cftime,
+    has_flox,
+    has_pandas_version_two,
     requires_dask,
+    requires_flox,
     requires_scipy,
 )
 
@@ -24,8 +30,11 @@ from . import (
 @pytest.fixture
 def dataset():
     ds = xr.Dataset(
-        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
-        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+        {
+            "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
+            "baz": ("x", ["e", "f", "g"]),
+        },
+        {"x": ("x", ["a", "b", "c"], {"name": "x"}), "y": [1, 2, 3, 4], "z": [1, 2]},
     )
     ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
 
@@ -38,7 +47,6 @@ def array(dataset):
 
 
 def test_consolidate_slices() -> None:
-
     assert _consolidate_slices([slice(3), slice(3, 5)]) == [slice(5)]
     assert _consolidate_slices([slice(2, 3), slice(3, 6)]) == [slice(2, 6)]
     assert _consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)]) == [slice(2, 6, 1)]
@@ -46,8 +54,9 @@ def test_consolidate_slices() -> None:
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices
 
+    # ignore type because we're checking for an error anyway
     with pytest.raises(ValueError):
-        _consolidate_slices([slice(3), 4])
+        _consolidate_slices([slice(3), 4])  # type: ignore[list-item]
 
 
 def test_groupby_dims_property(dataset) -> None:
@@ -69,6 +78,15 @@ def test_multi_index_groupby_map(dataset) -> None:
         .unstack("space")
     )
     assert_equal(expected, actual)
+
+
+def test_reduce_numeric_only(dataset) -> None:
+    gb = dataset.groupby("x", squeeze=False)
+    with xr.set_options(use_flox=False):
+        expected = gb.sum()
+    with xr.set_options(use_flox=True):
+        actual = gb.sum()
+    assert_identical(expected, actual)
 
 
 def test_multi_index_groupby_sum() -> None:
@@ -118,6 +136,18 @@ def test_groupby_input_mutation() -> None:
     actual = array.groupby("x").sum()
     assert_identical(expected, actual)
     assert_identical(array, array_copy)  # should not modify inputs
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_indexvariable(use_flox: bool) -> None:
+    # regression test for GH7919
+    array = xr.DataArray([1, 2, 3], [("x", [2, 2, 1])])
+    iv = xr.IndexVariable(dims="x", data=pd.Index(array.x.values))
+    with xr.set_options(use_flox=use_flox):
+        actual = array.groupby(iv).sum()
+    actual = array.groupby(iv).sum()
+    expected = xr.DataArray([3, 3], [("x", [1, 2])])
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize(
@@ -174,7 +204,6 @@ def test_ds_groupby_map_func_args() -> None:
 
 
 def test_da_groupby_empty() -> None:
-
     empty_array = xr.DataArray([], dims="dim")
 
     with pytest.raises(ValueError):
@@ -182,7 +211,6 @@ def test_da_groupby_empty() -> None:
 
 
 def test_da_groupby_quantile() -> None:
-
     array = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
@@ -204,11 +232,11 @@ def test_da_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     array = xr.DataArray(
-        data=[np.NaN, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+        data=[np.nan, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
         actual = array.groupby("x").quantile(0.5, skipna=skipna)
@@ -318,12 +346,12 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     ds = xr.Dataset(
-        data_vars={"a": ("x", [np.NaN, 2, 3, 4, 5, 6])},
+        data_vars={"a": ("x", [np.nan, 2, 3, 4, 5, 6])},
         coords={"x": [1, 1, 1, 2, 2, 2]},
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.Dataset(
             data_vars={"a": ("x", e)}, coords={"quantile": 0.5, "x": [1, 2]}
@@ -416,10 +444,9 @@ def test_ds_groupby_quantile() -> None:
 
 @pytest.mark.parametrize("as_dataset", [False, True])
 def test_groupby_quantile_interpolation_deprecated(as_dataset) -> None:
-
     array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
 
-    arr: Union[xr.DataArray, xr.Dataset]
+    arr: xr.DataArray | xr.Dataset
     arr = array.to_dataset(name="name") if as_dataset else array
 
     with pytest.warns(
@@ -490,6 +517,8 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)
@@ -508,39 +537,38 @@ def test_groupby_drops_nans() -> None:
     grouped = ds.groupby(ds.id)
 
     # non reduction operation
-    expected = ds.copy()
-    expected.variable.values[0, 0, :] = np.nan
-    expected.variable.values[-1, -1, :] = np.nan
-    expected.variable.values[3, 0, :] = np.nan
-    actual = grouped.map(lambda x: x).transpose(*ds.variable.dims)
-    assert_identical(actual, expected)
+    expected1 = ds.copy()
+    expected1.variable.values[0, 0, :] = np.nan
+    expected1.variable.values[-1, -1, :] = np.nan
+    expected1.variable.values[3, 0, :] = np.nan
+    actual1 = grouped.map(lambda x: x).transpose(*ds.variable.dims)
+    assert_identical(actual1, expected1)
 
     # reduction along grouped dimension
-    actual = grouped.mean()
+    actual2 = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
-    expected = (
+    expected2 = (
         stacked.variable.where(stacked.id.notnull())
         .rename({"xy": "id"})
         .to_dataset()
         .reset_index("id", drop=True)
-        .drop_vars(["lon", "lat"])
         .assign(id=stacked.id.values)
         .dropna("id")
-        .transpose(*actual.dims)
+        .transpose(*actual2.variable.dims)
     )
-    assert_identical(actual, expected)
+    assert_identical(actual2, expected2)
 
     # reduction operation along a different dimension
-    actual = grouped.mean("time")
-    expected = ds.mean("time").where(ds.id.notnull())
-    assert_identical(actual, expected)
+    actual3 = grouped.mean("time")
+    expected3 = ds.mean("time").where(ds.id.notnull())
+    assert_identical(actual3, expected3)
 
     # NaN in non-dimensional coordinate
     array = xr.DataArray([1, 2, 3], [("x", [1, 2, 3])])
     array["x1"] = ("x", [1, 1, np.nan])
-    expected_da = xr.DataArray(3, [("x1", [1])])
-    actual = array.groupby("x1").sum()
-    assert_equal(expected_da, actual)
+    expected4 = xr.DataArray(3, [("x1", [1])])
+    actual4 = array.groupby("x1").sum()
+    assert_equal(expected4, actual4)
 
     # NaT in non-dimensional coordinate
     array["t"] = (
@@ -551,15 +579,15 @@ def test_groupby_drops_nans() -> None:
             np.datetime64("NaT"),
         ],
     )
-    expected_da = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
-    actual = array.groupby("t").sum()
-    assert_equal(expected_da, actual)
+    expected5 = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
+    actual5 = array.groupby("t").sum()
+    assert_equal(expected5, actual5)
 
     # test for repeated coordinate labels
     array = xr.DataArray([0, 1, 2, 4, 3, 4], [("x", [np.nan, 1, 1, np.nan, 2, np.nan])])
-    expected_da = xr.DataArray([3, 3], [("x", [1, 2])])
-    actual = array.groupby("x").sum()
-    assert_equal(expected_da, actual)
+    expected6 = xr.DataArray([3, 3], [("x", [1, 2])])
+    actual6 = array.groupby("x").sum()
+    assert_equal(expected6, actual6)
 
 
 def test_groupby_grouping_errors() -> None:
@@ -639,7 +667,6 @@ def test_groupby_none_group_name() -> None:
 
 
 def test_groupby_getitem(dataset) -> None:
-
     assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
     assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
 
@@ -665,28 +692,28 @@ def test_groupby_dataset() -> None:
         ("b", data.isel(x=1)),
         ("c", data.isel(x=2)),
     ]
-    for actual, expected in zip(groupby, expected_items):
-        assert actual[0] == expected[0]
-        assert_equal(actual[1], expected[1])
+    for actual1, expected1 in zip(groupby, expected_items):
+        assert actual1[0] == expected1[0]
+        assert_equal(actual1[1], expected1[1])
 
     def identity(x):
         return x
 
     for k in ["x", "c", "y"]:
-        actual = data.groupby(k, squeeze=False).map(identity)
-        assert_equal(data, actual)
+        actual2 = data.groupby(k, squeeze=False).map(identity)
+        assert_equal(data, actual2)
 
 
 def test_groupby_dataset_returns_new_type() -> None:
     data = Dataset({"z": (["x", "y"], np.random.randn(3, 5))})
 
-    actual = data.groupby("x").map(lambda ds: ds["z"])
-    expected = data["z"]
-    assert_identical(expected, actual)
+    actual1 = data.groupby("x").map(lambda ds: ds["z"])
+    expected1 = data["z"]
+    assert_identical(expected1, actual1)
 
-    actual = data["z"].groupby("x").map(lambda x: x.to_dataset())
-    expected_ds = data
-    assert_identical(expected_ds, actual)
+    actual2 = data["z"].groupby("x").map(lambda x: x.to_dataset())
+    expected2 = data
+    assert_identical(expected2, actual2)
 
 
 def test_groupby_dataset_iter() -> None:
@@ -701,7 +728,7 @@ def test_groupby_dataset_iter() -> None:
 def test_groupby_dataset_errors() -> None:
     data = create_test_data()
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(np.arange(10))
+        data.groupby(np.arange(10))  # type: ignore[arg-type,unused-ignore]
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
@@ -781,11 +808,11 @@ def test_groupby_math_more() -> None:
     with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
         ds + grouped
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + 1
+        grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + grouped
+        grouped + grouped  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"in-place operations"):
-        ds += grouped
+        ds += grouped  # type: ignore[arg-type]
 
     ds = Dataset(
         {
@@ -795,6 +822,75 @@ def test_groupby_math_more() -> None:
     )
     with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
         ds + ds.groupby("time.month")
+
+
+def test_groupby_math_bitshift() -> None:
+    # create new dataset of int's only
+    ds = Dataset(
+        {
+            "x": ("index", np.ones(4, dtype=int)),
+            "y": ("index", np.ones(4, dtype=int) * -1),
+            "level": ("index", [1, 1, 2, 2]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    shift = DataArray([1, 2, 1], [("level", [1, 2, 8])])
+
+    left_expected = Dataset(
+        {
+            "x": ("index", [2, 2, 4, 4]),
+            "y": ("index", [-2, -2, -4, -4]),
+            "level": ("index", [2, 2, 8, 8]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+
+    left_manual = []
+    for lev, group in ds.groupby("level"):
+        shifter = shift.sel(level=lev)
+        left_manual.append(group << shifter)
+    left_actual = xr.concat(left_manual, dim="index").reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
+    left_actual = (ds.groupby("level") << shift).reset_coords(names="level")
+    assert_equal(left_expected, left_actual)
+
+    right_expected = Dataset(
+        {
+            "x": ("index", [0, 0, 2, 2]),
+            "y": ("index", [-1, -1, -2, -2]),
+            "level": ("index", [0, 0, 4, 4]),
+            "index": [0, 1, 2, 3],
+        }
+    )
+    right_manual = []
+    for lev, group in left_expected.groupby("level"):
+        shifter = shift.sel(level=lev)
+        right_manual.append(group >> shifter)
+    right_actual = xr.concat(right_manual, dim="index").reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
+    right_actual = (left_expected.groupby("level") >> shift).reset_coords(names="level")
+    assert_equal(right_expected, right_actual)
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
+    da = xr.DataArray(np.arange(12).reshape(6, 2), dims=("x", "y"))
+    x_bins = (0, 2, 4, 6)
+
+    with xr.set_options(use_flox=use_flox):
+        actual = da.groupby_bins(
+            "x", bins=x_bins, include_lowest=True, right=False
+        ).mean()
+    expected = xr.DataArray(
+        np.array([[1.0, 2.0], [5.0, 6.0], [9.0, 10.0]]),
+        dims=("x_bins", "y"),
+        coords={
+            "x_bins": ("x_bins", pd.IntervalIndex.from_breaks(x_bins, closed="left"))
+        },
+    )
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
@@ -857,6 +953,17 @@ def test_groupby_dataset_math_virtual() -> None:
     assert_identical(actual, expected)
 
 
+def test_groupby_math_dim_order() -> None:
+    da = DataArray(
+        np.ones((10, 10, 12)),
+        dims=("x", "y", "time"),
+        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6H")},
+    )
+    grouped = da.groupby("time.day")
+    result = grouped - grouped.mean()
+    assert result.dims == da.dims
+
+
 def test_groupby_dataset_nan() -> None:
     # nan should be excluded from groupby
     ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, {"bar": ("x", [1, 1, 2, np.nan])})
@@ -881,7 +988,6 @@ def test_groupby_dataset_order() -> None:
 
 
 def test_groupby_dataset_fillna():
-
     ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
     expected = Dataset({"a": ("x", range(4))}, {"x": [0, 1, 2, 3]})
     for target in [ds, expected]:
@@ -950,6 +1056,17 @@ def test_groupby_dataarray_map_dataset_func():
     assert_identical(actual, expected)
 
 
+@requires_flox
+@pytest.mark.parametrize("kwargs", [{"method": "map-reduce"}, {"engine": "numpy"}])
+def test_groupby_flox_kwargs(kwargs):
+    ds = Dataset({"a": ("x", range(5))}, {"c": ("x", [0, 0, 1, 1, 1])})
+    with xr.set_options(use_flox=False):
+        expected = ds.groupby("c").mean()
+    with xr.set_options(use_flox=True):
+        actual = ds.groupby("c").mean(**kwargs)
+    assert_identical(expected, actual)
+
+
 class TestDataArrayGroupBy:
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -989,12 +1106,12 @@ class TestDataArrayGroupBy:
         assert_equal(actual2, expected2)
 
     def test_groupby_iter(self):
-        for ((act_x, act_dv), (exp_x, exp_ds)) in zip(
+        for (act_x, act_dv), (exp_x, exp_ds) in zip(
             self.dv.groupby("y"), self.ds.groupby("y")
         ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
-        for ((_, exp_dv), act_dv) in zip(self.dv.groupby("x"), self.dv):
+        for (_, exp_dv), act_dv in zip(self.dv.groupby("x"), self.dv):
             assert_identical(exp_dv, act_dv)
 
     def test_groupby_properties(self):
@@ -1005,19 +1122,22 @@ class TestDataArrayGroupBy:
             assert_array_equal(expected_groups[key], grouped.groups[key])
         assert 3 == len(grouped)
 
-    def test_groupby_map_identity(self):
+    @pytest.mark.parametrize(
+        "by, use_da", [("x", False), ("y", False), ("y", True), ("abc", False)]
+    )
+    @pytest.mark.parametrize("shortcut", [True, False])
+    @pytest.mark.parametrize("squeeze", [True, False])
+    def test_groupby_map_identity(self, by, use_da, shortcut, squeeze) -> None:
         expected = self.da
-        idx = expected.coords["y"]
+        if use_da:
+            by = expected.coords[by]
 
         def identity(x):
             return x
 
-        for g in ["x", "y", "abc", idx]:
-            for shortcut in [False, True]:
-                for squeeze in [False, True]:
-                    grouped = expected.groupby(g, squeeze=squeeze)
-                    actual = grouped.map(identity, shortcut=shortcut)
-                    assert_identical(expected, actual)
+        grouped = expected.groupby(by, squeeze=squeeze)
+        actual = grouped.map(identity, shortcut=shortcut)
+        assert_identical(expected, actual)
 
     def test_groupby_sum(self):
         array = self.da
@@ -1072,19 +1192,21 @@ class TestDataArrayGroupBy:
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, "y"))
         assert_allclose(expected_sum_axis1, grouped.sum("y"))
 
-    def test_groupby_sum_default(self):
+    @pytest.mark.parametrize("method", ["sum", "mean", "median"])
+    def test_groupby_reductions(self, method):
         array = self.da
         grouped = array.groupby("abc")
 
-        expected_sum_all = Dataset(
+        reduction = getattr(np, method)
+        expected = Dataset(
             {
                 "foo": Variable(
                     ["x", "abc"],
                     np.array(
                         [
-                            self.x[:, :9].sum(axis=-1),
-                            self.x[:, 10:].sum(axis=-1),
-                            self.x[:, 9:10].sum(axis=-1),
+                            reduction(self.x[:, :9], axis=-1),
+                            reduction(self.x[:, 10:], axis=-1),
+                            reduction(self.x[:, 9:10], axis=-1),
                         ]
                     ).T,
                 ),
@@ -1092,7 +1214,14 @@ class TestDataArrayGroupBy:
             }
         )["foo"]
 
-        assert_allclose(expected_sum_all, grouped.sum(dim="y"))
+        with xr.set_options(use_flox=False):
+            actual_legacy = getattr(grouped, method)(dim="y")
+
+        with xr.set_options(use_flox=True):
+            actual_npg = getattr(grouped, method)(dim="y")
+
+        assert_allclose(expected, actual_legacy)
+        assert_allclose(expected, actual_npg)
 
     def test_groupby_count(self):
         array = DataArray(
@@ -1104,21 +1233,33 @@ class TestDataArrayGroupBy:
         expected = DataArray([1, 1, 2], coords=[("cat", ["a", "b", "c"])])
         assert_identical(actual, expected)
 
-    @pytest.mark.skip("needs to be fixed for shortcut=False, keep_attrs=False")
-    def test_groupby_reduce_attrs(self):
+    @pytest.mark.parametrize("shortcut", [True, False])
+    @pytest.mark.parametrize("keep_attrs", [None, True, False])
+    def test_groupby_reduce_keep_attrs(self, shortcut, keep_attrs):
         array = self.da
         array.attrs["foo"] = "bar"
 
-        for shortcut in [True, False]:
-            for keep_attrs in [True, False]:
-                print(f"shortcut={shortcut}, keep_attrs={keep_attrs}")
-                actual = array.groupby("abc").reduce(
-                    np.mean, keep_attrs=keep_attrs, shortcut=shortcut
-                )
-                expected = array.groupby("abc").mean()
-                if keep_attrs:
-                    expected.attrs["foo"] = "bar"
-                assert_identical(expected, actual)
+        actual = array.groupby("abc").reduce(
+            np.mean, keep_attrs=keep_attrs, shortcut=shortcut
+        )
+        with xr.set_options(use_flox=False):
+            expected = array.groupby("abc").mean(keep_attrs=keep_attrs)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("keep_attrs", [None, True, False])
+    def test_groupby_keep_attrs(self, keep_attrs):
+        array = self.da
+        array.attrs["foo"] = "bar"
+
+        with xr.set_options(use_flox=False):
+            expected = array.groupby("abc").mean(keep_attrs=keep_attrs)
+        with xr.set_options(use_flox=True):
+            actual = array.groupby("abc").mean(keep_attrs=keep_attrs)
+
+        # values are tested elsewhere, here we just check data
+        # TODO: add check_attrs kwarg to assert_allclose
+        actual.data = expected.data
+        assert_identical(expected, actual)
 
     def test_groupby_map_center(self):
         def center(x):
@@ -1155,26 +1296,28 @@ class TestDataArrayGroupBy:
         expected = change_metadata(expected)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("squeeze", [True, False])
+    def test_groupby_math_squeeze(self, squeeze):
+        array = self.da
+        grouped = array.groupby("x", squeeze=squeeze)
+
+        expected = array + array.coords["x"]
+        actual = grouped + array.coords["x"]
+        assert_identical(expected, actual)
+
+        actual = array.coords["x"] + grouped
+        assert_identical(expected, actual)
+
+        ds = array.coords["x"].to_dataset(name="X")
+        expected = array + ds
+        actual = grouped + ds
+        assert_identical(expected, actual)
+
+        actual = ds + grouped
+        assert_identical(expected, actual)
+
     def test_groupby_math(self):
         array = self.da
-        for squeeze in [True, False]:
-            grouped = array.groupby("x", squeeze=squeeze)
-
-            expected = array + array.coords["x"]
-            actual = grouped + array.coords["x"]
-            assert_identical(expected, actual)
-
-            actual = array.coords["x"] + grouped
-            assert_identical(expected, actual)
-
-            ds = array.coords["x"].to_dataset(name="X")
-            expected = array + ds
-            actual = grouped + ds
-            assert_identical(expected, actual)
-
-            actual = ds + grouped
-            assert_identical(expected, actual)
-
         grouped = array.groupby("abc")
         expected_agg = (grouped.mean(...) - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [("abc", ["a", "b", "c"])])
@@ -1197,8 +1340,15 @@ class TestDataArrayGroupBy:
         expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         assert_identical(expected, actual)
 
+        # regression test for #7797
+        other = array.groupby("b").sum()
+        actual = array.sel(x=[0, 1]).groupby("b") - other
+        expected = DataArray([-1, 0], {"b": ("x", [0, 0]), "x": [0, 1]}, dims="x")
+        assert_identical(expected, actual)
+
         other = DataArray([10], coords={"c": 123, "b": [0]}, dims="b")
         actual = array.groupby("b") + other
+        expected = DataArray([10, 11, np.nan, np.nan], array.coords)
         expected.coords["c"] = (["x"], [123] * 2 + [np.nan] * 2)
         assert_identical(expected, actual)
 
@@ -1294,23 +1444,95 @@ class TestDataArrayGroupBy:
         )
         assert_identical(expected, actual)
 
-    def test_groupby_bins(self):
-        array = DataArray(np.arange(4), dims="dim_0")
+    @pytest.mark.parametrize("use_flox", [True, False])
+    @pytest.mark.parametrize("coords", [np.arange(4), np.arange(4)[::-1], [2, 0, 3, 1]])
+    @pytest.mark.parametrize(
+        "cut_kwargs",
+        (
+            {"labels": None, "include_lowest": True},
+            {"labels": None, "include_lowest": False},
+            {"labels": ["a", "b"]},
+            {"labels": [1.2, 3.5]},
+            {"labels": ["b", "a"]},
+        ),
+    )
+    def test_groupby_bins(
+        self,
+        coords: np.typing.ArrayLike,
+        use_flox: bool,
+        cut_kwargs: dict,
+    ) -> None:
+        array = DataArray(
+            np.arange(4), dims="dim_0", coords={"dim_0": coords}, name="a"
+        )
         # the first value should not be part of any group ("right" binning)
         array[0] = 99
         # bins follow conventions for pandas.cut
         # http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         bins = [0, 1.5, 5]
-        bin_coords = pd.cut(array["dim_0"], bins).categories
-        expected = DataArray(
-            [1, 5], dims="dim_0_bins", coords={"dim_0_bins": bin_coords}
+
+        df = array.to_dataframe()
+        df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
+
+        expected_df = df.groupby("dim_0_bins").sum()
+        # TODO: can't convert df with IntervalIndex to Xarray
+        expected = (
+            expected_df.reset_index(drop=True)
+            .to_xarray()
+            .assign_coords(index=np.array(expected_df.index))
+            .rename({"index": "dim_0_bins"})["a"]
         )
-        # the problem with this is that it overwrites the dimensions of array!
-        # actual = array.groupby('dim_0', bins=bins).sum()
-        actual = array.groupby_bins("dim_0", bins).map(lambda x: x.sum())
-        assert_identical(expected, actual)
-        # make sure original array dims are unchanged
-        assert len(array.dim_0) == 4
+
+        with xr.set_options(use_flox=use_flox):
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).sum()
+            assert_identical(expected, actual)
+
+            actual = array.groupby_bins("dim_0", bins=bins, **cut_kwargs).map(
+                lambda x: x.sum()
+            )
+            assert_identical(expected, actual)
+
+            # make sure original array dims are unchanged
+            assert len(array.dim_0) == 4
+
+    def test_groupby_bins_ellipsis(self):
+        da = xr.DataArray(np.ones((2, 3, 4)))
+        bins = [-1, 0, 1, 2]
+        with xr.set_options(use_flox=False):
+            actual = da.groupby_bins("dim_0", bins).mean(...)
+        with xr.set_options(use_flox=True):
+            expected = da.groupby_bins("dim_0", bins).mean(...)
+        assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_bins_gives_correct_subset(self, use_flox: bool) -> None:
+        # GH7766
+        rng = np.random.default_rng(42)
+        coords = rng.normal(5, 5, 1000)
+        bins = np.logspace(-4, 1, 10)
+        labels = [
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+        ]
+        # xArray
+        # Make a mock dataarray
+        darr = xr.DataArray(coords, coords=[coords], dims=["coords"])
+        expected = xr.DataArray(
+            [np.nan, np.nan, 1, 1, 1, 8, 31, 104, 542],
+            dims="coords_bins",
+            coords={"coords_bins": labels},
+        )
+        gb = darr.groupby_bins("coords", bins, labels=labels)
+        with xr.set_options(use_flox=use_flox):
+            actual = gb.count()
+        assert_identical(actual, expected)
 
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
@@ -1337,6 +1559,27 @@ class TestDataArrayGroupBy:
         actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
 
+        bins = [-2, -1, 0, 1, 2]
+        field = DataArray(np.ones((5, 3)), dims=("x", "y"))
+        by = DataArray(
+            np.array([[-1.5, -1.5, 0.5, 1.5, 1.5] * 3]).reshape(5, 3), dims=("x", "y")
+        )
+        actual = field.groupby_bins(by, bins=bins).count()
+
+        bincoord = np.array(
+            [
+                pd.Interval(left, right, closed="right")
+                for left, right in zip(bins[:-1], bins[1:])
+            ],
+            dtype=object,
+        )
+        expected = DataArray(
+            np.array([6, np.nan, 3, 6]),
+            dims="group_bins",
+            coords={"group_bins": bincoord},
+        )
+        assert_identical(actual, expected)
+
     def test_groupby_bins_sort(self):
         data = xr.DataArray(
             np.arange(100), dims="x", coords={"x": np.linspace(-100, 100, num=100)}
@@ -1344,8 +1587,13 @@ class TestDataArrayGroupBy:
         binned_mean = data.groupby_bins("x", bins=11).mean()
         assert binned_mean.to_index().is_monotonic_increasing
 
-    def test_groupby_assign_coords(self):
+        with xr.set_options(use_flox=True):
+            actual = data.groupby_bins("x", bins=11).count()
+        with xr.set_options(use_flox=False):
+            expected = data.groupby_bins("x", bins=11).count()
+        assert_identical(actual, expected)
 
+    def test_groupby_assign_coords(self):
         array = DataArray([1, 2, 3, 4], {"c": ("x", [0, 0, 1, 1])}, dims="x")
         actual = array.groupby("c").assign_coords(d=lambda a: a.mean())
         expected = array.copy()
@@ -1370,27 +1618,73 @@ class TestDataArrayGroupBy:
 
 
 class TestDataArrayResample:
-    def test_resample(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample(self, use_cftime: bool) -> None:
+        if use_cftime and not has_cftime:
+            pytest.skip()
+        times = xr.date_range(
+            "2000-01-01", freq="6H", periods=10, use_cftime=use_cftime
+        )
+
+        def resample_as_pandas(array, *args, **kwargs):
+            array_ = array.copy(deep=True)
+            if use_cftime:
+                array_["time"] = times.to_datetimeindex()
+            result = DataArray.from_series(
+                array_.to_series().resample(*args, **kwargs).mean()
+            )
+            if use_cftime:
+                result = result.convert_calendar(
+                    calendar="standard", use_cftime=use_cftime
+                )
+            return result
+
         array = DataArray(np.arange(10), [("time", times)])
 
         actual = array.resample(time="24H").mean()
-        expected = DataArray(array.to_series().resample("24H").mean())
+        expected = resample_as_pandas(array, "24H")
         assert_identical(expected, actual)
 
         actual = array.resample(time="24H").reduce(np.mean)
         assert_identical(expected, actual)
 
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        actual = array.resample(time="24H", loffset="-12H").mean()
-        expected_ = array.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
-        assert_identical(actual, expected)
+        actual = array.resample(time="24H", closed="right").mean()
+        expected = resample_as_pandas(array, "24H", closed="right")
+        assert_identical(expected, actual)
 
         with pytest.raises(ValueError, match=r"index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
+
+    @pytest.mark.parametrize("use_cftime", [True, False])
+    def test_resample_doctest(self, use_cftime: bool) -> None:
+        # run the doctest example here so we are not surprised
+        if use_cftime and not has_cftime:
+            pytest.skip()
+
+        da = xr.DataArray(
+            np.array([1, 2, 3, 1, 2, np.nan]),
+            dims="time",
+            coords=dict(
+                time=(
+                    "time",
+                    xr.date_range(
+                        "2001-01-01", freq="M", periods=6, use_cftime=use_cftime
+                    ),
+                ),
+                labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+            ),
+        )
+        actual = da.resample(time="3M").count()
+        expected = DataArray(
+            [1, 3, 1],
+            dims="time",
+            coords={
+                "time": xr.date_range(
+                    "2001-01-01", freq="3M", periods=3, use_cftime=use_cftime
+                )
+            },
+        )
+        assert_identical(actual, expected)
 
     def test_da_resample_func_args(self):
         def func(arg1, arg2, arg3=0.0):
@@ -1523,7 +1817,7 @@ class TestDataArrayResample:
         # Nearest
         rs = array.resample(time="3H")
         actual = rs.nearest()
-        new_times = rs._full_index
+        new_times = rs.groupers[0].full_index
         expected = DataArray(array.reindex(time=new_times, method="nearest"))
         assert_identical(expected, actual)
 
@@ -1644,6 +1938,7 @@ class TestDataArrayResample:
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_upsample_interpolate_bug_2197(self):
         dates = pd.date_range("2007-02-01", "2007-03-01", freq="D")
         da = xr.DataArray(np.arange(len(dates)), [("time", dates)])
@@ -1708,6 +2003,71 @@ class TestDataArrayResample:
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
 
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
+    def test_resample_base(self) -> None:
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        base = 11
+
+        with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
+            actual = array.resample(time="24H", base=base).mean()
+        expected = DataArray(
+            array.to_series().resample("24H", offset=f"{base}H").mean()
+        )
+        assert_identical(expected, actual)
+
+    def test_resample_offset(self) -> None:
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        offset = pd.Timedelta("11H")
+        actual = array.resample(time="24H", offset=offset).mean()
+        expected = DataArray(array.to_series().resample("24H", offset=offset).mean())
+        assert_identical(expected, actual)
+
+    def test_resample_origin(self) -> None:
+        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        origin = "start"
+        actual = array.resample(time="24H", origin=origin).mean()
+        expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
+        assert_identical(expected, actual)
+
+    @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
+    @pytest.mark.parametrize(
+        "loffset",
+        [
+            "-12H",
+            datetime.timedelta(hours=-12),
+            pd.Timedelta(hours=-12),
+            pd.DateOffset(hours=-12),
+        ],
+    )
+    def test_resample_loffset(self, loffset) -> None:
+        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.warns(FutureWarning, match="`loffset` parameter"):
+            actual = array.resample(time="24H", loffset=loffset).mean()
+        series = array.to_series().resample("24H").mean()
+        if not isinstance(loffset, pd.DateOffset):
+            loffset = pd.Timedelta(loffset)
+        series.index = series.index + loffset
+        expected = DataArray(series)
+        assert_identical(actual, expected)
+
+    def test_resample_invalid_loffset(self) -> None:
+        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        array = DataArray(np.arange(10), [("time", times)])
+
+        with pytest.warns(
+            FutureWarning, match="Following pandas, the `loffset` parameter"
+        ):
+            with pytest.raises(ValueError, match="`loffset` must be"):
+                array.resample(time="24H", loffset=1).mean()  # type: ignore
+
 
 class TestDatasetResample:
     def test_resample_and_first(self):
@@ -1756,7 +2116,7 @@ class TestDatasetResample:
             ],
             dim=actual["time"],
         )
-        assert_equal(expected, actual)
+        assert_allclose(expected, actual)
 
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -1793,14 +2153,6 @@ class TestDatasetResample:
             }
         )
         ds.attrs["dsmeta"] = "dsdata"
-
-        # Our use of `loffset` may change if we align our API with pandas' changes.
-        # ref https://github.com/pydata/xarray/pull/4537
-        actual = ds.resample(time="24H", loffset="-12H").mean().bar
-        expected_ = ds.bar.to_series().resample("24H").mean()
-        expected_.index += to_offset("-12H")
-        expected = DataArray.from_series(expected_)
-        assert_allclose(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -1862,7 +2214,6 @@ class TestDatasetResample:
         assert "tc" not in actual.coords
 
     def test_resample_old_api(self):
-
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         ds = Dataset(
             {
@@ -1890,7 +2241,7 @@ class TestDatasetResample:
                 "x": np.arange(5),
             }
         )
-        assert_identical(
+        assert_allclose(
             ds.resample(time="M").mean()["foo"], ds.foo.resample(time="M").mean()
         )
 
@@ -1905,4 +2256,154 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
 
-# TODO: move other groupby tests from test_dataset and test_dataarray over here
+def test_groupby_cumsum() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+    )
+    actual = ds.groupby("group_id").cumsum(dim="x")
+    expected = xr.Dataset(
+        {
+            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
+        },
+        coords={
+            "x": [0, 1, 2, 3, 4, 5, 6],
+            "group_id": ds.group_id,
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+
+    actual = ds.foo.groupby("group_id").cumsum(dim="x")
+    expected.coords["group_id"] = ds.group_id
+    expected.coords["x"] = np.arange(7)
+    assert_identical(expected.foo, actual)
+
+
+def test_groupby_cumprod() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x",), [7, 3, 0, 1, 1, 2, 1])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+    )
+    actual = ds.groupby("group_id").cumprod(dim="x")
+    expected = xr.Dataset(
+        {
+            "foo": (("x",), [7, 21, 0, 0, 1, 2, 2]),
+        },
+        coords={
+            "x": [0, 1, 2, 3, 4, 5, 6],
+            "group_id": ds.group_id,
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+
+    actual = ds.foo.groupby("group_id").cumprod(dim="x")
+    expected.coords["group_id"] = ds.group_id
+    expected.coords["x"] = np.arange(7)
+    assert_identical(expected.foo, actual)
+
+
+@pytest.mark.parametrize(
+    "method, expected_array",
+    [
+        ("cumsum", [1.0, 2.0, 5.0, 6.0, 2.0, 2.0]),
+        ("cumprod", [1.0, 2.0, 6.0, 6.0, 2.0, 2.0]),
+    ],
+)
+def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
+    ds = xr.Dataset(
+        {"foo": ("time", [1, 2, 3, 1, 2, np.nan])},
+        coords={
+            "time": pd.date_range("01-01-2001", freq="M", periods=6),
+        },
+    )
+    actual = getattr(ds.resample(time="3M"), method)(dim="time")
+    expected = xr.Dataset(
+        {"foo": (("time",), expected_array)},
+        coords={
+            "time": pd.date_range("01-01-2001", freq="M", periods=6),
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["time"]), actual)
+
+    actual = getattr(ds.foo.resample(time="3M"), method)(dim="time")
+    expected.coords["time"] = ds.time
+    assert_identical(expected.drop_vars(["time"]).foo, actual)
+
+
+def test_groupby_binary_op_regression() -> None:
+    # regression test for #7797
+    # monthly timeseries that should return "zero anomalies" everywhere
+    time = xr.date_range("2023-01-01", "2023-12-31", freq="MS")
+    data = np.linspace(-1, 1, 12)
+    x = xr.DataArray(data, coords={"time": time})
+    clim = xr.DataArray(data, coords={"month": np.arange(1, 13, 1)})
+
+    # seems to give the correct result if we use the full x, but not with a slice
+    x_slice = x.sel(time=["2023-04-01"])
+
+    # two typical ways of computing anomalies
+    anom_gb = x_slice.groupby("time.month") - clim
+
+    assert_identical(xr.zeros_like(anom_gb), anom_gb)
+
+
+def test_groupby_multiindex_level() -> None:
+    # GH6836
+    midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
+    mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
+    groups = mda.groupby("one").groups
+    assert groups == {"a": [0, 1], "b": [2, 3], "c": [4, 5]}
+
+
+@requires_flox
+@pytest.mark.parametrize("func", ["sum", "prod"])
+@pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.parametrize("min_count", [None, 1])
+def test_min_count_vs_flox(func: str, min_count: int | None, skipna: bool) -> None:
+    da = DataArray(
+        data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
+        dims="x",
+        coords={"labels": ("x", np.array([1, 2, 3, 1, 2, 3]))},
+    )
+
+    gb = da.groupby("labels")
+    method = operator.methodcaller(func, min_count=min_count, skipna=skipna)
+    with xr.set_options(use_flox=True):
+        actual = method(gb)
+    with xr.set_options(use_flox=False):
+        expected = method(gb)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_min_count_error(use_flox: bool) -> None:
+    if use_flox and not has_flox:
+        pytest.skip()
+    da = DataArray(
+        data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
+        dims="x",
+        coords={"labels": ("x", np.array([1, 2, 3, 1, 2, 3]))},
+    )
+    with xr.set_options(use_flox=use_flox):
+        with pytest.raises(TypeError):
+            da.groupby("labels").mean(min_count=1)
+
+
+@requires_dask
+def test_groupby_math_auto_chunk():
+    da = xr.DataArray(
+        [[1, 2, 3], [1, 2, 3], [1, 2, 3]],
+        dims=("y", "x"),
+        coords={"label": ("x", [2, 2, 1])},
+    )
+    sub = xr.DataArray(
+        InaccessibleArray(np.array([1, 2])), dims="label", coords={"label": [1, 2]}
+    )
+    actual = da.chunk(x=1, y=2).groupby("label") - sub
+    assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}

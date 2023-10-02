@@ -1,11 +1,208 @@
-[build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-    "setuptools_scm[toml]>=3.4",
-    "setuptools_scm_git_archive",
+[project]
+authors = [
+  {name = "xarray Developers", email = "xarray@googlegroups.com"},
 ]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering",
+]
+description = "N-D labeled arrays and datasets in Python"
+dynamic = ["version"]
+license = {text = "Apache-2.0"}
+name = "xarray"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+  "numpy>=1.21",
+  "packaging>=21.3",
+  "pandas>=1.4",
+]
+
+[project.urls]
+Documentation = "https://docs.xarray.dev"
+SciPy2015-talk = "https://www.youtube.com/watch?v=X0pAhJgySxk"
+homepage = "https://xarray.dev/"
+issue-tracker = "https://github.com/pydata/xarray/issues"
+source-code = "https://github.com/pydata/xarray"
+
+[project.entry-points."xarray.chunkmanagers"]
+dask = "xarray.core.daskmanager:DaskManager"
+
+[project.optional-dependencies]
+accel = ["scipy", "bottleneck", "numbagg", "flox"]
+complete = ["xarray[accel,io,parallel,viz]"]
+io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
+parallel = ["dask[complete]"]
+viz = ["matplotlib", "seaborn", "nc-time-axis"]
+
+[build-system]
 build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "setuptools-scm>=7",
+]
+
+[tool.setuptools]
+packages = ["xarray"]
 
 [tool.setuptools_scm]
-fallback_version = "999"
+fallback_version = "9999"
+
+[tool.coverage.run]
+omit = [
+  "*/xarray/tests/*",
+  "*/xarray/core/dask_array_compat.py",
+  "*/xarray/core/npcompat.py",
+  "*/xarray/core/pdcompat.py",
+  "*/xarray/core/pycompat.py",
+  "*/xarray/core/types.py",
+]
+source = ["xarray"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
+
+[tool.mypy]
+enable_error_code = "redundant-self"
+exclude = 'xarray/util/generate_.*\.py'
+files = "xarray"
+show_error_codes = true
+show_error_context = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Much of the numerical computing stack doesn't have type annotations yet.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "affine.*",
+  "bottleneck.*",
+  "cartopy.*",
+  "cdms2.*",
+  "cf_units.*",
+  "cfgrib.*",
+  "cftime.*",
+  "cubed.*",
+  "cupy.*",
+  "fsspec.*",
+  "h5netcdf.*",
+  "h5py.*",
+  "iris.*",
+  "matplotlib.*",
+  "mpl_toolkits.*",
+  "Nio.*",
+  "nc_time_axis.*",
+  "numbagg.*",
+  "netCDF4.*",
+  "netcdftime.*",
+  "pandas.*",
+  "pooch.*",
+  "PseudoNetCDF.*",
+  "pydap.*",
+  "pytest.*",
+  "scipy.*",
+  "seaborn.*",
+  "setuptools",
+  "sparse.*",
+  "toolz.*",
+  "zarr.*",
+  "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
+]
+
+# Gradually we want to add more modules to this list, ratcheting up our total
+# coverage. Once a module is here, functions are checked by mypy regardless of
+# whether they have type annotations. It would be especially useful to have test
+# files listed here, because without them being checked, we don't have a great
+# way of testing our annotations.
+[[tool.mypy.overrides]]
+check_untyped_defs = true
+module = [
+  "xarray.core.accessor_dt",
+  "xarray.core.accessor_str",
+  "xarray.core.alignment",
+  "xarray.core.computation",
+  "xarray.core.rolling_exp",
+  "xarray.indexes.*",
+  "xarray.tests.*",
+]
+# This then excludes some modules from the above list. (So ideally we remove
+# from here in time...)
+[[tool.mypy.overrides]]
+check_untyped_defs = false
+module = [
+  "xarray.tests.test_coarsen",
+  "xarray.tests.test_coding_times",
+  "xarray.tests.test_combine",
+  "xarray.tests.test_computation",
+  "xarray.tests.test_concat",
+  "xarray.tests.test_coordinates",
+  "xarray.tests.test_dask",
+  "xarray.tests.test_dataarray",
+  "xarray.tests.test_duck_array_ops",
+  "xarray.tests.test_groupby",
+  "xarray.tests.test_indexing",
+  "xarray.tests.test_merge",
+  "xarray.tests.test_missing",
+  "xarray.tests.test_parallelcompat",
+  "xarray.tests.test_plot",
+  "xarray.tests.test_sparse",
+  "xarray.tests.test_ufuncs",
+  "xarray.tests.test_units",
+  "xarray.tests.test_utils",
+  "xarray.tests.test_variable",
+  "xarray.tests.test_weighted",
+]
+
+[tool.ruff]
+builtins = ["ellipsis"]
+exclude = [
+  ".eggs",
+  "doc",
+  "_typed_ops.pyi",
+]
+target-version = "py39"
+# E402: module level import not at top of file
+# E501: line too long - let black worry about that
+# E731: do not assign a lambda expression, use a def
+ignore = [
+  "E402",
+  "E501",
+  "E731",
+]
+select = [
+  "F", # Pyflakes
+  "E", # Pycodestyle
+  "W",
+  "I", # isort
+  "UP", # Pyupgrade
+]
+
+[tool.ruff.isort]
+known-first-party = ["xarray"]
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers"]
+log_cli_level = "INFO"
+minversion = "7"
+filterwarnings = [
+  "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+]
+markers = [
+  "flaky: flaky tests",
+  "network: tests requiring a network connection",
+  "slow: slow tests",
+]
+python_files = "test_*.py"
+testpaths = ["xarray/tests", "properties"]
+
+[tool.aliases]
+test = "pytest"

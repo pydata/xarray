@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
-from importlib.resources import read_binary
+from importlib.resources import files
 
-from .formatting import inline_variable_array_repr, short_data_repr
-from .options import _get_boolean_with_default
+from xarray.core.formatting import (
+    inline_index_repr,
+    inline_variable_array_repr,
+    short_data_repr,
+)
+from xarray.core.options import _get_boolean_with_default
 
 STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
@@ -17,7 +23,7 @@ STATIC_FILES = (
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        read_binary(package, resource).decode("utf-8")
+        files(package).joinpath(resource).read_text(encoding="utf-8")
         for package, resource in STATIC_FILES
     ]
 
@@ -59,10 +65,10 @@ def summarize_attrs(attrs):
 def _icon(icon_name):
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
-        "<svg class='icon xr-{0}'>"
-        "<use xlink:href='#{0}'>"
+        f"<svg class='icon xr-{icon_name}'>"
+        f"<use xlink:href='#{icon_name}'>"
         "</use>"
-        "</svg>".format(icon_name)
+        "</svg>"
     )
 
 
@@ -121,6 +127,40 @@ def summarize_vars(variables):
     )
 
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
+
+
+def short_index_repr_html(index):
+    if hasattr(index, "_repr_html_"):
+        return index._repr_html_()
+
+    return f"<pre>{escape(repr(index))}</pre>"
+
+
+def summarize_index(coord_names, index):
+    name = "<br>".join([escape(str(n)) for n in coord_names])
+
+    index_id = f"index-{uuid.uuid4()}"
+    preview = escape(inline_index_repr(index))
+    details = short_index_repr_html(index)
+
+    data_icon = _icon("icon-database")
+
+    return (
+        f"<div class='xr-index-name'><div>{name}</div></div>"
+        f"<div class='xr-index-preview'>{preview}</div>"
+        f"<div></div>"
+        f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
+        f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
+        f"<div class='xr-index-data'>{details}</div>"
+    )
+
+
+def summarize_indexes(indexes):
+    indexes_li = "".join(
+        f"<li class='xr-var-item'>{summarize_index(v, i)}</li>"
+        for v, i in indexes.items()
+    )
+    return f"<ul class='xr-var-list'>{indexes_li}</ul>"
 
 
 def collapsible_section(
@@ -211,6 +251,13 @@ datavar_section = partial(
     expand_option_name="display_expand_data_vars",
 )
 
+index_section = partial(
+    _mapping_section,
+    name="Indexes",
+    details_func=summarize_indexes,
+    max_items_collapse=0,
+    expand_option_name="display_expand_indexes",
+)
 
 attr_section = partial(
     _mapping_section,
@@ -219,6 +266,12 @@ attr_section = partial(
     max_items_collapse=10,
     expand_option_name="display_expand_attrs",
 )
+
+
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
 
 
 def _obj_repr(obj, header_components, sections):
@@ -264,6 +317,10 @@ def array_repr(arr):
     if hasattr(arr, "coords"):
         sections.append(coord_section(arr.coords))
 
+    if hasattr(arr, "xindexes"):
+        indexes = _get_indexes_dict(arr.xindexes)
+        sections.append(index_section(indexes))
+
     sections.append(attr_section(arr.attrs))
 
     return _obj_repr(arr, header_components, sections)
@@ -278,6 +335,7 @@ def dataset_repr(ds):
         dim_section(ds),
         coord_section(ds.coords),
         datavar_section(ds.data_vars),
+        index_section(_get_indexes_dict(ds.xindexes)),
         attr_section(ds.attrs),
     ]
 

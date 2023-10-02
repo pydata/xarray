@@ -9,17 +9,42 @@
 .. autosummary::
    :toctree: generated/
 
+   Coordinates.from_pandas_multiindex
+   Coordinates.get
+   Coordinates.items
+   Coordinates.keys
+   Coordinates.values
+   Coordinates.dims
+   Coordinates.dtypes
+   Coordinates.variables
+   Coordinates.xindexes
+   Coordinates.indexes
+   Coordinates.to_dataset
+   Coordinates.to_index
+   Coordinates.update
+   Coordinates.assign
+   Coordinates.merge
+   Coordinates.copy
+   Coordinates.equals
+   Coordinates.identical
+
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
    core.coordinates.DatasetCoordinates.keys
-   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.values
+   core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.dtypes
+   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.xindexes
+   core.coordinates.DatasetCoordinates.indexes
    core.coordinates.DatasetCoordinates.to_dataset
    core.coordinates.DatasetCoordinates.to_index
    core.coordinates.DatasetCoordinates.update
-   core.coordinates.DatasetCoordinates.values
-   core.coordinates.DatasetCoordinates.dims
-   core.coordinates.DatasetCoordinates.indexes
-   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.assign
+   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.copy
+   core.coordinates.DatasetCoordinates.equals
+   core.coordinates.DatasetCoordinates.identical
 
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
@@ -47,14 +72,20 @@
    core.coordinates.DataArrayCoordinates.get
    core.coordinates.DataArrayCoordinates.items
    core.coordinates.DataArrayCoordinates.keys
-   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.values
+   core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.dtypes
+   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.xindexes
+   core.coordinates.DataArrayCoordinates.indexes
    core.coordinates.DataArrayCoordinates.to_dataset
    core.coordinates.DataArrayCoordinates.to_index
    core.coordinates.DataArrayCoordinates.update
-   core.coordinates.DataArrayCoordinates.values
-   core.coordinates.DataArrayCoordinates.dims
-   core.coordinates.DataArrayCoordinates.indexes
-   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.assign
+   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DataArrayCoordinates.equals
+   core.coordinates.DataArrayCoordinates.identical
 
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
@@ -234,6 +265,7 @@
    Variable.dims
    Variable.dtype
    Variable.encoding
+   Variable.reset_encoding
    Variable.imag
    Variable.nbytes
    Variable.ndim
@@ -319,66 +351,6 @@
    IndexVariable.sizes
    IndexVariable.values
 
-   ufuncs.angle
-   ufuncs.arccos
-   ufuncs.arccosh
-   ufuncs.arcsin
-   ufuncs.arcsinh
-   ufuncs.arctan
-   ufuncs.arctan2
-   ufuncs.arctanh
-   ufuncs.ceil
-   ufuncs.conj
-   ufuncs.copysign
-   ufuncs.cos
-   ufuncs.cosh
-   ufuncs.deg2rad
-   ufuncs.degrees
-   ufuncs.exp
-   ufuncs.expm1
-   ufuncs.fabs
-   ufuncs.fix
-   ufuncs.floor
-   ufuncs.fmax
-   ufuncs.fmin
-   ufuncs.fmod
-   ufuncs.fmod
-   ufuncs.frexp
-   ufuncs.hypot
-   ufuncs.imag
-   ufuncs.iscomplex
-   ufuncs.isfinite
-   ufuncs.isinf
-   ufuncs.isnan
-   ufuncs.isreal
-   ufuncs.ldexp
-   ufuncs.log
-   ufuncs.log10
-   ufuncs.log1p
-   ufuncs.log2
-   ufuncs.logaddexp
-   ufuncs.logaddexp2
-   ufuncs.logical_and
-   ufuncs.logical_not
-   ufuncs.logical_or
-   ufuncs.logical_xor
-   ufuncs.maximum
-   ufuncs.minimum
-   ufuncs.nextafter
-   ufuncs.rad2deg
-   ufuncs.radians
-   ufuncs.real
-   ufuncs.rint
-   ufuncs.sign
-   ufuncs.signbit
-   ufuncs.sin
-   ufuncs.sinh
-   ufuncs.sqrt
-   ufuncs.square
-   ufuncs.tan
-   ufuncs.tanh
-   ufuncs.trunc
-
    plot.plot
    plot.line
    plot.step
@@ -389,11 +361,6 @@
    plot.pcolormesh
    plot.scatter
    plot.surface
-
-   plot.FacetGrid.map_dataarray
-   plot.FacetGrid.set_titles
-   plot.FacetGrid.set_ticks
-   plot.FacetGrid.map
 
    CFTimeIndex.all
    CFTimeIndex.any
@@ -439,10 +406,8 @@
    CFTimeIndex.is_floating
    CFTimeIndex.is_integer
    CFTimeIndex.is_interval
-   CFTimeIndex.is_mixed
    CFTimeIndex.is_numeric
    CFTimeIndex.is_object
-   CFTimeIndex.is_type_compatible
    CFTimeIndex.isin
    CFTimeIndex.isna
    CFTimeIndex.isnull
@@ -463,7 +428,6 @@
    CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
-   CFTimeIndex.set_value
    CFTimeIndex.shift
    CFTimeIndex.slice_indexer
    CFTimeIndex.slice_locs
@@ -477,7 +441,6 @@
    CFTimeIndex.to_flat_index
    CFTimeIndex.to_frame
    CFTimeIndex.to_list
-   CFTimeIndex.to_native_types
    CFTimeIndex.to_numpy
    CFTimeIndex.to_series
    CFTimeIndex.tolist
@@ -502,8 +465,6 @@
    CFTimeIndex.hasnans
    CFTimeIndex.hour
    CFTimeIndex.inferred_type
-   CFTimeIndex.is_all_dates
-   CFTimeIndex.is_monotonic
    CFTimeIndex.is_monotonic_increasing
    CFTimeIndex.is_monotonic_decreasing
    CFTimeIndex.is_unique
@@ -520,6 +481,21 @@
    CFTimeIndex.size
    CFTimeIndex.values
    CFTimeIndex.year
+
+   Index.from_variables
+   Index.concat
+   Index.stack
+   Index.unstack
+   Index.create_variables
+   Index.to_pandas_index
+   Index.isel
+   Index.sel
+   Index.join
+   Index.reindex_like
+   Index.equals
+   Index.roll
+   Index.rename
+   Index.copy
 
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode
@@ -548,6 +524,11 @@
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
 
+   backends.NetCDF4BackendEntrypoint.description
+   backends.NetCDF4BackendEntrypoint.url
+   backends.NetCDF4BackendEntrypoint.guess_can_open
+   backends.NetCDF4BackendEntrypoint.open_dataset
+
    backends.H5NetCDFStore.autoclose
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
@@ -575,6 +556,25 @@
    backends.H5NetCDFStore.sync
    backends.H5NetCDFStore.ds
 
+   backends.H5netcdfBackendEntrypoint.description
+   backends.H5netcdfBackendEntrypoint.url
+   backends.H5netcdfBackendEntrypoint.guess_can_open
+   backends.H5netcdfBackendEntrypoint.open_dataset
+
+   backends.PseudoNetCDFDataStore.close
+   backends.PseudoNetCDFDataStore.get_attrs
+   backends.PseudoNetCDFDataStore.get_dimensions
+   backends.PseudoNetCDFDataStore.get_encoding
+   backends.PseudoNetCDFDataStore.get_variables
+   backends.PseudoNetCDFDataStore.open
+   backends.PseudoNetCDFDataStore.open_store_variable
+   backends.PseudoNetCDFDataStore.ds
+
+   backends.PseudoNetCDFBackendEntrypoint.description
+   backends.PseudoNetCDFBackendEntrypoint.url
+   backends.PseudoNetCDFBackendEntrypoint.guess_can_open
+   backends.PseudoNetCDFBackendEntrypoint.open_dataset
+
    backends.PydapDataStore.close
    backends.PydapDataStore.get_attrs
    backends.PydapDataStore.get_dimensions
@@ -583,6 +583,11 @@
    backends.PydapDataStore.load
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
+
+   backends.PydapBackendEntrypoint.description
+   backends.PydapBackendEntrypoint.url
+   backends.PydapBackendEntrypoint.guess_can_open
+   backends.PydapBackendEntrypoint.open_dataset
 
    backends.ScipyDataStore.close
    backends.ScipyDataStore.encode
@@ -605,6 +610,36 @@
    backends.ScipyDataStore.store_dataset
    backends.ScipyDataStore.sync
    backends.ScipyDataStore.ds
+
+   backends.ScipyBackendEntrypoint.description
+   backends.ScipyBackendEntrypoint.url
+   backends.ScipyBackendEntrypoint.guess_can_open
+   backends.ScipyBackendEntrypoint.open_dataset
+
+   backends.ZarrStore.close
+   backends.ZarrStore.encode_attribute
+   backends.ZarrStore.encode_variable
+   backends.ZarrStore.get_attrs
+   backends.ZarrStore.get_dimensions
+   backends.ZarrStore.get_variables
+   backends.ZarrStore.open_group
+   backends.ZarrStore.open_store_variable
+   backends.ZarrStore.set_attributes
+   backends.ZarrStore.set_dimensions
+   backends.ZarrStore.set_variables
+   backends.ZarrStore.store
+   backends.ZarrStore.sync
+   backends.ZarrStore.ds
+
+   backends.ZarrBackendEntrypoint.description
+   backends.ZarrBackendEntrypoint.url
+   backends.ZarrBackendEntrypoint.guess_can_open
+   backends.ZarrBackendEntrypoint.open_dataset
+
+   backends.StoreBackendEntrypoint.description
+   backends.StoreBackendEntrypoint.url
+   backends.StoreBackendEntrypoint.guess_can_open
+   backends.StoreBackendEntrypoint.open_dataset
 
    backends.FileManager.acquire
    backends.FileManager.acquire_context

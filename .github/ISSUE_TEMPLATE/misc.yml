@@ -1,5 +1,5 @@
-name: Issue
-description: General Issue or discussion topic. For usage questions, please follow the "Usage question" link
+name: 📝 Issue
+description: General issue, that's not a bug report.
 labels: ["needs triage"]
 body:
   - type: markdown

@@ -1,23 +1,27 @@
+from __future__ import annotations
+
 import functools
 import operator
+import sys
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
-
-from . import (
+from xarray.tests import (
     assert_allclose,
     assert_duckarray_allclose,
     assert_equal,
     assert_identical,
     requires_dask,
     requires_matplotlib,
+    requires_numbagg,
 )
-from .test_plot import PlotTestCase
-from .test_variable import _PAD_XR_NP_ARGS
+from xarray.tests.test_plot import PlotTestCase
+from xarray.tests.test_variable import _PAD_XR_NP_ARGS
 
 try:
     import matplotlib.pyplot as plt
@@ -31,7 +35,7 @@ DimensionalityError = pint.errors.DimensionalityError
 
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
-unit_registry = pint.UnitRegistry(force_ndarray=True)
+unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
 
@@ -1506,6 +1510,10 @@ def test_dot_dataarray(dtype):
 
 
 class TestVariable:
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -1528,8 +1536,12 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -1837,21 +1849,43 @@ class TestVariable:
 
         assert expected == actual
 
+    @pytest.mark.parametrize("dask", [False, pytest.param(True, marks=[requires_dask])])
     @pytest.mark.parametrize(
-        "indices",
+        ["variable", "indexers"],
         (
-            pytest.param(4, id="single index"),
-            pytest.param([5, 2, 9, 1], id="multiple indices"),
+            pytest.param(
+                xr.Variable("x", np.linspace(0, 5, 10)),
+                {"x": 4},
+                id="single value-single indexer",
+            ),
+            pytest.param(
+                xr.Variable("x", np.linspace(0, 5, 10)),
+                {"x": [5, 2, 9, 1]},
+                id="multiple values-single indexer",
+            ),
+            pytest.param(
+                xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
+                {"x": 1, "y": 4},
+                id="single value-multiple indexers",
+            ),
+            pytest.param(
+                xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
+                {"x": [0, 1, 2], "y": [0, 2, 4]},
+                id="multiple values-multiple indexers",
+            ),
         ),
     )
-    def test_isel(self, indices, dtype):
-        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.s
-        variable = xr.Variable("x", array)
+    def test_isel(self, variable, indexers, dask, dtype):
+        if dask:
+            variable = variable.chunk({dim: 2 for dim in variable.dims})
+        quantified = xr.Variable(
+            variable.dims, variable.data.astype(dtype) * unit_registry.s
+        )
 
         expected = attach_units(
-            strip_units(variable).isel(x=indices), extract_units(variable)
+            strip_units(quantified).isel(indexers), extract_units(quantified)
         )
-        actual = variable.isel(x=indices)
+        actual = quantified.isel(indexers)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -2311,6 +2345,10 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2363,8 +2401,12 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -2384,6 +2426,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2503,7 +2549,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3804,23 +3849,21 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(
-                method("rolling", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
-                ),
-            ),
-            pytest.param(
-                method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numbagg functions are not supported by pint"
-                ),
-            ),
+            method("rolling", y=3),
+            pytest.param(method("rolling_exp", y=3), marks=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
     def test_computation_objects(self, func, variant, dtype):
+        if variant == "data":
+            if func.name == "rolling_exp":
+                pytest.xfail(reason="numbagg functions are not supported by pint")
+            elif func.name == "rolling":
+                pytest.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                )
+
         unit = unit_registry.m
 
         variants = {
@@ -4037,6 +4080,10 @@ class TestDataset:
         # warnings or errors, but does not check the result
         func(ds)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -4058,8 +4105,12 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
@@ -5322,8 +5373,12 @@ class TestDataset:
         units = extract_units(ds)
 
         args = [] if func.name != "groupby" else ["y"]
-        expected = attach_units(func(strip_units(ds)).mean(*args), units)
-        actual = func(ds).mean(*args)
+        # Doesn't work with flox because pint doesn't implement
+        # ufunc.reduceat or np.bincount
+        #  kwargs = {"engine": "numpy"} if "groupby" in func.name else {}
+        kwargs = {}
+        expected = attach_units(func(strip_units(ds)).mean(*args, **kwargs), units)
+        actual = func(ds).mean(*args, **kwargs)
 
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
@@ -5587,16 +5642,20 @@ class TestDataset:
 
 @requires_dask
 class TestPintWrappingDask:
+    @pytest.mark.skipif(
+        version.parse(pint.__version__) <= version.parse("0.21"),
+        reason="pint didn't support dask properly before 0.21",
+    )
     def test_duck_array_ops(self):
         import dask.array
 
         d = dask.array.array([1, 2, 3])
-        q = pint.Quantity(d, units="m")
+        q = unit_registry.Quantity(d, units="m")
         da = xr.DataArray(q, dims="x")
 
         actual = da.mean().compute()
         actual.name = None
-        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+        expected = xr.DataArray(unit_registry.Quantity(np.array(2.0), units="m"))
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
@@ -5693,7 +5752,7 @@ class TestPlots(PlotTestCase):
         fig, (ax, cax) = plt.subplots(1, 2)
         fgrid = da.plot.line(x="x", col="y")
 
-        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+        assert fgrid.axs[0, 0].get_ylabel() == "pressure [pascal]"
 
     def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
         arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa

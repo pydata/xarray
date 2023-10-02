@@ -1,27 +1,19 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 
-from . import dtypes, nputils, utils
-from .duck_array_ops import count, fillna, isnull, where, where_method
-from .pycompat import dask_array_type
-
-try:
-    import dask.array as dask_array
-
-    from . import dask_array_compat
-except ImportError:
-    dask_array = None
-    dask_array_compat = None  # type: ignore[assignment]
-
-
-def _replace_nan(a, val):
-    """
-    replace nan in a by val, and returns the replaced array and the nan
-    position
-    """
-    mask = isnull(a)
-    return where_method(val, mask, a), mask
+from xarray.core import dtypes, nputils, utils
+from xarray.core.duck_array_ops import (
+    astype,
+    count,
+    fillna,
+    isnull,
+    sum_where,
+    where,
+    where_method,
+)
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
@@ -31,7 +23,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     if axis is not None and getattr(result, "ndim", False):
         null_mask = (np.take(mask.shape, axis).prod() - mask.sum(axis) - min_count) < 0
         dtype, fill_value = dtypes.maybe_promote(result.dtype)
-        result = where(null_mask, fill_value, result.astype(dtype))
+        result = where(null_mask, fill_value, astype(result, dtype))
 
     elif getattr(result, "dtype", None) not in dtypes.NAT_TYPES:
         null_mask = mask.size - mask.sum()
@@ -72,16 +64,14 @@ def nanmin(a, axis=None, out=None):
     if a.dtype.kind == "O":
         return _nan_minmax_object("min", dtypes.get_pos_infinity(a.dtype), a, axis)
 
-    module = dask_array if isinstance(a, dask_array_type) else nputils
-    return module.nanmin(a, axis=axis)
+    return nputils.nanmin(a, axis=axis)
 
 
 def nanmax(a, axis=None, out=None):
     if a.dtype.kind == "O":
         return _nan_minmax_object("max", dtypes.get_neg_infinity(a.dtype), a, axis)
 
-    module = dask_array if isinstance(a, dask_array_type) else nputils
-    return module.nanmax(a, axis=axis)
+    return nputils.nanmax(a, axis=axis)
 
 
 def nanargmin(a, axis=None):
@@ -89,8 +79,7 @@ def nanargmin(a, axis=None):
         fill_value = dtypes.get_pos_infinity(a.dtype)
         return _nan_argminmax_object("argmin", fill_value, a, axis=axis)
 
-    module = dask_array if isinstance(a, dask_array_type) else nputils
-    return module.nanargmin(a, axis=axis)
+    return nputils.nanargmin(a, axis=axis)
 
 
 def nanargmax(a, axis=None):
@@ -98,13 +87,12 @@ def nanargmax(a, axis=None):
         fill_value = dtypes.get_neg_infinity(a.dtype)
         return _nan_argminmax_object("argmax", fill_value, a, axis=axis)
 
-    module = dask_array if isinstance(a, dask_array_type) else nputils
-    return module.nanargmax(a, axis=axis)
+    return nputils.nanargmax(a, axis=axis)
 
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
-    a, mask = _replace_nan(a, 0)
-    result = np.sum(a, axis=axis, dtype=dtype)
+    mask = isnull(a)
+    result = sum_where(a, axis=axis, dtype=dtype, where=mask)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -113,7 +101,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from .duck_array_ops import count, fillna, where_method
+    from xarray.core.duck_array_ops import count, fillna, where_method
 
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
@@ -135,8 +123,6 @@ def nanmean(a, axis=None, dtype=None, out=None):
         warnings.filterwarnings(
             "ignore", r"Mean of empty slice", category=RuntimeWarning
         )
-        if isinstance(a, dask_array_type):
-            return dask_array.nanmean(a, axis=axis, dtype=dtype)
 
         return np.nanmean(a, axis=axis, dtype=dtype)
 
@@ -155,7 +141,7 @@ def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):
     value_mean = _nanmean_ddof_object(
         ddof=0, value=value, axis=axis, keepdims=True, **kwargs
     )
-    squared = (value.astype(value_mean.dtype) - value_mean) ** 2
+    squared = (astype(value, value_mean.dtype) - value_mean) ** 2
     return _nanmean_ddof_object(ddof, squared, axis=axis, keepdims=keepdims, **kwargs)
 
 
@@ -171,7 +157,7 @@ def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
-    a, mask = _replace_nan(a, 1)
+    mask = isnull(a)
     result = nputils.nanprod(a, axis=axis, dtype=dtype, out=out)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)

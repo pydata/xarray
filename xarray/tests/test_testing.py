@@ -1,16 +1,17 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 import pytest
 
 import xarray as xr
-
-from . import has_dask
+from xarray.tests import has_dask
 
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x
+    dask_from_array = lambda x: x  # type: ignore
 
 try:
     import pint
@@ -162,3 +163,16 @@ def test_ensure_warnings_not_elevated(func) -> None:
             getattr(xr.testing, func)(a, b)
 
         assert len(w) > 0
+
+        # ensure warnings still raise outside of assert_*
+        with pytest.raises(UserWarning):
+            warnings.warn("test")
+
+    # ensure warnings stay ignored in assert_*
+    with warnings.catch_warnings(record=True) as w:
+        # ignore warnings
+        warnings.filterwarnings("ignore")
+        with pytest.raises(AssertionError):
+            getattr(xr.testing, func)(a, b)
+
+        assert len(w) == 0
