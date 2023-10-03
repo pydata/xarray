@@ -324,6 +324,7 @@ class Weighted(Generic[T_Xarray]):
         def _get_h(n: float, q: np.ndarray, method: QUANTILE_METHODS) -> np.ndarray:
             """Return the interpolation parameter."""
             # Note that options are not yet exposed in the public API.
+            h: np.ndarray
             if method == "linear":
                 h = (n - 1) * q + 1
             elif method == "interpolated_inverted_cdf":

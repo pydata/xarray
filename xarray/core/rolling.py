@@ -61,6 +61,11 @@ class Rolling(Generic[T_Xarray]):
 
     __slots__ = ("obj", "window", "min_periods", "center", "dim")
     _attributes = ("window", "min_periods", "center", "dim")
+    dim: list[Hashable]
+    window: list[int]
+    center: list[bool]
+    obj: T_Xarray
+    min_periods: int
 
     def __init__(
         self,
@@ -91,8 +96,8 @@ class Rolling(Generic[T_Xarray]):
         -------
         rolling : type of input argument
         """
-        self.dim: list[Hashable] = []
-        self.window: list[int] = []
+        self.dim = []
+        self.window = []
         for d, w in windows.items():
             self.dim.append(d)
             if w <= 0:
@@ -100,7 +105,7 @@ class Rolling(Generic[T_Xarray]):
             self.window.append(w)
 
         self.center = self._mapping_to_list(center, default=False)
-        self.obj: T_Xarray = obj
+        self.obj = obj
 
         missing_dims = tuple(dim for dim in self.dim if dim not in self.obj.dims)
         if missing_dims:
@@ -785,11 +790,14 @@ class DatasetRolling(Rolling["Dataset"]):
             if not keep_attrs:
                 dataset[key].attrs = {}
 
+        # Need to stride coords as well. TODO: is there a better way?
+        coords = self.obj.isel(
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
+        ).coords
+
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
-            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
-        )
+        return Dataset(dataset, coords=coords, attrs=attrs)
 
 
 class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
@@ -811,6 +819,10 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     )
     _attributes = ("windows", "side", "trim_excess")
     obj: T_Xarray
+    windows: Mapping[Hashable, int]
+    side: SideOptions | Mapping[Hashable, SideOptions]
+    boundary: CoarsenBoundaryOptions
+    coord_func: Mapping[Hashable, str | Callable]
 
     def __init__(
         self,
@@ -852,12 +864,15 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
                 f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
                 f"dimensions {tuple(self.obj.dims)}"
             )
-        if not utils.is_dict_like(coord_func):
-            coord_func = {d: coord_func for d in self.obj.dims}  # type: ignore[misc]
+
+        if utils.is_dict_like(coord_func):
+            coord_func_map = coord_func
+        else:
+            coord_func_map = {d: coord_func for d in self.obj.dims}
         for c in self.obj.coords:
-            if c not in coord_func:
-                coord_func[c] = duck_array_ops.mean  # type: ignore[index]
-        self.coord_func: Mapping[Hashable, str | Callable] = coord_func
+            if c not in coord_func_map:
+                coord_func_map[c] = duck_array_ops.mean  # type: ignore[index]
+        self.coord_func = coord_func_map
 
     def _get_keep_attrs(self, keep_attrs):
         if keep_attrs is None:
