@@ -3032,8 +3032,7 @@ class TestDataset:
     def test_rename_same_name(self) -> None:
         data = create_test_data()
         newnames = {"var1": "var1", "dim2": "dim2"}
-        with pytest.warns(UserWarning, match="does not create an index anymore"):
-            renamed = data.rename(newnames)
+        renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
     def test_rename_dims(self) -> None:
