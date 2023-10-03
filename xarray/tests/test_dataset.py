@@ -3104,7 +3104,7 @@ class TestDataset:
             ds.rename(x="y")
 
         # No operation should not raise a warning
-        ds = xr.Dataset(
+        ds = Dataset(
             data_vars={"data": (("x", "y"), np.ones((2, 3)))},
             coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
         )
