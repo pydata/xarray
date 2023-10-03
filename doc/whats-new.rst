@@ -37,6 +37,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
+  when the operation was a no-op. (:issue:`8266`)
+  By `Simon Hansen <https://github.com/hoxbro>`_.
 
 
 Documentation
