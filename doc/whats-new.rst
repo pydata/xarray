@@ -22,6 +22,10 @@ v2023.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`DataArray.where` & :py:meth:`Dataset.where` accept a callable for
+  the ``other`` parameter, passing the object as the first argument. Previously,
+  this was only valid for the ``cond`` parameter. (:issue:`8255`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -135,6 +139,8 @@ Bug fixes
 - Static typing of dunder ops methods (like :py:meth:`DataArray.__eq__`) has been fixed.
   Remaining issues are upstream problems (:issue:`7780`, :pull:`8204`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix type annotation for ``center`` argument of plotting methods (like :py:meth:`xarray.plot.dataarray_plot.pcolormesh`) (:pull:`8261`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 Documentation
 ~~~~~~~~~~~~~

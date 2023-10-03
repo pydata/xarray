@@ -1135,7 +1135,6 @@ def test_to_datetimeindex_feb_29(calendar):
 
 
 @requires_cftime
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/24263")
 def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
     mindex = pd.MultiIndex.from_arrays([index])

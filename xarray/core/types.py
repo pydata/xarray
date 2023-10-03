@@ -19,9 +19,9 @@ import pandas as pd
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import Self
+        from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self
+        from typing_extensions import Self, TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -184,7 +184,12 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
-T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
+T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# We allow the tuple form of this (though arguably we could transition to named dims only)
+T_Chunks: TypeAlias = Union[
+    T_ChunkDim, Mapping[Any, T_ChunkDim], tuple[T_ChunkDim, ...]
+]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
