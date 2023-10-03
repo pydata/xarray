@@ -1162,6 +1162,25 @@ def to_netcdf(
     ...
 
 
+# if compute cannot be evaluated at type check time
+# we may get back either Delayed or None
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = False,
+    multifile: bool = False,
+    invalid_netcdf: bool = False,
+) -> Delayed | None:
+    ...
+
+
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None = None,
