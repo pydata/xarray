@@ -3103,6 +3103,15 @@ class TestDataset:
         ):
             ds.rename(x="y")
 
+        # No operation should not raise a warning
+        ds = xr.Dataset(
+            data_vars={"data": (("x", "y"), np.ones((2, 3)))},
+            coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.rename(x="x")
+
     def test_rename_multiindex(self) -> None:
         midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")

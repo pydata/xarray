@@ -4165,6 +4165,9 @@ class Dataset(
             create_dim_coord = False
             new_k = name_dict[k]
 
+            if k == new_k:
+                continue  # Same name, nothing to do
+
             if k in self.dims and new_k in self._coord_names:
                 coord_dims = self._variables[name_dict[k]].dims
                 if coord_dims == (k,):
