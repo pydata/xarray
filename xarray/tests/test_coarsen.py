@@ -287,7 +287,10 @@ class TestCoarsenConstruct:
             {"a": "b"},
         )
         expected["vary"] = ds.vary
-        expected.coords["time"] = (("year", "month"), duck_array_ops.reshape(ds.time.data, (-1, 12)))
+        expected.coords["time"] = (
+            ("year", "month"),
+            duck_array_ops.reshape(ds.time.data, (-1, 12)),
+        )
 
         with raise_if_dask_computes():
             actual = ds.coarsen(time=12, x=5).construct(

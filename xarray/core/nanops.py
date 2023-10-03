@@ -4,8 +4,7 @@ import warnings
 
 import numpy as np
 
-from xarray.core import dtypes, nputils, utils
-from xarray.core import duck_array_ops
+from xarray.core import dtypes, duck_array_ops, nputils, utils
 from xarray.core.duck_array_ops import (
     astype,
     count,
@@ -22,7 +21,11 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     xarray version of pandas.core.nanops._maybe_null_out
     """
     if axis is not None and getattr(result, "ndim", False):
-        null_mask = (np.take(mask.shape, axis).prod() - duck_array_ops.sum(mask, axis) - min_count) < 0
+        null_mask = (
+            np.take(mask.shape, axis).prod()
+            - duck_array_ops.sum(mask, axis)
+            - min_count
+        ) < 0
         dtype, fill_value = dtypes.maybe_promote(result.dtype)
         result = where(null_mask, fill_value, astype(result, dtype))
 
