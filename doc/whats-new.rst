@@ -30,6 +30,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Made more arguments keyword-only (e.g. ``keep_attrs``, ``skipna``) for many :py:class:`xarray.DataArray` and
+  :py:class:`xarray.Dataset` methods (:pull:`6403`). By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
