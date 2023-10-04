@@ -4965,7 +4965,7 @@ class DataArray(
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.arange(5,0,-1),
+        ...     np.arange(5, 0, -1),
         ...     coords=[pd.date_range("1/1/2000", periods=5)],
         ...     dims="time",
         ... )

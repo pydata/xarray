@@ -7884,7 +7884,7 @@ class Dataset(
         Data variables:
             A        (x, y) int64 3 4 1 2
             B        (x, y) int64 7 8 5 6
-        >>> ds.sortby(lambda x: -x['y'])
+        >>> ds.sortby(lambda x: -x["y"])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
