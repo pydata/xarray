@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import importlib
 import sys
+from collections.abc import Hashable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Hashable, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
 
 import numpy as np
 
