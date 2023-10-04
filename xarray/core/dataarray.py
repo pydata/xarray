@@ -955,6 +955,7 @@ class DataArray(
     def reset_coords(
         self,
         names: Dims = None,
+        *,
         drop: Literal[False] = False,
     ) -> Dataset:
         ...
