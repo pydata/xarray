@@ -30,6 +30,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`Dataset.to_zarr` & :py:meth:`DataArray.to_zarr` require keyword
+  arguments after the initial 7 positional arguments.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
