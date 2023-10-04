@@ -44,7 +44,7 @@ POSITIONAL_ONLY = inspect.Parameter.POSITIONAL_ONLY
 EMPTY = inspect.Parameter.empty
 
 
-def _deprecate_positional_args(version):
+def _deprecate_positional_args(version) -> Callable[[T], T]:
     """Decorator for methods that issues warnings for positional arguments
 
     Using the keyword-only argument syntax in pep 3102, arguments after the
@@ -74,7 +74,7 @@ def _deprecate_positional_args(version):
     licences/SCIKIT_LEARN_LICENSE
     """
 
-    def _decorator(func: T) -> T:
+    def _decorator(func):
         signature = inspect.signature(func)
 
         pos_or_kw_args = []
