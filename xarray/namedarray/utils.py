@@ -159,4 +159,4 @@ class ReprObject:
     def __dask_tokenize__(self) -> Hashable:
         from dask.base import normalize_token
 
-        return normalize_token((type(self), self._value))
+        return normalize_token((type(self), self._value))  # type: ignore[no-any-return]

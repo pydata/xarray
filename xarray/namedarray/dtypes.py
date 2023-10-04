@@ -130,7 +130,7 @@ def get_pos_infinity(
         return np.inf
 
     if issubclass(dtype.type, np.integer):
-        return np.iinfo(dtype).max if max_for_int else np.inf
+        return np.iinfo(dtype.type).max if max_for_int else np.inf
     if issubclass(dtype.type, np.complexfloating):
         return np.inf + 1j * np.inf
 
@@ -156,7 +156,7 @@ def get_neg_infinity(
         return -np.inf
 
     if issubclass(dtype.type, np.integer):
-        return np.iinfo(dtype).min if min_for_int else -np.inf
+        return np.iinfo(dtype.type).min if min_for_int else -np.inf
     if issubclass(dtype.type, np.complexfloating):
         return -np.inf - 1j * np.inf
 
