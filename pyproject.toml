@@ -93,6 +93,7 @@ module = [
   "cftime.*",
   "cubed.*",
   "cupy.*",
+  "dask.types.*",
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
@@ -161,6 +162,41 @@ module = [
   "xarray.tests.test_variable",
   "xarray.tests.test_weighted",
 ]
+
+# Use strict = true whenever namedarray has become standalone. In the meantime
+# don't forget to add all new files related to namedarray here:
+# ref: https://mypy.readthedocs.io/en/stable/existing_code.html#introduce-stricter-options
+[[tool.mypy.overrides]]
+# Start off with these
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Getting these passing should be easy
+strict_equality = true
+strict_concatenate = true
+
+# Strongly recommend enabling this one as soon as you can
+check_untyped_defs = true
+
+# These shouldn't be too much additional work, but may be tricky to
+# get passing if you use a lot of untyped libraries
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+
+# These next few are various gradations of forcing use of type annotations
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+
+# This one isn't too hard to get passing, but return on investment is lower
+no_implicit_reexport = true
+
+# This one can be tricky to get passing if you use a lot of untyped libraries
+warn_return_any = true
+
+module = ["xarray.namedarray.*", "xarray.tests.test_namedarray"]
 
 [tool.ruff]
 builtins = ["ellipsis"]
