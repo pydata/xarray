@@ -4,7 +4,7 @@ Interoperability of Xarray
 ==========================
 
 Xarray is designed to be extremely interoperable, in many orthogonal ways.
-Making xarray as flexible as possible is the common theme of most of the goals on our development :ref:`roadmap`.
+Making xarray as flexible as possible is the common theme of most of the goals on our :ref:`roadmap`.
 
 This interoperability comes via a set of flexible abstractions into which the user can plug in. The current full list is:
 
