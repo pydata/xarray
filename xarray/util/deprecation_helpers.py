@@ -74,7 +74,7 @@ def _deprecate_positional_args(version):
     licences/SCIKIT_LEARN_LICENSE
     """
 
-    def _decorator(func) -> Callable[[T], T]:
+    def _decorator(func: T) -> T:
         signature = inspect.signature(func)
 
         pos_or_kw_args = []
