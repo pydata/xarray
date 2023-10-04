@@ -42,6 +42,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
+  By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
