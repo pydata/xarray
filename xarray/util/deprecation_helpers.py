@@ -34,6 +34,9 @@
 import inspect
 import warnings
 from functools import wraps
+from typing import Callable, TypeVar
+
+T = TypeVar("T", bound=Callable)
 
 POSITIONAL_OR_KEYWORD = inspect.Parameter.POSITIONAL_OR_KEYWORD
 KEYWORD_ONLY = inspect.Parameter.KEYWORD_ONLY
@@ -71,7 +74,7 @@ def _deprecate_positional_args(version):
     licences/SCIKIT_LEARN_LICENSE
     """
 
-    def _decorator(func):
+    def _decorator(func) -> Callable[[T], T]:
         signature = inspect.signature(func)
 
         pos_or_kw_args = []
