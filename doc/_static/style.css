@@ -172,11 +172,9 @@ https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom
   display: block;
   padding: 0.25rem 1.5rem;
   font-size: 90%;
-  color: rgba(0, 0, 0, 0.65);
 }
 
 .bd-sidebar .nav > li > a:hover {
-  color: rgba(0, 0, 0, 0.85);
   text-decoration: none;
   background-color: transparent;
 }
@@ -184,7 +182,6 @@ https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom
 .bd-sidebar .nav > .active > a,
 .bd-sidebar .nav > .active:hover > a {
   font-weight: 400;
-  color: #130654;
   /* adjusted from original
   color: rgba(0, 0, 0, 0.85);
   background-color: transparent; */
@@ -199,13 +196,11 @@ https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom
   display: block;
   padding: 0.25rem 1.5rem;
   font-size: 90%;
-  color: rgba(0, 0, 0, 0.65);
 }
 
 .bd-sidebar .nav > li > ul > .active > a,
 .bd-sidebar .nav > li > ul > .active:hover > a {
   font-weight: 400;
-  color: #542437;
 }
 
 dt:target {

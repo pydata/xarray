@@ -50,7 +50,7 @@ array-like, which gives the interpolated result as an array.
     # interpolation
     da.interp(time=[2.5, 3.5])
 
-To interpolate data with a :py:doc:`numpy.datetime64 <reference/arrays.datetime>` coordinate you can pass a string.
+To interpolate data with a :py:doc:`numpy.datetime64 <numpy:reference/arrays.datetime>` coordinate you can pass a string.
 
 .. ipython:: python
 

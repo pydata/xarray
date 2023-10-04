@@ -9,17 +9,42 @@
 .. autosummary::
    :toctree: generated/
 
+   Coordinates.from_pandas_multiindex
+   Coordinates.get
+   Coordinates.items
+   Coordinates.keys
+   Coordinates.values
+   Coordinates.dims
+   Coordinates.dtypes
+   Coordinates.variables
+   Coordinates.xindexes
+   Coordinates.indexes
+   Coordinates.to_dataset
+   Coordinates.to_index
+   Coordinates.update
+   Coordinates.assign
+   Coordinates.merge
+   Coordinates.copy
+   Coordinates.equals
+   Coordinates.identical
+
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
    core.coordinates.DatasetCoordinates.keys
-   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.values
+   core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.dtypes
+   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.xindexes
+   core.coordinates.DatasetCoordinates.indexes
    core.coordinates.DatasetCoordinates.to_dataset
    core.coordinates.DatasetCoordinates.to_index
    core.coordinates.DatasetCoordinates.update
-   core.coordinates.DatasetCoordinates.values
-   core.coordinates.DatasetCoordinates.dims
-   core.coordinates.DatasetCoordinates.indexes
-   core.coordinates.DatasetCoordinates.variables
+   core.coordinates.DatasetCoordinates.assign
+   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.copy
+   core.coordinates.DatasetCoordinates.equals
+   core.coordinates.DatasetCoordinates.identical
 
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
@@ -47,14 +72,20 @@
    core.coordinates.DataArrayCoordinates.get
    core.coordinates.DataArrayCoordinates.items
    core.coordinates.DataArrayCoordinates.keys
-   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.values
+   core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.dtypes
+   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.xindexes
+   core.coordinates.DataArrayCoordinates.indexes
    core.coordinates.DataArrayCoordinates.to_dataset
    core.coordinates.DataArrayCoordinates.to_index
    core.coordinates.DataArrayCoordinates.update
-   core.coordinates.DataArrayCoordinates.values
-   core.coordinates.DataArrayCoordinates.dims
-   core.coordinates.DataArrayCoordinates.indexes
-   core.coordinates.DataArrayCoordinates.variables
+   core.coordinates.DataArrayCoordinates.assign
+   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DataArrayCoordinates.equals
+   core.coordinates.DataArrayCoordinates.identical
 
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
@@ -234,6 +265,7 @@
    Variable.dims
    Variable.dtype
    Variable.encoding
+   Variable.reset_encoding
    Variable.imag
    Variable.nbytes
    Variable.ndim
@@ -374,10 +406,8 @@
    CFTimeIndex.is_floating
    CFTimeIndex.is_integer
    CFTimeIndex.is_interval
-   CFTimeIndex.is_mixed
    CFTimeIndex.is_numeric
    CFTimeIndex.is_object
-   CFTimeIndex.is_type_compatible
    CFTimeIndex.isin
    CFTimeIndex.isna
    CFTimeIndex.isnull
@@ -398,7 +428,6 @@
    CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
-   CFTimeIndex.set_value
    CFTimeIndex.shift
    CFTimeIndex.slice_indexer
    CFTimeIndex.slice_locs
@@ -412,7 +441,6 @@
    CFTimeIndex.to_flat_index
    CFTimeIndex.to_frame
    CFTimeIndex.to_list
-   CFTimeIndex.to_native_types
    CFTimeIndex.to_numpy
    CFTimeIndex.to_series
    CFTimeIndex.tolist
@@ -437,8 +465,6 @@
    CFTimeIndex.hasnans
    CFTimeIndex.hour
    CFTimeIndex.inferred_type
-   CFTimeIndex.is_all_dates
-   CFTimeIndex.is_monotonic
    CFTimeIndex.is_monotonic_increasing
    CFTimeIndex.is_monotonic_decreasing
    CFTimeIndex.is_unique
@@ -455,6 +481,21 @@
    CFTimeIndex.size
    CFTimeIndex.values
    CFTimeIndex.year
+
+   Index.from_variables
+   Index.concat
+   Index.stack
+   Index.unstack
+   Index.create_variables
+   Index.to_pandas_index
+   Index.isel
+   Index.sel
+   Index.join
+   Index.reindex_like
+   Index.equals
+   Index.roll
+   Index.rename
+   Index.copy
 
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode
@@ -483,7 +524,6 @@
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
 
-   backends.NetCDF4BackendEntrypoint.available
    backends.NetCDF4BackendEntrypoint.description
    backends.NetCDF4BackendEntrypoint.url
    backends.NetCDF4BackendEntrypoint.guess_can_open
@@ -516,7 +556,6 @@
    backends.H5NetCDFStore.sync
    backends.H5NetCDFStore.ds
 
-   backends.H5netcdfBackendEntrypoint.available
    backends.H5netcdfBackendEntrypoint.description
    backends.H5netcdfBackendEntrypoint.url
    backends.H5netcdfBackendEntrypoint.guess_can_open
@@ -531,7 +570,6 @@
    backends.PseudoNetCDFDataStore.open_store_variable
    backends.PseudoNetCDFDataStore.ds
 
-   backends.PseudoNetCDFBackendEntrypoint.available
    backends.PseudoNetCDFBackendEntrypoint.description
    backends.PseudoNetCDFBackendEntrypoint.url
    backends.PseudoNetCDFBackendEntrypoint.guess_can_open
@@ -546,7 +584,6 @@
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
 
-   backends.PydapBackendEntrypoint.available
    backends.PydapBackendEntrypoint.description
    backends.PydapBackendEntrypoint.url
    backends.PydapBackendEntrypoint.guess_can_open
@@ -574,7 +611,6 @@
    backends.ScipyDataStore.sync
    backends.ScipyDataStore.ds
 
-   backends.ScipyBackendEntrypoint.available
    backends.ScipyBackendEntrypoint.description
    backends.ScipyBackendEntrypoint.url
    backends.ScipyBackendEntrypoint.guess_can_open
@@ -595,13 +631,11 @@
    backends.ZarrStore.sync
    backends.ZarrStore.ds
 
-   backends.ZarrBackendEntrypoint.available
    backends.ZarrBackendEntrypoint.description
    backends.ZarrBackendEntrypoint.url
    backends.ZarrBackendEntrypoint.guess_can_open
    backends.ZarrBackendEntrypoint.open_dataset
 
-   backends.StoreBackendEntrypoint.available
    backends.StoreBackendEntrypoint.description
    backends.StoreBackendEntrypoint.url
    backends.StoreBackendEntrypoint.guess_can_open

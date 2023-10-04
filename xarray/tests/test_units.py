@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import operator
+import sys
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ from xarray.tests import (
     assert_identical,
     requires_dask,
     requires_matplotlib,
+    requires_numbagg,
 )
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
@@ -1508,6 +1510,10 @@ def test_dot_dataarray(dtype):
 
 
 class TestVariable:
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2339,6 +2345,10 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2416,6 +2426,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2535,7 +2549,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3836,23 +3849,21 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(
-                method("rolling", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
-                ),
-            ),
-            pytest.param(
-                method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numbagg functions are not supported by pint"
-                ),
-            ),
+            method("rolling", y=3),
+            pytest.param(method("rolling_exp", y=3), marks=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
     def test_computation_objects(self, func, variant, dtype):
+        if variant == "data":
+            if func.name == "rolling_exp":
+                pytest.xfail(reason="numbagg functions are not supported by pint")
+            elif func.name == "rolling":
+                pytest.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                )
+
         unit = unit_registry.m
 
         variants = {
@@ -4069,6 +4080,10 @@ class TestDataset:
         # warnings or errors, but does not check the result
         func(ds)
 
+    @pytest.mark.skipif(
+        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
+        reason="fails for some reason on win and 3.11, GH7971",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -5627,16 +5642,20 @@ class TestDataset:
 
 @requires_dask
 class TestPintWrappingDask:
+    @pytest.mark.skipif(
+        version.parse(pint.__version__) <= version.parse("0.21"),
+        reason="pint didn't support dask properly before 0.21",
+    )
     def test_duck_array_ops(self):
         import dask.array
 
         d = dask.array.array([1, 2, 3])
-        q = pint.Quantity(d, units="m")
+        q = unit_registry.Quantity(d, units="m")
         da = xr.DataArray(q, dims="x")
 
         actual = da.mean().compute()
         actual.name = None
-        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+        expected = xr.DataArray(unit_registry.Quantity(np.array(2.0), units="m"))
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through

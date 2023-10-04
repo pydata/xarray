@@ -3,16 +3,8 @@ from __future__ import annotations
 import collections
 import itertools
 import operator
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    DefaultDict,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-)
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable
 
 import numpy as np
 
@@ -41,7 +33,6 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 def check_result_variables(
     result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
-
     if kind == "coords":
         nice_str = "coordinate"
     elif kind == "data_vars":
@@ -412,10 +403,10 @@ def map_blocks(
     # func applied to the values.
 
     graph: dict[Any, Any] = {}
-    new_layers: DefaultDict[str, dict[Any, Any]] = collections.defaultdict(dict)
-    gname = "{}-{}".format(
-        dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
+    new_layers: collections.defaultdict[str, dict[Any, Any]] = collections.defaultdict(
+        dict
     )
+    gname = f"{dask.utils.funcname(func)}-{dask.base.tokenize(npargs[0], args, kwargs)}"
 
     # map dims to list of chunk indexes
     ichunk = {dim: range(len(chunks_v)) for dim, chunks_v in input_chunks.items()}
@@ -452,7 +443,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index[dim]]
 
-                chunk_variable_task = (f"{name}-{gname}-{chunk[0]}",) + chunk_tuple
+                chunk_variable_task = (f"{name}-{gname}-{chunk[0]!r}",) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],

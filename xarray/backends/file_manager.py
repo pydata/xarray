@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import atexit
 import contextlib
 import io
 import threading
 import uuid
 import warnings
-from typing import Any, Hashable
+from collections.abc import Hashable
+from typing import Any
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
@@ -286,6 +288,13 @@ class CachingFileManager(FileManager):
             f"{type(self).__name__}({self._opener!r}, {args_string}, "
             f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
+
+
+@atexit.register
+def _remove_del_method():
+    # We don't need to close unclosed files at program exit, and may not be able
+    # to, because Python is cleaning up imports / globals.
+    del CachingFileManager.__del__
 
 
 class _RefCounter:

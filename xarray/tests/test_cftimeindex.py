@@ -7,7 +7,6 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -33,12 +32,7 @@ from xarray.tests.test_coding_times import (
 # cftime 1.5.2 renames "gregorian" to "standard"
 standard_or_gregorian = ""
 if has_cftime:
-    import cftime
-
-    if Version(cftime.__version__) >= Version("1.5.2"):
-        standard_or_gregorian = "standard"
-    else:
-        standard_or_gregorian = "gregorian"
+    standard_or_gregorian = "standard"
 
 
 def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
@@ -363,85 +357,57 @@ def test_get_loc(date_type, index):
 
 @requires_cftime
 def test_get_slice_bound(date_type, index):
-    # The kind argument is required in earlier versions of pandas even though it
-    # is not used by CFTimeIndex.  This logic can be removed once our minimum
-    # version of pandas is at least 1.3.
-    if Version(pd.__version__) < Version("1.3"):
-        kind_args = ("getitem",)
-    else:
-        kind_args = ()
-
-    result = index.get_slice_bound("0001", "left", *kind_args)
+    result = index.get_slice_bound("0001", "left")
     expected = 0
     assert result == expected
 
-    result = index.get_slice_bound("0001", "right", *kind_args)
+    result = index.get_slice_bound("0001", "right")
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "left", *kind_args)
+    result = index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "right", *kind_args)
+    result = index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 2
     assert result == expected
 
 
 @requires_cftime
 def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index):
-    # The kind argument is required in earlier versions of pandas even though it
-    # is not used by CFTimeIndex.  This logic can be removed once our minimum
-    # version of pandas is at least 1.3.
-    if Version(pd.__version__) < Version("1.3"):
-        kind_args = ("getitem",)
-    else:
-        kind_args = ()
-
-    result = monotonic_decreasing_index.get_slice_bound("0001", "left", *kind_args)
+    result = monotonic_decreasing_index.get_slice_bound("0001", "left")
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound("0001", "right", *kind_args)
+    result = monotonic_decreasing_index.get_slice_bound("0001", "right")
     expected = 4
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "left", *kind_args
-    )
+    result = monotonic_decreasing_index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "right", *kind_args
-    )
+    result = monotonic_decreasing_index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 2
     assert result == expected
 
 
 @requires_cftime
 def test_get_slice_bound_length_one_index(date_type, length_one_index):
-    # The kind argument is required in earlier versions of pandas even though it
-    # is not used by CFTimeIndex.  This logic can be removed once our minimum
-    # version of pandas is at least 1.3.
-    if Version(pd.__version__) <= Version("1.3"):
-        kind_args = ("getitem",)
-    else:
-        kind_args = ()
-
-    result = length_one_index.get_slice_bound("0001", "left", *kind_args)
+    result = length_one_index.get_slice_bound("0001", "left")
     expected = 0
     assert result == expected
 
-    result = length_one_index.get_slice_bound("0001", "right", *kind_args)
+    result = length_one_index.get_slice_bound("0001", "right")
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left", *kind_args)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right", *kind_args)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 1
     assert result == expected
 
@@ -1169,7 +1135,6 @@ def test_to_datetimeindex_feb_29(calendar):
 
 
 @requires_cftime
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/24263")
 def test_multiindex():
     index = xr.cftime_range("2001-01-01", periods=100, calendar="360_day")
     mindex = pd.MultiIndex.from_arrays([index])
@@ -1338,7 +1303,6 @@ def test_infer_freq(freq, calendar):
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_pickle_cftimeindex(calendar):
-
     idx = xr.cftime_range("2000-01-01", periods=3, freq="D", calendar=calendar)
     idx_pkl = pickle.loads(pickle.dumps(idx))
     assert (idx == idx_pkl).all()

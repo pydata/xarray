@@ -46,22 +46,24 @@ import os
 import re
 import sys
 import warnings
+from collections.abc import (
+    Collection,
+    Container,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    Sequence,
+)
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Collection,
-    Container,
     Generic,
-    Hashable,
-    Iterable,
-    Iterator,
     Literal,
-    Mapping,
-    MutableMapping,
-    MutableSet,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -71,7 +73,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -111,7 +113,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
         dtype = np.dtype("O")
     elif hasattr(array, "categories"):
         # category isn't a real numpy dtype
-        dtype = array.categories.dtype  # type: ignore[union-attr]
+        dtype = array.categories.dtype
     elif not is_valid_numpy_dtype(array.dtype):
         dtype = np.dtype("O")
     else:
@@ -251,7 +253,7 @@ def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
-def is_duck_array(value: Any) -> bool:
+def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (
@@ -534,8 +536,7 @@ class OrderedSet(MutableSet[T]):
     # Additional methods
 
     def update(self, values: Iterable[T]) -> None:
-        for v in values:
-            self._d[v] = None
+        self._d.update(dict.fromkeys(values))
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({list(self)!r})"
@@ -861,7 +862,6 @@ def drop_dims_from_indexers(
         return indexers
 
     elif missing_dims == "warn":
-
         # don't modify input
         indexers = dict(indexers)
 
@@ -910,7 +910,6 @@ def drop_missing_dims(
         return supplied_dims
 
     elif missing_dims == "warn":
-
         invalid = set(supplied_dims) - set(dims)
         if invalid:
             warnings.warn(
@@ -1125,19 +1124,19 @@ def iterate_nested(nested_list):
             yield item
 
 
-def contains_only_dask_or_numpy(obj) -> bool:
-    """Returns True if xarray object contains only numpy or dask arrays.
+def contains_only_chunked_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
-    from xarray.core.pycompat import is_duck_dask_array
+    from xarray.core.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
         [
-            isinstance(var.data, np.ndarray) or is_duck_dask_array(var.data)
+            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
             for var in obj.variables.values()
         ]
     )
@@ -1202,3 +1201,66 @@ def emit_user_level_warning(message, category=None):
     """Emit a warning at the user level by inspecting the stack trace."""
     stacklevel = find_stack_level()
     warnings.warn(message, category=category, stacklevel=stacklevel)
+
+
+def consolidate_dask_from_array_kwargs(
+    from_array_kwargs: dict,
+    name: str | None = None,
+    lock: bool | None = None,
+    inline_array: bool | None = None,
+) -> dict:
+    """
+    Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
+
+    Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
+    """
+
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="name",
+        passed_kwarg_value=name,
+        default=None,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="lock",
+        passed_kwarg_value=lock,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="inline_array",
+        passed_kwarg_value=inline_array,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+
+    return from_array_kwargs
+
+
+def _resolve_doubly_passed_kwarg(
+    kwargs_dict: dict,
+    kwarg_name: str,
+    passed_kwarg_value: str | bool | None,
+    default: bool | None,
+    err_msg_dict_name: str,
+) -> dict:
+    # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
+    if kwarg_name in kwargs_dict and passed_kwarg_value is None:
+        pass
+    # if passed explicitly but not in kwargs_dict then use that
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is not None:
+        kwargs_dict[kwarg_name] = passed_kwarg_value
+    # if in neither then use default
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is None:
+        kwargs_dict[kwarg_name] = default
+    # if in both then raise
+    else:
+        raise ValueError(
+            f"argument {kwarg_name} cannot be passed both as a keyword argument and within "
+            f"the {err_msg_dict_name} dictionary"
+        )
+
+    return kwargs_dict

@@ -4,7 +4,7 @@ import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
-from importlib.resources import read_binary
+from importlib.resources import files
 
 from xarray.core.formatting import (
     inline_index_repr,
@@ -23,7 +23,7 @@ STATIC_FILES = (
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        read_binary(package, resource).decode("utf-8")
+        files(package).joinpath(resource).read_text(encoding="utf-8")
         for package, resource in STATIC_FILES
     ]
 
@@ -65,10 +65,10 @@ def summarize_attrs(attrs):
 def _icon(icon_name):
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
-        "<svg class='icon xr-{0}'>"
-        "<use xlink:href='#{0}'>"
+        f"<svg class='icon xr-{icon_name}'>"
+        f"<use xlink:href='#{icon_name}'>"
         "</use>"
-        "</svg>".format(icon_name)
+        "</svg>"
     )
 
 

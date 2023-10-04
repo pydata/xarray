@@ -3,7 +3,8 @@ from __future__ import annotations
 import functools
 import inspect
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, TypeVar, overload
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from xarray.core.alignment import broadcast
 from xarray.plot import dataarray_plot
@@ -102,7 +103,7 @@ def _dsplot(plotfunc):
         be either ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging
         dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
         for more information.
 
         If *seaborn* is installed, ``cmap`` may also be a
@@ -127,7 +128,7 @@ def _dsplot(plotfunc):
         If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     infer_intervals: bool | None
-        If True the intervals are infered.
+        If True the intervals are inferred.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
@@ -191,7 +192,6 @@ def _dsplot(plotfunc):
         levels: ArrayLike | None = None,
         **kwargs: Any,
     ) -> Any:
-
         if args:
             # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
@@ -321,7 +321,7 @@ def _dsplot(plotfunc):
 
 
 @overload
-def quiver(
+def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -475,7 +475,7 @@ def quiver(
 
 
 @overload
-def streamplot(
+def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -632,7 +632,6 @@ def streamplot(
         du = du.transpose(ydim, xdim)
         dv = dv.transpose(ydim, xdim)
 
-    args = [dx.values, dy.values, du.values, dv.values]
     hue = kwargs.pop("hue")
     cmap_params = kwargs.pop("cmap_params")
 
@@ -646,7 +645,9 @@ def streamplot(
             )
 
     kwargs.pop("hue_style")
-    hdl = ax.streamplot(*args, **kwargs, **cmap_params)
+    hdl = ax.streamplot(
+        dx.values, dy.values, du.values, dv.values, **kwargs, **cmap_params
+    )
 
     # Return .lines so colorbar creation works properly
     return hdl.lines
@@ -730,7 +731,7 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     coords = dict(ds.coords)
 
     # Add extra coords to the DataArray from valid kwargs, if using all
-    # kwargs there is a risk that we add unneccessary dataarrays as
+    # kwargs there is a risk that we add unnecessary dataarrays as
     # coords straining RAM further for example:
     # ds.both and extend="both" would add ds.both to the coords:
     valid_coord_kwargs = {"x", "z", "markersize", "hue", "row", "col", "u", "v"}
@@ -748,7 +749,7 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
 
 
 @overload
-def scatter(
+def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,

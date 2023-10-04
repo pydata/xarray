@@ -218,7 +218,46 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
-    def test_index_repr(self):
+    def test_index_repr(self) -> None:
+        from xarray.core.indexes import Index
+
+        class CustomIndex(Index):
+            names: tuple[str, ...]
+
+            def __init__(self, names: tuple[str, ...]):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        coord_names = ("x", "y")
+        index = CustomIndex(coord_names)
+        names = ("x",)
+
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in normal
+        assert len(normal.splitlines()) == len(names)
+        assert "CustomIndex" in normal
+
+        class IndexWithInlineRepr(CustomIndex):
+            def _repr_inline_(self, max_width: int):
+                return f"CustomIndex[{', '.join(self.names)}]"
+
+        index = IndexWithInlineRepr(coord_names)
+        inline = formatting.summarize_index(names, index, col_width=20)
+        assert names[0] in inline
+        assert index._repr_inline_(max_width=40) in inline
+
+    @pytest.mark.parametrize(
+        "names",
+        (
+            ("x",),
+            ("x", "y"),
+            ("x", "y", "z"),
+            ("x", "y", "z", "a"),
+        ),
+    )
+    def test_index_repr_grouping(self, names) -> None:
         from xarray.core.indexes import Index
 
         class CustomIndex(Index):
@@ -228,20 +267,20 @@ class TestFormatting:
             def __repr__(self):
                 return f"CustomIndex(coords={self.names})"
 
-        coord_names = ["x", "y"]
-        index = CustomIndex(coord_names)
-        name = "x"
+        index = CustomIndex(names)
 
-        normal = formatting.summarize_index(name, index, col_width=20)
-        assert name in normal
+        normal = formatting.summarize_index(names, index, col_width=20)
+        assert all(name in normal for name in names)
+        assert len(normal.splitlines()) == len(names)
         assert "CustomIndex" in normal
 
-        CustomIndex._repr_inline_ = (
-            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
-        )
-        inline = formatting.summarize_index(name, index, col_width=20)
-        assert name in inline
-        assert index._repr_inline_(max_width=40) in inline
+        hint_chars = [line[2] for line in normal.splitlines()]
+
+        if len(names) <= 1:
+            assert hint_chars == [" "]
+        else:
+            assert hint_chars[0] == "┌" and hint_chars[-1] == "└"
+            assert len(names) == 2 or hint_chars[1:-1] == ["│"] * (len(names) - 2)
 
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
@@ -510,7 +549,7 @@ def test_inline_variable_array_repr_custom_repr() -> None:
 
             return formatted
 
-        def __array_function__(self, *args, **kwargs):
+        def __array_namespace__(self, *args, **kwargs):
             return NotImplemented
 
         @property
@@ -542,7 +581,7 @@ def test_set_numpy_options() -> None:
     assert np.get_printoptions() == original_options
 
 
-def test_short_numpy_repr() -> None:
+def test_short_array_repr() -> None:
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -552,20 +591,19 @@ def test_short_numpy_repr() -> None:
     ]
     # number of lines:
     # for default numpy repr: 167, 140, 254, 248, 599
-    # for short_numpy_repr: 1, 7, 24, 19, 25
+    # for short_array_repr: 1, 7, 24, 19, 25
     for array in cases:
-        num_lines = formatting.short_numpy_repr(array).count("\n") + 1
+        num_lines = formatting.short_array_repr(array).count("\n") + 1
         assert num_lines < 30
 
     # threshold option (default: 200)
     array2 = np.arange(100)
-    assert "..." not in formatting.short_numpy_repr(array2)
+    assert "..." not in formatting.short_array_repr(array2)
     with xr.set_options(display_values_threshold=10):
-        assert "..." in formatting.short_numpy_repr(array2)
+        assert "..." in formatting.short_array_repr(array2)
 
 
 def test_large_array_repr_length() -> None:
-
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
     result = repr(da).splitlines()
@@ -614,7 +652,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for (v, _c) in zip(a, coords.items()):
+    for v, _c in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
@@ -625,7 +663,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     ds.attrs = attrs
 
     with xr.set_options(display_max_rows=display_max_rows):
-
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]

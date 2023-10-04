@@ -65,13 +65,13 @@ def test_CFMaskCoder_missing_value() -> None:
     expected.attrs["missing_value"] = -9999
 
     decoded = xr.decode_cf(expected.to_dataset())
-    encoded, _ = xr.conventions.cf_encoder(decoded, decoded.attrs)
+    encoded, _ = xr.conventions.cf_encoder(decoded.variables, decoded.attrs)
 
     assert_equal(encoded["tmpk"], expected.variable)
 
     decoded.tmpk.encoding["_FillValue"] = -9940
     with pytest.raises(ValueError):
-        encoded, _ = xr.conventions.cf_encoder(decoded, decoded.attrs)
+        encoded, _ = xr.conventions.cf_encoder(decoded.variables, decoded.attrs)
 
 
 @requires_dask

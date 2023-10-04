@@ -146,6 +146,11 @@ class TestPandasIndex:
             PandasIndex.from_variables({"x": var, "foo": var2}, options={})
 
         with pytest.raises(
+            ValueError, match=r".*cannot set a PandasIndex.*scalar variable.*"
+        ):
+            PandasIndex.from_variables({"foo": xr.Variable((), 1)}, options={})
+
+        with pytest.raises(
             ValueError, match=r".*only accepts a 1-dimensional variable.*"
         ):
             PandasIndex.from_variables({"foo": var2}, options={})
@@ -174,7 +179,6 @@ class TestPandasIndex:
 
     @pytest.mark.parametrize("dtype", [str, bytes])
     def test_concat_str_dtype(self, dtype) -> None:
-
         a = PandasIndex(np.array(["a"], dtype=dtype), "x", coord_dtype=dtype)
         b = PandasIndex(np.array(["b"], dtype=dtype), "x", coord_dtype=dtype)
         expected = PandasIndex(
@@ -483,7 +487,10 @@ class TestPandasMultiIndex:
             index.sel({"x": 0})
         with pytest.raises(ValueError, match=r"cannot provide labels for both.*"):
             index.sel({"one": 0, "x": "a"})
-        with pytest.raises(ValueError, match=r"invalid multi-index level names"):
+        with pytest.raises(
+            ValueError,
+            match=r"multi-index level names \('three',\) not found in indexes",
+        ):
             index.sel({"x": {"three": 0}})
         with pytest.raises(IndexError):
             index.sel({"x": (slice(None), 1, "no_level")})
@@ -583,7 +590,12 @@ class TestIndexes:
 
         _, variables = indexes_and_vars
 
-        return Indexes(indexes, variables)
+        if isinstance(x_idx, Index):
+            index_type = Index
+        else:
+            index_type = pd.Index
+
+        return Indexes(indexes, variables, index_type=index_type)
 
     def test_interface(self, unique_indexes, indexes) -> None:
         x_idx = unique_indexes[0]

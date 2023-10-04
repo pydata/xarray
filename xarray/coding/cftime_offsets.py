@@ -44,7 +44,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta
 from functools import partial
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -57,12 +57,22 @@ from xarray.coding.times import (
     format_cftime_datetime,
 )
 from xarray.core.common import _contains_datetime_like_objects, is_np_datetime_like
-from xarray.core.pdcompat import count_not_none
+from xarray.core.pdcompat import (
+    NoDefault,
+    count_not_none,
+    nanosecond_precision_timestamp,
+    no_default,
+)
+from xarray.core.utils import emit_user_level_warning
 
 try:
     import cftime
 except ImportError:
     cftime = None
+
+
+if TYPE_CHECKING:
+    from xarray.core.types import InclusiveOptions, SideOptions
 
 
 def get_date_type(calendar, use_cftime=True):
@@ -95,7 +105,7 @@ class BaseCFTimeOffset:
         if not isinstance(n, int):
             raise TypeError(
                 "The provided multiple 'n' must be an integer. "
-                "Instead a value of type {!r} was provided.".format(type(n))
+                f"Instead a value of type {type(n)!r} was provided."
             )
         self.n = n
 
@@ -343,13 +353,13 @@ def _validate_month(month, default_month):
         raise TypeError(
             "'self.month' must be an integer value between 1 "
             "and 12.  Instead, it was set to a value of "
-            "{!r}".format(result_month)
+            f"{result_month!r}"
         )
     elif not (1 <= result_month <= 12):
         raise ValueError(
             "'self.month' must be an integer value between 1 "
             "and 12.  Instead, it was set to a value of "
-            "{!r}".format(result_month)
+            f"{result_month!r}"
         )
     return result_month
 
@@ -761,7 +771,7 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
         raise TypeError(
             "date_str_or_date must be a string or a "
             "subclass of cftime.datetime. Instead got "
-            "{!r}.".format(date_str_or_date)
+            f"{date_str_or_date!r}."
         )
 
 
@@ -849,6 +859,40 @@ def _generate_range(start, end, periods, offset):
             current = next_date
 
 
+def _translate_closed_to_inclusive(closed):
+    """Follows code added in pandas #43504."""
+    emit_user_level_warning(
+        "Following pandas, the `closed` parameter is deprecated in "
+        "favor of the `inclusive` parameter, and will be removed in "
+        "a future version of xarray.",
+        FutureWarning,
+    )
+    if closed is None:
+        inclusive = "both"
+    elif closed in ("left", "right"):
+        inclusive = closed
+    else:
+        raise ValueError(
+            f"Argument `closed` must be either 'left', 'right', or None. "
+            f"Got {closed!r}."
+        )
+    return inclusive
+
+
+def _infer_inclusive(closed, inclusive):
+    """Follows code added in pandas #43504."""
+    if closed is not no_default and inclusive is not None:
+        raise ValueError(
+            "Following pandas, deprecated argument `closed` cannot be "
+            "passed if argument `inclusive` is not None."
+        )
+    if closed is not no_default:
+        inclusive = _translate_closed_to_inclusive(closed)
+    elif inclusive is None:
+        inclusive = "both"
+    return inclusive
+
+
 def cftime_range(
     start=None,
     end=None,
@@ -856,7 +900,8 @@ def cftime_range(
     freq="D",
     normalize=False,
     name=None,
-    closed=None,
+    closed: NoDefault | SideOptions = no_default,
+    inclusive: None | InclusiveOptions = None,
     calendar="standard",
 ):
     """Return a fixed frequency CFTimeIndex.
@@ -875,9 +920,20 @@ def cftime_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {"left", "right"} or None, default: None
+    closed : {None, "left", "right"}, default: "NO_DEFAULT"
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
+
+        .. deprecated:: 2023.02.0
+            Following pandas, the ``closed`` parameter is deprecated in favor
+            of the ``inclusive`` parameter, and will be removed in a future
+            version of xarray.
+
+    inclusive : {None, "both", "neither", "left", "right"}, default None
+        Include boundaries; whether to set each bound as closed or open.
+
+        .. versionadded:: 2023.02.0
+
     calendar : str, default: "standard"
         Calendar type for the datetimes.
 
@@ -1047,18 +1103,25 @@ def cftime_range(
         offset = to_offset(freq)
         dates = np.array(list(_generate_range(start, end, periods, offset)))
 
-    left_closed = False
-    right_closed = False
+    inclusive = _infer_inclusive(closed, inclusive)
 
-    if closed is None:
+    if inclusive == "neither":
+        left_closed = False
+        right_closed = False
+    elif inclusive == "left":
         left_closed = True
+        right_closed = False
+    elif inclusive == "right":
+        left_closed = False
         right_closed = True
-    elif closed == "left":
+    elif inclusive == "both":
         left_closed = True
-    elif closed == "right":
         right_closed = True
     else:
-        raise ValueError("Closed must be either 'left', 'right' or None")
+        raise ValueError(
+            f"Argument `inclusive` must be either 'both', 'neither', "
+            f"'left', 'right', or None.  Got {inclusive}."
+        )
 
     if not left_closed and len(dates) and start is not None and dates[0] == start:
         dates = dates[1:]
@@ -1076,7 +1139,8 @@ def date_range(
     tz=None,
     normalize=False,
     name=None,
-    closed=None,
+    closed: NoDefault | SideOptions = no_default,
+    inclusive: None | InclusiveOptions = None,
     calendar="standard",
     use_cftime=None,
 ):
@@ -1103,9 +1167,20 @@ def date_range(
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {"left", "right"} or None, default: None
+    closed : {None, "left", "right"}, default: "NO_DEFAULT"
         Make the interval closed with respect to the given frequency to the
         "left", "right", or both sides (None).
+
+        .. deprecated:: 2023.02.0
+            Following pandas, the `closed` parameter is deprecated in favor
+            of the `inclusive` parameter, and will be removed in a future
+            version of xarray.
+
+    inclusive : {None, "both", "neither", "left", "right"}, default: None
+        Include boundaries; whether to set each bound as closed or open.
+
+        .. versionadded:: 2023.02.0
+
     calendar : str, default: "standard"
         Calendar type for the datetimes.
     use_cftime : boolean, optional
@@ -1129,6 +1204,8 @@ def date_range(
     if tz is not None:
         use_cftime = False
 
+    inclusive = _infer_inclusive(closed, inclusive)
+
     if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
             return pd.date_range(
@@ -1139,7 +1216,7 @@ def date_range(
                 tz=tz,
                 normalize=normalize,
                 name=name,
-                closed=closed,
+                inclusive=inclusive,
             )
         except pd.errors.OutOfBoundsDatetime as err:
             if use_cftime is False:
@@ -1158,7 +1235,7 @@ def date_range(
         freq=freq,
         normalize=normalize,
         name=name,
-        closed=closed,
+        inclusive=inclusive,
         calendar=calendar,
     )
 
@@ -1195,7 +1272,7 @@ def date_range_like(source, calendar, use_cftime=None):
     if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
         isinstance(source, DataArray)
         and (source.ndim != 1)
-        or not _contains_datetime_like_objects(source)
+        or not _contains_datetime_like_objects(source.variable)
     ):
         raise ValueError(
             "'source' must be a 1D array of datetime objects for inferring its range."
@@ -1214,8 +1291,10 @@ def date_range_like(source, calendar, use_cftime=None):
     if is_np_datetime_like(source.dtype):
         # We want to use datetime fields (datetime64 object don't have them)
         source_calendar = "standard"
-        source_start = pd.Timestamp(source_start)
-        source_end = pd.Timestamp(source_end)
+        # TODO: the strict enforcement of nanosecond precision Timestamps can be
+        # relaxed when addressing GitHub issue #7493.
+        source_start = nanosecond_precision_timestamp(source_start)
+        source_end = nanosecond_precision_timestamp(source_end)
     else:
         if isinstance(source, CFTimeIndex):
             source_calendar = source.calendar

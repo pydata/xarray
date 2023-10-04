@@ -17,7 +17,10 @@ from xarray.tests import (
 
 
 def test_coarsen_absent_dims_error(ds: Dataset) -> None:
-    with pytest.raises(ValueError, match=r"not found in Dataset."):
+    with pytest.raises(
+        ValueError,
+        match=r"Window dimensions \('foo',\) not found in Dataset dimensions",
+    ):
         ds.coarsen(foo=2)
 
 
@@ -252,7 +255,6 @@ def test_coarsen_da_reduce(da, window, name) -> None:
 class TestCoarsenConstruct:
     @pytest.mark.parametrize("dask", [True, False])
     def test_coarsen_construct(self, dask: bool) -> None:
-
         ds = Dataset(
             {
                 "vart": ("time", np.arange(48), {"a": "b"}),
