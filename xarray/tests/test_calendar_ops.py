@@ -35,7 +35,6 @@ def create_xdata(start, end, calendar, freq, xtype="da"):
     ],
 )
 def test_convert_calendar(source, target, use_cftime, freq, xtype):
-
     da_src = create_xdata("2004-01-01", "2004-12-31", source, freq, xtype)
 
     conv = convert_calendar(da_src, target, use_cftime=use_cftime)
@@ -80,7 +79,6 @@ def test_convert_calendar(source, target, use_cftime, freq, xtype):
 )
 @pytest.mark.parametrize("align_on", ["date", "year"])
 def test_convert_calendar_360_days(source, target, freq, align_on, xtype):
-
     da_src = create_xdata("2004-01-01", "2004-12-30", source, freq, xtype)
 
     conv = convert_calendar(da_src, target, align_on=align_on)
