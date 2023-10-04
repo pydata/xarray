@@ -4921,7 +4921,7 @@ class DataArray(
 
     def sortby(
         self,
-        variables: Hashable | DataArray | Sequence[Hashable | DataArray],
+        variables: Hashable | DataArray | Sequence[Hashable | DataArray] | Callable,
         ascending: bool = True,
     ) -> Self:
         """Sort object by labels or values (along an axis).
@@ -4942,9 +4942,10 @@ class DataArray(
 
         Parameters
         ----------
-        variables : Hashable, DataArray, or sequence of Hashable or DataArray
-            1D DataArray objects or name(s) of 1D variable(s) in
-            coords whose values are used to sort this array.
+        variables : Hashable, DataArray, sequence of Hashable or DataArray, or Callable
+            1D DataArray objects or name(s) of 1D variable(s) in coords whose values are
+            used to sort this array. If a callable, the callable is passed this object,
+            and the result is used as the value for cond.
         ascending : bool, default: True
             Whether to sort by ascending or descending order.
 
@@ -4964,22 +4965,33 @@ class DataArray(
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.random.rand(5),
+        ...     np.arange(5,0,-1),
         ...     coords=[pd.date_range("1/1/2000", periods=5)],
         ...     dims="time",
         ... )
         >>> da
         <xarray.DataArray (time: 5)>
-        array([0.5488135 , 0.71518937, 0.60276338, 0.54488318, 0.4236548 ])
+        array([5, 4, 3, 2, 1])
         Coordinates:
           * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-05
 
         >>> da.sortby(da)
         <xarray.DataArray (time: 5)>
-        array([0.4236548 , 0.54488318, 0.5488135 , 0.60276338, 0.71518937])
+        array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-05 2000-01-04 ... 2000-01-02
+          * time     (time) datetime64[ns] 2000-01-05 2000-01-04 ... 2000-01-01
+
+        >>> da.sortby(lambda x: x)
+        <xarray.DataArray (time: 5)>
+        array([1, 2, 3, 4, 5])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-05 2000-01-04 ... 2000-01-01
         """
+        # We need to convert the callable here rather than pass it through to the
+        # dataset method, since otherwise the dataset method would try to call the
+        # callable with the dataset as the object
+        if callable(variables):
+            variables = variables(self)
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
