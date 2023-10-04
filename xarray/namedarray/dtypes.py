@@ -51,7 +51,7 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 )
 
 
-def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
+def maybe_promote(dtype: np.dtype[np.generic]) -> tuple[np.dtype[np.generic], Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -96,7 +96,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
 NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
-def get_fill_value(dtype: np.dtype) -> Any:
+def get_fill_value(dtype: np.dtype[np.generic]) -> Any:
     """Return an appropriate fill value for this dtype.
 
     Parameters
@@ -112,7 +112,7 @@ def get_fill_value(dtype: np.dtype) -> Any:
 
 
 def get_pos_infinity(
-    dtype: np.dtype, max_for_int: bool = False
+    dtype: np.dtype[np.generic], max_for_int: bool = False
 ) -> float | complex | AlwaysGreaterThan:
     """Return an appropriate positive infinity for this dtype.
 
@@ -138,7 +138,7 @@ def get_pos_infinity(
 
 
 def get_neg_infinity(
-    dtype: np.dtype, min_for_int: bool = False
+    dtype: np.dtype[np.generic], min_for_int: bool = False
 ) -> float | complex | AlwaysLessThan:
     """Return an appropriate positive infinity for this dtype.
 
@@ -163,14 +163,16 @@ def get_neg_infinity(
     return NINF
 
 
-def is_datetime_like(dtype: np.dtype) -> TypeGuard[np.datetime64 | np.timedelta64]:
+def is_datetime_like(
+    dtype: np.dtype[np.generic],
+) -> TypeGuard[np.datetime64 | np.timedelta64]:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
-) -> np.dtype:
+) -> np.dtype[np.generic]:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:
