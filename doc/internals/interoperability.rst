@@ -17,7 +17,7 @@ This interoperability comes via a set of flexible abstractions into which the us
 .. warning::
 
     One obvious way in which xarray could be more flexible is that whilst subclassing xarray objects is possible, we
-    generally advise against it, instead recommending composition over inheritance. See the
+    currently don't support it in most transformations, instead recommending composition over inheritance. See the
     :ref:`internal design page <internal design.subclassing>` and `GH issue <https://github.com/pydata/xarray/issues/3980>`_
     for more details.
 
