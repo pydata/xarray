@@ -267,7 +267,7 @@ class NamedArray(Generic[T_DuckArray]):
         """
         return self._replace(data=self.data.imag)
 
-    def __dask_tokenize__(self) -> Hashable | None:
+    def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
         from dask.base import normalize_token
