@@ -54,7 +54,6 @@ from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import array_type
 from xarray.tests import (
-    arm_xfail,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -526,7 +525,6 @@ class DatasetIOBase:
             assert_identical(expected, actual)
             assert actual["x"].encoding["_Encoding"] == "ascii"
 
-    @arm_xfail
     def test_roundtrip_numpy_datetime_data(self) -> None:
         times = pd.to_datetime(["2000-01-01", "2000-01-02", "NaT"])
         expected = Dataset({"t": ("t", times), "t0": times[0]})
@@ -716,9 +714,6 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
-    @pytest.mark.xfail(
-        reason="zarr without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing_negative_step(self) -> None:
         # use dask explicitly when present
         open_kwargs: dict[str, Any] | None
@@ -1844,8 +1839,8 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
         # dask first pulls items by block.
         pass
 
+    @pytest.mark.skip(reason="caching behavior differs for dask")
     def test_dataset_caching(self) -> None:
-        # caching behavior differs for dask
         pass
 
     def test_write_inconsistent_chunks(self) -> None:
@@ -1966,7 +1961,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks == original[k].chunks
 
     @requires_dask
-    @pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+    @pytest.mark.filterwarnings("ignore:The specified chunks separate:UserWarning")
     def test_manual_chunk(self) -> None:
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
@@ -2263,9 +2258,6 @@ class ZarrBase(CFEncodedBase):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
-    # TODO: someone who understand caching figure out whether caching
-    # makes sense for Zarr backend
-    @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self) -> None:
         super().test_dataset_caching()
 
@@ -2714,6 +2706,14 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
 
+    def test_vectorized_indexing_negative_step(self) -> None:
+        if not has_dask:
+            pytest.xfail(
+                reason="zarr without dask handles negative steps in slices incorrectly"
+            )
+
+        super().test_vectorized_indexing_negative_step()
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -3086,8 +3086,9 @@ class TestH5NetCDFData(NetCDF4Base):
     def test_complex(self) -> None:
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": True}
-        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_equal(expected, actual)
+        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.parametrize("invalid_netcdf", [None, False])
     def test_complex_error(self, invalid_netcdf) -> None:
@@ -3101,14 +3102,14 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:You are writing invalid netcdf features")
     def test_numpy_bool_(self) -> None:
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
         expected = Dataset({"x": ("y", np.ones(5), {"numpy_bool": np.bool_(True)})})
         save_kwargs = {"invalid_netcdf": True}
-        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_identical(expected, actual)
+        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_identical(expected, actual)
 
     def test_cross_engine_read_write_netcdf4(self) -> None:
         # Drop dim3, because its labels include strings. These appear to be
@@ -3379,8 +3380,8 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         ) as ds:
             yield ds
 
+    @pytest.mark.skip(reason="caching behavior differs for dask")
     def test_dataset_caching(self) -> None:
-        # caching behavior differs for dask
         pass
 
     def test_write_inconsistent_chunks(self) -> None:
@@ -3983,7 +3984,6 @@ class TestDask(DatasetIOBase):
                 with pytest.raises(ValueError, match="`concat_dim` has no effect"):
                     open_mfdataset([tmp1, tmp2], concat_dim="x")
 
-    @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self) -> None:
         original = Dataset(
             {
@@ -4196,7 +4196,6 @@ class TestDask(DatasetIOBase):
         assert computed._in_memory
         assert_allclose(actual, computed, decode_bytes=False)
 
-    @pytest.mark.xfail
     def test_save_mfdataset_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
@@ -5126,15 +5125,17 @@ def test_open_fsspec() -> None:
     ds2 = open_dataset(url, engine="zarr")
     xr.testing.assert_equal(ds0, ds2)
 
-    # multi dataset
-    url = "memory://out*.zarr"
-    ds2 = open_mfdataset(url, engine="zarr")
-    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+    # open_mfdataset requires dask
+    if has_dask:
+        # multi dataset
+        url = "memory://out*.zarr"
+        ds2 = open_mfdataset(url, engine="zarr")
+        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
-    # multi dataset with caching
-    url = "simplecache::memory://out*.zarr"
-    ds2 = open_mfdataset(url, engine="zarr")
-    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+        # multi dataset with caching
+        url = "simplecache::memory://out*.zarr"
+        ds2 = open_mfdataset(url, engine="zarr")
+        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf
@@ -5193,7 +5194,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
-@pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
+@pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consintency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
     dask_arr = da.from_array(

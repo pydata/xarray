@@ -728,7 +728,7 @@ def test_groupby_dataset_iter() -> None:
 def test_groupby_dataset_errors() -> None:
     data = create_test_data()
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(np.arange(10))  # type: ignore
+        data.groupby(np.arange(10))  # type: ignore[arg-type,unused-ignore]
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
@@ -810,9 +810,9 @@ def test_groupby_math_more() -> None:
     with pytest.raises(TypeError, match=r"only support binary ops"):
         grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + grouped
+        grouped + grouped  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"in-place operations"):
-        ds += grouped
+        ds += grouped  # type: ignore[arg-type]
 
     ds = Dataset(
         {

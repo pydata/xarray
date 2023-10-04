@@ -115,10 +115,7 @@ you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
 
 There may be minor differences in the :py:class:`Dataset` object returned
-when reading a NetCDF file with different engines. For example,
-single-valued attributes are returned as scalars by the default
-``engine=netcdf4``, but as arrays of size ``(1,)`` when reading with
-``engine=h5netcdf``.
+when reading a NetCDF file with different engines.
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray

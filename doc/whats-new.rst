@@ -14,10 +14,59 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.08.1:
+.. _whats-new.2023.09.1:
 
-v2023.08.1 (unreleased)
+v2023.09.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- :py:meth:`DataArray.where` & :py:meth:`Dataset.where` accept a callable for
+  the ``other`` parameter, passing the object as the first argument. Previously,
+  this was only valid for the ``cond`` parameter. (:issue:`8255`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added page on the interoperability of xarray objects.
+  (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
+  By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.09.0:
+
+v2023.09.0 (Sep 26, 2023)
+-------------------------
+
+This release continues work on the new :py:class:`xarray.Coordinates` object, allows to provide `preferred_chunks` when
+reading from netcdf files, enables :py:func:`xarray.apply_ufunc` to handle missing core dimensions and fixes several bugs.
+
+Thanks to the 24 contributors to this release: Alexander Fischer, Amrest Chinkamol, Benoit Bovy, Darsh Ranjan, Deepak Cherian,
+Gianfranco Costamagna, Gregorio L. Trevisan, Illviljan, Joe Hamman, JR, Justus Magin, Kai Mühlbauer, Kian-Meng Ang, Kyle Sunden,
+Martin Raspaud, Mathias Hauser, Mattia Almansi, Maximilian Roos, András Gunyhó, Michael Niklas, Richard Kleijn, Riulinchen,
+Tom Nicholas and Wiktor Kraśnicki.
+
+We welcome the following new contributors to Xarray!: Alexander Fischer, Amrest Chinkamol, Darsh Ranjan, Gianfranco Costamagna, Gregorio L. Trevisan,
+Kian-Meng Ang, Riulinchen and Wiktor Kraśnicki.
 
 New Features
 ~~~~~~~~~~~~
@@ -26,7 +75,11 @@ New Features
   different collections of coordinates prior to assign them to a Dataset or
   DataArray (:pull:`8102`) at once.
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`)
+- Provide `preferred_chunks` for data read from netcdf files (:issue:`1440`, :pull:`7948`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Added `on_missing_core_dims` to :py:meth:`apply_ufunc` to allow for copying or
+  dropping a :py:class:`Dataset`'s variables with missing core dimensions (:pull:`8138`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,6 +90,9 @@ Breaking changes
   extracts and add the indexes from another :py:class:`Coordinates` object
   passed via ``coords`` (:pull:`8107`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Static typing of ``xlim`` and ``ylim`` arguments in plotting functions now must
+  be ``tuple[float, float]`` to align with matplotlib requirements. (:issue:`7802`, :pull:`8030`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -51,6 +107,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Improved static typing of reduction methods (:pull:`6746`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Fix bug where empty attrs would generate inconsistent tokens (:issue:`6970`, :pull:`8101`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Improved handling of multi-coordinate indexes when updating coordinates, including bug fixes
@@ -61,20 +119,53 @@ Bug fixes
   :pull:`8104`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fix bug where :py:class:`DataArray` instances on the right-hand side
-  of :py:meth:`DataArray.__setitem__` lose dimension names.
-  (:issue:`7030`, :pull:`8067`) By `Darsh Ranjan <https://github.com/dranjan>`_.
+  of :py:meth:`DataArray.__setitem__` lose dimension names (:issue:`7030`, :pull:`8067`).
+  By `Darsh Ranjan <https://github.com/dranjan>`_.
+- Return ``float64`` in presence of ``NaT`` in :py:class:`~core.accessor_dt.DatetimeAccessor` and
+  special case ``NaT`` handling in :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar`
+  (:issue:`7928`, :pull:`8084`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix :py:meth:`~core.rolling.DatasetRolling.construct` with stride on Datasets without indexes.
+  (:issue:`7021`, :pull:`7578`).
+  By `Amrest Chinkamol <https://github.com/p4perf4ce>`_ and `Michael Niklas <https://github.com/headtr1ck>`_.
+- Calling plot with kwargs ``col``, ``row`` or ``hue`` no longer squeezes dimensions passed via these arguments
+  (:issue:`7552`, :pull:`8174`).
+  By `Wiktor Kraśnicki <https://github.com/wkrasnicki>`_.
+- Fixed a bug where casting from ``float`` to ``int64`` (undefined for ``NaN``) led to varying issues (:issue:`7817`, :issue:`7942`, :issue:`7790`, :issue:`6191`, :issue:`7096`,
+  :issue:`1064`, :pull:`7827`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fixed a bug where inaccurate ``coordinates`` silently failed to decode variable (:issue:`1809`, :pull:`8195`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_
+- ``.rolling_exp`` functions no longer mistakenly lose non-dimensioned coords
+  (:issue:`6528`, :pull:`8114`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- In the event that user-provided datetime64/timedelta64 units and integer dtype encoding parameters conflict with each other, override the units to preserve an integer dtype for most faithful serialization to disk (:issue:`1064`, :pull:`8201`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Static typing of dunder ops methods (like :py:meth:`DataArray.__eq__`) has been fixed.
+  Remaining issues are upstream problems (:issue:`7780`, :pull:`8204`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix type annotation for ``center`` argument of plotting methods (like :py:meth:`xarray.plot.dataarray_plot.pcolormesh`) (:pull:`8261`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Added page on the interoperability of xarray objects.
-  (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Make documentation of :py:meth:`DataArray.where` clearer (:issue:`7767`, :pull:`7955`).
+  By `Riulinchen <https://github.com/Riulinchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Many error messages related to invalid dimensions or coordinates now always show the list of valid dims/coords (:pull:`8079`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Refactor of encoding and decoding times/timedeltas to preserve nanosecond resolution in arrays that contain missing values (:pull:`7827`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Transition ``.rolling_exp`` functions to use `.apply_ufunc` internally rather
+  than `.reduce`, as the start of a broader effort to move non-reducing
+  functions away from ```.reduce``, (:pull:`8114`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Test range of fill_value's in test_interpolate_pd_compat (:issue:`8146`, :pull:`8189`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 .. _whats-new.2023.08.0:
 

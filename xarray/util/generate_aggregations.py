@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
-from xarray.core.types import Dims
+from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
@@ -50,7 +50,7 @@ class {obj}{cls}Aggregations:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> {obj}:
+    ) -> Self:
         raise NotImplementedError()"""
 
 GROUPBY_PREAMBLE = """
@@ -108,7 +108,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> {obj}:
+    ) -> Self:
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 

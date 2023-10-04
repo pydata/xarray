@@ -16,7 +16,7 @@ from packaging.version import Version
 
 # remove once numpy 2.0 is the oldest supported version
 try:
-    from numpy.exceptions import RankWarning
+    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
 except ImportError:
     from numpy import RankWarning
 
@@ -38,6 +38,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
+from xarray.testing import _assert_internal_invariants
 from xarray.tests import (
     InaccessibleArray,
     ReturnItem,
@@ -414,9 +415,6 @@ class TestDataArray:
             DataArray(np.random.rand(4, 4), [("x", self.mindex), ("y", self.mindex)])
         with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
             DataArray(np.random.rand(4, 4), [("x", self.mindex), ("level_1", range(4))])
-
-        with pytest.raises(ValueError, match=r"matching the dimension size"):
-            DataArray(data, coords={"x": 0}, dims=["x", "y"])
 
     def test_constructor_from_self_described(self) -> None:
         data = [[-0.1, 21], [0, 2]]
@@ -2719,6 +2717,14 @@ class TestDataArray:
         actual = arr.where(lambda x: x.y < 2, drop=True)
         assert_identical(actual, expected)
 
+    def test_where_other_lambda(self) -> None:
+        arr = DataArray(np.arange(4), dims="y")
+        expected = xr.concat(
+            [arr.sel(y=slice(2)), arr.sel(y=slice(2, None)) + 1], dim="y"
+        )
+        actual = arr.where(lambda x: x.y < 2, lambda x: x + 1)
+        assert_identical(actual, expected)
+
     def test_where_string(self) -> None:
         array = DataArray(["a", "b"])
         expected = DataArray(np.array(["a", np.nan], dtype=object))
@@ -4011,7 +4017,7 @@ class TestDataArray:
         assert_equal(expected5, actual5)
 
         with pytest.raises(NotImplementedError):
-            da.dot(dm3.to_dataset(name="dm"))  # type: ignore
+            da.dot(dm3.to_dataset(name="dm"))
         with pytest.raises(TypeError):
             da.dot(dm3.values)  # type: ignore
 
@@ -7112,3 +7118,35 @@ class TestStackEllipsis:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
             da.stack(flat=...)  # type: ignore
+
+
+def test_nD_coord_dataarray() -> None:
+    # should succeed
+    da = DataArray(
+        np.ones((2, 4)),
+        dims=("x", "y"),
+        coords={
+            "x": (("x", "y"), np.arange(8).reshape((2, 4))),
+            "y": ("y", np.arange(4)),
+        },
+    )
+    _assert_internal_invariants(da, check_default_indexes=True)
+
+    da2 = DataArray(np.ones(4), dims=("y"), coords={"y": ("y", np.arange(4))})
+    da3 = DataArray(np.ones(4), dims=("z"))
+
+    _, actual = xr.align(da, da2)
+    assert_identical(da2, actual)
+
+    expected = da.drop_vars("x")
+    _, actual = xr.broadcast(da, da2)
+    assert_identical(expected, actual)
+
+    actual, _ = xr.broadcast(da, da3)
+    expected = da.expand_dims(z=4, axis=-1)
+    assert_identical(actual, expected)
+
+    da4 = DataArray(np.ones((2, 4)), coords={"x": 0}, dims=["x", "y"])
+    _assert_internal_invariants(da4, check_default_indexes=True)
+    assert "x" not in da4.xindexes
+    assert "x" in da4.coords
