@@ -111,6 +111,7 @@ if TYPE_CHECKING:
         ReindexMethodOptions,
         Self,
         SideOptions,
+        T_Chunks,
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
@@ -1288,13 +1289,7 @@ class DataArray(
 
     def chunk(
         self,
-        chunks: (
-            int
-            | Literal["auto"]
-            | tuple[int, ...]
-            | tuple[tuple[int, ...], ...]
-            | Mapping[Any, None | int | tuple[int, ...]]
-        ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
@@ -1362,7 +1357,7 @@ class DataArray(
 
         if isinstance(chunks, (float, str, int)):
             # ignoring type; unclear why it won't accept a Literal into the value.
-            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore
+            chunks = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
         else:
@@ -4015,6 +4010,7 @@ class DataArray(
         mode: Literal["w", "w-", "a", "r+", None] = None,
         synchronizer=None,
         group: str | None = None,
+        *,
         encoding: Mapping | None = None,
         compute: Literal[True] = True,
         consolidated: bool | None = None,
@@ -4055,6 +4051,7 @@ class DataArray(
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
+        *,
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
@@ -4618,25 +4615,22 @@ class DataArray(
             return da
 
     def _binary_op(
-        self,
-        other: T_Xarray,
-        f: Callable,
-        reflexive: bool = False,
-    ) -> T_Xarray:
+        self, other: DaCompatible, f: Callable, reflexive: bool = False
+    ) -> Self:
         from xarray.core.groupby import GroupBy
 
         if isinstance(other, (Dataset, GroupBy)):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
-            self, other = align(self, other, join=align_type, copy=False)
-        other_variable = getattr(other, "variable", other)
+            self, other = align(self, other, join=align_type, copy=False)  # type: ignore[type-var,assignment]
+        other_variable_or_arraylike: DaCompatible = getattr(other, "variable", other)
         other_coords = getattr(other, "coords", None)
 
         variable = (
-            f(self.variable, other_variable)
+            f(self.variable, other_variable_or_arraylike)
             if not reflexive
-            else f(other_variable, self.variable)
+            else f(other_variable_or_arraylike, self.variable)
         )
         coords, indexes = self.coords._merge_raw(other_coords, reflexive)
         name = self._result_name(other)

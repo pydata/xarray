@@ -411,10 +411,14 @@ class TestDataset:
         class Array:
             def __init__(self):
                 self.shape = (2,)
+                self.ndim = 1
                 self.dtype = np.dtype(np.float64)
 
             def __array_function__(self, *args, **kwargs):
-                pass
+                return NotImplemented
+
+            def __array_ufunc__(self, *args, **kwargs):
+                return NotImplemented
 
             def __repr__(self):
                 return "Custom\nArray"
@@ -3028,8 +3032,7 @@ class TestDataset:
     def test_rename_same_name(self) -> None:
         data = create_test_data()
         newnames = {"var1": "var1", "dim2": "dim2"}
-        with pytest.warns(UserWarning, match="does not create an index anymore"):
-            renamed = data.rename(newnames)
+        renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
     def test_rename_dims(self) -> None:
@@ -3098,6 +3101,15 @@ class TestDataset:
             UserWarning, match="rename 'x' to 'y' does not create an index.*"
         ):
             ds.rename(x="y")
+
+        # No operation should not raise a warning
+        ds = Dataset(
+            data_vars={"data": (("x", "y"), np.ones((2, 3)))},
+            coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.rename(x="x")
 
     def test_rename_multiindex(self) -> None:
         midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
@@ -4116,7 +4128,8 @@ class TestDataset:
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
         data5 = data4.astype(str)
         data5["var4"] = data4["var1"]
-        err_msg = "could not convert string to float: 'a'"
+        # convert to `np.str_('a')` once `numpy<2.0` has been dropped
+        err_msg = "could not convert string to float: .*'a'.*"
         with pytest.raises(ValueError, match=err_msg):
             data5[{"dim2": 1}] = "a"
 

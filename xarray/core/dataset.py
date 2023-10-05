@@ -93,7 +93,14 @@ from xarray.core.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.core.types import QuantileMethods, Self, T_DataArrayOrSet, T_Dataset
+from xarray.core.types import (
+    QuantileMethods,
+    Self,
+    T_ChunkDim,
+    T_Chunks,
+    T_DataArrayOrSet,
+    T_Dataset,
+)
 from xarray.core.utils import (
     Default,
     Frozen,
@@ -1475,13 +1482,20 @@ class Dataset(
     def __iter__(self) -> Iterator[Hashable]:
         return iter(self.data_vars)
 
-    def __array__(self, dtype=None):
-        raise TypeError(
-            "cannot directly convert an xarray.Dataset into a "
-            "numpy array. Instead, create an xarray.DataArray "
-            "first, either with indexing on the Dataset or by "
-            "invoking the `to_array()` method."
-        )
+    if TYPE_CHECKING:
+        # needed because __getattr__ is returning Any and otherwise
+        # this class counts as part of the SupportsArray Protocol
+        __array__ = None  # type: ignore[var-annotated,unused-ignore]
+
+    else:
+
+        def __array__(self, dtype=None):
+            raise TypeError(
+                "cannot directly convert an xarray.Dataset into a "
+                "numpy array. Instead, create an xarray.DataArray "
+                "first, either with indexing on the Dataset or by "
+                "invoking the `to_array()` method."
+            )
 
     @property
     def nbytes(self) -> int:
@@ -2279,6 +2293,7 @@ class Dataset(
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
+        *,
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
@@ -2322,6 +2337,7 @@ class Dataset(
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
+        *,
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
@@ -2562,16 +2578,14 @@ class Dataset(
 
     def chunk(
         self,
-        chunks: (
-            int | Literal["auto"] | Mapping[Any, None | int | str | tuple[int, ...]]
-        ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         chunked_array_type: str | ChunkManagerEntrypoint | None = None,
         from_array_kwargs=None,
-        **chunks_kwargs: None | int | str | tuple[int, ...],
+        **chunks_kwargs: T_ChunkDim,
     ) -> Self:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2622,20 +2636,20 @@ class Dataset(
         xarray.unify_chunks
         dask.array.from_array
         """
-        if chunks is None and chunks_kwargs is None:
+        if chunks is None and not chunks_kwargs:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
             )
             chunks = {}
-
-        if isinstance(chunks, (Number, str, int)):
-            chunks = dict.fromkeys(self.dims, chunks)
+        chunks_mapping: Mapping[Any, Any]
+        if not isinstance(chunks, Mapping) and chunks is not None:
+            chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        bad_dims = chunks.keys() - self.dims.keys()
+        bad_dims = chunks_mapping.keys() - self.dims.keys()
         if bad_dims:
             raise ValueError(
                 f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
@@ -2649,7 +2663,7 @@ class Dataset(
             k: _maybe_chunk(
                 k,
                 v,
-                chunks,
+                chunks_mapping,
                 token,
                 lock,
                 name_prefix,
@@ -4152,6 +4166,9 @@ class Dataset(
 
             create_dim_coord = False
             new_k = name_dict[k]
+
+            if k == new_k:
+                continue  # Same name, nothing to do
 
             if k in self.dims and new_k in self._coord_names:
                 coord_dims = self._variables[name_dict[k]].dims

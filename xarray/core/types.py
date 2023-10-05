@@ -19,9 +19,9 @@ import pandas as pd
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import Self
+        from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self
+        from typing_extensions import Self, TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupby import DataArrayGroupBy, GroupBy
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
@@ -107,7 +106,7 @@ class Alignable(Protocol):
         ...
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         ...
 
     @property
@@ -177,15 +176,20 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 T_DuckArray = TypeVar("T_DuckArray", bound=Any)
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
-DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
-DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
-GroupByIncompatible = Union["Variable", "GroupBy"]
+DaCompatible = Union["DataArray", "VarCompatible"]
+DsCompatible = Union["Dataset", "DaCompatible"]
+GroupByCompatible = Union["Dataset", "DataArray"]
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
-T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
+T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# We allow the tuple form of this (though arguably we could transition to named dims only)
+T_Chunks: TypeAlias = Union[
+    T_ChunkDim, Mapping[Any, T_ChunkDim], tuple[T_ChunkDim, ...]
+]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
