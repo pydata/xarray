@@ -11,6 +11,7 @@ from xarray.core.alignment import align, broadcast
 from xarray.core.computation import apply_ufunc, dot
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import Dims, T_Xarray
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
@@ -450,18 +451,22 @@ class Weighted(Generic[T_Xarray]):
     def _implementation(self, func, dim, **kwargs):
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
 
+    @_deprecate_positional_args("v2023.10.0")
     def sum_of_weights(
         self,
         dim: Dims = None,
+        *,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def sum_of_squares(
         self,
         dim: Dims = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -469,9 +474,11 @@ class Weighted(Generic[T_Xarray]):
             self._sum_of_squares, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def sum(
         self,
         dim: Dims = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -479,9 +486,11 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def mean(
         self,
         dim: Dims = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -489,9 +498,11 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def var(
         self,
         dim: Dims = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -499,9 +510,11 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_var, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def std(
         self,
         dim: Dims = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
