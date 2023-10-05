@@ -56,6 +56,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- More improvements to support the Python `array API standard <https://data-apis.org/array-api/latest/>`_
+  by using duck array ops in more places in the codebase. (:pull:`8267`)
+  By `Tom White <https://github.com/tomwhite>`_.
+
 
 .. _whats-new.2023.09.0:
 
