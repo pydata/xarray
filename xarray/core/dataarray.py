@@ -66,6 +66,7 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
@@ -954,6 +955,7 @@ class DataArray(
     def reset_coords(
         self,
         names: Dims = None,
+        *,
         drop: Literal[False] = False,
     ) -> Dataset:
         ...
@@ -967,9 +969,11 @@ class DataArray(
     ) -> Self:
         ...
 
+    @_deprecate_positional_args("v2023.10.0")
     def reset_coords(
         self,
         names: Dims = None,
+        *,
         drop: bool = False,
     ) -> Self | Dataset:
         """Given names of coordinates, reset them to become variables.
@@ -1287,9 +1291,11 @@ class DataArray(
         all_variables = [self.variable] + [c.variable for c in self.coords.values()]
         return get_chunksizes(all_variables)
 
+    @_deprecate_positional_args("v2023.10.0")
     def chunk(
         self,
         chunks: T_Chunks = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        *,
         name_prefix: str = "xarray-",
         token: str | None = None,
         lock: bool = False,
@@ -1724,9 +1730,11 @@ class DataArray(
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def broadcast_like(
         self,
         other: T_DataArrayOrSet,
+        *,
         exclude: Iterable[Hashable] | None = None,
     ) -> Self:
         """Broadcast this DataArray against another Dataset or DataArray.
@@ -1835,9 +1843,11 @@ class DataArray(
 
         return da
 
+    @_deprecate_positional_args("v2023.10.0")
     def reindex_like(
         self,
         other: T_DataArrayOrSet,
+        *,
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
@@ -2005,9 +2015,11 @@ class DataArray(
             fill_value=fill_value,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def reindex(
         self,
         indexers: Mapping[Any, Any] | None = None,
+        *,
         method: ReindexMethodOptions = None,
         tolerance: float | Iterable[float] | None = None,
         copy: bool = True,
@@ -2787,9 +2799,11 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
+        *,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> Self:
@@ -2847,7 +2861,7 @@ class DataArray(
         --------
         DataArray.stack
         """
-        ds = self._to_temp_dataset().unstack(dim, fill_value, sparse)
+        ds = self._to_temp_dataset().unstack(dim, fill_value=fill_value, sparse=sparse)
         return self._from_temp_dataset(ds)
 
     def to_unstacked_dataset(self, dim: Hashable, level: int | Hashable = 0) -> Dataset:
@@ -3198,9 +3212,11 @@ class DataArray(
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
+    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
+        *,
         how: Literal["any", "all"] = "any",
         thresh: int | None = None,
     ) -> Self:
@@ -4696,10 +4712,12 @@ class DataArray(
 
         return title
 
+    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
         n: int = 1,
+        *,
         label: Literal["upper", "lower"] = "upper",
     ) -> Self:
         """Calculate the n-th order discrete difference along given axis.
@@ -4985,10 +5003,12 @@ class DataArray(
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
         dim: Dims = None,
+        *,
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5103,9 +5123,11 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
+        *,
         pct: bool = False,
         keep_attrs: bool | None = None,
     ) -> Self:
@@ -5678,9 +5700,11 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
+        *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
@@ -5774,9 +5798,11 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable = None,
+        *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
@@ -5870,9 +5896,11 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def argmin(
         self,
         dim: Dims = None,
+        *,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5970,9 +5998,11 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
+    @_deprecate_positional_args("v2023.10.0")
     def argmax(
         self,
         dim: Dims = None,
+        *,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -6317,9 +6347,11 @@ class DataArray(
             kwargs=kwargs,
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
+        *,
         keep: Literal["first", "last", False] = "first",
     ) -> Self:
         """Returns a new DataArray with duplicate dimension values removed.
