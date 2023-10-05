@@ -2324,7 +2324,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 shape.append(variable.shape[i])
 
-        return variable.data.reshape(shape), tuple(axes)
+        return duck_array_ops.reshape(variable.data, shape), tuple(axes)
 
     def isnull(self, keep_attrs: bool | None = None):
         """Test each value in the array for whether it is a missing value.

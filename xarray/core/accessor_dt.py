@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.times import infer_calendar_name
+from xarray.core import duck_array_ops
 from xarray.core.common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
@@ -50,7 +51,7 @@ def _access_through_cftimeindex(values, name):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if not isinstance(values, CFTimeIndex):
-        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
     else:
         values_as_cftimeindex = values
     if name == "season":
@@ -69,7 +70,7 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
-    values_as_series = pd.Series(values.ravel(), copy=False)
+    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
@@ -148,10 +149,10 @@ def _round_through_series_or_index(values, name, freq):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if is_np_datetime_like(values.dtype):
-        values_as_series = pd.Series(values.ravel(), copy=False)
+        values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
         method = getattr(values_as_series.dt, name)
     else:
-        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
         method = getattr(values_as_cftimeindex, name)
 
     field_values = method(freq=freq).values
@@ -195,7 +196,7 @@ def _strftime_through_cftimeindex(values, date_format: str):
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    values_as_cftimeindex = CFTimeIndex(values.ravel())
+    values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
 
     field_values = values_as_cftimeindex.strftime(date_format)
     return field_values.values.reshape(values.shape)
@@ -205,7 +206,7 @@ def _strftime_through_series(values, date_format: str):
     """Coerce an array of datetime-like values to a pandas Series and
     apply string formatting
     """
-    values_as_series = pd.Series(values.ravel(), copy=False)
+    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     strs = values_as_series.dt.strftime(date_format)
     return strs.values.reshape(values.shape)
 

@@ -337,6 +337,10 @@ def reshape(array, shape):
     return xp.reshape(array, shape)
 
 
+def ravel(array):
+    return reshape(array, (-1,))
+
+
 @contextlib.contextmanager
 def _ignore_warnings_if(condition):
     if condition:
@@ -363,7 +367,7 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in "SU":
-            values = values.astype(object)
+            values = astype(values, object)
 
         func = None
         if skipna or (skipna is None and values.dtype.kind in "cfO"):

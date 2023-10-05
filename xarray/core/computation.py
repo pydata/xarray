@@ -2123,7 +2123,8 @@ def _calc_idxminmax(
         chunkmanager = get_chunked_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
-        res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
+        data = dask_coord[duck_array_ops.ravel(indx.data)]
+        res = indx.copy(data=duck_array_ops.reshape(data, indx.shape))
         # we need to attach back the dim name
         res.name = dim
     else:
