@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
+from typing import TYPE_CHECKING, Callable, Literal, TypedDict
 
 from xarray.core.utils import FrozenDict
 
@@ -96,7 +96,7 @@ _VALIDATORS = {
     "display_default_indexes": lambda choice: choice in [True, False, "default"],
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
-    "keep_attrs": lambda choice: choice in [True, False, "default"],
+    "keep_attrs": lambda choice: choice in [True, False, "default"] or callable(choice),
     "use_bottleneck": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
@@ -136,8 +136,18 @@ def _get_boolean_with_default(option: Options, default: bool) -> bool:
         )
 
 
-def _get_keep_attrs(default: bool) -> bool:
-    return _get_boolean_with_default("keep_attrs", default)
+def _get_keep_attrs(default: bool | Callable) -> bool | Callable:
+    global_choice = OPTIONS["keep_attrs"]
+
+    if global_choice == "default":
+        return default
+    elif isinstance(global_choice, bool) or callable(global_choice):
+        return global_choice
+    else:
+        raise ValueError(
+            "The the global option 'keep_attrs' must be one of"
+            " True, False or 'default', or a callable."
+        )
 
 
 class set_options:
@@ -216,7 +226,7 @@ class set_options:
         global least-recently-usage cached. This should be smaller than
         your system's per-process file descriptor limit, e.g.,
         ``ulimit -n`` on Linux.
-    keep_attrs : {"default", True, False}
+    keep_attrs : {"default", True, False} or callable
         Whether to keep attributes on xarray Datasets/dataarrays after
         operations. Can be
 
@@ -224,6 +234,7 @@ class set_options:
         * ``False`` : to always discard attrs
         * ``default`` : to use original logic that attrs should only
           be kept in unambiguous circumstances
+        * callable: a function that decides what to do.
     use_bottleneck : bool, default: True
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.

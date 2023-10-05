@@ -58,6 +58,9 @@ class Context:
     def __init__(self, func):
         self.func = func
 
+    def __repr__(self):
+        return f"Context('{self.func}')"
+
 
 def broadcast_dimension_size(variables: list[Variable]) -> dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
