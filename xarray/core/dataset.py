@@ -7824,7 +7824,7 @@ class Dataset(
 
     def sortby(
         self,
-        variables: Hashable | DataArray | list[Hashable | DataArray] | Callable,
+        variables: Hashable | DataArray | Sequence[Hashable | DataArray] | Callable[[Self], Hashable | DataArray | list[Hashable | DataArray]],
         ascending: bool = True,
     ) -> Self:
         """
