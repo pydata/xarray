@@ -32,6 +32,9 @@ Breaking changes
 
 - Made more arguments keyword-only (e.g. ``keep_attrs``, ``skipna``) for many :py:class:`xarray.DataArray` and
   :py:class:`xarray.Dataset` methods (:pull:`6403`). By `Mathias Hauser <https://github.com/mathause>`_.
+- :py:meth:`Dataset.to_zarr` & :py:meth:`DataArray.to_zarr` require keyword
+  arguments after the initial 7 positional arguments.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Deprecations
@@ -40,10 +43,16 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
+  when the operation was a no-op. (:issue:`8266`)
+  By `Simon Hansen <https://github.com/hoxbro>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
+  By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
 
 
 Internal Changes
@@ -142,6 +151,8 @@ Bug fixes
 - Static typing of dunder ops methods (like :py:meth:`DataArray.__eq__`) has been fixed.
   Remaining issues are upstream problems (:issue:`7780`, :pull:`8204`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix type annotation for ``center`` argument of plotting methods (like :py:meth:`xarray.plot.dataarray_plot.pcolormesh`) (:pull:`8261`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 Documentation
 ~~~~~~~~~~~~~
