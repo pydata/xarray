@@ -4921,7 +4921,7 @@ class DataArray(
 
     def sortby(
         self,
-        variables: Hashable | DataArray | Sequence[Hashable | DataArray] | Callable,
+        variables: Hashable | DataArray | Sequence[Hashable | DataArray] | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]],
         ascending: bool = True,
     ) -> Self:
         """Sort object by labels or values (along an axis).
