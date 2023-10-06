@@ -333,6 +333,16 @@ class TestDecodeCF:
         with pytest.raises(ValueError, match=r"unable to decode time"):
             decode_cf(ds)
 
+    def test_invalid_timedelta_units_do_not_decode(self) -> None:
+        # regression test for #8269
+        ds = Dataset(
+            {"time": ("time", [0, 1, 20], {"units": "days invalid", "_FillValue": 20})}
+        )
+        expected = Dataset(
+            {"time": ("time", [0.0, 1.0, np.nan], {"units": "days invalid"})}
+        )
+        assert_identical(expected, decode_cf(ds))
+
     @requires_cftime
     def test_dataset_repr_with_netcdf4_datetimes(self) -> None:
         # regression test for #347
