@@ -218,7 +218,6 @@ def _apply_mask(
 def _is_time_like(units):
     # test for time-like
     time_strings = [
-        "since",
         "days",
         "hours",
         "minutes",
@@ -227,7 +226,13 @@ def _is_time_like(units):
         "microseconds",
         "nanoseconds",
     ]
-    return any(tstr in str(units) for tstr in time_strings)
+    units = str(units)
+    # to prevent detecting units like `days accumulated` as time-like
+    # special casing for datetime-units and timedelta-units (GH-8269)
+    if "since" in units:
+        return any(tstr in units for tstr in time_strings)
+    else:
+        return any(tstr == units for tstr in time_strings)
 
 
 class CFMaskCoder(VariableCoder):
