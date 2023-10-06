@@ -23,8 +23,11 @@ New Features
 ~~~~~~~~~~~~
 
 - :py:meth:`DataArray.where` & :py:meth:`Dataset.where` accept a callable for
-  the ``other`` parameter, passing the object as the first argument. Previously,
+  the ``other`` parameter, passing the object as the only argument. Previously,
   this was only valid for the ``cond`` parameter. (:issue:`8255`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`DataArray.sortby` & :py:meth:`Dataset.sortby` accept a callable for
+  the ``variables`` parameter, passing the object as the only argument.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
