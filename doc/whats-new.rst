@@ -50,6 +50,12 @@ Bug fixes
   when the operation was a no-op. (:issue:`8266`)
   By `Simon Hansen <https://github.com/hoxbro>`_.
 
+- Fix datetime encoding precision loss regression introduced in the previous
+  release for datetimes encoded with units requiring floating point values, and
+  a reference date not equal to the first value of the datetime array
+  (:issue:`8271`, :pull:`8272`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~

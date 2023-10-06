@@ -714,7 +714,8 @@ def encode_cf_datetime(
         if data_units != units:
             # this accounts for differences in the reference times
             ref_delta = abs(data_ref_date - ref_date).to_timedelta64()
-            if ref_delta > np.timedelta64(0, "ns"):
+            data_delta = _time_units_to_timedelta64(needed_units)
+            if (ref_delta % data_delta) > np.timedelta64(0, "ns"):
                 needed_units = _infer_time_units_from_diff(ref_delta)
 
         # needed time delta to encode faithfully to int64

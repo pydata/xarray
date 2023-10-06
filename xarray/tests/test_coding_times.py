@@ -1363,10 +1363,15 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
 
 
 def test_roundtrip_float_times() -> None:
+    # Regression test for GitHub issue #8271
     fill_value = 20.0
-    times = [np.datetime64("2000-01-01 12:00:00", "ns"), np.datetime64("NaT", "ns")]
+    times = [
+        np.datetime64("1970-01-01 00:00:00", "ns"),
+        np.datetime64("1970-01-01 06:00:00", "ns"),
+        np.datetime64("NaT", "ns"),
+    ]
 
-    units = "days since 2000-01-01"
+    units = "days since 1960-01-01"
     var = Variable(
         ["time"],
         times,
@@ -1374,7 +1379,7 @@ def test_roundtrip_float_times() -> None:
     )
 
     encoded_var = conventions.encode_cf_variable(var)
-    np.testing.assert_array_equal(encoded_var, np.array([0.5, 20.0]))
+    np.testing.assert_array_equal(encoded_var, np.array([3653, 3653.25, 20.0]))
     assert encoded_var.attrs["units"] == units
     assert encoded_var.attrs["_FillValue"] == fill_value
 
