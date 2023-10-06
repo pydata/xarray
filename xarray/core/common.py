@@ -1073,7 +1073,8 @@ class DataWithCoords(AttrAccessMixin):
         ----------
         cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
-            If a callable, it must expect this object as its only parameter.
+            If a callable, the callable is passed this object, and the result is used as
+            the value for cond.
         other : scalar, DataArray, Dataset, or callable, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations are filled with NA. If a callable, it must

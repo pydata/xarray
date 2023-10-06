@@ -7838,7 +7838,10 @@ class Dataset(
 
     def sortby(
         self,
-        variables: Hashable | DataArray | list[Hashable | DataArray],
+        variables: Hashable
+        | DataArray
+        | Sequence[Hashable | DataArray]
+        | Callable[[Self], Hashable | DataArray | list[Hashable | DataArray]],
         ascending: bool = True,
     ) -> Self:
         """
@@ -7860,9 +7863,10 @@ class Dataset(
 
         Parameters
         ----------
-        variables : Hashable, DataArray, or list of hashable or DataArray
-            1D DataArray objects or name(s) of 1D variable(s) in
-            coords/data_vars whose values are used to sort the dataset.
+        kariables : Hashable, DataArray, sequence of Hashable or DataArray, or Callable
+            1D DataArray objects or name(s) of 1D variable(s) in coords whose values are
+            used to sort this array. If a callable, the callable is passed this object,
+            and the result is used as the value for cond.
         ascending : bool, default: True
             Whether to sort by ascending or descending order.
 
@@ -7888,8 +7892,7 @@ class Dataset(
         ...     },
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
-        >>> ds = ds.sortby("x")
-        >>> ds
+        >>> ds.sortby("x")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -7898,9 +7901,20 @@ class Dataset(
         Data variables:
             A        (x, y) int64 3 4 1 2
             B        (x, y) int64 7 8 5 6
+        >>> ds.sortby(lambda x: -x["y"])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) <U1 'b' 'a'
+          * y        (y) int64 1 0
+        Data variables:
+            A        (x, y) int64 1 2 3 4
+            B        (x, y) int64 5 6 7 8
         """
         from xarray.core.dataarray import DataArray
 
+        if callable(variables):
+            variables = variables(self)
         if not isinstance(variables, list):
             variables = [variables]
         else:
