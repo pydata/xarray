@@ -121,8 +121,7 @@ def from_array(
         return NamedArray(dims, data_, attrs)
 
     if isinstance(data, tuple):
-        data_ = to_0d_object_array(data)
-        return NamedArray(dims, data_, attrs)
+        return NamedArray(dims, to_0d_object_array(data), attrs)
 
     # validate whether the data is valid data types.
     return NamedArray(dims, np.asarray(data), attrs)
