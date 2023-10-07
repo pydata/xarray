@@ -211,8 +211,8 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
 def test_typing() -> None:
     from typing import Generic
 
-    from numpy.typing import DTypeLike
     from dask.array.core import Array as DaskArray
+    from numpy.typing import DTypeLike
 
     from xarray.namedarray.core import from_array
     from xarray.namedarray.utils import T_DType_co
