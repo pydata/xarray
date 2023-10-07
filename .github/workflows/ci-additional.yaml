@@ -197,9 +197,7 @@ jobs:
     if: |
         always()
         && (
-            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-            || needs.detect-ci-trigger.outputs.triggered == 'true'
-            || contains( github.event.pull_request.labels.*.name, 'run-pyright')
+            contains( github.event.pull_request.labels.*.name, 'run-pyright')
         )
     defaults:
       run:
@@ -258,9 +256,7 @@ jobs:
     if: |
         always()
         && (
-            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-            || needs.detect-ci-trigger.outputs.triggered == 'true'
-            || contains( github.event.pull_request.labels.*.name, 'run-pyright')
+            contains( github.event.pull_request.labels.*.name, 'run-pyright')
         )
     defaults:
       run:
@@ -303,7 +299,7 @@ jobs:
         run: |
           python -m pyright xarray/
 
-      - name: Upload mypy coverage to Codecov
+      - name: Upload pyright coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
         with:
           file: pyright_report/cobertura.xml
