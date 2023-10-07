@@ -38,13 +38,15 @@ class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
         raise NotImplementedError
 
 
-class CustomArray(CustomArrayBase, Generic[T_DuckArray]):
+class CustomArray(CustomArrayBase[T_DuckArray], Generic[T_DuckArray]):
     def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
         return np.array(self.array)
 
 
 class CustomArrayIndexable(
-    CustomArrayBase, xr.core.indexing.ExplicitlyIndexed, Generic[T_DuckArray]
+    CustomArrayBase[T_DuckArray],
+    xr.core.indexing.ExplicitlyIndexed,
+    Generic[T_DuckArray],
 ):
     pass
 
@@ -79,7 +81,7 @@ def test_from_array(
 
 
 def test_from_array_with_masked_array() -> None:
-    masked_array: np.ndarray = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
+    masked_array: np.ndarray[Any, Any] = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
     with pytest.raises(NotImplementedError):
         from_array(masked_array)
 
