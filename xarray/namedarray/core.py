@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast, overload
 
 import numpy as np
 
@@ -75,6 +75,46 @@ def as_compatible_data(
     return cast(T_DuckArray, np.asarray(data))
 
 
+@overload
+def from_array(
+    dims: DimsInput,
+    data: T_DuckArray,
+    attrs: AttrsInput = None,
+) -> NamedArray[T_DuckArray]:
+    ...
+
+
+@overload
+def from_array(
+    dims: DimsInput,
+    data: np.typing.ArrayLike,
+    attrs: AttrsInput = None,
+) -> NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
+    ...
+
+
+def from_array(
+    dims: DimsInput,
+    data: T_DuckArray | np.typing.ArrayLike,
+    attrs: AttrsInput = None,
+) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
+    if isinstance(data, NamedArray):
+        return data.copy()
+
+    if is_duck_array(data):
+        return NamedArray(data)
+
+    if isinstance(data, ExplicitlyIndexed):
+        # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
+        return NamedArray(cast(T_DuckArray, data))
+
+    if isinstance(data, tuple):
+        data = to_0d_object_array(data)
+
+    # validate whether the data is valid data types.
+    return NamedArray(np.asarray(data))
+
+
 class NamedArray(Generic[T_DuckArray]):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
@@ -90,9 +130,8 @@ class NamedArray(Generic[T_DuckArray]):
     def __init__(
         self,
         dims: DimsInput,
-        data: T_DuckArray | np.typing.ArrayLike,
+        data: T_DuckArray,
         attrs: AttrsInput = None,
-        fastpath: bool = False,
     ):
         """
         Parameters
@@ -116,7 +155,7 @@ class NamedArray(Generic[T_DuckArray]):
 
 
         """
-        self._data = as_compatible_data(data, fastpath=fastpath)
+        self._data = data
         self._dims = self._parse_dimensions(dims)
         self._attrs = dict(attrs) if attrs else None
 
@@ -240,8 +279,8 @@ class NamedArray(Generic[T_DuckArray]):
         return self._data
 
     @data.setter
-    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
-        data = as_compatible_data(data)
+    def data(self, data: T_DuckArray) -> None:
+        # data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
 
@@ -398,7 +437,7 @@ class NamedArray(Generic[T_DuckArray]):
     def _replace(
         self,
         dims: DimsInput | Default = _default,
-        data: T_DuckArray | np.typing.ArrayLike | Default = _default,
+        data: T_DuckArray | Default = _default,
         attrs: AttrsInput | Default = _default,
     ) -> Self:
         if dims is _default:
@@ -412,7 +451,7 @@ class NamedArray(Generic[T_DuckArray]):
     def _copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | np.typing.ArrayLike | None = None,
+        data: T_DuckArray | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -438,7 +477,7 @@ class NamedArray(Generic[T_DuckArray]):
     def copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | np.typing.ArrayLike | None = None,
+        data: T_DuckArray | None = None,
     ) -> Self:
         """Returns a copy of this object.
 
