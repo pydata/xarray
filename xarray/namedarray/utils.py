@@ -42,7 +42,7 @@ class _Array(Protocol[T_DType_co]):
         ...
 
     @property
-    def shape(self) -> tuple[float, ...]:
+    def shape(self) -> tuple[int, ...]:
         ...
 
     @property

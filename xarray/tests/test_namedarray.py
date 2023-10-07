@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pytest
 
-import xarray as xr
-from xarray.namedarray.core import NamedArray, as_compatible_data
-from xarray.namedarray.utils import T_DuckArray
+# import xarray as xr
+from xarray.namedarray.core import NamedArray
 
-if TYPE_CHECKING:
-    from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
+# from xarray.namedarray.utils import T_DuckArray
+
+# if TYPE_CHECKING:
+#     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
 
 @pytest.fixture
@@ -18,75 +19,75 @@ def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
     return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
 
 
-@pytest.mark.parametrize(
-    "input_data, expected_output",
-    [
-        ([1, 2, 3], np.array([1, 2, 3])),
-        (np.array([4, 5, 6]), np.array([4, 5, 6])),
-        (NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3])),
-        (2, np.array(2)),
-    ],
-)
-def test_as_compatible_data(
-    input_data: T_DuckArray, expected_output: T_DuckArray
-) -> None:
-    output: T_DuckArray = as_compatible_data(input_data)
-    assert np.array_equal(output, expected_output)
+# @pytest.mark.parametrize(
+#     "input_data, expected_output",
+#     [
+#         ([1, 2, 3], np.array([1, 2, 3])),
+#         (np.array([4, 5, 6]), np.array([4, 5, 6])),
+#         (NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3])),
+#         (2, np.array(2)),
+#     ],
+# )
+# def test_as_compatible_data(
+#     input_data: T_DuckArray, expected_output: T_DuckArray
+# ) -> None:
+#     output: T_DuckArray = as_compatible_data(input_data)
+#     assert np.array_equal(output, expected_output)
 
 
-def test_as_compatible_data_with_masked_array() -> None:
-    masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
-    with pytest.raises(NotImplementedError):
-        as_compatible_data(masked_array)
+# def test_as_compatible_data_with_masked_array() -> None:
+#     masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
+#     with pytest.raises(NotImplementedError):
+#         as_compatible_data(masked_array)
 
 
-def test_as_compatible_data_with_0d_object() -> None:
-    data = np.empty((), dtype=object)
-    data[()] = (10, 12, 12)
-    np.array_equal(as_compatible_data(data), data)
+# def test_as_compatible_data_with_0d_object() -> None:
+#     data = np.empty((), dtype=object)
+#     data[()] = (10, 12, 12)
+#     np.array_equal(as_compatible_data(data), data)
 
 
-def test_as_compatible_data_with_explicitly_indexed(
-    random_inputs: np.ndarray[Any, Any]
-) -> None:
-    # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
-    class CustomArrayBase(xr.core.indexing.NDArrayMixin):
-        def __init__(self, array: T_DuckArray) -> None:
-            self.array = array
+# def test_as_compatible_data_with_explicitly_indexed(
+#     random_inputs: np.ndarray[Any, Any]
+# ) -> None:
+#     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
+#     class CustomArrayBase(xr.core.indexing.NDArrayMixin):
+#         def __init__(self, array: T_DuckArray) -> None:
+#             self.array = array
 
-        @property
-        def dtype(self) -> np.dtype[np.generic]:
-            return self.array.dtype
+#         @property
+#         def dtype(self) -> np.dtype[np.generic]:
+#             return self.array.dtype
 
-        @property
-        def shape(self) -> tuple[int, ...]:
-            return self.array.shape
+#         @property
+#         def shape(self) -> tuple[int, ...]:
+#             return self.array.shape
 
-        @property
-        def real(self) -> Self:
-            raise NotImplementedError
+#         @property
+#         def real(self) -> Self:
+#             raise NotImplementedError
 
-        @property
-        def imag(self) -> Self:
-            raise NotImplementedError
+#         @property
+#         def imag(self) -> Self:
+#             raise NotImplementedError
 
-        def astype(self, dtype: np.typing.DTypeLike) -> Self:
-            raise NotImplementedError
+#         def astype(self, dtype: np.typing.DTypeLike) -> Self:
+#             raise NotImplementedError
 
-    class CustomArray(CustomArrayBase):
-        def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
-            return np.array(self.array)
+#     class CustomArray(CustomArrayBase):
+#         def __array__(self) -> np.ndarray[Any, np.dtype[np.generic]]:
+#             return np.array(self.array)
 
-    class CustomArrayIndexable(CustomArrayBase, xr.core.indexing.ExplicitlyIndexed):
-        pass
+#     class CustomArrayIndexable(CustomArrayBase, xr.core.indexing.ExplicitlyIndexed):
+#         pass
 
-    array = CustomArray(random_inputs)
-    output: CustomArray = as_compatible_data(array)
-    assert isinstance(output, np.ndarray)
+#     array = CustomArray(random_inputs)
+#     output: CustomArray = as_compatible_data(array)
+#     assert isinstance(output, np.ndarray)
 
-    array2 = CustomArrayIndexable(random_inputs)
-    output2: CustomArrayIndexable = as_compatible_data(array2)
-    assert isinstance(output2, CustomArrayIndexable)
+#     array2 = CustomArrayIndexable(random_inputs)
+#     output2: CustomArrayIndexable = as_compatible_data(array2)
+#     assert isinstance(output2, CustomArrayIndexable)
 
 
 def test_properties() -> None:

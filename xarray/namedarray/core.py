@@ -45,35 +45,35 @@ if TYPE_CHECKING:
     AttrsInput = Union[Mapping[Any, Any], None]
 
 
-# TODO: Add tests!
-def as_compatible_data(
-    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
-) -> T_DuckArray:
-    if fastpath and getattr(data, "ndim", 0) > 0:
-        # can't use fastpath (yet) for scalars
-        return cast(T_DuckArray, data)
+# # TODO: Add tests!
+# def as_compatible_data(
+#     data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
+# ) -> T_DuckArray:
+#     if fastpath and getattr(data, "ndim", 0) > 0:
+#         # can't use fastpath (yet) for scalars
+#         return cast(T_DuckArray, data)
 
-    if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
-        if mask.any():
-            # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
-            raise NotImplementedError("MaskedArray is not supported yet")
-        else:
-            return cast(T_DuckArray, np.asarray(data))
-    if is_duck_array(data):
-        return data
-    if isinstance(data, NamedArray):
-        return cast(T_DuckArray, data.data)
+#     if isinstance(data, np.ma.MaskedArray):
+#         mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
+#         if mask.any():
+#             # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
+#             raise NotImplementedError("MaskedArray is not supported yet")
+#         else:
+#             return cast(T_DuckArray, np.asarray(data))
+#     if is_duck_array(data):
+#         return data
+#     if isinstance(data, NamedArray):
+#         return cast(T_DuckArray, data.data)
 
-    if isinstance(data, ExplicitlyIndexed):
-        # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
-        return cast(T_DuckArray, data)
+#     if isinstance(data, ExplicitlyIndexed):
+#         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
+#         return cast(T_DuckArray, data)
 
-    if isinstance(data, tuple):
-        data = to_0d_object_array(data)
+#     if isinstance(data, tuple):
+#         data = to_0d_object_array(data)
 
-    # validate whether the data is valid data types.
-    return cast(T_DuckArray, np.asarray(data))
+#     # validate whether the data is valid data types.
+#     return cast(T_DuckArray, np.asarray(data))
 
 
 @overload
