@@ -208,22 +208,59 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
         assert named_array.dims == tuple(new_dims)
 
 
-# def test_typing() -> None:
-#     from dask.array.core import Array as DaskArray
+def test_typing() -> None:
+    from typing import Generic
 
-#     from xarray.namedarray.core import from_array
+    from numpy.typing import DTypeLike
+    from dask.array.core import Array as DaskArray
 
-#     a = [1, 2, 3]
-#     reveal_type(from_array("x", a))
-#     reveal_type(from_array([None], a))
+    from xarray.namedarray.core import from_array
+    from xarray.namedarray.utils import T_DType_co
 
-#     b = np.array([1, 2, 3])
-#     reveal_type(b)
-#     reveal_type(from_array("a", b))
-#     reveal_type(from_array([None], b))
+    a = [1, 2, 3]
+    reveal_type(from_array("x", a))
+    reveal_type(from_array([None], a))
 
-#     c: DaskArray = DaskArray([1, 2, 3], "c", {})
-#     reveal_type(c.shape)
-#     reveal_type(c)
-#     reveal_type(from_array("a", c))
-#     reveal_type(from_array([None], c))
+    b = np.array([1, 2, 3])
+    reveal_type(b)
+    reveal_type(from_array("a", b))
+    reveal_type(from_array([None], b))
+
+    c: DaskArray = DaskArray([1, 2, 3], "c", {})
+    reveal_type(c.shape)
+    reveal_type(c)
+    reveal_type(from_array("a", c))
+    reveal_type(from_array([None], c))
+
+    class CustomArray(Generic[T_DType_co]):
+        def __init__(self, x: object, dtype: T_DType_co | None = None) -> None:
+            ...
+
+        @property
+        def dtype(self) -> T_DType_co:
+            ...
+
+        @property
+        def shape(self) -> tuple[int, ...]:
+            ...
+
+        @property
+        def real(self) -> Self:
+            ...
+
+        @property
+        def imag(self) -> Self:
+            ...
+
+        def astype(self, dtype: DTypeLike) -> Self:
+            ...
+
+        # # TODO: numpy doesn't use any inputs:
+        # # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
+        # def __array__(self) -> np.ndarray[Any, T_DType_co]:
+        #     ...
+
+    custom_a = CustomArray(2, dtype=np.dtype(int))
+    reveal_type(custom_a)
+    dims: tuple[str, ...] = ("x",)
+    reveal_type(from_array(dims, custom_a))
