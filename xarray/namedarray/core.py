@@ -79,18 +79,18 @@ def as_compatible_data(
 @overload
 def from_array(
     dims: DimsInput,
-    data: float,
+    data: T_DuckArray,
     attrs: AttrsInput = None,
-) -> NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
+) -> NamedArray[T_DuckArray]:
     ...
 
 
 @overload
 def from_array(
     dims: DimsInput,
-    data: T_DuckArray,
+    data: float,
     attrs: AttrsInput = None,
-) -> NamedArray[T_DuckArray]:
+) -> NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
     ...
 
 
@@ -105,7 +105,7 @@ def from_array(
     reveal_type(data)
     if isinstance(data, _Array):
         reveal_type(data)
-        return NamedArray(dims, data, attrs)
+        return NamedArray(dims, cast(T_DuckArray, data), attrs)
     else:
         reveal_type(data)
         return NamedArray(dims, np.asarray(data), attrs)
