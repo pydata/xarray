@@ -7,7 +7,6 @@ import pytest
 
 import xarray as xr
 from xarray.namedarray.core import NamedArray, from_array
-
 from xarray.namedarray.utils import T_DuckArray
 
 if TYPE_CHECKING:
@@ -92,7 +91,6 @@ def test_as_compatible_data_with_0d_object() -> None:
 def test_from_array_with_explicitly_indexed(
     random_inputs: np.ndarray[Any, Any]
 ) -> None:
-
     array = CustomArray(random_inputs)
     output: NamedArray[CustomArray] = from_array(("x", "y", "z"), array)
     assert isinstance(output.data, np.ndarray)
@@ -221,12 +219,7 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
 
 
 def test_typing() -> None:
-    from typing import Generic
-
     from dask.array.core import Array as DaskArray
-    from numpy.typing import DTypeLike
-
-    from xarray.namedarray.utils import Self, T_DType_co
 
     a = [1, 2, 3]
     reveal_type(from_array("x", a))
