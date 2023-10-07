@@ -9,16 +9,13 @@ import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes
-from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
     _Array,
     _default,
     is_chunked_duck_array,
-    is_duck_array,
     is_duck_dask_array,
-    to_0d_object_array,
 )
 
 if TYPE_CHECKING:
