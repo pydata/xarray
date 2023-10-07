@@ -86,10 +86,10 @@ def test_from_array_with_masked_array() -> None:
         from_array(masked_array)
 
 
-def test_as_compatible_data_with_0d_object() -> None:
+def test_from_array_with_0d_object() -> None:
     data = np.empty((), dtype=object)
     data[()] = (10, 12, 12)
-    np.array_equal(from_array(data), data)
+    np.array_equal(from_array(data).data, data)
 
 
 def test_from_array_with_explicitly_indexed(
