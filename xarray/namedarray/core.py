@@ -99,20 +99,20 @@ def from_array(
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
     if isinstance(data, NamedArray):
-        return data.copy()
+        return NamedArray(dims, data._data, attrs)
 
     if is_duck_array(data):
-        return NamedArray(data)
+        return NamedArray(dims, data, attrs)
 
     if isinstance(data, ExplicitlyIndexed):
         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
-        return NamedArray(cast(T_DuckArray, data))
+        return NamedArray(dims, cast(T_DuckArray, data), attrs)
 
     if isinstance(data, tuple):
         data = to_0d_object_array(data)
 
     # validate whether the data is valid data types.
-    return NamedArray(np.asarray(data))
+    return NamedArray(dims, np.asarray(data), attrs)
 
 
 class NamedArray(Generic[T_DuckArray]):
