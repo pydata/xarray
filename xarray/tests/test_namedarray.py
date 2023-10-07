@@ -208,8 +208,9 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
 
 
 def test_typing() -> None:
-    from dask.array import Array as DaskArray
+    from dask.array.core import Array as DaskArray
     from xarray.namedarray.core import from_array
+    from xarray.namedarray.utils import _Array
 
     a = [1, 2, 3]
     reveal_type(from_array("x", a))
@@ -220,6 +221,8 @@ def test_typing() -> None:
     reveal_type(from_array("a", b))
     reveal_type(from_array([None], b))
 
-    c = DaskArray([1, 2, 3], "c", {})
+    c: DaskArray = DaskArray([1, 2, 3], "c", {})
+    reveal_type(c.shape)
+    reveal_type(c)
     reveal_type(from_array("a", c))
     reveal_type(from_array([None], c))

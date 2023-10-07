@@ -18,6 +18,7 @@ from xarray.namedarray.utils import (
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
+    _Array,
 )
 
 if TYPE_CHECKING:
@@ -78,32 +79,35 @@ def as_compatible_data(
 @overload
 def from_array(
     dims: DimsInput,
-    data: T_DuckArray,
+    data: float,
     attrs: AttrsInput = None,
-) -> NamedArray[T_DuckArray]:
+) -> NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
     ...
 
 
 @overload
 def from_array(
     dims: DimsInput,
-    data: np.typing.ArrayLike,
+    data: T_DuckArray,
     attrs: AttrsInput = None,
-) -> NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
+) -> NamedArray[T_DuckArray]:
     ...
 
 
 def from_array(
     dims: DimsInput,
-    data: T_DuckArray | np.typing.ArrayLike,
+    data: T_DuckArray | float,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
     # if isinstance(data, NamedArray):
     #     return NamedArray(dims, data._data, attrs)
 
-    if is_duck_array(data):
-        return NamedArray(dims, cast(T_DuckArray, data), attrs)
+    reveal_type(data)
+    if isinstance(data, _Array):
+        reveal_type(data)
+        return NamedArray(dims, data, attrs)
     else:
+        reveal_type(data)
         return NamedArray(dims, np.asarray(data), attrs)
 
     # if isinstance(data, ExplicitlyIndexed):
@@ -282,7 +286,6 @@ class NamedArray(Generic[T_DuckArray]):
 
     @data.setter
     def data(self, data: T_DuckArray) -> None:
-        # data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
 
@@ -461,7 +464,7 @@ class NamedArray(Generic[T_DuckArray]):
             if deep:
                 ndata = copy.deepcopy(ndata, memo=memo)
         else:
-            ndata = as_compatible_data(data)
+            ndata = data
             self._check_shape(ndata)
 
         attrs = (

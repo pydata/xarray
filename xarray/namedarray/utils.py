@@ -4,7 +4,7 @@ import importlib
 import sys
 from collections.abc import Hashable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, runtime_checkable
 
 import numpy as np
 
@@ -19,12 +19,15 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Self
 
-    try:
-        from dask.array import Array as DaskArray
-        from dask.types import DaskCollection
-    except ImportError:
-        DaskArray = np.ndarray  # type: ignore
-        DaskCollection: Any = np.ndarray  # type: ignore
+    from dask.array.core import Array as DaskArray
+    from dask.typing import DaskCollection
+
+    # try:
+    #     from dask.array.core import Array as DaskArray
+    #     from dask.typing import DaskCollection
+    # except ImportError:
+    #     DaskArray = np.ndarray  # type: ignore
+    #     DaskCollection: Any = np.ndarray  # type: ignore
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
@@ -32,13 +35,14 @@ T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
 # T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
 
 
+@runtime_checkable
 class _Array(Protocol[T_DType_co]):
     @property
     def dtype(self) -> T_DType_co:
         ...
 
     @property
-    def shape(self) -> tuple[int, ...]:
+    def shape(self) -> tuple[float, ...]:
         ...
 
     @property
@@ -104,26 +108,24 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
-def is_duck_array(value: T_DuckArray | object) -> TypeGuard[T_DuckArray]:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and (
-            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-            or hasattr(value, "__array_namespace__")
-        )
+_T = TypeVar("_T")
+
+
+def is_duck_array(value: _T) -> TypeGuard[_T]:
+    # if isinstance(value, np.ndarray):
+    #     return True
+    return isinstance(value, _Array) and (
+        (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+        or hasattr(value, "__array_namespace__")
     )
 
 
-def is_duck_dask_array(x: T_DuckArray) -> TypeGuard[DaskArray]:
+def is_duck_dask_array(x: _Array) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
 def is_chunked_duck_array(
-    x: T_DuckArray,
+    x: _Array,
 ) -> TypeGuard[_ChunkedArray[np.dtype[np.generic]]]:
     return hasattr(x, "chunks")
 
