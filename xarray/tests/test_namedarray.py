@@ -206,6 +206,7 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
         named_array.dims = new_dims
         assert named_array.dims == tuple(new_dims)
 
+
 def test_typing() -> None:
     from dask.array import Array as DaskArray
     from xarray.namedarray.core import from_array
