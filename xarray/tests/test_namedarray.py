@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 # import xarray as xr
-from xarray.namedarray.core import NamedArray
+from xarray.namedarray.core import NamedArray, from_array
 
 # from xarray.namedarray.utils import T_DuckArray
 
@@ -132,7 +132,7 @@ def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
 )
 def test_0d_string(data: Any, dtype: np.typing.DTypeLike) -> None:
     named_array: NamedArray[np.ndarray[Any, Any]]
-    named_array = NamedArray([], data)
+    named_array = from_array([], data)
     assert named_array.data == data
     assert named_array.dims == ()
     assert named_array.sizes == {}
@@ -144,7 +144,7 @@ def test_0d_string(data: Any, dtype: np.typing.DTypeLike) -> None:
 
 def test_0d_object() -> None:
     named_array: NamedArray[np.ndarray[Any, Any]]
-    named_array = NamedArray([], (10, 12, 12))
+    named_array = from_array([], (10, 12, 12))
     expected_data = np.empty((), dtype=object)
     expected_data[()] = (10, 12, 12)
     assert np.array_equal(named_array.data, expected_data)
@@ -159,7 +159,7 @@ def test_0d_object() -> None:
 
 def test_0d_datetime() -> None:
     named_array: NamedArray[np.ndarray[Any, Any]]
-    named_array = NamedArray([], np.datetime64("2000-01-01"))
+    named_array = from_array([], np.datetime64("2000-01-01"))
     assert named_array.dtype == np.dtype("datetime64[D]")
 
 
@@ -181,7 +181,7 @@ def test_0d_timedelta(
     timedelta: np.timedelta64, expected_dtype: np.dtype[np.timedelta64]
 ) -> None:
     named_array: NamedArray[np.ndarray[Any, np.dtype[np.timedelta64]]]
-    named_array = NamedArray([], timedelta)
+    named_array = from_array([], timedelta)
     assert named_array.dtype == expected_dtype
     assert named_array.data == timedelta
 
@@ -214,7 +214,6 @@ def test_typing() -> None:
     from dask.array.core import Array as DaskArray
     from numpy.typing import DTypeLike
 
-    from xarray.namedarray.core import from_array
     from xarray.namedarray.utils import T_DType_co
 
     a = [1, 2, 3]
