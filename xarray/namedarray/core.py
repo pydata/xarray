@@ -77,7 +77,7 @@ if TYPE_CHECKING:
 
 @overload
 def from_array(
-    dims: Dims,
+    dims: DimsInput,
     data: T_DuckArray,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray]:
@@ -86,7 +86,7 @@ def from_array(
 
 @overload
 def from_array(
-    dims: Dims,
+    dims: DimsInput,
     data: ArrayLike,
     attrs: AttrsInput = None,
 ) -> NamedArray[np.ndarray[Any, np.dtype[Any]]]:
@@ -94,7 +94,7 @@ def from_array(
 
 
 def from_array(
-    dims: Dims,
+    dims: DimsInput,
     data: T_DuckArray | NamedArray[T_DuckArray] | ArrayLike,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[Any]]]:
