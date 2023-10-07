@@ -13,12 +13,12 @@ from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
+    _Array,
     _default,
     is_chunked_duck_array,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
-    _Array,
 )
 
 if TYPE_CHECKING:
