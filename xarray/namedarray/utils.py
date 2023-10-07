@@ -52,10 +52,10 @@ class _Array(Protocol[T_DType_co]):
     def astype(self, dtype: np.typing.DTypeLike) -> Self:
         ...
 
-    # TODO: numpy doesn't use any inputs:
-    # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
-    def __array__(self) -> np.ndarray[Any, T_DType_co]:
-        ...
+    # # TODO: numpy doesn't use any inputs:
+    # # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
+    # def __array__(self) -> np.ndarray[Any, T_DType_co]:
+    #     ...
 
 
 class _ChunkedArray(_Array[T_DType_co], Protocol[T_DType_co]):
@@ -104,7 +104,7 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
-def is_duck_array(value: object) -> TypeGuard[T_DuckArray]:
+def is_duck_array(value: T_DuckArray | object) -> TypeGuard[T_DuckArray]:
     if isinstance(value, np.ndarray):
         return True
     return (

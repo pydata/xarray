@@ -98,21 +98,23 @@ def from_array(
     data: T_DuckArray | np.typing.ArrayLike,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
-    if isinstance(data, NamedArray):
-        return NamedArray(dims, data._data, attrs)
+    # if isinstance(data, NamedArray):
+    #     return NamedArray(dims, data._data, attrs)
 
     if is_duck_array(data):
-        return NamedArray(dims, data, attrs)
-
-    if isinstance(data, ExplicitlyIndexed):
-        # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
         return NamedArray(dims, cast(T_DuckArray, data), attrs)
+    else:
+        return NamedArray(dims, np.asarray(data), attrs)
 
-    if isinstance(data, tuple):
-        data = to_0d_object_array(data)
+    # if isinstance(data, ExplicitlyIndexed):
+    #     # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
+    #     return NamedArray(dims, cast(T_DuckArray, data), attrs)
+
+    # if isinstance(data, tuple):
+    #     data = to_0d_object_array(data)
 
     # validate whether the data is valid data types.
-    return NamedArray(dims, np.asarray(data), attrs)
+    # return NamedArray(dims, np.asarray(data), attrs)
 
 
 class NamedArray(Generic[T_DuckArray]):
@@ -508,10 +510,14 @@ class NamedArray(Generic[T_DuckArray]):
 
     def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
-        # TODO we should replace dask's native nonzero
+        # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
-        nonzeros = np.nonzero(self.data)
-        return tuple(type(self)((dim,), nz) for nz, dim in zip(nonzeros, self.dims))
+        # TODO: cast to ndarray and back to T_DuckArray is a workaround
+        nonzeros = np.nonzero(cast(np.ndarray, self.data))
+        return tuple(
+            type(self)((dim,), cast(T_DuckArray, nz))
+            for nz, dim in zip(nonzeros, self.dims)
+        )
 
     def _as_sparse(
         self,
