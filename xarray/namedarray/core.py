@@ -19,6 +19,7 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
 
 # # TODO: Add tests!
 # def as_compatible_data(
-#     data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
+#     data: T_DuckArray | ArrayLike, fastpath: bool = False
 # ) -> T_DuckArray:
 #     if fastpath and getattr(data, "ndim", 0) > 0:
 #         # can't use fastpath (yet) for scalars
@@ -85,7 +86,7 @@ def from_array(
 @overload
 def from_array(
     dims: Dims,
-    data: np.typing.ArrayLike,
+    data: ArrayLike,
     attrs: AttrsInput = None,
 ) -> NamedArray[np.ndarray[Any, np.dtype[Any]]]:
     ...
@@ -93,16 +94,19 @@ def from_array(
 
 def from_array(
     dims: Dims,
-    data: T_DuckArray | np.typing.ArrayLike,
+    data: T_DuckArray | NamedArray[T_DuckArray] | ArrayLike,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[Any]]]:
-    # if isinstance(data, NamedArray):
-    #     return NamedArray(dims, data._data, attrs)
+    if isinstance(data, NamedArray):
+        raise ValueError(
+            "Array is already a Named array. Use 'data.data' to retrieve the data array"
+        )
 
     reveal_type(data)
     if isinstance(data, _Array):
         reveal_type(data)
-        return NamedArray(dims, cast(T_DuckArray, data), attrs)
+        data_ = cast(T_DuckArray, data)
+        return NamedArray(dims, data_, attrs)
     else:
         reveal_type(data)
         return NamedArray(dims, np.asarray(data), attrs)
@@ -131,7 +135,7 @@ class NamedArray(Generic[T_DuckArray]):
         ----------
         dims : str or iterable of str
             Name(s) of the dimension(s).
-        data : T_DuckArray or np.typing.ArrayLike
+        data : T_DuckArray or ArrayLike
             The actual data that populates the array. Should match the shape specified by `dims`.
         attrs : dict, optional
             A dictionary containing any additional information or attributes you want to store with the array.
@@ -512,7 +516,7 @@ class NamedArray(Generic[T_DuckArray]):
     def _as_sparse(
         self,
         sparse_format: str | Default = _default,
-        fill_value: np.typing.ArrayLike | Default = _default,
+        fill_value: ArrayLike | Default = _default,
     ) -> Self:
         """
         use sparse-array as backend.
