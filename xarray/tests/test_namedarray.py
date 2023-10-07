@@ -209,6 +209,7 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
 
 def test_typing() -> None:
     from dask.array import Array as DaskArray
+
     from xarray.namedarray.core import from_array
 
     a = [1, 2, 3]
