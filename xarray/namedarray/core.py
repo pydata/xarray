@@ -78,7 +78,7 @@ def as_compatible_data(
 
 @overload
 def from_array(
-    dims: DimsInput,
+    dims: Dims,
     data: T_DuckArray,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray]:
@@ -87,18 +87,18 @@ def from_array(
 
 @overload
 def from_array(
-    dims: DimsInput,
-    data: float,
+    dims: Dims,
+    data: np.typing.ArrayLike,
     attrs: AttrsInput = None,
-) -> NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
+) -> NamedArray[np.ndarray[Any, np.dtype[Any]]]:
     ...
 
 
 def from_array(
-    dims: DimsInput,
-    data: T_DuckArray | float,
+    dims: Dims,
+    data: T_DuckArray | np.typing.ArrayLike,
     attrs: AttrsInput = None,
-) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[np.generic]]]:
+) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[Any]]]:
     # if isinstance(data, NamedArray):
     #     return NamedArray(dims, data._data, attrs)
 
@@ -109,16 +109,6 @@ def from_array(
     else:
         reveal_type(data)
         return NamedArray(dims, np.asarray(data), attrs)
-
-    # if isinstance(data, ExplicitlyIndexed):
-    #     # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
-    #     return NamedArray(dims, cast(T_DuckArray, data), attrs)
-
-    # if isinstance(data, tuple):
-    #     data = to_0d_object_array(data)
-
-    # validate whether the data is valid data types.
-    # return NamedArray(dims, np.asarray(data), attrs)
 
 
 class NamedArray(Generic[T_DuckArray]):
