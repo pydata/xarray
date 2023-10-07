@@ -96,12 +96,15 @@ def test_from_array_with_explicitly_indexed(
     random_inputs: np.ndarray[Any, Any]
 ) -> None:
     array = CustomArray(random_inputs)
-    reveal_type(array)
-    output: NamedArray[CustomArray] = from_array(("x", "y", "z"), array)
+    output: NamedArray[CustomArray[np.dtype[np.generic]]] = from_array(
+        ("x", "y", "z"), array
+    )
     assert isinstance(output.data, np.ndarray)
 
     array2 = CustomArrayIndexable(random_inputs)
-    output2: NamedArray[CustomArrayIndexable] = from_array(("x", "y", "z"), array2)
+    output2: NamedArray[CustomArrayIndexable[np.dtype[np.generic]]] = from_array(
+        ("x", "y", "z"), array2
+    )
     assert isinstance(output2.data, CustomArrayIndexable)
 
 
