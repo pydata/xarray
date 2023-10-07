@@ -20,6 +20,7 @@ from xarray.namedarray.utils import (
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
+
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
