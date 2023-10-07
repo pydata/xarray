@@ -503,7 +503,7 @@ class NamedArray(Generic[T_DuckArray]):
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
-        nonzeros = np.nonzero(cast(np.ndarray, self.data))
+        nonzeros = np.nonzero(cast("np.ndarray[np.dtype[np.generic]]", self.data))
         return tuple(
             type(self)((dim,), cast(T_DuckArray, nz))
             for nz, dim in zip(nonzeros, self.dims)

@@ -46,11 +46,11 @@ class _Array(Protocol[T_DType_co]):
         ...
 
     @property
-    def real(self) -> _Array[np.dtype[np.generic]]:
+    def real(self) -> Self:  # _Array[np.dtype[np.generic]]:
         ...
 
     @property
-    def imag(self) -> _Array[np.dtype[np.generic]]:
+    def imag(self) -> Self:  # _Array[np.dtype[np.generic]]:
         ...
 
     def astype(self, dtype: np.typing.DTypeLike) -> Self:
