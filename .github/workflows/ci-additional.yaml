@@ -194,8 +194,13 @@ jobs:
     name: Pyright
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    # temporarily skipping due to https://github.com/pydata/xarray/issues/6551
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    if: |
+        always()
+        && (
+            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+            || needs.detect-ci-trigger.outputs.triggered == 'true'
+            || contains( github.event.pull_request.labels.*.name, 'run-pyright')
+        )
     defaults:
       run:
         shell: bash -l {0}
@@ -250,6 +255,13 @@ jobs:
     name: Pyright 3.9
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
+    if: |
+        always()
+        && (
+            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+            || needs.detect-ci-trigger.outputs.triggered == 'true'
+            || contains( github.event.pull_request.labels.*.name, 'run-pyright')
+        )
     defaults:
       run:
         shell: bash -l {0}
