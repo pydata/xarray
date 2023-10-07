@@ -81,7 +81,7 @@ def test_from_array(
 
 
 def test_from_array_with_masked_array() -> None:
-    masked_array: np.ndarray[Any, Any] = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
+    masked_array: np.ndarray[Any, np.dtype[np.generic]] = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
     with pytest.raises(NotImplementedError):
         from_array(masked_array)
 
