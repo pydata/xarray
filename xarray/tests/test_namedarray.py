@@ -214,7 +214,7 @@ def test_typing() -> None:
     from dask.array.core import Array as DaskArray
     from numpy.typing import DTypeLike
 
-    from xarray.namedarray.utils import T_DType_co
+    from xarray.namedarray.utils import T_DType_co, Self
 
     a = [1, 2, 3]
     reveal_type(from_array("x", a))

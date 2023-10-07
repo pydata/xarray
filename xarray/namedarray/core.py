@@ -16,6 +16,7 @@ from xarray.namedarray.utils import (
     _default,
     is_chunked_duck_array,
     is_duck_dask_array,
+    to_0d_object_array,
 )
 
 if TYPE_CHECKING:
@@ -103,14 +104,28 @@ def from_array(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
         )
 
-    reveal_type(data)
-    if isinstance(data, _Array):
-        reveal_type(data)
+    # TODO: dask.array.ma.masked_array also exists, better way?
+    if isinstance(data, np.ma.MaskedArray):
+        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
+        if mask.any():
+            # TODO: requires refactoring/vendoring xarray.core.dtypes and
+            # xarray.core.duck_array_ops
+            raise NotImplementedError("MaskedArray is not supported yet")
+        # TODO: cast is used becuase of mypy, pyright returns correctly:
         data_ = cast(T_DuckArray, data)
         return NamedArray(dims, data_, attrs)
-    else:
-        reveal_type(data)
-        return NamedArray(dims, np.asarray(data), attrs)
+
+    if isinstance(data, _Array):
+        # TODO: cast is used becuase of mypy, pyright returns correctly:
+        data_ = cast(T_DuckArray, data)
+        return NamedArray(dims, data_, attrs)
+
+    if isinstance(data, tuple):
+        data_ = to_0d_object_array(data)
+        return NamedArray(dims, data_, attrs)
+
+    # validate whether the data is valid data types.
+    return NamedArray(dims, np.asarray(data), attrs)
 
 
 class NamedArray(Generic[T_DuckArray]):
@@ -508,7 +523,7 @@ class NamedArray(Generic[T_DuckArray]):
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
-        nonzeros = np.nonzero(cast("np.ndarray[np.dtype[np.generic]]", self.data))
+        nonzeros = np.nonzero(cast("np.ndarray[Any, np.dtype[np.generic]]", self.data))
         return tuple(
             type(self)((dim,), cast(T_DuckArray, nz))
             for nz, dim in zip(nonzeros, self.dims)
