@@ -12,8 +12,11 @@ from xarray.namedarray.utils import T_DuckArray, _array
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
-    from xarray.namedarray.utils import _Shape
+    from xarray.namedarray.utils import (
+        Self,  # type: ignore[attr-defined]
+        _Shape,
+    )
+
 
 # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
 class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
