@@ -2959,7 +2959,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"contain all variables in original"):
             orig.copy(data={"var1": new_var1})
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         orig = create_test_data()
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
@@ -2967,7 +2967,7 @@ class TestDataset:
         for k, v in orig.variables.items():
             orig[k].encoding = vencoding
 
-        actual = orig.reset_encoding()
+        actual = orig.drop_encoding()
         assert actual.encoding == {}
         for k, v in actual.variables.items():
             assert v.encoding == {}

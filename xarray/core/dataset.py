@@ -756,9 +756,13 @@ class Dataset(
         self._encoding = dict(value)
 
     def reset_encoding(self) -> Self:
+        warnings.warn("reset_encoding is deprecated, use `drop_encoding` instead")
+        self.drop_encoding()
+
+    def drop_encoding(self) -> Self:
         """Return a new Dataset without encoding on the dataset or any of its
         variables/coords."""
-        variables = {k: v.reset_encoding() for k, v in self.variables.items()}
+        variables = {k: v.drop_encoding() for k, v in self.variables.items()}
         return self._replace(variables=variables, encoding={})
 
     @property
