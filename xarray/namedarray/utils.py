@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import sys
 from collections.abc import Hashable
 from enum import Enum
