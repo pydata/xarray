@@ -9,7 +9,11 @@ from typing import (
     Any,
     Final,
     Generic,
+    Iterable,
+    Mapping,
     Protocol,
+    Sequence,
+    SupportsIndex,
     TypeVar,
     runtime_checkable,
 )
@@ -38,16 +42,31 @@ if TYPE_CHECKING:
     #     DaskArray = NDArray  # type: ignore
     #     DaskCollection: Any = NDArray  # type: ignore
 
+from typing import Union, SupportsIndex
+
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T_co = TypeVar("_T_co", covariant=True)
-_DType_co = TypeVar(
-    "_DType_co", covariant=True, bound=np.dtype[Any]
-)  # T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
+
+_DType = TypeVar("_DType_co", bound=np.dtype[Any])
+_DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+
+# For unknown shapes Dask uses np.nan, array_api uses None:
+_IntOrUnknown = int
+_Shape = tuple[_IntOrUnknown, ...]
+_ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=Any)
 _ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+
+_Chunks = tuple[_Shape, ...]
+
+_Dim = Hashable
+_Dims = tuple[_Dim, ...]
+
+_DimsLike = Union[str, Iterable[_Dim]]
+_AttrsLike = Union[Mapping[Any, Any], None]
 
 _dtype = np.dtype
 
@@ -66,8 +85,14 @@ class _SupportsImag(Protocol[_T_co]):
 
 @runtime_checkable
 class _array(Protocol[_ShapeType, _DType_co]):
+    """
+    Minimal duck array.
+
+    Corresponds to np.ndarray.
+    """
+
     @property
-    def shape(self) -> tuple[int, ...]:
+    def shape(self) -> _Shape:
         ...
 
     @property
@@ -99,26 +124,41 @@ class _array(Protocol[_ShapeType, _DType_co]):
     #     ...
 
 
+# Corresponds to np.typing.NDArray:
 _Array = _array[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
-class _chunkedArray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
+class _chunkedarray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
+    """
+    Minimal chunked duck array.
+
+    Corresponds to np.ndarray.
+    """
+
     @property
-    def chunks(self) -> tuple[tuple[int, ...], ...]:
+    def chunks(self) -> _Chunks:
         ...
 
 
-_ChunkedArray = _chunkedArray[Any, np.dtype[_ScalarType_co]]
+# Corresponds to np.typing.NDArray:
+_ChunkedArray = _chunkedarray[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
-class _sparseArray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
+class _sparsearray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
+    """
+    Minimal sparse duck array.
+
+    Corresponds to np.ndarray.
+    """
+
     def todense(self) -> NDArray[_ScalarType_co]:
         ...
 
 
-_SparseArray = _sparseArray[Any, np.dtype[_ScalarType_co]]
+# Corresponds to np.typing.NDArray:
+_SparseArray = _sparsearray[Any, np.dtype[_ScalarType_co]]
 
 
 # temporary placeholder for indicating an array api compliant type.

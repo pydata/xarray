@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast, overload, Literal
 
 import numpy as np
 
@@ -12,9 +12,16 @@ from xarray.core import dtypes
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
+    _Chunks,
+    _AttrsLike,
+    _Dim,
+    _Dims,
+    _DimsLike,
+    _IntOrUnknown,
+    _Shape,
     _array,
     _default,
-    _sparseArray,
+    _sparsearray,
     is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -42,11 +49,6 @@ if TYPE_CHECKING:
         SchedulerGetCallable: Any  # type: ignore[no-redef]
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
-
-    # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[T_DuckArray]")
-    DimsInput = Union[str, Iterable[Hashable]]
-    Dims = tuple[Hashable, ...]
-    AttrsInput = Union[Mapping[Any, Any], None]
 
 
 # # TODO: Add tests!
@@ -82,26 +84,26 @@ if TYPE_CHECKING:
 
 @overload
 def from_array(
-    dims: DimsInput,
+    dims: _DimsLike,
     data: T_DuckArray,
-    attrs: AttrsInput = None,
+    attrs: _AttrsLike = None,
 ) -> NamedArray[T_DuckArray]:
     ...
 
 
 @overload
 def from_array(
-    dims: DimsInput,
+    dims: _DimsLike,
     data: ArrayLike,
-    attrs: AttrsInput = None,
+    attrs: _AttrsLike = None,
 ) -> NamedArray[NDArray[np.generic]]:
     ...
 
 
 def from_array(
-    dims: DimsInput,
+    dims: _DimsLike,
     data: T_DuckArray | ArrayLike,
-    attrs: AttrsInput = None,
+    attrs: _AttrsLike = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[NDArray[np.generic]]:
     if isinstance(data, NamedArray):
         raise ValueError(
@@ -142,14 +144,14 @@ class NamedArray(Generic[T_DuckArray]):
     __slots__ = ("_data", "_dims", "_attrs")
 
     _data: T_DuckArray
-    _dims: Dims
+    _dims: _Dims
     _attrs: dict[Any, Any] | None
 
     def __init__(
         self,
-        dims: DimsInput,
+        dims: _DimsLike,
         data: T_DuckArray,
-        attrs: AttrsInput = None,
+        attrs: _AttrsLike = None,
     ):
         """
         Parameters
@@ -178,7 +180,7 @@ class NamedArray(Generic[T_DuckArray]):
         self._attrs = dict(attrs) if attrs else None
 
     @property
-    def ndim(self) -> int:
+    def ndim(self) -> _IntOrUnknown:
         """
         Number of array dimensions.
 
@@ -189,7 +191,7 @@ class NamedArray(Generic[T_DuckArray]):
         return len(self.shape)
 
     @property
-    def size(self) -> int:
+    def size(self) -> _IntOrUnknown:
         """
         Number of elements in the array.
 
@@ -201,7 +203,7 @@ class NamedArray(Generic[T_DuckArray]):
         """
         return math.prod(self.shape)
 
-    def __len__(self) -> int:
+    def __len__(self) -> _IntOrUnknown:
         try:
             return self.shape[0]
         except Exception as exc:
@@ -220,7 +222,7 @@ class NamedArray(Generic[T_DuckArray]):
         return self._data.dtype
 
     @property
-    def shape(self) -> tuple[int, ...]:
+    def shape(self) -> _Shape:
         """
 
 
@@ -238,7 +240,7 @@ class NamedArray(Generic[T_DuckArray]):
         return self._data.shape
 
     @property
-    def nbytes(self) -> int:
+    def nbytes(self) -> _IntOrUnknown:
         """
         Total bytes consumed by the elements of the data array.
 
@@ -251,15 +253,15 @@ class NamedArray(Generic[T_DuckArray]):
             return self.size * self.dtype.itemsize
 
     @property
-    def dims(self) -> Dims:
+    def dims(self) -> _Dims:
         """Tuple of dimension names with which this NamedArray is associated."""
         return self._dims
 
     @dims.setter
-    def dims(self, value: DimsInput) -> None:
+    def dims(self, value: _DimsLike) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims: DimsInput) -> Dims:
+    def _parse_dimensions(self, dims: _DimsLike) -> _Dims:
         dims = (dims,) if isinstance(dims, str) else tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
@@ -405,7 +407,7 @@ class NamedArray(Generic[T_DuckArray]):
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @property
-    def chunks(self) -> tuple[tuple[int, ...], ...] | None:
+    def chunks(self) -> _Chunks | None:
         """
         Tuple of block lengths for this NamedArray's data, in order of dimensions, or None if
         the underlying data is not a dask array.
@@ -425,7 +427,7 @@ class NamedArray(Generic[T_DuckArray]):
     @property
     def chunksizes(
         self,
-    ) -> Mapping[Any, tuple[int, ...]]:
+    ) -> Mapping[_Dim, _Shape]:
         """
         Mapping from dimension names to block lengths for this namedArray's data, or None if
         the underlying data is not a dask array.
@@ -447,15 +449,15 @@ class NamedArray(Generic[T_DuckArray]):
             return {}
 
     @property
-    def sizes(self) -> dict[Hashable, int]:
+    def sizes(self) -> dict[_Dim, _IntOrUnknown]:
         """Ordered mapping from dimension names to lengths."""
         return dict(zip(self.dims, self.shape))
 
     def _replace(
         self,
-        dims: DimsInput | Default = _default,
+        dims: _DimsLike | Default = _default,
         data: T_DuckArray | Default = _default,
-        attrs: AttrsInput | Default = _default,
+        attrs: _AttrsLike | Default = _default,
     ) -> Self:
         if dims is _default:
             dims = copy.copy(self._dims)
@@ -536,7 +538,7 @@ class NamedArray(Generic[T_DuckArray]):
 
     def _as_sparse(
         self,
-        sparse_format: str | Default = _default,
+        sparse_format: Literal["coo"] | Default = _default,
         fill_value: ArrayLike | Default = _default,
     ) -> Self:
         """
@@ -564,6 +566,6 @@ class NamedArray(Generic[T_DuckArray]):
         """
         Change backend from sparse to np.array
         """
-        if isinstance(self._data, _sparseArray):
+        if isinstance(self._data, _sparsearray):
             return self._replace(data=self._data.todense())
         return self.copy(deep=False)
