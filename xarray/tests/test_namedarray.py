@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from xarray.namedarray.utils import (
-        Self,  # type: ignore[attr-defined]
         _DimsLike,
         _Shape,
     )
