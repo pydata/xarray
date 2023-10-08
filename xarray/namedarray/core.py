@@ -9,9 +9,9 @@ from typing import (
     Callable,
     Generic,
     Literal,
+    TypeVar,
     cast,
     overload,
-    TypeVar,
 )
 
 import numpy as np
@@ -40,8 +40,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray.utils import (
-        _Array,
         Self,  # type: ignore[attr-defined]
+        _Array,
     )
 
     try:
