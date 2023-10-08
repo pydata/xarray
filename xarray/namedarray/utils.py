@@ -6,11 +6,15 @@ from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Final,
+    Literal,
     Protocol,
     SupportsIndex,
+    Union,
     TypeVar,
     runtime_checkable,
+    ModuleType,
 )
 
 import numpy as np
@@ -37,7 +41,6 @@ if TYPE_CHECKING:
     #     DaskArray = NDArray  # type: ignore
     #     DaskCollection: Any = NDArray  # type: ignore
 
-from typing import SupportsIndex, Union
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
@@ -95,7 +98,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
         ...
 
     @property
-    def imag(self) -> _array[Any, _DType_co]:
+    def imag(self) -> Self[Any, _DType_co]:
         ...
 
     # @property
@@ -126,6 +129,57 @@ _Array = _array[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
+class _arrayfunction(
+    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
+    """
+    Duck array supporting NEP 18.
+
+    Corresponds to np.ndarray.
+    """
+
+    def __array_ufunc__(
+        self,
+        ufunc: Callable[..., Any],
+        method: Literal[
+            "__call__", "reduce", "reduceat", "accumulate", "outer", "inner"
+        ],
+        *inputs: Any,
+        **kwargs: Any,
+    ) -> Any:
+        ...
+
+    def __array_function__(
+        self,
+        func: Callable[..., Any],
+        types: Iterable[type],
+        args: Iterable[Any],
+        kwargs: Mapping[str, Any],
+    ) -> Any:
+        ...
+
+
+# Corresponds to np.typing.NDArray:
+_ArrayFunction = _arrayfunction[Any, np.dtype[_ScalarType_co]]
+
+
+@runtime_checkable
+class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]):
+    """
+    Duck array supporting NEP 47.
+
+    Corresponds to np.ndarray.
+    """
+
+    def __array_namespace__(self) -> ModuleType:
+        ...
+
+
+# Corresponds to np.typing.NDArray:
+_ArrayAPI = _arrayapi[Any, np.dtype[_ScalarType_co]]
+
+
+@runtime_checkable
 class _chunkedarray(
     _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
 ):
@@ -142,6 +196,44 @@ class _chunkedarray(
 
 # Corresponds to np.typing.NDArray:
 _ChunkedArray = _chunkedarray[Any, np.dtype[_ScalarType_co]]
+
+
+@runtime_checkable
+class _chunkedarrayfunction(
+    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
+    """
+    Minimal chunked duck array.
+
+    Corresponds to np.ndarray.
+    """
+
+    @property
+    def chunks(self) -> _Chunks:
+        ...
+
+
+# Corresponds to np.typing.NDArray:
+_ChunkedArrayFunction = _chunkedarrayfunction[Any, np.dtype[_ScalarType_co]]
+
+
+@runtime_checkable
+class _chunkedarrayapi(
+    _arrayapi[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
+    """
+    Minimal chunked duck array.
+
+    Corresponds to np.ndarray.
+    """
+
+    @property
+    def chunks(self) -> _Chunks:
+        ...
+
+
+# Corresponds to np.typing.NDArray:
+_ChunkedArrayAPI = _chunkedarrayapi[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
@@ -204,13 +296,13 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
-def is_duck_array(value: _T) -> TypeGuard[_T]:
-    # if isinstance(value, np.ndarray):
-    #     return True
-    return isinstance(value, _array) and (
-        (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-        or hasattr(value, "__array_namespace__")
-    )
+# def is_duck_array(value: _T) -> TypeGuard[_T]:
+#     # if isinstance(value, np.ndarray):
+#     #     return True
+#     return isinstance(value, _array) and (
+#         (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+#         or hasattr(value, "__array_namespace__")
+#     )
 
 
 def is_duck_dask_array(x: _Array[np.generic]) -> TypeGuard[DaskArray]:

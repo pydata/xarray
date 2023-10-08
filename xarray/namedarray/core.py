@@ -50,37 +50,6 @@ if TYPE_CHECKING:
         PostPersistCallable: Any  # type: ignore[no-redef]
 
 
-# # TODO: Add tests!
-# def as_compatible_data(
-#     data: T_DuckArray | ArrayLike, fastpath: bool = False
-# ) -> T_DuckArray:
-#     if fastpath and getattr(data, "ndim", 0) > 0:
-#         # can't use fastpath (yet) for scalars
-#         return cast(T_DuckArray, data)
-
-#     if isinstance(data, np.ma.MaskedArray):
-#         mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
-#         if mask.any():
-#             # TODO: requires refactoring/vendoring xarray.core.dtypes and xarray.core.duck_array_ops
-#             raise NotImplementedError("MaskedArray is not supported yet")
-#         else:
-#             return cast(T_DuckArray, np.asarray(data))
-#     if is_duck_array(data):
-#         return data
-#     if isinstance(data, NamedArray):
-#         return cast(T_DuckArray, data.data)
-
-#     if isinstance(data, ExplicitlyIndexed):
-#         # TODO: better that is_duck_array(ExplicitlyIndexed) -> True
-#         return cast(T_DuckArray, data)
-
-#     if isinstance(data, tuple):
-#         data = to_0d_object_array(data)
-
-#     # validate whether the data is valid data types.
-#     return cast(T_DuckArray, np.asarray(data))
-
-
 @overload
 def from_array(
     dims: _DimsLike,
@@ -95,7 +64,7 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = None,
-) -> NamedArray[NDArray[np.generic]]:
+) -> NamedArray[NDArray[Any]]:
     ...
 
 
@@ -103,7 +72,7 @@ def from_array(
     dims: _DimsLike,
     data: T_DuckArray | ArrayLike,
     attrs: _AttrsLike = None,
-) -> NamedArray[T_DuckArray] | NamedArray[NDArray[np.generic]]:
+) -> NamedArray[T_DuckArray] | NamedArray[NDArray[Any]]:
     """
     Create a Named array from an array-like object.
 

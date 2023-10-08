@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
     from xarray.namedarray.utils import _Shape
 
-# TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
+
 class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
     def __init__(self, array: T_DuckArray) -> None:
         self.array: T_DuckArray = array
@@ -94,6 +94,8 @@ def test_from_array_with_0d_object() -> None:
     np.array_equal(from_array(data).data, data)
 
 
+# TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of _array
+# and remove this test.
 def test_from_array_with_explicitly_indexed(
     random_inputs: np.ndarray[Any, Any]
 ) -> None:
