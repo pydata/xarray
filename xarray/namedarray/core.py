@@ -62,23 +62,6 @@ if TYPE_CHECKING:
     T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[Any]")
 
 
-def _replace_with_new_data_type(
-    obj: T_NamedArray,
-    dims: _DimsLike | Default = _default,
-    data: _ArrayFunctionOrAPI | Default = _default,
-    attrs: _AttrsLike | Default = _default,
-) -> T_NamedArray:
-    if dims is _default:
-        dims = copy.copy(obj._dims)
-    if data is _default:
-        data_ = copy.copy(obj._data)
-    else:
-        data_ = data
-    if attrs is _default:
-        attrs = copy.copy(obj._attrs)
-    return type(obj)(dims, data_, attrs)
-
-
 @overload
 def from_array(
     dims: _DimsLike,
@@ -320,8 +303,10 @@ class NamedArray(Generic[T_DuckArray]):
         self._check_shape(data)
         self._data = data
 
+    # TODO: Should return the same subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
     @property
-    def real(self) -> NamedArray:
+    def real(self) -> Any:
         """
         The real part of the NamedArray.
 
@@ -329,11 +314,12 @@ class NamedArray(Generic[T_DuckArray]):
         --------
         numpy.ndarray.real
         """
-        # return self._replace(data=self.data.real)
-        return _replace_with_new_data_type(self, data=self.data.real)
+        return self._replace_with_new_data_type(self, data=self.data.real)
 
+    # TODO: Should return the same subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
     @property
-    def imag(self) -> NamedArray:
+    def imag(self) -> Any:
         """
         The imaginary part of the NamedArray.
 
@@ -341,8 +327,7 @@ class NamedArray(Generic[T_DuckArray]):
         --------
         numpy.ndarray.imag
         """
-        # return self._replace(data=self.data.imag)
-        return _replace_with_new_data_type(self, data=self.data.imag)
+        return self._replace_with_new_data_type(data=self.data.imag)
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
@@ -491,6 +476,22 @@ class NamedArray(Generic[T_DuckArray]):
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         return type(self)(dims, data, attrs)
+
+    def _replace_with_new_data_type(
+        self,
+        dims: _DimsLike | Default = _default,
+        data: _ArrayFunctionOrAPI | Default = _default,
+        attrs: _AttrsLike | Default = _default,
+    ) -> Any:
+        if dims is _default:
+            dims = copy.copy(self._dims)
+        if data is _default:
+            data_ = copy.copy(self._data)
+        else:
+            data_ = data
+        if attrs is _default:
+            attrs = copy.copy(self._attrs)
+        return type(self)(dims, data_, attrs)
 
     def _copy(
         self,
