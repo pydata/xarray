@@ -30,7 +30,7 @@ from xarray.namedarray.utils import (
     _DimsLike,
     _IntOrUnknown,
     _Shape,
-    _sparsearray,
+    _sparsearrayfunction_or_api,
     is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -314,7 +314,7 @@ class NamedArray(Generic[T_DuckArray]):
         --------
         numpy.ndarray.real
         """
-        return self._replace_with_new_data_type(self, data=self.data.real)
+        return self._replace_with_new_data_type(data=self.data.real)
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -485,6 +485,8 @@ class NamedArray(Generic[T_DuckArray]):
     ) -> Any:
         if dims is _default:
             dims = copy.copy(self._dims)
+
+        data_: _ArrayFunctionOrAPI
         if data is _default:
             data_ = copy.copy(self._data)
         else:
@@ -592,8 +594,8 @@ class NamedArray(Generic[T_DuckArray]):
         """
         Change backend from sparse to np.array
         """
-        if isinstance(self._data, _sparsearray):
+        if isinstance(self._data, _sparsearrayfunction_or_api):
             # return self._replace(data=self._data.todense())
-            return _replace_with_new_data_type(self, data=self._data.todense())
+            return self._replace_with_new_data_type(data=self._data.todense())
         else:
             raise TypeError("self.data is not a sparse array")

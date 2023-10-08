@@ -240,7 +240,7 @@ _ChunkedArrayAPI = _chunkedarrayapi[Any, np.dtype[_ScalarType_co]]
 
 @runtime_checkable
 class _sparsearray(
-    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
 ):
     """
     Minimal sparse duck array.
@@ -254,6 +254,48 @@ class _sparsearray(
 
 # Corresponds to np.typing.NDArray:
 _SparseArray = _sparsearray[Any, np.dtype[_ScalarType_co]]
+
+
+@runtime_checkable
+class _sparsearrayfunction(
+    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
+    """
+    Sparse duck array supporting NEP 18.
+
+    Corresponds to np.ndarray.
+    """
+
+    def todense(self) -> NDArray[_ScalarType_co]:
+        ...
+
+
+# Corresponds to np.typing.NDArray:
+_SparseArrayFunction = _sparsearrayfunction[Any, np.dtype[_ScalarType_co]]
+
+
+@runtime_checkable
+class _sparsearrayapi(
+    _arrayapi[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
+    """
+    Sparse duck array supporting NEP 47.
+
+    Corresponds to np.ndarray.
+    """
+
+    def todense(self) -> NDArray[_ScalarType_co]:
+        ...
+
+
+# Corresponds to np.typing.NDArray:
+_SparseArrayAPI = _sparsearrayapi[Any, np.dtype[_ScalarType_co]]
+
+# NamedArray can most likely use both __array_function__ and __array_namespace__:
+_sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
+_SparseArrayFunctionOrAPI = Union[
+    _SparseArrayFunction[np.generic], _SparseArrayAPI[np.generic]
+]
 
 
 # Temporary placeholder for indicating an array api compliant type.
