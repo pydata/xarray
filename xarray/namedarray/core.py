@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import copy
 import math
-from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast, overload, Literal
+from collections.abc import Hashable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
 import numpy as np
 
@@ -12,15 +12,15 @@ from xarray.core import dtypes
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
-    _Chunks,
+    _array,
     _AttrsLike,
+    _Chunks,
+    _default,
     _Dim,
     _Dims,
     _DimsLike,
     _IntOrUnknown,
     _Shape,
-    _array,
-    _default,
     _sparsearray,
     is_chunked_duck_array,
     is_duck_dask_array,

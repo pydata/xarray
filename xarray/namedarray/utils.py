@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Hashable
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
-    Generic,
-    Iterable,
-    Mapping,
     Protocol,
-    Sequence,
     SupportsIndex,
     TypeVar,
     runtime_checkable,
@@ -41,8 +37,7 @@ if TYPE_CHECKING:
     #     DaskArray = NDArray  # type: ignore
     #     DaskCollection: Any = NDArray  # type: ignore
 
-from typing import Union, SupportsIndex
-
+from typing import SupportsIndex, Union
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T_co = TypeVar("_T_co", covariant=True)
