@@ -20,9 +20,10 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
+    from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
+    from xarray.namedarray.utils import _SparseArray
 
     try:
         from dask.typing import (
@@ -90,7 +91,7 @@ def from_array(
     dims: DimsInput,
     data: ArrayLike,
     attrs: AttrsInput = None,
-) -> NamedArray[np.ndarray[Any, np.dtype[Any]]]:
+) -> NamedArray[NDArray[np.generic]]:
     ...
 
 
@@ -98,7 +99,7 @@ def from_array(
     dims: DimsInput,
     data: T_DuckArray | NamedArray[T_DuckArray] | ArrayLike,
     attrs: AttrsInput = None,
-) -> NamedArray[T_DuckArray] | NamedArray[np.ndarray[Any, np.dtype[Any]]]:
+) -> NamedArray[T_DuckArray] | NamedArray[NDArray[np.generic]]:
     if isinstance(data, NamedArray):
         raise ValueError(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
@@ -522,7 +523,7 @@ class NamedArray(Generic[T_DuckArray]):
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
-        nonzeros = np.nonzero(cast("np.ndarray[Any, np.dtype[np.generic]]", self.data))
+        nonzeros = np.nonzero(cast("NDArray[np.generic]", self.data))
         return tuple(
             type(self)((dim,), cast(T_DuckArray, nz))
             for nz, dim in zip(nonzeros, self.dims)
@@ -558,6 +559,6 @@ class NamedArray(Generic[T_DuckArray]):
         """
         Change backend from sparse to np.array
         """
-        if hasattr(self._data, "todense"):
+        if isinstance(self._data, _SparseArray):
             return self._replace(data=self._data.todense())
         return self.copy(deep=False)

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Self
 
+    from numpy.typing import DTypeLike, NDArray
     from dask.array.core import Array as DaskArray
     from dask.typing import DaskCollection
 
@@ -26,19 +27,20 @@ if TYPE_CHECKING:
     #     from dask.array.core import Array as DaskArray
     #     from dask.typing import DaskCollection
     # except ImportError:
-    #     DaskArray = np.ndarray  # type: ignore
-    #     DaskCollection: Any = np.ndarray  # type: ignore
+    #     DaskArray = NDArray  # type: ignore
+    #     DaskCollection: Any = NDArray  # type: ignore
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
 # T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
+_ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
 
 @runtime_checkable
-class _Array(Protocol[T_DType_co]):
+class _Array(Protocol[_ScalarType_co]):
     @property
-    def dtype(self) -> T_DType_co:
+    def dtype(self) -> np.dtype[_ScalarType_co]:
         ...
 
     @property
@@ -53,25 +55,35 @@ class _Array(Protocol[T_DType_co]):
     def imag(self) -> Self:  # _Array[np.dtype[np.generic]]:
         ...
 
-    def astype(self, dtype: np.typing.DTypeLike) -> Self:
+    def astype(self, dtype: DTypeLike) -> Self:
         ...
+
+    # def to_numpy(self) -> NDArray[_ScalarType_co]:
+    #     ...
 
     # # TODO: numpy doesn't use any inputs:
     # # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
-    # def __array__(self) -> np.ndarray[Any, T_DType_co]:
+    # def __array__(self) -> NDArray[_ScalarType_co]:
     #     ...
 
 
-class _ChunkedArray(_Array[T_DType_co], Protocol[T_DType_co]):
+@runtime_checkable
+class _ChunkedArray(_Array[_ScalarType_co], Protocol[_ScalarType_co]):
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...]:
         ...
 
 
+@runtime_checkable
+class _SparseArray(_Array[_ScalarType_co], Protocol[_ScalarType_co]):
+    def todense(self) -> NDArray[_ScalarType_co]:
+        ...
+
+
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DuckArray = TypeVar("T_DuckArray", bound=_Array[np.dtype[np.generic]])
-T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray[np.dtype[np.generic]])
+T_DuckArray = TypeVar("T_DuckArray", bound=_Array[np.generic])
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray[np.generic])
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -120,19 +132,19 @@ def is_duck_array(value: _T) -> TypeGuard[_T]:
     )
 
 
-def is_duck_dask_array(x: _Array[np.dtype[np.generic]]) -> TypeGuard[DaskArray]:
+def is_duck_dask_array(x: _Array[np.generic]) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
 def is_chunked_duck_array(
-    x: _Array[np.dtype[np.generic]],
-) -> TypeGuard[_ChunkedArray[np.dtype[np.generic]]]:
+    x: _Array[np.generic],
+) -> TypeGuard[_ChunkedArray[np.generic]]:
     return hasattr(x, "chunks")
 
 
 def to_0d_object_array(
     value: object,
-) -> np.ndarray[Any, np.dtype[np.object_]]:
+) -> NDArray[np.object_]:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value
