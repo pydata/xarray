@@ -257,6 +257,8 @@ _SparseArray = _sparsearray[Any, np.dtype[_ScalarType_co]]
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
 T_DuckArray = TypeVar("T_DuckArray", bound=_Array[np.generic])
+T_DuckArray2 = TypeVar("T_DuckArray2", bound=_Array[np.generic])
+
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray[np.generic])
 
 

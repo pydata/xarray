@@ -3,7 +3,16 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Hashable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    cast,
+    overload,
+    TypeVar,
+)
 
 import numpy as np
 
@@ -31,6 +40,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray.utils import (
+        _Array,
         Self,  # type: ignore[attr-defined]
     )
 
@@ -48,6 +58,25 @@ if TYPE_CHECKING:
         SchedulerGetCallable: Any  # type: ignore[no-redef]
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
+
+    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
+
+
+def _replace_with_new_data_type(
+    obj: T_NamedArray,
+    dims: _DimsLike | Default = _default,
+    data: _Array | Default = _default,
+    attrs: _AttrsLike | Default = _default,
+) -> T_NamedArray:
+    if dims is _default:
+        dims = copy.copy(obj._dims)
+    if data is _default:
+        data_ = copy.copy(obj._data)
+    else:
+        data_ = data
+    if attrs is _default:
+        attrs = copy.copy(obj._attrs)
+    return type(obj)(dims, data_, attrs)
 
 
 @overload
@@ -292,7 +321,7 @@ class NamedArray(Generic[T_DuckArray]):
         self._data = data
 
     @property
-    def real(self) -> Self:
+    def real(self) -> NamedArray:
         """
         The real part of the NamedArray.
 
@@ -300,10 +329,11 @@ class NamedArray(Generic[T_DuckArray]):
         --------
         numpy.ndarray.real
         """
-        return self._replace(data=self.data.real)
+        # return self._replace(data=self.data.real)
+        return _replace_with_new_data_type(self, data=self.data.real)
 
     @property
-    def imag(self) -> Self:
+    def imag(self) -> NamedArray:
         """
         The imaginary part of the NamedArray.
 
@@ -311,7 +341,8 @@ class NamedArray(Generic[T_DuckArray]):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self.data.imag)
+        # return self._replace(data=self.data.imag)
+        return _replace_with_new_data_type(self, data=self.data.imag)
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
@@ -447,6 +478,12 @@ class NamedArray(Generic[T_DuckArray]):
         data: T_DuckArray | Default = _default,
         attrs: _AttrsLike | Default = _default,
     ) -> Self:
+        """
+        Create a new Named array with dims, data or attrs.
+
+        The types for each argument cannot change,
+        use _replace_with_new_data_type if that is a risk.
+        """
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -550,10 +587,12 @@ class NamedArray(Generic[T_DuckArray]):
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self) -> Self:
+    def _to_dense(self) -> NamedArray:
         """
         Change backend from sparse to np.array
         """
         if isinstance(self._data, _sparsearray):
-            return self._replace(data=self._data.todense())
-        return self.copy(deep=False)
+            # return self._replace(data=self._data.todense())
+            return _replace_with_new_data_type(self, data=self._data.todense())
+        else:
+            raise TypeError("self.data is not a sparse array")

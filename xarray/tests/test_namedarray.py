@@ -151,7 +151,7 @@ def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
     "data, dtype",
     [
         ("foo", np.dtype("U3")),
-        (np.bytes_("foo"), np.dtype("S3")),
+        (b"foo", np.dtype("S3")),
     ],
 )
 def test_0d_string(data: Any, dtype: np.typing.DTypeLike) -> None:
@@ -204,7 +204,7 @@ def test_0d_datetime() -> None:
 def test_0d_timedelta(
     timedelta: np.timedelta64, expected_dtype: np.dtype[np.timedelta64]
 ) -> None:
-    named_array: NamedArray[np.ndarray[Any, np.dtype[np.timedelta64]]]
+    named_array: NamedArray[np.ndarray[Any, Any]]
     named_array = from_array([], timedelta)
     assert named_array.dtype == expected_dtype
     assert named_array.data == timedelta
@@ -222,7 +222,7 @@ def test_0d_timedelta(
 )
 def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) -> None:
     named_array: NamedArray[np.ndarray[Any, Any]]
-    named_array = NamedArray(dims, np.random.random(data_shape))
+    named_array = NamedArray(dims, np.asarray(np.random.random(data_shape)))
     assert named_array.dims == tuple(dims)
     if raises:
         with pytest.raises(ValueError):
