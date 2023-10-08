@@ -4370,8 +4370,9 @@ class TestDataset:
         var = Variable("x", [1, 2, 3], attrs=dict(x=1, y=2))
         idx = IndexVariable("y", [1, 2, 3], attrs=dict(c=1, d=2))
         ds = Dataset(dict(x=var), coords=dict(y=idx)).assign_attrs(a=1, b=2)
-        original = ds.copy(deep=True)
+        assert ds.coords["y"].attrs != {}
 
+        original = ds.copy(deep=True)
         result = ds.drop_attrs()
 
         assert result.attrs == {}
@@ -4380,6 +4381,9 @@ class TestDataset:
 
         # Doesn't change original
         assert_identical(ds, original)
+        # Specifically test that the attrs on the coords are still there. (The index
+        # can't currently contain `attrs`, so we can't test those.)
+        assert ds.coords["y"].attrs != {}
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
