@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import sys
 from collections.abc import Hashable
 from enum import Enum
@@ -8,7 +7,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
-    Generic,
     Protocol,
     TypeVar,
     runtime_checkable,

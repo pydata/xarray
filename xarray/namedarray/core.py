@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
     from xarray.namedarray.utils import (
         Self,  # type: ignore[attr-defined]
-        _SparseArray,
     )
 
     try:
