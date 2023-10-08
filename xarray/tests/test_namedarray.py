@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     )
 
 
-
 class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
     def __init__(self, array: T_DuckArray) -> None:
         self.array: T_DuckArray = array

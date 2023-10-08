@@ -9,12 +9,12 @@ from typing import (
     Callable,
     Final,
     Literal,
+    ModuleType,
     Protocol,
     SupportsIndex,
-    Union,
     TypeVar,
+    Union,
     runtime_checkable,
-    ModuleType,
 )
 
 import numpy as np
