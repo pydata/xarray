@@ -19,9 +19,9 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Self
 
-    from numpy.typing import DTypeLike, NDArray
     from dask.array.core import Array as DaskArray
     from dask.typing import DaskCollection
+    from numpy.typing import DTypeLike, NDArray
 
     # try:
     #     from dask.array.core import Array as DaskArray
