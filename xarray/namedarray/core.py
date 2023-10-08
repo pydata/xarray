@@ -12,8 +12,9 @@ from xarray.core import dtypes
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
-    _Array,
+    _array,
     _default,
+    _sparseArray,
     is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
-    from xarray.namedarray.utils import _SparseArray
 
     try:
         from dask.typing import (
@@ -97,7 +97,7 @@ def from_array(
 
 def from_array(
     dims: DimsInput,
-    data: T_DuckArray | NamedArray[T_DuckArray] | ArrayLike,
+    data: T_DuckArray | ArrayLike,
     attrs: AttrsInput = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[NDArray[np.generic]]:
     if isinstance(data, NamedArray):
@@ -116,16 +116,18 @@ def from_array(
         data_ = cast(T_DuckArray, data)
         return NamedArray(dims, data_, attrs)
 
-    if isinstance(data, _Array):
+    if isinstance(data, _array):
         # TODO: cast is used becuase of mypy, pyright returns correctly:
         data_ = cast(T_DuckArray, data)
         return NamedArray(dims, data_, attrs)
+    else:
+        if isinstance(data, tuple):
+            return NamedArray(dims, to_0d_object_array(data), attrs)
+        else:
+            # validate whether the data is valid data types.
+            reveal_type(data)
 
-    if isinstance(data, tuple):
-        return NamedArray(dims, to_0d_object_array(data), attrs)
-
-    # validate whether the data is valid data types.
-    return NamedArray(dims, np.asarray(data), attrs)
+            return NamedArray(dims, np.asarray(data), attrs)
 
 
 class NamedArray(Generic[T_DuckArray]):
@@ -559,6 +561,6 @@ class NamedArray(Generic[T_DuckArray]):
         """
         Change backend from sparse to np.array
         """
-        if isinstance(self._data, _SparseArray):
+        if isinstance(self._data, _sparseArray):
             return self._replace(data=self._data.todense())
         return self.copy(deep=False)

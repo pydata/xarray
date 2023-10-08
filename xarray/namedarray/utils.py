@@ -4,7 +4,15 @@ import importlib
 import sys
 from collections.abc import Hashable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Generic,
+    Protocol,
+    TypeVar,
+    runtime_checkable,
+)
 
 import numpy as np
 
@@ -32,30 +40,54 @@ if TYPE_CHECKING:
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
-T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
-# T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
+_T_co = TypeVar("_T_co", covariant=True)
+_DType_co = TypeVar(
+    "_DType_co", covariant=True, bound=np.dtype[Any]
+)  # T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
+_ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+_ShapeType = TypeVar("_ShapeType", bound=Any)
+_ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+
+_dtype = np.dtype
+
+
+class _SupportsReal(Protocol[_T_co]):
+    @property
+    def real(self) -> _T_co:
+        ...
+
+
+class _SupportsImag(Protocol[_T_co]):
+    @property
+    def imag(self) -> _T_co:
+        ...
 
 
 @runtime_checkable
-class _Array(Protocol[_ScalarType_co]):
-    @property
-    def dtype(self) -> np.dtype[_ScalarType_co]:
-        ...
-
+class _array(Protocol[_ShapeType, _DType_co]):
     @property
     def shape(self) -> tuple[int, ...]:
         ...
 
     @property
-    def real(self) -> Self:  # _Array[np.dtype[np.generic]]:
+    def real(
+        self: _array[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
         ...
 
     @property
-    def imag(self) -> Self:  # _Array[np.dtype[np.generic]]:
+    def imag(
+        self: _array[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
         ...
 
     def astype(self, dtype: DTypeLike) -> Self:
+        ...
+
+    # Keep `dtype` at the bottom to avoid name conflicts with `np.dtype`
+    @property
+    def dtype(self) -> _DType_co:
         ...
 
     # def to_numpy(self) -> NDArray[_ScalarType_co]:
@@ -67,17 +99,26 @@ class _Array(Protocol[_ScalarType_co]):
     #     ...
 
 
+_Array = _array[Any, np.dtype[_ScalarType_co]]
+
+
 @runtime_checkable
-class _ChunkedArray(_Array[_ScalarType_co], Protocol[_ScalarType_co]):
+class _chunkedArray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...]:
         ...
 
 
+_ChunkedArray = _chunkedArray[Any, np.dtype[_ScalarType_co]]
+
+
 @runtime_checkable
-class _SparseArray(_Array[_ScalarType_co], Protocol[_ScalarType_co]):
+class _sparseArray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
     def todense(self) -> NDArray[_ScalarType_co]:
         ...
+
+
+_SparseArray = _sparseArray[Any, np.dtype[_ScalarType_co]]
 
 
 # temporary placeholder for indicating an array api compliant type.
@@ -109,7 +150,9 @@ def module_available(module: str) -> bool:
     available : bool
         Whether the module is installed.
     """
-    return importlib.util.find_spec(module) is not None
+    from importlib.util import find_spec
+
+    return find_spec(module) is not None
 
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
@@ -126,7 +169,7 @@ _T = TypeVar("_T")
 def is_duck_array(value: _T) -> TypeGuard[_T]:
     # if isinstance(value, np.ndarray):
     #     return True
-    return isinstance(value, _Array) and (
+    return isinstance(value, _array) and (
         (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
         or hasattr(value, "__array_namespace__")
     )
