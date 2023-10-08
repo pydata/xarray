@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, cast
 
 import numpy as np
 import pytest
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
-
+    from xarray.namedarray.utils import _Shape
 
 # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
 class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
@@ -25,7 +25,7 @@ class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
         return self.array.dtype
 
     @property
-    def shape(self) -> tuple[int, ...]:
+    def shape(self) -> _Shape:
         return self.array.shape
 
     @property
@@ -230,42 +230,19 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
 
 def test_duck_array_class() -> None:
     def test_duck_array_typevar(a: T_DuckArray) -> T_DuckArray:
+        # Mypy checks a is valid:
         b: T_DuckArray = a
 
+        # Runtime check if valid:
         if isinstance(b, _array):
-            return b
+            # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
+            # pyright doesn't need it.
+            return cast(T_DuckArray, b)
         else:
             raise TypeError(f"a ({type(a)}) is not a valid _array")
 
-    dtype_scalar = np.int64
-    numpy_a: NDArray[dtype_scalar] = np.array([2.1], dtype=np.dtype(dtype_scalar))
-    custom_a = CustomArrayBase(numpy_a)
+    numpy_a: NDArray[np.int64] = np.array([2.1, 4], dtype=np.dtype(np.int64))
+    custom_a: CustomArrayBase[NDArray[np.int64]] = CustomArrayBase(numpy_a)
 
     test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)
-
-
-# def test_typing() -> None:
-#     from dask.array.core import Array as DaskArray
-
-#     a = [1, 2, 3]
-#     reveal_type(from_array("x", a))
-#     reveal_type(from_array([None], a))
-
-#     b = np.array([1, 2, 3])
-#     reveal_type(b)
-#     reveal_type(b.shape)
-#     reveal_type(from_array("a", b))
-#     reveal_type(from_array([None], b))
-
-#     c: DaskArray = DaskArray([1, 2, 3], "c", {})
-#     reveal_type(c)
-#     reveal_type(c.shape)
-#     reveal_type(from_array("a", c))
-#     reveal_type(from_array([None], c))
-
-#     custom_a = CustomArrayBase(np.array([2], dtype=np.dtype(int)))
-#     reveal_type(custom_a)
-#     reveal_type(custom_a.shape)
-#     dims: tuple[str, ...] = ("x",)
-#     reveal_type(from_array(dims, custom_a))

@@ -131,12 +131,14 @@ def from_array(
             # TODO: requires refactoring/vendoring xarray.core.dtypes and
             # xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
-        # TODO: cast is used becuase of mypy, pyright returns correctly:
+        # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
+        # pyright doesn't need it.
         data_ = cast(T_DuckArray, data)
         return NamedArray(dims, data_, attrs)
 
     if isinstance(data, _array):
-        # TODO: cast is used becuase of mypy, pyright returns correctly:
+        # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
+        # pyright doesn't need it.
         data_ = cast(T_DuckArray, data)
         return NamedArray(dims, data_, attrs)
     else:
@@ -144,8 +146,6 @@ def from_array(
             return NamedArray(dims, to_0d_object_array(data), attrs)
         else:
             # validate whether the data is valid data types.
-            reveal_type(data)
-
             return NamedArray(dims, np.asarray(data), attrs)
 
 

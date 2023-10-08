@@ -40,9 +40,10 @@ if TYPE_CHECKING:
 from typing import SupportsIndex, Union
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
+_T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-_DType = TypeVar("_DType_co", bound=np.dtype[Any])
+_DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
@@ -78,7 +79,7 @@ class _SupportsImag(Protocol[_T_co]):
 
 
 @runtime_checkable
-class _array(Protocol[_ShapeType, _DType_co]):
+class _array(Protocol[_ShapeType_co, _DType_co]):
     """
     Minimal duck array.
 
@@ -90,16 +91,18 @@ class _array(Protocol[_ShapeType, _DType_co]):
         ...
 
     @property
-    def real(
-        self: _array[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
-    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
+    def real(self) -> _array[Any, _DType_co]:
         ...
 
     @property
-    def imag(
-        self: _array[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
-    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
+    def imag(self) -> _array[Any, _DType_co]:
         ...
+
+    # @property
+    # def imag(
+    #     self(: _array[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    # ) -> _array[_ShapeType, _dtype[_ScalarType]]:)
+    #     ...
 
     def astype(self, dtype: DTypeLike) -> Self:
         ...
@@ -123,7 +126,9 @@ _Array = _array[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
-class _chunkedarray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
+class _chunkedarray(
+    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
     """
     Minimal chunked duck array.
 
@@ -140,7 +145,9 @@ _ChunkedArray = _chunkedarray[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
-class _sparsearray(_array[_ShapeType, _DType_co], Protocol[_ShapeType, _DType_co]):
+class _sparsearray(
+    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+):
     """
     Minimal sparse duck array.
 
@@ -195,9 +202,6 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
 
         return isinstance(x, DaskCollection)
     return False
-
-
-_T = TypeVar("_T")
 
 
 def is_duck_array(value: _T) -> TypeGuard[_T]:
