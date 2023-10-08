@@ -70,10 +70,10 @@ def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
 def test_from_array(
     input_data: np.typing.ArrayLike,
     expected_output: np.ndarray[Any, Any],
-    raises_error: bool,
+    raise_error: bool,
 ) -> None:
     output: NamedArray[np.ndarray[Any, Any]]
-    if raises_error:
+    if raise_error:
         with pytest.raises(NotImplementedError):
             output = from_array(input_data)  # type: ignore
     else:
