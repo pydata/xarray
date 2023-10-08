@@ -7,9 +7,11 @@ import pytest
 
 import xarray as xr
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import T_DuckArray
+from xarray.namedarray.utils import T_DuckArray, _array
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
 
@@ -224,6 +226,23 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
     else:
         named_array.dims = new_dims
         assert named_array.dims == tuple(new_dims)
+
+
+def test_duck_array_class() -> None:
+    def test_duck_array_typevar(a: T_DuckArray) -> T_DuckArray:
+        b: T_DuckArray = a
+
+        if isinstance(b, _array):
+            return b
+        else:
+            raise TypeError(f"a ({type(a)}) is not a valid _array")
+
+    dtype_scalar = np.int64
+    numpy_a: NDArray[dtype_scalar] = np.array([2.1], dtype=np.dtype(dtype_scalar))
+    custom_a = CustomArrayBase(numpy_a)
+
+    test_duck_array_typevar(numpy_a)
+    test_duck_array_typevar(custom_a)
 
 
 # def test_typing() -> None:
