@@ -916,7 +916,7 @@ class VariableSubclassobjects(ABC):
 
         actual = v.pad(**xr_arg)
         expected = np.pad(
-            np.array(v.data.astype(float)),
+            np.array(duck_array_ops.astype(v.data, float)),
             np_arg,
             mode="constant",
             constant_values=np.nan,

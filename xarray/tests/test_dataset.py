@@ -3032,8 +3032,7 @@ class TestDataset:
     def test_rename_same_name(self) -> None:
         data = create_test_data()
         newnames = {"var1": "var1", "dim2": "dim2"}
-        with pytest.warns(UserWarning, match="does not create an index anymore"):
-            renamed = data.rename(newnames)
+        renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
     def test_rename_dims(self) -> None:
@@ -3102,6 +3101,15 @@ class TestDataset:
             UserWarning, match="rename 'x' to 'y' does not create an index.*"
         ):
             ds.rename(x="y")
+
+        # No operation should not raise a warning
+        ds = Dataset(
+            data_vars={"data": (("x", "y"), np.ones((2, 3)))},
+            coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.rename(x="x")
 
     def test_rename_multiindex(self) -> None:
         midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
@@ -5051,9 +5059,9 @@ class TestDataset:
         ):
             ds.dropna("foo")
         with pytest.raises(ValueError, match=r"invalid how"):
-            ds.dropna("a", how="somehow")  # type: ignore
+            ds.dropna("a", how="somehow")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
-            ds.dropna("a", how=None)  # type: ignore
+            ds.dropna("a", how=None)  # type: ignore[arg-type]
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})

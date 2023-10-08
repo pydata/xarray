@@ -1073,10 +1073,12 @@ class DataWithCoords(AttrAccessMixin):
         ----------
         cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
-            If a callable, it must expect this object as its only parameter.
-        other : scalar, DataArray or Dataset, optional
+            If a callable, the callable is passed this object, and the result is used as
+            the value for cond.
+        other : scalar, DataArray, Dataset, or callable, optional
             Value to use for locations in this object where ``cond`` is False.
-            By default, these locations filled with NA.
+            By default, these locations are filled with NA. If a callable, it must
+            expect this object as its only parameter.
         drop : bool, default: False
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result.
@@ -1124,20 +1126,21 @@ class DataWithCoords(AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
-        >>> a.where(lambda x: x.x + x.y < 4, drop=True)
+        >>> a.where(lambda x: x.x + x.y < 4, lambda x: -x)
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[  0,   1,   2,   3,  -4],
+               [  5,   6,   7,  -8,  -9],
+               [ 10,  11, -12, -13, -14],
+               [ 15, -16, -17, -18, -19],
+               [-20, -21, -22, -23, -24]])
+        Dimensions without coordinates: x, y
+
+        >>> a.where(a.x + a.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 0.,  1.,  2.,  3.],
                [ 5.,  6.,  7., nan],
                [10., 11., nan, nan],
                [15., nan, nan, nan]])
-        Dimensions without coordinates: x, y
-
-        >>> a.where(a.x + a.y < 4, -1, drop=True)
-        <xarray.DataArray (x: 4, y: 4)>
-        array([[ 0,  1,  2,  3],
-               [ 5,  6,  7, -1],
-               [10, 11, -1, -1],
-               [15, -1, -1, -1]])
         Dimensions without coordinates: x, y
 
         See Also
@@ -1151,11 +1154,13 @@ class DataWithCoords(AttrAccessMixin):
 
         if callable(cond):
             cond = cond(self)
+        if callable(other):
+            other = other(self)
 
         if drop:
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
-                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
+                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
 
             self, cond = align(self, cond)  # type: ignore[assignment]
