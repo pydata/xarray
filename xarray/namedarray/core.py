@@ -104,6 +104,21 @@ def from_array(
     data: T_DuckArray | ArrayLike,
     attrs: _AttrsLike = None,
 ) -> NamedArray[T_DuckArray] | NamedArray[NDArray[np.generic]]:
+    """
+    Create a Named array from an array-like object.
+
+    Parameters
+    ----------
+    dims : str or iterable of str
+        Name(s) of the dimension(s).
+    data : T_DuckArray or ArrayLike
+        The actual data that populates the array. Should match the
+        shape specified by `dims`.
+    attrs : dict, optional
+        A dictionary containing any additional information or
+        attributes you want to store with the array.
+        Default is None, meaning no attributes will be stored.
+    """
     if isinstance(data, NamedArray):
         raise ValueError(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
@@ -135,10 +150,37 @@ def from_array(
 
 
 class NamedArray(Generic[T_DuckArray]):
+    """
+    A wrapper around duck arrays with named dimensions
+    and attributes which describe a single Array.
+    Numeric operations on this object implement array broadcasting and
+    dimension alignment based on dimension names,
+    rather than axis order.
 
-    """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
-    Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
-    rather than axis order."""
+
+    Parameters
+    ----------
+    dims : str or iterable of str
+        Name(s) of the dimension(s).
+    data : T_DuckArray
+        The actual data that populates the array. Should match the
+        shape specified by `dims`.
+    attrs : dict, optional
+        A dictionary containing any additional information or
+        attributes you want to store with the array.
+        Default is None, meaning no attributes will be stored.
+
+    Raises
+    ------
+    ValueError
+        If the `dims` length does not match the number of data dimensions (ndim).
+
+
+    Examples
+    --------
+    >>> data = np.array([1.5, 2, 3], dtype=float)
+    >>> narr = NamedArray(("x",), data, {"units": "m"})  # TODO: Better name than narr?
+    """
 
     __slots__ = ("_data", "_dims", "_attrs")
 
@@ -152,28 +194,6 @@ class NamedArray(Generic[T_DuckArray]):
         data: T_DuckArray,
         attrs: _AttrsLike = None,
     ):
-        """
-        Parameters
-        ----------
-        dims : str or iterable of str
-            Name(s) of the dimension(s).
-        data : T_DuckArray or ArrayLike
-            The actual data that populates the array. Should match the shape specified by `dims`.
-        attrs : dict, optional
-            A dictionary containing any additional information or attributes you want to store with the array.
-            Default is None, meaning no attributes will be stored.
-        fastpath : bool, optional
-            A flag to indicate if certain validations should be skipped for performance reasons.
-            Should only be True if you are certain about the integrity of the input data.
-            Default is False.
-
-        Raises
-        ------
-        ValueError
-            If the `dims` length does not match the number of data dimensions (ndim).
-
-
-        """
         self._data = data
         self._dims = self._parse_dimensions(dims)
         self._attrs = dict(attrs) if attrs else None
