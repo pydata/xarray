@@ -10344,12 +10344,13 @@ class Dataset(
         Removes all attributes from the Dataset and its variables.
         """
         # Remove attributes from the dataset
-        self = self.copy()
-
-        self.attrs = {}
+        self = self._replace(attrs={})
 
         # Remove attributes from each variable in the dataset
         for var in self.variables:
+            # variables don't have a `._replace` method, so we copy and then remove. If
+            # we added a `._replace` method, we could use that instead.
+            self[var] = self[var].copy()
             self[var].attrs = {}
 
         return self

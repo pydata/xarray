@@ -4369,7 +4369,7 @@ class TestDataset:
         # Example with variables and coords with attrs, check they're dropped too
         var = Variable("x", [1, 2, 3], attrs=dict(x=1, y=2))
         idx = IndexVariable("y", [1, 2, 3], attrs=dict(c=1, d=2))
-        ds = Dataset(dict(x=var), coords=dict(y=idx)).assign_attrs(a=1, b=2)
+        ds = Dataset(dict(var1=var), coords=dict(y=idx)).assign_attrs(a=1, b=2)
         assert ds.coords["y"].attrs != {}
 
         original = ds.copy(deep=True)
@@ -4378,6 +4378,8 @@ class TestDataset:
         assert result.attrs == {}
         assert result["x"].attrs == {}
         assert result["y"].attrs == {}
+        assert list(result.data_vars) == list(ds.data_vars)
+        assert list(result.coords) == list(ds.coords)
 
         # Doesn't change original
         assert_identical(ds, original)
