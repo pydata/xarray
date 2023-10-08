@@ -84,7 +84,7 @@ class _SupportsImag(Protocol[_T_co]):
 @runtime_checkable
 class _array(Protocol[_ShapeType_co, _DType_co]):
     """
-    Minimal duck array.
+    Minimal duck array named array uses.
 
     Corresponds to np.ndarray.
     """
@@ -93,30 +93,27 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def shape(self) -> _Shape:
         ...
 
+    # TODO: Should return the sama subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
     @property
-    def real(self) -> _array[Any, _DType_co]:
+    def real(self) -> Any:
         ...
 
+    # TODO: Should return the sama subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
     @property
-    def imag(self) -> Self[Any, _DType_co]:
+    def imag(self) -> Any:
         ...
 
-    # @property
-    # def imag(
-    #     self(: _array[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
-    # ) -> _array[_ShapeType, _dtype[_ScalarType]]:)
-    #     ...
-
-    def astype(self, dtype: DTypeLike) -> Self:
+    # TODO: Should return the sama subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
+    def astype(self, dtype: DTypeLike) -> Any:
         ...
 
     # Keep `dtype` at the bottom to avoid name conflicts with `np.dtype`
     @property
     def dtype(self) -> _DType_co:
         ...
-
-    # def to_numpy(self) -> NDArray[_ScalarType_co]:
-    #     ...
 
     # # TODO: numpy doesn't use any inputs:
     # # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
@@ -138,17 +135,28 @@ class _arrayfunction(
     Corresponds to np.ndarray.
     """
 
+    # def __array_ufunc__(
+    #     self,
+    #     ufunc: Any,  # Callable[..., Any],
+    #     method: Any,  # str,
+    #     *inputs: Any,
+    #     **kwargs: Any,
+    # ) -> Any:
+    #     ...
+
+    # TODO: Should return the sama subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
     def __array_ufunc__(
         self,
-        ufunc: Callable[..., Any],
-        method: Literal[
-            "__call__", "reduce", "reduceat", "accumulate", "outer", "inner"
-        ],
+        ufunc: Any,
+        method: Any,
         *inputs: Any,
         **kwargs: Any,
     ) -> Any:
         ...
 
+    # TODO: Should return the sama subclass but with a new dtype generic.
+    # https://github.com/python/typing/issues/548
     def __array_function__(
         self,
         func: Callable[..., Any],
@@ -203,7 +211,7 @@ class _chunkedarrayfunction(
     _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
 ):
     """
-    Minimal chunked duck array.
+    Chunked duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -222,7 +230,7 @@ class _chunkedarrayapi(
     _arrayapi[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
 ):
     """
-    Minimal chunked duck array.
+    Chunked duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """
@@ -256,10 +264,15 @@ _SparseArray = _sparsearray[Any, np.dtype[_ScalarType_co]]
 
 # temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DuckArray = TypeVar("T_DuckArray", bound=_Array[np.generic])
-T_DuckArray2 = TypeVar("T_DuckArray2", bound=_Array[np.generic])
+_arrayfunction_or_api = (_arrayfunction, _arrayapi)
+_ArrayFunctionOrAPI = Union[_ArrayFunction[np.generic], _ArrayAPI[np.generic]]
+T_DuckArray = TypeVar("T_DuckArray", bound=_ArrayFunctionOrAPI)
+T_DuckArray2 = TypeVar("T_DuckArray2", bound=_ArrayFunctionOrAPI)
 
-T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray[np.generic])
+_ChunkedArrayFunctionOrAPI = Union[
+    _ChunkedArrayFunction[np.generic], _ChunkedArrayAPI[np.generic]
+]
+T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArrayFunctionOrAPI)
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -307,12 +320,12 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
 #     )
 
 
-def is_duck_dask_array(x: _Array[np.generic]) -> TypeGuard[DaskArray]:
+def is_duck_dask_array(x: _ArrayFunctionOrAPI) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
 def is_chunked_duck_array(
-    x: _Array[np.generic],
+    x: _ArrayFunctionOrAPI,
 ) -> TypeGuard[_ChunkedArray[np.generic]]:
     return hasattr(x, "chunks")
 

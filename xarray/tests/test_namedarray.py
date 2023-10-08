@@ -7,13 +7,15 @@ import pytest
 
 import xarray as xr
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import T_DuckArray, _array
+from xarray.namedarray.utils import T_DuckArray, _arrayfunction_or_api
 
 if TYPE_CHECKING:
+    from types import ModuleType
     from numpy.typing import NDArray
 
     from xarray.namedarray.utils import (
         Self,  # type: ignore[attr-defined]
+        _DimsLike,
         _Shape,
     )
 
@@ -32,14 +34,14 @@ class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
 
     @property
     def real(self) -> Self:
-        raise NotImplementedError
+        return self.array.real
 
     @property
     def imag(self) -> Self:
-        raise NotImplementedError
+        return self.array.imag
 
     def astype(self, dtype: np.typing.DTypeLike) -> Self:
-        raise NotImplementedError
+        return self.array.astype(dtype)
 
 
 class CustomArray(CustomArrayBase[T_DuckArray], Generic[T_DuckArray]):
@@ -52,7 +54,8 @@ class CustomArrayIndexable(
     xr.core.indexing.ExplicitlyIndexed,
     Generic[T_DuckArray],
 ):
-    pass
+    def __array_namespace__(self) -> ModuleType:
+        return np
 
 
 @pytest.fixture
@@ -61,56 +64,57 @@ def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
 
 
 @pytest.mark.parametrize(
-    "input_data, expected_output, raise_error",
+    "dims, data, expected, raise_error",
     [
-        ([1, 2, 3], np.array([1, 2, 3]), False),
-        (np.array([4, 5, 6]), np.array([4, 5, 6]), False),
-        (NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3]), True),
-        (2, np.array(2), False),
+        (("x",), [1, 2, 3], np.array([1, 2, 3]), False),
+        ((1,), np.array([4, 5, 6]), np.array([4, 5, 6]), False),
+        ((), 2, np.array(2), False),
+        # Fail:
+        (("x",), NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3]), True),
     ],
 )
 def test_from_array(
-    input_data: np.typing.ArrayLike,
-    expected_output: np.ndarray[Any, Any],
+    dims: _DimsLike,
+    data: np.typing.ArrayLike,
+    expected: np.ndarray[Any, Any],
     raise_error: bool,
 ) -> None:
-    output: NamedArray[np.ndarray[Any, Any]]
+    actual: NamedArray[np.ndarray[Any, Any]]
     if raise_error:
-        with pytest.raises(NotImplementedError):
-            output = from_array(input_data)  # type: ignore
+        with pytest.raises(TypeError, match="already a Named array"):
+            actual = from_array(dims, data)  # type: ignore
     else:
-        output = from_array(input_data)
+        actual = from_array(dims, data)
 
-    assert np.array_equal(output.data, expected_output)
+        assert np.array_equal(actual.data, expected)
 
 
 def test_from_array_with_masked_array() -> None:
-    masked_array: np.ndarray[Any, np.dtype[np.generic]] = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
+    masked_array: np.ndarray[Any, np.dtype[np.generic]]
+    masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
     with pytest.raises(NotImplementedError):
-        from_array(masked_array)
+        from_array(("x",), masked_array)
 
 
 def test_from_array_with_0d_object() -> None:
     data = np.empty((), dtype=object)
     data[()] = (10, 12, 12)
-    np.array_equal(from_array(data).data, data)
+    np.array_equal(from_array((), data).data, data)
 
 
-# TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of _array
+# TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of_arrayfunction_or_api
 # and remove this test.
 def test_from_array_with_explicitly_indexed(
     random_inputs: np.ndarray[Any, Any]
 ) -> None:
     array = CustomArray(random_inputs)
-    output: NamedArray[CustomArray[np.ndarray[Any, Any]]] = from_array(
-        ("x", "y", "z"), array
-    )
+    output: NamedArray[CustomArray[np.ndarray[Any, Any]]]
+    output = from_array(("x", "y", "z"), array)
     assert isinstance(output.data, np.ndarray)
 
     array2 = CustomArrayIndexable(random_inputs)
-    output2: NamedArray[CustomArrayIndexable[np.ndarray[Any, Any]]] = from_array(
-        ("x", "y", "z"), array2
-    )
+    output2: NamedArray[CustomArrayIndexable[np.ndarray[Any, Any]]]
+    output2 = from_array(("x", "y", "z"), array2)
     assert isinstance(output2.data, CustomArrayIndexable)
 
 
@@ -238,15 +242,15 @@ def test_duck_array_class() -> None:
         b: T_DuckArray = a
 
         # Runtime check if valid:
-        if isinstance(b, _array):
+        if isinstance(b, _arrayfunction_or_api):
             # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
             # pyright doesn't need it.
             return cast(T_DuckArray, b)
         else:
-            raise TypeError(f"a ({type(a)}) is not a valid _array")
+            raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
 
     numpy_a: NDArray[np.int64] = np.array([2.1, 4], dtype=np.dtype(np.int64))
-    custom_a: CustomArrayBase[NDArray[np.int64]] = CustomArrayBase(numpy_a)
+    custom_a: CustomArray[NDArray[np.int64]] = CustomArray(numpy_a)
 
     test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)

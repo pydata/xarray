@@ -21,7 +21,7 @@ from xarray.core import dtypes
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
-    _array,
+    _arrayfunction_or_api,
     _AttrsLike,
     _Chunks,
     _default,
@@ -118,7 +118,7 @@ def from_array(
         Default is None, meaning no attributes will be stored.
     """
     if isinstance(data, NamedArray):
-        raise ValueError(
+        raise TypeError(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
         )
 
@@ -134,7 +134,7 @@ def from_array(
         data_ = cast(T_DuckArray, data)
         return NamedArray(dims, data_, attrs)
 
-    if isinstance(data, _array):
+    if isinstance(data, _arrayfunction_or_api):
         # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
         # pyright doesn't need it.
         data_ = cast(T_DuckArray, data)
