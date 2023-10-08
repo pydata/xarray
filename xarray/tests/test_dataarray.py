@@ -2955,6 +2955,11 @@ class TestDataArray:
         assert_identical(new_actual, expected)
         assert actual.attrs == {"a": 1, "b": 2}
 
+    def test_drop_attrs(self) -> None:
+        # Mostly tested in test_dataset.py, but adding a very small test here
+        da = DataArray([], attrs=dict(a=1, b=2))
+        assert da.drop_attrs().attrs == {}
+
     @pytest.mark.parametrize(
         "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
     )

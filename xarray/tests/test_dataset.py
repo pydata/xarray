@@ -4355,6 +4355,32 @@ class TestDataset:
         assert_identical(new_actual, expected)
         assert actual.attrs == dict(a=1, b=2)
 
+    def test_drop_attrs(self) -> None:
+        # Simple example
+        ds = Dataset().assign_attrs(a=1, b=2)
+        original = ds.copy()
+        expected = Dataset()
+        result = ds.drop_attrs()
+        assert_identical(result, expected)
+
+        # Doesn't change original
+        assert_identical(ds, original)
+
+        # Example with variables and coords with attrs, check they're dropped too
+        var = Variable("x", [1, 2, 3], attrs=dict(x=1, y=2))
+        idx = IndexVariable("y", [1, 2, 3], attrs=dict(c=1, d=2))
+        ds = Dataset(dict(x=var), coords=dict(y=idx)).assign_attrs(a=1, b=2)
+        original = ds.copy(deep=True)
+
+        result = ds.drop_attrs()
+
+        assert result.attrs == {}
+        assert result["x"].attrs == {}
+        assert result["y"].attrs == {}
+
+        # Doesn't change original
+        assert_identical(ds, original)
+
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
         with pytest.raises(ValueError, match=r"cannot drop or update.*corrupt.*index "):
