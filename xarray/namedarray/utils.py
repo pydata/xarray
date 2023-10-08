@@ -9,7 +9,6 @@ from typing import (
     Any,
     Callable,
     Final,
-    Literal,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -26,9 +25,9 @@ if TYPE_CHECKING:
         from typing_extensions import TypeGuard
 
     if sys.version_info >= (3, 11):
-        from typing import Self
+        pass
     else:
-        from typing_extensions import Self
+        pass
 
     from dask.array.core import Array as DaskArray
     from dask.typing import DaskCollection

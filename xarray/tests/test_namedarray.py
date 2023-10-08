@@ -11,6 +11,7 @@ from xarray.namedarray.utils import T_DuckArray, _arrayfunction_or_api
 
 if TYPE_CHECKING:
     from types import ModuleType
+
     from numpy.typing import NDArray
 
     from xarray.namedarray.utils import (
