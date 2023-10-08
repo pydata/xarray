@@ -34,14 +34,14 @@ class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
         return self.array.shape
 
     @property
-    def real(self) -> Self:
+    def real(self) -> Any:
         return self.array.real
 
     @property
-    def imag(self) -> Self:
+    def imag(self) -> Any:
         return self.array.imag
 
-    def astype(self, dtype: np.typing.DTypeLike) -> Self:
+    def astype(self, dtype: np.typing.DTypeLike) -> Any:
         return self.array.astype(dtype)
 
 
@@ -251,7 +251,7 @@ def test_duck_array_class() -> None:
             raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
 
     numpy_a: NDArray[np.int64] = np.array([2.1, 4], dtype=np.dtype(np.int64))
-    custom_a: CustomArray[NDArray[np.int64]] = CustomArray(numpy_a)
+    custom_a: CustomArrayIndexable[NDArray[np.int64]] = CustomArrayIndexable(numpy_a)
 
     test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)

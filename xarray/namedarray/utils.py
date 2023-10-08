@@ -92,19 +92,19 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def shape(self) -> _Shape:
         ...
 
-    # TODO: Should return the sama subclass but with a new dtype generic.
+    # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     @property
     def real(self) -> Any:
         ...
 
-    # TODO: Should return the sama subclass but with a new dtype generic.
+    # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     @property
     def imag(self) -> Any:
         ...
 
-    # TODO: Should return the sama subclass but with a new dtype generic.
+    # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     def astype(self, dtype: DTypeLike) -> Any:
         ...
@@ -133,15 +133,6 @@ class _arrayfunction(
 
     Corresponds to np.ndarray.
     """
-
-    # def __array_ufunc__(
-    #     self,
-    #     ufunc: Any,  # Callable[..., Any],
-    #     method: Any,  # str,
-    #     *inputs: Any,
-    #     **kwargs: Any,
-    # ) -> Any:
-    #     ...
 
     # TODO: Should return the sama subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -184,6 +175,10 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 
 # Corresponds to np.typing.NDArray:
 _ArrayAPI = _arrayapi[Any, np.dtype[_ScalarType_co]]
+
+# NamedArray can most likely use both __array_function__ and __array_namespace__:
+_arrayfunction_or_api = (_arrayfunction, _arrayapi)
+_ArrayFunctionOrAPI = Union[_ArrayFunction[np.generic], _ArrayAPI[np.generic]]
 
 
 @runtime_checkable
@@ -245,7 +240,7 @@ _ChunkedArrayAPI = _chunkedarrayapi[Any, np.dtype[_ScalarType_co]]
 
 @runtime_checkable
 class _sparsearray(
-    _array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
+    _arrayfunction[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]
 ):
     """
     Minimal sparse duck array.
@@ -261,13 +256,11 @@ class _sparsearray(
 _SparseArray = _sparsearray[Any, np.dtype[_ScalarType_co]]
 
 
-# temporary placeholder for indicating an array api compliant type.
+# Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-_arrayfunction_or_api = (_arrayfunction, _arrayapi)
-_ArrayFunctionOrAPI = Union[_ArrayFunction[np.generic], _ArrayAPI[np.generic]]
 T_DuckArray = TypeVar("T_DuckArray", bound=_ArrayFunctionOrAPI)
-T_DuckArray2 = TypeVar("T_DuckArray2", bound=_ArrayFunctionOrAPI)
 
+# The chunked arrays like dask or cubed:
 _ChunkedArrayFunctionOrAPI = Union[
     _ChunkedArrayFunction[np.generic], _ChunkedArrayAPI[np.generic]
 ]

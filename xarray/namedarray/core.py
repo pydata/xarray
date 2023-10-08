@@ -39,9 +39,9 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.namedarray.utils import (
-        Self,  # type: ignore[attr-defined]
-        _Array,
+    from xarray.namedarray.utils import (  # type: ignore[attr-defined]
+        Self,
+        _ArrayFunctionOrAPI,
     )
 
     try:
@@ -59,13 +59,13 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray")
+    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[Any]")
 
 
 def _replace_with_new_data_type(
     obj: T_NamedArray,
     dims: _DimsLike | Default = _default,
-    data: _Array | Default = _default,
+    data: _ArrayFunctionOrAPI | Default = _default,
     attrs: _AttrsLike | Default = _default,
 ) -> T_NamedArray:
     if dims is _default:
