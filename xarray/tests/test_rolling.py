@@ -788,7 +788,9 @@ class TestDatasetRolling:
 
 @requires_numbagg
 class TestDatasetRollingExp:
-    @pytest.mark.parametrize("backend", ["numpy", pytest.param("dask", marks=requires_dask )], indirect=True)
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=requires_dask)], indirect=True
+    )
     def test_rolling_exp(self, ds) -> None:
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)
