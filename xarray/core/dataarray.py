@@ -4639,7 +4639,7 @@ class DataArray(
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
-            self, other = align(self, other, join=align_type, copy=False)  # type: ignore[type-var,assignment]
+            self, other = align(self, other, join=align_type, copy=False)
         other_variable_or_arraylike: DaCompatible = getattr(other, "variable", other)
         other_coords = getattr(other, "coords", None)
 
