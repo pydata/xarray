@@ -29,6 +29,9 @@ New Features
 - :py:meth:`DataArray.sortby` & :py:meth:`Dataset.sortby` accept a callable for
   the ``variables`` parameter, passing the object as the only argument.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- ``.rolling_exp`` functions can now operate on dask-backed arrays, assuming the
+  core dim has exactly one chunk. (:pull:`8284`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
