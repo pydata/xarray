@@ -45,10 +45,27 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
+
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
+# A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
+
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+
+# A protocol for anything with the dtype attribute
+@runtime_checkable
+class _SupportsDType(Protocol[_DType_co]):
+    @property
+    def dtype(self) -> _DType_co:
+        ...
+
+
+_DTypeLike = Union[
+    np.dtype[_ScalarType],
+    type[_ScalarType],
+    _SupportsDType[np.dtype[_ScalarType]],
+]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
 _IntOrUnknown = int

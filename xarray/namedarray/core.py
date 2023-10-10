@@ -62,6 +62,43 @@ if TYPE_CHECKING:
     T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[Any]")
 
 
+# def _replace_with_new_data_type(
+#     cls: type[NamedArray[Any]],
+#     dims: _DimsLike,
+#     data: T_DuckArray,
+#     attrs: _AttrsLike,
+# ) -> NamedArray[T_DuckArray]:
+#     return cls(dims, data, attrs)
+
+
+# # def _replace_with_new_data_type(
+# #     cls: type[T_NamedArray],
+# #     dims: _DimsLike,
+# #     data: _ArrayFunctionOrAPI,
+# #     attrs: _AttrsLike,
+# # ) -> T_NamedArray:
+# #     return cls(dims, data, attrs)
+
+
+# def _replace_with_new_data_type(
+#     self: T_NamedArray,
+#     dims: _DimsLike | Default = _default,
+#     data: _ArrayFunctionOrAPI | Default = _default,
+#     attrs: _AttrsLike | Default = _default,
+# ) -> T_NamedArray:
+#     if dims is _default:
+#         dims = copy.copy(self._dims)
+
+#     data_: _ArrayFunctionOrAPI
+#     if data is _default:
+#         data_ = copy.copy(self._data)
+#     else:
+#         data_ = data
+#     if attrs is _default:
+#         attrs = copy.copy(self._attrs)
+#     return type(self)(dims, data_, attrs)
+
+
 @overload
 def from_array(
     dims: _DimsLike,
@@ -306,7 +343,7 @@ class NamedArray(Generic[T_DuckArray]):
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     @property
-    def real(self) -> Any:
+    def real(self) -> NamedArray[Any]:
         """
         The real part of the NamedArray.
 
@@ -314,7 +351,16 @@ class NamedArray(Generic[T_DuckArray]):
         --------
         numpy.ndarray.real
         """
-        return self._replace_with_new_data_type(data=self.data.real)
+        # reveal_type(self)
+        # out = _replace_with_new_data_type(
+        #     type(self), self._dims, self._data.real, self.attrs.copy()
+        # )
+        # reveal_type(out)
+        # return out
+
+        return type(self)(self._dims, self._data.real, self.attrs.copy())
+
+        # return self._replace_with_new_data_type(data=self.data.real)
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
