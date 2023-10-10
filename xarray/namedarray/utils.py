@@ -53,6 +53,7 @@ _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
 
+
 # A protocol for anything with the dtype attribute
 @runtime_checkable
 class _SupportsDType(Protocol[_DType_co]):
