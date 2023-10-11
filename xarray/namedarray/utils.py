@@ -153,8 +153,8 @@ class ReprObject:
 
 
 # %% Array API functions
-def get_array_namespace(x):
-    if hasattr(x, "__array_namespace__"):
+def get_array_namespace(x: _Array[Any]):
+    if hasattr(x, "__array_namespace__") -> :
         return x.__array_namespace__()
     else:
         return np
@@ -163,3 +163,13 @@ def get_array_namespace(x):
 def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
     # np.astype does not exist yet:
     return x.astype(dtype)  # type: ignore[no-any-return, attr-defined]
+
+
+def imag(x: _Array[Any], /) -> _Array[Any]:
+    xp = get_array_namespace(x)
+    return xp.imag(x)
+
+
+def real(x: _Array[Any], /) -> _Array[Any]:
+    xp = get_array_namespace(x)
+    return xp.real(x)
