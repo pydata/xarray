@@ -11,10 +11,10 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
-    astype,
     Default,
     T_DuckArray,
     _default,
+    astype,
     is_chunked_duck_array,
     is_duck_array,
     is_duck_dask_array,
