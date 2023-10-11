@@ -145,6 +145,8 @@ class Alignable(Protocol):
         ...
 
 
+T_Alignable = TypeVar("T_Alignable", bound="Alignable")
+
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
@@ -168,7 +170,6 @@ T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray
 # on `DataWithCoords`.
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
-T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
