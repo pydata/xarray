@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     Union,
     runtime_checkable,
+    overload,
 )
 
 import numpy as np
@@ -96,6 +97,8 @@ class _SupportsImag(Protocol[_T_co]):
     def imag(self) -> _T_co:
         ...
 
+_SupportsReal[_ScalarType]
+
 
 @runtime_checkable
 class _array(Protocol[_ShapeType_co, _DType_co]):
@@ -106,27 +109,34 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     """
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> _ShapeType_co:
         ...
 
-    # TODO: Should return the same subclass but with a new dtype generic.
-    # https://github.com/python/typing/issues/548
     @property
-    def real(self) -> Any:
+    def real(
+        self: _array[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
         ...
 
-    # TODO: Should return the same subclass but with a new dtype generic.
-    # https://github.com/python/typing/issues/548
     @property
-    def imag(self) -> Any:
+    def imag(
+        self: _array[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
         ...
 
-    # TODO: Should return the same subclass but with a new dtype generic.
-    # https://github.com/python/typing/issues/548
-    def astype(self, dtype: DTypeLike) -> Any:
+    @overload
+    def astype(self, dtype: _DTypeLike[_ScalarType]) -> _Array[_ScalarType]:
         ...
 
-    # Keep `dtype` at the bottom to avoid name conflicts with `np.dtype`
+    @overload
+    def astype(self, dtype: DTypeLike) -> _Array[_ScalarType]:
+        ...
+
+    def astype(
+        self, dtype: _DTypeLike[_ScalarType] | DTypeLike
+    ) -> _Array[_ScalarType | Any]:
+        ...
+
     @property
     def dtype(self) -> _DType_co:
         ...
@@ -195,7 +205,14 @@ _ArrayAPI = _arrayapi[Any, np.dtype[_ScalarType_co]]
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
-_ArrayFunctionOrAPI = Union[_ArrayFunction[np.generic], _ArrayAPI[np.generic]]
+_ArrayFunctionOrAPI = Union[_ArrayFunction[_ScalarType_co], _ArrayAPI[_ScalarType_co]]
+
+
+class duckarray(_array, Protocol[_ShapeType_co, _DType_co]):
+    ...
+
+
+DuckArray = duckarray[Any, np.dtype[_ScalarType_co]]
 
 
 @runtime_checkable
@@ -317,7 +334,7 @@ _SparseArrayFunctionOrAPI = Union[
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more
-T_DuckArray = TypeVar("T_DuckArray", bound=_ArrayFunctionOrAPI)
+# T_DuckArray = TypeVar("T_DuckArray", bound=_ArrayFunctionOrAPI)
 
 # The chunked arrays like dask or cubed:
 _ChunkedArrayFunctionOrAPI = Union[
@@ -371,12 +388,12 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
 #     )
 
 
-def is_duck_dask_array(x: _ArrayFunctionOrAPI) -> TypeGuard[DaskArray]:
+def is_duck_dask_array(x: DuckArray[np.generic]) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
 def is_chunked_duck_array(
-    x: _ArrayFunctionOrAPI,
+    x: DuckArray[np.generic],
 ) -> TypeGuard[_ChunkedArray[np.generic]]:
     return hasattr(x, "chunks")
 

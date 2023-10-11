@@ -20,16 +20,26 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray.utils import (
     Default,
-    T_DuckArray,
     _arrayfunction_or_api,
     _AttrsLike,
     _Chunks,
     _default,
+    _Array,
+    DuckArray,
+    duckarray,
     _Dim,
     _Dims,
     _DimsLike,
+    _DType_co,
     _IntOrUnknown,
     _Shape,
+    _DType_co,
+    _ScalarType,
+    _ScalarType_co,
+    _ShapeType,
+    _ShapeType_co,
+    _SupportsReal,
+    _SupportsImag,
     _sparsearrayfunction_or_api,
     is_chunked_duck_array,
     is_duck_dask_array,
@@ -59,52 +69,15 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[Any]")
-
-
-# def _replace_with_new_data_type(
-#     cls: type[NamedArray[Any]],
-#     dims: _DimsLike,
-#     data: T_DuckArray,
-#     attrs: _AttrsLike,
-# ) -> NamedArray[T_DuckArray]:
-#     return cls(dims, data, attrs)
-
-
-# # def _replace_with_new_data_type(
-# #     cls: type[T_NamedArray],
-# #     dims: _DimsLike,
-# #     data: _ArrayFunctionOrAPI,
-# #     attrs: _AttrsLike,
-# # ) -> T_NamedArray:
-# #     return cls(dims, data, attrs)
-
-
-# def _replace_with_new_data_type(
-#     self: T_NamedArray,
-#     dims: _DimsLike | Default = _default,
-#     data: _ArrayFunctionOrAPI | Default = _default,
-#     attrs: _AttrsLike | Default = _default,
-# ) -> T_NamedArray:
-#     if dims is _default:
-#         dims = copy.copy(self._dims)
-
-#     data_: _ArrayFunctionOrAPI
-#     if data is _default:
-#         data_ = copy.copy(self._data)
-#     else:
-#         data_ = data
-#     if attrs is _default:
-#         attrs = copy.copy(self._attrs)
-#     return type(self)(dims, data_, attrs)
+    T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
 
 
 @overload
 def from_array(
     dims: _DimsLike,
-    data: T_DuckArray,
+    data: DuckArray[_ScalarType],
     attrs: _AttrsLike = None,
-) -> NamedArray[T_DuckArray]:
+) -> _NamedArray[_ScalarType]:
     ...
 
 
@@ -113,15 +86,15 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = None,
-) -> NamedArray[NDArray[Any]]:
+) -> _NamedArray[Any]:
     ...
 
 
 def from_array(
     dims: _DimsLike,
-    data: T_DuckArray | ArrayLike,
+    data: DuckArray[_ScalarType] | ArrayLike,
     attrs: _AttrsLike = None,
-) -> NamedArray[T_DuckArray] | NamedArray[NDArray[Any]]:
+) -> _NamedArray[_ScalarType] | _NamedArray[Any]:
     """
     Create a Named array from an array-like object.
 
@@ -149,16 +122,12 @@ def from_array(
             # TODO: requires refactoring/vendoring xarray.core.dtypes and
             # xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
-        # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
-        # pyright doesn't need it.
-        data_ = cast(T_DuckArray, data)
-        return NamedArray(dims, data_, attrs)
+
+        return NamedArray(dims, data, attrs)
 
     if isinstance(data, _arrayfunction_or_api):
-        # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
-        # pyright doesn't need it.
-        data_ = cast(T_DuckArray, data)
-        return NamedArray(dims, data_, attrs)
+
+        return NamedArray(dims, data, attrs)
     else:
         if isinstance(data, tuple):
             return NamedArray(dims, to_0d_object_array(data), attrs)
@@ -167,7 +136,7 @@ def from_array(
             return NamedArray(dims, np.asarray(data), attrs)
 
 
-class NamedArray(Generic[T_DuckArray]):
+class NamedArray(Generic[_ShapeType_co, _DType_co]):
     """
     A wrapper around duck arrays with named dimensions
     and attributes which describe a single Array.
@@ -202,14 +171,14 @@ class NamedArray(Generic[T_DuckArray]):
 
     __slots__ = ("_data", "_dims", "_attrs")
 
-    _data: T_DuckArray
+    _data: duckarray[Any, _DType_co]
     _dims: _Dims
     _attrs: dict[Any, Any] | None
 
     def __init__(
         self,
         dims: _DimsLike,
-        data: T_DuckArray,
+        data: duckarray[Any, _DType_co],
         attrs: _AttrsLike = None,
     ):
         self._data = data
@@ -247,7 +216,7 @@ class NamedArray(Generic[T_DuckArray]):
             raise TypeError("len() of unsized object") from exc
 
     @property
-    def dtype(self) -> np.dtype[Any]:
+    def dtype(self) -> _DType_co:
         """
         Data-type of the array’s elements.
 
@@ -259,7 +228,7 @@ class NamedArray(Generic[T_DuckArray]):
         return self._data.dtype
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> _ShapeType_co:
         """
 
 
@@ -318,7 +287,7 @@ class NamedArray(Generic[T_DuckArray]):
     def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
-    def _check_shape(self, new_data: T_DuckArray) -> None:
+    def _check_shape(self, new_data: DuckArray[_ScalarType_co]) -> None:
         if new_data.shape != self.shape:
             raise ValueError(
                 f"replacement data must match the {self.__class__.__name__}'s shape. "
@@ -326,7 +295,7 @@ class NamedArray(Generic[T_DuckArray]):
             )
 
     @property
-    def data(self) -> T_DuckArray:
+    def data(self) -> DuckArray[_ScalarType_co]:
         """
         The NamedArray's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -336,14 +305,14 @@ class NamedArray(Generic[T_DuckArray]):
         return self._data
 
     @data.setter
-    def data(self, data: T_DuckArray) -> None:
+    def data(self, data: DuckArray[_ScalarType_co]) -> None:
         self._check_shape(data)
         self._data = data
 
-    # TODO: Should return the same subclass but with a new dtype generic.
-    # https://github.com/python/typing/issues/548
     @property
-    def real(self) -> NamedArray[Any]:
+    def real(
+        self: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
         """
         The real part of the NamedArray.
 
@@ -362,10 +331,10 @@ class NamedArray(Generic[T_DuckArray]):
 
         # return self._replace_with_new_data_type(data=self.data.real)
 
-    # TODO: Should return the same subclass but with a new dtype generic.
-    # https://github.com/python/typing/issues/548
     @property
-    def imag(self) -> Any:
+    def imag(
+        self: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],
+    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
         """
         The imaginary part of the NamedArray.
 
@@ -506,7 +475,7 @@ class NamedArray(Generic[T_DuckArray]):
     def _replace(
         self,
         dims: _DimsLike | Default = _default,
-        data: T_DuckArray | Default = _default,
+        data: DuckArray[_ScalarType_co] | Default = _default,
         attrs: _AttrsLike | Default = _default,
     ) -> Self:
         """
@@ -544,7 +513,7 @@ class NamedArray(Generic[T_DuckArray]):
     def _copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | None = None,
+        data: DuckArray[_ScalarType_co] | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -570,7 +539,7 @@ class NamedArray(Generic[T_DuckArray]):
     def copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | None = None,
+        data: DuckArray[_ScalarType_co] | None = None,
     ) -> Self:
         """Returns a copy of this object.
 
@@ -606,7 +575,7 @@ class NamedArray(Generic[T_DuckArray]):
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
         nonzeros = np.nonzero(cast("NDArray[np.generic]", self.data))
         return tuple(
-            type(self)((dim,), cast(T_DuckArray, nz))
+            type(self)((dim,), cast(DuckArray[_ScalarType_co], nz))
             for nz, dim in zip(nonzeros, self.dims)
         )
 
@@ -645,3 +614,6 @@ class NamedArray(Generic[T_DuckArray]):
             return self._replace_with_new_data_type(data=self._data.todense())
         else:
             raise TypeError("self.data is not a sparse array")
+
+
+_NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
