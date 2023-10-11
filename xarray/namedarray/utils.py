@@ -5,6 +5,7 @@ import sys
 from collections.abc import Hashable
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
+from types import ModuleType
 
 import numpy as np
 
@@ -153,8 +154,8 @@ class ReprObject:
 
 
 # %% Array API functions
-def get_array_namespace(x: _Array[Any]):
-    if hasattr(x, "__array_namespace__") -> :
+def get_array_namespace(x: _Array[Any]) -> ModuleType:
+    if hasattr(x, "__array_namespace__"):
         return x.__array_namespace__()
     else:
         return np
