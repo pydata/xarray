@@ -41,17 +41,6 @@ class _Array(Protocol[T_DType_co]):
     def shape(self) -> tuple[int, ...]:
         ...
 
-    @property
-    def real(self) -> Self:
-        ...
-
-    @property
-    def imag(self) -> Self:
-        ...
-
-    def astype(self, dtype: np.typing.DTypeLike) -> Self:
-        ...
-
     # TODO: numpy doesn't use any inputs:
     # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
     def __array__(self) -> np.ndarray[Any, T_DType_co]:
