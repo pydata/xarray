@@ -22,9 +22,25 @@ v2023.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`DataArray.where` & :py:meth:`Dataset.where` accept a callable for
+  the ``other`` parameter, passing the object as the only argument. Previously,
+  this was only valid for the ``cond`` parameter. (:issue:`8255`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`DataArray.sortby` & :py:meth:`Dataset.sortby` accept a callable for
+  the ``variables`` parameter, passing the object as the only argument.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- ``.rolling_exp`` functions can now operate on dask-backed arrays, assuming the
+  core dim has exactly one chunk. (:pull:`8284`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- Made more arguments keyword-only (e.g. ``keep_attrs``, ``skipna``) for many :py:class:`xarray.DataArray` and
+  :py:class:`xarray.Dataset` methods (:pull:`6403`). By `Mathias Hauser <https://github.com/mathause>`_.
+- :py:meth:`Dataset.to_zarr` & :py:meth:`DataArray.to_zarr` require keyword
+  arguments after the initial 7 positional arguments.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Deprecations
@@ -33,15 +49,32 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
 - Fix bug where :py:meth:`Dataset.to_zarr` would modify chunks of datetime-like variables (:issue:`8230`, :pull:`8253`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
+- :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
+  when the operation was a no-op. (:issue:`8266`)
+  By `Simon Hansen <https://github.com/hoxbro>`_.
+- Fix datetime encoding precision loss regression introduced in the previous
+  release for datetimes encoded with units requiring floating point values, and
+  a reference date not equal to the first value of the datetime array
+  (:issue:`8271`, :pull:`8272`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
+  By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- More improvements to support the Python `array API standard <https://data-apis.org/array-api/latest/>`_
+  by using duck array ops in more places in the codebase. (:pull:`8267`)
+  By `Tom White <https://github.com/tomwhite>`_.
 
 
 .. _whats-new.2023.09.0:
@@ -136,6 +169,8 @@ Bug fixes
 - Static typing of dunder ops methods (like :py:meth:`DataArray.__eq__`) has been fixed.
   Remaining issues are upstream problems (:issue:`7780`, :pull:`8204`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix type annotation for ``center`` argument of plotting methods (like :py:meth:`xarray.plot.dataarray_plot.pcolormesh`) (:pull:`8261`).
+  By `Pieter Eendebak <https://github.com/eendebakpt>`_.
 
 Documentation
 ~~~~~~~~~~~~~

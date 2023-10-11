@@ -1883,6 +1883,16 @@ class TestDataArray:
         ):
             da.rename(x="y")
 
+        # No operation should not raise a warning
+        da = xr.DataArray(
+            data=np.ones((2, 3)),
+            dims=["x", "y"],
+            coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            da.rename(x="x")
+
     def test_init_value(self) -> None:
         expected = DataArray(
             np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
@@ -2715,6 +2725,14 @@ class TestDataArray:
         arr = DataArray(np.arange(4), dims="y")
         expected = arr.sel(y=slice(2))
         actual = arr.where(lambda x: x.y < 2, drop=True)
+        assert_identical(actual, expected)
+
+    def test_where_other_lambda(self) -> None:
+        arr = DataArray(np.arange(4), dims="y")
+        expected = xr.concat(
+            [arr.sel(y=slice(2)), arr.sel(y=slice(2, None)) + 1], dim="y"
+        )
+        actual = arr.where(lambda x: x.y < 2, lambda x: x + 1)
         assert_identical(actual, expected)
 
     def test_where_string(self) -> None:

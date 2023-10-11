@@ -123,6 +123,7 @@ from xarray.core.variable import (
     calculate_dimensions,
 )
 from xarray.plot.accessor import DatasetPlotAccessor
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -2293,6 +2294,7 @@ class Dataset(
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
+        *,
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
@@ -2336,6 +2338,7 @@ class Dataset(
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
+        *,
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
@@ -4165,6 +4168,9 @@ class Dataset(
             create_dim_coord = False
             new_k = name_dict[k]
 
+            if k == new_k:
+                continue  # Same name, nothing to do
+
             if k in self.dims and new_k in self._coord_names:
                 coord_dims = self._variables[name_dict[k]].dims
                 if coord_dims == (k,):
@@ -4770,9 +4776,11 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes_
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def reset_index(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
+        *,
         drop: bool = False,
     ) -> Self:
         """Reset the specified index(es) or multi-index level(s).
@@ -5407,9 +5415,11 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def unstack(
         self,
         dim: Dims = None,
+        *,
         fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
     ) -> Self:
@@ -6150,9 +6160,11 @@ class Dataset(
             ds._variables[name] = var.transpose(*var_dims)
         return ds
 
+    @_deprecate_positional_args("v2023.10.0")
     def dropna(
         self,
         dim: Hashable,
+        *,
         how: Literal["any", "all"] = "any",
         thresh: int | None = None,
         subset: Iterable[Hashable] | None = None,
@@ -7496,7 +7508,7 @@ class Dataset(
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, (DataArray, Dataset)):
-            self, other = align(self, other, join=align_type, copy=False)  # type: ignore[assignment]
+            self, other = align(self, other, join=align_type, copy=False)
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=False)
@@ -7578,10 +7590,12 @@ class Dataset(
             if v in self.variables:
                 self.variables[v].attrs = other.variables[v].attrs
 
+    @_deprecate_positional_args("v2023.10.0")
     def diff(
         self,
         dim: Hashable,
         n: int = 1,
+        *,
         label: Literal["upper", "lower"] = "upper",
     ) -> Self:
         """Calculate the n-th order discrete difference along given axis.
@@ -7824,7 +7838,10 @@ class Dataset(
 
     def sortby(
         self,
-        variables: Hashable | DataArray | list[Hashable | DataArray],
+        variables: Hashable
+        | DataArray
+        | Sequence[Hashable | DataArray]
+        | Callable[[Self], Hashable | DataArray | list[Hashable | DataArray]],
         ascending: bool = True,
     ) -> Self:
         """
@@ -7846,9 +7863,10 @@ class Dataset(
 
         Parameters
         ----------
-        variables : Hashable, DataArray, or list of hashable or DataArray
-            1D DataArray objects or name(s) of 1D variable(s) in
-            coords/data_vars whose values are used to sort the dataset.
+        kariables : Hashable, DataArray, sequence of Hashable or DataArray, or Callable
+            1D DataArray objects or name(s) of 1D variable(s) in coords whose values are
+            used to sort this array. If a callable, the callable is passed this object,
+            and the result is used as the value for cond.
         ascending : bool, default: True
             Whether to sort by ascending or descending order.
 
@@ -7874,8 +7892,7 @@ class Dataset(
         ...     },
         ...     coords={"x": ["b", "a"], "y": [1, 0]},
         ... )
-        >>> ds = ds.sortby("x")
-        >>> ds
+        >>> ds.sortby("x")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
         Coordinates:
@@ -7884,17 +7901,28 @@ class Dataset(
         Data variables:
             A        (x, y) int64 3 4 1 2
             B        (x, y) int64 7 8 5 6
+        >>> ds.sortby(lambda x: -x["y"])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) <U1 'b' 'a'
+          * y        (y) int64 1 0
+        Data variables:
+            A        (x, y) int64 1 2 3 4
+            B        (x, y) int64 5 6 7 8
         """
         from xarray.core.dataarray import DataArray
 
+        if callable(variables):
+            variables = variables(self)
         if not isinstance(variables, list):
             variables = [variables]
         else:
             variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
-        aligned_vars = align(self, *arrays, join="left")  # type: ignore[type-var]
-        aligned_self = cast(Self, aligned_vars[0])
-        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]  # type: ignore[assignment]
+        aligned_vars = align(self, *arrays, join="left")
+        aligned_self = aligned_vars[0]
+        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
@@ -7908,10 +7936,12 @@ class Dataset(
             indices[key] = order if ascending else order[::-1]
         return aligned_self.isel(indices)
 
+    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
         dim: Dims = None,
+        *,
         method: QuantileMethods = "linear",
         numeric_only: bool = False,
         keep_attrs: bool | None = None,
@@ -8086,9 +8116,11 @@ class Dataset(
         )
         return new.assign_coords(quantile=q)
 
+    @_deprecate_positional_args("v2023.10.0")
     def rank(
         self,
         dim: Hashable,
+        *,
         pct: bool = False,
         keep_attrs: bool | None = None,
     ) -> Self:
@@ -9032,9 +9064,11 @@ class Dataset(
         attrs = self._attrs if keep_attrs else None
         return self._replace_with_new_dims(variables, indexes=indexes, attrs=attrs)
 
+    @_deprecate_positional_args("v2023.10.0")
     def idxmin(
         self,
         dim: Hashable | None = None,
+        *,
         skipna: bool | None = None,
         fill_value: Any = xrdtypes.NA,
         keep_attrs: bool | None = None,
@@ -9129,9 +9163,11 @@ class Dataset(
             )
         )
 
+    @_deprecate_positional_args("v2023.10.0")
     def idxmax(
         self,
         dim: Hashable | None = None,
+        *,
         skipna: bool | None = None,
         fill_value: Any = xrdtypes.NA,
         keep_attrs: bool | None = None,
@@ -9752,9 +9788,11 @@ class Dataset(
 
         return result
 
+    @_deprecate_positional_args("v2023.10.0")
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable],
+        *,
         keep: Literal["first", "last", False] = "first",
     ) -> Self:
         """Returns a new Dataset with duplicate dimension values removed.
