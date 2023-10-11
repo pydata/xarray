@@ -4,8 +4,8 @@ import importlib
 import sys
 from collections.abc import Hashable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
 from types import ModuleType
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
 
 import numpy as np
 
