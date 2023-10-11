@@ -20,27 +20,25 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray.utils import (
     Default,
+    DuckArray,
     _arrayfunction_or_api,
     _AttrsLike,
     _Chunks,
     _default,
-    _Array,
-    DuckArray,
-    duckarray,
     _Dim,
     _Dims,
     _DimsLike,
     _DType_co,
     _IntOrUnknown,
-    _Shape,
-    _DType_co,
     _ScalarType,
     _ScalarType_co,
+    _Shape,
     _ShapeType,
     _ShapeType_co,
-    _SupportsReal,
-    _SupportsImag,
     _sparsearrayfunction_or_api,
+    _SupportsImag,
+    _SupportsReal,
+    duckarray,
     is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -126,7 +124,6 @@ def from_array(
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, _arrayfunction_or_api):
-
         return NamedArray(dims, data, attrs)
     else:
         if isinstance(data, tuple):

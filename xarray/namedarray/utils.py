@@ -13,8 +13,8 @@ from typing import (
     SupportsIndex,
     TypeVar,
     Union,
-    runtime_checkable,
     overload,
+    runtime_checkable,
 )
 
 import numpy as np
@@ -53,6 +53,7 @@ _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 
 _ScalarType = TypeVar("_ScalarType", bound=np.generic)
 _ScalarType_co = TypeVar("_ScalarType_co", bound=np.generic, covariant=True)
+
 
 # A protocol for anything with the dtype attribute
 @runtime_checkable
@@ -96,6 +97,7 @@ class _SupportsImag(Protocol[_T_co]):
     @property
     def imag(self) -> _T_co:
         ...
+
 
 _SupportsReal[_ScalarType]
 
