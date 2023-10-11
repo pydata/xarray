@@ -15,9 +15,9 @@ if TYPE_CHECKING:
         from typing_extensions import TypeGuard
 
     if sys.version_info >= (3, 11):
-        from typing import Self
+        pass
     else:
-        from typing_extensions import Self
+        pass
 
     try:
         from dask.array import Array as DaskArray
