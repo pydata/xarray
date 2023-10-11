@@ -11,6 +11,7 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray.utils import (
+    astype,
     Default,
     T_DuckArray,
     _default,
@@ -475,7 +476,7 @@ class NamedArray(Generic[T_DuckArray]):
         except AttributeError as exc:
             raise ValueError(f"{sparse_format} is not a valid sparse format") from exc
 
-        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        data = as_sparse(astype(self.data, dtype), fill_value=fill_value)
         return self._replace(data=data)
 
     def _to_dense(self) -> Self:

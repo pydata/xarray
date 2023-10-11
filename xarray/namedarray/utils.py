@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
-# T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
+T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
 
 
 class _Array(Protocol[T_DType_co]):
@@ -150,3 +150,16 @@ class ReprObject:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
+
+
+# %% Array API functions
+def get_array_namespace(x):
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()
+    else:
+        return np
+
+
+def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
+    # np.astype does not exist yet:
+    return x.astype(dtype)  # type: ignore[no-any-return, attr-defined]
