@@ -156,21 +156,25 @@ class ReprObject:
 # %% Array API functions
 def get_array_namespace(x: _Array[Any]) -> ModuleType:
     if hasattr(x, "__array_namespace__"):
-        return x.__array_namespace__()
+        return x.__array_namespace__()  # type: ignore[no-any-return]
     else:
         return np
 
 
 def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
-    # np.astype does not exist yet:
-    return x.astype(dtype)  # type: ignore[no-any-return, attr-defined]
+    if hasattr(x, "__array_namespace__"):
+        xp = x.__array_namespace__()
+        return xp.astype(x, dtype, copy=copy)  # type: ignore[no-any-return]
+
+    # np.astype doesn't exist yet:
+    return x.astype(dtype, copy=copy)  # type: ignore[no-any-return, attr-defined]
 
 
 def imag(x: _Array[Any], /) -> _Array[Any]:
     xp = get_array_namespace(x)
-    return xp.imag(x)
+    return xp.imag(x)  # type: ignore[no-any-return]
 
 
 def real(x: _Array[Any], /) -> _Array[Any]:
     xp = get_array_namespace(x)
-    return xp.real(x)
+    return xp.real(x)  # type: ignore[no-any-return]
