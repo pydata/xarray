@@ -7512,7 +7512,7 @@ class Dataset(
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, (DataArray, Dataset)):
-            self, other = align(self, other, join=align_type, copy=False)  # type: ignore[assignment]
+            self, other = align(self, other, join=align_type, copy=False)
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
         keep_attrs = _get_keep_attrs(default=False)
@@ -7924,9 +7924,9 @@ class Dataset(
         else:
             variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
-        aligned_vars = align(self, *arrays, join="left")  # type: ignore[type-var]
-        aligned_self = cast(Self, aligned_vars[0])
-        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]  # type: ignore[assignment]
+        aligned_vars = align(self, *arrays, join="left")
+        aligned_self = aligned_vars[0]
+        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
