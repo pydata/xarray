@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -34,6 +34,7 @@ from xarray.core.pycompat import (
     is_chunked_array,
     is_duck_dask_array,
 )
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -63,7 +64,6 @@ if TYPE_CHECKING:
         PadReflectOptions,
         QuantileMethods,
         Self,
-        T_DuckArray,
     )
 
 NON_NANOSECOND_WARNING = (
@@ -311,7 +311,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(NamedArray, AbstractArray, VariableArithmetic):
+class Variable(NamedArray, AbstractArray, VariableArithmetic, Generic[T_DuckArray]):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -379,7 +379,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         )
 
     @property
-    def data(self):
+    def data(self) -> T_DuckArray:
         """
         The Variable's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -1079,9 +1079,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             data = data.magnitude
         if isinstance(data, array_type("sparse")):
             data = data.todense()
-        data = np.asarray(data)
 
-        return data
+        return np.asarray(data)
 
     def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
@@ -2499,7 +2498,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result_flat_indices.data, reduce_shape
         )
 
-        result = {
+        result: dict[Any, Variable] = {
             d: Variable(dims=result_dims, data=i)
             for d, i in zip(dim, result_unravelled_indices)
         }
