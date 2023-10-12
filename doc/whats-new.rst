@@ -49,7 +49,12 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Rename :py:meth:`Dataset.reset_encoding` & :py:meth:`DataArray.reset_encoding`
+  to :py:meth:`Dataset.drop_encoding` & :py:meth:`DataArray.drop_encoding` for
+  consistency with other ``drop`` & ``reset`` methods — ``drop`` generally
+  removes something, while ``reset`` generally resets to some default or
+  standard value. (:pull:`8287`, :issue:`8259`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
