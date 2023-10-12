@@ -19,6 +19,7 @@ from io import BytesIO
 from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -2860,6 +2861,43 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
+
+
+@requires_zarr
+class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
+    def test_avoid_excess_metadata_calls(self) -> None:
+        """Test that chunk requests do not trigger redundant metadata requests.
+
+        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
+        to retrieve chunk data after initialization do not trigger additional
+        metadata requests.
+
+        https://github.com/pydata/xarray/issues/8290
+        """
+
+        import zarr
+
+        ds = xr.Dataset(data_vars={"test": (("Z"), np.array([np.nan]).reshape(1))})
+
+        # The call to retrieve metadata performs a group lookup. We patch the group, allowing
+        # assessment of call details to the target group.__getitem__ calls.
+        with self.create_zarr_target() as store, patch.object(
+            zarr.hierarchy.Group,
+            "__getitem__",
+            side_effect=zarr.hierarchy.Group.__getitem__,
+            autospec=True,
+        ) as mock:
+            ds.to_zarr(store, mode="w")
+
+            # we expect this to request array metadata information, so call_count should be > 1
+            xrds = xr.open_zarr(store)
+            call_count = mock.call_count
+            assert call_count > 0
+
+            # computing requests chunks, which should not trigger additional metadata requests
+            # we assert that the number of calls has not increased after fetchhing the array
+            xrds.test.compute(scheduler="sync")
+            assert mock.call_count == call_count
 
 
 @requires_zarr
