@@ -110,9 +110,9 @@ Dataset contents
    Dataset.drop_indexes
    Dataset.drop_duplicates
    Dataset.drop_dims
+   Dataset.drop_encoding
    Dataset.set_coords
    Dataset.reset_coords
-   Dataset.reset_encoding
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
@@ -303,8 +303,8 @@ DataArray contents
    DataArray.drop_vars
    DataArray.drop_indexes
    DataArray.drop_duplicates
+   DataArray.drop_encoding
    DataArray.reset_coords
-   DataArray.reset_encoding
    DataArray.copy
    DataArray.convert_calendar
    DataArray.interp_calendar
