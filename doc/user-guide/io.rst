@@ -260,12 +260,12 @@ Note that all operations that manipulate variables other than indexing
 will remove encoding information.
 
 In some cases it is useful to intentionally reset a dataset's original encoding values.
-This can be done with either the :py:meth:`Dataset.reset_encoding` or
-:py:meth:`DataArray.reset_encoding` methods.
+This can be done with either the :py:meth:`Dataset.drop_encoding` or
+:py:meth:`DataArray.drop_encoding` methods.
 
 .. ipython:: python
 
-    ds_no_encoding = ds_disk.reset_encoding()
+    ds_no_encoding = ds_disk.drop_encoding()
     ds_no_encoding.encoding
 
 .. _combining multiple files:

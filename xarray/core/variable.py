@@ -883,6 +883,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             raise ValueError("encoding must be castable to a dictionary")
 
     def reset_encoding(self) -> Self:
+        warnings.warn(
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+        )
+        return self.drop_encoding()
+
+    def drop_encoding(self) -> Self:
         """Return a new Variable without encoding."""
         return self._replace(encoding={})
 
