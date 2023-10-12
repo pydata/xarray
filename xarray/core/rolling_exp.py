@@ -139,9 +139,9 @@ class RollingExp(Generic[T_DataWithCoords]):
             input_core_dims=[[self.dim]],
             kwargs=dict(alpha=self.alpha, min_weight=self.min_weight, axis=-1),
             output_core_dims=[[self.dim]],
-            exclude_dims={self.dim},
             keep_attrs=keep_attrs,
             on_missing_core_dim="copy",
+            dask="parallelized",
         ).transpose(*dim_order)
 
     def sum(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
@@ -175,7 +175,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             input_core_dims=[[self.dim]],
             kwargs=dict(alpha=self.alpha, min_weight=self.min_weight, axis=-1),
             output_core_dims=[[self.dim]],
-            exclude_dims={self.dim},
             keep_attrs=keep_attrs,
             on_missing_core_dim="copy",
+            dask="parallelized",
         ).transpose(*dim_order)
