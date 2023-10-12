@@ -756,7 +756,9 @@ class Dataset(
         self._encoding = dict(value)
 
     def reset_encoding(self) -> Self:
-        warnings.warn("reset_encoding is deprecated, use `drop_encoding` instead")
+        warnings.warn(
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+        )
         return self.drop_encoding()
 
     def drop_encoding(self) -> Self:
