@@ -917,7 +917,7 @@ class DataArray(
         warnings.warn(
             "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
         )
-        self.drop_encoding()
+        return self.drop_encoding()
 
     def drop_encoding(self) -> Self:
         """Return a new DataArray without encoding on the array or any attached
