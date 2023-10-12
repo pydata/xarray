@@ -117,6 +117,11 @@ class RollingExp(Generic[T_DataWithCoords]):
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
         self.min_weight = min_weight
+        # Don't pass min_weight=0 so we can support older versions of numbagg
+        kwargs = dict(alpha=self.alpha, axis=-1)
+        if min_weight > 0:
+            kwargs["min_weight"] = min_weight
+        self.kwargs = kwargs
 
     def mean(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
         """
@@ -147,7 +152,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             move_exp_nanmean,
             self.obj,
             input_core_dims=[[self.dim]],
-            kwargs=dict(alpha=self.alpha, min_weight=self.min_weight, axis=-1),
+            kwargs=self.kwargs,
             output_core_dims=[[self.dim]],
             keep_attrs=keep_attrs,
             on_missing_core_dim="copy",
@@ -183,7 +188,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             move_exp_nansum,
             self.obj,
             input_core_dims=[[self.dim]],
-            kwargs=dict(alpha=self.alpha, min_weight=self.min_weight, axis=-1),
+            kwargs=self.kwargs,
             output_core_dims=[[self.dim]],
             keep_attrs=keep_attrs,
             on_missing_core_dim="copy",
