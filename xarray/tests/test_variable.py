@@ -473,12 +473,12 @@ class VariableSubclassobjects(ABC):
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         encoding1 = {"scale_factor": 1}
         # encoding set via cls constructor
         v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
         assert v1.encoding == encoding1
-        v2 = v1.reset_encoding()
+        v2 = v1.drop_encoding()
         assert v1.encoding == encoding1
         assert v2.encoding == {}
 
@@ -486,7 +486,7 @@ class VariableSubclassobjects(ABC):
         encoding3 = {"scale_factor": 10}
         v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
         assert v3.encoding == encoding3
-        v4 = v3.reset_encoding()
+        v4 = v3.drop_encoding()
         assert v3.encoding == encoding3
         assert v4.encoding == {}
 
