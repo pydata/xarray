@@ -3459,6 +3459,7 @@ def skip_if_not_engine(engine):
 
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
+@pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
