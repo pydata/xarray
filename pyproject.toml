@@ -78,6 +78,7 @@ files = "xarray"
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
+warn_unused_configs = true
 warn_unused_ignores = true
 
 # Much of the numerical computing stack doesn't have type annotations yet.
