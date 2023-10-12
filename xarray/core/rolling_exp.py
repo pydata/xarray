@@ -100,7 +100,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         min_weight: float = 0.0,
     ):
         if has_numbagg is False or has_numbagg < "0.3.1":
-            raise ImportError("numbagg >= 0.3.1 is required for rolling_exp")
+            raise ImportError(
+                f"numbagg >= 0.3.1 is required for rolling_exp, currently {has_numbagg} is installed"
+            )
 
         self.obj: T_DataWithCoords = obj
         dim, window = next(iter(windows.items()))
