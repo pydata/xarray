@@ -2879,22 +2879,26 @@ class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
 
         ds = xr.Dataset(data_vars={"test": (("Z"), np.array([np.nan]).reshape(1))})
 
-        # The call to retrieve metadata performs a group lookup. We patch the group, allowing
-        # assessment of call details to the target group.__getitem__ calls.
-        with self.create_zarr_target() as store, patch.object(
-            zarr.hierarchy.Group,
-            "__getitem__",
-            side_effect=zarr.hierarchy.Group.__getitem__,
-            autospec=True,
-        ) as mock:
+        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
+        # so that we can inspect calls to this method - specifically count of calls.
+        # Use of side_effect means that calls are passed through to the original method
+        # rather than a mocked method.
+        Group = zarr.hierarchy.Group
+        with (
+            self.create_zarr_target() as store,
+            patch.object(
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
+            ) as mock,
+        ):
             ds.to_zarr(store, mode="w")
 
-            # we expect this to request array metadata information, so call_count should be > 1
+            # We expect this to request array metadata information, so call_count should be >= 1,
+            # At time of writing, 2 calls are made
             xrds = xr.open_zarr(store)
             call_count = mock.call_count
             assert call_count > 0
 
-            # computing requests chunks, which should not trigger additional metadata requests
+            # compute() requests array data, which should not trigger additional metadata requests
             # we assert that the number of calls has not increased after fetchhing the array
             xrds.test.compute(scheduler="sync")
             assert mock.call_count == call_count
