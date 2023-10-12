@@ -2877,7 +2877,7 @@ class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
 
         import zarr
 
-        ds = xr.Dataset(data_vars={"test": (("Z"), np.array([np.nan]).reshape(1))})
+        ds = xr.Dataset(data_vars={"test": (("Z", ), np.array([123]).reshape(1))})
 
         # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
         # so that we can inspect calls to this method - specifically count of calls.
