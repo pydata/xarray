@@ -884,7 +884,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def reset_encoding(self) -> Self:
         warnings.warn("reset_encoding is deprecated, use `drop_encoding` instead")
-        self.drop_encoding()
+        return self.drop_encoding()
 
     def drop_encoding(self) -> Self:
         """Return a new Variable without encoding."""
