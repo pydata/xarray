@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from types import ModuleType
 from typing import (
@@ -15,11 +14,6 @@ from typing import (
 )
 
 import numpy as np
-
-if sys.version_info >= (3, 11):
-    pass
-else:
-    pass
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

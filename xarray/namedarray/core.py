@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import copy
 import math
 from collections.abc import Hashable, Mapping, Sequence
@@ -63,6 +64,11 @@ if TYPE_CHECKING:
         SchedulerGetCallable: Any  # type: ignore[no-redef]
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
+
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
 
