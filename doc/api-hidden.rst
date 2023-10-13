@@ -351,6 +351,85 @@
    IndexVariable.sizes
    IndexVariable.values
 
+
+   NamedArray.all
+   NamedArray.any
+   ..
+      NamedArray.argmax
+      NamedArray.argmin
+      NamedArray.argsort
+      NamedArray.astype
+   ..
+      NamedArray.broadcast_equals
+      NamedArray.chunk
+      NamedArray.clip
+      NamedArray.coarsen
+      NamedArray.compute
+      NamedArray.concat
+      NamedArray.conj
+      NamedArray.conjugate
+      NamedArray.copy
+   NamedArray.count
+   NamedArray.cumprod
+   NamedArray.cumsum
+   ..
+      NamedArray.equals
+      NamedArray.fillna
+   NamedArray.get_axis_num
+   ..
+      NamedArray.identical
+   ..
+      NamedArray.isel
+   ..
+      NamedArray.isnull
+      NamedArray.item
+      NamedArray.load
+   NamedArray.max
+   NamedArray.mean
+   NamedArray.median
+   NamedArray.min
+   ..
+      NamedArray.no_conflicts
+      NamedArray.notnull
+      NamedArray.pad
+   NamedArray.prod
+   NamedArray.quantile
+   ..
+      NamedArray.rank
+   NamedArray.reduce
+   ..
+      NamedArray.roll
+      NamedArray.rolling_window
+      NamedArray.round
+      NamedArray.searchsorted
+      NamedArray.set_dims
+      NamedArray.shift
+      NamedArray.squeeze
+      NamedArray.stack
+   NamedArray.std
+   NamedArray.sum
+   ..
+      NamedArray.to_dict
+      NamedArray.transpose
+      NamedArray.unstack
+   NamedArray.var
+   ..
+      NamedArray.where
+      NamedArray.T
+   NamedArray.attrs
+   NamedArray.chunks
+   NamedArray.data
+   NamedArray.dims
+   NamedArray.dtype
+   NamedArray.imag
+   NamedArray.nbytes
+   NamedArray.ndim
+   NamedArray.real
+   NamedArray.shape
+   NamedArray.size
+   NamedArray.sizes
+   NamedArray.values
+
    plot.plot
    plot.line
    plot.step

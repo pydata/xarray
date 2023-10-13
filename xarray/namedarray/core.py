@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import copy
 import math
+import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
 
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
-from xarray.core import dtypes
+from xarray.core import dtypes, formatting, formatting_html
 from xarray.core.indexing import ExplicitlyIndexed
+from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
@@ -75,7 +77,7 @@ def as_compatible_data(
     return cast(T_DuckArray, np.asarray(data))
 
 
-class NamedArray(Generic[T_DuckArray]):
+class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
@@ -348,6 +350,30 @@ class NamedArray(Generic[T_DuckArray]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
+    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+        """Return axis number(s) corresponding to dimension(s) in this array.
+
+        Parameters
+        ----------
+        dim : str or iterable of str
+            Dimension name(s) for which to lookup axes.
+
+        Returns
+        -------
+        int or tuple of int
+            Axis number or numbers corresponding to the given dimensions.
+        """
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
+            return tuple(self._get_axis_num(d) for d in dim)
+        else:
+            return self._get_axis_num(dim)
+
+    def _get_axis_num(self: Any, dim: Hashable) -> int:
+        try:
+            return self.dims.index(dim)
+        except ValueError:
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
         """
@@ -467,12 +493,111 @@ class NamedArray(Generic[T_DuckArray]):
         """
         return self._copy(deep=deep, data=data)
 
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool = True,
+        keepdims: bool = False,
+        **kwargs,
+    ) -> NamedArray:
+        """Reduce this array by applying `func` along some dimension(s).
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of reducing an
+            np.ndarray over an integer valued axis.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
+        axis : int or Sequence of int, optional
+            Axis(es) over which to apply `func`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            the reduction is calculated over the flattened array (by calling
+            `func(x)` without an axis argument).
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+        keepdims : bool, default: False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Array
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        if dim == ...:
+            dim = None
+        if dim is not None and axis is not None:
+            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
+
+        if dim is not None:
+            axis = self.get_axis_num(dim)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
+            )
+            if axis is not None:
+                if isinstance(axis, tuple) and len(axis) == 1:
+                    # unpack axis for the benefit of functions
+                    # like np.argmin which can't handle tuple arguments
+                    axis = axis[0]
+                data = func(self.data, axis=axis, **kwargs)
+            else:
+                data = func(self.data, **kwargs)
+
+        if getattr(data, "shape", ()) == self.shape:
+            dims = self.dims
+        else:
+            removed_axes: Iterable[int]
+            if axis is None:
+                removed_axes = range(self.ndim)
+            else:
+                removed_axes = np.atleast_1d(axis) % self.ndim
+            if keepdims:
+                # Insert np.newaxis for removed dims
+                slices = tuple(
+                    np.newaxis if i in removed_axes else slice(None, None)
+                    for i in range(self.ndim)
+                )
+                if getattr(data, "shape", None) is None:
+                    # Reduce has produced a scalar value, not an array-like
+                    data = np.asanyarray(data)[slices]
+                else:
+                    data = data[slices]
+                dims = self.dims
+            else:
+                dims = tuple(
+                    adim for n, adim in enumerate(self.dims) if n not in removed_axes
+                )
+
+        attrs = self._attrs if keep_attrs else None
+
+        # We need to return `Variable` rather than the type of `self` at the moment, ref
+        # #8216
+        return type(self)(dims, data, attrs=attrs)
+
     def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)
         return tuple(type(self)((dim,), nz) for nz, dim in zip(nonzeros, self.dims))
+
+    def __repr__(self) -> str:
+        return formatting.array_repr(self)
+
+    def _repr_html_(self):
+        return formatting_html.array_repr(self)
 
     def _as_sparse(
         self,

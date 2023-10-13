@@ -34,9 +34,23 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-flox_available = module_available("flox")'''
+flox_available = module_available("flox")
+'''
 
-DEFAULT_PREAMBLE = """
+NAMED_ARRAY_MODULE_PREAMBLE = '''\
+"""Mixin classes with reduction operations."""
+# This file was generated using xarray.util.generate_aggregations. Do not edit manually.
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any, Callable
+
+from xarray.core import duck_array_ops
+from xarray.core.types import Dims, Self
+'''
+
+AGGREGATIONS_PREAMBLE = """
 
 class {obj}{cls}Aggregations:
     __slots__ = ()
@@ -139,9 +153,7 @@ TEMPLATE_RETURNS = """
 TEMPLATE_SEE_ALSO = """
         See Also
         --------
-        numpy.{method}
-        dask.array.{method}
-        {see_also_obj}.{method}
+{see_also_methods}
         :ref:`{docref}`
             User guide on {docref_description}."""
 
@@ -186,15 +198,6 @@ _KWARGS_DOCSTRING = """**kwargs : Any
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
 
-_COUNT_SEE_ALSO = """
-        See Also
-        --------
-        pandas.DataFrame.{method}
-        dask.dataframe.DataFrame.{method}
-        {see_also_obj}.{method}
-        :ref:`{docref}`
-            User guide on {docref_description}."""
-
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 _FLOX_NOTES_TEMPLATE = """Use the ``flox`` package to significantly speed up {kind} computations,
@@ -238,6 +241,15 @@ ddof = ExtraKwarg(
 )
 
 
+@dataclass
+class DataStructure:
+    name: str
+    create_example: str
+    example_var_name: str
+    numeric_only: bool = False
+    see_also_modules: tuple[str] = tuple
+
+
 class Method:
     def __init__(
         self,
@@ -245,11 +257,12 @@ class Method:
         bool_reduce=False,
         extra_kwargs=tuple(),
         numeric_only=False,
+        see_also_modules=("numpy", "dask.array"),
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
-
+        self.see_also_modules = see_also_modules
         if bool_reduce:
             self.array_method = f"array_{name}"
             self.np_example_array = """
@@ -268,13 +281,12 @@ class AggregationGenerator:
     def __init__(
         self,
         cls,
-        datastructure,
+        datastructure: DataStructure,
         methods,
         docref,
         docref_description,
         example_call_preamble,
         definition_preamble,
-        see_also_obj=None,
         notes=None,
     ):
         self.datastructure = datastructure
@@ -285,10 +297,6 @@ class AggregationGenerator:
         self.example_call_preamble = example_call_preamble
         self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
         self.notes = "" if notes is None else notes
-        if not see_also_obj:
-            self.see_also_obj = self.datastructure.name
-        else:
-            self.see_also_obj = see_also_obj
 
     def generate_methods(self):
         yield [self.preamble]
@@ -321,13 +329,24 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        see_also = _COUNT_SEE_ALSO if method.name == "count" else TEMPLATE_SEE_ALSO
+        # we want Datset.count to refer to DataArray.count
+        # but we also want DatasetGroupBy.count to refer to Dataset.count
+        # The generic aggregations have self.cls == ''
+        others = (
+            self.datastructure.see_also_modules
+            if self.cls == ""
+            else (self.datastructure.name,)
+        )
+        see_also_methods = "\n".join(
+            " " * 8 + f"{mod}.{method.name}"
+            for mod in (method.see_also_modules + others)
+        )
         # Fixes broken links mentioned in #8055
-        yield see_also.format(
+        yield TEMPLATE_SEE_ALSO.format(
             **template_kwargs,
             docref=self.docref,
             docref_description=self.docref_description,
-            see_also_obj=self.see_also_obj,
+            see_also_methods=see_also_methods,
         )
 
         notes = self.notes
@@ -345,15 +364,9 @@ class AggregationGenerator:
         yield self.generate_code(method)
 
     def generate_example(self, method):
-        create_da = f"""
-        >>> da = xr.DataArray({method.np_example_array},
-        ...     dims="time",
-        ...     coords=dict(
-        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
-        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
-        ...     ),
-        ... )"""
-
+        created = self.datastructure.create_example.format(
+            example_array=method.np_example_array
+        )
         calculation = f"{self.datastructure.example_var_name}{self.example_call_preamble}.{method.name}"
         if method.extra_kwargs:
             extra_examples = "".join(
@@ -364,7 +377,8 @@ class AggregationGenerator:
 
         return f"""
         Examples
-        --------{create_da}{self.datastructure.docstring_create}
+        --------{created}
+        >>> {self.datastructure.example_var_name}
 
         >>> {calculation}(){extra_examples}"""
 
@@ -446,7 +460,7 @@ class GenericAggregationGenerator(AggregationGenerator):
 
 AGGREGATION_METHODS = (
     # Reductions:
-    Method("count"),
+    Method("count", see_also_modules=("pandas.DataFrame", "dask.dataframe.DataFrame")),
     Method("all", bool_reduce=True),
     Method("any", bool_reduce=True),
     Method("max", extra_kwargs=(skipna,)),
@@ -463,28 +477,34 @@ AGGREGATION_METHODS = (
 )
 
 
-@dataclass
-class DataStructure:
-    name: str
-    docstring_create: str
-    example_var_name: str
-    numeric_only: bool = False
-
-
 DATASET_OBJECT = DataStructure(
     name="Dataset",
-    docstring_create="""
-        >>> ds = xr.Dataset(dict(da=da))
-        >>> ds""",
+    create_example="""
+        >>> da = xr.DataArray({example_array},
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))""",
     example_var_name="ds",
     numeric_only=True,
+    see_also_modules=("DataArray",),
 )
 DATAARRAY_OBJECT = DataStructure(
     name="DataArray",
-    docstring_create="""
-        >>> da""",
+    create_example="""
+        >>> da = xr.DataArray({example_array},
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("2001-01-01", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )""",
     example_var_name="da",
     numeric_only=False,
+    see_also_modules=("Dataset",),
 )
 DATASET_GENERATOR = GenericAggregationGenerator(
     cls="",
@@ -493,8 +513,7 @@ DATASET_GENERATOR = GenericAggregationGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
-    see_also_obj="DataArray",
-    definition_preamble=DEFAULT_PREAMBLE,
+    definition_preamble=AGGREGATIONS_PREAMBLE,
 )
 DATAARRAY_GENERATOR = GenericAggregationGenerator(
     cls="",
@@ -503,8 +522,7 @@ DATAARRAY_GENERATOR = GenericAggregationGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
-    see_also_obj="Dataset",
-    definition_preamble=DEFAULT_PREAMBLE,
+    definition_preamble=AGGREGATIONS_PREAMBLE,
 )
 DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",
@@ -547,24 +565,58 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     notes=_FLOX_RESAMPLE_NOTES,
 )
 
+NAMED_ARRAY_OBJECT = DataStructure(
+    name="NamedArray",
+    create_example="""
+        >>> from xarray.namedarray.core import NamedArray
+        >>> na = NamedArray(
+        ...     "x",{example_array},
+        ... )""",
+    example_var_name="na",
+    numeric_only=False,  # TODO
+    see_also_modules=("Dataset", "DataArray"),
+)
+
+NAMED_ARRAY_GENERATOR = GenericAggregationGenerator(
+    cls="",
+    datastructure=NAMED_ARRAY_OBJECT,
+    methods=AGGREGATION_METHODS,
+    docref="agg",
+    docref_description="reduction or aggregation operations",
+    example_call_preamble="",
+    definition_preamble=AGGREGATIONS_PREAMBLE,
+)
+
+
+def write_methods(filepath, generators, preamble):
+    with open(filepath, mode="w", encoding="utf-8") as f:
+        f.write(preamble)
+        for gen in generators:
+            for lines in gen.generate_methods():
+                for line in lines:
+                    f.write(line + "\n")
+
 
 if __name__ == "__main__":
     import os
     from pathlib import Path
 
     p = Path(os.getcwd())
-    filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
-    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
-    with open(filepath, mode="w", encoding="utf-8") as f:
-        f.write(MODULE_PREAMBLE + "\n")
-        for gen in [
+    write_methods(
+        filepath=p.parent / "xarray" / "xarray" / "core" / "_aggregations.py",
+        generators=[
             DATASET_GENERATOR,
             DATAARRAY_GENERATOR,
             DATASET_GROUPBY_GENERATOR,
             DATASET_RESAMPLE_GENERATOR,
             DATAARRAY_GROUPBY_GENERATOR,
             DATAARRAY_RESAMPLE_GENERATOR,
-        ]:
-            for lines in gen.generate_methods():
-                for line in lines:
-                    f.write(line + "\n")
+        ],
+        preamble=MODULE_PREAMBLE,
+    )
+    write_methods(
+        filepath=p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py",
+        generators=[NAMED_ARRAY_GENERATOR],
+        preamble=NAMED_ARRAY_MODULE_PREAMBLE,
+    )
+    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
