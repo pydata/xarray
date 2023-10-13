@@ -54,6 +54,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
 - :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
   when the operation was a no-op. (:issue:`8266`)
   By `Simon Hansen <https://github.com/hoxbro>`_.
@@ -63,6 +64,12 @@ Bug fixes
   a reference date not equal to the first value of the datetime array
   (:issue:`8271`, :pull:`8272`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+
+- Fix excess metadata requests when using a Zarr store. Prior to this, metadata
+  was re-read every time data was retrieved from the array, now metadata is retrieved only once
+  when they array is initialized.
+  (:issue:`8290`, :pull:`8297`).
+  By `Oliver McCormack <https://github.com/olimcc>`_.
 
 
 Documentation
