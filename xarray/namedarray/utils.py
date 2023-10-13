@@ -25,10 +25,10 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
-    if sys.version_info >= (3, 11):
-        pass
-    else:
-        pass
+    # if sys.version_info >= (3, 11):
+    #     from typing import Self
+    # else:
+    #     from typing_extensions import Self
 
     from dask.array.core import Array as DaskArray
     from dask.typing import DaskCollection
@@ -97,9 +97,6 @@ class _SupportsImag(Protocol[_T_co]):
     @property
     def imag(self) -> _T_co:
         ...
-
-
-_SupportsReal[_ScalarType]
 
 
 @runtime_checkable
@@ -210,7 +207,7 @@ _arrayfunction_or_api = (_arrayfunction, _arrayapi)
 _ArrayFunctionOrAPI = Union[_ArrayFunction[_ScalarType_co], _ArrayAPI[_ScalarType_co]]
 
 
-class duckarray(_array, Protocol[_ShapeType_co, _DType_co]):
+class duckarray(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]):
     ...
 
 
