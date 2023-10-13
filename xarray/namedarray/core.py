@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import sys
 import copy
 import math
+import sys
 from collections.abc import Hashable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
