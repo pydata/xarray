@@ -72,7 +72,6 @@ if TYPE_CHECKING:
 def _new(
     x: _NamedArray[Any], dims, data: DuckArray[_ScalarType], attrs
 ) -> _NamedArray[_ScalarType]:
-
     _cls = cast(type[NamedArray[Any, Any]], type(x))
 
     return _cls(dims, data, attrs)
@@ -557,9 +556,9 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         """
         use sparse-array as backend.
         """
-        from xarray.namedarray._array_api import astype
-
         import sparse
+
+        from xarray.namedarray._array_api import astype
 
         # TODO: what to do if dask-backended?
         if fill_value is _default:
