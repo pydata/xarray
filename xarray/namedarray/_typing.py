@@ -85,7 +85,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     """
 
     @property
-    def shape(self) -> _ShapeType_co:
+    def shape(self) -> _Shape:
         ...
 
     @property

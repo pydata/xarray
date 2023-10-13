@@ -78,15 +78,17 @@ def _new(
     data: duckarray[Any, _DType_co] | Default = _default,
     attrs: _AttrsLike | Default = _default,
 ) -> NamedArray[Any, _DType_co]:
+    """
+    Initialize a new Named Array.
+    """
     dims_ = copy.copy(x._dims) if dims is _default else dims
     data_ = copy.copy(x._data) if data is _default else data
     if attrs is _default:
         attrs_: Mapping[Any, Any] | None = None if x._attrs is None else x._attrs.copy()
     else:
         attrs_ = attrs
-    _cls = cast(type[NamedArray[Any, Any]], type(x))
 
-    return _cls(dims_, data_, attrs_)
+    return type(x)(dims_, data_, attrs_)
 
 
 @overload
@@ -525,12 +527,12 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         """
         return self._copy(deep=deep, data=data)
 
-    def _nonzero(self) -> tuple[_NamedArray[np.integer], ...]:
+    def _nonzero(self) -> tuple[_NamedArray[np.integer[Any]], ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
-        nonzeros = np.nonzero(cast(NDArray[np.integer], self.data))
+        nonzeros = np.nonzero(cast(NDArray[np.integer[Any]], self.data))
         _attrs = self.attrs
         return tuple(
             _new(self, (dim,), nz, _attrs) for nz, dim in zip(nonzeros, self.dims)
