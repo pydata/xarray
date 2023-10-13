@@ -128,7 +128,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
         ...
 
     @overload
-    def astype(self, dtype: DTypeLike) -> _Array[_ScalarType]:
+    def astype(self, dtype: DTypeLike) -> _Array[Any]:
         ...
 
     def astype(
