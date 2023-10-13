@@ -17,9 +17,9 @@ from typing import (
 import numpy as np
 
 if sys.version_info >= (3, 11):
-    from typing import Self
+    pass
 else:
-    from typing_extensions import Self
+    pass
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

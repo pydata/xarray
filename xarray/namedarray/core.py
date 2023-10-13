@@ -18,25 +18,25 @@ import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes
+from xarray.namedarray._typing import (
+    _arrayfunction_or_api,
+    _DType_co,
+    _ScalarType_co,
+    _ShapeType_co,
+)
 from xarray.namedarray.utils import (
     _default,
     is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
-from xarray.namedarray._typing import (
-    _arrayfunction_or_api,
-    _ShapeType_co,
-    _DType_co,
-    _ScalarType_co,
-)
-
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray._typing import (
         DuckArray,
+        Self,  # type: ignore[attr-defined]
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -46,9 +46,7 @@ if TYPE_CHECKING:
         _ScalarType,
         _Shape,
         duckarray,
-        Self,  # type: ignore[attr-defined]
     )
-
     from xarray.namedarray.utils import Default
 
     try:
