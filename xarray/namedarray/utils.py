@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from dask.typing import DaskCollection
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import DuckArray, _ChunkedArray, duckarray
+    from xarray.namedarray._typing import _ChunkedArray, duckarray
 
     # try:
     #     from dask.array.core import Array as DaskArray

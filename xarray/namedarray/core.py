@@ -78,7 +78,6 @@ def _new(
     data: duckarray[Any, _DType_co] | Default = _default,
     attrs: _AttrsLike | Default = _default,
 ) -> NamedArray[Any, _DType_co]:
-
     dims_ = copy.copy(x._dims) if dims is _default else dims
     data_ = copy.copy(x._data) if data is _default else data
     if attrs is _default:
