@@ -1743,14 +1743,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs_ = (
+            _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
+        )
 
         result = super().reduce(
             func=func,
             dim=dim,
             axis=axis,
-            keep_attrs=keep_attrs,
+            keep_attrs=keep_attrs_,
             keepdims=keepdims,
             **kwargs,
         )

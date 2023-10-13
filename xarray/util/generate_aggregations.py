@@ -61,11 +61,12 @@ class {obj}{cls}Aggregations:
         dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
-        keep_attrs: bool | None = None,
+        keep_attrs{keep_attrs_type},
         keepdims: bool = False,
         **kwargs: Any,
     ) -> Self:
         raise NotImplementedError()"""
+
 
 GROUPBY_PREAMBLE = """
 
@@ -120,7 +121,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         self,
         dim: Dims = None,
         *,{extra_kwargs}
-        keep_attrs: bool | None = None,
+        keep_attrs{keep_attrs_type},
         **kwargs: Any,
     ) -> Self:
         """
@@ -188,7 +189,7 @@ _DDOF_DOCSTRING = """ddof : int, default: 0
     “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
     where ``N`` represents the number of elements."""
 
-_KEEP_ATTRS_DOCSTRING = """keep_attrs : bool or None, optional
+_KEEP_ATTRS_DOCSTRING = """keep_attrs : {keep_attrs_type}, optional
     If True, ``attrs`` will be copied from the original
     object to the new one.  If False, the new object will be
     returned without attributes."""
@@ -240,6 +241,8 @@ ddof = ExtraKwarg(
         >>> {calculation}(skipna=True, ddof=1)""",
 )
 
+from dataclasses import field
+
 
 @dataclass
 class DataStructure:
@@ -247,6 +250,7 @@ class DataStructure:
     create_example: str
     example_var_name: str
     numeric_only: bool = False
+    keep_attrs_type: str = field(default=": bool | None = None")
     see_also_modules: tuple[str] = tuple
 
 
@@ -295,7 +299,11 @@ class AggregationGenerator:
         self.docref = docref
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
-        self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
+        self.preamble = definition_preamble.format(
+            obj=datastructure.name,
+            cls=cls,
+            keep_attrs_type=datastructure.keep_attrs_type,
+        )
         self.notes = "" if notes is None else notes
 
     def generate_methods(self):
@@ -304,7 +312,11 @@ class AggregationGenerator:
             yield self.generate_method(method)
 
     def generate_method(self, method):
-        template_kwargs = dict(obj=self.datastructure.name, method=method.name)
+        template_kwargs = dict(
+            obj=self.datastructure.name,
+            method=method.name,
+            keep_attrs_type=self.datastructure.keep_attrs_type,
+        )
 
         if method.extra_kwargs:
             extra_kwargs = "\n        " + "\n        ".join(
@@ -321,7 +333,11 @@ class AggregationGenerator:
         for text in [
             self._dim_docstring.format(method=method.name, cls=self.cls),
             *(kwarg.docs for kwarg in method.extra_kwargs if kwarg.docs),
-            _KEEP_ATTRS_DOCSTRING,
+            _KEEP_ATTRS_DOCSTRING.format(
+                keep_attrs_type="bool or None"
+                if "None" in self.datastructure.keep_attrs_type
+                else "bool"
+            ),
             _KWARGS_DOCSTRING.format(method=method.name),
         ]:
             if text:
@@ -574,6 +590,7 @@ NAMED_ARRAY_OBJECT = DataStructure(
         ... )""",
     example_var_name="na",
     numeric_only=False,  # TODO
+    keep_attrs_type=": bool = True",
     see_also_modules=("Dataset", "DataArray"),
 )
 
