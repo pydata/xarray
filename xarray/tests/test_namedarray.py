@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray._typing import _arrayfunction_or_api
+from xarray.namedarray.core import NamedArray, from_array
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -15,12 +15,11 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from xarray.namedarray._typing import (
+        DuckArray,
         _DimsLike,
-        _Shape,
         _DType_co,
         _ScalarType,
-        _ScalarType_co,
-        DuckArray,
+        _Shape,
         _ShapeType_co,
         duckarray,
     )
