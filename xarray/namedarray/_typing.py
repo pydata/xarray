@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from enum import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Final,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -20,17 +18,15 @@ import numpy as np
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
-        from typing import TypeGuard
+        pass
     else:
-        from typing_extensions import TypeGuard
+        pass
 
     # if sys.version_info >= (3, 11):
     #     from typing import Self
     # else:
     #     from typing_extensions import Self
 
-    from dask.array.core import Array as DaskArray
-    from dask.typing import DaskCollection
     from numpy.typing import NDArray
 
     # try:

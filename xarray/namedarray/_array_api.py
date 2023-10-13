@@ -1,5 +1,5 @@
-from typing import Any, Callable, cast
 from types import ModuleType
+from typing import Any
 
 import numpy as np
 
@@ -7,11 +7,10 @@ from xarray.namedarray.core import NamedArray, _new
 from xarray.namedarray.utils import (
     _arrayapi,
     _DType,
-    DuckArray,
-    _SupportsReal,
-    _SupportsImag,
     _ScalarType,
     _ShapeType,
+    _SupportsImag,
+    _SupportsReal,
 )
 
 
