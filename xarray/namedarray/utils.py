@@ -178,14 +178,15 @@ _ArrayAPI = _arrayapi[Any, np.dtype[_ScalarType_co]]
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
-_ArrayFunctionOrAPI = Union[_ArrayFunction[_ScalarType_co], _ArrayAPI[_ScalarType_co]]
+# _ArrayFunctionOrAPI = Union[
+#     _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
+# ]
 
-
-class duckarray(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]):
-    ...
-
-
-DuckArray = duckarray[Any, np.dtype[_ScalarType_co]]
+duckarray = Union[
+    _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
+]
+DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
+T_DuckArray = TypeVar("T_DuckArray", bound=_arrayfunction[Any, Any])
 
 
 @runtime_checkable
@@ -404,30 +405,3 @@ class ReprObject:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
-
-
-# %% Array API functions
-def get_array_namespace(x: _Array[Any]) -> ModuleType:
-    if hasattr(x, "__array_namespace__"):
-        return x.__array_namespace__()  # type: ignore[no-any-return]
-    else:
-        return np
-
-
-def astype(x: _Array[Any], dtype: _DType, /, *, copy: bool = True) -> _Array[_DType]:
-    if hasattr(x, "__array_namespace__"):
-        xp = x.__array_namespace__()
-        return xp.astype(x, dtype, copy=copy)  # type: ignore[no-any-return]
-
-    # np.astype doesn't exist yet:
-    return x.astype(dtype, copy=copy)  # type: ignore[no-any-return, attr-defined]
-
-
-def imag(x: _Array[Any], /) -> _Array[Any]:
-    xp = get_array_namespace(x)
-    return xp.imag(x)  # type: ignore[no-any-return]
-
-
-def real(x: _Array[Any], /) -> _Array[Any]:
-    xp = get_array_namespace(x)
-    return xp.real(x)  # type: ignore[no-any-return]
