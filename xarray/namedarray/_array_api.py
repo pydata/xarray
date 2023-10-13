@@ -3,7 +3,6 @@ from typing import Any
 
 import numpy as np
 
-from xarray.namedarray.core import NamedArray, _new
 from xarray.namedarray._typing import (
     _arrayapi,
     _DType,
@@ -12,6 +11,7 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
+from xarray.namedarray.core import NamedArray, _new
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
