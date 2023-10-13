@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from enum import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Final,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -18,27 +16,13 @@ from typing import (
 
 import numpy as np
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
-
-    # if sys.version_info >= (3, 11):
-    #     from typing import Self
-    # else:
-    #     from typing_extensions import Self
-
-    from dask.array.core import Array as DaskArray
-    from dask.typing import DaskCollection
     from numpy.typing import NDArray
-
-    # try:
-    #     from dask.array.core import Array as DaskArray
-    #     from dask.typing import DaskCollection
-    # except ImportError:
-    #     DaskArray = NDArray  # type: ignore
-    #     DaskCollection: Any = NDArray  # type: ignore
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
