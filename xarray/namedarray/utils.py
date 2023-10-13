@@ -110,32 +110,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     @property
     def shape(self) -> _ShapeType_co:
         ...
-
-    @property
-    def real(
-        self: _array[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
-    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
-        ...
-
-    @property
-    def imag(
-        self: _array[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
-    ) -> _array[_ShapeType, _dtype[_ScalarType]]:
-        ...
-
-    @overload
-    def astype(self, dtype: _DTypeLike[_ScalarType]) -> _Array[_ScalarType]:
-        ...
-
-    @overload
-    def astype(self, dtype: DTypeLike) -> _Array[Any]:
-        ...
-
-    def astype(
-        self, dtype: _DTypeLike[_ScalarType] | DTypeLike
-    ) -> _Array[_ScalarType | Any]:
-        ...
-
+        
     @property
     def dtype(self) -> _DType_co:
         ...
@@ -430,3 +405,30 @@ class ReprObject:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
+
+
+# %% Array API functions
+def get_array_namespace(x: _Array[Any]) -> ModuleType:
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()  # type: ignore[no-any-return]
+    else:
+        return np
+
+
+def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
+    if hasattr(x, "__array_namespace__"):
+        xp = x.__array_namespace__()
+        return xp.astype(x, dtype, copy=copy)  # type: ignore[no-any-return]
+
+    # np.astype doesn't exist yet:
+    return x.astype(dtype, copy=copy)  # type: ignore[no-any-return, attr-defined]
+
+
+def imag(x: _Array[Any], /) -> _Array[Any]:
+    xp = get_array_namespace(x)
+    return xp.imag(x)  # type: ignore[no-any-return]
+
+
+def real(x: _Array[Any], /) -> _Array[Any]:
+    xp = get_array_namespace(x)
+    return xp.real(x)  # type: ignore[no-any-return]

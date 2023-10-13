@@ -39,6 +39,7 @@ from xarray.namedarray.utils import (
     _SupportsImag,
     _SupportsReal,
     duckarray,
+    astype,
     is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
@@ -306,41 +307,6 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         self._check_shape(data)
         self._data = data
 
-    @property
-    def real(
-        self: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
-    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
-        """
-        The real part of the NamedArray.
-
-        See Also
-        --------
-        numpy.ndarray.real
-        """
-        # reveal_type(self)
-        # out = _replace_with_new_data_type(
-        #     type(self), self._dims, self._data.real, self.attrs.copy()
-        # )
-        # reveal_type(out)
-        # return out
-
-        return type(self)(self._dims, self._data.real, self.attrs.copy())
-
-        # return self._replace_with_new_data_type(data=self.data.real)
-
-    @property
-    def imag(
-        self: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],
-    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
-        """
-        The imaginary part of the NamedArray.
-
-        See Also
-        --------
-        numpy.ndarray.imag
-        """
-        return self._replace_with_new_data_type(data=self.data.imag)
-
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
@@ -599,7 +565,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         except AttributeError as exc:
             raise ValueError(f"{sparse_format} is not a valid sparse format") from exc
 
-        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        data = as_sparse(astype(self.data, dtype), fill_value=fill_value)
         return self._replace(data=data)
 
     def _to_dense(self) -> NamedArray:
