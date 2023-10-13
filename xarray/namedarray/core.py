@@ -35,7 +35,6 @@ from xarray.namedarray.utils import (
     _Shape,
     _ShapeType_co,
     _sparsearrayfunction_or_api,
-    astype,
     duckarray,
     is_chunked_duck_array,
     is_duck_dask_array,
@@ -66,6 +65,15 @@ if TYPE_CHECKING:
         PostPersistCallable: Any  # type: ignore[no-redef]
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
+
+
+def _new(
+    x: _NamedArray[Any], dims, data: DuckArray[_ScalarType], attrs
+) -> _NamedArray[_ScalarType]:
+
+    _cls = cast(type[NamedArray[Any, Any]], type(x))
+
+    return _cls(dims, data, attrs)
 
 
 @overload
@@ -290,7 +298,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
             )
 
     @property
-    def data(self) -> DuckArray[_ScalarType_co]:
+    def data(self) -> duckarray[Any, _DType_co]:
         """
         The NamedArray's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -300,7 +308,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         return self._data
 
     @data.setter
-    def data(self, data: DuckArray[_ScalarType_co]) -> None:
+    def data(self, data: duckarray[Any, _DType_co]) -> None:
         self._check_shape(data)
         self._data = data
 
@@ -547,6 +555,8 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         """
         use sparse-array as backend.
         """
+        from xarray.namedarray._array_api import astype
+
         import sparse
 
         # TODO: what to do if dask-backended?
