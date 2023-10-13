@@ -501,7 +501,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
         keep_attrs: bool = True,
         keepdims: bool = False,
         **kwargs,
-    ) -> NamedArray:
+    ) -> Self:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -582,9 +582,10 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
 
         attrs = self._attrs if keep_attrs else None
 
-        # We need to return `Variable` rather than the type of `self` at the moment, ref
+        # We need to return NamedArray rather than the type of `self` at the moment, ref
         # #8216
-        return type(self)(dims, data, attrs=attrs)
+        # To handle IndexVariable
+        return NamedArray(dims, data, attrs=attrs)
 
     def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
