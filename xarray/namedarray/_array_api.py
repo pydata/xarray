@@ -27,10 +27,10 @@ def astype(
     if isinstance(x._data, _arrayapi):
         xp = x._data.__array_namespace__()
 
-        return _new(x, x._dims, xp.astype(x, dtype, copy=copy), x._attrs)  # type: ignore[no-any-return]
+        return _new(x, x._dims, xp.astype(x, dtype, copy=copy), x._attrs)
 
     # np.astype doesn't exist yet:
-    return _new(x, data=x.astype(dtype, copy=copy))  # type: ignore[no-any-return, attr-defined]
+    return _new(x, data=x.astype(dtype, copy=copy))  # type: ignore[attr-defined]
 
 
 def imag(

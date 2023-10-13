@@ -544,7 +544,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         self,
         sparse_format: Literal["coo"] | Default = _default,
         fill_value: ArrayLike | Default = _default,
-    ) -> Self:
+    ) -> NamedArray[Any, _DType_co]:
         """
         use sparse-array as backend.
         """
