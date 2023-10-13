@@ -460,7 +460,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = _default,
         data: duckarray[Any, _DType_co] | Default = _default,
         attrs: _AttrsLike | Default = _default,
-    ) -> NamedArray[Any, _DType_co]:
+    ) -> Self:
         """
         Create a new Named array with dims, data or attrs.
 
@@ -474,7 +474,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         deep: bool = True,
         data: duckarray[Any, _DType_co] | None = None,
         memo: dict[int, Any] | None = None,
-    ) -> NamedArray[Any, _DType_co]:
+    ) -> Self:
         if data is None:
             ndata = self._data
             if deep:
@@ -489,19 +489,17 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
 
         return self._replace(data=ndata, attrs=attrs)
 
-    def __copy__(self) -> NamedArray[Any, _DType_co]:
+    def __copy__(self) -> Self:
         return self._copy(deep=False)
 
-    def __deepcopy__(
-        self, memo: dict[int, Any] | None = None
-    ) -> NamedArray[Any, _DType_co]:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
         return self._copy(deep=True, memo=memo)
 
     def copy(
         self,
         deep: bool = True,
         data: duckarray[Any, _DType_co] | None = None,
-    ) -> NamedArray[Any, _DType_co]:
+    ) -> Self:
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto

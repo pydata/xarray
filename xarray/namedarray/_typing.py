@@ -92,9 +92,9 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def dtype(self) -> _DType_co:
         ...
 
-    # # TODO: numpy doesn't use any inputs:
-    # # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
-    # def __array__(self) -> NDArray[_ScalarType_co]:
+    # def __array__(
+    #     self, *, dtype: _DTypeLike[_ScalarType_co]
+    # ) -> NDArray[_ScalarType_co]:
     #     ...
 
 
