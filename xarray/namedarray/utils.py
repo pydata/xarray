@@ -13,7 +13,6 @@ from typing import (
     SupportsIndex,
     TypeVar,
     Union,
-    overload,
     runtime_checkable,
 )
 
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 
     from dask.array.core import Array as DaskArray
     from dask.typing import DaskCollection
-    from numpy.typing import DTypeLike, NDArray
+    from numpy.typing import NDArray
 
     # try:
     #     from dask.array.core import Array as DaskArray
