@@ -110,7 +110,7 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     @property
     def shape(self) -> _ShapeType_co:
         ...
-        
+
     @property
     def dtype(self) -> _DType_co:
         ...
@@ -415,7 +415,7 @@ def get_array_namespace(x: _Array[Any]) -> ModuleType:
         return np
 
 
-def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
+def astype(x: _Array[Any], dtype: _DType, /, *, copy: bool = True) -> _Array[_DType]:
     if hasattr(x, "__array_namespace__"):
         xp = x.__array_namespace__()
         return xp.astype(x, dtype, copy=copy)  # type: ignore[no-any-return]
