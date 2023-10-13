@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 
 from xarray.namedarray.core import NamedArray, _new
-from xarray.namedarray.utils import (
+from xarray.namedarray._typing import (
     _arrayapi,
     _DType,
     _ScalarType,
