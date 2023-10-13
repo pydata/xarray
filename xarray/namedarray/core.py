@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
     from xarray.namedarray._typing import (
         DuckArray,
-        Self,  # type: ignore[attr-defined]
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -74,11 +73,21 @@ if TYPE_CHECKING:
 
 
 def _new(
-    x: _NamedArray[Any], dims, data: DuckArray[_ScalarType], attrs
-) -> _NamedArray[_ScalarType]:
+    x: NamedArray[Any, Any],
+    dims: _DimsLike | Default = _default,
+    data: duckarray[Any, _DType_co] | Default = _default,
+    attrs: _AttrsLike | Default = _default,
+) -> NamedArray[Any, _DType_co]:
+
+    dims_ = copy.copy(x._dims) if dims is _default else dims
+    data_ = copy.copy(x._data) if data is _default else data
+    if attrs is _default:
+        attrs_: Mapping[Any, Any] | None = None if x._attrs is None else x._attrs.copy()
+    else:
+        attrs_ = attrs
     _cls = cast(type[NamedArray[Any, Any]], type(x))
 
-    return _cls(dims, data, attrs)
+    return _cls(dims_, data_, attrs_)
 
 
 @overload
@@ -236,7 +245,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         return self._data.dtype
 
     @property
-    def shape(self) -> _ShapeType_co:
+    def shape(self) -> _Shape:
         """
 
 
@@ -295,7 +304,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
-    def _check_shape(self, new_data: DuckArray[_ScalarType_co]) -> None:
+    def _check_shape(self, new_data: duckarray[Any, _DType_co]) -> None:
         if new_data.shape != self.shape:
             raise ValueError(
                 f"replacement data must match the {self.__class__.__name__}'s shape. "
@@ -448,45 +457,21 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     def _replace(
         self,
         dims: _DimsLike | Default = _default,
-        data: DuckArray[_ScalarType_co] | Default = _default,
+        data: duckarray[Any, _DType_co] | Default = _default,
         attrs: _AttrsLike | Default = _default,
     ) -> Self:
         """
         Create a new Named array with dims, data or attrs.
 
         The types for each argument cannot change,
-        use _replace_with_new_data_type if that is a risk.
+        use _new if that is a risk.
         """
-        if dims is _default:
-            dims = copy.copy(self._dims)
-        if data is _default:
-            data = copy.copy(self._data)
-        if attrs is _default:
-            attrs = copy.copy(self._attrs)
-        return type(self)(dims, data, attrs)
-
-    def _replace_with_new_data_type(
-        self,
-        dims: _DimsLike | Default = _default,
-        data: DuckArray[Any] | Default = _default,
-        attrs: _AttrsLike | Default = _default,
-    ) -> Any:
-        if dims is _default:
-            dims = copy.copy(self._dims)
-
-        data_: DuckArray[Any]
-        if data is _default:
-            data_ = copy.copy(self._data)
-        else:
-            data_ = data
-        if attrs is _default:
-            attrs = copy.copy(self._attrs)
-        return type(self)(dims, data_, attrs)
+        return _new(self, dims, data, attrs)
 
     def _copy(
         self,
         deep: bool = True,
-        data: DuckArray[_ScalarType_co] | None = None,
+        data: duckarray[Any, _DType_co] | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -512,7 +497,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     def copy(
         self,
         deep: bool = True,
-        data: DuckArray[_ScalarType_co] | None = None,
+        data: duckarray[Any, _DType_co] | None = None,
     ) -> Self:
         """Returns a copy of this object.
 
@@ -541,15 +526,15 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         """
         return self._copy(deep=deep, data=data)
 
-    def _nonzero(self) -> tuple[Self, ...]:
+    def _nonzero(self) -> tuple[_NamedArray[np.integer], ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
-        nonzeros = np.nonzero(cast("NDArray[np.generic]", self.data))
+        nonzeros = np.nonzero(cast(NDArray[np.integer], self.data))
+        _attrs = self.attrs
         return tuple(
-            type(self)((dim,), cast(DuckArray[_ScalarType_co], nz))
-            for nz, dim in zip(nonzeros, self.dims)
+            _new(self, (dim,), nz, _attrs) for nz, dim in zip(nonzeros, self.dims)
         )
 
     def _as_sparse(
@@ -577,10 +562,10 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         except AttributeError as exc:
             raise ValueError(f"{sparse_format} is not a valid sparse format") from exc
 
-        data = as_sparse(astype(self.data, dtype), fill_value=fill_value)
+        data = as_sparse(astype(self, dtype).data, fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self) -> NamedArray:
+    def _to_dense(self) -> NamedArray[Any, _DType_co]:
         """
         Change backend from sparse to np.array
         """
@@ -588,7 +573,8 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
 
         if isinstance(self._data, _sparsearrayfunction_or_api):
             # return self._replace(data=self._data.todense())
-            return self._replace_with_new_data_type(data=self._data.todense())
+            data_: np.ndarray[Any, Any] = self._data.todense()
+            return _new(self, data=data_)
         else:
             raise TypeError("self.data is not a sparse array")
 

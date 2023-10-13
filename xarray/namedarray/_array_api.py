@@ -30,21 +30,21 @@ def astype(
         return _new(x, x._dims, xp.astype(x, dtype, copy=copy), x._attrs)  # type: ignore[no-any-return]
 
     # np.astype doesn't exist yet:
-    return _new(x, x._dims, x.astype(dtype, copy=copy), x._attrs)  # type: ignore[no-any-return, attr-defined]
+    return _new(x, data=x.astype(dtype, copy=copy))  # type: ignore[no-any-return, attr-defined]
 
 
 def imag(
     x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]], /  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     xp = _get_data_namespace(x)
-    return _new(x, x._dims, xp.imag(x._data), x._attrs)
+    return _new(x, data=xp.imag(x._data))
 
 
 def real(
     x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]], /  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
     xp = _get_data_namespace(x)
-    return _new(x, x._dims, xp.real(x._data), x._attrs)
+    return _new(x, xp.real(x._data))
 
 
 a = NamedArray(("x",), np.array([1 + 3j, 2 + 2j, 3 + 3j], dtype=np.complex64))

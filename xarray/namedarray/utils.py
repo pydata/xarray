@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from dask.typing import DaskCollection
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import DuckArray, _ChunkedArray
+    from xarray.namedarray._typing import DuckArray, _ChunkedArray, duckarray
 
     # try:
     #     from dask.array.core import Array as DaskArray
@@ -76,13 +76,13 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
 #     )
 
 
-def is_duck_dask_array(x: DuckArray[np.generic]) -> TypeGuard[DaskArray]:
+def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
 def is_chunked_duck_array(
-    x: DuckArray[np.generic],
-) -> TypeGuard[_ChunkedArray[np.generic]]:
+    x: duckarray[Any, Any],
+) -> TypeGuard[_ChunkedArray[Any]]:
     return hasattr(x, "chunks")
 
 
