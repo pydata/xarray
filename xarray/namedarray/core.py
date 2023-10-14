@@ -16,6 +16,7 @@ from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
     _default,
+    astype,
     is_chunked_duck_array,
     is_duck_array,
     is_duck_dask_array,
@@ -246,28 +247,6 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
-
-    @property
-    def real(self) -> Self:
-        """
-        The real part of the NamedArray.
-
-        See Also
-        --------
-        numpy.ndarray.real
-        """
-        return self._replace(data=self.data.real)
-
-    @property
-    def imag(self) -> Self:
-        """
-        The imaginary part of the NamedArray.
-
-        See Also
-        --------
-        numpy.ndarray.imag
-        """
-        return self._replace(data=self.data.imag)
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
@@ -614,7 +593,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
         except AttributeError as exc:
             raise ValueError(f"{sparse_format} is not a valid sparse format") from exc
 
-        data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
+        data = as_sparse(astype(self.data, dtype), fill_value=fill_value)
         return self._replace(data=data)
 
     def _to_dense(self) -> Self:
