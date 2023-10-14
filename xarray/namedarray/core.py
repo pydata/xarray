@@ -579,7 +579,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         if isinstance(self._data, _sparsearrayfunction_or_api):
             # return self._replace(data=self._data.todense())
             data_: np.ndarray[Any, Any] = self._data.todense()
-            return _new(self, data=data_)
+            return self.replace(data=data_)
         else:
             raise TypeError("self.data is not a sparse array")
 
