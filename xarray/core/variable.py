@@ -2784,14 +2784,15 @@ class IndexVariable(Variable):
             New object with dimensions, attributes, encodings, and optionally
             data copied from original.
         """
-        if data is None:
-            ndata = self._data.copy(deep=deep)
-        else:
+        if data is not None:
             ndata = as_compatible_data(data)
             if self.shape != ndata.shape:
                 raise ValueError(
                     f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
+        else:
+            # TODO: array api has no copy-function:
+            ndata = self._data.copy(deep=deep)  # type: ignore[assignment]
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
         encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
