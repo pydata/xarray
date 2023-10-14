@@ -19,7 +19,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
-        keep_attrs: bool = True,
         keepdims: bool = False,
         **kwargs: Any,
     ) -> Self:
@@ -28,8 +27,6 @@ class NamedArrayAggregations:
     def count(
         self,
         dim: Dims = None,
-        *,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -40,10 +37,6 @@ class NamedArrayAggregations:
         dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
@@ -82,15 +75,12 @@ class NamedArrayAggregations:
         return self.reduce(
             duck_array_ops.count,
             dim=dim,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
     def all(
         self,
         dim: Dims = None,
-        *,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -101,10 +91,6 @@ class NamedArrayAggregations:
         dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
@@ -143,15 +129,12 @@ class NamedArrayAggregations:
         return self.reduce(
             duck_array_ops.array_all,
             dim=dim,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
     def any(
         self,
         dim: Dims = None,
-        *,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -162,10 +145,6 @@ class NamedArrayAggregations:
         dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
@@ -204,7 +183,6 @@ class NamedArrayAggregations:
         return self.reduce(
             duck_array_ops.array_any,
             dim=dim,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -213,7 +191,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -229,10 +206,6 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
@@ -278,7 +251,6 @@ class NamedArrayAggregations:
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -287,7 +259,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -303,10 +274,6 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
@@ -352,7 +319,6 @@ class NamedArrayAggregations:
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -361,7 +327,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -377,10 +342,6 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
@@ -430,7 +391,6 @@ class NamedArrayAggregations:
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -440,7 +400,6 @@ class NamedArrayAggregations:
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -462,10 +421,6 @@ class NamedArrayAggregations:
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
@@ -522,7 +477,6 @@ class NamedArrayAggregations:
             dim=dim,
             skipna=skipna,
             min_count=min_count,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -532,7 +486,6 @@ class NamedArrayAggregations:
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -554,10 +507,6 @@ class NamedArrayAggregations:
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
@@ -614,7 +563,6 @@ class NamedArrayAggregations:
             dim=dim,
             skipna=skipna,
             min_count=min_count,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -624,7 +572,6 @@ class NamedArrayAggregations:
         *,
         skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -643,10 +590,6 @@ class NamedArrayAggregations:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
@@ -703,7 +646,6 @@ class NamedArrayAggregations:
             dim=dim,
             skipna=skipna,
             ddof=ddof,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -713,7 +655,6 @@ class NamedArrayAggregations:
         *,
         skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -732,10 +673,6 @@ class NamedArrayAggregations:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
@@ -792,7 +729,6 @@ class NamedArrayAggregations:
             dim=dim,
             skipna=skipna,
             ddof=ddof,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -801,7 +737,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -817,10 +752,6 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
@@ -870,7 +801,6 @@ class NamedArrayAggregations:
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -879,7 +809,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -895,10 +824,6 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``cumsum`` on this object's data.
@@ -948,7 +873,6 @@ class NamedArrayAggregations:
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
-            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -957,7 +881,6 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        keep_attrs: bool = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -973,10 +896,6 @@ class NamedArrayAggregations:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False, the new object will be
-            returned without attributes.
         **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``cumprod`` on this object's data.
@@ -1026,6 +945,5 @@ class NamedArrayAggregations:
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
-            keep_attrs=keep_attrs,
             **kwargs,
         )

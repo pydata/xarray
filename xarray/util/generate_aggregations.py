@@ -61,7 +61,23 @@ class {obj}{cls}Aggregations:
         dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
-        keep_attrs{keep_attrs_type},
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()"""
+
+NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
+
+class {obj}{cls}Aggregations:
+    __slots__ = ()
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
         **kwargs: Any,
     ) -> Self:
@@ -119,9 +135,7 @@ class {obj}{cls}Aggregations:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Dims = None,
-        *,{extra_kwargs}
-        keep_attrs{keep_attrs_type},
+        dim: Dims = None,{kw_only}{extra_kwargs}{keep_attrs}
         **kwargs: Any,
     ) -> Self:
         """
@@ -189,7 +203,7 @@ _DDOF_DOCSTRING = """ddof : int, default: 0
     “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
     where ``N`` represents the number of elements."""
 
-_KEEP_ATTRS_DOCSTRING = """keep_attrs : {keep_attrs_type}, optional
+_KEEP_ATTRS_DOCSTRING = """keep_attrs : bool or None, optional
     If True, ``attrs`` will be copied from the original
     object to the new one.  If False, the new object will be
     returned without attributes."""
@@ -241,8 +255,6 @@ ddof = ExtraKwarg(
         >>> {calculation}(skipna=True, ddof=1)""",
 )
 
-from dataclasses import field
-
 
 @dataclass
 class DataStructure:
@@ -250,7 +262,6 @@ class DataStructure:
     create_example: str
     example_var_name: str
     numeric_only: bool = False
-    keep_attrs_type: str = field(default=": bool | None = None")
     see_also_modules: tuple[str] = tuple
 
 
@@ -291,6 +302,7 @@ class AggregationGenerator:
         docref_description,
         example_call_preamble,
         definition_preamble,
+        has_keep_attrs=True,
         notes=None,
     ):
         self.datastructure = datastructure
@@ -299,11 +311,8 @@ class AggregationGenerator:
         self.docref = docref
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
-        self.preamble = definition_preamble.format(
-            obj=datastructure.name,
-            cls=cls,
-            keep_attrs_type=datastructure.keep_attrs_type,
-        )
+        self.has_keep_attrs = has_keep_attrs
+        self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
         self.notes = "" if notes is None else notes
 
     def generate_methods(self):
@@ -312,10 +321,15 @@ class AggregationGenerator:
             yield self.generate_method(method)
 
     def generate_method(self, method):
+        has_kw_only = method.extra_kwargs or self.has_keep_attrs
+
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
-            keep_attrs_type=self.datastructure.keep_attrs_type,
+            keep_attrs="\n        keep_attrs: bool | None = None,"
+            if self.has_keep_attrs
+            else "",
+            kw_only="\n        *," if has_kw_only else "",
         )
 
         if method.extra_kwargs:
@@ -333,11 +347,7 @@ class AggregationGenerator:
         for text in [
             self._dim_docstring.format(method=method.name, cls=self.cls),
             *(kwarg.docs for kwarg in method.extra_kwargs if kwarg.docs),
-            _KEEP_ATTRS_DOCSTRING.format(
-                keep_attrs_type="bool or None"
-                if "None" in self.datastructure.keep_attrs_type
-                else "bool"
-            ),
+            _KEEP_ATTRS_DOCSTRING if self.has_keep_attrs else None,
             _KWARGS_DOCSTRING.format(method=method.name),
         ]:
             if text:
@@ -377,7 +387,7 @@ class AggregationGenerator:
         yield textwrap.indent(self.generate_example(method=method), "")
         yield '        """'
 
-        yield self.generate_code(method)
+        yield self.generate_code(method, self.has_keep_attrs)
 
     def generate_example(self, method):
         created = self.datastructure.create_example.format(
@@ -403,7 +413,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
     _dim_docstring = _DIM_DOCSTRING_GROUPBY
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE_GROUPBY
 
-    def generate_code(self, method):
+    def generate_code(self, method, has_keep_attrs):
         extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
 
         if self.datastructure.numeric_only:
@@ -455,7 +465,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
 
 class GenericAggregationGenerator(AggregationGenerator):
-    def generate_code(self, method):
+    def generate_code(self, method, has_keep_attrs):
         extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
 
         if self.datastructure.numeric_only:
@@ -465,11 +475,13 @@ class GenericAggregationGenerator(AggregationGenerator):
             extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), 12 * " ")
         else:
             extra_kwargs = ""
+        keep_attrs = (
+            "\n" + 12 * " " + "keep_attrs=keep_attrs," if has_keep_attrs else ""
+        )
         return f"""\
         return self.reduce(
             duck_array_ops.{method.array_method},
-            dim=dim,{extra_kwargs}
-            keep_attrs=keep_attrs,
+            dim=dim,{extra_kwargs}{keep_attrs}
             **kwargs,
         )"""
 
@@ -581,28 +593,6 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     notes=_FLOX_RESAMPLE_NOTES,
 )
 
-VARIABLE_OBJECT = DataStructure(
-    name="Variable",
-    create_example="""
-        >>> from xarray import Variable
-        >>> variable = Variable(
-        ...     "x",{example_array},
-        ... )""",
-    example_var_name="variable",
-    numeric_only=False,  # TODO
-    see_also_modules=("Dataset", "DataArray"),
-)
-
-VARIABLE_GENERATOR = GenericAggregationGenerator(
-    cls="",
-    datastructure=VARIABLE_OBJECT,
-    methods=AGGREGATION_METHODS,
-    docref="agg",
-    docref_description="reduction or aggregation operations",
-    example_call_preamble="",
-    definition_preamble=AGGREGATIONS_PREAMBLE,
-)
-
 NAMED_ARRAY_OBJECT = DataStructure(
     name="NamedArray",
     create_example="""
@@ -612,7 +602,6 @@ NAMED_ARRAY_OBJECT = DataStructure(
         ... )""",
     example_var_name="na",
     numeric_only=False,  # TODO
-    keep_attrs_type=": bool = True",
     see_also_modules=("Dataset", "DataArray"),
 )
 
@@ -623,7 +612,8 @@ NAMED_ARRAY_GENERATOR = GenericAggregationGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
-    definition_preamble=AGGREGATIONS_PREAMBLE,
+    definition_preamble=NAMED_ARRAY_AGGREGATIONS_PREAMBLE,
+    has_keep_attrs=False,
 )
 
 
@@ -650,7 +640,6 @@ if __name__ == "__main__":
             DATASET_RESAMPLE_GENERATOR,
             DATAARRAY_GROUPBY_GENERATOR,
             DATAARRAY_RESAMPLE_GENERATOR,
-            VARIABLE_GENERATOR,
         ],
         preamble=MODULE_PREAMBLE,
     )

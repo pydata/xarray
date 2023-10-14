@@ -498,7 +498,6 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
         func: Callable[..., Any],
         dim: Dims = None,
         axis: int | Sequence[int] | None = None,
-        keep_attrs: bool = True,
         keepdims: bool = False,
         **kwargs,
     ) -> Self:
@@ -518,10 +517,6 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
             and 'axis' arguments can be supplied. If neither are supplied, then
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
-        keep_attrs : bool, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
             as dimensions of size one
@@ -580,12 +575,8 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
                     adim for n, adim in enumerate(self.dims) if n not in removed_axes
                 )
 
-        attrs = self._attrs if keep_attrs else None
-
-        # We need to return NamedArray rather than the type of `self` at the moment, ref
-        # #8216
-        # To handle IndexVariable
-        return NamedArray(dims, data, attrs=attrs)
+        # Return NamedArray to handle IndexVariable when data is nD
+        return NamedArray(dims, data, attrs=self._attrs)
 
     def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
