@@ -19,7 +19,7 @@ from pandas.errors import OutOfBoundsDatetime
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
-from xarray.core.pycompat import array_type, to_duck_array
+from xarray.core.pycompat import array_type, to_duck_array, to_numpy
 from xarray.core.utils import is_duck_array
 
 if TYPE_CHECKING:
@@ -121,7 +121,8 @@ def last_item(array):
         return []
 
     indexer = (slice(-1, None),) * array.ndim
-    return np.ravel(to_duck_array(array[indexer])).tolist()
+    # to_numpy since dask doesn't support tolist
+    return np.ravel(to_numpy(array[indexer])).tolist()
 
 
 def calc_max_rows_first(max_rows: int) -> int:
