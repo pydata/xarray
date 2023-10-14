@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import functools
-from typing import Any
+import sys
+from typing import Any, Literal
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
 
 import numpy as np
 
-from xarray.core import utils
+from xarray.namedarray import utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -13,19 +19,19 @@ NA = utils.ReprObject("<NA>")
 
 @functools.total_ordering
 class AlwaysGreaterThan:
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> Literal[True]:
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, type(self))
 
 
 @functools.total_ordering
 class AlwaysLessThan:
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> Literal[True]:
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, type(self))
 
 
@@ -45,7 +51,7 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 )
 
 
-def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
+def maybe_promote(dtype: np.dtype[np.generic]) -> tuple[np.dtype[np.generic], Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -90,7 +96,7 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
 NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
-def get_fill_value(dtype):
+def get_fill_value(dtype: np.dtype[np.generic]) -> Any:
     """Return an appropriate fill value for this dtype.
 
     Parameters
@@ -105,7 +111,9 @@ def get_fill_value(dtype):
     return fill_value
 
 
-def get_pos_infinity(dtype, max_for_int=False):
+def get_pos_infinity(
+    dtype: np.dtype[np.generic], max_for_int: bool = False
+) -> float | complex | AlwaysGreaterThan:
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
@@ -122,18 +130,16 @@ def get_pos_infinity(dtype, max_for_int=False):
         return np.inf
 
     if issubclass(dtype.type, np.integer):
-        if max_for_int:
-            return np.iinfo(dtype).max
-        else:
-            return np.inf
-
+        return np.iinfo(dtype.type).max if max_for_int else np.inf
     if issubclass(dtype.type, np.complexfloating):
         return np.inf + 1j * np.inf
 
     return INF
 
 
-def get_neg_infinity(dtype, min_for_int=False):
+def get_neg_infinity(
+    dtype: np.dtype[np.generic], min_for_int: bool = False
+) -> float | complex | AlwaysLessThan:
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
@@ -150,25 +156,23 @@ def get_neg_infinity(dtype, min_for_int=False):
         return -np.inf
 
     if issubclass(dtype.type, np.integer):
-        if min_for_int:
-            return np.iinfo(dtype).min
-        else:
-            return -np.inf
-
+        return np.iinfo(dtype.type).min if min_for_int else -np.inf
     if issubclass(dtype.type, np.complexfloating):
         return -np.inf - 1j * np.inf
 
     return NINF
 
 
-def is_datetime_like(dtype):
+def is_datetime_like(
+    dtype: np.dtype[np.generic],
+) -> TypeGuard[np.datetime64 | np.timedelta64]:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
-) -> np.dtype:
+) -> np.dtype[np.generic]:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:

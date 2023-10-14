@@ -473,12 +473,12 @@ class VariableSubclassobjects(ABC):
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         encoding1 = {"scale_factor": 1}
         # encoding set via cls constructor
         v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
         assert v1.encoding == encoding1
-        v2 = v1.reset_encoding()
+        v2 = v1.drop_encoding()
         assert v1.encoding == encoding1
         assert v2.encoding == {}
 
@@ -486,7 +486,7 @@ class VariableSubclassobjects(ABC):
         encoding3 = {"scale_factor": 10}
         v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
         assert v3.encoding == encoding3
-        v4 = v3.reset_encoding()
+        v4 = v3.drop_encoding()
         assert v3.encoding == encoding3
         assert v4.encoding == {}
 
@@ -885,20 +885,10 @@ class VariableSubclassobjects(ABC):
         "mode",
         [
             "mean",
-            pytest.param(
-                "median",
-                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
-            ),
-            pytest.param(
-                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
-            ),
+            "median",
+            "reflect",
             "edge",
-            pytest.param(
-                "linear_ramp",
-                marks=pytest.mark.xfail(
-                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
-                ),
-            ),
+            "linear_ramp",
             "maximum",
             "minimum",
             "symmetric",
@@ -926,7 +916,7 @@ class VariableSubclassobjects(ABC):
 
         actual = v.pad(**xr_arg)
         expected = np.pad(
-            np.array(v.data.astype(float)),
+            np.array(duck_array_ops.astype(v.data, float)),
             np_arg,
             mode="constant",
             constant_values=np.nan,
@@ -2345,11 +2335,34 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
-    @pytest.mark.xfail(
-        reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203"
-    )
     def test_multiindex(self):
         super().test_multiindex()
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "mean",
+            pytest.param(
+                "median",
+                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
+            ),
+            pytest.param(
+                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
+            ),
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.filterwarnings(
+        r"ignore:dask.array.pad.+? converts integers to floats."
+    )
+    def test_pad(self, mode, xr_arg, np_arg):
+        super().test_pad(mode, xr_arg, np_arg)
 
 
 @requires_sparse
