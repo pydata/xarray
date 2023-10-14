@@ -4366,10 +4366,15 @@ class TestDataset:
         # Doesn't change original
         assert_identical(ds, original)
 
-        # Example with variables and coords with attrs, check they're dropped too
+        # Example with variables and coords with attrs, and a multiindex. (arguably
+        # should have used a canonical dataset with all the features we're should
+        # support...)
         var = Variable("x", [1, 2, 3], attrs=dict(x=1, y=2))
         idx = IndexVariable("y", [1, 2, 3], attrs=dict(c=1, d=2))
-        ds = Dataset(dict(var1=var), coords=dict(y=idx)).assign_attrs(a=1, b=2)
+        mx = xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["d", "e"]), "z"
+        )
+        ds = Dataset(dict(var1=var), coords=dict(y=idx, z=mx)).assign_attrs(a=1, b=2)
         assert ds.coords["y"].attrs != {}
 
         original = ds.copy(deep=True)

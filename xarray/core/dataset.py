@@ -10342,15 +10342,34 @@ class Dataset(
     def drop_attrs(self) -> Self:
         """
         Removes all attributes from the Dataset and its variables.
+
+        Returns
+        -------
+        Dataset
         """
         # Remove attributes from the dataset
         self = self._replace(attrs={})
 
         # Remove attributes from each variable in the dataset
         for var in self.variables:
-            # variables don't have a `._replace` method, so we copy and then remove. If
-            # we added a `._replace` method, we could use that instead.
-            self[var] = self[var].copy()
-            self[var].attrs = {}
+            # variables don't have a `._replace` method, so we copy and then remove
+            # attrs. If we added a `._replace` method, we could use that instead.
+            if var not in self.indexes:
+                self[var] = self[var].copy()
+                self[var].attrs = {}
+
+        new_idx_variables = {}
+
+        # Not sure this is the most elegant way of doing this, but it works.
+        # (Contributions welcome for a more general "map over all variables, including
+        # indexes" approach.)
+        for idx, idx_vars in self.xindexes.group_by_index():
+            # copy each coordinate variable of an index and drop their attrs
+            temp_idx_variables = {k: v.copy() for k, v in idx_vars.items()}
+            for v in temp_idx_variables.values():
+                v.attrs = {}
+            # maybe re-wrap the index object in new coordinate variables
+            new_idx_variables.update(idx.create_variables(temp_idx_variables))
+        self = self.assign(**new_idx_variables)
 
         return self
