@@ -103,7 +103,7 @@ def is_0d_dask_array(x):
     return is_duck_dask_array(x) and is_scalar(x)
 
 
-def to_numpy(data):
+def to_numpy(data) -> np.ndarray:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.core.parallelcompat import get_chunked_array_type
 
