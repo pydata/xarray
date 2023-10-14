@@ -352,83 +352,83 @@
    IndexVariable.values
 
 
-   NamedArray.all
-   NamedArray.any
+   namedarray.core.NamedArray.all
+   namedarray.core.NamedArray.any
    ..
-      NamedArray.argmax
-      NamedArray.argmin
-      NamedArray.argsort
-      NamedArray.astype
+      namedarray.core.NamedArray.argmax
+      namedarray.core.NamedArray.argmin
+      namedarray.core.NamedArray.argsort
+      namedarray.core.NamedArray.astype
    ..
-      NamedArray.broadcast_equals
-      NamedArray.chunk
-      NamedArray.clip
-      NamedArray.coarsen
-      NamedArray.compute
-      NamedArray.concat
-      NamedArray.conj
-      NamedArray.conjugate
-      NamedArray.copy
-   NamedArray.count
-   NamedArray.cumprod
-   NamedArray.cumsum
+      namedarray.core.NamedArray.broadcast_equals
+      namedarray.core.NamedArray.chunk
+      namedarray.core.NamedArray.clip
+      namedarray.core.NamedArray.coarsen
+      namedarray.core.NamedArray.compute
+      namedarray.core.NamedArray.concat
+      namedarray.core.NamedArray.conj
+      namedarray.core.NamedArray.conjugate
+      namedarray.core.NamedArray.copy
+   namedarray.core.NamedArray.count
+   namedarray.core.NamedArray.cumprod
+   namedarray.core.NamedArray.cumsum
    ..
-      NamedArray.equals
-      NamedArray.fillna
-   NamedArray.get_axis_num
+      namedarray.core.NamedArray.equals
+      namedarray.core.NamedArray.fillna
+   namedarray.core.NamedArray.get_axis_num
    ..
-      NamedArray.identical
+      namedarray.core.NamedArray.identical
    ..
-      NamedArray.isel
+      namedarray.core.NamedArray.isel
    ..
-      NamedArray.isnull
-      NamedArray.item
-      NamedArray.load
-   NamedArray.max
-   NamedArray.mean
-   NamedArray.median
-   NamedArray.min
+      namedarray.core.NamedArray.isnull
+      namedarray.core.NamedArray.item
+      namedarray.core.NamedArray.load
+   namedarray.core.NamedArray.max
+   namedarray.core.NamedArray.mean
+   namedarray.core.NamedArray.median
+   namedarray.core.NamedArray.min
    ..
-      NamedArray.no_conflicts
-      NamedArray.notnull
-      NamedArray.pad
-   NamedArray.prod
-   NamedArray.quantile
+      namedarray.core.NamedArray.no_conflicts
+      namedarray.core.NamedArray.notnull
+      namedarray.core.NamedArray.pad
+   namedarray.core.NamedArray.prod
+   namedarray.core.NamedArray.quantile
    ..
-      NamedArray.rank
-   NamedArray.reduce
+      namedarray.core.NamedArray.rank
+   namedarray.core.NamedArray.reduce
    ..
-      NamedArray.roll
-      NamedArray.rolling_window
-      NamedArray.round
-      NamedArray.searchsorted
-      NamedArray.set_dims
-      NamedArray.shift
-      NamedArray.squeeze
-      NamedArray.stack
-   NamedArray.std
-   NamedArray.sum
+      namedarray.core.NamedArray.roll
+      namedarray.core.NamedArray.rolling_window
+      namedarray.core.NamedArray.round
+      namedarray.core.NamedArray.searchsorted
+      namedarray.core.NamedArray.set_dims
+      namedarray.core.NamedArray.shift
+      namedarray.core.NamedArray.squeeze
+      namedarray.core.NamedArray.stack
+   namedarray.core.NamedArray.std
+   namedarray.core.NamedArray.sum
    ..
-      NamedArray.to_dict
-      NamedArray.transpose
-      NamedArray.unstack
-   NamedArray.var
+      namedarray.core.NamedArray.to_dict
+      namedarray.core.NamedArray.transpose
+      namedarray.core.NamedArray.unstack
+   namedarray.core.NamedArray.var
    ..
-      NamedArray.where
-      NamedArray.T
-   NamedArray.attrs
-   NamedArray.chunks
-   NamedArray.data
-   NamedArray.dims
-   NamedArray.dtype
-   NamedArray.imag
-   NamedArray.nbytes
-   NamedArray.ndim
-   NamedArray.real
-   NamedArray.shape
-   NamedArray.size
-   NamedArray.sizes
-   NamedArray.values
+      namedarray.core.NamedArray.where
+      namedarray.core.NamedArray.T
+   namedarray.core.NamedArray.attrs
+   namedarray.core.NamedArray.chunks
+   namedarray.core.NamedArray.data
+   namedarray.core.NamedArray.dims
+   namedarray.core.NamedArray.dtype
+   namedarray.core.NamedArray.imag
+   namedarray.core.NamedArray.nbytes
+   namedarray.core.NamedArray.ndim
+   namedarray.core.NamedArray.real
+   namedarray.core.NamedArray.shape
+   namedarray.core.NamedArray.size
+   namedarray.core.NamedArray.sizes
+   namedarray.core.NamedArray.values
 
    plot.plot
    plot.line
