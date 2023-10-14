@@ -16,6 +16,7 @@ from numpy.typing import ArrayLike
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from xarray.core._aggregations import VariableAggregations
 from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
@@ -311,7 +312,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(NamedArray, AbstractArray, VariableArithmetic):
+class Variable(VariableAggregations, NamedArray, AbstractArray, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -1702,6 +1703,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
+    def _to_named_array(self) -> NamedArray:
+        return NamedArray(self.dims, self._data, self._attrs)
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -1747,7 +1751,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
         )
 
-        result = super().reduce(
+        # If we were to simply subclass NamedArray alone then
+        # the call order for Variable.mean is
+        #    Variable.mean -> NamedArray.mean -> Variable.reduce
+        #    -> NamedArray.reduce
+        # This means that the default keep_attrs will always be set
+        # to True by NamedArray.mean.
+        # Instead we need to make VariableAggregations mixin with .mean,
+        # and delegate to NamedArray.reduce setting keep_attrs explicitly
+        result = self._to_named_array().reduce(
             func=func,
             dim=dim,
             axis=axis,
@@ -1756,8 +1768,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             **kwargs,
         )
 
-        # We need to return `Variable` rather than the type of `self` at the moment, ref
-        # #8216
+        # return Variable always to support IndexVariable
         return Variable(result.dims, result._data, attrs=result._attrs)
 
     @classmethod

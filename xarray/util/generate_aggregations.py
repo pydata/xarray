@@ -581,6 +581,28 @@ DATASET_RESAMPLE_GENERATOR = GroupByAggregationGenerator(
     notes=_FLOX_RESAMPLE_NOTES,
 )
 
+VARIABLE_OBJECT = DataStructure(
+    name="Variable",
+    create_example="""
+        >>> from xarray import Variable
+        >>> variable = Variable(
+        ...     "x",{example_array},
+        ... )""",
+    example_var_name="variable",
+    numeric_only=False,  # TODO
+    see_also_modules=("Dataset", "DataArray"),
+)
+
+VARIABLE_GENERATOR = GenericAggregationGenerator(
+    cls="",
+    datastructure=VARIABLE_OBJECT,
+    methods=AGGREGATION_METHODS,
+    docref="agg",
+    docref_description="reduction or aggregation operations",
+    example_call_preamble="",
+    definition_preamble=AGGREGATIONS_PREAMBLE,
+)
+
 NAMED_ARRAY_OBJECT = DataStructure(
     name="NamedArray",
     create_example="""
@@ -628,6 +650,7 @@ if __name__ == "__main__":
             DATASET_RESAMPLE_GENERATOR,
             DATAARRAY_GROUPBY_GENERATOR,
             DATAARRAY_RESAMPLE_GENERATOR,
+            VARIABLE_GENERATOR,
         ],
         preamble=MODULE_PREAMBLE,
     )
