@@ -2760,7 +2760,7 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep: bool = True, data: ArrayLike | None = None):
+    def copy(self, deep: bool = True, data: T_DuckArray | ArrayLike | None = None):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of
@@ -2784,15 +2784,25 @@ class IndexVariable(Variable):
             New object with dimensions, attributes, encodings, and optionally
             data copied from original.
         """
-        if data is not None:
-            ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
-                raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
-                )
+
+        if data is None:
+            data_old = self._data
+
+            if isinstance(data_old, indexing.MemoryCachedArray):
+                # don't share caching between copies
+                ndata = indexing.MemoryCachedArray(data_old.array)
+            else:
+                ndata = data_old
+
+            if deep:
+                ndata = copy.deepcopy(ndata, None)
+
         else:
-            # TODO: array api has no copy-function:
-            ndata = self._data.copy(deep=deep)  # type: ignore[assignment]
+            ndata = as_compatible_data(data)
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+                raise ValueError(
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
         encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
