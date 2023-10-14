@@ -10,8 +10,8 @@ from typing import (
     SupportsIndex,
     TypeVar,
     Union,
-    runtime_checkable,
     overload,
+    runtime_checkable,
 )
 
 import numpy as np
