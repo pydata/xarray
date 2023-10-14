@@ -535,10 +535,10 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         # TODO: cast to ndarray and back to T_DuckArray is a workaround
-        nonzeros = np.nonzero(cast(NDArray[np.integer[Any]], self.data))
+        nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            cast(T_NamedArrayInteger, _new(self, (dim,), nz, _attrs))
+            cast("T_NamedArrayInteger", _new(self, (dim,), nz, _attrs))
             for nz, dim in zip(nonzeros, self.dims)
         )
 
