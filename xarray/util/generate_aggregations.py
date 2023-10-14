@@ -14,7 +14,7 @@ while replacing the doctests.
 """
 import collections
 import textwrap
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
@@ -289,31 +289,26 @@ class Method:
         ...     np.array([1, 2, 3, 0, 2, np.nan])"""
 
 
+@dataclass
 class AggregationGenerator:
     _dim_docstring = _DIM_DOCSTRING
     _template_signature = TEMPLATE_REDUCTION_SIGNATURE
 
-    def __init__(
-        self,
-        cls,
-        datastructure: DataStructure,
-        methods,
-        docref,
-        docref_description,
-        example_call_preamble,
-        definition_preamble,
-        has_keep_attrs=True,
-        notes=None,
-    ):
-        self.datastructure = datastructure
-        self.cls = cls
-        self.methods = methods
-        self.docref = docref
-        self.docref_description = docref_description
-        self.example_call_preamble = example_call_preamble
-        self.has_keep_attrs = has_keep_attrs
-        self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
-        self.notes = "" if notes is None else notes
+    cls: str
+    datastructure: DataStructure
+    methods: tuple[Method, ...]
+    docref: str
+    docref_description: str
+    example_call_preamble: str
+    definition_preamble: str
+    has_keep_attrs: bool = True
+    notes: str = ""
+    preamble: str = field(init=False)
+
+    def __post_init__(self):
+        self.preamble = self.definition_preamble.format(
+            obj=self.datastructure.name, cls=self.cls
+        )
 
     def generate_methods(self):
         yield [self.preamble]
@@ -601,7 +596,7 @@ NAMED_ARRAY_OBJECT = DataStructure(
         ...     "x",{example_array},
         ... )""",
     example_var_name="na",
-    numeric_only=False,  # TODO
+    numeric_only=False,
     see_also_modules=("Dataset", "DataArray"),
 )
 
