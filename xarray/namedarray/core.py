@@ -70,6 +70,9 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
+    T_NamedArrayInteger = TypeVar(
+        "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
+    )
 
 
 def _new(
@@ -467,7 +470,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         The types for each argument cannot change,
         use _new if that is a risk.
         """
-        return _new(self, dims, data, attrs)
+        return cast(Self, _new(self, dims, data, attrs))
 
     def _copy(
         self,
@@ -527,7 +530,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         """
         return self._copy(deep=deep, data=data)
 
-    def _nonzero(self) -> tuple[_NamedArray[np.integer[Any]], ...]:
+    def _nonzero(self: T_NamedArrayInteger) -> tuple[T_NamedArrayInteger, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
@@ -542,7 +545,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         self,
         sparse_format: Literal["coo"] | Default = _default,
         fill_value: ArrayLike | Default = _default,
-    ) -> NamedArray[Any, _DType_co]:
+    ) -> Self:
         """
         use sparse-array as backend.
         """
@@ -566,7 +569,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         data = as_sparse(astype(self, dtype).data, fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self) -> NamedArray[Any, _DType_co]:
+    def _to_dense(self) -> Self:
         """
         Change backend from sparse to np.array
         """
