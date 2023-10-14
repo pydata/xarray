@@ -26,6 +26,10 @@ New Features
   the ``other`` parameter, passing the object as the only argument. Previously,
   this was only valid for the ``cond`` parameter. (:issue:`8255`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- ``.rolling_exp`` functions can now take a ``min_weight`` parameter, to only
+  output values when there are sufficient recent non-nan values.
+  ``numbagg>=0.3.1`` is required. (:pull:`8285`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - :py:meth:`DataArray.sortby` & :py:meth:`Dataset.sortby` accept a callable for
   the ``variables`` parameter, passing the object as the only argument.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -54,6 +58,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
 - :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
   when the operation was a no-op. (:issue:`8266`)
   By `Simon Hansen <https://github.com/hoxbro>`_.
@@ -63,6 +68,12 @@ Bug fixes
   a reference date not equal to the first value of the datetime array
   (:issue:`8271`, :pull:`8272`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+
+- Fix excess metadata requests when using a Zarr store. Prior to this, metadata
+  was re-read every time data was retrieved from the array, now metadata is retrieved only once
+  when they array is initialized.
+  (:issue:`8290`, :pull:`8297`).
+  By `Oliver McCormack <https://github.com/olimcc>`_.
 
 
 Documentation
