@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, cast
+from typing import TYPE_CHECKING, Any, Generic
 
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.namedarray._typing import (
+    DuckArray,
     _arrayfunction_or_api,
     _DType_co,
     _ScalarType,
     _ShapeType_co,
-    DuckArray,
 )
 from xarray.namedarray.core import NamedArray, from_array
 
