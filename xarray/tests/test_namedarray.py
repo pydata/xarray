@@ -6,7 +6,13 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.namedarray._typing import _arrayfunction_or_api, _ShapeType_co
+from xarray.namedarray._typing import (
+    _arrayfunction_or_api,
+    _DType_co,
+    _ScalarType,
+    _ShapeType_co,
+    DuckArray,
+)
 from xarray.namedarray.core import NamedArray, from_array
 
 if TYPE_CHECKING:
@@ -15,10 +21,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from xarray.namedarray._typing import (
-        DuckArray,
         _DimsLike,
-        _DType_co,
-        _ScalarType,
         _Shape,
         duckarray,
     )
@@ -238,9 +241,7 @@ def test_duck_array_class() -> None:
 
         # Runtime check if valid:
         if isinstance(b, _arrayfunction_or_api):
-            # TODO: cast is a mypy workaround for https://github.com/python/mypy/issues/10817
-            # pyright doesn't need it.
-            return cast(DuckArray[_ScalarType], b)
+            return b
         else:
             raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
 
