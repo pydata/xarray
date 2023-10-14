@@ -105,11 +105,11 @@ class RollingExp(Generic[T_DataWithCoords]):
             )
         elif has_numbagg < "0.2.1":
             raise ImportError(
-                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {has_numbagg} is installed"
+                f"numbagg >= 0.2.1 is required for `rolling_exp` but currently version {has_numbagg} is installed"
             )
         elif has_numbagg < "0.3.1" and min_weight > 0:
             raise ImportError(
-                f"numbagg >= 0.3.1 is required for `min_weight > 0` but currently version {has_numbagg} is installed"
+                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {has_numbagg} is installed"
             )
 
         self.obj: T_DataWithCoords = obj
