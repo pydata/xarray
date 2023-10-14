@@ -11,6 +11,7 @@ from typing import (
     TypeVar,
     Union,
     runtime_checkable,
+    overload,
 )
 
 import numpy as np
@@ -92,10 +93,13 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def dtype(self) -> _DType_co:
         ...
 
-    # def __array__(
-    #     self, *, dtype: _DTypeLike[_ScalarType_co]
-    # ) -> NDArray[_ScalarType_co]:
-    #     ...
+    @overload
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
+        ...
+
+    @overload
+    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
+        ...
 
 
 # Corresponds to np.typing.NDArray:

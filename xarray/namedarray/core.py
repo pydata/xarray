@@ -538,7 +538,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         nonzeros = np.nonzero(cast(NDArray[np.integer[Any]], self.data))
         _attrs = self.attrs
         return tuple(
-            (T_NamedArrayInteger, _new(self, (dim,), nz, _attrs))
+            cast(T_NamedArrayInteger, _new(self, (dim,), nz, _attrs))
             for nz, dim in zip(nonzeros, self.dims)
         )
 
