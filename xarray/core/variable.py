@@ -35,7 +35,6 @@ from xarray.core.pycompat import (
     is_duck_dask_array,
 )
 from xarray.core.utils import (
-    Default,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -68,8 +67,6 @@ if TYPE_CHECKING:
     )
     from xarray.namedarray._typing import (
         _AttrsLike,
-        _DimsLike,
-        duckarray,
     )
 
 

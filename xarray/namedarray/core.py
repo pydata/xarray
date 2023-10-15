@@ -45,8 +45,8 @@ if TYPE_CHECKING:
         _DimsLike,
         _IntOrUnknown,
         _ScalarType,
-        _ShapeType,
         _Shape,
+        _ShapeType,
         duckarray,
     )
     from xarray.namedarray.utils import Default
