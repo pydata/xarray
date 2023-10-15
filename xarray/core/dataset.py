@@ -2889,6 +2889,12 @@ class Dataset(
         --------
         Dataset.sel
         DataArray.isel
+
+
+        `**Tutorial on indexing** <https://tutorial.xarray.dev/intermediate/indexing/advanced-indexing.html>`_
+            Intermediate Tutorial on applying advanced indexing on dataset
+
+
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
@@ -8632,6 +8638,10 @@ class Dataset(
         --------
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
+
+        `**Tutorial on map_blocks** <https://tutorial.xarray.dev/advanced/map_blocks/simple_map_blocks.html>`_
+            Advanced Tutorial on map_blocks with dask
+
 
         Examples
         --------

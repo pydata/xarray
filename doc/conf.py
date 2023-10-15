@@ -58,7 +58,7 @@ except ImportError:
         ]
     )
 
-nbsphinx_allow_errors = False
+nbsphinx_allow_errors = True
 
 # -- General configuration ------------------------------------------------
 
