@@ -378,10 +378,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def _new(
         self,
-        dims: _DimsLike | Default = _default,
-        data: duckarray | Default = _default,
-        attrs: _AttrsLike | Default = _default,
-    ) -> Variable:
+        dims=_default,
+        data=_default,
+        attrs=_default,
+    ):
         dims_ = copy.copy(self._dims) if dims is _default else dims
 
         attrs_: _AttrsLike
