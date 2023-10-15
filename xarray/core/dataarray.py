@@ -7150,6 +7150,10 @@ class DataArray(
     def drop_attrs(self) -> Self:
         """
         Removes all attributes from the DataArray.
+
+        Returns
+        -------
+        DataArray
         """
         self = self.copy()
 
