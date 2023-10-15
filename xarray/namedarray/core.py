@@ -71,7 +71,6 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
-    T_NamedArray2 = TypeVar("T_NamedArray", bound="NamedArray[Any, Any]")
     T_NamedArrayInteger = TypeVar(
         "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
     )
@@ -238,6 +237,15 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
                 "Subclasses of `NamedArray` must override the `_new` method."
             )
         super().__init_subclass__(**kwargs)
+
+    @overload
+    def _new(
+        self,
+        dims: _DimsLike | Default = ...,
+        data: duckarray[Any, _DType] = ...,
+        attrs: _AttrsLike | Default = ...,
+    ) -> NamedArray[Any, _DType]:
+        ...
 
     @overload
     def _new(
