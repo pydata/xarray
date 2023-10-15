@@ -20,6 +20,7 @@ from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
     BasicIndexer,
+    ExplicitlyIndexedNDArrayMixin,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -2667,7 +2668,7 @@ class IndexVariable(Variable):
 
     __slots__ = ()
 
-    _data: PandasIndexingAdapter
+    _data: ExplicitlyIndexedNDArrayMixin
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
