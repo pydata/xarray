@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         _DimsLike,
         _IntOrUnknown,
         _ScalarType,
+        _ShapeType,
         _Shape,
         duckarray,
     )
@@ -80,28 +81,28 @@ if TYPE_CHECKING:
 def _new(
     x: NamedArray[Any, _DType_co],
     dims: _DimsLike | Default = ...,
-    data: duckarray[Any, _DType] = ...,
+    data: duckarray[_ShapeType, _DType] = ...,
     attrs: _AttrsLike | Default = ...,
-) -> NamedArray[Any, _DType]:
+) -> NamedArray[_ShapeType, _DType]:
     ...
 
 
 @overload
 def _new(
-    x: NamedArray[Any, _DType_co],
+    x: NamedArray[_ShapeType_co, _DType_co],
     dims: _DimsLike | Default = ...,
     data: Default = ...,
     attrs: _AttrsLike | Default = ...,
-) -> NamedArray[Any, _DType_co]:
+) -> NamedArray[_ShapeType_co, _DType_co]:
     ...
 
 
 def _new(
     x: NamedArray[Any, _DType_co],
     dims: _DimsLike | Default = _default,
-    data: duckarray[Any, _DType] | Default = _default,
+    data: duckarray[_ShapeType, _DType] | Default = _default,
     attrs: _AttrsLike | Default = _default,
-) -> NamedArray[Any, _DType] | NamedArray[Any, _DType_co]:
+) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, _DType_co]:
     dims_ = copy.copy(x._dims) if dims is _default else dims
 
     attrs_: Mapping[Any, Any] | None
@@ -113,7 +114,7 @@ def _new(
     if data is _default:
         return type(x)(dims_, copy.copy(x._data), attrs_)
     else:
-        cls_ = cast("type[NamedArray[Any, _DType]]", type(x))
+        cls_ = cast("type[NamedArray[_ShapeType, _DType]]", type(x))
         return cls_(dims_, data, attrs_)
 
 
@@ -242,9 +243,9 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     def _new(
         self,
         dims: _DimsLike | Default = ...,
-        data: duckarray[Any, _DType] = ...,
+        data: duckarray[_ShapeType, _DType] = ...,
         attrs: _AttrsLike | Default = ...,
-    ) -> NamedArray[Any, _DType]:
+    ) -> NamedArray[_ShapeType, _DType]:
         ...
 
     @overload
@@ -261,7 +262,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = _default,
         data: duckarray[Any, _DType] | Default = _default,
         attrs: _AttrsLike | Default = _default,
-    ) -> NamedArray[Any, _DType] | NamedArray[_ShapeType_co, _DType_co]:
+    ) -> NamedArray[_ShapeType, _DType] | NamedArray[_ShapeType_co, _DType_co]:
         return _new(self, dims, data, attrs)
 
     def _replace(
@@ -596,7 +597,8 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            self._new((dim,), nz, _attrs) for nz, dim in zip(nonzeros, self.dims)
+            cast(T_NamedArrayInteger, self._new((dim,), nz, _attrs))
+            for nz, dim in zip(nonzeros, self.dims)
         )
 
     def _as_sparse(
