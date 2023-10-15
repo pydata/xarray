@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -65,6 +65,15 @@ if TYPE_CHECKING:
         Self,
         T_DuckArray,
     )
+
+    from xarray.namedarray._typing import (
+        _DimsLike,
+        duckarray,
+        _DType,
+        _AttrsLike,
+    )
+    from xarray.namedarray.utils import Default
+
 
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "
@@ -368,6 +377,26 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self._encoding = None
         if encoding is not None:
             self.encoding = encoding
+
+    def _new(
+        self,
+        dims: _DimsLike | Default = _default,
+        data: duckarray | Default = _default,
+        attrs: _AttrsLike | Default = _default,
+    ) -> Variable:
+        dims_ = copy.copy(self._dims) if dims is _default else dims
+
+        attrs_: Mapping[Any, Any] | None
+        if attrs is _default:
+            attrs_ = None if self._attrs is None else self._attrs.copy()
+        else:
+            attrs_ = attrs
+
+        if data is _default:
+            return type(self)(dims_, copy.copy(self._data), attrs_)
+        else:
+            cls_ = cast("type[Variable[Any, _DType]]", type(self))
+            return cls_(dims_, data, attrs_)
 
     @property
     def _in_memory(self):
