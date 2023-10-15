@@ -617,7 +617,7 @@ class VariableSubclassobjects(ABC):
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
-            orig.copy(data=new_data)
+            orig.copy(data=new_data)  # type: ignore[arg-type]
 
     def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
@@ -2945,6 +2945,7 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("America/New_York")
         )
@@ -2978,6 +2979,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("America/New_York")
         )
