@@ -20,10 +20,10 @@ from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
     BasicIndexer,
-    _ExplicitlyIndexedNDArrayMixinArray,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
+    _ExplicitlyIndexedNDArrayMixinArray,
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
