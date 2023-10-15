@@ -35,6 +35,7 @@ from xarray.core.pycompat import (
     is_duck_dask_array,
 )
 from xarray.core.utils import (
+    Default,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -71,7 +72,6 @@ if TYPE_CHECKING:
         _DType,
         duckarray,
     )
-    from xarray.namedarray.utils import Default
 
 
 NON_NANOSECOND_WARNING = (
@@ -385,7 +385,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     ) -> Variable:
         dims_ = copy.copy(self._dims) if dims is _default else dims
 
-        attrs_: Mapping[Any, Any] | None
+        attrs_: _AttrsLike
         if attrs is _default:
             attrs_ = None if self._attrs is None else self._attrs.copy()
         else:
@@ -394,7 +394,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if data is _default:
             return type(self)(dims_, copy.copy(self._data), attrs_)
         else:
-            cls_ = cast("type[Variable[Any, _DType]]", type(self))
+            # cls_ = cast("type[Variable[Any, _DType]]", type(self))
+            cls_ = type(self)
             return cls_(dims_, data, attrs_)
 
     @property
