@@ -11,7 +11,7 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.core import NamedArray, _new
+from xarray.namedarray.core import NamedArray
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
@@ -24,24 +24,106 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 def astype(
     x: NamedArray[Any, Any], dtype: _DType, /, *, copy: bool = True
 ) -> NamedArray[Any, _DType]:
+    """
+    Copies an array to a specified data type irrespective of Type Promotion Rules rules.
+
+    Parameters
+    ----------
+    x : NamedArray
+        array to cast.
+    dtype : _DType
+        desired data type.
+    copy : bool, optional
+        Specifies whether to copy an array when the specified dtype matches the data
+        type of the input array x.
+        If True, a newly allocated array must always be returned.
+        If False and the specified dtype matches the data type of the input array,
+        the input array must be returned; otherwise, a newly allocated array must be
+        returned. Default: True.
+
+    Returns
+    -------
+    out : NamedArray
+        An array having the specified data type. The returned array must have the
+        same shape as x.
+
+    Examples
+    --------
+    >>> narr = NamedArray(("x", ), np.array([1.5, 2.5]))
+    >>> astype(narr, np.dtype(int)).data
+    array([1, 2])
+    """
     if isinstance(x._data, _arrayapi):
         xp = x._data.__array_namespace__()
 
-        return _new(x, x._dims, xp.astype(x, dtype, copy=copy), x._attrs)
+        return x._new(x._dims, xp.astype(x, dtype, copy=copy), x._attrs)
 
     # np.astype doesn't exist yet:
-    return _new(x, data=x.astype(dtype, copy=copy))  # type: ignore[attr-defined]
+    return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
 
 
 def imag(
     x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]], /  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+    """
+    Returns the imaginary component of a complex number for each element x_i of the
+    input array x.
+
+    Parameters
+    ----------
+    x : NamedArray
+        input array. Should have a complex floating-point data type.
+
+    Returns
+    -------
+    out : NamedArray
+        An array containing the element-wise results. The returned array must have a
+        floating-point data type with the same floating-point precision as x
+        (e.g., if x is complex64, the returned array must have the floating-point
+        data type float32).
+
+    Examples
+    --------
+    >>> narr = NamedArray(("x", ), np.array([1 + 2j, 2 + 4j]))
+    >>> imag(narr).data
+    array([2., 4.])
+    """
     xp = _get_data_namespace(x)
-    return _new(x, data=xp.imag(x._data))
+    out = x._new(data=xp.imag(x._data))
+    return out
 
 
 def real(
     x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]], /  # type: ignore[type-var]
 ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+    """
+    Returns the real component of a complex number for each element x_i of the
+    input array x.
+
+    Parameters
+    ----------
+    x : NamedArray
+        input array. Should have a complex floating-point data type.
+
+    Returns
+    -------
+    out : NamedArray
+        An array containing the element-wise results. The returned array must have a
+        floating-point data type with the same floating-point precision as x
+        (e.g., if x is complex64, the returned array must have the floating-point
+        data type float32).
+
+    Examples
+    --------
+    >>> narr = NamedArray(("x", ), np.array([1 + 2j, 2 + 4j]))
+    >>> real(narr).data
+    array([1., 2.])
+    """
     xp = _get_data_namespace(x)
-    return _new(x, xp.real(x._data))
+    return x._new(data=xp.real(x._data))
+
+
+# if __name__ == "__main__":
+#     import doctest
+
+#     doctest.testmod()
