@@ -65,9 +65,6 @@ if TYPE_CHECKING:
         Self,
         T_DuckArray,
     )
-    from xarray.namedarray._typing import (
-        _AttrsLike,
-    )
 
 
 NON_NANOSECOND_WARNING = (
