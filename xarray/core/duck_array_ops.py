@@ -184,6 +184,9 @@ def cumulative_trapezoid(y, x, axis):
 def astype(data, dtype, **kwargs):
     if hasattr(data, "__array_namespace__"):
         xp = get_array_namespace(data)
+        if xp == np:
+            # numpy currently doesn't have a astype:
+            data.astype(dtype, **kwargs)
         return xp.astype(data, dtype, **kwargs)
     return data.astype(dtype, **kwargs)
 
