@@ -30,9 +30,9 @@ def astype(
     Parameters
     ----------
     x : NamedArray
-        array to cast.
+        Array to cast.
     dtype : _DType
-        desired data type.
+        Desired data type.
     copy : bool, optional
         Specifies whether to copy an array when the specified dtype matches the data
         type of the input array x.
@@ -72,7 +72,7 @@ def imag(
     Parameters
     ----------
     x : NamedArray
-        input array. Should have a complex floating-point data type.
+        Input array. Should have a complex floating-point data type.
 
     Returns
     -------
@@ -103,7 +103,7 @@ def real(
     Parameters
     ----------
     x : NamedArray
-        input array. Should have a complex floating-point data type.
+        Input array. Should have a complex floating-point data type.
 
     Returns
     -------
