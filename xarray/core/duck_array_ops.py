@@ -186,7 +186,7 @@ def astype(data, dtype, **kwargs):
         xp = get_array_namespace(data)
         if xp == np:
             # numpy currently doesn't have a astype:
-            data.astype(dtype, **kwargs)
+            return data.astype(dtype, **kwargs)
         return xp.astype(data, dtype, **kwargs)
     return data.astype(dtype, **kwargs)
 
