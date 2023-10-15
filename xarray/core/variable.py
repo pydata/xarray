@@ -69,7 +69,6 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         _AttrsLike,
         _DimsLike,
-        _DType,
         duckarray,
     )
 
