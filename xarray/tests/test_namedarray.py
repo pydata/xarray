@@ -19,7 +19,7 @@ from xarray.namedarray.utils import _default
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from numpy.typing import NDArray, ArrayLike, DTypeLike
+    from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from xarray.namedarray._typing import (
         _AttrsLike,
