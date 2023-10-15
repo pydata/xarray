@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import copy
 import math
 import sys
@@ -21,6 +22,7 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
+    _DType,
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
@@ -70,35 +72,59 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
+    T_NamedArray2 = TypeVar("T_NamedArray", bound="NamedArray[Any, Any]")
     T_NamedArrayInteger = TypeVar(
         "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
     )
 
 
+@overload
 def _new(
-    x: NamedArray[Any, Any],
-    dims: _DimsLike | Default = _default,
-    data: duckarray[Any, _DType_co] | Default = _default,
-    attrs: _AttrsLike | Default = _default,
+    x: NamedArray[Any, _DType_co],
+    dims: _DimsLike | Default = ...,
+    data: duckarray[Any, _DType] = ...,
+    attrs: _AttrsLike | Default = ...,
+) -> NamedArray[Any, _DType]:
+    ...
+
+
+@overload
+def _new(
+    x: NamedArray[Any, _DType_co],
+    dims: _DimsLike | Default = ...,
+    data: Default = ...,
+    attrs: _AttrsLike | Default = ...,
 ) -> NamedArray[Any, _DType_co]:
-    """
-    Initialize a new Named Array.
-    """
+    ...
+
+
+def _new(
+    x: NamedArray[Any, _DType_co],
+    dims: _DimsLike | Default = _default,
+    data: duckarray[Any, _DType] | Default = _default,
+    attrs: _AttrsLike | Default = _default,
+) -> NamedArray[Any, _DType] | NamedArray[Any, _DType_co]:
+
     dims_ = copy.copy(x._dims) if dims is _default else dims
-    data_ = copy.copy(x._data) if data is _default else data
+
+    attrs_: Mapping[Any, Any] | None
     if attrs is _default:
-        attrs_: Mapping[Any, Any] | None = None if x._attrs is None else x._attrs.copy()
+        attrs_ = None if x._attrs is None else x._attrs.copy()
     else:
         attrs_ = attrs
 
-    return type(x)(dims_, data_, attrs_)
+    if data is _default:
+        return type(x)(dims_, copy.copy(x._data), attrs_)
+    else:
+        cls_ = cast("type[NamedArray[Any, _DType]]", type(x))
+        return cls_(dims_, data, attrs_)
 
 
 @overload
 def from_array(
     dims: _DimsLike,
     data: DuckArray[_ScalarType],
-    attrs: _AttrsLike = None,
+    attrs: _AttrsLike = ...,
 ) -> _NamedArray[_ScalarType]:
     ...
 
@@ -107,7 +133,7 @@ def from_array(
 def from_array(
     dims: _DimsLike,
     data: ArrayLike,
-    attrs: _AttrsLike = None,
+    attrs: _AttrsLike = ...,
 ) -> _NamedArray[Any]:
     ...
 
@@ -205,6 +231,104 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         self._data = data
         self._dims = self._parse_dimensions(dims)
         self._attrs = dict(attrs) if attrs else None
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        if NamedArray in cls.__bases__ and (cls._new == NamedArray._new):
+            # Type hinting does not work for subclasses unless _new is overriden with
+            # the correct class.
+            raise TypeError(
+                "Subclasses of `NamedArray` must override the `_new` method."
+            )
+        super().__init_subclass__(**kwargs)
+
+    @overload
+    def _new(
+        self,
+        dims: _DimsLike | Default = ...,
+        data: Default = ...,
+        attrs: _AttrsLike | Default = ...,
+    ) -> NamedArray[Any, _DType_co]:
+        ...
+
+    def _new(
+        self,
+        dims: _DimsLike | Default = _default,
+        data: duckarray[Any, _DType] | Default = _default,
+        attrs: _AttrsLike | Default = _default,
+    ) -> NamedArray[Any, _DType] | NamedArray[Any, _DType_co]:
+        return _new(self, dims, data, attrs)
+
+    def _replace(
+        self,
+        dims: _DimsLike | Default = _default,
+        data: duckarray[Any, _DType_co] | Default = _default,
+        attrs: _AttrsLike | Default = _default,
+    ) -> Self:
+        """
+        Create a new Named array with dims, data or attrs.
+
+        The types for each argument cannot change,
+        use self._new if that is a risk.
+        """
+        return cast(Self, self._new(dims, data, attrs))
+
+    def _copy(
+        self,
+        deep: bool = True,
+        data: duckarray[Any, _DType_co] | None = None,
+        memo: dict[int, Any] | None = None,
+    ) -> Self:
+        if data is None:
+            ndata = self._data
+            if deep:
+                ndata = copy.deepcopy(ndata, memo=memo)
+        else:
+            ndata = data
+            self._check_shape(ndata)
+
+        attrs = (
+            copy.deepcopy(self._attrs, memo=memo) if deep else copy.copy(self._attrs)
+        )
+
+        return self._replace(data=ndata, attrs=attrs)
+
+    def __copy__(self) -> Self:
+        return self._copy(deep=False)
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        return self._copy(deep=True, memo=memo)
+
+    def copy(
+        self,
+        deep: bool = True,
+        data: duckarray[Any, _DType_co] | None = None,
+    ) -> Self:
+        """Returns a copy of this object.
+
+        If `deep=True`, the data array is loaded into memory and copied onto
+        the new object. Dimensions, attributes and encodings are always copied.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, default: True
+            Whether the data array is loaded into memory and copied onto
+            the new object. Default is True.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+            When `data` is used, `deep` is ignored.
+
+        Returns
+        -------
+        object : NamedArray
+            New object with dimensions, attributes, and optionally
+            data copied from original.
+
+
+        """
+        return self._copy(deep=deep, data=data)
 
     @property
     def ndim(self) -> _IntOrUnknown:
@@ -458,78 +582,6 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         """Ordered mapping from dimension names to lengths."""
         return dict(zip(self.dims, self.shape))
 
-    def _replace(
-        self,
-        dims: _DimsLike | Default = _default,
-        data: duckarray[Any, _DType_co] | Default = _default,
-        attrs: _AttrsLike | Default = _default,
-    ) -> Self:
-        """
-        Create a new Named array with dims, data or attrs.
-
-        The types for each argument cannot change,
-        use _new if that is a risk.
-        """
-        return cast(Self, _new(self, dims, data, attrs))
-
-    def _copy(
-        self,
-        deep: bool = True,
-        data: duckarray[Any, _DType_co] | None = None,
-        memo: dict[int, Any] | None = None,
-    ) -> Self:
-        if data is None:
-            ndata = self._data
-            if deep:
-                ndata = copy.deepcopy(ndata, memo=memo)
-        else:
-            ndata = data
-            self._check_shape(ndata)
-
-        attrs = (
-            copy.deepcopy(self._attrs, memo=memo) if deep else copy.copy(self._attrs)
-        )
-
-        return self._replace(data=ndata, attrs=attrs)
-
-    def __copy__(self) -> Self:
-        return self._copy(deep=False)
-
-    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
-        return self._copy(deep=True, memo=memo)
-
-    def copy(
-        self,
-        deep: bool = True,
-        data: duckarray[Any, _DType_co] | None = None,
-    ) -> Self:
-        """Returns a copy of this object.
-
-        If `deep=True`, the data array is loaded into memory and copied onto
-        the new object. Dimensions, attributes and encodings are always copied.
-
-        Use `data` to create a new object with the same structure as
-        original but entirely new data.
-
-        Parameters
-        ----------
-        deep : bool, default: True
-            Whether the data array is loaded into memory and copied onto
-            the new object. Default is True.
-        data : array_like, optional
-            Data to use in the new object. Must have same shape as original.
-            When `data` is used, `deep` is ignored.
-
-        Returns
-        -------
-        object : NamedArray
-            New object with dimensions, attributes, and optionally
-            data copied from original.
-
-
-        """
-        return self._copy(deep=deep, data=data)
-
     def _nonzero(self: T_NamedArrayInteger) -> tuple[T_NamedArrayInteger, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
@@ -538,8 +590,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            cast("T_NamedArrayInteger", _new(self, (dim,), nz, _attrs))
-            for nz, dim in zip(nonzeros, self.dims)
+            self._new((dim,), nz, _attrs) for nz, dim in zip(nonzeros, self.dims)
         )
 
     def _as_sparse(

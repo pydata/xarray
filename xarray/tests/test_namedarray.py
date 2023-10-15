@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic
+import copy
+from typing import TYPE_CHECKING, Any, Generic, overload, cast, Mapping
 
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.namedarray._typing import (
-    DuckArray,
     _arrayfunction_or_api,
     _DType_co,
-    _ScalarType,
     _ShapeType_co,
 )
 from xarray.namedarray.core import NamedArray, from_array
+from xarray.namedarray.utils import _default
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -21,13 +21,16 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from xarray.namedarray._typing import (
+        _AttrsLike,
         _DimsLike,
+        _DType,
         _Shape,
         duckarray,
     )
+    from xarray.namedarray.utils import Default
 
 
-class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[_ShapeType_co, _DType_co]):
+class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
     def __init__(self, array: duckarray[Any, _DType_co]) -> None:
         self.array: duckarray[Any, _DType_co] = array
 
@@ -105,11 +108,13 @@ def test_from_array_with_0d_object() -> None:
 def test_from_array_with_explicitly_indexed(
     random_inputs: np.ndarray[Any, Any]
 ) -> None:
+    array: CustomArray[Any, Any]
     array = CustomArray(random_inputs)
     output: NamedArray[Any, Any]
     output = from_array(("x", "y", "z"), array)
     assert isinstance(output.data, np.ndarray)
 
+    array2: CustomArrayIndexable[Any, Any]
     array2 = CustomArrayIndexable(random_inputs)
     output2: NamedArray[Any, Any]
     output2 = from_array(("x", "y", "z"), array2)
@@ -235,9 +240,9 @@ def test_dims_setter(dims: Any, data_shape: Any, new_dims: Any, raises: bool) ->
 
 
 def test_duck_array_class() -> None:
-    def test_duck_array_typevar(a: DuckArray[_ScalarType]) -> DuckArray[_ScalarType]:
+    def test_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType]:
         # Mypy checks a is valid:
-        b: DuckArray[_ScalarType] = a
+        b: duckarray[Any, _DType] = a
 
         # Runtime check if valid:
         if isinstance(b, _arrayfunction_or_api):
@@ -245,10 +250,73 @@ def test_duck_array_class() -> None:
         else:
             raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")
 
-    numpy_a: NDArray[np.int64] = np.array([2.1, 4], dtype=np.dtype(np.int64))
-    custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]] = CustomArrayIndexable(
-        numpy_a
-    )
+    numpy_a: NDArray[np.int64]
+    numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
+    custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
+    custom_a = CustomArrayIndexable(numpy_a)
 
     test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)
+
+
+def test_new_namedarray() -> None:
+
+    dtype_float = np.dtype(np.float32)
+    narr_float: NamedArray[Any, np.dtype[np.float32]]
+    narr_float = NamedArray(("x",), np.array([1.5, 3.2], dtype=dtype_float))
+    assert narr_float.dtype == dtype_float
+
+    dtype_int = np.dtype(np.int8)
+    narr_int: NamedArray[Any, np.dtype[np.int8]]
+    narr_int = narr_float._new(("x",), np.array([1, 3], dtype=dtype_int))
+    assert narr_int.dtype == dtype_int
+
+    # Test with a subclass:
+    class Variable(
+        NamedArray[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
+    ):
+        @overload
+        def _new(
+            self,
+            dims: _DimsLike | Default = ...,
+            data: duckarray[Any, _DType] = ...,
+            attrs: _AttrsLike | Default = ...,
+        ) -> Variable[Any, _DType]:
+            ...
+
+        @overload
+        def _new(
+            self,
+            dims: _DimsLike | Default = ...,
+            data: Default = ...,
+            attrs: _AttrsLike | Default = ...,
+        ) -> Variable[Any, _DType_co]:
+            ...
+
+        def _new(
+            self,
+            dims: _DimsLike | Default = _default,
+            data: duckarray[Any, _DType] | Default = _default,
+            attrs: _AttrsLike | Default = _default,
+        ) -> Variable[Any, _DType] | Variable[Any, _DType_co]:
+            dims_ = copy.copy(self._dims) if dims is _default else dims
+
+            attrs_: Mapping[Any, Any] | None
+            if attrs is _default:
+                attrs_ = None if self._attrs is None else self._attrs.copy()
+            else:
+                attrs_ = attrs
+
+            if data is _default:
+                return type(self)(dims_, copy.copy(self._data), attrs_)
+            else:
+                cls_ = cast("type[Variable[Any, _DType]]", type(self))
+                return cls_(dims_, data, attrs_)
+
+    var_float: Variable[Any, np.dtype[np.float32]]
+    var_float = Variable(("x",), np.array([1.5, 3.2], dtype=dtype_float))
+    assert var_float.dtype == dtype_float
+
+    var_int: Variable[Any, np.dtype[np.int8]]
+    var_int = var_float._new(("x",), np.array([1, 3], dtype=dtype_int))
+    assert var_int.dtype == dtype_int
