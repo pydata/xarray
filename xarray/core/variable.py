@@ -922,11 +922,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if data is None:
             data_old = self._data
 
-            if isinstance(data_old, indexing.MemoryCachedArray):
+            if not isinstance(data_old, indexing.MemoryCachedArray):
+                ndata = data_old
+            else:
                 # don't share caching between copies
                 ndata = indexing.MemoryCachedArray(data_old.array)
-            else:
-                ndata = data_old
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
@@ -1064,7 +1064,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)
         else:
-            if isinstance(data_old, indexing.ExplicitlyIndexed):
+            if not isinstance(data_old, indexing.ExplicitlyIndexed):
+                ndata = data_old
+            else:
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
                 # that can't handle general array indexing. For example, in netCDF4 you
                 # can do "outer" indexing along two dimensions independent, which works
@@ -1076,8 +1078,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 ndata = indexing.ImplicitToExplicitIndexingAdapter(
                     data_old, indexing.OuterIndexer
                 )
-            else:
-                ndata = data_old
 
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
@@ -1525,7 +1525,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
-        return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
+        return type(self)(
+            new_dims, new_data, self._attrs, self._encoding, fastpath=True
+        )
 
     def stack(self, dimensions=None, **dimensions_kwargs):
         """
@@ -2665,6 +2667,8 @@ class IndexVariable(Variable):
 
     __slots__ = ()
 
+    _data: PandasIndexingAdapter
+
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
@@ -2809,11 +2813,11 @@ class IndexVariable(Variable):
         if data is None:
             data_old = self._data
 
-            if isinstance(data_old, indexing.MemoryCachedArray):
+            if not isinstance(data_old, indexing.MemoryCachedArray):
+                ndata = data_old
+            else:
                 # don't share caching between copies
                 ndata = indexing.MemoryCachedArray(data_old.array)
-            else:
-                ndata = data_old
 
             if deep:
                 ndata = copy.deepcopy(ndata, None)
