@@ -381,7 +381,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     ):
         dims_ = copy.copy(self._dims) if dims is _default else dims
 
-        attrs_: _AttrsLike
         if attrs is _default:
             attrs_ = None if self._attrs is None else self._attrs.copy()
         else:

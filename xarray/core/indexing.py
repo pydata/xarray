@@ -460,6 +460,9 @@ class ExplicitlyIndexed:
     def get_duck_array(self):
         return self.array
 
+    def __array_namespace__(self):
+        return np
+
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
