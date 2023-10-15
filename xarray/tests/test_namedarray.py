@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Generic, cast, overload
 import numpy as np
 import pytest
 
-import xarray as xr
+from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
     _DType_co,
@@ -19,7 +19,7 @@ from xarray.namedarray.utils import _default
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from numpy.typing import NDArray
+    from numpy.typing import NDArray, ArrayLike, DTypeLike
 
     from xarray.namedarray._typing import (
         _AttrsLike,
@@ -53,7 +53,7 @@ class CustomArray(
 
 class CustomArrayIndexable(
     CustomArrayBase[_ShapeType_co, _DType_co],
-    xr.core.indexing.ExplicitlyIndexed,
+    ExplicitlyIndexed,
     Generic[_ShapeType_co, _DType_co],
 ):
     def __array_namespace__(self) -> ModuleType:
@@ -63,6 +63,20 @@ class CustomArrayIndexable(
 @pytest.fixture
 def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
     return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
+
+
+def test_namedarray_init() -> None:
+    dtype = np.dtype(np.int8)
+    expected = np.array([1, 2], dtype=dtype)
+    actual: NamedArray[Any, np.dtype[np.int8]]
+    actual = NamedArray(("x",), expected)
+    assert np.array_equal(actual.data, expected)
+
+    with pytest.raises(AttributeError):
+        expected2 = [1, 2]
+        actual2: NamedArray[Any, Any]
+        actual2 = NamedArray(("x",), expected2)  # type: ignore[arg-type]
+        assert np.array_equal(actual2.data, expected2)
 
 
 @pytest.mark.parametrize(
@@ -77,7 +91,7 @@ def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
 )
 def test_from_array(
     dims: _DimsLike,
-    data: np.typing.ArrayLike,
+    data: ArrayLike,
     expected: np.ndarray[Any, Any],
     raise_error: bool,
 ) -> None:
@@ -162,7 +176,7 @@ def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
         (b"foo", np.dtype("S3")),
     ],
 )
-def test_0d_string(data: Any, dtype: np.typing.DTypeLike) -> None:
+def test_0d_string(data: Any, dtype: DTypeLike) -> None:
     named_array: NamedArray[Any, Any]
     named_array = from_array([], data)
     assert named_array.data == data
