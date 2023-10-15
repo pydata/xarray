@@ -253,7 +253,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = ...,
         data: Default = ...,
         attrs: _AttrsLike | Default = ...,
-    ) -> NamedArray[Any, _DType_co]:
+    ) -> NamedArray[_ShapeType_co, _DType_co]:
         ...
 
     def _new(
@@ -261,13 +261,13 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         dims: _DimsLike | Default = _default,
         data: duckarray[Any, _DType] | Default = _default,
         attrs: _AttrsLike | Default = _default,
-    ) -> NamedArray[Any, _DType] | NamedArray[Any, _DType_co]:
+    ) -> NamedArray[Any, _DType] | NamedArray[_ShapeType_co, _DType_co]:
         return _new(self, dims, data, attrs)
 
     def _replace(
         self,
         dims: _DimsLike | Default = _default,
-        data: duckarray[Any, _DType_co] | Default = _default,
+        data: duckarray[_ShapeType_co, _DType_co] | Default = _default,
         attrs: _AttrsLike | Default = _default,
     ) -> Self:
         """
@@ -281,7 +281,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     def _copy(
         self,
         deep: bool = True,
-        data: duckarray[Any, _DType_co] | None = None,
+        data: duckarray[_ShapeType_co, _DType_co] | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -307,7 +307,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     def copy(
         self,
         deep: bool = True,
-        data: duckarray[Any, _DType_co] | None = None,
+        data: duckarray[_ShapeType_co, _DType_co] | None = None,
     ) -> Self:
         """Returns a copy of this object.
 
