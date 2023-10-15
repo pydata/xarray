@@ -98,7 +98,10 @@ def test_from_array(
     actual: NamedArray[Any, Any]
     if raise_error:
         with pytest.raises(TypeError, match="already a Named array"):
-            actual = from_array(dims, data)  # type: ignore
+            actual = from_array(dims, data)
+
+            # Named arrays are not allowed:
+            from_array(actual)  # type: ignore[call-overload]
     else:
         actual = from_array(dims, data)
 
