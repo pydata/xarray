@@ -3,17 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, cast
 
 import numpy as np
-import pytest
 
 import xarray as xr
-from xarray.namedarray.core import NamedArray, from_array
+from xarray.namedarray.core import from_array
 from xarray.namedarray.utils import T_DuckArray, _array
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
-    from xarray.namedarray.utils import _Shape
+    from xarray.namedarray.utils import (
+        Self,  # type: ignore[attr-defined]
+        _Shape,
+    )
+
 
 # TODO: Make xr.core.indexing.ExplicitlyIndexed pass is_duck_array and remove this test.
 class CustomArrayBase(xr.core.indexing.NDArrayMixin, Generic[T_DuckArray]):
@@ -74,8 +76,6 @@ def test_duck_array_class() -> None:
 
 
 def test_typing() -> None:
-    from dask.array.core import Array as DaskArray
-
     a = [1, 2, 3]
     reveal_type(from_array("x", a))
     reveal_type(from_array([None], a))
