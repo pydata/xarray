@@ -460,9 +460,6 @@ class ExplicitlyIndexed:
     def get_duck_array(self):
         return self.array
 
-    # def __array_namespace__(self):
-    #     return np
-
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
@@ -475,6 +472,9 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         # This is necessary because we apply the indexing key in self.get_duck_array()
         # Note this is the base class for all lazy indexing classes
         return np.asarray(self.get_duck_array(), dtype=dtype)
+
+    def __array_namespace__(self):
+        return duck_array_ops.get_array_namespace(self.array)
 
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
@@ -501,6 +501,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             # Sometimes explicitly indexed arrays return NumPy arrays or
             # scalars.
             return result
+
+    def __array_namespace__(self):
+        return duck_array_ops.get_array_namespace(self.array)
 
 
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
