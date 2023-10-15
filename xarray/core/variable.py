@@ -23,6 +23,7 @@ from xarray.core.indexing import (
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
+    _ExplicitlyIndexedNDArrayMixinArray,
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
@@ -2643,6 +2644,8 @@ class IndexVariable(Variable):
     """
 
     __slots__ = ()
+
+    _data: _ExplicitlyIndexedNDArrayMixinArray
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
