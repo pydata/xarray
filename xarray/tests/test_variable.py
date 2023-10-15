@@ -617,7 +617,7 @@ class VariableSubclassobjects(ABC):
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
-            orig.copy(data=new_data)  # type: ignore[arg-type]
+            orig.copy(data=new_data)
 
     def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
