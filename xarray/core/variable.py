@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -65,12 +65,11 @@ if TYPE_CHECKING:
         Self,
         T_DuckArray,
     )
-
     from xarray.namedarray._typing import (
-        _DimsLike,
-        duckarray,
-        _DType,
         _AttrsLike,
+        _DimsLike,
+        _DType,
+        duckarray,
     )
     from xarray.namedarray.utils import Default
 

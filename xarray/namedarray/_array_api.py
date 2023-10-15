@@ -49,7 +49,7 @@ def astype(
 
     Examples
     --------
-    >>> narr = NamedArray(("x", ), np.array([1.5, 2.5]))
+    >>> narr = NamedArray(("x",), np.array([1.5, 2.5]))
     >>> astype(narr, np.dtype(int)).data
     array([1, 2])
     """
@@ -84,7 +84,7 @@ def imag(
 
     Examples
     --------
-    >>> narr = NamedArray(("x", ), np.array([1 + 2j, 2 + 4j]))
+    >>> narr = NamedArray(("x",), np.array([1 + 2j, 2 + 4j]))
     >>> imag(narr).data
     array([2., 4.])
     """
@@ -115,7 +115,7 @@ def real(
 
     Examples
     --------
-    >>> narr = NamedArray(("x", ), np.array([1 + 2j, 2 + 4j]))
+    >>> narr = NamedArray(("x",), np.array([1 + 2j, 2 + 4j]))
     >>> real(narr).data
     array([1., 2.])
     """

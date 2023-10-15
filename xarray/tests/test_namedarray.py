@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any, Generic, overload, cast, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
 import pytest
@@ -260,7 +261,6 @@ def test_duck_array_class() -> None:
 
 
 def test_new_namedarray() -> None:
-
     dtype_float = np.dtype(np.float32)
     narr_float: NamedArray[Any, np.dtype[np.float32]]
     narr_float = NamedArray(("x",), np.array([1.5, 3.2], dtype=dtype_float))

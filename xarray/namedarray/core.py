@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import copy
 import math
 import sys
@@ -104,7 +103,6 @@ def _new(
     data: duckarray[Any, _DType] | Default = _default,
     attrs: _AttrsLike | Default = _default,
 ) -> NamedArray[Any, _DType] | NamedArray[Any, _DType_co]:
-
     dims_ = copy.copy(x._dims) if dims is _default else dims
 
     attrs_: Mapping[Any, Any] | None
