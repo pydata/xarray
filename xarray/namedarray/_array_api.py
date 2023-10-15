@@ -22,8 +22,8 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 
 
 def astype(
-    x: NamedArray[Any, Any], dtype: _DType, /, *, copy: bool = True
-) -> NamedArray[Any, _DType]:
+    x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
+) -> NamedArray[_ShapeType, _DType]:
     """
     Copies an array to a specified data type irrespective of Type Promotion Rules rules.
 
