@@ -20,10 +20,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from xarray.namedarray._typing import (
-        _chunkedarray,
         duckarray,
-        _ShapeType_co,
-        _DType_co,
     )
 
     try:

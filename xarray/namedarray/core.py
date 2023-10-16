@@ -26,6 +26,7 @@ from xarray.namedarray._typing import (
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
+    chunkedarray,
 )
 from xarray.namedarray.utils import (
     _default,
