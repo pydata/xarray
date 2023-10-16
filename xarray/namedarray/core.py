@@ -21,7 +21,7 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
-    chunkedarray,
+    _chunkedarray,
     _DType,
     _DType_co,
     _ScalarType_co,
