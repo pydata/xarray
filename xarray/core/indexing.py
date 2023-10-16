@@ -473,16 +473,6 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         # Note this is the base class for all lazy indexing classes
         return np.asarray(self.get_duck_array(), dtype=dtype)
 
-    # def __array_namespace__(self):
-    #     return duck_array_ops.get_array_namespace(self.array)
-
-
-class _ExplicitlyIndexedNDArrayMixinArray(ExplicitlyIndexedNDArrayMixin):
-    __slots__ = ("array",)
-
-    def __init__(self, array):
-        self.array = array
-
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     """Wrap an array, converting tuples into the indicated explicit indexer."""
@@ -508,9 +498,6 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
             # Sometimes explicitly indexed arrays return NumPy arrays or
             # scalars.
             return result
-
-    # def __array_namespace__(self):
-    #     return duck_array_ops.get_array_namespace(self.array)
 
 
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
@@ -696,7 +683,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array)
 
 
-class MemoryCachedArray(_ExplicitlyIndexedNDArrayMixinArray):
+class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array",)
 
     def __init__(self, array):
@@ -1483,7 +1470,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return self.array.transpose(order)
 
 
-class PandasIndexingAdapter(_ExplicitlyIndexedNDArrayMixinArray):
+class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
