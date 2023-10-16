@@ -2787,8 +2787,6 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            data_old = self._data
-
             ndata = self._data
 
             if deep:
