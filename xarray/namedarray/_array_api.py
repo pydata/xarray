@@ -57,9 +57,9 @@ def astype(
         xp = x._data.__array_namespace__()
         if xp == np:
             # np.astype doesn't exist yet:
-            return x._new(x._dims, x.astype(dtype, copy=copy), x._attrs)
+            return x._new(data=x._data.astype(dtype, copy=copy))
 
-        return x._new(x._dims, xp.astype(x, dtype, copy=copy), x._attrs)
+        return x._new(data=xp.astype(x, dtype, copy=copy))
 
     # np.astype doesn't exist yet:
     return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
