@@ -1076,7 +1076,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = indexing.ImplicitToExplicitIndexingAdapter(
+                ndata = indexing.ImplicitToExplicitIndexingAdapter(  # type: ignore[assignment]
                     data_old, indexing.OuterIndexer
                 )
 
