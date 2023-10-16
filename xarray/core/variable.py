@@ -1076,6 +1076,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
+                # TODO: ImplicitToExplicitIndexingAdapter doesn't match the array api:
                 ndata = indexing.ImplicitToExplicitIndexingAdapter(  # type: ignore[assignment]
                     data_old, indexing.OuterIndexer
                 )
@@ -2668,6 +2669,7 @@ class IndexVariable(Variable):
 
     __slots__ = ()
 
+    # TODO: PandasIndexingAdapter doesn't match the array api:
     _data: PandasIndexingAdapter  # type: ignore[assignment]
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):

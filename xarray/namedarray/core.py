@@ -21,6 +21,7 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
+    chunkedarray,
     _DType,
     _DType_co,
     _ScalarType_co,
@@ -28,7 +29,6 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.utils import (
     _default,
-    is_chunked_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
@@ -555,7 +555,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         xarray.unify_chunks
         """
         data = self._data
-        if is_chunked_duck_array(data):
+        if isinstance(data, chunkedarray):
             return data.chunks
         else:
             return None
@@ -579,7 +579,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         xarray.unify_chunks
         """
         data = self._data
-        if is_chunked_duck_array(data):
+        if isinstance(data, chunkedarray):
             return dict(zip(self.dims, data.chunks))
         else:
             return {}

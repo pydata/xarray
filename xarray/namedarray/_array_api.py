@@ -120,9 +120,3 @@ def real(
     """
     xp = _get_data_namespace(x)
     return x._new(data=xp.real(x._data))
-
-
-# if __name__ == "__main__":
-#     import doctest
-
-#     doctest.testmod()

@@ -17,18 +17,21 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
-    from dask.array.core import Array as DaskArray
-    from dask.typing import DaskCollection
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import _ChunkedArray, duckarray
+    from xarray.namedarray._typing import (
+        _chunkedarray,
+        duckarray,
+        _ShapeType_co,
+        _DType_co,
+    )
 
-    # try:
-    #     from dask.array.core import Array as DaskArray
-    #     from dask.typing import DaskCollection
-    # except ImportError:
-    #     DaskArray = NDArray  # type: ignore
-    #     DaskCollection: Any = NDArray  # type: ignore
+    try:
+        from dask.array.core import Array as DaskArray
+        from dask.typing import DaskCollection
+    except ImportError:
+        DaskArray = NDArray  # type: ignore
+        DaskCollection: Any = NDArray  # type: ignore
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -67,23 +70,8 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
-# def is_duck_array(value: _T) -> TypeGuard[_T]:
-#     # if isinstance(value, np.ndarray):
-#     #     return True
-#     return isinstance(value, _array) and (
-#         (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-#         or hasattr(value, "__array_namespace__")
-#     )
-
-
 def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
-
-
-def is_chunked_duck_array(
-    x: duckarray[Any, Any],
-) -> TypeGuard[_ChunkedArray[Any]]:
-    return hasattr(x, "chunks")
 
 
 def to_0d_object_array(
