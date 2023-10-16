@@ -182,7 +182,7 @@ def _create_method(name, npmodule=np):
             and isinstance(values, np.ndarray)
             and nba_func is not None
             # numbagg uses ddof=1 only
-            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
+            and (("var" in name or "std" in name) and kwargs.get("ddof", 1) == 0)
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
