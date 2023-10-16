@@ -2668,7 +2668,7 @@ class IndexVariable(Variable):
 
     __slots__ = ()
 
-    _data: _ExplicitlyIndexedNDArrayMixinArray
+    _data: PandasIndexingAdapter  # type: ignore[assignment]
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
@@ -2812,13 +2812,7 @@ class IndexVariable(Variable):
         """
 
         if data is None:
-            data_old = self._data
-
-            if not isinstance(data_old, indexing.MemoryCachedArray):
-                ndata = data_old
-            else:
-                # don't share caching between copies
-                ndata = indexing.MemoryCachedArray(data_old.array)
+            ndata = self._data
 
             if deep:
                 ndata = copy.deepcopy(ndata, None)
