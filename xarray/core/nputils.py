@@ -13,7 +13,7 @@ except ImportError:
     from numpy import RankWarning
 
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import is_duck_array
+from xarray.namedarray.pycompat import is_duck_array
 
 try:
     import bottleneck as bn

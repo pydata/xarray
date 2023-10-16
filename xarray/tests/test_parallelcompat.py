@@ -5,14 +5,14 @@ from typing import Any
 import numpy as np
 import pytest
 
-from xarray.core.daskmanager import DaskManager
-from xarray.core.parallelcompat import (
+from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
+from xarray.namedarray.daskmanager import DaskManager
+from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
     guess_chunkmanager,
     list_chunkmanagers,
 )
-from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
 from xarray.tests import has_dask, requires_dask
 
 

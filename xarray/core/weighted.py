@@ -9,8 +9,8 @@ from numpy.typing import ArrayLike
 from xarray.core import duck_array_ops, utils
 from xarray.core.alignment import align, broadcast
 from xarray.core.computation import apply_ufunc, dot
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import Dims, T_Xarray
+from xarray.namedarray.pycompat import is_duck_dask_array
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.

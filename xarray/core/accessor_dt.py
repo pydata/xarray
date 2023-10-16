@@ -13,9 +13,9 @@ from xarray.core.common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import T_DataArray
 from xarray.core.variable import IndexVariable
+from xarray.namedarray.pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

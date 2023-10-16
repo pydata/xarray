@@ -17,21 +17,21 @@ import pandas as pd
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.pycompat import (
-    array_type,
-    integer_types,
-    is_duck_array,
-    is_duck_dask_array,
-)
 from xarray.core.types import T_Xarray
 from xarray.core.utils import (
     NDArrayMixin,
-    either_dict_or_kwargs,
     get_valid_numpy_dtype,
     is_scalar,
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.namedarray.pycompat import (
+    array_type,
+    integer_types,
+    is_duck_array,
+    is_duck_dask_array,
+)
+from xarray.namedarray.utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

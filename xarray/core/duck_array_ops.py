@@ -34,9 +34,10 @@ from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defi
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
-from xarray.core.pycompat import array_type, is_duck_dask_array
-from xarray.core.utils import is_duck_array, module_available
+from xarray.core.utils import module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
+from xarray.namedarray.pycompat import array_type, is_duck_dask_array
+from xarray.namedarray.utils import is_duck_array
 
 dask_available = module_available("dask")
 

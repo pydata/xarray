@@ -20,7 +20,7 @@ from xarray.core.ops import (
     IncludeReduceMethods,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import is_duck_array
+from xarray.namedarray.pycompat import is_duck_array
 
 
 class SupportsArithmetic:

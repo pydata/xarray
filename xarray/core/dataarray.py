@@ -55,7 +55,6 @@ from xarray.core.utils import (
     HybridMappingProxy,
     ReprObject,
     _default,
-    either_dict_or_kwargs,
     emit_user_level_warning,
 )
 from xarray.core.variable import (
@@ -64,6 +63,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.utils import either_dict_or_kwargs
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args

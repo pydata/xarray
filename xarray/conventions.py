@@ -14,9 +14,9 @@ from xarray.core.common import (
     _contains_datetime_like_objects,
     contains_cftime_datetimes,
 )
-from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.pycompat import is_duck_dask_array
 
 CF_RELATED_DATA = (
     "bounds",

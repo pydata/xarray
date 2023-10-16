@@ -27,10 +27,10 @@ from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
-    either_dict_or_kwargs,
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.namedarray.utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords

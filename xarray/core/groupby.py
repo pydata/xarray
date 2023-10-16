@@ -33,16 +33,16 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.options import _get_keep_attrs
-from xarray.core.pycompat import integer_types
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
-    either_dict_or_kwargs,
     hashable,
     is_scalar,
     maybe_wrap_array,
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.pycompat import integer_types
+from xarray.namedarray.utils import either_dict_or_kwargs
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:

@@ -63,7 +63,6 @@ from xarray.core.coordinates import (
     assert_coordinate_consistent,
     create_coords_with_default_indexes,
 )
-from xarray.core.daskmanager import DaskManager
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.indexes import (
     Index,
@@ -86,12 +85,6 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import (
-    array_type,
-    is_chunked_array,
-    is_duck_array,
-    is_duck_dask_array,
-)
 from xarray.core.types import (
     QuantileMethods,
     Self,
@@ -108,9 +101,7 @@ from xarray.core.utils import (
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
-    either_dict_or_kwargs,
     infix_dims,
-    is_dict_like,
     is_scalar,
     maybe_wrap_array,
 )
@@ -121,7 +112,15 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.namedarray.pycompat import (
+    array_type,
+    is_chunked_array,
+    is_duck_array,
+    is_duck_dask_array,
+)
+from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 

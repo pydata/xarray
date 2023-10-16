@@ -12,9 +12,9 @@ import numpy as np
 
 from xarray.conventions import cf_encoder
 from xarray.core import indexing
-from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from io import BufferedIOBase

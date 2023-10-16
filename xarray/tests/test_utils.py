@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs, iterate_nested
+from xarray.core.utils import iterate_nested
+from xarray.namedarray.utils import either_dict_or_kwargs
 from xarray.tests import assert_array_equal, requires_dask
 
 

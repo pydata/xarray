@@ -26,23 +26,22 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.pycompat import (
-    integer_types,
-    is_0d_dask_array,
-    is_duck_dask_array,
-)
 from xarray.core.utils import (
     OrderedSet,
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
-    either_dict_or_kwargs,
     ensure_us_time_resolution,
     infix_dims,
-    is_duck_array,
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
+from xarray.namedarray.pycompat import (
+    integer_types,
+    is_0d_dask_array,
+    is_duck_dask_array,
+)
+from xarray.namedarray.utils import either_dict_or_kwargs, is_duck_array
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
