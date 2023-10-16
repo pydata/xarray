@@ -354,81 +354,32 @@
 
    namedarray.core.NamedArray.all
    namedarray.core.NamedArray.any
-   ..
-      namedarray.core.NamedArray.argmax
-      namedarray.core.NamedArray.argmin
-      namedarray.core.NamedArray.argsort
-      namedarray.core.NamedArray.astype
-   ..
-      namedarray.core.NamedArray.broadcast_equals
-      namedarray.core.NamedArray.chunk
-      namedarray.core.NamedArray.clip
-      namedarray.core.NamedArray.coarsen
-      namedarray.core.NamedArray.compute
-      namedarray.core.NamedArray.concat
-      namedarray.core.NamedArray.conj
-      namedarray.core.NamedArray.conjugate
-      namedarray.core.NamedArray.copy
+   namedarray.core.NamedArray.attrs
+   namedarray.core.NamedArray.chunks
+   namedarray.core.NamedArray.chunksizes
+   namedarray.core.NamedArray.copy
    namedarray.core.NamedArray.count
    namedarray.core.NamedArray.cumprod
    namedarray.core.NamedArray.cumsum
-   ..
-      namedarray.core.NamedArray.equals
-      namedarray.core.NamedArray.fillna
+   namedarray.core.NamedArray.data
+   namedarray.core.NamedArray.dims
+   namedarray.core.NamedArray.dtype
    namedarray.core.NamedArray.get_axis_num
-   ..
-      namedarray.core.NamedArray.identical
-   ..
-      namedarray.core.NamedArray.isel
-   ..
-      namedarray.core.NamedArray.isnull
-      namedarray.core.NamedArray.item
-      namedarray.core.NamedArray.load
    namedarray.core.NamedArray.max
    namedarray.core.NamedArray.mean
    namedarray.core.NamedArray.median
    namedarray.core.NamedArray.min
-   ..
-      namedarray.core.NamedArray.no_conflicts
-      namedarray.core.NamedArray.notnull
-      namedarray.core.NamedArray.pad
-   namedarray.core.NamedArray.prod
-   namedarray.core.NamedArray.quantile
-   ..
-      namedarray.core.NamedArray.rank
-   namedarray.core.NamedArray.reduce
-   ..
-      namedarray.core.NamedArray.roll
-      namedarray.core.NamedArray.rolling_window
-      namedarray.core.NamedArray.round
-      namedarray.core.NamedArray.searchsorted
-      namedarray.core.NamedArray.set_dims
-      namedarray.core.NamedArray.shift
-      namedarray.core.NamedArray.squeeze
-      namedarray.core.NamedArray.stack
-   namedarray.core.NamedArray.std
-   namedarray.core.NamedArray.sum
-   ..
-      namedarray.core.NamedArray.to_dict
-      namedarray.core.NamedArray.transpose
-      namedarray.core.NamedArray.unstack
-   namedarray.core.NamedArray.var
-   ..
-      namedarray.core.NamedArray.where
-      namedarray.core.NamedArray.T
-   namedarray.core.NamedArray.attrs
-   namedarray.core.NamedArray.chunks
-   namedarray.core.NamedArray.data
-   namedarray.core.NamedArray.dims
-   namedarray.core.NamedArray.dtype
-   namedarray.core.NamedArray.imag
    namedarray.core.NamedArray.nbytes
    namedarray.core.NamedArray.ndim
-   namedarray.core.NamedArray.real
+   namedarray.core.NamedArray.prod
+   namedarray.core.NamedArray.reduce
    namedarray.core.NamedArray.shape
    namedarray.core.NamedArray.size
    namedarray.core.NamedArray.sizes
-   namedarray.core.NamedArray.values
+   namedarray.core.NamedArray.std
+   namedarray.core.NamedArray.sum
+   namedarray.core.NamedArray.var
+
 
    plot.plot
    plot.line
