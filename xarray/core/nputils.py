@@ -182,8 +182,7 @@ def _create_bottleneck_method(name, npmodule=np):
             and isinstance(values, np.ndarray)
             and nba_func is not None
             # numbagg uses ddof=1 only
-            and "var" not in name
-            and "std" not in name
+            and (("var" in name or "std" not in name) and kwargs.get("ddof", 0) == 1)
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
