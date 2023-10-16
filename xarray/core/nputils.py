@@ -170,7 +170,7 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_bottleneck_method(name, npmodule=np):
+def _create_method(name, npmodule=np):
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
@@ -182,14 +182,15 @@ def _create_bottleneck_method(name, npmodule=np):
             and isinstance(values, np.ndarray)
             and nba_func is not None
             # numbagg uses ddof=1 only
-            and (("var" in name or "std" not in name) and kwargs.get("ddof", 0) == 1)
+            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
         ):
-            # bottleneck does not take care dtype, min_count
+            # numbagg does not take care dtype, ddof
             kwargs.pop("dtype", None)
+            kwargs.pop("ddof", None)
             result = nba_func(values, axis=axis, **kwargs)
         elif (
             _BOTTLENECK_AVAILABLE
@@ -258,14 +259,14 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
-nanmin = _create_bottleneck_method("nanmin")
-nanmax = _create_bottleneck_method("nanmax")
-nanmean = _create_bottleneck_method("nanmean")
-nanmedian = _create_bottleneck_method("nanmedian")
-nanvar = _create_bottleneck_method("nanvar")
-nanstd = _create_bottleneck_method("nanstd")
-nanprod = _create_bottleneck_method("nanprod")
-nancumsum = _create_bottleneck_method("nancumsum")
-nancumprod = _create_bottleneck_method("nancumprod")
-nanargmin = _create_bottleneck_method("nanargmin")
-nanargmax = _create_bottleneck_method("nanargmax")
+nanmin = _create_method("nanmin")
+nanmax = _create_method("nanmax")
+nanmean = _create_method("nanmean")
+nanmedian = _create_method("nanmedian")
+nanvar = _create_method("nanvar")
+nanstd = _create_method("nanstd")
+nanprod = _create_method("nanprod")
+nancumsum = _create_method("nancumsum")
+nancumprod = _create_method("nancumprod")
+nanargmin = _create_method("nanargmin")
+nanargmax = _create_method("nanargmax")
