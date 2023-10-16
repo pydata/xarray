@@ -15,10 +15,6 @@ from typing import (
     overload,
 )
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 import numpy as np
 
@@ -71,10 +67,15 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
+
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
-T_NamedArrayInteger = TypeVar(
-    "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
-)
+    T_NamedArrayInteger = TypeVar(
+        "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
+    )
 
 
 @overload
@@ -277,7 +278,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         The types for each argument cannot change,
         use self._new if that is a risk.
         """
-        return cast(Self, self._new(dims, data, attrs))
+        return cast("Self", self._new(dims, data, attrs))
 
     def _copy(
         self,
@@ -597,7 +598,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            cast(T_NamedArrayInteger, self._new((dim,), nz, _attrs))
+            cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
             for nz, dim in zip(nonzeros, self.dims)
         )
 
