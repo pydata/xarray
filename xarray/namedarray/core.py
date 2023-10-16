@@ -568,7 +568,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
     def __repr__(self) -> str:
         return formatting.array_repr(self)
 
-    def _repr_html_(self):
+    def _repr_html_(self) -> str:
         return formatting_html.array_repr(self)
 
     def _as_sparse(
