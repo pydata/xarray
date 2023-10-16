@@ -901,20 +901,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if data is None:
             data_old = self._data
 
-            if isinstance(data_old, indexing.MemoryCachedArray):
+            if not isinstance(data_old, indexing.MemoryCachedArray):
+                ndata = data_old
+            else:
                 # don't share caching between copies
                 ndata = indexing.MemoryCachedArray(data_old.array)
-            else:
-                ndata = data_old
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+            if self.shape != ndata.shape:
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -1043,7 +1043,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if chunkmanager.is_chunked_array(data_old):
             data_chunked = chunkmanager.rechunk(data_old, chunks)
         else:
-            if isinstance(data_old, indexing.ExplicitlyIndexed):
+            if not isinstance(data_old, indexing.ExplicitlyIndexed):
+                ndata = data_old
+            else:
                 # Unambiguously handle array storage backends (like NetCDF4 and h5py)
                 # that can't handle general array indexing. For example, in netCDF4 you
                 # can do "outer" indexing along two dimensions independent, which works
@@ -1055,8 +1057,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 ndata = indexing.ImplicitToExplicitIndexingAdapter(
                     data_old, indexing.OuterIndexer
                 )
-            else:
-                ndata = data_old
 
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
@@ -1504,7 +1504,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
-        return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
+        return type(self)(
+            new_dims, new_data, self._attrs, self._encoding, fastpath=True
+        )
 
     def stack(self, dimensions=None, **dimensions_kwargs):
         """
@@ -2400,6 +2402,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
+    @property
+    def real(self):
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._replace(data=self.data.real)
+
+    @property
+    def imag(self):
+        """
+        The imaginary part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
+        return self._replace(data=self.data.imag)
+
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 
@@ -2738,7 +2762,7 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep: bool = True, data: ArrayLike | None = None):
+    def copy(self, deep: bool = True, data: T_DuckArray | ArrayLike | None = None):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of
@@ -2763,7 +2787,17 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            ndata = self._data.copy(deep=deep)
+            data_old = self._data
+
+            if not isinstance(data_old, indexing.MemoryCachedArray):
+                ndata = data_old
+            else:
+                # don't share caching between copies
+                ndata = indexing.MemoryCachedArray(data_old.array)
+
+            if deep:
+                ndata = copy.deepcopy(ndata, None)
+
         else:
             ndata = as_compatible_data(data)
             if self.shape != ndata.shape:

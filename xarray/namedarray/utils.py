@@ -4,6 +4,7 @@ import importlib
 import sys
 from collections.abc import Hashable
 from enum import Enum
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
 
 import numpy as np
@@ -15,9 +16,9 @@ if TYPE_CHECKING:
         from typing_extensions import TypeGuard
 
     if sys.version_info >= (3, 11):
-        from typing import Self
+        pass
     else:
-        from typing_extensions import Self
+        pass
 
     try:
         from dask.array import Array as DaskArray
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
-# T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
+T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
 
 
 class _Array(Protocol[T_DType_co]):
@@ -39,17 +40,6 @@ class _Array(Protocol[T_DType_co]):
 
     @property
     def shape(self) -> tuple[int, ...]:
-        ...
-
-    @property
-    def real(self) -> Self:
-        ...
-
-    @property
-    def imag(self) -> Self:
-        ...
-
-    def astype(self, dtype: np.typing.DTypeLike) -> Self:
         ...
 
     # TODO: numpy doesn't use any inputs:
@@ -161,3 +151,30 @@ class ReprObject:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
+
+
+# %% Array API functions
+def get_array_namespace(x: _Array[Any]) -> ModuleType:
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()  # type: ignore[no-any-return]
+    else:
+        return np
+
+
+def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
+    if hasattr(x, "__array_namespace__"):
+        xp = x.__array_namespace__()
+        return xp.astype(x, dtype, copy=copy)  # type: ignore[no-any-return]
+
+    # np.astype doesn't exist yet:
+    return x.astype(dtype, copy=copy)  # type: ignore[no-any-return, attr-defined]
+
+
+def imag(x: _Array[Any], /) -> _Array[Any]:
+    xp = get_array_namespace(x)
+    return xp.imag(x)  # type: ignore[no-any-return]
+
+
+def real(x: _Array[Any], /) -> _Array[Any]:
+    xp = get_array_namespace(x)
+    return xp.real(x)  # type: ignore[no-any-return]

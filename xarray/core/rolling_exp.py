@@ -8,8 +8,15 @@ import numpy as np
 from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
-from xarray.core.pycompat import is_duck_dask_array
-from xarray.core.types import T_DataWithCoords, T_DuckArray
+from xarray.core.types import T_DataWithCoords
+
+try:
+    import numbagg
+    from numbagg import move_exp_nanmean, move_exp_nansum
+
+    has_numbagg = numbagg.__version__
+except ImportError:
+    has_numbagg = False
 
 
 def _get_alpha(
@@ -23,26 +30,6 @@ def _get_alpha(
 
     com = _get_center_of_mass(com, span, halflife, alpha)
     return 1 / (1 + com)
-
-
-def move_exp_nanmean(array: T_DuckArray, *, axis: int, alpha: float) -> np.ndarray:
-    if is_duck_dask_array(array):
-        raise TypeError("rolling_exp is not currently support for dask-like arrays")
-    import numbagg
-
-    # No longer needed in numbag > 0.2.0; remove in time
-    if axis == ():
-        return array.astype(np.float64)
-    else:
-        return numbagg.move_exp_nanmean(array, axis=axis, alpha=alpha)
-
-
-def move_exp_nansum(array: T_DuckArray, *, axis: int, alpha: float) -> np.ndarray:
-    if is_duck_dask_array(array):
-        raise TypeError("rolling_exp is not currently supported for dask-like arrays")
-    import numbagg
-
-    return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 
 
 def _get_center_of_mass(
@@ -110,11 +97,31 @@ class RollingExp(Generic[T_DataWithCoords]):
         obj: T_DataWithCoords,
         windows: Mapping[Any, int | float],
         window_type: str = "span",
+        min_weight: float = 0.0,
     ):
+        if has_numbagg is False:
+            raise ImportError(
+                "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
+            )
+        elif has_numbagg < "0.2.1":
+            raise ImportError(
+                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {has_numbagg} is installed"
+            )
+        elif has_numbagg < "0.3.1" and min_weight > 0:
+            raise ImportError(
+                f"numbagg >= 0.3.1 is required for `min_weight > 0` but currently version {has_numbagg} is installed"
+            )
+
         self.obj: T_DataWithCoords = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
+        self.min_weight = min_weight
+        # Don't pass min_weight=0 so we can support older versions of numbagg
+        kwargs = dict(alpha=self.alpha, axis=-1)
+        if min_weight > 0:
+            kwargs["min_weight"] = min_weight
+        self.kwargs = kwargs
 
     def mean(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
         """
@@ -145,7 +152,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             move_exp_nanmean,
             self.obj,
             input_core_dims=[[self.dim]],
-            kwargs=dict(alpha=self.alpha, axis=-1),
+            kwargs=self.kwargs,
             output_core_dims=[[self.dim]],
             keep_attrs=keep_attrs,
             on_missing_core_dim="copy",
@@ -181,7 +188,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             move_exp_nansum,
             self.obj,
             input_core_dims=[[self.dim]],
-            kwargs=dict(alpha=self.alpha, axis=-1),
+            kwargs=self.kwargs,
             output_core_dims=[[self.dim]],
             keep_attrs=keep_attrs,
             on_missing_core_dim="copy",
