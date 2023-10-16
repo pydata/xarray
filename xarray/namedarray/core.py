@@ -24,6 +24,7 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
+    from xarray.core.types import Dims
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
 
     # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[T_DuckArray]")
     DimsInput = Union[str, Iterable[Hashable]]
-    Dims = tuple[Hashable, ...]
+    DimsProperty = tuple[Hashable, ...]
     AttrsInput = Union[Mapping[Any, Any], None]
 
 
@@ -87,7 +88,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
     __slots__ = ("_data", "_dims", "_attrs")
 
     _data: T_DuckArray
-    _dims: Dims
+    _dims: DimsProperty
     _attrs: dict[Any, Any] | None
 
     def __init__(
@@ -197,7 +198,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
             return self.size * self.dtype.itemsize
 
     @property
-    def dims(self) -> Dims:
+    def dims(self) -> DimsProperty:
         """Tuple of dimension names with which this NamedArray is associated."""
         return self._dims
 
@@ -205,7 +206,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
     def dims(self, value: DimsInput) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims: DimsInput) -> Dims:
+    def _parse_dimensions(self, dims: DimsInput) -> DimsProperty:
         dims = (dims,) if isinstance(dims, str) else tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
