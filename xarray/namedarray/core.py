@@ -21,11 +21,11 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
-    chunkedarray,
     _DType,
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
+    chunkedarray,
 )
 from xarray.namedarray.utils import (
     _default,
