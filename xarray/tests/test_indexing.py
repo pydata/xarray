@@ -307,6 +307,7 @@ class TestLazyArray:
                         assert expected.shape == actual.shape
                         assert_array_equal(expected, actual)
                         assert isinstance(actual._data, indexing.LazilyIndexedArray)
+                        assert isinstance(v_lazy._data, indexing.LazilyIndexedArray)
 
                         # make sure actual.key is appropriate type
                         if all(
