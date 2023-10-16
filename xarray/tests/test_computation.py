@@ -283,7 +283,7 @@ def test_apply_missing_dims() -> None:
 
     # `raise` — should raise on a missing dim
     with pytest.raises(ValueError):
-        add_one(ds, core_dims=[["y"]], on_missing_core_dim="raise"),
+        add_one(ds, core_dims=[["y"]], on_missing_core_dim="raise")
 
     # `drop` — should drop the var with the missing dim
     assert_identical(
@@ -1249,7 +1249,7 @@ def test_apply_dask_parallelized_two_args() -> None:
         assert actual.data.chunks == array.chunks
         assert_identical(data_array, actual)
 
-    check(data_array, 0),
+    check(data_array, 0)
     check(0, data_array)
     check(data_array, xr.DataArray(0))
     check(data_array, 0 * data_array)
