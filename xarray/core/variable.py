@@ -29,7 +29,6 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import (
     integer_types,
     is_0d_dask_array,
-    is_chunked_array,
     is_duck_dask_array,
 )
 from xarray.core.utils import (
@@ -44,7 +43,6 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
-from xarray.namedarray.parallelcompat import get_chunked_array_type
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -475,54 +473,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             keep_attrs=keep_attrs,
             dask="allowed",
         )
-
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
-
-        Normally, it should not be necessary to call this method in user code,
-        because all xarray functions should either work on deferred data or
-        load data automatically.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
-
-        See Also
-        --------
-        dask.array.compute
-        """
-        if is_chunked_array(self._data):
-            chunkmanager = get_chunked_array_type(self._data)
-            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
-            self._data = as_compatible_data(loaded_data)
-        elif isinstance(self._data, indexing.ExplicitlyIndexed):
-            self._data = self._data.get_duck_array()
-        elif not is_duck_array(self._data):
-            self._data = np.asarray(self._data)
-        return self
-
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
-
-        Normally, it should not be necessary to call this method in user code,
-        because all xarray functions should either work on deferred data or
-        load data automatically.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
-
-        See Also
-        --------
-        dask.array.compute
-        """
-        new = self.copy(deep=False)
-        return new.load(**kwargs)
 
     def _dask_finalize(self, results, array_func, *args, **kwargs):
         data = array_func(results, *args, **kwargs)
