@@ -67,7 +67,7 @@ To register a new entrypoint you need to add an entry to the ``setup.cfg`` like 
 
     [options.entry_points]
     xarray.chunkmanagers =
-        dask = xarray.core.daskmanager:DaskManager
+        dask = xarray.namedarray.daskmanager:DaskManager
 
 See also `cubed-xarray <https://github.com/xarray-contrib/cubed-xarray>`_ for another example.
 
