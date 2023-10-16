@@ -14,6 +14,17 @@ that was more flexible than a single `xarray.Dataset` object.
 The initial motivation was to represent netCDF files / Zarr stores with multiple nested groups in a single in-memory object,
 but `datatree.DataTree` objects have many other uses.
 
+### Installation
+You can install datatree via pip:
+```shell
+pip install xarray-datatree
+```
+
+or via conda-forge
+```shell
+conda install -c conda-forge xarray-datatree
+```
+
 ### Why Datatree?
 
 You might want to use datatree for:
