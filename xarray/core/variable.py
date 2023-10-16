@@ -934,9 +934,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+            if self.shape != ndata.shape:
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
