@@ -23,7 +23,6 @@ from xarray.core.indexing import (
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
-    _ExplicitlyIndexedNDArrayMixinArray,
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
