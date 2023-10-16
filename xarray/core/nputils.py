@@ -183,6 +183,7 @@ def _create_bottleneck_method(name, npmodule=np):
             and nba_func is not None
             # numbagg uses ddof=1 only
             and "var" not in name
+            and "std" not in name
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
