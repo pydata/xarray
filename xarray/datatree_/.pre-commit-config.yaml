@@ -15,7 +15,7 @@ repos:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 23.9.1
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
@@ -23,7 +23,7 @@ repos:
     hooks:
       - id: blackdoc
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
       - id: flake8
   # - repo: https://github.com/Carreau/velin
@@ -32,7 +32,7 @@ repos:
   #     - id: velin
   #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.1
+    rev: v1.5.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -45,7 +45,7 @@ repos:
             types-pytz,
             # Dependencies that are typed
             numpy,
-            typing-extensions==3.10.0.0,
+            typing-extensions>=4.1.0,
           ]
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade
