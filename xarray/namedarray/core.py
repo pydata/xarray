@@ -15,7 +15,6 @@ from typing import (
     overload,
 )
 
-
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
