@@ -21,11 +21,11 @@ import numpy as np
 from xarray.core import dtypes
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
+    _chunkedarray,
     _DType,
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
-    chunkedarray,
 )
 from xarray.namedarray.utils import (
     _default,
@@ -555,7 +555,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         xarray.unify_chunks
         """
         data = self._data
-        if isinstance(data, chunkedarray):
+        if isinstance(data, _chunkedarray):
             return data.chunks
         else:
             return None
@@ -579,7 +579,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         xarray.unify_chunks
         """
         data = self._data
-        if isinstance(data, chunkedarray):
+        if isinstance(data, _chunkedarray):
             return dict(zip(self.dims, data.chunks))
         else:
             return {}
