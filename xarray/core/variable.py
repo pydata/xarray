@@ -66,7 +66,6 @@ if TYPE_CHECKING:
         T_DuckArray,
     )
 
-
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "
     "This behavior can eventually be relaxed in xarray, as it is an artifact from "
