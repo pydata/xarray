@@ -18,11 +18,20 @@ from xarray.core.pycompat import is_duck_array
 try:
     import bottleneck as bn
 
-    _USE_BOTTLENECK = True
+    _BOTTLENECK_AVAILABLE = True
 except ImportError:
     # use numpy methods instead
     bn = np
-    _USE_BOTTLENECK = False
+    _BOTTLENECK_AVAILABLE = False
+
+try:
+    import numbagg
+
+    _NUMBAGG_AVAILABLE = True
+except ImportError:
+    # use numpy methods instead
+    numbagg = np
+    _NUMBAGG_AVAILABLE = False
 
 
 def _select_along_axis(values, idx, axis):
@@ -165,9 +174,25 @@ def _create_bottleneck_method(name, npmodule=np):
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
+        nba_func = getattr(numbagg, name, None)
 
         if (
-            _USE_BOTTLENECK
+            _NUMBAGG_AVAILABLE
+            and OPTIONS["use_numbagg"]
+            and isinstance(values, np.ndarray)
+            and nba_func is not None
+            # numbagg uses ddof=1 only
+            and "var" not in name
+            # TODO: bool?
+            and values.dtype.kind in "uifc"
+            # and values.dtype.isnative
+            and (dtype is None or np.dtype(dtype) == values.dtype)
+        ):
+            # bottleneck does not take care dtype, min_count
+            kwargs.pop("dtype", None)
+            result = nba_func(values, axis=axis, **kwargs)
+        elif (
+            _BOTTLENECK_AVAILABLE
             and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
