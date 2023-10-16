@@ -93,7 +93,6 @@ if TYPE_CHECKING:
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
     from xarray.core.groupby import DataArrayGroupBy
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
     from xarray.core.rolling import DataArrayCoarsen, DataArrayRolling
     from xarray.core.types import (
@@ -116,6 +115,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DataArrayWeighted
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 

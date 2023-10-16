@@ -26,7 +26,6 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
     array_type,
     integer_types,
@@ -46,6 +45,7 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -55,7 +55,6 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.types import (
         Dims,
         ErrorOptionsWithWarn,
@@ -65,6 +64,7 @@ if TYPE_CHECKING:
         Self,
         T_DuckArray,
     )
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "

@@ -20,7 +20,7 @@ from typing import (
 
 import numpy as np
 
-from xarray.core.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import is_chunked_array
 
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 

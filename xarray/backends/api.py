@@ -37,8 +37,8 @@ from xarray.core.daskmanager import DaskManager
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
-from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.utils import is_remote_uri
+from xarray.namedarray.parallelcompat import guess_chunkmanager
 
 if TYPE_CHECKING:
     try:

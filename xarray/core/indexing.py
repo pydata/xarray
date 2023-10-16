@@ -17,7 +17,6 @@ import pandas as pd
 from xarray.core import duck_array_ops
 from xarray.core.nputils import NumpyVIndexAdapter
 from xarray.core.options import OPTIONS
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import (
     array_type,
     integer_types,
@@ -32,6 +31,7 @@ from xarray.core.utils import (
     is_scalar,
     to_0d_array,
 )
+from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

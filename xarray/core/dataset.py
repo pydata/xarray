@@ -86,7 +86,6 @@ from xarray.core.merge import (
 )
 from xarray.core.missing import get_clean_interp_index
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
     array_type,
     is_chunked_array,
@@ -122,6 +121,7 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
@@ -133,7 +133,6 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.groupby import DatasetGroupBy
     from xarray.core.merge import CoercibleMapping, CoercibleValue, _MergeResult
-    from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DatasetResample
     from xarray.core.rolling import DatasetCoarsen, DatasetRolling
     from xarray.core.types import (
@@ -159,6 +158,7 @@ if TYPE_CHECKING:
         T_Xarray,
     )
     from xarray.core.weighted import DatasetWeighted
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     try:
         from dask.delayed import Delayed

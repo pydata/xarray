@@ -10,9 +10,9 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, indexing
-from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 
 if TYPE_CHECKING:
     T_VarTuple = tuple[tuple[Hashable, ...], Any, dict, dict]

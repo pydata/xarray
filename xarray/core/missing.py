@@ -15,10 +15,10 @@ from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
 from xarray.core.variable import Variable, broadcast_variables
+from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray

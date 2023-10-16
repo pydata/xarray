@@ -19,7 +19,6 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import (
     FrozenDict,
@@ -27,6 +26,7 @@ from xarray.core.utils import (
     close_on_error,
 )
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import guess_chunkmanager
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
