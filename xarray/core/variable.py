@@ -927,7 +927,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 ndata = data_old
             else:
                 # don't share caching between copies
-                ndata = indexing.MemoryCachedArray(data_old.array)
+                # TODO: MemoryCachedArray doesn't match the array api:
+                ndata = indexing.MemoryCachedArray(data_old.array)  # type: ignore[assignment]
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
