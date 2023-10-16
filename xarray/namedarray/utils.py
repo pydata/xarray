@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import importlib
 import sys
-from collections.abc import Hashable
+from collections.abc import Hashable, Mapping
 from enum import Enum
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, cast
 
 import numpy as np
 
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         DaskArray = np.ndarray  # type: ignore
         DaskCollection: Any = np.ndarray  # type: ignore
 
+T = TypeVar("T")
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
@@ -178,3 +179,90 @@ def imag(x: _Array[Any], /) -> _Array[Any]:
 def real(x: _Array[Any], /) -> _Array[Any]:
     xp = get_array_namespace(x)
     return xp.real(x)  # type: ignore[no-any-return]
+
+
+# It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
+def is_dict_like(value: Any) -> TypeGuard[Mapping]:
+    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+
+
+def either_dict_or_kwargs(
+    pos_kwargs: Mapping[Any, T] | None,
+    kw_kwargs: Mapping[str, T],
+    func_name: str,
+) -> Mapping[Hashable, T]:
+    if pos_kwargs is None or pos_kwargs == {}:
+        # Need an explicit cast to appease mypy due to invariance; see
+        # https://github.com/python/mypy/issues/6228
+        return cast(Mapping[Hashable, T], kw_kwargs)
+
+    if not is_dict_like(pos_kwargs):
+        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
+    if kw_kwargs:
+        raise ValueError(
+            f"cannot specify both keyword and positional arguments to .{func_name}"
+        )
+    return pos_kwargs
+
+
+def consolidate_dask_from_array_kwargs(
+    from_array_kwargs: dict,
+    name: str | None = None,
+    lock: bool | None = None,
+    inline_array: bool | None = None,
+) -> dict:
+    """
+    Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
+
+    Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
+    """
+
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="name",
+        passed_kwarg_value=name,
+        default=None,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="lock",
+        passed_kwarg_value=lock,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+    from_array_kwargs = _resolve_doubly_passed_kwarg(
+        from_array_kwargs,
+        kwarg_name="inline_array",
+        passed_kwarg_value=inline_array,
+        default=False,
+        err_msg_dict_name="from_array_kwargs",
+    )
+
+    return from_array_kwargs
+
+
+def _resolve_doubly_passed_kwarg(
+    kwargs_dict: dict,
+    kwarg_name: str,
+    passed_kwarg_value: str | bool | None,
+    default: bool | None,
+    err_msg_dict_name: str,
+) -> dict:
+    # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
+    if kwarg_name in kwargs_dict and passed_kwarg_value is None:
+        pass
+    # if passed explicitly but not in kwargs_dict then use that
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is not None:
+        kwargs_dict[kwarg_name] = passed_kwarg_value
+    # if in neither then use default
+    elif kwarg_name not in kwargs_dict and passed_kwarg_value is None:
+        kwargs_dict[kwarg_name] = default
+    # if in both then raise
+    else:
+        raise ValueError(
+            f"argument {kwarg_name} cannot be passed both as a keyword argument and within "
+            f"the {err_msg_dict_name} dictionary"
+        )
+
+    return kwargs_dict

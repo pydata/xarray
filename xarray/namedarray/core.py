@@ -2,26 +2,37 @@ from __future__ import annotations
 
 import copy
 import math
+import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union, cast
 
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes
-from xarray.core.indexing import ExplicitlyIndexed
+from xarray.core.indexing import (
+    ExplicitlyIndexed,
+    ImplicitToExplicitIndexingAdapter,
+    OuterIndexer,
+)
+from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
+from xarray.namedarray.pycompat import array_type
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
     _default,
     astype,
+    consolidate_dask_from_array_kwargs,
+    either_dict_or_kwargs,
     is_chunked_duck_array,
+    is_dict_like,
     is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
 
 if TYPE_CHECKING:
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
@@ -446,12 +457,153 @@ class NamedArray(Generic[T_DuckArray]):
         """
         return self._copy(deep=deep, data=data)
 
-    def _nonzero(self) -> tuple[Self, ...]:
-        """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
-        # TODO we should replace dask's native nonzero
-        # after https://github.com/dask/dask/issues/1076 is implemented.
-        nonzeros = np.nonzero(self.data)
-        return tuple(type(self)((dim,), nz) for nz, dim in zip(nonzeros, self.dims))
+    def chunk(
+        self,
+        chunks: (
+            int
+            | Literal["auto"]
+            | tuple[int, ...]
+            | tuple[tuple[int, ...], ...]
+            | Mapping[Any, None | int | tuple[int, ...]]
+        ) = {},
+        name: str | None = None,
+        lock: bool | None = None,
+        inline_array: bool | None = None,
+        chunked_array_type: str | ChunkManagerEntrypoint | None = None,
+        from_array_kwargs=None,
+        **chunks_kwargs: Any,
+    ) -> Self:
+        """Coerce this array's data into a dask array with the given chunks.
+
+        If this variable is a non-dask array, it will be converted to dask
+        array. If it's a dask array, it will be rechunked to the given chunk
+        sizes.
+
+        If neither chunks is not provided for one or more dimensions, chunk
+        sizes along that dimension will not be updated; non-dask arrays will be
+        converted into dask arrays with a single block.
+
+        Parameters
+        ----------
+        chunks : int, tuple or dict, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+            ``{'x': 5, 'y': 5}``.
+        name : str, optional
+            Used to generate the name for this array in the internal dask
+            graph. Does not need not be unique.
+        lock : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        inline_array : bool, default: False
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        chunked_array_type: str, optional
+            Which chunked array type to coerce this datasets' arrays to.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntrypoint` system.
+            Experimental API that should not be relied upon.
+        from_array_kwargs: dict, optional
+            Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
+            chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
+            For example, with dask as the default chunked array type, this method would pass additional kwargs
+            to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
+
+        Returns
+        -------
+        chunked : xarray.Variable
+
+        See Also
+        --------
+        Variable.chunks
+        Variable.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
+        """
+
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+            )
+            chunks = {}
+
+        if isinstance(chunks, (float, str, int, tuple, list)):
+            # TODO we shouldn't assume here that other chunkmanagers can handle these types
+            # TODO should we call normalize_chunks here?
+            pass  # dask.array.from_array can handle these directly
+        else:
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        if is_dict_like(chunks):
+            chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
+
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        # TODO deprecate passing these dask-specific arguments explicitly. In future just pass everything via from_array_kwargs
+        _from_array_kwargs = consolidate_dask_from_array_kwargs(
+            from_array_kwargs,
+            name=name,
+            lock=lock,
+            inline_array=inline_array,
+        )
+
+        data_old = self._data
+        if chunkmanager.is_chunked_array(data_old):
+            data_chunked = chunkmanager.rechunk(data_old, chunks)
+        else:
+            if not isinstance(data_old, ExplicitlyIndexed):
+                ndata = data_old
+            else:
+                # Unambiguously handle array storage backends (like NetCDF4 and h5py)
+                # that can't handle general array indexing. For example, in netCDF4 you
+                # can do "outer" indexing along two dimensions independent, which works
+                # differently from how NumPy handles it.
+                # da.from_array works by using lazy indexing with a tuple of slices.
+                # Using OuterIndexer is a pragmatic choice: dask does not yet handle
+                # different indexing types in an explicit way:
+                # https://github.com/dask/dask/issues/2883
+                ndata = ImplicitToExplicitIndexingAdapter(data_old, OuterIndexer)
+
+            if is_dict_like(chunks):
+                chunks = tuple(chunks.get(n, s) for n, s in enumerate(ndata.shape))
+
+            data_chunked = chunkmanager.from_array(
+                ndata,
+                chunks,
+                **_from_array_kwargs,
+            )
+
+        return self._replace(data=data_chunked)
+
+    def to_numpy(self) -> np.ndarray:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        data = self.data
+
+        # TODO first attempt to call .to_numpy() once some libraries implement it
+        if hasattr(data, "chunks"):
+            chunkmanager = get_chunked_array_type(data)
+            data, *_ = chunkmanager.compute(data)
+        if isinstance(data, array_type("cupy")):
+            data = data.get()
+        # pint has to be imported dynamically as pint imports xarray
+        if isinstance(data, array_type("pint")):
+            data = data.magnitude
+        if isinstance(data, array_type("sparse")):
+            data = data.todense()
+        data = np.asarray(data)
+
+        return data
+
+    def as_numpy(self) -> Self:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.to_numpy())
 
     def _as_sparse(
         self,
@@ -486,3 +638,10 @@ class NamedArray(Generic[T_DuckArray]):
         if hasattr(self._data, "todense"):
             return self._replace(data=self._data.todense())
         return self.copy(deep=False)
+
+    def _nonzero(self) -> tuple[Self, ...]:
+        """Equivalent to numpy's nonzero but returns a tuple of NamedArrays."""
+        # TODO we should replace dask's native nonzero
+        # after https://github.com/dask/dask/issues/1076 is implemented.
+        nonzeros = np.nonzero(self.data)
+        return tuple(type(self)((dim,), nz) for nz, dim in zip(nonzeros, self.dims))
