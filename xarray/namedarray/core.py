@@ -15,6 +15,11 @@ from typing import (
     overload,
 )
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
@@ -66,15 +71,10 @@ if TYPE_CHECKING:
         PostComputeCallable: Any  # type: ignore[no-redef]
         PostPersistCallable: Any  # type: ignore[no-redef]
 
-    if sys.version_info >= (3, 11):
-        from typing import Self
-    else:
-        from typing_extensions import Self
-
     T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any]")
-    T_NamedArrayInteger = TypeVar(
-        "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
-    )
+T_NamedArrayInteger = TypeVar(
+    "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
+)
 
 
 @overload
