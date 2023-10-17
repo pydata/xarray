@@ -192,7 +192,7 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
 
     Parameters
     ----------
-    dims : str or iterable of hashable 
+    dims : str or iterable of hashable
         Name(s) of the dimension(s).
     data : array-like or duck-array
         The actual data that populates the array. Should match the
