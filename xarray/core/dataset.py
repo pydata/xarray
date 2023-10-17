@@ -6280,7 +6280,7 @@ class Dataset(
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))  # type: ignore[attr-defined]
+                count += np.asarray(array.count(dims))
                 size += math.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
