@@ -10383,6 +10383,6 @@ class Dataset(
                 v.attrs = {}
             # re-wrap the index object in new coordinate variables
             new_idx_variables.update(idx.create_variables(temp_idx_variables))
-        self = self.assign(**new_idx_variables)
+        self = self.assign(new_idx_variables)
 
         return self

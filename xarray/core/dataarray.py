@@ -11,6 +11,7 @@ from typing import (
     Generic,
     Literal,
     NoReturn,
+    cast,
     overload,
 )
 
@@ -7166,4 +7167,6 @@ class DataArray(
         -------
         DataArray
         """
-        return self._to_temp_dataset().drop_attrs(deep=deep).to_array()
+        return (
+            self._to_temp_dataset().drop_attrs(deep=deep).pipe(self._from_temp_dataset)
+        )
