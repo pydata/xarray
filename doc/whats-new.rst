@@ -75,6 +75,11 @@ Bug fixes
   (:issue:`8290`, :pull:`8297`).
   By `Oliver McCormack <https://github.com/olimcc>`_.
 
+- Fix to_zarr ending in a ReadOnlyError when consolidated metadata was used and the
+  write_empty_chunks was provided.
+  (:issue:`8323`, :pull:`8326`)
+  By `Matthijs Amesz <https://github.com/Metamess>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~

@@ -676,7 +676,7 @@ class ZarrStore(AbstractWritableDataStore):
                 # and append_dim.
                 if self._write_empty is not None:
                     zarr_array = zarr.open(
-                        store=self.zarr_group.store,
+                        store=self.zarr_group.chunk_store,
                         path=f"{self.zarr_group.name}/{name}",
                         write_empty_chunks=self._write_empty,
                     )

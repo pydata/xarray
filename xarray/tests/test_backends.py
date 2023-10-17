@@ -2459,7 +2459,8 @@ class ZarrBase(CFEncodedBase):
     @pytest.mark.parametrize("consolidated", [False, True, None])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
-    def test_write_region(self, consolidated, compute, use_dask) -> None:
+    @pytest.mark.parametrize("write_empty", [False, True, None])
+    def test_write_region(self, consolidated, compute, use_dask, write_empty) -> None:
         if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
         if consolidated and self.zarr_version > 2:
@@ -2491,6 +2492,7 @@ class ZarrBase(CFEncodedBase):
                     store,
                     region=region,
                     consolidated=consolidated,
+                    write_empty_chunks=write_empty,
                     **self.version_kwargs,
                 )
             with xr.open_zarr(
@@ -2772,9 +2774,12 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
-    @pytest.mark.parametrize("write_empty", [True, False])
-    def test_write_empty(self, write_empty: bool) -> None:
-        if not write_empty:
+    @pytest.mark.parametrize("consolidated", [True, False, None])
+    @pytest.mark.parametrize("write_empty", [True, False, None])
+    def test_write_empty(
+        self, consolidated: bool | None, write_empty: bool | None
+    ) -> None:
+        if write_empty is False:
             expected = ["0.1.0", "1.1.0"]
         else:
             expected = [
