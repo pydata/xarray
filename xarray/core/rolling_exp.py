@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any, Generic
 
 import numpy as np
+from packaging.version import Version
 
 from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
@@ -14,9 +15,9 @@ try:
     import numbagg
     from numbagg import move_exp_nanmean, move_exp_nansum
 
-    has_numbagg = numbagg.__version__
+    _NUMBAGG_VERSION: Version | None = Version(numbagg.__version__)
 except ImportError:
-    has_numbagg = False
+    _NUMBAGG_VERSION = None
 
 
 def _get_alpha(
@@ -99,17 +100,17 @@ class RollingExp(Generic[T_DataWithCoords]):
         window_type: str = "span",
         min_weight: float = 0.0,
     ):
-        if has_numbagg is False:
+        if _NUMBAGG_VERSION is None:
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
-        elif has_numbagg < "0.2.1":
+        elif _NUMBAGG_VERSION < Version("0.2.1"):
             raise ImportError(
-                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {has_numbagg} is installed"
+                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {_NUMBAGG_VERSION} is installed"
             )
-        elif has_numbagg < "0.3.1" and min_weight > 0:
+        elif _NUMBAGG_VERSION < Version("0.3.1") and min_weight > 0:
             raise ImportError(
-                f"numbagg >= 0.3.1 is required for `min_weight > 0` but currently version {has_numbagg} is installed"
+                f"numbagg >= 0.3.1 is required for `min_weight > 0` but currently version {_NUMBAGG_VERSION} is installed"
             )
 
         self.obj: T_DataWithCoords = obj
