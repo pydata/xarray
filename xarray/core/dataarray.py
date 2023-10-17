@@ -914,9 +914,15 @@ class DataArray(
         self.variable.encoding = dict(value)
 
     def reset_encoding(self) -> Self:
+        warnings.warn(
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+        )
+        return self.drop_encoding()
+
+    def drop_encoding(self) -> Self:
         """Return a new DataArray without encoding on the array or any attached
         coords."""
-        ds = self._to_temp_dataset().reset_encoding()
+        ds = self._to_temp_dataset().drop_encoding()
         return self._from_temp_dataset(ds)
 
     @property

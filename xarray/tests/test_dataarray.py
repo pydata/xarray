@@ -287,7 +287,7 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         array = self.mda
         encoding = {"scale_factor": 10}
         array.encoding = encoding
@@ -296,7 +296,7 @@ class TestDataArray:
         assert array.encoding == encoding
         assert array["x"].encoding == encoding
 
-        actual = array.reset_encoding()
+        actual = array.drop_encoding()
 
         # did not modify in place
         assert array.encoding == encoding
