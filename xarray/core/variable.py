@@ -385,7 +385,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if data is _default:
             return type(self)(dims_, copy.copy(self._data), attrs_)
         else:
-            # cls_ = cast("type[Variable[Any, _DType]]", type(self))
             cls_ = type(self)
             return cls_(dims_, data, attrs_)
 
