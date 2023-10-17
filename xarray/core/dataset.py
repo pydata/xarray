@@ -10339,9 +10339,14 @@ class Dataset(
             **indexer_kwargs,
         )
 
-    def drop_attrs(self) -> Self:
+    def drop_attrs(self, deep: bool = True) -> Self:
         """
         Removes all attributes from the Dataset and its variables.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            Removes attributes from all variables.
 
         Returns
         -------
@@ -10349,6 +10354,9 @@ class Dataset(
         """
         # Remove attributes from the dataset
         self = self._replace(attrs={})
+
+        if not deep:
+            return self
 
         # Remove attributes from each variable in the dataset
         for var in self.variables:
@@ -10359,7 +10367,6 @@ class Dataset(
                 self[var].attrs = {}
 
         new_idx_variables = {}
-
         # Not sure this is the most elegant way of doing this, but it works.
         # (Should we have a more general "map over all variables, including
         # indexes" approach?)

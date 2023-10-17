@@ -4375,13 +4375,16 @@ class TestDataset:
             pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["d", "e"]), "z"
         )
         ds = Dataset(dict(var1=var), coords=dict(y=idx, z=mx)).assign_attrs(a=1, b=2)
+        assert ds.attrs != {}
+        assert ds["var1"].attrs != {}
+        assert ds["y"].attrs != {}
         assert ds.coords["y"].attrs != {}
 
         original = ds.copy(deep=True)
         result = ds.drop_attrs()
 
         assert result.attrs == {}
-        assert result["x"].attrs == {}
+        assert result["var1"].attrs == {}
         assert result["y"].attrs == {}
         assert list(result.data_vars) == list(ds.data_vars)
         assert list(result.coords) == list(ds.coords)
@@ -4391,6 +4394,14 @@ class TestDataset:
         # Specifically test that the attrs on the coords are still there. (The index
         # can't currently contain `attrs`, so we can't test those.)
         assert ds.coords["y"].attrs != {}
+
+        # Test for deep=False
+        result_shallow = ds.drop_attrs(deep=False)
+        assert result_shallow.attrs == {}
+        assert result_shallow["var1"].attrs != {}
+        assert result_shallow["y"].attrs != {}
+        assert list(result.data_vars) == list(ds.data_vars)
+        assert list(result.coords) == list(ds.coords)
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()

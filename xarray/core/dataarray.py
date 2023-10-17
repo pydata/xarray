@@ -7147,16 +7147,17 @@ class DataArray(
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
 
-    def drop_attrs(self) -> Self:
+    def drop_attrs(self, deep: bool = True) -> Self:
         """
         Removes all attributes from the DataArray.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            Removes attributes from coordinates.
 
         Returns
         -------
         DataArray
         """
-        self = self.copy()
-
-        self.attrs = {}
-
-        return self
+        return self._to_temp_dataset().drop_attrs(deep=deep).to_array()
