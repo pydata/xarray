@@ -120,7 +120,11 @@ from xarray.namedarray.pycompat import (
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like
+from xarray.namedarray.utils import (
+    consolidate_dask_from_array_kwargs,
+    either_dict_or_kwargs,
+    is_dict_like,
+)
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 
@@ -311,7 +315,7 @@ def _maybe_chunk(
             token2 = tokenize(name, token if token else var._data, chunks)
             name2 = f"{name_prefix}{name}-{token2}"
 
-            from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
+            from_array_kwargs = consolidate_dask_from_array_kwargs(
                 from_array_kwargs,
                 name=name2,
                 lock=lock,
