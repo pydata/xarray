@@ -15,9 +15,9 @@ from xarray.core.indexing import (
     ImplicitToExplicitIndexingAdapter,
     OuterIndexer,
 )
+from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array
-from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
@@ -33,8 +33,8 @@ from xarray.namedarray.utils import (
 )
 
 if TYPE_CHECKING:
-    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.types import Dims
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
@@ -678,7 +678,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
     def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
-      
+
     def reduce(
         self,
         func: Callable[..., Any],
