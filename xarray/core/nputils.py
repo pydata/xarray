@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+from packaging.version import Version
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -27,11 +28,11 @@ except ImportError:
 try:
     import numbagg
 
-    _NUMBAGG_AVAILABLE = True
+    _HAS_NUMBAGG = Version(numbagg.__version__) >= Version("0.5.0")
 except ImportError:
     # use numpy methods instead
     numbagg = np
-    _NUMBAGG_AVAILABLE = False
+    _HAS_NUMBAGG = False
 
 
 def _select_along_axis(values, idx, axis):
@@ -177,12 +178,12 @@ def _create_method(name, npmodule=np):
         nba_func = getattr(numbagg, name, None)
 
         if (
-            _NUMBAGG_AVAILABLE
+            _HAS_NUMBAGG
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
             and nba_func is not None
-            # numbagg uses ddof=1 only
-            and (("var" in name or "std" in name) and kwargs.get("ddof", 1) == 0)
+            # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
+            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
             # TODO: bool?
             and values.dtype.kind in "uifc"
             # and values.dtype.isnative
