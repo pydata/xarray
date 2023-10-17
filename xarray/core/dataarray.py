@@ -2100,7 +2100,7 @@ class DataArray(
         DataArray.reindex_like
         align
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,

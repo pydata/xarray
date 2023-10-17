@@ -131,14 +131,14 @@ def register_dummy_chunkmanager(monkeypatch):
     This preserves the presence of the existing DaskManager, so a test that relies on this and DaskManager both being
     returned from list_chunkmanagers() at once would still work.
 
-    The monkeypatching changes the behavior of list_chunkmanagers when called inside xarray.core.parallelcompat,
+    The monkeypatching changes the behavior of list_chunkmanagers when called inside xarray.namedarray.parallelcompat,
     but not when called from this tests file.
     """
     # Should include DaskManager iff dask is available to be imported
     preregistered_chunkmanagers = list_chunkmanagers()
 
     monkeypatch.setattr(
-        "xarray.core.parallelcompat.list_chunkmanagers",
+        "xarray.namedarray.parallelcompat.list_chunkmanagers",
         lambda: {"dummy": DummyChunkManager()} | preregistered_chunkmanagers,
     )
     yield

@@ -3689,7 +3689,7 @@ class Dataset(
         original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
@@ -3712,7 +3712,7 @@ class Dataset(
         """
         Same as reindex but supports sparse option.
         """
-        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
             indexers=indexers,
