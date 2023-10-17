@@ -103,6 +103,25 @@ def _new(
     data: duckarray[_ShapeType, _DType] | Default = _default,
     attrs: _AttrsLike | Default = _default,
 ) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, _DType_co]:
+    """
+    Create a new array with new typing information.
+
+    Parameters
+    ----------
+    x : NamedArray
+        Array to create a new array from
+    dims : Iterable of Hashable, optional
+        Name(s) of the dimension(s).
+        Will copy the dims from x by default.
+    data : duckarray, optional
+        The actual data that populates the array. Should match the
+        shape specified by `dims`.
+        Will copy the data from x by default.
+    attrs : dict, optional
+        A dictionary containing any additional information or
+        attributes you want to store with the array.
+        Will copy the attrs from x by default.
+    """
     dims_ = copy.copy(x._dims) if dims is _default else dims
 
     attrs_: Mapping[Any, Any] | None
@@ -173,12 +192,12 @@ def from_array(
 
     if isinstance(data, _arrayfunction_or_api):
         return NamedArray(dims, data, attrs)
-    else:
-        if isinstance(data, tuple):
-            return NamedArray(dims, to_0d_object_array(data), attrs)
-        else:
-            # validate whether the data is valid data types.
-            return NamedArray(dims, np.asarray(data), attrs)
+
+    if isinstance(data, tuple):
+        return NamedArray(dims, to_0d_object_array(data), attrs)
+
+    # validate whether the data is valid data types.
+    return NamedArray(dims, np.asarray(data), attrs)
 
 
 class NamedArray(Generic[_ShapeType_co, _DType_co]):
@@ -232,8 +251,8 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         if NamedArray in cls.__bases__ and (cls._new == NamedArray._new):
-            # Type hinting does not work for subclasses unless _new is overriden with
-            # the correct class.
+            # Type hinting does not work for subclasses unless _new is
+            # overriden with the correct class.
             raise TypeError(
                 "Subclasses of `NamedArray` must override the `_new` method."
             )
@@ -263,6 +282,27 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         data: duckarray[Any, _DType] | Default = _default,
         attrs: _AttrsLike | Default = _default,
     ) -> NamedArray[_ShapeType, _DType] | NamedArray[_ShapeType_co, _DType_co]:
+        """
+        Create a new array with new typing information.
+
+        _new has to be reimplemented each time NamedArray is subclassed,
+        otherwise type hints will not be correct. The same is likely true
+        for methods that relied on _new.
+
+        Parameters
+        ----------
+        dims : Iterable of Hashable, optional
+            Name(s) of the dimension(s).
+            Will copy the dims from x by default.
+        data : duckarray, optional
+            The actual data that populates the array. Should match the
+            shape specified by `dims`.
+            Will copy the data from x by default.
+        attrs : dict, optional
+            A dictionary containing any additional information or
+            attributes you want to store with the array.
+            Will copy the attrs from x by default.
+        """
         return _new(self, dims, data, attrs)
 
     def _replace(
@@ -272,10 +312,24 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
         attrs: _AttrsLike | Default = _default,
     ) -> Self:
         """
-        Create a new Named array with dims, data or attrs.
+        Create a new array with the same typing information.
 
         The types for each argument cannot change,
         use self._new if that is a risk.
+
+        Parameters
+        ----------
+        dims : Iterable of Hashable, optional
+            Name(s) of the dimension(s).
+            Will copy the dims from x by default.
+        data : duckarray, optional
+            The actual data that populates the array. Should match the
+            shape specified by `dims`.
+            Will copy the data from x by default.
+        attrs : dict, optional
+            A dictionary containing any additional information or
+            attributes you want to store with the array.
+            Will copy the attrs from x by default.
         """
         return cast("Self", self._new(dims, data, attrs))
 
@@ -382,14 +436,12 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
     @property
     def shape(self) -> _Shape:
         """
-
+        Get the shape of the array.
 
         Returns
         -------
         shape : tuple of ints
-                Tuple of array dimensions.
-
-
+            Tuple of array dimensions.
 
         See Also
         --------
