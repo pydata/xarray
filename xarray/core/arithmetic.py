@@ -15,7 +15,6 @@ from xarray.core._typed_ops import (
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.ops import (
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     IncludeReduceMethods,
 )
@@ -99,8 +98,6 @@ class SupportsArithmetic:
 
 class VariableArithmetic(
     ImplementsArrayReduce,
-    IncludeReduceMethods,
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     VariableOpsMixin,

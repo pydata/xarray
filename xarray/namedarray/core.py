@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union, cast
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
-from xarray.core import dtypes
+from xarray.core import dtypes, formatting, formatting_html
 from xarray.core.indexing import (
     ExplicitlyIndexed,
     ImplicitToExplicitIndexingAdapter,
@@ -17,6 +17,7 @@ from xarray.core.indexing import (
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray.utils import (
     Default,
     T_DuckArray,
@@ -33,6 +34,7 @@ from xarray.namedarray.utils import (
 
 if TYPE_CHECKING:
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
+    from xarray.core.types import Dims
     from xarray.namedarray.utils import Self  # type: ignore[attr-defined]
 
     try:
@@ -52,7 +54,7 @@ if TYPE_CHECKING:
 
     # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[T_DuckArray]")
     DimsInput = Union[str, Iterable[Hashable]]
-    Dims = tuple[Hashable, ...]
+    DimsProperty = tuple[Hashable, ...]
     AttrsInput = Union[Mapping[Any, Any], None]
 
 
@@ -87,7 +89,7 @@ def as_compatible_data(
     return cast(T_DuckArray, np.asarray(data))
 
 
-class NamedArray(Generic[T_DuckArray]):
+class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
@@ -96,7 +98,7 @@ class NamedArray(Generic[T_DuckArray]):
     __slots__ = ("_data", "_dims", "_attrs")
 
     _data: T_DuckArray
-    _dims: Dims
+    _dims: DimsProperty
     _attrs: dict[Any, Any] | None
 
     def __init__(
@@ -206,7 +208,7 @@ class NamedArray(Generic[T_DuckArray]):
             return self.size * self.dtype.itemsize
 
     @property
-    def dims(self) -> Dims:
+    def dims(self) -> DimsProperty:
         """Tuple of dimension names with which this NamedArray is associated."""
         return self._dims
 
@@ -214,7 +216,7 @@ class NamedArray(Generic[T_DuckArray]):
     def dims(self, value: DimsInput) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims: DimsInput) -> Dims:
+    def _parse_dimensions(self, dims: DimsInput) -> DimsProperty:
         dims = (dims,) if isinstance(dims, str) else tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
@@ -385,6 +387,30 @@ class NamedArray(Generic[T_DuckArray]):
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
+
+    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+        """Return axis number(s) corresponding to dimension(s) in this array.
+
+        Parameters
+        ----------
+        dim : str or iterable of str
+            Dimension name(s) for which to lookup axes.
+
+        Returns
+        -------
+        int or tuple of int
+            Axis number or numbers corresponding to the given dimensions.
+        """
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
+            return tuple(self._get_axis_num(d) for d in dim)
+        else:
+            return self._get_axis_num(dim)
+
+    def _get_axis_num(self: Any, dim: Hashable) -> int:
+        try:
+            return self.dims.index(dim)  # type: ignore[no-any-return]
+        except ValueError:
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
@@ -652,6 +678,104 @@ class NamedArray(Generic[T_DuckArray]):
     def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
+      
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        axis: int | Sequence[int] | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> Self:
+        """Reduce this array by applying `func` along some dimension(s).
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `func(x, axis=axis, **kwargs)` to return the result of reducing an
+            np.ndarray over an integer valued axis.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
+        axis : int or Sequence of int, optional
+            Axis(es) over which to apply `func`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            the reduction is calculated over the flattened array (by calling
+            `func(x)` without an axis argument).
+        keepdims : bool, default: False
+            If True, the dimensions which are reduced are left in the result
+            as dimensions of size one
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Array
+            Array with summarized data and the indicated dimension(s)
+            removed.
+        """
+        if dim == ...:
+            dim = None
+        if dim is not None and axis is not None:
+            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
+
+        if dim is not None:
+            axis = self.get_axis_num(dim)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
+            )
+            if axis is not None:
+                if isinstance(axis, tuple) and len(axis) == 1:
+                    # unpack axis for the benefit of functions
+                    # like np.argmin which can't handle tuple arguments
+                    axis = axis[0]
+                data = func(self.data, axis=axis, **kwargs)
+            else:
+                data = func(self.data, **kwargs)
+
+        if getattr(data, "shape", ()) == self.shape:
+            dims = self.dims
+        else:
+            removed_axes: Iterable[int]
+            if axis is None:
+                removed_axes = range(self.ndim)
+            else:
+                removed_axes = np.atleast_1d(axis) % self.ndim
+            if keepdims:
+                # Insert np.newaxis for removed dims
+                slices = tuple(
+                    np.newaxis if i in removed_axes else slice(None, None)
+                    for i in range(self.ndim)
+                )
+                if getattr(data, "shape", None) is None:
+                    # Reduce has produced a scalar value, not an array-like
+                    data = np.asanyarray(data)[slices]
+                else:
+                    data = data[slices]
+                dims = self.dims
+            else:
+                dims = tuple(
+                    adim for n, adim in enumerate(self.dims) if n not in removed_axes
+                )
+
+        # Return NamedArray to handle IndexVariable when data is nD
+        return NamedArray(dims, data, attrs=self._attrs)
+
+    def _nonzero(self) -> tuple[Self, ...]:
+        """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
+        # TODO we should replace dask's native nonzero
+        # after https://github.com/dask/dask/issues/1076 is implemented.
+        nonzeros = np.nonzero(self.data)
+        return tuple(type(self)((dim,), nz) for nz, dim in zip(nonzeros, self.dims))
+
+    def __repr__(self) -> str:
+        return formatting.array_repr(self)
+
+    def _repr_html_(self) -> str:
+        return formatting_html.array_repr(self)
 
     def _as_sparse(
         self,
