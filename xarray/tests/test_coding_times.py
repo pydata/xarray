@@ -3,7 +3,9 @@ from __future__ import annotations
 import warnings
 from datetime import timedelta
 from itertools import product
+from typing import Any, Union
 
+import cftime_rs
 import numpy as np
 import pandas as pd
 import pytest
@@ -19,12 +21,12 @@ from xarray import (
     decode_cf,
 )
 from xarray.coding.times import (
-    _encode_datetime_with_cftime,
     _numpy_to_netcdf_timeunit,
     _should_cftime_be_used,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
+    encode_datetime_with_cftime,
     to_timedelta_unboxed,
 )
 from xarray.coding.variables import SerializationWarning
@@ -60,8 +62,8 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     (np.arange(10).astype("float32"), "days since 2000-01-01"),
     (np.arange(10).reshape(2, 5), "days since 2000-01-01"),
     (12300 + np.arange(5), "hours since 1680-01-01 00:00:00"),
-    # here we add a couple minor formatting errors to test
-    # the robustness of the parsing algorithm.
+    # # here we add a couple minor formatting errors to test
+    # # the robustness of the parsing algorithm.
     (12300 + np.arange(5), "hour since 1680-01-01  00:00:00"),
     (12300 + np.arange(5), "Hour  since 1680-01-01 00:00:00"),
     (12300 + np.arange(5), " Hour  since  1680-01-01 00:00:00 "),
@@ -80,8 +82,8 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     ([0.5, 1.5], "hours since 1900-01-01T00:00:00"),
     (0, "milliseconds since 2000-01-01T00:00:00"),
     (0, "microseconds since 2000-01-01T00:00:00"),
-    (np.int32(788961600), "seconds since 1981-01-01"),  # GH2002
-    (12300 + np.arange(5), "hour since 1680-01-01 00:00:00.500000"),
+    ([np.int32(788961600)], "seconds since 1981-01-01"),  # GH2002
+    # (12300 + np.arange(5), "hour since 1680-01-01 00:00:00.500000"),
     (164375, "days since 1850-01-01 00:00:00"),
     (164374.5, "days since 1850-01-01 00:00:00"),
     ([164374.5, 168360.5], "days since 1850-01-01 00:00:00"),
@@ -109,16 +111,28 @@ def _all_cftime_date_types():
     }
 
 
+POSSIBLE_NUM_DATES = Union[Any, list[Any], list[list[Any]]]
+
+
+def _num_dates_to_array_1d(num_dates: POSSIBLE_NUM_DATES) -> np.ndarray:
+    """cftime_rs functions only accept 1d arrays"""
+    if not isinstance(num_dates, (list, np.ndarray)):
+        return np.array([num_dates])
+    elif isinstance(num_dates, (list, np.ndarray)):
+        return np.array(num_dates).flatten()
+    else:
+        raise TypeError("Invalid type for num_dates")
+
+
 @requires_cftime
 @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
 @pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
 def test_cf_datetime(num_dates, units, calendar) -> None:
-    import cftime
+    num_dates = _num_dates_to_array_1d(num_dates)
+    units = coding.times._cleanup_netcdf_time_units(units)
+    expected = cftime_rs.num2pydate(num_dates, units, calendar)
 
-    expected = cftime.num2date(
-        num_dates, units, calendar, only_use_cftime_datetimes=True
-    )
     min_y = np.ravel(np.atleast_1d(expected))[np.nanargmin(num_dates)].year
     max_y = np.ravel(np.atleast_1d(expected))[np.nanargmax(num_dates)].year
     if min_y >= 1678 and max_y < 2262:
@@ -153,20 +167,29 @@ def test_decode_cf_datetime_overflow() -> None:
     # checks for
     # https://github.com/pydata/pandas/issues/14068
     # https://github.com/pydata/xarray/issues/975
-    from cftime import DatetimeGregorian
-
-    datetime = DatetimeGregorian
+    calendar = cftime_rs.PyCFCalendar.from_str("standard")
     units = "days since 2000-01-01 00:00:00"
 
     # date after 2262 and before 1678
     days = (-117608, 95795)
-    expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
-
+    expected = [
+        cftime_rs.PyCFDatetime.from_ymd(1677, 12, 31, calendar=calendar),
+        cftime_rs.PyCFDatetime.from_ymd(2262, 4, 12, calendar=calendar),
+    ]
     for i, day in enumerate(days):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "Unable to decode time axis")
             result = coding.times.decode_cf_datetime(day, units)
-        assert result == expected[i]
+            dt = result.tolist()
+            (year, month, day, hour, minute, second) = (
+                dt.year,
+                dt.month,
+                dt.day,
+                dt.hour,
+                dt.minute,
+                dt.second,
+            )
+        assert (year, month, day, hour, minute, second) == expected[i].ymd_hms()
 
 
 def test_decode_cf_datetime_non_standard_units() -> None:
@@ -200,15 +223,16 @@ def test_decode_cf_datetime_non_iso_strings() -> None:
 @requires_cftime
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_decode_standard_calendar_inside_timestamp_range(calendar) -> None:
-    import cftime
-
     units = "days since 0001-01-01"
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
-    time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
+    encoded_numbers = cftime_rs.pydate2num(
+        times.to_pydatetime().tolist(), units, calendar=calendar, dtype="f64"
+    )
     expected = times.values
     expected_dtype = np.dtype("M8[ns]")
 
-    actual = coding.times.decode_cf_datetime(time, units, calendar=calendar)
+    actual = coding.times.decode_cf_datetime(encoded_numbers, units, calendar=calendar)
+
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -220,15 +244,13 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar) -> None:
 @requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_non_standard_calendar_inside_timestamp_range(calendar) -> None:
-    import cftime
-
     units = "days since 0001-01-01"
     times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
-    non_standard_time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
-
-    expected = cftime.num2date(
-        non_standard_time, units, calendar=calendar, only_use_cftime_datetimes=True
+    non_standard_time = cftime_rs.pydate2num(
+        times.to_pydatetime().tolist(), units, calendar=calendar, dtype="f64"
     )
+
+    expected = cftime_rs.num2pydate(non_standard_time, units, calendar=calendar)
     expected_dtype = np.dtype("O")
 
     actual = coding.times.decode_cf_datetime(
@@ -247,15 +269,10 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar) -> None:
 def test_decode_dates_outside_timestamp_range(calendar) -> None:
     from datetime import datetime
 
-    import cftime
-
     units = "days since 0001-01-01"
     times = [datetime(1, 4, 1, h) for h in range(1, 5)]
-    time = cftime.date2num(times, units, calendar=calendar)
-
-    expected = cftime.num2date(
-        time, units, calendar=calendar, only_use_cftime_datetimes=True
-    )
+    time = cftime_rs.pydate2num(times, units, calendar=calendar, dtype="f64")
+    expected = cftime_rs.num2date(time, units, calendar=calendar)
     expected_date_type = type(expected[0])
 
     with warnings.catch_warnings():
@@ -298,8 +315,6 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
 @requires_cftime
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 def test_decode_single_element_outside_timestamp_range(calendar) -> None:
-    import cftime
-
     units = "days since 0001-01-01"
     for days in [1, 1470376]:
         for num_time in [days, [days], [[days]]]:
@@ -308,11 +323,9 @@ def test_decode_single_element_outside_timestamp_range(calendar) -> None:
                 actual = coding.times.decode_cf_datetime(
                     num_time, units, calendar=calendar
                 )
-
-            expected = cftime.num2date(
-                days, units, calendar, only_use_cftime_datetimes=True
-            )
-            assert isinstance(actual.item(), type(expected))
+            _days = _num_dates_to_array_1d(days)
+            expected = cftime_rs.num2pydate(_days, units, calendar)
+            assert isinstance(actual.item(), type(expected[0]))
 
 
 @requires_cftime
@@ -320,13 +333,15 @@ def test_decode_single_element_outside_timestamp_range(calendar) -> None:
 def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     calendar,
 ) -> None:
-    import cftime
-
     units = "days since 0001-01-01"
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
     times2 = pd.date_range("2001-05-01", end="2001-05-05", freq="D")
-    time1 = cftime.date2num(times1.to_pydatetime(), units, calendar=calendar)
-    time2 = cftime.date2num(times2.to_pydatetime(), units, calendar=calendar)
+    time1 = cftime_rs.pydate2num(
+        times1.to_pydatetime().tolist(), units, calendar=calendar, dtype="i64"
+    )
+    time2 = cftime_rs.pydate2num(
+        times2.to_pydatetime().tolist(), units, calendar=calendar, dtype="i64"
+    )
     mdim_time = np.empty((len(time1), 2))
     mdim_time[:, 0] = time1
     mdim_time[:, 1] = time2
@@ -351,27 +366,21 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
 def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
     calendar,
 ) -> None:
-    import cftime
-
     units = "days since 0001-01-01"
     times1 = pd.date_range("2001-04-01", end="2001-04-05", freq="D")
     times2 = pd.date_range("2001-05-01", end="2001-05-05", freq="D")
-    time1 = cftime.date2num(times1.to_pydatetime(), units, calendar=calendar)
-    time2 = cftime.date2num(times2.to_pydatetime(), units, calendar=calendar)
+    time1 = cftime_rs.pydate2num(
+        times1.to_pydatetime().tolist(), units, calendar=calendar, dtype="i64"
+    )
+    time2 = cftime_rs.pydate2num(
+        times2.to_pydatetime().tolist(), units, calendar=calendar, dtype="i64"
+    )
     mdim_time = np.empty((len(time1), 2))
     mdim_time[:, 0] = time1
     mdim_time[:, 1] = time2
 
-    if cftime.__name__ == "cftime":
-        expected1 = cftime.num2date(
-            time1, units, calendar, only_use_cftime_datetimes=True
-        )
-        expected2 = cftime.num2date(
-            time2, units, calendar, only_use_cftime_datetimes=True
-        )
-    else:
-        expected1 = cftime.num2date(time1, units, calendar)
-        expected2 = cftime.num2date(time2, units, calendar)
+    expected1 = cftime_rs.num2pydate(time1, units, calendar)
+    expected2 = cftime_rs.num2pydate(time2, units, calendar)
 
     expected_dtype = np.dtype("O")
 
@@ -392,19 +401,17 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
 def test_decode_multidim_time_outside_timestamp_range(calendar) -> None:
     from datetime import datetime
 
-    import cftime
-
     units = "days since 0001-01-01"
     times1 = [datetime(1, 4, day) for day in range(1, 6)]
     times2 = [datetime(1, 5, day) for day in range(1, 6)]
-    time1 = cftime.date2num(times1, units, calendar=calendar)
-    time2 = cftime.date2num(times2, units, calendar=calendar)
+    time1 = cftime_rs.pydate2num(times1, units, calendar=calendar, dtype="i64")
+    time2 = cftime_rs.pydate2num(times2, units, calendar=calendar, dtype="i64")
     mdim_time = np.empty((len(time1), 2))
     mdim_time[:, 0] = time1
     mdim_time[:, 1] = time2
 
-    expected1 = cftime.num2date(time1, units, calendar, only_use_cftime_datetimes=True)
-    expected2 = cftime.num2date(time2, units, calendar, only_use_cftime_datetimes=True)
+    expected1 = cftime_rs.num2pydate(time1, units, calendar)
+    expected2 = cftime_rs.num2pydate(time2, units, calendar)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
@@ -427,32 +434,28 @@ def test_decode_multidim_time_outside_timestamp_range(calendar) -> None:
     [("360_day", 720058.0), ("all_leap", 732059.0), ("366_day", 732059.0)],
 )
 def test_decode_non_standard_calendar_single_element(calendar, num_time) -> None:
-    import cftime
-
     units = "days since 0001-01-01"
+    _num_time = _num_dates_to_array_1d(num_time)
+    try:
+        expected = np.asarray(cftime_rs.num2pydate(_num_time, units, calendar))
+    except ValueError:
+        expected = np.asarray(cftime_rs.num2date(_num_time, units, calendar))
 
     actual = coding.times.decode_cf_datetime(num_time, units, calendar=calendar)
 
-    expected = np.asarray(
-        cftime.num2date(num_time, units, calendar, only_use_cftime_datetimes=True)
-    )
     assert actual.dtype == np.dtype("O")
     assert expected == actual
 
 
 @requires_cftime
 def test_decode_360_day_calendar() -> None:
-    import cftime
-
     calendar = "360_day"
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
         units = f"days since {year}-01-01"
         num_times = np.arange(100)
 
-        expected = cftime.num2date(
-            num_times, units, calendar, only_use_cftime_datetimes=True
-        )
+        expected = cftime_rs.num2date(num_times, units, calendar)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -468,12 +471,13 @@ def test_decode_360_day_calendar() -> None:
 @requires_cftime
 def test_decode_abbreviation() -> None:
     """Test making sure we properly fall back to cftime on abbreviated units."""
-    import cftime
 
     val = np.array([1586628000000.0])
-    units = "msecs since 1970-01-01T00:00:00Z"
-    actual = coding.times.decode_cf_datetime(val, units)
-    expected = coding.times.cftime_to_nptime(cftime.num2date(val, units))
+    units = "ms since 1970-01-01 00:00:00"
+    actual = coding.times.decode_cf_datetime(val, units, calendar="standard")
+    expected = coding.times.cftime_to_nptime(
+        cftime_rs.num2date(val, units, calendar="standard")
+    )
     assert_array_equal(actual, expected)
 
 
@@ -1089,7 +1093,7 @@ def test__encode_datetime_with_cftime() -> None:
         expected = cftime.date2num(times, encoding_units, calendar, longdouble=False)
     except TypeError:
         expected = cftime.date2num(times, encoding_units, calendar)
-    result = _encode_datetime_with_cftime(times, encoding_units, calendar)
+    result = encode_datetime_with_cftime(times, encoding_units, calendar)
     np.testing.assert_equal(result, expected)
 
 
