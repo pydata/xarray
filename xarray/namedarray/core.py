@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar, Union, cast, overload
 
 import numpy as np
 
@@ -40,8 +40,6 @@ if TYPE_CHECKING:
         PostPersistCallable: Any  # type: ignore[no-redef]
 
     # T_NamedArray = TypeVar("T_NamedArray", bound="NamedArray[T_DuckArray]")
-    DimsInput = Union[str, Iterable[Hashable]]
-    Dims = tuple[Hashable, ...]
     AttrsInput = Union[Mapping[Any, Any], None]
 
 
@@ -76,7 +74,10 @@ def as_compatible_data(
     return cast(T_DuckArray, np.asarray(data))
 
 
-class NamedArray(Generic[T_DuckArray]):
+T_Dim = TypeVar("T_Dim", bound=Hashable)
+
+
+class NamedArray(Generic[T_Dim, T_DuckArray]):
 
     """A lightweight wrapper around duck arrays with named dimensions and attributes which describe a single Array.
     Numeric operations on this object implement array broadcasting and dimension alignment based on dimension names,
@@ -85,20 +86,60 @@ class NamedArray(Generic[T_DuckArray]):
     __slots__ = ("_data", "_dims", "_attrs")
 
     _data: T_DuckArray
-    _dims: Dims
+    _dims: tuple[T_Dim, ...]
     _attrs: dict[Any, Any] | None
+
+    @overload
+    def __init__(
+        self: NamedArray[str, T_DuckArray],
+        dims: str,
+        data: T_DuckArray,
+        attrs: AttrsInput = None,
+        fastpath: bool = False,
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: NamedArray[str, np.ndarray[Any, np.dtype[np.generic]]],
+        dims: str,
+        data: np.typing.ArrayLike,
+        attrs: AttrsInput = None,
+        fastpath: bool = False,
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: NamedArray[T_Dim, T_DuckArray],
+        dims: Iterable[T_Dim],
+        data: T_DuckArray,
+        attrs: AttrsInput = None,
+        fastpath: bool = False,
+    ) -> None:
+        ...
+
+    @overload
+    def __init__(
+        self: NamedArray[T_Dim, np.ndarray[Any, np.dtype[np.generic]]],
+        dims: Iterable[T_Dim],
+        data: np.typing.ArrayLike,
+        attrs: AttrsInput = None,
+        fastpath: bool = False,
+    ) -> None:
+        ...
 
     def __init__(
         self,
-        dims: DimsInput,
+        dims: str | Iterable[T_Dim],
         data: T_DuckArray | np.typing.ArrayLike,
         attrs: AttrsInput = None,
         fastpath: bool = False,
-    ):
+    ) -> None:
         """
         Parameters
         ----------
-        dims : str or iterable of str
+        dims : str or iterable of hashable
             Name(s) of the dimension(s).
         data : T_DuckArray or np.typing.ArrayLike
             The actual data that populates the array. Should match the shape specified by `dims`.
@@ -195,22 +236,22 @@ class NamedArray(Generic[T_DuckArray]):
             return self.size * self.dtype.itemsize
 
     @property
-    def dims(self) -> Dims:
+    def dims(self) -> tuple[T_Dim, ...]:
         """Tuple of dimension names with which this NamedArray is associated."""
         return self._dims
 
     @dims.setter
-    def dims(self, value: DimsInput) -> None:
+    def dims(self, value: str | Iterable[T_Dim]) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims: DimsInput) -> Dims:
-        dims = (dims,) if isinstance(dims, str) else tuple(dims)
-        if len(dims) != self.ndim:
+    def _parse_dimensions(self, dims: str | Iterable[T_Dim]) -> tuple[T_Dim, ...]:
+        pdims = (dims,) if isinstance(dims, str) else tuple(dims)
+        if len(pdims) != self.ndim:
             raise ValueError(
-                f"dimensions {dims} must have the same length as the "
+                f"dimensions {pdims} must have the same length as the "
                 f"number of data dimensions, ndim={self.ndim}"
             )
-        return dims
+        return pdims  # type: ignore[return-value]
 
     @property
     def attrs(self) -> dict[Any, Any]:
@@ -376,7 +417,7 @@ class NamedArray(Generic[T_DuckArray]):
 
     def _replace(
         self,
-        dims: DimsInput | Default = _default,
+        dims: str | Iterable[T_Dim] | Default = _default,
         data: T_DuckArray | np.typing.ArrayLike | Default = _default,
         attrs: AttrsInput | Default = _default,
     ) -> Self:
