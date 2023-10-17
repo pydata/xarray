@@ -14,7 +14,7 @@ from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from xarray.namedarray.pycompat import is_duck_dask_array
-from xarray.namedarray.utils import either_dict_or_kwargs
+from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like
 
 try:
     import bottleneck
@@ -209,7 +209,7 @@ class Rolling(Generic[T_Xarray]):
         allow_default: bool = True,
         allow_allsame: bool = True,
     ) -> list[_T]:
-        if utils.is_dict_like(arg):
+        if is_dict_like(arg):
             if allow_default:
                 return [arg.get(d, default) for d in self.dim]
             for d in self.dim:
@@ -865,7 +865,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
                 f"dimensions {tuple(self.obj.dims)}"
             )
 
-        if utils.is_dict_like(coord_func):
+        if is_dict_like(coord_func):
             coord_func_map = coord_func
         else:
             coord_func_map = {d: coord_func for d in self.obj.dims}

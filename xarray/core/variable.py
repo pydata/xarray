@@ -41,7 +41,7 @@ from xarray.namedarray.pycompat import (
     is_0d_dask_array,
     is_duck_dask_array,
 )
-from xarray.namedarray.utils import either_dict_or_kwargs, is_duck_array
+from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like, is_duck_array
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -535,7 +535,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return item
 
     def _item_key_to_tuple(self, key):
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             return tuple(key.get(dim, slice(None)) for dim in self.dims)
         else:
             return key
@@ -1250,7 +1250,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if isinstance(dims, str):
             dims = [dims]
 
-        if shape is None and utils.is_dict_like(dims):
+        if shape is None and is_dict_like(dims):
             shape = dims.values()
 
         missing_dims = set(self.dims) - set(dims)
@@ -2068,10 +2068,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Construct a reshaped-array for coarsen
         """
-        if not utils.is_dict_like(boundary):
+        if not is_dict_like(boundary):
             boundary = {d: boundary for d in windows.keys()}
 
-        if not utils.is_dict_like(side):
+        if not is_dict_like(side):
             side = {d: side for d in windows.keys()}
 
         # remove unrelated dimensions

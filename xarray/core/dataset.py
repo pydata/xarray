@@ -494,12 +494,12 @@ class _LocIndexer(Generic[T_Dataset]):
         self.dataset = dataset
 
     def __getitem__(self, key: Mapping[Any, Any]) -> T_Dataset:
-        if not utils.is_dict_like(key):
+        if not is_dict_like(key):
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
 
     def __setitem__(self, key, value) -> None:
-        if not utils.is_dict_like(key):
+        if not is_dict_like(key):
             raise TypeError(
                 "can only set locations defined by dictionaries from Dataset.loc."
                 f" Got: {key}"
@@ -1341,7 +1341,7 @@ class Dataset(
     ) -> Self:
         if data is None:
             data = {}
-        elif not utils.is_dict_like(data):
+        elif not is_dict_like(data):
             raise ValueError("Data must be dict-like")
 
         if data:
@@ -1537,7 +1537,7 @@ class Dataset(
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
             return self._construct_dataarray(key)
@@ -1568,7 +1568,7 @@ class Dataset(
         """
         from xarray.core.dataarray import DataArray
 
-        if utils.is_dict_like(key):
+        if is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
             # loop over dataset variables and set new values
@@ -6365,7 +6365,7 @@ class Dataset(
             C        (x) float64 2.0 2.0 2.0 5.0
             D        (x) float64 3.0 3.0 3.0 4.0
         """
-        if utils.is_dict_like(value):
+        if is_dict_like(value):
             value_keys = getattr(value, "data_vars", value).keys()
             if not set(value_keys) <= set(self.data_vars.keys()):
                 raise ValueError(
@@ -7567,7 +7567,7 @@ class Dataset(
                     dest_vars[k] = f(rhs_vars[k], np.nan)
             return dest_vars
 
-        if utils.is_dict_like(other) and not isinstance(other, Dataset):
+        if is_dict_like(other) and not isinstance(other, Dataset):
             # can't use our shortcut of doing the binary operation with
             # Variable objects, so apply over our data vars instead.
             new_data_vars = apply_over_both(
