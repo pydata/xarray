@@ -1,7 +1,7 @@
 import pytest
 
 from datatree.iterators import LevelOrderIter, PreOrderIter
-from datatree.treenode import InvalidTreeError, NamedNode, TreeNode
+from datatree.treenode import InvalidTreeError, NamedNode, NodePath, TreeNode
 
 
 class TestFamilyTree:
@@ -369,3 +369,9 @@ class TestRenderTree:
         ]
         for expected_node, printed_node in zip(expected_nodes, printout.splitlines()):
             assert expected_node in printed_node
+
+
+def test_nodepath():
+    path = NodePath("/Mary")
+    assert path.root == "/"
+    assert path.stem == "Mary"

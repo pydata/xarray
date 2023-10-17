@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections import OrderedDict
 from pathlib import PurePosixPath
 from typing import (
@@ -30,20 +31,19 @@ class NotFoundInTreeError(ValueError):
 class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
-    def __new__(cls, *args: str | "NodePath") -> "NodePath":
-        obj = super().__new__(cls, *args)
-
-        if obj.drive:
+    def __init__(self, *pathsegments):
+        if sys.version_info >= (3, 12):
+            super().__init__(*pathsegments)
+        else:
+            super().__new__(PurePosixPath, *pathsegments)
+        if self.drive:
             raise ValueError("NodePaths cannot have drives")
 
-        if obj.root not in ["/", ""]:
+        if self.root not in ["/", ""]:
             raise ValueError(
                 'Root of NodePath can only be either "/" or "", with "" meaning the path is relative.'
             )
-
         # TODO should we also forbid suffixes to avoid node names with dots in them?
-
-        return obj
 
 
 Tree = TypeVar("Tree", bound="TreeNode")

@@ -32,6 +32,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Ensure nodepath class is compatible with python 3.12 (:pull:`260`)
+  By `Max Grover <https://github.com/mgrover1>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
