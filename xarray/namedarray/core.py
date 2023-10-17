@@ -192,9 +192,9 @@ class NamedArray(Generic[_ShapeType_co, _DType_co]):
 
     Parameters
     ----------
-    dims : str or iterable of str
+    dims : str or iterable of hashable 
         Name(s) of the dimension(s).
-    data : T_DuckArray
+    data : array-like or duck-array
         The actual data that populates the array. Should match the
         shape specified by `dims`.
     attrs : dict, optional

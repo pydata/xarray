@@ -116,7 +116,7 @@ class _arrayfunction(
     Corresponds to np.ndarray.
     """
 
-    # TODO: Should return the sama subclass but with a new dtype generic.
+    # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     def __array_ufunc__(
         self,
@@ -127,7 +127,7 @@ class _arrayfunction(
     ) -> Any:
         ...
 
-    # TODO: Should return the sama subclass but with a new dtype generic.
+    # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     def __array_function__(
         self,
