@@ -479,7 +479,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
         dim: Dims = None,
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> Self:
         """Reduce this array by applying `func` along some dimension(s).
 
