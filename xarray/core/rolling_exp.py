@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any, Generic
 
 import numpy as np
+from packaging.version import Version
 
 from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
@@ -14,9 +15,9 @@ try:
     import numbagg
     from numbagg import move_exp_nanmean, move_exp_nansum
 
-    has_numbagg = numbagg.__version__
+    has_numbagg: Version | None = Version(numbagg.__version__)
 except ImportError:
-    has_numbagg = False
+    has_numbagg = None
 
 
 def _get_alpha(
@@ -99,15 +100,15 @@ class RollingExp(Generic[T_DataWithCoords]):
         window_type: str = "span",
         min_weight: float = 0.0,
     ):
-        if has_numbagg is False:
+        if has_numbagg is None:
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
-        elif has_numbagg < "0.2.1":
+        elif has_numbagg < Version("0.2.1"):
             raise ImportError(
                 f"numbagg >= 0.2.1 is required for `rolling_exp` but currently version {has_numbagg} is installed"
             )
-        elif has_numbagg < "0.3.1" and min_weight > 0:
+        elif has_numbagg < Version("0.3.1") and min_weight > 0:
             raise ImportError(
                 f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {has_numbagg} is installed"
             )
@@ -210,7 +211,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is False or has_numbagg < "0.4.0":
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {has_numbagg} is installed"
             )
@@ -242,7 +243,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is False or has_numbagg < "0.4.0":
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {has_numbagg} is installed"
             )
@@ -274,7 +275,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is False or has_numbagg < "0.4.0":
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {has_numbagg} is installed"
             )
@@ -307,7 +308,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is False or has_numbagg < "0.4.0":
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {has_numbagg} is installed"
             )
