@@ -1704,7 +1704,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
-    def reduce(
+    def reduce(  # type: ignore[override]
         self,
         func: Callable[..., Any],
         dim: Dims = None,

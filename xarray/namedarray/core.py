@@ -350,7 +350,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
         try:
-            return self.dims.index(dim)
+            return self.dims.index(dim)  # type: ignore[no-any-return]
         except ValueError:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
