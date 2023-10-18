@@ -369,6 +369,25 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if encoding is not None:
             self.encoding = encoding
 
+    def _new(
+        self,
+        dims=_default,
+        data=_default,
+        attrs=_default,
+    ):
+        dims_ = copy.copy(self._dims) if dims is _default else dims
+
+        if attrs is _default:
+            attrs_ = None if self._attrs is None else self._attrs.copy()
+        else:
+            attrs_ = attrs
+
+        if data is _default:
+            return type(self)(dims_, copy.copy(self._data), attrs_)
+        else:
+            cls_ = type(self)
+            return cls_(dims_, data, attrs_)
+
     @property
     def _in_memory(self):
         return isinstance(
@@ -905,16 +924,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 ndata = data_old
             else:
                 # don't share caching between copies
-                ndata = indexing.MemoryCachedArray(data_old.array)
+                # TODO: MemoryCachedArray doesn't match the array api:
+                ndata = indexing.MemoryCachedArray(data_old.array)  # type: ignore[assignment]
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -1054,7 +1074,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = indexing.ImplicitToExplicitIndexingAdapter(
+                # TODO: ImplicitToExplicitIndexingAdapter doesn't match the array api:
+                ndata = indexing.ImplicitToExplicitIndexingAdapter(  # type: ignore[assignment]
                     data_old, indexing.OuterIndexer
                 )
 
@@ -2608,6 +2629,9 @@ class IndexVariable(Variable):
 
     __slots__ = ()
 
+    # TODO: PandasIndexingAdapter doesn't match the array api:
+    _data: PandasIndexingAdapter  # type: ignore[assignment]
+
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
@@ -2756,9 +2780,9 @@ class IndexVariable(Variable):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
                 )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
