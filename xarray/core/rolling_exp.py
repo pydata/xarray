@@ -20,6 +20,7 @@ except ImportError:
     _NUMBAGG_VERSION = None
 
 
+
 def _get_alpha(
     com: float | None = None,
     span: float | None = None,
@@ -192,6 +193,136 @@ class RollingExp(Generic[T_DataWithCoords]):
             kwargs=self.kwargs,
             output_core_dims=[[self.dim]],
             keep_attrs=keep_attrs,
+            on_missing_core_dim="copy",
+            dask="parallelized",
+        ).transpose(*dim_order)
+
+    def std(self) -> T_DataWithCoords:
+        """
+        Exponentially weighted moving standard deviation.
+
+        `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").std()
+        <xarray.DataArray (x: 5)>
+        array([       nan, 0.        , 0.67936622, 0.42966892, 0.25389527])
+        Dimensions without coordinates: x
+        """
+
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+            raise ImportError(
+                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {has_numbagg} is installed"
+            )
+        dim_order = self.obj.dims
+
+        return apply_ufunc(
+            numbagg.move_exp_nanstd,
+            self.obj,
+            input_core_dims=[[self.dim]],
+            kwargs=self.kwargs,
+            output_core_dims=[[self.dim]],
+            keep_attrs=True,
+            on_missing_core_dim="copy",
+            dask="parallelized",
+        ).transpose(*dim_order)
+
+    def var(self) -> T_DataWithCoords:
+        """
+        Exponentially weighted moving variance.
+
+        `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").var()
+        <xarray.DataArray (x: 5)>
+        array([       nan, 0.        , 0.46153846, 0.18461538, 0.06446281])
+        Dimensions without coordinates: x
+        """
+
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+            raise ImportError(
+                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {has_numbagg} is installed"
+            )
+        dim_order = self.obj.dims
+
+        return apply_ufunc(
+            numbagg.move_exp_nanvar,
+            self.obj,
+            input_core_dims=[[self.dim]],
+            kwargs=self.kwargs,
+            output_core_dims=[[self.dim]],
+            keep_attrs=True,
+            on_missing_core_dim="copy",
+            dask="parallelized",
+        ).transpose(*dim_order)
+
+    def cov(self, other: T_DataWithCoords) -> T_DataWithCoords:
+        """
+        Exponentially weighted moving covariance.
+
+        `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").cov(da**2)
+        <xarray.DataArray (x: 5)>
+        array([       nan, 0.        , 1.38461538, 0.55384615, 0.19338843])
+        Dimensions without coordinates: x
+        """
+
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+            raise ImportError(
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {has_numbagg} is installed"
+            )
+        dim_order = self.obj.dims
+
+        return apply_ufunc(
+            numbagg.move_exp_nancov,
+            self.obj,
+            other,
+            input_core_dims=[[self.dim], [self.dim]],
+            kwargs=self.kwargs,
+            output_core_dims=[[self.dim]],
+            keep_attrs=True,
+            on_missing_core_dim="copy",
+            dask="parallelized",
+        ).transpose(*dim_order)
+
+    def corr(self, other: T_DataWithCoords) -> T_DataWithCoords:
+        """
+        Exponentially weighted moving correlation.
+
+        `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").corr(da.shift(x=1))
+        <xarray.DataArray (x: 5)>
+        array([       nan,        nan,        nan, 0.4330127 , 0.48038446])
+        Dimensions without coordinates: x
+        """
+
+        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+            raise ImportError(
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {has_numbagg} is installed"
+            )
+        dim_order = self.obj.dims
+
+        return apply_ufunc(
+            numbagg.move_exp_nancorr,
+            self.obj,
+            other,
+            input_core_dims=[[self.dim], [self.dim]],
+            kwargs=self.kwargs,
+            output_core_dims=[[self.dim]],
+            keep_attrs=True,
             on_missing_core_dim="copy",
             dask="parallelized",
         ).transpose(*dim_order)
