@@ -203,7 +203,7 @@ def from_array(
     return NamedArray(dims, np.asarray(data), attrs)
 
 
-class NamedArray(Generic[_ShapeType_co, _DType_co]):
+class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     """
     A wrapper around duck arrays with named dimensions
     and attributes which describe a single Array.
