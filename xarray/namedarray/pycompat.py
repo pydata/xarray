@@ -106,7 +106,7 @@ def is_0d_dask_array(x):
 
 def to_numpy(data) -> np.ndarray:
     from xarray.core.indexing import ExplicitlyIndexed
-    from xarray.core.parallelcompat import get_chunked_array_type
+    from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     if isinstance(data, ExplicitlyIndexed):
         data = data.get_duck_array()

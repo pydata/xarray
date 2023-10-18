@@ -35,13 +35,12 @@ from xarray.namedarray._typing import (
     _ShapeType_co,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import array_type, is_chunked_array
+from xarray.namedarray.pycompat import array_type
 from xarray.namedarray.utils import (
     _default,
     consolidate_dask_from_array_kwargs,
     either_dict_or_kwargs,
     is_dict_like,
-    is_duck_array,
     is_duck_dask_array,
     to_0d_object_array,
 )
@@ -611,54 +610,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ) -> Self:
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
-
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
-
-        Normally, it should not be necessary to call this method in user code,
-        because all xarray functions should either work on deferred data or
-        load data automatically.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
-
-        See Also
-        --------
-        dask.array.compute
-        """
-        if is_chunked_array(self._data):
-            chunkmanager = get_chunked_array_type(self._data)
-            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
-            self._data = as_compatible_data(loaded_data)
-        elif isinstance(self._data, ExplicitlyIndexed):
-            self._data = self._data.get_duck_array()
-        elif not is_duck_array(self._data):
-            self._data = np.asarray(self._data)
-        return self
-
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
-
-        Normally, it should not be necessary to call this method in user code,
-        because all xarray functions should either work on deferred data or
-        load data automatically.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
-
-        See Also
-        --------
-        dask.array.compute
-        """
-        new = self.copy(deep=False)
-        return new.load(**kwargs)
 
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.

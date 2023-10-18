@@ -20,6 +20,7 @@ from xarray.core.arithmetic import VariableArithmetic
 from xarray.core.common import AbstractArray
 from xarray.core.indexing import (
     BasicIndexer,
+    ExplicitlyIndexed,
     OuterIndexer,
     PandasIndexingAdapter,
     VectorizedIndexer,
@@ -36,9 +37,11 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
     integer_types,
     is_0d_dask_array,
+    is_chunked_array,
     is_duck_dask_array,
 )
 from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like, is_duck_array
@@ -909,6 +912,54 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if encoding is _default:
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
+
+    def load(self, **kwargs):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source into memory and return this variable.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
+        """
+        if is_chunked_array(self._data):
+            chunkmanager = get_chunked_array_type(self._data)
+            loaded_data, *_ = chunkmanager.compute(self._data, **kwargs)
+            self._data = as_compatible_data(loaded_data)
+        elif isinstance(self._data, ExplicitlyIndexed):
+            self._data = self._data.get_duck_array()
+        elif not is_duck_array(self._data):
+            self._data = np.asarray(self._data)
+        return self
+
+    def compute(self, **kwargs):
+        """Manually trigger loading of this variable's data from disk or a
+        remote source into memory and return a new variable. The original is
+        left unaltered.
+
+        Normally, it should not be necessary to call this method in user code,
+        because all xarray functions should either work on deferred data or
+        load data automatically.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
+        """
+        new = self.copy(deep=False)
+        return new.load(**kwargs)
 
     def isel(
         self,
