@@ -110,7 +110,7 @@ class RollingExp(Generic[T_DataWithCoords]):
             )
         elif _NUMBAGG_VERSION < Version("0.3.1") and min_weight > 0:
             raise ImportError(
-                f"numbagg >= 0.3.1 is required for `min_weight > 0` but currently version {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {_NUMBAGG_VERSION} is installed"
             )
 
         self.obj: T_DataWithCoords = obj
