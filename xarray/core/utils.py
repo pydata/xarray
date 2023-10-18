@@ -72,7 +72,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -245,20 +245,6 @@ def is_full_slice(value: Any) -> bool:
 
 def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
-
-
-def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and (
-            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-            or hasattr(value, "__array_namespace__")
-        )
-    )
 
 
 def _is_scalar(value, include_0d):

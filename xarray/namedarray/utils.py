@@ -101,6 +101,20 @@ def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
 
 
+def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
+    if isinstance(value, np.ndarray):
+        return True
+    return (
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
+    )
+
+
 def to_0d_object_array(
     value: object,
 ) -> NDArray[np.object_]:
