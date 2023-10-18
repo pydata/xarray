@@ -20,7 +20,6 @@ except ImportError:
     _NUMBAGG_VERSION = None
 
 
-
 def _get_alpha(
     com: float | None = None,
     span: float | None = None,
