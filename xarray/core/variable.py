@@ -28,11 +28,11 @@ from xarray.core.indexing import (
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
-    array_type,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
     is_duck_dask_array,
+    to_numpy,
 )
 from xarray.core.utils import (
     OrderedSet,
@@ -1093,22 +1093,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def to_numpy(self) -> np.ndarray:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
-        data = self.data
-
-        # TODO first attempt to call .to_numpy() once some libraries implement it
-        if hasattr(data, "chunks"):
-            chunkmanager = get_chunked_array_type(data)
-            data, *_ = chunkmanager.compute(data)
-        if isinstance(data, array_type("cupy")):
-            data = data.get()
-        # pint has to be imported dynamically as pint imports xarray
-        if isinstance(data, array_type("pint")):
-            data = data.magnitude
-        if isinstance(data, array_type("sparse")):
-            data = data.todense()
-        data = np.asarray(data)
-
-        return data
+        return to_numpy(self._data)
 
     def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
