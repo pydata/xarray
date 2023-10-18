@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import sys
 from collections.abc import Hashable, Mapping
 from enum import Enum
@@ -15,17 +14,18 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import TypeGuard
 
-    if sys.version_info >= (3, 11):
-        pass
-    else:
-        pass
+    from numpy.typing import NDArray
+
+    from xarray.namedarray._typing import (
+        duckarray,
+    )
 
     try:
-        from dask.array import Array as DaskArray
-        from dask.types import DaskCollection
+        from dask.array.core import Array as DaskArray
+        from dask.typing import DaskCollection
     except ImportError:
-        DaskArray = np.ndarray  # type: ignore
-        DaskCollection: Any = np.ndarray  # type: ignore
+        DaskArray = NDArray  # type: ignore
+        DaskCollection: Any = NDArray  # type: ignore
 
 T = TypeVar("T")
 
@@ -84,7 +84,9 @@ def module_available(module: str) -> bool:
     available : bool
         Whether the module is installed.
     """
-    return importlib.util.find_spec(module) is not None
+    from importlib.util import find_spec
+
+    return find_spec(module) is not None
 
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
@@ -95,33 +97,13 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     return False
 
 
-def is_duck_array(value: object) -> TypeGuard[T_DuckArray]:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and (
-            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-            or hasattr(value, "__array_namespace__")
-        )
-    )
-
-
-def is_duck_dask_array(x: T_DuckArray) -> TypeGuard[DaskArray]:
+def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
     return is_dask_collection(x)
-
-
-def is_chunked_duck_array(
-    x: T_DuckArray,
-) -> TypeGuard[_ChunkedArray[np.dtype[np.generic]]]:
-    return hasattr(x, "chunks")
 
 
 def to_0d_object_array(
     value: object,
-) -> np.ndarray[Any, np.dtype[np.object_]]:
+) -> NDArray[np.object_]:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value

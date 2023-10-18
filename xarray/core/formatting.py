@@ -16,10 +16,10 @@ import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray.core.duck_array_ops import array_equiv
-from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
+from xarray.core.duck_array_ops import array_equiv, astype
+from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
-from xarray.namedarray.pycompat import array_type
+from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
 from xarray.namedarray.utils import is_duck_array
 
 if TYPE_CHECKING:
@@ -68,6 +68,8 @@ def first_n_items(array, n_desired):
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
+    from xarray.core.variable import Variable
+
     if n_desired < 1:
         raise ValueError("must request at least one item")
 
@@ -78,7 +80,14 @@ def first_n_items(array, n_desired):
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
         array = array[indexer]
-    return np.asarray(array).flat[:n_desired]
+
+    # We pass variable objects in to handle indexing
+    # with indexer above. It would not work with our
+    # lazy indexing classes at the moment, so we cannot
+    # pass Variable._data
+    if isinstance(array, Variable):
+        array = array._data
+    return np.ravel(to_duck_array(array))[:n_desired]
 
 
 def last_n_items(array, n_desired):
@@ -87,13 +96,22 @@ def last_n_items(array, n_desired):
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
+    from xarray.core.variable import Variable
+
     if (n_desired == 0) or (array.size == 0):
         return []
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
         array = array[indexer]
-    return np.asarray(array).flat[-n_desired:]
+
+    # We pass variable objects in to handle indexing
+    # with indexer above. It would not work with our
+    # lazy indexing classes at the moment, so we cannot
+    # pass Variable._data
+    if isinstance(array, Variable):
+        array = array._data
+    return np.ravel(to_duck_array(array))[-n_desired:]
 
 
 def last_item(array):
@@ -103,7 +121,8 @@ def last_item(array):
         return []
 
     indexer = (slice(-1, None),) * array.ndim
-    return np.ravel(np.asarray(array[indexer])).tolist()
+    # to_numpy since dask doesn't support tolist
+    return np.ravel(to_numpy(array[indexer])).tolist()
 
 
 def calc_max_rows_first(max_rows: int) -> int:
@@ -171,10 +190,10 @@ def format_item(x, timedelta_format=None, quote_strings=True):
 
 def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
-    x = np.asarray(x)
+    x = to_duck_array(x)
     timedelta_format = "datetime"
     if np.issubdtype(x.dtype, np.timedelta64):
-        x = np.asarray(x, dtype="timedelta64[ns]")
+        x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
@@ -584,12 +603,9 @@ def limit_lines(string: str, *, limit: int):
 def short_array_repr(array):
     from xarray.core.common import AbstractArray
 
-    if isinstance(array, ExplicitlyIndexed):
-        array = array.get_duck_array()
-    elif isinstance(array, AbstractArray):
+    if isinstance(array, AbstractArray):
         array = array.data
-    if not is_duck_array(array):
-        array = np.asarray(array)
+    array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width

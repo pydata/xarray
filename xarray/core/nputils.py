@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+from packaging.version import Version
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -18,11 +19,20 @@ from xarray.namedarray.pycompat import is_duck_array
 try:
     import bottleneck as bn
 
-    _USE_BOTTLENECK = True
+    _BOTTLENECK_AVAILABLE = True
 except ImportError:
     # use numpy methods instead
     bn = np
-    _USE_BOTTLENECK = False
+    _BOTTLENECK_AVAILABLE = False
+
+try:
+    import numbagg
+
+    _HAS_NUMBAGG = Version(numbagg.__version__) >= Version("0.5.0")
+except ImportError:
+    # use numpy methods instead
+    numbagg = np
+    _HAS_NUMBAGG = False
 
 
 def _select_along_axis(values, idx, axis):
@@ -161,13 +171,30 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_bottleneck_method(name, npmodule=np):
+def _create_method(name, npmodule=np):
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
+        nba_func = getattr(numbagg, name, None)
 
         if (
-            _USE_BOTTLENECK
+            _HAS_NUMBAGG
+            and OPTIONS["use_numbagg"]
+            and isinstance(values, np.ndarray)
+            and nba_func is not None
+            # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
+            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
+            # TODO: bool?
+            and values.dtype.kind in "uifc"
+            # and values.dtype.isnative
+            and (dtype is None or np.dtype(dtype) == values.dtype)
+        ):
+            # numbagg does not take care dtype, ddof
+            kwargs.pop("dtype", None)
+            kwargs.pop("ddof", None)
+            result = nba_func(values, axis=axis, **kwargs)
+        elif (
+            _BOTTLENECK_AVAILABLE
             and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
@@ -233,14 +260,14 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
-nanmin = _create_bottleneck_method("nanmin")
-nanmax = _create_bottleneck_method("nanmax")
-nanmean = _create_bottleneck_method("nanmean")
-nanmedian = _create_bottleneck_method("nanmedian")
-nanvar = _create_bottleneck_method("nanvar")
-nanstd = _create_bottleneck_method("nanstd")
-nanprod = _create_bottleneck_method("nanprod")
-nancumsum = _create_bottleneck_method("nancumsum")
-nancumprod = _create_bottleneck_method("nancumprod")
-nanargmin = _create_bottleneck_method("nanargmin")
-nanargmax = _create_bottleneck_method("nanargmax")
+nanmin = _create_method("nanmin")
+nanmax = _create_method("nanmax")
+nanmean = _create_method("nanmean")
+nanmedian = _create_method("nanmedian")
+nanvar = _create_method("nanvar")
+nanstd = _create_method("nanstd")
+nanprod = _create_method("nanprod")
+nancumsum = _create_method("nancumsum")
+nancumprod = _create_method("nancumprod")
+nanargmin = _create_method("nanargmin")
+nanargmax = _create_method("nanargmax")
