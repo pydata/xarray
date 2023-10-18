@@ -3,7 +3,8 @@ from __future__ import annotations
 import copy
 import math
 import sys
-from collections.abc import Hashable, Mapping, Sequence
+import warnings
+from collections.abc import Hashable, Mapping, Sequence, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -19,6 +20,7 @@ import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes, formatting, formatting_html
+from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
     _chunkedarray,
@@ -36,6 +38,7 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
+    from xarray.core.types import Dims
     from xarray.namedarray._typing import (
         DuckArray,
         _AttrsLike,
