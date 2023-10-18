@@ -209,7 +209,9 @@ defineConstant = {DEBUG = true}
 # stubPath = "src/stubs"
 # venv = "env367"
 
-reportMissingImports = true
+# Enabling this means that developers who have disabled the warning locally —
+# because not all dependencies are installable — are overridden
+# reportMissingImports = true
 reportMissingTypeStubs = false
 
 # pythonVersion = "3.6"
