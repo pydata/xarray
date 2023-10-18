@@ -217,6 +217,8 @@ def _apply_mask(
 
 def _is_time_like(units):
     # test for time-like
+    if units is None:
+        return False
     time_strings = [
         "days",
         "hours",
@@ -230,7 +232,13 @@ def _is_time_like(units):
     # to prevent detecting units like `days accumulated` as time-like
     # special casing for datetime-units and timedelta-units (GH-8269)
     if "since" in units:
-        return any(tstr in units for tstr in time_strings)
+        from xarray.coding.times import _unpack_netcdf_time_units
+
+        try:
+            _unpack_netcdf_time_units(units)
+        except ValueError:
+            return False
+        return True
     else:
         return any(tstr == units for tstr in time_strings)
 
