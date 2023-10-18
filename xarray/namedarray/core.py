@@ -675,7 +675,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> Self:
+    ) -> NamedArray[Any, Any]:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -751,7 +751,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 )
 
         # Return NamedArray to handle IndexVariable when data is nD
-        return NamedArray(dims, data, attrs=self._attrs)
+        return from_array(dims, data, attrs=self._attrs)
 
     def _nonzero(self: T_NamedArrayInteger) -> tuple[T_NamedArrayInteger, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
