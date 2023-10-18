@@ -2004,6 +2004,7 @@ class DataArray(
           * y        (y) int64 70 80 90
 
         Note that unlike ``broadcast_like``, ``reindex_like`` doesn't create new dimensions:
+
         >>> da1.sel(x=20)
         <xarray.DataArray (y: 3)>
         array([3, 4, 5])
@@ -2012,6 +2013,7 @@ class DataArray(
           * y        (y) int64 70 80 90
 
         ...so ``b`` in not added here:
+
         >>> da1.sel(x=20).reindex_like(da1)
         <xarray.DataArray (y: 3)>
         array([3, 4, 5])
