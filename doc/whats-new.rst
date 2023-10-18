@@ -62,6 +62,9 @@ Bug fixes
 - :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
   when the operation was a no-op. (:issue:`8266`)
   By `Simon Hansen <https://github.com/hoxbro>`_.
+- Fixed a regression introduced in the previous release checking time-like units
+  when encoding/decoding masked data (:issue:`8269`, :pull:`8277`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 - Fix datetime encoding precision loss regression introduced in the previous
   release for datetimes encoded with units requiring floating point values, and
