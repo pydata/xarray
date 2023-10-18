@@ -6280,7 +6280,7 @@ class DataArray(
         >>> def exp_decay(t, time_constant, amplitude):
         ...     return np.exp(-t / time_constant) * amplitude
         ...
-        >>> t = np.linspace(0, 10, 11)
+        >>> t = np.arange(11)
         >>> da = xr.DataArray(
         ...     np.stack(
         ...         [
@@ -6305,7 +6305,7 @@ class DataArray(
                  0.00910995]])
         Coordinates:
           * x        (x) int64 0 1 2
-          * time     (time) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0
+          * time     (time) int64 0 1 2 3 4 5 6 7 8 9 10
 
         Fit the exponential decay function to the data along the ``time`` dimension:
 
