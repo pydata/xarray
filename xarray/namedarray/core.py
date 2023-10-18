@@ -335,7 +335,7 @@ class NamedArray(NamedArrayAggregations, Generic[T_DuckArray]):
 
         Parameters
         ----------
-        dim : iterable of str
+        dim : tuple of str
             Dimension name(s) for which to lookup axes.
 
         Returns
