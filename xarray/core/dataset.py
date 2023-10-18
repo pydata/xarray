@@ -5169,6 +5169,7 @@ class Dataset(
         dimensions: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
+        invert: bool = False,
         **dimensions_kwargs: Sequence[Hashable | ellipsis],
     ) -> Self:
         """
@@ -5192,9 +5193,15 @@ class Dataset(
             - None. create a multi-index only if exactly one single (1-d) coordinate
               index is found for every dimension to stack.
 
-        index_cls: Index-class, default: PandasMultiIndex
+        index_cls : Index-class, default: PandasMultiIndex
             Can be used to pass a custom multi-index type (must be an Xarray index that
             implements `.stack()`). By default, a pandas multi-index wrapper is used.
+        invert : bool, default: False
+            When `True`, all dimensions of the DataArray except for the sequence of
+            dimensions specified in the `dimensions` parameter will be stacked.
+            `dimensions` must have a length of 1 in this case, all dimensions listed
+            must exist in the current DataArray. Neither the `**dimensions_kwargs` nor
+            the ellipsis syntaxes may be used.
         **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
@@ -5210,8 +5217,33 @@ class Dataset(
         """
         dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "stack")
         result = self
+
+        if invert:
+            if len(dimensions) > 1:
+                raise ValueError(
+                    "The dimensions argument must have length 1 when invert=True"
+                )
+
+            for new_dim, dims in dimensions.items():
+                # When inverting, all dims listed should be in the current
+                # DataArray's dims
+                for dim in dims:
+                    if dim is Ellipsis:
+                        raise ValueError(
+                            "Ellipsis syntax cannot be used when invert=True"
+                        )
+                    if dim not in self.dims:
+                        raise ValueError(f'Dimension "{dim}" does not exist')
+
+                # Subtract specified dimensions from the DataArray's current
+                # dimensions and stack the resulting dimensions
+                dimensions = {
+                    new_dim: tuple(dim for dim in self.dims if dim not in dims)
+                }
+
         for new_dim, dims in dimensions.items():
             result = result._stack_once(dims, new_dim, index_cls, create_index)
+
         return result
 
     def to_stacked_array(

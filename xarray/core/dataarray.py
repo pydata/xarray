@@ -2731,6 +2731,7 @@ class DataArray(
         dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
+        invert: bool = False,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> Self:
         """
@@ -2752,9 +2753,15 @@ class DataArray(
             If False, don't create any index.
             If None, create a multi-index only if exactly one single (1-d) coordinate
             index is found for every dimension to stack.
-        index_cls: class, optional
+        index_cls : class, optional
             Can be used to pass a custom multi-index type. Must be an Xarray index that
             implements `.stack()`. By default, a pandas multi-index wrapper is used.
+        invert : bool, default: False
+            When `True`, all dimensions of the DataArray except for the sequence of
+            dimensions specified in the `dimensions` parameter will be stacked.
+            `dimensions` must have a length of 1 in this case, all dimensions listed
+            must exist in the current DataArray. Neither the `**dimensions_kwargs` nor
+            the ellipsis syntaxes may be used.
         **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
@@ -2767,25 +2774,56 @@ class DataArray(
         Examples
         --------
         >>> arr = xr.DataArray(
-        ...     np.arange(6).reshape(2, 3),
-        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
+        ...     np.arange(12).reshape(2, 3, 2),
+        ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2]), ("z", ["alpha", "beta"])],
         ... )
         >>> arr
-        <xarray.DataArray (x: 2, y: 3)>
-        array([[0, 1, 2],
-               [3, 4, 5]])
+        <xarray.DataArray (x: 2, y: 3, z: 2)>
+        array([[[ 0,  1],
+                [ 2,  3],
+                [ 4,  5]],
+
+               [[ 6,  7],
+                [ 8,  9],
+                [10, 11]]])
         Coordinates:
           * x        (x) <U1 'a' 'b'
           * y        (y) int64 0 1 2
-        >>> stacked = arr.stack(z=("x", "y"))
-        >>> stacked.indexes["z"]
+          * z        (z) <U5 'alpha' 'beta'
+        >>> stacked = arr.stack(newdim=("x", "y"))
+        >>> stacked
+        <xarray.DataArray (z: 2, newdim: 6)>
+        array([[ 0,  2,  4,  6,  8, 10],
+               [ 1,  3,  5,  7,  9, 11]])
+        Coordinates:
+          * z        (z) <U5 'alpha' 'beta'
+          * newdim   (newdim) object MultiIndex
+          * x        (newdim) <U1 'a' 'a' 'a' 'b' 'b' 'b'
+          * y        (newdim) int64 0 1 2 0 1 2
+        >>> stacked.indexes["newdim"]
         MultiIndex([('a', 0),
                     ('a', 1),
                     ('a', 2),
                     ('b', 0),
                     ('b', 1),
                     ('b', 2)],
-                   name='z')
+                   name='newdim')
+        >>> inverted_stack = arr.stack({"newdim": "z"}, invert=True)
+        >>> inverted_stack
+        <xarray.DataArray (z: 2, newdim: 6)>
+        array([[ 0,  2,  4,  6,  8, 10],
+               [ 1,  3,  5,  7,  9, 11]])
+        Coordinates:
+          * z        (z) <U5 'alpha' 'beta'
+          * newdim   (newdim) object MultiIndex
+          * x        (newdim) <U1 'a' 'a' 'a' 'b' 'b' 'b'
+          * y        (newdim) int64 0 1 2 0 1 2
+        >>> np.all(inverted_stack.indexes["newdim"] == stacked.indexes["newdim"])
+        True
+        >>> np.all(inverted_stack == stacked)
+        <xarray.DataArray ()>
+        array(True)
+
 
         See Also
         --------
@@ -2795,6 +2833,7 @@ class DataArray(
             dimensions,
             create_index=create_index,
             index_cls=index_cls,
+            invert=invert,
             **dimensions_kwargs,
         )
         return self._from_temp_dataset(ds)

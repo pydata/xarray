@@ -2547,6 +2547,13 @@ class TestDataArray:
         expected = DataArray(da.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
+    def test_stack_inverted_consistency(self) -> None:
+        da = DataArray(
+            [[0, 1], [2, 3]],
+            dims=["x", "y"],
+        )
+        assert_identical(da.stack(z=["x"]), da.stack({"z": ["y"]}, invert=True))
+
     def test_to_unstacked_dataset_raises_value_error(self) -> None:
         data = DataArray([0, 1], dims="x", coords={"x": [0, 1]})
         with pytest.raises(ValueError, match="'x' is not a stacked coordinate"):
