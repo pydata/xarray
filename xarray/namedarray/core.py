@@ -18,7 +18,7 @@ from typing import (
 import numpy as np
 
 # TODO: get rid of this after migrating this class to array API
-from xarray.core import dtypes
+from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
     _chunkedarray,
@@ -27,9 +27,6 @@ from xarray.namedarray._typing import (
     _ScalarType_co,
     _ShapeType_co,
 )
-from xarray.core import dtypes, formatting, formatting_html
-from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray.utils import (
     _default,
     is_duck_dask_array,
