@@ -14,7 +14,7 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.09.1:
+.. _whats-new.2023.10.0:
 
 v2023.10.0 (19 Oct, 2023)
 -------------------------
@@ -30,7 +30,7 @@ New Features
 ~~~~~~~~~~~~
 - Support high-performance reductions with `numbagg <https://github.com/numbagg/numbagg>`_.
   This is enabled by default if ``numbagg`` is installed.
-  By `Deepak Cherian <https://github.com/dcherian`_. (:pull:`8316`)
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`8316`)
 - Add ``corr``, ``cov``, ``std`` & ``var`` to ``.rolling_exp``.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8307`)
 - :py:meth:`DataArray.where` & :py:meth:`Dataset.where` accept a callable for
