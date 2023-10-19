@@ -19,7 +19,7 @@ What's New
 v2023.10.1 (19 Oct, 2023)
 -------------------------
 
-This release updates our minimum numpy version in ``pyproject.yaml`` to 1.22,
+This release updates our minimum numpy version in ``pyproject.toml`` to 1.22,
 consistent with our documentation below.
 
 .. _whats-new.2023.10.0:
