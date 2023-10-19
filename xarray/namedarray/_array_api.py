@@ -199,20 +199,42 @@ def mean(
     >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
     >>> mean(x).data
     Array(2.5, dtype=float64)
+    >>> mean(x, dims=("x",)).data
+    Array([2., 3.], dtype=float64)
+
+    Using keepdims:
+
+    >>> mean(x, dims=("x",), keepdims=True).data
+    Array([[2., 3.]], dtype=float64)
+    >>> mean(x, dims=("y",), keepdims=True).data
+    Array([[1.5],
+           [3.5]], dtype=float64)
     """
     xp = _get_data_namespace(x)
     axis_ = _dims_to_axis(x, dims, axis)
-    d = xp.mean(x._data, axis=axis, keepdims=keepdims)
+    d = xp.mean(x._data, axis=axis_, keepdims=False)  # We fix keepdims later
+    # TODO: Why do we need to do the keepdims ourselves?
     dims_, data_ = _get_remaining_dims(x, d, axis_, keepdims=keepdims)
     out = x._new(dims=dims_, data=data_)
     return out
 
 
-if __name__ == "__main__":
-    import doctest
+# if __name__ == "__main__":
+#     import doctest
 
-    doctest.testmod()
+#     doctest.testmod()
+#     err
+#     arr = nxp.asarray([[1.0, 2], [3, 4]])
+#     arr_m = nxp.mean(arr, axis=(1,), keepdims=True)
 
-    x = NamedArray(("x", "y"), _to_nxp(np.array([[1.0, 2], [3, 4]]))[-1])
-    x_mean = mean(x)
-    print(x_mean)
+#     removed_axes = np.atleast_1d((0,)) % arr.ndim
+#     slices = tuple(
+#         np.newaxis if i in removed_axes else slice(None, None) for i in range(arr.ndim)
+#     )
+#     arr_m[slices]
+#     err
+#     x = NamedArray(("x", "y"), arr)
+#     x_mean = mean(x, axis=(0,), keepdims=True)
+#     print(x_mean)
+
+#     x_mean = mean(x, dims=("x",), keepdims=True)
