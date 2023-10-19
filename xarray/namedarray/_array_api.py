@@ -1,24 +1,21 @@
+import warnings
 from types import ModuleType
 from typing import Any
-import warnings
 
 import numpy as np
 
 from xarray.namedarray._typing import (
-    duckarray,
     _arrayapi,
-    _Axes,
     _AxisLike,
     _Dims,
-    _DimsLike,
     _DType,
     _ScalarType,
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
+    duckarray,
 )
 from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
-
 
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -39,7 +36,6 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 def _to_nxp(
     x: duckarray[_ShapeType, _DType]
 ) -> tuple[ModuleType, _arrayapi[_ShapeType, _DType]]:
-
     return nxp, nxp.asarray(x)
 
 
@@ -111,7 +107,7 @@ def imag(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1. + 2j, 2 + 4j])) # TODO: Use nxp
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
     >>> imag(narr).data
     array([2., 4.])
     """
@@ -142,7 +138,7 @@ def real(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.asarray([1. + 2j, 2 + 4j])) # TODO: Use nxp
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
     >>> real(narr).data
     array([1., 2.])
     """
