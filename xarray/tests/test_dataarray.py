@@ -879,13 +879,14 @@ class TestDataArray:
         assert blocked.chunks == ((3,), (4,))
         first_dask_name = blocked.data.name
 
-        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
-        assert blocked.chunks == ((2, 1), (2, 2))
-        assert blocked.data.name != first_dask_name
+        with pytest.warns(DeprecationWarning):
+            blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore 
+            assert blocked.chunks == ((2, 1), (2, 2))
+            assert blocked.data.name != first_dask_name
 
-        blocked = unblocked.chunk(chunks=(3, 3))
-        assert blocked.chunks == ((3,), (3, 1))
-        assert blocked.data.name != first_dask_name
+            blocked = unblocked.chunk(chunks=(3, 3))
+            assert blocked.chunks == ((3,), (3, 1))
+            assert blocked.data.name != first_dask_name
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined

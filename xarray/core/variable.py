@@ -34,6 +34,7 @@ from xarray.core.pycompat import (
     is_duck_dask_array,
     to_numpy,
 )
+from xarray.core.types import T_Chunks
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -965,13 +966,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(
         self,
-        chunks: (
-            int
-            | Literal["auto"]
-            | tuple[int, ...]
-            | tuple[tuple[int, ...], ...]
-            | Mapping[Any, None | int | tuple[int, ...]]
-        ) = {},
+        chunks: T_Chunks = {},
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
