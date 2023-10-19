@@ -327,13 +327,11 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
-        import netCDF4
-
-        if isinstance(manager, netCDF4.Dataset):
+        if isinstance(manager, self.DatasetClass()):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
-                if type(manager) is not netCDF4.Dataset:
+                if type(manager) is not self.DatasetClass():
                     raise ValueError(
                         "must supply a root netCDF4.Dataset if the group "
                         "argument is provided"
@@ -351,6 +349,13 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.autoclose = autoclose
 
     @classmethod
+    def DatasetClass(self) -> type:
+        # This is to allow subclassing the datastore and retain lazy-importing
+        import netCDF4
+
+        return netCDF4.Dataset
+
+    @classmethod
     def open(
         cls,
         filename,
@@ -364,8 +369,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
-        import netCDF4
-
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
@@ -395,7 +398,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             clobber=clobber, diskless=diskless, persist=persist, format=format
         )
         manager = CachingFileManager(
-            netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
+            cls.DatasetClass(), filename, mode=mode, kwargs=kwargs
         )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
@@ -561,6 +564,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
+    DataStore = NetCDF4DataStore
+    # This is to allow subclassing this backend entrypoint
 
     def guess_can_open(
         self,
@@ -600,7 +605,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
-        store = NetCDF4DataStore.open(
+        store = self.DataStore.open(
             filename_or_obj,
             mode=mode,
             format=format,
