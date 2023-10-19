@@ -14,14 +14,25 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.09.1:
+.. _whats-new.2023.10.0:
 
-v2023.09.1 (unreleased)
------------------------
+v2023.10.0 (19 Oct, 2023)
+-------------------------
+
+This release brings performance enhancements to reading Zarr datasets, the ability to use `numbagg <https://github.com/numbagg/numbagg>`_ for reductions,
+an expansion in API for ``rolling_exp``, fixes two regressions with datetime decoding,
+and many other bugfixes and improvements. Groupby reductions will also use ``numbagg`` if ``flox>=0.8.1`` and ``numbagg`` are both installed.
+
+Thanks to our 13 contributors:
+Anderson Banihirwe, Bart Schilperoort, Deepak Cherian, Illviljan, Kai Mühlbauer, Mathias Hauser, Maximilian Roos, Michael Niklas, Pieter Eendebak, Simon Høxbro Hansen, Spencer Clark, Tom White, olimcc
 
 New Features
 ~~~~~~~~~~~~
-
+- Support high-performance reductions with `numbagg <https://github.com/numbagg/numbagg>`_.
+  This is enabled by default if ``numbagg`` is installed.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`8316`)
+- Add ``corr``, ``cov``, ``std`` & ``var`` to ``.rolling_exp``.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8307`)
 - :py:meth:`DataArray.where` & :py:meth:`Dataset.where` accept a callable for
   the ``other`` parameter, passing the object as the only argument. Previously,
   this was only valid for the ``cond`` parameter. (:issue:`8255`)
