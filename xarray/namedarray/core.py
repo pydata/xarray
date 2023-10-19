@@ -97,8 +97,6 @@ def _dims_to_axis(
     (0,)
     >>> _dims_to_axis(narr, None, None)
     """
-    # if dims == ...:
-    #     dims = None
     if dims is not None and axis is not None:
         raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
@@ -137,9 +135,9 @@ def _get_remaining_dims(
         DESCRIPTION.
 
     """
-    removed_axes: np.ndarray[Any, np.dtype[int]]
+    removed_axes: np.ndarray[Any, np.dtype[np.intp]]
     if axis is None:
-        removed_axes = np.arange(x.ndim, dtype=int)
+        removed_axes = np.arange(x.ndim, dtype=np.intp)
     else:
         removed_axes = np.atleast_1d(axis) % x.ndim
 
@@ -779,7 +777,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        axis_ = _dims_to_axis(self, dim, axis)
+        d: _Dims
+        if dim == ...:
+            d = None
+        else:
+            d = dim
+        axis_ = _dims_to_axis(self, d, axis)
 
         with warnings.catch_warnings():
             warnings.filterwarnings(
@@ -796,12 +799,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 data = func(self.data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
-            dims = self.dims
+            dims_ = self.dims
         else:
-            dims, data = _get_remaining_dims(data, data, axis, keepdims=keepdims)
+            dims_, data = _get_remaining_dims(data, data, axis, keepdims=keepdims)
 
         # Return NamedArray to handle IndexVariable when data is nD
-        return from_array(dims, data, attrs=self._attrs)
+        return from_array(dims_, data, attrs=self._attrs)
 
     def _nonzero(self: T_NamedArrayInteger) -> tuple[T_NamedArrayInteger, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
