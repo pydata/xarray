@@ -880,7 +880,7 @@ class TestDataArray:
         first_dask_name = blocked.data.name
 
         with pytest.warns(DeprecationWarning):
-            blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore 
+            blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore
             assert blocked.chunks == ((2, 1), (2, 2))
             assert blocked.data.name != first_dask_name
 

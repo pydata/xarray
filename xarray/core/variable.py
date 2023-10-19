@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
 
 import numpy as np
 import pandas as pd
