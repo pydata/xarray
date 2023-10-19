@@ -14,7 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.10.0:
+.. _whats-new.2023.11.0:
+
+v2023.11.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add :py:meth:`DataArray.drop_attrs` & :py:meth:`Dataset.drop_attrs` methods,
+  to return an object without ``attrs``. A ``deep`` parameter controls whether
+  variables' ``attrs`` are also dropped.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
 
 v2023.10.0 (19 Oct, 2023)
 -------------------------
