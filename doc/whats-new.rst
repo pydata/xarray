@@ -27,6 +27,8 @@ New Features
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
 
+.. _whats-new.2023.10.0:
+
 v2023.10.0 (19 Oct, 2023)
 -------------------------
 
