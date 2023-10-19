@@ -1375,6 +1375,7 @@ class DataArray(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimensions as keys.",
                 category=DeprecationWarning,
+                stacklevel=2,
             )
             chunks = dict(zip(self.dims, chunks))
         else:
