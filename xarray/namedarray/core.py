@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         DuckArray,
         _AttrsLike,
+        _Axes,
+        _AxisLike,
         _Chunks,
         _Dim,
         _Dims,
@@ -78,6 +80,81 @@ if TYPE_CHECKING:
     T_NamedArrayInteger = TypeVar(
         "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
     )
+
+
+def _dims_to_axis(
+    x: NamedArray[Any, Any], dims: _DimsLike | None, axis: _AxisLike | None
+) -> _Axes | None:
+    """
+    Convert dims to axis indices.
+
+    Examples
+    --------
+    >>> narr = NamedArray(("x", "y"), np.array([[1, 2, 3], [5, 6, 7]]))
+    >>> _dims_to_axis(narr, ("y",), None)
+    (1,)
+    >>> _dims_to_axis(narr, None, 0)
+    (0,)
+    >>> _dims_to_axis(narr, None, None)
+    """
+    # if dims == ...:
+    #     dims = None
+    if dims is not None and axis is not None:
+        raise ValueError("cannot supply both 'axis' and 'dim' arguments")
+
+    if dims is None:
+        if axis is None or isinstance(axis, tuple):
+            return axis
+        return (axis,)
+    else:
+        return x.get_axis_num(dims)
+
+
+def _get_remaining_dims(
+    x: NamedArray[Any, _DType],
+    data: duckarray[Any, _DType],
+    axis: _Axes,
+    *,
+    keepdims: bool,
+) -> tuple[_Dims, duckarray[Any, _DType]]:
+    """
+    Get the reamining dims after a reduce operation.
+
+    Parameters
+    ----------
+    x :
+        DESCRIPTION.
+    data :
+        DESCRIPTION.
+    axis :
+        DESCRIPTION.
+    keepdims :
+        DESCRIPTION.
+
+    Returns
+    -------
+    tuple[_Dims, duckarray[Any, _DType]]
+        DESCRIPTION.
+
+    """
+    removed_axes: np.ndarray[Any, np.dtype[int]]
+    if axis is None:
+        removed_axes = np.arange(x.ndim, dtype=int)
+    else:
+        removed_axes = np.atleast_1d(axis) % x.ndim
+
+    if keepdims:
+        # Insert np.newaxis for removed dims
+        slices = tuple(
+            np.newaxis if i in removed_axes else slice(None, None)
+            for i in range(x.ndim)
+        )
+        data = data[slices]
+        dims = x.dims
+    else:
+        dims = tuple(adim for n, adim in enumerate(x.dims) if n not in removed_axes)
+
+    return dims, data
 
 
 @overload
@@ -597,7 +674,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
-    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+    def _get_axis_num(self, dim: _Dim) -> int:
+        try:
+            out = self.dims.index(dim)
+            return out
+        except ValueError:
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+
+    def get_axis_num(self, dims: _Dims) -> _Axes:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -610,16 +694,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if not isinstance(dim, str) and isinstance(dim, Iterable):
-            return tuple(self._get_axis_num(d) for d in dim)
-        else:
-            return self._get_axis_num(dim)
-
-    def _get_axis_num(self: Any, dim: Hashable) -> int:
-        try:
-            return self.dims.index(dim)  # type: ignore[no-any-return]
-        except ValueError:
-            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
+        return tuple(self._get_axis_num(d) for d in dims)
 
     @property
     def chunks(self) -> _Chunks | None:
@@ -704,51 +779,26 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim == ...:
-            dim = None
-        if dim is not None and axis is not None:
-            raise ValueError("cannot supply both 'axis' and 'dim' arguments")
-
-        if dim is not None:
-            axis = self.get_axis_num(dim)
+        axis_ = _dims_to_axis(self, dim, axis)
 
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
-            if axis is not None:
-                if isinstance(axis, tuple) and len(axis) == 1:
+            if axis_ is not None:
+                if len(axis_) == 1:
                     # unpack axis for the benefit of functions
                     # like np.argmin which can't handle tuple arguments
-                    axis = axis[0]
-                data = func(self.data, axis=axis, **kwargs)
+                    data = func(self.data, axis=axis_[0], **kwargs)
+                else:
+                    data = func(self.data, axis=axis_, **kwargs)
             else:
                 data = func(self.data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
         else:
-            removed_axes: Iterable[int]
-            if axis is None:
-                removed_axes = range(self.ndim)
-            else:
-                removed_axes = np.atleast_1d(axis) % self.ndim
-            if keepdims:
-                # Insert np.newaxis for removed dims
-                slices = tuple(
-                    np.newaxis if i in removed_axes else slice(None, None)
-                    for i in range(self.ndim)
-                )
-                if getattr(data, "shape", None) is None:
-                    # Reduce has produced a scalar value, not an array-like
-                    data = np.asanyarray(data)[slices]
-                else:
-                    data = data[slices]
-                dims = self.dims
-            else:
-                dims = tuple(
-                    adim for n, adim in enumerate(self.dims) if n not in removed_axes
-                )
+            dims, data = _get_remaining_dims(data, data, axis, keepdims=keepdims)
 
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims, data, attrs=self._attrs)

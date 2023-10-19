@@ -19,6 +19,12 @@ import numpy as np
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
+    # https://data-apis.org/array-api/latest/API_specification/indexing.html
+    # TODO: np.array_api doesn't allow None for some reason, maybe they're
+    # recommending to use expand_dims?
+    _IndexKey = Union[int, slice, ellipsis, None]
+    _IndexKeys = tuple[_IndexKey, ...]
+    _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
@@ -48,11 +54,15 @@ _DTypeLike = Union[
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
-_IntOrUnknown = int
+_IntOrUnknown = int  # Union[int, _Unknown]
 _Shape = tuple[_IntOrUnknown, ...]
 _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=Any)
 _ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
+
+_Axis = int
+_Axes = tuple[_Axis, ...]
+_AxisLike = Union[_Axis, _Axes]
 
 _Chunks = tuple[_Shape, ...]
 
@@ -116,6 +126,9 @@ class _arrayfunction(
     Corresponds to np.ndarray.
     """
 
+    def __getitem__(self, key: _IndexKeyLike, /) -> _arrayfunction[Any, _DType_co]:
+        ...
+
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
     def __array_ufunc__(
@@ -150,6 +163,9 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 
     Corresponds to np.ndarray.
     """
+
+    def __getitem__(self, key: _IndexKeyLike, /) -> _arrayapi[Any, _DType_co]:
+        ...
 
     def __array_namespace__(self) -> ModuleType:
         ...
