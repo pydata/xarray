@@ -84,6 +84,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinxext.rediraffe",
     "sphinx_design",
+    "sphinx_inline_tabs",
 ]
 
 
