@@ -111,6 +111,7 @@ Dataset contents
    Dataset.drop_duplicates
    Dataset.drop_dims
    Dataset.drop_encoding
+   Dataset.drop_attrs
    Dataset.set_coords
    Dataset.reset_coords
    Dataset.convert_calendar
@@ -304,6 +305,7 @@ DataArray contents
    DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.drop_encoding
+   DataArray.drop_attrs
    DataArray.reset_coords
    DataArray.copy
    DataArray.convert_calendar
