@@ -71,7 +71,7 @@ def astype(
     Examples
     --------
     >>> narr = NamedArray(("x",), nxp.asarray([1.5, 2.5]))
-    >>> astype(narr, np.dtype(int)).data
+    >>> astype(narr, np.dtype(np.int32)).data
     Array([1, 2], dtype=int32)
     """
     if isinstance(x._data, _arrayapi):
@@ -154,9 +154,9 @@ def mean(
     x: NamedArray[Any, _DType],
     /,
     *,
-    axis: _AxisLike | None = None,
-    keepdims: bool = False,
     dims: _Dims | None = None,
+    keepdims: bool = False,
+    axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
     """
     Calculates the arithmetic mean of the input array x.
