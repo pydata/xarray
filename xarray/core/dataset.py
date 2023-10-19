@@ -309,7 +309,7 @@ def _maybe_chunk(
             # when rechunking by different amounts, make sure dask names change
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
-            token2 = tokenize(name, token if token else var._data, chunks)
+            token2 = tokenize(token if token else var._data, str(chunks))
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
