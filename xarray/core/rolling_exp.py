@@ -211,9 +211,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {has_numbagg} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {_NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
@@ -243,9 +243,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {has_numbagg} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {_NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
@@ -275,9 +275,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {has_numbagg} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {_NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
@@ -308,9 +308,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if has_numbagg is None or has_numbagg < Version("0.4.0"):
+        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {has_numbagg} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {_NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
