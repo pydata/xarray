@@ -2891,8 +2891,8 @@ class Dataset(
         DataArray.isel
 
 
-        `**Tutorial on indexing** <https://tutorial.xarray.dev/intermediate/indexing/advanced-indexing.html>`_
-            Intermediate Tutorial on applying advanced indexing on dataset
+        `**Tutorial on indexing** <https://tutorial.xarray.dev/intermediate/indexing/indexing.html>`_
+            Tutorial material on indexing with Xarray objects
 
 
         """
@@ -8639,7 +8639,7 @@ class Dataset(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
-        `**Tutorial on map_blocks** <https://tutorial.xarray.dev/advanced/map_blocks/simple_map_blocks.html>`_
+        `**Tutorial on map_blocks** <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
             Advanced Tutorial on map_blocks with dask
 
 

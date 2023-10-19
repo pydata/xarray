@@ -1145,11 +1145,9 @@ def apply_ufunc(
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
-    :ref:`dask.automatic-parallelization`
-        Example guide describing :py:func:`apply_ufunc` for 1d array.
-
     `*Tutorial on apply_ufunc* <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
         Advanced Tutorial on applying numpy function using ``apply_ufunc``
+
     References
     ----------
     .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
