@@ -5435,7 +5435,7 @@ class DataArray(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
-        `**Tutorial on map_blocks** <https://tutorial.xarray.dev/advanced/map_blocks/simple_map_blocks.html>`_
+        `**Tutorial on map_blocks** <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
             Advanced Tutorial on map_blocks with dask
 
         Examples
