@@ -21,7 +21,7 @@ v2023.10.0 (19 Oct, 2023)
 
 This release brings performance enhancements to reading Zarr datasets, the ability to use `numbagg <https://github.com/numbagg/numbagg>`_ for reductions,
 an expansion in API for ``rolling_exp``, fixes two regressions with datetime decoding,
-and many other bugfixes and improvements.
+and many other bugfixes and improvements. Groupby reductions will also use ``numbagg`` if ``flox>=0.8.1`` and ``numbagg`` are both installed.
 
 Thanks to our 13 contributors:
 Anderson Banihirwe, Bart Schilperoort, Deepak Cherian, Illviljan, Kai Mühlbauer, Mathias Hauser, Maximilian Roos, Michael Niklas, Pieter Eendebak, Simon Høxbro Hansen, Spencer Clark, Tom White, olimcc
