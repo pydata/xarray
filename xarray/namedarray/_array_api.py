@@ -71,7 +71,11 @@ def astype(
     Examples
     --------
     >>> narr = NamedArray(("x",), nxp.asarray([1.5, 2.5]))
-    >>> astype(narr, np.dtype(np.int32)).data
+    >>> narr
+    <xarray.NamedArray (x: 2)>
+    Array([1.5, 2.5], dtype=float64)
+    >>> astype(narr, np.dtype(np.int32))
+    <xarray.NamedArray (x: 2)>
     Array([1, 2], dtype=int32)
     """
     if isinstance(x._data, _arrayapi):
@@ -108,7 +112,8 @@ def imag(
     Examples
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
-    >>> imag(narr).data
+    >>> imag(narr)
+    <xarray.NamedArray (x: 2)>
     array([2., 4.])
     """
     xp = _get_data_namespace(x)
@@ -139,7 +144,8 @@ def real(
     Examples
     --------
     >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
-    >>> real(narr).data
+    >>> real(narr)
+    <xarray.NamedArray (x: 2)>
     array([1., 2.])
     """
     xp = _get_data_namespace(x)
@@ -200,9 +206,11 @@ def mean(
 
     Using keepdims:
 
-    >>> mean(x, dims=("x",), keepdims=True).data
+    >>> mean(x, dims=("x",), keepdims=True)
+    <xarray.NamedArray (x: 1, y: 2)>
     Array([[2., 3.]], dtype=float64)
-    >>> mean(x, dims=("y",), keepdims=True).data
+    >>> mean(x, dims=("y",), keepdims=True)
+    <xarray.NamedArray (x: 2, y: 1)>
     Array([[1.5],
            [3.5]], dtype=float64)
     """
@@ -219,18 +227,3 @@ def mean(
 #     import doctest
 
 #     doctest.testmod()
-#     err
-#     arr = nxp.asarray([[1.0, 2], [3, 4]])
-#     arr_m = nxp.mean(arr, axis=(1,), keepdims=True)
-
-#     removed_axes = np.atleast_1d((0,)) % arr.ndim
-#     slices = tuple(
-#         np.newaxis if i in removed_axes else slice(None, None) for i in range(arr.ndim)
-#     )
-#     arr_m[slices]
-#     err
-#     x = NamedArray(("x", "y"), arr)
-#     x_mean = mean(x, axis=(0,), keepdims=True)
-#     print(x_mean)
-
-#     x_mean = mean(x, dims=("x",), keepdims=True)
