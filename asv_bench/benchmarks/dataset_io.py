@@ -643,7 +643,7 @@ class IOReadCustomEngine:
 
         self.engine = PerformanceBackend
 
-    @parameterized(["chunks"], ([None, {}, {"time", 10}]))
+    @parameterized(["chunks"], ([None, {}, {"time": 10}]))
     def time_open_dataset(self, chunks):
         """
         Time how fast xr.open_dataset is without the slow data reading part.
