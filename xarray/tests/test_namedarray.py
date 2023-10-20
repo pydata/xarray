@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         _DType,
         _Shape,
         duckarray,
+        _IndexKeyLike,
     )
     from xarray.namedarray.utils import Default
 
@@ -56,6 +57,11 @@ class CustomArrayIndexable(
     ExplicitlyIndexed,
     Generic[_ShapeType_co, _DType_co],
 ):
+    def __getitem__(
+        self, key: _IndexKeyLike, /
+    ) -> CustomArrayIndexable[Any, _DType_co]:
+        ...
+
     def __array_namespace__(self) -> ModuleType:
         return np
 
