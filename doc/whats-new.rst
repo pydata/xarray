@@ -22,6 +22,13 @@ v2023.10.1 (19 Oct, 2023)
 This release updates our minimum numpy version in ``pyproject.toml`` to 1.22,
 consistent with our documentation below.
 
+Bug fixes
+~~~~~~~~~
+
+- Fix bug where :py:meth:`Dataset.to_zarr` would modify chunks of datetime-like variables (:issue:`8230`, :pull:`8253`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+
+
 .. _whats-new.2023.10.0:
 
 v2023.10.0 (19 Oct, 2023)
@@ -78,11 +85,6 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Fix bug where :py:meth:`Dataset.to_zarr` would modify chunks of datetime-like variables (:issue:`8230`, :pull:`8253`).
-  By `Mattia Almansi <https://github.com/malmans2>`_.
-- :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
-  when the operation was a no-op. (:issue:`8266`)
-  By `Simon Hansen <https://github.com/hoxbro>`_.
 - :py:meth:`DataArray.rename` & :py:meth:`Dataset.rename` would emit a warning
   when the operation was a no-op. (:issue:`8266`)
   By `Simon Hansen <https://github.com/hoxbro>`_.
