@@ -593,7 +593,7 @@ class IOReadCustomEngine:
                 n_variables = 2000
 
                 # Important to have a shape and dtype for lazy loading.
-                shape = (1,)
+                shape = (1000,)
                 dtype = np.dtype(int)
                 variables = {
                     f"long_variable_name_{v}": xr.Variable(
@@ -643,7 +643,7 @@ class IOReadCustomEngine:
 
         self.engine = PerformanceBackend
 
-    @parameterized(["chunks"], ([None, {}]))
+    @parameterized(["chunks"], ([None, {}, {"time": 10}]))
     def time_open_dataset(self, chunks):
         """
         Time how fast xr.open_dataset is without the slow data reading part.
