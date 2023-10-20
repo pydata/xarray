@@ -100,12 +100,14 @@ def _dims_to_axis(
     if dims is not None and axis is not None:
         raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
-    if dims is None:
-        if axis is None or isinstance(axis, tuple):
-            return axis
+    if dims is not None:
+        dims_: _Dims = (dims,) if isinstance(dims, str) else dims
+        return x.get_axis_num(dims_)
+
+    if isinstance(axis, int):
         return (axis,)
-    else:
-        return x.get_axis_num(dims)
+
+    return axis
 
 
 def _get_remaining_dims(
