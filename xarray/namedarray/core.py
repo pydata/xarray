@@ -792,7 +792,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             if axis_ is not None:
-                if isinstance(axis, tuple) and len(axis) == 1:
+                if isinstance(axis_, tuple) and len(axis_) == 1:
                     # unpack axis for the benefit of functions
                     # like np.argmin which can't handle tuple arguments
                     data = func(self.data, axis=axis_[0], **kwargs)
