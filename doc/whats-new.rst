@@ -14,9 +14,9 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.11.0:
+.. _whats-new.2023.10.2:
 
-v2023.11.0 (unreleased)
+v2023.10.2 (unreleased)
 -----------------------
 
 New Features
@@ -26,6 +26,34 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.10.1:
+
+v2023.10.1 (19 Oct, 2023)
+-------------------------
+
+This release updates our minimum numpy version in ``pyproject.toml`` to 1.22,
+consistent with our documentation below.
 
 .. _whats-new.2023.10.0:
 
