@@ -25,9 +25,9 @@ if TYPE_CHECKING:
         _AttrsLike,
         _DimsLike,
         _DType,
+        _IndexKeyLike,
         _Shape,
         duckarray,
-        _IndexKeyLike,
     )
     from xarray.namedarray.utils import Default
 
