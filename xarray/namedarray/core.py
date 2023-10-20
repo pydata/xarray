@@ -806,7 +806,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if getattr(data, "shape", ()) == self.shape:
             dims_ = self.dims
         else:
-            dims_, data = _get_remaining_dims(self, data, axis, keepdims=keepdims)
+            dims_, data = _get_remaining_dims(self, data, axis_, keepdims=keepdims)
 
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims_, data, attrs=self._attrs)
