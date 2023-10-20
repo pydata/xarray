@@ -61,27 +61,29 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("datastore", "dtype", "shape", "variable_name")
+    __slots__ = ("datastore", "dtype", "shape", "variable_name", "_array")
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
 
-        array = self.get_array()
-        self.shape = array.shape
+        # some callers attempt to evaluate an array if an `array` property exists on the object.
+        # we prefix with _ to avoid this inference.
+        self._array = self.datastore.zarr_group[self.variable_name]
+        self.shape = self._array.shape
 
         # preserve vlen string object dtype (GH 7328)
-        if array.filters is not None and any(
-            [filt.codec_id == "vlen-utf8" for filt in array.filters]
+        if self._array.filters is not None and any(
+            [filt.codec_id == "vlen-utf8" for filt in self._array.filters]
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
-            dtype = array.dtype
+            dtype = self._array.dtype
 
         self.dtype = dtype
 
     def get_array(self):
-        return self.datastore.zarr_group[self.variable_name]
+        return self._array
 
     def _oindex(self, key):
         return self.get_array().oindex[key]

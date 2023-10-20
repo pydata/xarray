@@ -756,9 +756,15 @@ class Dataset(
         self._encoding = dict(value)
 
     def reset_encoding(self) -> Self:
+        warnings.warn(
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+        )
+        return self.drop_encoding()
+
+    def drop_encoding(self) -> Self:
         """Return a new Dataset without encoding on the dataset or any of its
         variables/coords."""
-        variables = {k: v.reset_encoding() for k, v in self.variables.items()}
+        variables = {k: v.drop_encoding() for k, v in self.variables.items()}
         return self._replace(variables=variables, encoding={})
 
     @property
@@ -3416,8 +3422,10 @@ class Dataset(
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
     ) -> Self:
-        """Conform this object onto the indexes of another object, filling in
-        missing values with ``fill_value``. The default fill value is NaN.
+        """
+        Conform this object onto the indexes of another object, for indexes which the
+        objects share. Missing values are filled with ``fill_value``. The default fill
+        value is NaN.
 
         Parameters
         ----------
@@ -3463,7 +3471,9 @@ class Dataset(
         See Also
         --------
         Dataset.reindex
+        DataArray.reindex_like
         align
+
         """
         return alignment.reindex_like(
             self,
@@ -6274,7 +6284,7 @@ class Dataset(
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))  # type: ignore[attr-defined]
+                count += np.asarray(array.count(dims))
                 size += math.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
