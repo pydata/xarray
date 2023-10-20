@@ -807,7 +807,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             else:
                 data = func(self.data, **kwargs)
 
-        if not isinstance(data, duckarray):
+        if not isinstance(data, _arrayfunction_or_api):
             data = np.asarray(data)
 
         dims_, data = _get_remaining_dims(self, data, axis_, keepdims=keepdims)
