@@ -672,13 +672,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
-    def _get_axis_num(self, dim: _Dim) -> int:
-        try:
-            out = self.dims.index(dim)
-            return out
-        except ValueError:
-            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
-
     def get_axis_num(self, dim: _Dims) -> _Axes:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
@@ -696,6 +689,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return tuple(self._get_axis_num(d) for d in dim)
         else:
             return self._get_axis_num(dim)
+
+    def _get_axis_num(self, dim: _Dim) -> int:
+        try:
+            out = self.dims.index(dim)
+            return out
+        except ValueError:
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
     def chunks(self) -> _Chunks | None:
@@ -804,7 +804,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if getattr(data, "shape", ()) == self.shape:
             dims_ = self.dims
         else:
-            dims_, data = _get_remaining_dims(data, data, axis, keepdims=keepdims)
+            dims_, data = _get_remaining_dims(self, data, axis, keepdims=keepdims)
 
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims_, data, attrs=self._attrs)
