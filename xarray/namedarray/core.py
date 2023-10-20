@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    Iterable,
 )
 
 import numpy as np
@@ -679,7 +680,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         except ValueError:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
-    def get_axis_num(self, dims: _Dims) -> _Axes:
+    def get_axis_num(self, dim: _Dims) -> _Axes:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -692,7 +693,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        return tuple(self._get_axis_num(d) for d in dims)
+        if not isinstance(dim, str) and isinstance(dim, Iterable):
+            return tuple(self._get_axis_num(d) for d in dim)
+        else:
+            return self._get_axis_num(dim)
 
     @property
     def chunks(self) -> _Chunks | None:

@@ -2600,24 +2600,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
-    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
-        """Return axis number(s) corresponding to dimension(s) in this array.
-
-        Parameters
-        ----------
-        dim : str or iterable of str
-            Dimension name(s) for which to lookup axes.
-
-        Returns
-        -------
-        int or tuple of int
-            Axis number or numbers corresponding to the given dimensions.
-        """
-        if not isinstance(dim, str) and isinstance(dim, Iterable):
-            return tuple(self._get_axis_num(d) for d in dim)
-        else:
-            return self._get_axis_num(dim)
-
 
 class IndexVariable(Variable):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
