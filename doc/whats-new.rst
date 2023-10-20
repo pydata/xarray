@@ -14,6 +14,35 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.10.2:
+
+v2023.10.2 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2023.10.1:
 
 v2023.10.1 (19 Oct, 2023)
