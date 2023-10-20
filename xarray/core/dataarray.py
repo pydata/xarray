@@ -1373,7 +1373,7 @@ class DataArray(
         elif isinstance(chunks, (tuple, list)):
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
-                "It will raise an error in the future. Instead use a dict with dimensions as keys.",
+                "It will raise an error in the future. Instead use a dict with dimension names as keys.",
                 category=DeprecationWarning,
             )
             chunks = dict(zip(self.dims, chunks))
