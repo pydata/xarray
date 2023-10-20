@@ -137,6 +137,9 @@ def _get_remaining_dims(
         DESCRIPTION.
 
     """
+    if data.shape == x.shape:
+        return x.dims, data
+
     removed_axes: np.ndarray[Any, np.dtype[np.intp]]
     if axis is None:
         removed_axes = np.arange(x.ndim, dtype=np.intp)
@@ -789,6 +792,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             d = dim
         axis_ = _dims_to_axis(self, d, axis)
 
+        data: duckarray[Any, Any] | ArrayLike
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
@@ -803,10 +807,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             else:
                 data = func(self.data, **kwargs)
 
-        if getattr(data, "shape", ()) == self.shape:
-            dims_ = self.dims
-        else:
-            dims_, data = _get_remaining_dims(self, data, axis_, keepdims=keepdims)
+        if not isinstance(data, duckarray):
+            data = np.asarray(data)
+
+        dims_, data = _get_remaining_dims(self, data, axis_, keepdims=keepdims)
 
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims_, data, attrs=self._attrs)
