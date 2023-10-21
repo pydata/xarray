@@ -22,7 +22,7 @@ with warnings.catch_warnings():
         r"The numpy.array_api submodule is still experimental",
         category=UserWarning,
     )
-    import numpy.array_api as nxp
+    import numpy.array_api as nxp  # noqa: F401
 
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
