@@ -61,7 +61,7 @@ class CustomArrayIndexable(
     def __getitem__(
         self, key: _IndexKeyLike | CustomArrayIndexable[Any, Any], /
     ) -> CustomArrayIndexable[Any, _DType_co]:
-        ...
+        return type(self)(array=self.array[key])
 
     def __array_namespace__(self) -> ModuleType:
         return np

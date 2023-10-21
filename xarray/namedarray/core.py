@@ -788,15 +788,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-
-        if isinstance(dim, EllipsisType):
-            # TODO: What's the point of ellipsis? Use either ... or None?
-            dim = None
         d: _Dims | None
-        if dim is None:
-            d = dim
+        if dim is None or dim is ...:
+            # TODO: What's the point of ellipsis? Use either ... or None?
+            d = None
         else:
-            d = _normalize_dimensions(dim)
+            dimslike: _DimsLike = dim  # type: ignore[assignment]
+            d = _normalize_dimensions(dimslike)
 
         axislike: _AxisLike | None
         if axis is None or isinstance(axis, int):

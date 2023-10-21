@@ -35,9 +35,7 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     return np
 
 
-def _to_nxp(
-    x: duckarray[_ShapeType, _DType]
-) -> tuple[ModuleType, _arrayapi[_ShapeType, _DType]]:
+def _to_nxp(x: duckarray[_ShapeType, _DType]) -> tuple[ModuleType, nxp.Array]:
     return nxp, nxp.asarray(x)
 
 
