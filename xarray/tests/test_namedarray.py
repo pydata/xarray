@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
@@ -58,7 +59,7 @@ class CustomArrayIndexable(
     Generic[_ShapeType_co, _DType_co],
 ):
     def __getitem__(
-        self, key: _IndexKeyLike, /
+        self, key: _IndexKeyLike | CustomArrayIndexable[Any, Any], /
     ) -> CustomArrayIndexable[Any, _DType_co]:
         ...
 
@@ -281,6 +282,18 @@ def test_duck_array_class() -> None:
 
     test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)
+
+    # Test numpy's array api:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            r"The numpy.array_api submodule is still experimental",
+            category=UserWarning,
+        )
+        import numpy.array_api as nxp
+
+    arraypi_a = nxp.asarray([2.1, 4], dtype=np.dtype(np.int64))
+    test_duck_array_typevar(arraypi_a)
 
 
 def test_new_namedarray() -> None:

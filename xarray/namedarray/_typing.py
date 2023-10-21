@@ -19,18 +19,13 @@ import numpy as np
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-    # https://data-apis.org/array-api/latest/API_specification/indexing.html
-    # TODO: np.array_api doesn't allow None for some reason, maybe they're
-    # recommending to use expand_dims?
-    _IndexKey = Union[int, slice, ellipsis, None]
-    _IndexKeys = tuple[_IndexKey, ...]
-    _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
 
+_dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
@@ -68,11 +63,18 @@ _Chunks = tuple[_Shape, ...]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
-
 _DimsLike = Union[str, Iterable[_Dim]]
-_AttrsLike = Union[Mapping[Any, Any], None]
+_DimsLikeAgg = Union[_DimsLike, "ellipsis", None]
 
-_dtype = np.dtype
+
+# https://data-apis.org/array-api/latest/API_specification/indexing.html
+# TODO: np.array_api doesn't allow None for some reason, maybe they're
+# recommending to use expand_dims?
+_IndexKey = Union[int, slice, "ellipsis"]
+_IndexKeys = tuple[_IndexKey | None, ...]
+_IndexKeyLike = Union[_IndexKey, _IndexKeys]
+
+_AttrsLike = Union[Mapping[Any, Any], None]
 
 
 class _SupportsReal(Protocol[_T_co]):
@@ -126,7 +128,22 @@ class _arrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def __getitem__(self, key: _IndexKeyLike, /) -> _arrayfunction[Any, _DType_co]:
+    @overload
+    def __getitem__(self, key: _IndexKeyLike) -> Any:
+        ...
+
+    @overload
+    def __getitem__(
+        self, key: (_arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...])
+    ) -> _arrayfunction[Any, _DType_co]:
+        ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: _IndexKeyLike | _arrayfunction[Any, Any],
+        /,
+    ) -> _arrayfunction[Any, _DType_co] | Any:
         ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
@@ -164,7 +181,10 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
     Corresponds to np.ndarray.
     """
 
-    def __getitem__(self, key: _IndexKeyLike, /) -> _arrayapi[Any, _DType_co]:
+    # TODO: Only integer _arrayapi:
+    def __getitem__(
+        self, key: _IndexKeyLike | _arrayapi[Any, Any], /
+    ) -> _arrayapi[Any, _DType_co]:
         ...
 
     def __array_namespace__(self) -> ModuleType:
@@ -254,7 +274,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
@@ -272,7 +292,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
@@ -290,7 +310,7 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 

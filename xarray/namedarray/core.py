@@ -5,6 +5,7 @@ import math
 import sys
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -38,7 +39,6 @@ from xarray.namedarray.utils import (
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
-    from xarray.core.types import Dims
     from xarray.namedarray._typing import (
         DuckArray,
         _AttrsLike,
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
         _Dim,
         _Dims,
         _DimsLike,
+        _DimsLikeAgg,
         _IntOrUnknown,
         _ScalarType,
         _Shape,
@@ -83,7 +84,7 @@ if TYPE_CHECKING:
 
 
 def _dims_to_axis(
-    x: NamedArray[Any, Any], dims: _DimsLike | None, axis: _AxisLike | None
+    x: NamedArray[Any, Any], dims: _Dims | None, axis: _AxisLike | None
 ) -> _Axes | None:
     """
     Convert dims to axis indices.
@@ -113,7 +114,7 @@ def _dims_to_axis(
 def _get_remaining_dims(
     x: NamedArray[Any, _DType],
     data: duckarray[Any, _DType],
-    axis: _Axes,
+    axis: _Axes | None,
     *,
     keepdims: bool,
 ) -> tuple[_Dims, duckarray[Any, _DType]]:
@@ -223,9 +224,9 @@ def _new(
 @overload
 def from_array(
     dims: _DimsLike,
-    data: DuckArray[_ScalarType],
+    data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
-) -> _NamedArray[_ScalarType]:
+) -> NamedArray[_ShapeType, _DType]:
     ...
 
 
@@ -234,15 +235,15 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = ...,
-) -> _NamedArray[Any]:
+) -> NamedArray[Any, Any]:
     ...
 
 
 def from_array(
     dims: _DimsLike,
-    data: DuckArray[_ScalarType] | ArrayLike,
+    data: duckarray[_ShapeType, _DType] | ArrayLike,
     attrs: _AttrsLike = None,
-) -> _NamedArray[_ScalarType] | _NamedArray[Any]:
+) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
     Create a Named array from an array-like object.
 
@@ -693,7 +694,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if not isinstance(dim, str) and isinstance(dim, Iterable):
             return tuple(self._get_axis_num(d) for d in dim)
         else:
-            return self._get_axis_num(dim)
+            return (self._get_axis_num(dim),)
 
     def _get_axis_num(self, dim: _Dim) -> int:
         try:
@@ -752,8 +753,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
-        axis: int | Sequence[int] | None = None,
+        dim: _DimsLikeAgg = None,
+        axis: int | Sequence[int] | None = None,  # TODO: Use _AxisLike
         keepdims: bool = False,
         **kwargs: Any,
     ) -> NamedArray[Any, Any]:
@@ -785,12 +786,22 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        d: _Dims
-        if dim == ...:
-            d = None
-        else:
+
+        if isinstance(dim, EllipsisType):
+            # TODO: What's the point of ellipsis? Use either ... or None?
+            dim = None
+        d: _Dims | None
+        if dim is None:
             d = dim
-        axis_ = _dims_to_axis(self, d, axis)
+        else:
+            d = self._parse_dimensions(dim)
+
+        axislike: _AxisLike | None
+        if axis is None or isinstance(axis, int):
+            axislike = axis
+        else:
+            axislike = tuple(axis)
+        axis_ = _dims_to_axis(self, d, axislike)
 
         data: duckarray[Any, Any] | ArrayLike
         with warnings.catch_warnings():
@@ -869,7 +880,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         if isinstance(self._data, _sparsearrayfunction_or_api):
             # return self._replace(data=self._data.todense())
-            data_: np.ndarray[Any, Any] = self._data.todense()
+            data_: np.ndarray[Any, _DType_co] = self._data.todense()
             return self._replace(data=data_)
         else:
             raise TypeError("self.data is not a sparse array")
