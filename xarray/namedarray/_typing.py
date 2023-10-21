@@ -71,7 +71,7 @@ _DimsLikeAgg = Union[_DimsLike, "ellipsis", None]
 # TODO: np.array_api doesn't allow None for some reason, maybe they're
 # recommending to use expand_dims?
 _IndexKey = Union[int, slice, "ellipsis"]
-_IndexKeys = tuple[_IndexKey | None, ...]
+_IndexKeys = tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
