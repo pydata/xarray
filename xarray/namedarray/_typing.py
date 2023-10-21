@@ -17,7 +17,7 @@ from typing import (
 import numpy as np
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    pass
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array

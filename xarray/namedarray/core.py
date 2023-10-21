@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray._typing import (
-        DuckArray,
         _AttrsLike,
         _Axes,
         _AxisLike,
@@ -50,7 +49,6 @@ if TYPE_CHECKING:
         _DimsLike,
         _DimsLikeAgg,
         _IntOrUnknown,
-        _ScalarType,
         _Shape,
         _ShapeType,
         duckarray,
