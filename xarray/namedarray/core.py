@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         _AttrsLike,
         _Axes,
+        _Axis,
         _AxisLike,
         _Chunks,
         _Dim,
@@ -679,7 +680,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
-    def get_axis_num(self, dim: _Dims) -> _AxisLike:
+    @overload
+    def get_axis_num(self, dim: _Dims) -> _Axes:
+        ...
+
+    @overload
+    def get_axis_num(self, dim: _Dim) -> _Axis:
+        ...
+
+    def get_axis_num(self, dim: _Dim | _Dims) -> _Axis | _Axes:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -792,7 +801,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # TODO: What's the point of ellipsis? Use either ... or None?
             d = None
         else:
-            dimslike: _DimsLike = dim  # type: ignore[assignment]
+            dimslike: _DimsLike = dim
             d = _normalize_dimensions(dimslike)
 
         axislike: _AxisLike | None
