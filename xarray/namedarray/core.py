@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         _AttrsLike,
         _Axes,
+        _Axis,
         _AxisLike,
         _Chunks,
         _Dim,
@@ -679,7 +680,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
-    def get_axis_num(self, dim: _Dims) -> _Axes:
+    def get_axis_num(self, dim: _Dims) -> _Axis | _Axes:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -695,7 +696,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if not isinstance(dim, str) and isinstance(dim, Iterable):
             return tuple(self._get_axis_num(d) for d in dim)
         else:
-            return (self._get_axis_num(dim),)
+            return self._get_axis_num(dim)
 
     def _get_axis_num(self, dim: _Dim) -> int:
         try:
