@@ -198,7 +198,15 @@ class AbstractArray:
             raise TypeError("iteration over a 0-d array")
         return self._iter()
 
-    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+    @overload
+    def get_axis_num(self, dim: Hashable) -> int:
+        ...
+
+    @overload
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
+        ...
+
+    def get_axis_num(self, dim: str | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
