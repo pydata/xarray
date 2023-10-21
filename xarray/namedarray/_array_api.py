@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 import warnings
 from types import ModuleType
 from typing import Any
