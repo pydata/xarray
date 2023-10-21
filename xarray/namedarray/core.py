@@ -83,6 +83,10 @@ if TYPE_CHECKING:
     )
 
 
+def _normalize_dimensions(dims: _DimsLike) -> _Dims:
+    return (dims,) if isinstance(dims, str) else tuple(dims)
+
+
 def _dims_to_axis(
     x: NamedArray[Any, Any], dims: _Dims | None, axis: _AxisLike | None
 ) -> _Axes | None:
@@ -556,7 +560,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._dims = self._parse_dimensions(value)
 
     def _parse_dimensions(self, dims: _DimsLike) -> _Dims:
-        dims = (dims,) if isinstance(dims, str) else tuple(dims)
+        dims = _normalize_dimensions(dims)
         if len(dims) != self.ndim:
             raise ValueError(
                 f"dimensions {dims} must have the same length as the "
@@ -794,7 +798,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if dim is None:
             d = dim
         else:
-            d = self._parse_dimensions(dim)
+            d = _normalize_dimensions(dim)
 
         axislike: _AxisLike | None
         if axis is None or isinstance(axis, int):
