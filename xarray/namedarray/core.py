@@ -5,7 +5,6 @@ import math
 import sys
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -789,7 +788,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             removed.
         """
         d: _Dims | None
-        if dim is None or dim is ...:
+        if dim is None or dim is ...:  # isinstance(dim, types.EllipsisType)
             # TODO: What's the point of ellipsis? Use either ... or None?
             d = None
         else:
