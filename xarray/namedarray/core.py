@@ -5,7 +5,6 @@ import math
 import sys
 import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
