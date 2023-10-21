@@ -788,7 +788,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             removed.
         """
         d: _Dims | None
-        if dim is None or dim is ...:  # isinstance(dim, types.EllipsisType)
+        if dim is None or dim is ...:  # TODO: isinstance(dim, types.EllipsisType)
             # TODO: What's the point of ellipsis? Use either ... or None?
             d = None
         else:
