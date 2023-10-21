@@ -30,6 +30,13 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
+  :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
+  dimensions, or a single ``int`` or ``"auto"`` argument covering all
+  dimensions. Xarray favors using dimensions names rather than positions, and
+  this was one place in the API where dimension positions were used.
+  (:pull:`8341`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
