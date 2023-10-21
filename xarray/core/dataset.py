@@ -2648,11 +2648,17 @@ class Dataset(
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
+                category=DeprecationWarning,
             )
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
+            if isinstance(chunks, (tuple, list)):
+                utils.emit_user_level_warning(
+                    "Supplying chunks as dimension-order tuples is deprecated. "
+                    "It will raise an error in the future. Instead use a dict with dimensions as keys.",
+                    category=DeprecationWarning,
+                )
             chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
             chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
