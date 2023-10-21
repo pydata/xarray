@@ -2162,7 +2162,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     raise ValueError(
                         f"Expected {name}={arg!r} to be a scalar like 'dim'."
                     )
-            dim = [dim]
+            dim = (dim,)
 
         # dim is now a list
         nroll = len(dim)
