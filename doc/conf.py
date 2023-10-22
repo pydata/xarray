@@ -325,6 +325,7 @@ intersphinx_mapping = {
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "cubed": ("https://tom-e-white.com/cubed/", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
 }
 
 

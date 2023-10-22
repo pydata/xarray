@@ -5435,7 +5435,7 @@ class DataArray(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
-        `**Tutorial on map_blocks** <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
+        `Tutorial on map_blocks <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
             Advanced Tutorial on map_blocks with dask
 
         Examples
@@ -6802,7 +6802,7 @@ class DataArray(
         --------
         Dataset.weighted
 
-        `Weighted array reductions <https://docs.xarray.dev/en/stable/user-guide/computation.html#weighted-array-reductions>`_
+        :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
         `Weighted reduction <https://tutorial.xarray.dev/fundamentals/03.4_weighted.html>`_
@@ -6950,10 +6950,10 @@ class DataArray(
         core.rolling.DataArrayCoarsen
         Dataset.coarsen
 
-        `Reshaping via coarsen <https://docs.xarray.dev/en/stable/user-guide/reshaping.html#reshaping-via-coarsen>`_
+        :ref:`reshape.coarsen`
             User guide describing :py:func:`~xarray.DataArray.coarsen`
 
-        `Coarsening large arrays <https://docs.xarray.dev/en/stable/user-guide/computation.html#coarsen-large-arrays>`_
+        :ref:`compute.coarsen`
             User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
 
         `Block window operation and reshaping <https://tutorial.xarray.dev/fundamentals/03.3_windowed.html?#coarsening>`_
