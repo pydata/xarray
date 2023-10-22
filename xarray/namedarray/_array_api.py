@@ -18,7 +18,6 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
 
-
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
