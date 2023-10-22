@@ -2891,7 +2891,7 @@ class Dataset(
         DataArray.isel
 
 
-        `**Tutorial on indexing** <https://tutorial.xarray.dev/intermediate/indexing/indexing.html>`_
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
 
 
@@ -8639,7 +8639,7 @@ class Dataset(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
-        `Tutorial on map_blocks <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
+        :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
 
 
@@ -10029,10 +10029,10 @@ class Dataset(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        `Deconstructing GroupBy operation <https://tutorial.xarray.dev/intermediate/01-high-level-computation-patterns.html#label-space-windows-or-bins-groupby>`_
+        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
-        `Grouped Computation <https://tutorial.xarray.dev/fundamentals/03.2_groupby_with_xarray.html>`_
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
             Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparision with :py:func:`~xarray.Dataset.resample`.
 
         Dataset.groupby_bins
@@ -10181,7 +10181,7 @@ class Dataset(
         :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
 
-        `Weighted reduction <https://tutorial.xarray.dev/fundamentals/03.4_weighted.html>`_
+        :doc:`xarray-tutorial:fundamentals/03.4_weighted`
             Tutorial on Weighted Reduction using :py:func:`~xarray.Dataset.weighted`
 
         """
@@ -10267,7 +10267,7 @@ class Dataset(
         :ref:`compute.coarsen`
             User guide on block arrgragation :py:func:`~xarray.Dataset.coarsen`
 
-        `Block window operation and reshaping <https://tutorial.xarray.dev/fundamentals/03.3_windowed.html?#coarsening>`_
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
 
         """

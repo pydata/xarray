@@ -5435,7 +5435,7 @@ class DataArray(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
-        `Tutorial on map_blocks <https://tutorial.xarray.dev/advanced/map_blocks/map_blocks.html>`_
+        :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
 
         Examples
@@ -6654,10 +6654,10 @@ class DataArray(
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
 
-        `Deconstructing GroupBy operation <https://tutorial.xarray.dev/intermediate/01-high-level-computation-patterns.html#label-space-windows-or-bins-groupby>`_
+        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
 
-        `Grouped Computation <https://tutorial.xarray.dev/fundamentals/03.2_groupby_with_xarray.html>`_
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
             Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
 
         DataArray.groupby_bins
@@ -6805,7 +6805,7 @@ class DataArray(
         :ref:`comput.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
-        `Weighted reduction <https://tutorial.xarray.dev/fundamentals/03.4_weighted.html>`_
+        :doc:`xarray-tutorial:fundamentals/03.4_weighted`
             Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
 
         """
@@ -6956,7 +6956,7 @@ class DataArray(
         :ref:`compute.coarsen`
             User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
 
-        `Block window operation and reshaping <https://tutorial.xarray.dev/fundamentals/03.3_windowed.html?#coarsening>`_
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
 
         """
