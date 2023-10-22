@@ -15,7 +15,6 @@ from xarray.namedarray._typing import (
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
-    duckarray,
 )
 from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
 
