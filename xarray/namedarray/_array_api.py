@@ -15,17 +15,9 @@ from xarray.namedarray._typing import (
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
-    duckarray,
 )
 from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
 
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        "ignore",
-        r"The numpy.array_api submodule is still experimental",
-        category=UserWarning,
-    )
-    import numpy.array_api as nxp
 
 with warnings.catch_warnings():
     warnings.filterwarnings(
