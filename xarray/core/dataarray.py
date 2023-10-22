@@ -6653,10 +6653,20 @@ class DataArray(
         --------
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
+
+        `Deconstructing GroupBy operation <https://tutorial.xarray.dev/intermediate/01-high-level-computation-patterns.html#label-space-windows-or-bins-groupby>`_
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
+
+        `Grouped Computation <https://tutorial.xarray.dev/fundamentals/03.2_groupby_with_xarray.html>`_
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
+
         DataArray.groupby_bins
         Dataset.groupby
         core.groupby.DataArrayGroupBy
+        DataArray.coarsen
         pandas.DataFrame.groupby
+        Dataset.resample
+        DataArray.resample
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -6791,6 +6801,13 @@ class DataArray(
         See Also
         --------
         Dataset.weighted
+
+        `Weighted array reductions <https://docs.xarray.dev/en/stable/user-guide/computation.html#weighted-array-reductions>`_
+            User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
+
+        `Weighted reduction <https://tutorial.xarray.dev/fundamentals/03.4_weighted.html>`_
+            Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
+
         """
         from xarray.core.weighted import DataArrayWeighted
 
@@ -6932,6 +6949,16 @@ class DataArray(
         --------
         core.rolling.DataArrayCoarsen
         Dataset.coarsen
+
+        `Reshaping via coarsen <https://docs.xarray.dev/en/stable/user-guide/reshaping.html#reshaping-via-coarsen>`_
+            User guide describing :py:func:`~xarray.DataArray.coarsen`
+
+        `Coarsening large arrays <https://docs.xarray.dev/en/stable/user-guide/computation.html#coarsen-large-arrays>`_
+            User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
+
+        `Block window operation and reshaping <https://tutorial.xarray.dev/fundamentals/03.3_windowed.html?#coarsening>`_
+            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
+
         """
         from xarray.core.rolling import DataArrayCoarsen
 
