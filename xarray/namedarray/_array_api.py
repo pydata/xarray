@@ -27,16 +27,20 @@ with warnings.catch_warnings():
     )
     import numpy.array_api as nxp
 
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        r"The numpy.array_api submodule is still experimental",
+        category=UserWarning,
+    )
+    import numpy.array_api as nxp  # noqa: F401
+
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     if isinstance(x._data, _arrayapi):
         return x._data.__array_namespace__()
 
     return np
-
-
-def _to_nxp(x: duckarray[_ShapeType, _DType]) -> tuple[ModuleType, nxp.Array]:
-    return nxp, nxp.asarray(x)
 
 
 # %% Creation Functions
