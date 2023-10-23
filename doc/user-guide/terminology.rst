@@ -90,7 +90,7 @@ complete examples, please consult the relevant documentation.*
         dimensions although in most cases it is also a :term:`Dimension
         coordinate`. It may or may not be grouped with other indexed coordinates
         depending on whether they share the same index. Indexed coordinates are
-        marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+        marked by an asterisk ``*`` when printing a ``DataArray`` or ``Dataset``.
 
     Non-indexed coordinate
         A coordinate which has no associated :term:`Index`. It may still
