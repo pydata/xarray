@@ -199,11 +199,11 @@ class AbstractArray:
         return self._iter()
 
     @overload
-    def get_axis_num(self, dim: Hashable) -> int:
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
         ...
 
     @overload
-    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
+    def get_axis_num(self, dim: Hashable) -> int:
         ...
 
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
