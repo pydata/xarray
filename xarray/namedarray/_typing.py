@@ -113,6 +113,11 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
         ...
 
+    def __array__(
+        self, dtype: _DType | None = ..., /
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
+        ...
+
 
 # Corresponds to np.typing.NDArray:
 _Array = _array[Any, np.dtype[_ScalarType_co]]
@@ -134,11 +139,10 @@ class _arrayfunction(
 
     @overload
     def __getitem__(
-        self, key: (_arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...])
+        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...]
     ) -> _arrayfunction[Any, _DType_co]:
         ...
 
-    @overload
     def __getitem__(
         self,
         key: _IndexKeyLike | _arrayfunction[Any, Any],
@@ -182,8 +186,23 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
     """
 
     # TODO: Only integer _arrayapi:
+    # def __getitem__(
+    #     self,
+    #     key: Union[
+    #         int,
+    #         slice,
+    #         "ellipsis",
+    #         tuple[Union[int, slice, "ellipsis", None], ...],
+    #         _arrayapi[Any, Any],
+    #     ],
+    #     /,
+    # ) -> _arrayapi[Any, _DType_co]:
+    #     ...
+
     def __getitem__(
-        self, key: _IndexKeyLike | _arrayapi[Any, Any], /
+        self,
+        key: Any,
+        /,
     ) -> _arrayapi[Any, _DType_co]:
         ...
 
