@@ -395,7 +395,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self._copy(deep=deep, data=data)
 
     @property
-    def ndim(self) -> _IntOrUnknown:
+    def ndim(self) -> int:
         """
         Number of array dimensions.
 
