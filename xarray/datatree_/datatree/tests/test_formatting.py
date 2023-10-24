@@ -90,11 +90,14 @@ class TestDiffFormatting:
         assert actual == expected
 
     def test_diff_node_data(self):
-        ds1 = Dataset({"u": 0, "v": 1})
-        ds3 = Dataset({"w": 5})
+        import numpy as np
+
+        # casting to int64 explicitly ensures that int64s are created on all architectures
+        ds1 = Dataset({"u": np.int64(0), "v": np.int64(1)})
+        ds3 = Dataset({"w": np.int64(5)})
         dt_1 = DataTree.from_dict({"a": ds1, "a/b": ds3})
-        ds2 = Dataset({"u": 0})
-        ds4 = Dataset({"w": 6})
+        ds2 = Dataset({"u": np.int64(0)})
+        ds4 = Dataset({"w": np.int64(6)})
         dt_2 = DataTree.from_dict({"a": ds2, "a/b": ds4})
 
         expected = dedent(
