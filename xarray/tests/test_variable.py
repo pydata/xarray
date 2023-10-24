@@ -2663,7 +2663,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
     def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
-        ).chunk(((1, 1), (2,)))
+        ).chunk(dict(x=(1, 1), y=(2,)))
 
         def check(actual, expect_dtype, expect_values):
             assert actual.dtype == expect_dtype

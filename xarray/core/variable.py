@@ -27,6 +27,7 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -37,7 +38,6 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
-from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
     integer_types,
     is_0d_dask_array,
@@ -2029,7 +2029,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     raise ValueError(
                         f"Expected {name}={arg!r} to be a scalar like 'dim'."
                     )
-            dim = [dim]
+            dim = (dim,)
 
         # dim is now a list
         nroll = len(dim)
@@ -2060,7 +2060,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pads[d] = (win - 1, 0)
 
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
-        axis = tuple(self.get_axis_num(d) for d in dim)
+        axis = self.get_axis_num(dim)
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
