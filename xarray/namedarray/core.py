@@ -513,7 +513,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._data = data
 
     @property
-    def imag(self) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+    def imag(self) -> Self:
         """
         The imaginary part of the array.
 
@@ -521,13 +521,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.imag
         """
-
-        from xarray.namedarray._array_api import imag
-
-        return imag(self)
+        return self._replace(data=self._data.imag)
 
     @property
-    def real(self) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+    def real(self) -> Self:
         """
         The real part of the array.
 
@@ -535,14 +532,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.real
         """
+        return self._replace(data=self._data.real)
 
-        from xarray.namedarray._array_api import real
-
-        return real(self)
-
-    def astype(
-        self, dtype: _DType, copy: bool = True
-    ) -> NamedArray[_ShapeType, _DType]:
+    def astype(self, dtype: _DType, copy: bool = True) -> Self:
         """
         Copy of the array, cast to a specified type.
 
