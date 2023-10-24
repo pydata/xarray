@@ -534,18 +534,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         return self._replace(data=self.data.real)
 
-    def astype(self, dtype: _DType, copy: bool = True) -> Self:
-        """
-        Copy of the array, cast to a specified type.
-
-        See Also
-        --------
-        numpy.ndarray.astype
-        """
-        from xarray.namedarray._array_api import astype
-
-        return astype(self, dtype, copy=copy)
-
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
         # around NetCDF and the like
