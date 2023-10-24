@@ -8,11 +8,7 @@ import numpy as np
 import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._typing import (
-    _arrayfunction_or_api,
-    _DType_co,
-    _ShapeType_co,
-)
+from xarray.namedarray._typing import _arrayfunction_or_api, _DType_co, _ShapeType_co
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import _default
 
@@ -169,6 +165,16 @@ def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
     assert np.array_equal(named_array.data, random_inputs)
     with pytest.raises(ValueError):
         named_array.data = np.random.random((3, 4)).astype(np.float64)
+
+
+def test_real_and_imag() -> None:
+    named_array: NamedArray[Any, Any]
+    named_array = NamedArray(["x"], np.arange(3) - 1j * np.arange(3))
+    expected_real = np.arange(3)
+    assert np.array_equal(named_array.real.data, expected_real)
+
+    expected_imag = -np.arange(3)
+    assert np.array_equal(named_array.imag.data, expected_imag)
 
 
 # Additional tests as per your original class-based code
