@@ -2365,6 +2365,30 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
+    @property
+    def real(self):
+        """
+        The real part of the variable.
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        # TODO: this should be removed (in favor of namedarray/_array_api) once there's wide support for Python Array API
+        # https://github.com/pydata/xarray/pull/8365#issuecomment-1776593216
+        return self._replace(data=self.data.real)
+
+    @property
+    def imag(self):
+        """
+        The imaginary part of the variable.
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
+        # TODO: this should be removed (in favor of namedarray/_array_api) once there's wide support for Python Array API
+        # https://github.com/pydata/xarray/pull/8365#issuecomment-1776593216
+        return self._replace(data=self.data.imag)
+
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 
