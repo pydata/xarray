@@ -521,7 +521,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self._data.imag)
+        return self._replace(data=self.data.imag)
 
     @property
     def real(self) -> Self:
@@ -532,7 +532,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.real
         """
-        return self._replace(data=self._data.real)
+        return self._replace(data=self.data.real)
 
     def astype(self, dtype: _DType, copy: bool = True) -> Self:
         """
