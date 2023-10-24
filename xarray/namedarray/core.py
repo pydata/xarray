@@ -27,6 +27,8 @@ from xarray.namedarray._typing import (
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
+    _SupportsImag,
+    _SupportsReal,
 )
 from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
@@ -513,7 +515,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._data = data
 
     @property
-    def imag(self) -> Self:
+    def imag(
+        self: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
         """
         The imaginary part of the array.
 
@@ -521,10 +525,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self.data.imag)  # type: ignore
+        return self._new(data=self.data.imag)
 
     @property
-    def real(self) -> Self:
+    def real(
+        self: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
         """
         The real part of the array.
 
@@ -532,7 +538,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.real
         """
-        return self._replace(data=self.data.real)  # type: ignore
+        return self._new(data=self.data.real)
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
