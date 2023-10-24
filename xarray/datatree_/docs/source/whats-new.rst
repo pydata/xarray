@@ -23,6 +23,10 @@ v0.0.13 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Indicate which node caused the problem if error encountered while applying user function using :py:func:`map_over_subtree`
+  (:issue:`190`, :pull:`264`). Only works when using python 3.11 or later.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 

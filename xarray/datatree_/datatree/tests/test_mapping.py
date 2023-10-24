@@ -264,6 +264,23 @@ class TestMapOverSubTree:
 
         dt.map_over_subtree(check_for_data)
 
+    @pytest.mark.xfail(
+        reason="probably some bug in pytests handling of exception notes"
+    )
+    def test_error_contains_path_of_offending_node(self, create_test_datatree):
+        dt = create_test_datatree()
+        dt["set1"]["bad_var"] = 0
+        print(dt)
+
+        def fail_on_specific_node(ds):
+            if "bad_var" in ds:
+                raise ValueError("Failed because 'bar_var' present in dataset")
+
+        with pytest.raises(
+            ValueError, match="Raised whilst mapping function over node /set1"
+        ):
+            dt.map_over_subtree(fail_on_specific_node)
+
 
 class TestMutableOperations:
     def test_construct_using_type(self):

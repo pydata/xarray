@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import sys
 from itertools import repeat
 from textwrap import dedent
 from typing import TYPE_CHECKING, Callable, Tuple
@@ -202,10 +203,15 @@ def map_over_subtree(func: Callable) -> Callable:
                     ],
                 )
             )
+            func_with_error_context = _handle_errors_with_path_context(
+                node_of_first_tree.path
+            )(func)
 
             # Now we can call func on the data in this particular set of corresponding nodes
             results = (
-                func(*node_args_as_datasets, **node_kwargs_as_datasets)
+                func_with_error_context(
+                    *node_args_as_datasets, **node_kwargs_as_datasets
+                )
                 if node_of_first_tree.has_data
                 else None
             )
@@ -249,6 +255,34 @@ def map_over_subtree(func: Callable) -> Callable:
             return tuple(result_trees)
 
     return _map_over_subtree
+
+
+def _handle_errors_with_path_context(path):
+    """Wraps given function so that if it fails it also raises path to node on which it failed."""
+
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if sys.version_info >= (3, 11):
+                    # Add the context information to the error message
+                    e.add_note(
+                        f"Raised whilst mapping function over node with path {path}"
+                    )
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+def add_note(err: BaseException, msg: str) -> None:
+    # TODO: remove once python 3.10 can be dropped
+    if sys.version_info < (3, 11):
+        err.__notes__ = getattr(err, "__notes__", []) + [msg]
+    else:
+        err.add_note(msg)
 
 
 def _check_single_set_return_values(path_to_node, obj):
