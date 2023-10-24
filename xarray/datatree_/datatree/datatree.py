@@ -108,13 +108,10 @@ class DatasetView(Dataset):
     An immutable Dataset-like view onto the data in a single DataTree node.
 
     In-place operations modifying this object should raise an AttributeError.
+    This requires overriding all inherited constructors.
 
     Operations returning a new result will return a new xarray.Dataset object.
     This includes all API on Dataset, which will be inherited.
-
-    This requires overriding all inherited private constructors.
-
-    We leave the public init constructor because it is used by type() in some xarray code (see datatree GH issue #188)
     """
 
     # TODO what happens if user alters (in-place) a DataArray they extracted from this object?
@@ -129,6 +126,14 @@ class DatasetView(Dataset):
         "_indexes",
         "_variables",
     )
+
+    def __init__(
+        self,
+        data_vars: Optional[Mapping[Any, Any]] = None,
+        coords: Optional[Mapping[Any, Any]] = None,
+        attrs: Optional[Mapping[Any, Any]] = None,
+    ):
+        raise AttributeError("DatasetView objects are not to be initialized directly")
 
     @classmethod
     def _from_node(
@@ -150,14 +155,16 @@ class DatasetView(Dataset):
 
     def __setitem__(self, key, val) -> None:
         raise AttributeError(
-            "Mutation of the DatasetView is not allowed, please use __setitem__ on the wrapping DataTree node, "
-            "or use `DataTree.to_dataset()` if you want a mutable dataset"
+            "Mutation of the DatasetView is not allowed, please use `.__setitem__` on the wrapping DataTree node, "
+            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"
+            "use `.copy()` first to get a mutable version of the input dataset."
         )
 
     def update(self, other) -> None:
         raise AttributeError(
-            "Mutation of the DatasetView is not allowed, please use .update on the wrapping DataTree node, "
-            "or use `DataTree.to_dataset()` if you want a mutable dataset"
+            "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
+            "or use `dt.to_dataset()` if you want a mutable dataset. If calling this from within `map_over_subtree`,"
+            "use `.copy()` first to get a mutable version of the input dataset."
         )
 
     # FIXME https://github.com/python/mypy/issues/7328

@@ -190,15 +190,14 @@ def map_over_subtree(func: Callable) -> Callable:
             *args_as_tree_length_iterables,
             *list(kwargs_as_tree_length_iterables.values()),
         ):
-            node_args_as_datasets = [
-                a.to_dataset() if isinstance(a, DataTree) else a
-                for a in all_node_args[:n_args]
+            node_args_as_datasetviews = [
+                a.ds if isinstance(a, DataTree) else a for a in all_node_args[:n_args]
             ]
-            node_kwargs_as_datasets = dict(
+            node_kwargs_as_datasetviews = dict(
                 zip(
                     [k for k in kwargs_as_tree_length_iterables.keys()],
                     [
-                        v.to_dataset() if isinstance(v, DataTree) else v
+                        v.ds if isinstance(v, DataTree) else v
                         for v in all_node_args[n_args:]
                     ],
                 )
@@ -210,7 +209,7 @@ def map_over_subtree(func: Callable) -> Callable:
             # Now we can call func on the data in this particular set of corresponding nodes
             results = (
                 func_with_error_context(
-                    *node_args_as_datasets, **node_kwargs_as_datasets
+                    *node_args_as_datasetviews, **node_kwargs_as_datasetviews
                 )
                 if node_of_first_tree.has_data
                 else None
