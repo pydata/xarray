@@ -24,16 +24,11 @@ from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     _arrayfunction_or_api,
     _chunkedarray,
-    _DType,
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
 )
-from xarray.namedarray.utils import (
-    _default,
-    is_duck_dask_array,
-    to_0d_object_array,
-)
+from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -46,6 +41,7 @@ if TYPE_CHECKING:
         _Dim,
         _Dims,
         _DimsLike,
+        _DType,
         _IntOrUnknown,
         _ScalarType,
         _Shape,
@@ -515,6 +511,28 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def data(self, data: duckarray[Any, _DType_co]) -> None:
         self._check_shape(data)
         self._data = data
+
+    @property
+    def imag(self) -> Self:
+        """
+        The imaginary part of the array.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
+        return self._replace(data=self.data.imag)  # type: ignore
+
+    @property
+    def real(self) -> Self:
+        """
+        The real part of the array.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._replace(data=self.data.real)  # type: ignore
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
