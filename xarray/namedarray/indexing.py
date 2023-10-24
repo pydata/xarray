@@ -339,3 +339,21 @@ class VIndexer:
 
     def __repr__(self):
         return f"{type(self).__name__}({self.tuple})"
+
+
+class IndexCallable:
+    __slots__ = ("fn",)
+
+    def __init__(self, fn) -> None:
+        self.fn = fn
+
+    def __getitem__(self, key):
+        return self.fn(key)
+
+
+def _vindex(x, *indices):
+    return x
+
+
+def _oindex(x, *indices):
+    return x

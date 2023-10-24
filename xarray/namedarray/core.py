@@ -29,6 +29,7 @@ from xarray.namedarray._typing import (
     _ScalarType_co,
     _ShapeType_co,
 )
+from xarray.namedarray.indexing import IndexCallable, _oindex, _vindex
 from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
 if TYPE_CHECKING:
@@ -314,11 +315,19 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __getitem__(self, key) -> Self:
         ...
 
-    def oindex(self, key) -> Self:
-        ...
+    def _oindex(self, key) -> Self:
+        return _oindex(self, *key)
 
-    def vindex(self, key) -> Self:
-        ...
+    @property
+    def oindex(self) -> Self:
+        return IndexCallable(self._oindex)
+
+    def _vindex(self, key) -> Self:
+        return _vindex(self, *key)
+
+    @property
+    def vindex(self) -> Self:
+        return IndexCallable(self._vindex)
 
     def _replace(
         self,
