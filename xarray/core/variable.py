@@ -27,7 +27,6 @@ from xarray.core.indexing import (
     as_indexable,
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -38,6 +37,7 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
     integer_types,
     is_0d_dask_array,
