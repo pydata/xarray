@@ -175,7 +175,7 @@ Let's use a different example of a tree to discuss more complex relationships be
     ]
 
 We have used the :py:meth:`~DataTree.from_dict` constructor method as an alternate way to quickly create a whole tree,
-and :ref:`filesystem-like syntax <filesystem paths>`_ (to be explained shortly) to select two nodes of interest.
+and :ref:`filesystem paths` (to be explained shortly) to select two nodes of interest.
 
 .. ipython:: python
 
@@ -339,3 +339,262 @@ we can construct a complex tree quickly using the alternative constructor :py:me
     Notice that using the path-like syntax will also create any intermediate empty nodes necessary to reach the end of the specified path
     (i.e. the node labelled `"c"` in this case.)
     This is to help avoid lots of redundant entries when creating deeply-nested trees using :py:meth:`DataTree.from_dict`.
+
+.. _iterating over trees:
+
+Iterating over trees
+~~~~~~~~~~~~~~~~~~~~
+
+You can iterate over every node in a tree using the subtree :py:class:`~DataTree.subtree` property.
+This returns an iterable of nodes, which yields them in depth-first order.
+
+.. ipython:: python
+
+    for node in vertebrates.subtree:
+        print(node.path)
+
+A very useful pattern is to use :py:class:`~DataTree.subtree` conjunction with the :py:class:`~DataTree.path` property to manipulate the nodes however you wish,
+then rebuild a new tree using :py:meth:`DataTree.from_dict()`.
+
+For example, we could keep only the nodes containing data by looping over all nodes,
+checking if they contain any data using :py:class:`~DataTree.has_data`,
+then rebuilding a new tree using only the paths of those nodes:
+
+.. ipython:: python
+
+    non_empty_nodes = {node.path: node.ds for node in dt.subtree if node.has_data}
+    DataTree.from_dict(non_empty_nodes)
+
+You can see this tree is similar to the ``dt`` object above, except that it is missing the empty nodes ``a/c`` and ``a/c/d``.
+
+(If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
+
+.. _manipulating trees:
+
+Manipulating Trees
+------------------
+
+Subsetting Tree Nodes
+~~~~~~~~~~~~~~~~~~~~~
+
+We can subset our tree to select only nodes of interest in various ways.
+
+The :py:meth:`DataTree.filter` method can be used to retain only the nodes of a tree that meet a certain condition.
+For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
+First lets recreate the tree but with an `age` data variable in every node:
+
+.. ipython:: python
+
+    simpsons = DataTree.from_dict(
+        d={
+            "/": xr.Dataset({"age": 83}),
+            "/Herbert": xr.Dataset({"age": 40}),
+            "/Homer": xr.Dataset({"age": 39}),
+            "/Homer/Bart": xr.Dataset({"age": 10}),
+            "/Homer/Lisa": xr.Dataset({"age": 8}),
+            "/Homer/Maggie": xr.Dataset({"age": 1}),
+        },
+        name="Abe",
+    )
+    simpsons
+
+Now let's filter out the minors:
+
+.. ipython:: python
+
+    simpsons.filter(lambda node: node["age"] > 18)
+
+The result is a new tree, containing only the nodes matching the condition.
+
+(Yes, under the hood :py:meth:`~DataTree.filter` is just syntactic sugar for the pattern we showed you in :ref:`iterating over trees` !)
+
+.. _tree computation:
+
+Computation
+-----------
+
+`DataTree` objects are also useful for performing computations, not just for organizing data.
+
+Operations and Methods on Trees
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To show how applying operations across a whole tree at once can be useful,
+let's first create a example scientific dataset.
+
+.. ipython:: python
+
+    def time_stamps(n_samples, T):
+        """Create an array of evenly-spaced time stamps"""
+        return xr.DataArray(
+            data=np.linspace(0, 2 * np.pi * T, n_samples), dims=["time"]
+        )
+
+
+    def signal_generator(t, f, A, phase):
+        """Generate an example electrical-like waveform"""
+        return A * np.sin(f * t.data + phase)
+
+
+    time_stamps1 = time_stamps(n_samples=15, T=1.5)
+    time_stamps2 = time_stamps(n_samples=10, T=1.0)
+
+    voltages = DataTree.from_dict(
+        {
+            "/oscilloscope1": xr.Dataset(
+                {
+                    "potential": (
+                        "time",
+                        signal_generator(time_stamps1, f=2, A=1.2, phase=0.5),
+                    ),
+                    "current": (
+                        "time",
+                        signal_generator(time_stamps1, f=2, A=1.2, phase=1),
+                    ),
+                },
+                coords={"time": time_stamps1},
+            ),
+            "/oscilloscope2": xr.Dataset(
+                {
+                    "potential": (
+                        "time",
+                        signal_generator(time_stamps2, f=1.6, A=1.6, phase=0.2),
+                    ),
+                    "current": (
+                        "time",
+                        signal_generator(time_stamps2, f=1.6, A=1.6, phase=0.7),
+                    ),
+                },
+                coords={"time": time_stamps2},
+            ),
+        }
+    )
+    voltages
+
+Most xarray computation methods also exist as methods on datatree objects,
+so you can for example take the mean value of these two timeseries at once:
+
+.. ipython:: python
+
+    voltages.mean(dim="time")
+
+This works by mapping the standard :py:meth:`xarray.Dataset.mean()` method over the dataset stored in each node of the
+tree one-by-one.
+
+The arguments passed to the method are used for every node, so the values of the arguments you pass might be valid for one node and invalid for another
+
+.. ipython:: python
+    :okexcept:
+
+    voltages.isel(time=12)
+
+Notice that the error raised helpfully indicates which node of the tree the operation failed on.
+
+Arithmetic Methods on Trees
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Arithmetic methods are also implemented, so you can e.g. add a scalar to every dataset in the tree at once.
+For example, we can advance the timeline of the Simpsons by a decade just by
+
+.. ipython:: python
+
+    simpsons + 10
+
+See that the same change (fast-forwarding by adding 10 years to the age of each character) has been applied to every node.
+
+Mapping Custom Functions Over Trees
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can map custom computation over each node in a tree using :py:func:`map_over_subtree`.
+You can map any function, so long as it takes `xarray.Dataset` objects as one (or more) of the input arguments,
+and returns one (or more) xarray datasets.
+
+.. note::
+
+    Functions passed to :py:func:`map_over_subtree` cannot alter nodes in-place.
+    Instead they must return new `xarray.Dataset` objects.
+
+For example, we can define a function to calculate the Root Mean Square of a timeseries
+
+.. ipython:: python
+
+    def rms(signal):
+        return np.sqrt(np.mean(signal**2))
+
+Then calculate the RMS value of these signals:
+
+.. ipython:: python
+
+    rms(readings)
+
+.. _multiple trees:
+
+Operating on Multiple Trees
+---------------------------
+
+The examples so far have involved mapping functions or methods over the nodes of a single tree,
+but we can generalize this to mapping functions over multiple trees at once.
+
+Comparing Trees for Isomorphism
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For it to make sense to map a single non-unary function over the nodes of multiple trees at once,
+each tree needs to have the same structure. Specifically two trees can only be considered similar, or "isomorphic",
+if they have the same number of nodes, and each corresponding node has the same number of children.
+We can check if any two trees are isomorphic using the :py:meth:`DataTree.isomorphic` method.
+
+.. ipython:: python
+    :okexcept:
+
+    dt1 = DataTree.from_dict({"a": None, "a/b": None})
+    dt2 = DataTree.from_dict({"a": None})
+    dt1.isomorphic(dt2)
+
+    dt3 = DataTree.from_dict({"a": None, "b": None})
+    dt1.isomorphic(dt3)
+
+    dt4 = DataTree.from_dict({"A": None, "A/B": xr.Dataset({"foo": 1})})
+    dt1.isomorphic(dt4)
+
+If the trees are not isomorphic a :py:class:`~TreeIsomorphismError` will be raised.
+Notice that corresponding tree nodes do not need to have the same name or contain the same data in order to be considered isomorphic.
+
+Arithmetic Between Multiple Trees
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Arithmetic operations like multiplication are binary operations, so as long as we have wo isomorphic trees,
+we can do arithmetic between them.
+
+.. ipython:: python
+
+    currents = DataTree.from_dict(
+        {
+            "/oscilloscope1": xr.Dataset(
+                {
+                    "current": (
+                        "time",
+                        signal_generator(time_stamps1, f=2, A=1.2, phase=1),
+                    ),
+                },
+                coords={"time": time_stamps1},
+            ),
+            "/oscilloscope2": xr.Dataset(
+                {
+                    "current": (
+                        "time",
+                        signal_generator(time_stamps2, f=1.6, A=1.6, phase=0.7),
+                    ),
+                },
+                coords={"time": time_stamps2},
+            ),
+        }
+    )
+    currents
+
+    currents.isomorphic(voltages)
+
+We could use this feature to quickly calculate the electrical power in our signal, P=IV.
+
+.. ipython:: python
+
+    power = currents * voltages
+    power

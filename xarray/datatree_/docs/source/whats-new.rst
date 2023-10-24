@@ -45,6 +45,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added new sections to page on ``Working with Hierarchical Data`` (:pull:`180`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
