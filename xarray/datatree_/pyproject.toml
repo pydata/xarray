@@ -20,6 +20,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "xarray >=2022.6.0",
+    "packaging",
 ]
 dynamic = ["version"]
 

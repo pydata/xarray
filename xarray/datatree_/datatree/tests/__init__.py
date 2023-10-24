@@ -1,7 +1,7 @@
 import importlib
-from distutils import version
 
 import pytest
+from packaging import version
 
 
 def _importorskip(modname, minversion=None):
@@ -21,7 +21,7 @@ def LooseVersion(vstring):
     # Our development version is something like '0.10.9+aac7bfc'
     # This function just ignores the git commit id.
     vstring = vstring.split("+")[0]
-    return version.LooseVersion(vstring)
+    return version.parse(vstring)
 
 
 has_zarr, requires_zarr = _importorskip("zarr")
