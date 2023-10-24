@@ -26,6 +26,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Nodes containing only attributes but no data are now ignored by :py:func:`map_over_subtree` (:issue:`262`, :pull:`263`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 

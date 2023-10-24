@@ -109,8 +109,8 @@ def map_over_subtree(func: Callable) -> Callable:
 
     Applies a function to every dataset in one or more subtrees, returning new trees which store the results.
 
-    The function will be applied to any non-empty dataset stored in any of the nodes in the trees. The returned trees
-    will have the same structure as the supplied trees.
+    The function will be applied to any data-containing dataset stored in any of the nodes in the trees. The returned
+    trees will have the same structure as the supplied trees.
 
     `func` needs to return one Datasets, DataArrays, or None in order to be able to rebuild the subtrees after
     mapping, as each result will be assigned to its respective node of a new tree via `DataTree.__setitem__`. Any
@@ -206,7 +206,7 @@ def map_over_subtree(func: Callable) -> Callable:
             # Now we can call func on the data in this particular set of corresponding nodes
             results = (
                 func(*node_args_as_datasets, **node_kwargs_as_datasets)
-                if not node_of_first_tree.is_empty
+                if node_of_first_tree.has_data
                 else None
             )
 

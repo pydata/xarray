@@ -252,6 +252,18 @@ class TestMapOverSubTree:
         result_tree = times_ten(subtree)
         assert_equal(result_tree, expected, from_root=False)
 
+    def test_skip_empty_nodes_with_attrs(self, create_test_datatree):
+        # inspired by xarray-datatree GH262
+        dt = create_test_datatree()
+        dt["set1/set2"].attrs["foo"] = "bar"
+
+        def check_for_data(ds):
+            # fails if run on a node that has no data
+            assert len(ds.variables) != 0
+            return ds
+
+        dt.map_over_subtree(check_for_data)
+
 
 class TestMutableOperations:
     def test_construct_using_type(self):
