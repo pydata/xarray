@@ -1242,8 +1242,13 @@ class DataTree(
         filterfunc: function
             A function which accepts only one DataTree - the node on which filterfunc will be called.
 
+        Returns
+        -------
+        DataTree
+
         See Also
         --------
+        match
         pipe
         map_over_subtree
         """
@@ -1251,6 +1256,51 @@ class DataTree(
             node.path: node.ds for node in self.subtree if filterfunc(node)
         }
         return DataTree.from_dict(filtered_nodes, name=self.root.name)
+
+    def match(self, pattern: str) -> DataTree:
+        """
+        Return nodes with paths matching pattern.
+
+        Uses unix glob-like syntax for pattern-matching.
+
+        Parameters
+        ----------
+        pattern: str
+            A pattern to match each node path against.
+
+        Returns
+        -------
+        DataTree
+
+        See Also
+        --------
+        filter
+        pipe
+        map_over_subtree
+
+        Examples
+        --------
+        >>> dt = DataTree.from_dict(
+        ...     {
+        ...         "/a/A": None,
+        ...         "/a/B": None,
+        ...         "/b/A": None,
+        ...         "/b/B": None,
+        ...     }
+        ... )
+        >>> dt.match("*/B")
+        DataTree('None', parent=None)
+        ├── DataTree('a')
+        │   └── DataTree('B')
+        └── DataTree('b')
+            └── DataTree('B')
+        """
+        matching_nodes = {
+            node.path: node.ds
+            for node in self.subtree
+            if NodePath(node.path).match(pattern)
+        }
+        return DataTree.from_dict(matching_nodes, name=self.root.name)
 
     def map_over_subtree(
         self,

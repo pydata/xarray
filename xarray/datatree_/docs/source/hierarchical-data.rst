@@ -379,7 +379,23 @@ Subsetting Tree Nodes
 
 We can subset our tree to select only nodes of interest in various ways.
 
-The :py:meth:`DataTree.filter` method can be used to retain only the nodes of a tree that meet a certain condition.
+Similarly to on a real filesystem, matching nodes by common patterns in their paths is often useful.
+We can use :py:meth:`DataTree.match` for this:
+
+.. ipython:: python
+
+    dt = DataTree.from_dict(
+        {
+            "/a/A": None,
+            "/a/B": None,
+            "/b/A": None,
+            "/b/B": None,
+        }
+    )
+    result = dt.match("*/B")
+
+We can also subset trees by the contents of the nodes.
+:py:meth:`DataTree.filter` retains only the nodes of a tree that meet a certain condition.
 For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
 First lets recreate the tree but with an `age` data variable in every node:
 

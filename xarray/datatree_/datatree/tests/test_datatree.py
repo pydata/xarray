@@ -678,6 +678,25 @@ class TestPipe:
 
 
 class TestSubset:
+    def test_match(self):
+        # TODO is this example going to cause problems with case sensitivity?
+        dt = DataTree.from_dict(
+            {
+                "/a/A": None,
+                "/a/B": None,
+                "/b/A": None,
+                "/b/B": None,
+            }
+        )
+        result = dt.match("*/B")
+        expected = DataTree.from_dict(
+            {
+                "/a/B": None,
+                "/b/B": None,
+            }
+        )
+        dtt.assert_identical(result, expected)
+
     def test_filter(self):
         simpsons = DataTree.from_dict(
             d={
