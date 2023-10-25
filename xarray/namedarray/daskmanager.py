@@ -8,7 +8,7 @@ from packaging.version import Version
 
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
-from xarray.namedarray.pycompat import is_duck_dask_array, module_available
+from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
     from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks

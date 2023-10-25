@@ -13,8 +13,11 @@ from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from xarray.namedarray.pycompat import is_duck_dask_array
-from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like
+from xarray.namedarray.utils import (
+    either_dict_or_kwargs,
+    is_dict_like,
+    is_duck_dask_array,
+)
 
 try:
     import bottleneck

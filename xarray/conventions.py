@@ -16,7 +16,7 @@ from xarray.core.common import (
 )
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.pycompat import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_dask_array
 
 CF_RELATED_DATA = (
     "bounds",

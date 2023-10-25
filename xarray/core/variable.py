@@ -42,9 +42,13 @@ from xarray.namedarray.pycompat import (
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
+)
+from xarray.namedarray.utils import (
+    either_dict_or_kwargs,
+    is_dict_like,
+    is_duck_array,
     is_duck_dask_array,
 )
-from xarray.namedarray.utils import either_dict_or_kwargs, is_dict_like, is_duck_array
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,

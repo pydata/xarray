@@ -25,13 +25,12 @@ from xarray.core.utils import (
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.namedarray.pycompat import (
-    array_type,
-    integer_types,
+from xarray.namedarray.pycompat import array_type, integer_types
+from xarray.namedarray.utils import (
+    either_dict_or_kwargs,
     is_duck_array,
     is_duck_dask_array,
 )
-from xarray.namedarray.utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

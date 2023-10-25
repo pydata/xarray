@@ -11,7 +11,7 @@ import numpy as np
 from xarray.core.alignment import align
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.namedarray.pycompat import is_dask_collection
+from xarray.namedarray.utils import is_dask_collection
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray

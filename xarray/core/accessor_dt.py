@@ -15,7 +15,7 @@ from xarray.core.common import (
 )
 from xarray.core.types import T_DataArray
 from xarray.core.variable import IndexVariable
-from xarray.namedarray.pycompat import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike

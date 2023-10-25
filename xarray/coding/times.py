@@ -26,7 +26,7 @@ from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
-from xarray.namedarray.pycompat import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_dask_array
 
 try:
     import cftime

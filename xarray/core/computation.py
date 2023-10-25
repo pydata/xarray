@@ -25,8 +25,8 @@ from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_scalar
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array, is_duck_dask_array
-from xarray.namedarray.utils import is_dict_like
+from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.utils import is_dict_like, is_duck_dask_array
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates

@@ -36,8 +36,8 @@ from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.utils import module_available
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
-from xarray.namedarray.pycompat import array_type, is_duck_dask_array
-from xarray.namedarray.utils import is_duck_array
+from xarray.namedarray.pycompat import array_type
+from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 dask_available = module_available("dask")
 

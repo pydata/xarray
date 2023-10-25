@@ -8,7 +8,7 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
-from xarray.namedarray.utils import is_duck_array, module_available
+from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
 
@@ -82,18 +82,6 @@ def array_type(mod: ModType) -> DuckArrayTypes:
 def mod_version(mod: ModType) -> Version:
     """Quick wrapper to get the version of the module."""
     return _get_cached_duck_array_module(mod).version
-
-
-def is_dask_collection(x):
-    if module_available("dask"):
-        from dask.base import is_dask_collection
-
-        return is_dask_collection(x)
-    return False
-
-
-def is_duck_dask_array(x):
-    return is_duck_array(x) and is_dask_collection(x)
 
 
 def is_chunked_array(x) -> bool:

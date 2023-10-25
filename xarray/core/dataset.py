@@ -117,13 +117,13 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunk
 from xarray.namedarray.pycompat import (
     array_type,
     is_chunked_array,
-    is_duck_array,
-    is_duck_dask_array,
 )
 from xarray.namedarray.utils import (
     consolidate_dask_from_array_kwargs,
     either_dict_or_kwargs,
     is_dict_like,
+    is_duck_array,
+    is_duck_dask_array,
 )
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
