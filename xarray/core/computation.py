@@ -1690,7 +1690,7 @@ def dot(
     dims: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Uses ``np.einsum``, but
+    """Generalized dot product for xarray objects. Like ``np.einsum``, but
     provides a simpler interface based on array dimension names.
 
     Parameters
@@ -1708,7 +1708,6 @@ def dot(
     -------
     DataArray
 
-
     See Also
     --------
     numpy.einsum
@@ -1717,7 +1716,7 @@ def dot(
 
     Notes
     -----
-    We recommend either passing `optimize=True` or installing the optional
+    We recommend either passing ``optimize=True`` in ``kwargs`` or installing the optional
     ``opt_einsum`` packages. Note that not all array packages support this however,
 
     Examples
