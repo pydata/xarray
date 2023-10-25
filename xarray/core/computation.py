@@ -1716,8 +1716,8 @@ def dot(
 
     Notes
     -----
-    We recommend either passing ``optimize=True`` in ``kwargs`` or installing the optional
-    ``opt_einsum`` packages. Note that not all array packages support this however,
+    We recommend installing the optional ``opt_einsum`` package, or alternatively passing `optimize=True`,
+    which is passed through to ``np.einsum``, and works for most array backends.
 
     Examples
     --------
