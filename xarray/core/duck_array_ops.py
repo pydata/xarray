@@ -18,7 +18,6 @@ from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
 from numpy import (  # noqa
     around,  # noqa
-    einsum,
     gradient,
     isclose,
     isin,
@@ -46,6 +45,15 @@ def get_array_namespace(x):
         return x.__array_namespace__()
     else:
         return np
+
+
+def einsum(*args, **kwargs):
+    if module_available("opt_einsum"):
+        import opt_einsum
+
+        return opt_einsum.contract(*args, **kwargs)
+    else:
+        return np.einsum(*args, **kwargs)
 
 
 def _dask_or_eager_func(

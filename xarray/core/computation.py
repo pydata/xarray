@@ -1690,8 +1690,8 @@ def dot(
     dims: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like np.einsum, but
-    provides a simpler interface based on array dimensions.
+    """Generalized dot product for xarray objects. Uses ``np.einsum``, but
+    provides a simpler interface based on array dimension names.
 
     Parameters
     ----------
@@ -1701,12 +1701,17 @@ def dot(
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict
-        Additional keyword arguments passed to numpy.einsum or
-        dask.array.einsum
+        Additional keyword arguments passed to ``numpy.einsum`` or
+        ``dask.array.einsum``
 
     Returns
     -------
     DataArray
+
+    Notes
+    -----
+    We recommend either passing `optimize=True` or installing the optional
+    ``opt_einsum`` packages. Note that not all array packages support this however,
 
     Examples
     --------

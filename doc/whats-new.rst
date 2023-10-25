@@ -22,6 +22,8 @@ v2023.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
+  By `Deepak Cherian <https://github.com/dcherian/>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
