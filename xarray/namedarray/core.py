@@ -25,6 +25,7 @@ from xarray.namedarray._typing import (
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
+    _dtype,
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
@@ -518,7 +519,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     @property
     def imag(
         self: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
-    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+    ) -> NamedArray[_ShapeType, _dtype[_ScalarType]]:
         """
         The imaginary part of the array.
 
@@ -536,7 +537,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     @property
     def real(
         self: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
-    ) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+    ) -> NamedArray[_ShapeType, _dtype[_ScalarType]]:
         """
         The real part of the array.
 
