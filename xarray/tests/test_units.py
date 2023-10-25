@@ -2467,7 +2467,8 @@ class TestDataArray:
 
         units = extract_units(func(array))
         expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
