@@ -6,13 +6,15 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.duck_array_ops import dask_available
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
-from xarray.namedarray.pycompat import is_duck_dask_array
+from xarray.namedarray.pycompat import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
     from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks
+
+
+dask_available = module_available("dask")
 
 
 class DaskManager(ChunkManagerEntrypoint["DaskArray"]):

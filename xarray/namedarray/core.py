@@ -67,10 +67,7 @@ if TYPE_CHECKING:
         duckarray,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
-    from xarray.namedarray.utils import (
-        Default,
-        Self,  # type: ignore[attr-defined]
-    )
+    from xarray.namedarray.utils import Default
 
     try:
         from dask.typing import (
