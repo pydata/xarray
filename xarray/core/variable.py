@@ -2232,6 +2232,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
+    @property
+    def imag(self) -> Variable:
+        """
+        The imaginary part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
+        return self._new(data=self.data.imag)
+
+    @property
+    def real(self) -> Variable:
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._new(data=self.data.real)
+
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 
