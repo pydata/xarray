@@ -1716,7 +1716,7 @@ def dot(
 
     Notes
     -----
-    We recommend installing the optional ``opt_einsum`` package, or alternatively passing `optimize=True`,
+    We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
     which is passed through to ``np.einsum``, and works for most array backends.
 
     Examples
