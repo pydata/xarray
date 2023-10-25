@@ -531,7 +531,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
             return imag(self)
 
-        return self._new(data=self.data.imag)
+        return self._new(data=self._data.imag)
 
     @property
     def real(
@@ -548,7 +548,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             from xarray.namedarray._array_api import real
 
             return real(self)
-        return self._new(data=self.data.real)
+        return self._new(data=self._data.real)
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers
