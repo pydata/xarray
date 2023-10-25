@@ -136,6 +136,16 @@ class TestStoreDatasets:
         john = DataTree(name="john", data=None)
         assert not john.has_data
 
+    def test_is_hollow(self):
+        john = DataTree(data=xr.Dataset({"a": 0}))
+        assert john.is_hollow
+
+        eve = DataTree(children={"john": john})
+        assert eve.is_hollow
+
+        eve.ds = xr.Dataset({"a": 1})
+        assert not eve.is_hollow
+
 
 class TestVariablesChildrenNameCollisions:
     def test_parent_already_has_variable_with_childs_name(self):

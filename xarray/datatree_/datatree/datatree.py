@@ -506,6 +506,11 @@ class DataTree(
         return not (self.has_data or self.has_attrs)
 
     @property
+    def is_hollow(self) -> bool:
+        """True if only leaf nodes contain data."""
+        return not any(node.has_data for node in self.subtree if not node.is_leaf)
+
+    @property
     def variables(self) -> Mapping[Hashable, Variable]:
         """Low level interface to node contents as dict of Variable objects.
 

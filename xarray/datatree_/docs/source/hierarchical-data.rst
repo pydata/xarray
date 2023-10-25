@@ -369,6 +369,25 @@ You can see this tree is similar to the ``dt`` object above, except that it is m
 
 (If you want to keep the name of the root node, you will need to add the ``name`` kwarg to :py:class:`from_dict`, i.e. ``DataTree.from_dict(non_empty_nodes, name=dt.root.name)``.)
 
+.. _Tree Contents:
+
+Tree Contents
+-------------
+
+Hollow Trees
+~~~~~~~~~~~~
+
+A concept that can sometimes be useful is that of a "Hollow Tree", which means a tree with data stored only at the leaf nodes.
+This is useful because certain useful tree manipulation operations only make sense for hollow trees.
+
+You can check if a tree is a hollow tree by using the :py:meth:`~DataTree.is_hollow` property.
+We can see that the Simpson's family is not hollow because the data variable ``"age"`` is present at some nodes which
+have children (i.e. Abe and Homer).
+
+.. ipython:: python
+
+    simpsons.is_hollow
+
 .. _manipulating trees:
 
 Manipulating Trees

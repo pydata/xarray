@@ -64,6 +64,7 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.has_data
    DataTree.has_attrs
    DataTree.is_empty
+   DataTree.is_hollow
 
 ..
 

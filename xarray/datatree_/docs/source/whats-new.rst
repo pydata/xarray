@@ -25,6 +25,8 @@ New Features
 
 - New :py:meth:`DataTree.match` method for glob-like pattern matching of node paths. (:pull:`267`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- New :py:meth:`DataTree.is_hollow` property for checking if data is only contained at the leaf nodes. (:pull:`272`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Indicate which node caused the problem if error encountered while applying user function using :py:func:`map_over_subtree`
   (:issue:`190`, :pull:`264`). Only works when using python 3.11 or later.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
