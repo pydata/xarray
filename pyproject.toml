@@ -106,6 +106,7 @@ module = [
   "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
+  "opt_einsum.*",
   "pandas.*",
   "pooch.*",
   "PseudoNetCDF.*",
