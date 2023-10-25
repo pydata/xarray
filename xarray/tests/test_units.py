@@ -1502,10 +1502,10 @@ def test_dot_dataarray(dtype):
     data_array = xr.DataArray(data=array1, dims=("x", "y"))
     other = xr.DataArray(data=array2, dims=("y", "z"))
 
-    expected = attach_units(
-        xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
-    )
     with xr.set_options(use_opt_einsum=False):
+        expected = attach_units(
+            xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
+        )
         actual = xr.dot(data_array, other)
 
     assert_units_equal(expected, actual)
@@ -2466,8 +2466,8 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         units = extract_units(func(array))
-        expected = attach_units(func(strip_units(data_array)), units)
         with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
             actual = func(data_array)
 
         assert_units_equal(expected, actual)
@@ -3831,8 +3831,9 @@ class TestDataArray:
         if not isinstance(func, (function, method)):
             units.update(extract_units(func(array.reshape(-1))))
 
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
