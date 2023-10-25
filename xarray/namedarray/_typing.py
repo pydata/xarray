@@ -168,15 +168,11 @@ _ArrayAPI = _arrayapi[Any, np.dtype[_ScalarType_co]]
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (_arrayfunction, _arrayapi)
-# _ArrayFunctionOrAPI = Union[
-#     _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
-# ]
 
 duckarray = Union[
     _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
 ]
 DuckArray = _arrayfunction[Any, np.dtype[_ScalarType_co]]
-T_DuckArray = TypeVar("T_DuckArray", bound=_arrayfunction[Any, Any])
 
 
 @runtime_checkable
@@ -234,6 +230,13 @@ class _chunkedarrayapi(
 
 # Corresponds to np.typing.NDArray:
 _ChunkedArrayAPI = _chunkedarrayapi[Any, np.dtype[_ScalarType_co]]
+
+# NamedArray can most likely use both __array_function__ and __array_namespace__:
+_chunkedarrayfunction_or_api = (_arrayfunction, _arrayapi)
+
+chunkedduckarray = Union[
+    _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
+]
 
 
 @runtime_checkable
@@ -295,13 +298,7 @@ _SparseArrayFunctionOrAPI = Union[
     _SparseArrayFunction[np.generic], _SparseArrayAPI[np.generic]
 ]
 
-
-# Temporary placeholder for indicating an array api compliant type.
-# hopefully in the future we can narrow this down more
-# T_DuckArray = TypeVar("T_DuckArray", bound=_ArrayFunctionOrAPI)
-
 # The chunked arrays like dask or cubed:
 _ChunkedArrayFunctionOrAPI = Union[
     _ChunkedArrayFunction[np.generic], _ChunkedArrayAPI[np.generic]
 ]
-T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArrayFunctionOrAPI)
