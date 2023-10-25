@@ -101,14 +101,6 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
         ...
 
-    @property
-    def imag(self) -> Any:
-        ...
-
-    @property
-    def real(self) -> Any:
-        ...
-
 
 # Corresponds to np.typing.NDArray:
 _Array = _array[Any, np.dtype[_ScalarType_co]]
