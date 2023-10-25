@@ -22,6 +22,7 @@ import numpy as np
 from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
+    _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
     _DType_co,
@@ -525,6 +526,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.imag
         """
+        if isinstance(self._data, _arrayapi):
+            from xarray.namedarray._array_api import imag
+
+            return imag(self)
+
         return self._new(data=self.data.imag)
 
     @property
@@ -538,6 +544,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.real
         """
+        if isinstance(self._data, _arrayapi):
+            from xarray.namedarray._array_api import real
+
+            return real(self)
         return self._new(data=self.data.real)
 
     def __dask_tokenize__(self) -> Hashable:

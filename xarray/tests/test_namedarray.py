@@ -180,11 +180,11 @@ def test_real_and_imag() -> None:
     named_array: NamedArray[Any, np.dtype[np.complex128]]
     named_array = NamedArray(["x"], arr)
 
-    actual_real: np.ndarray[Any, np.dtype[np.float64]] = named_array.real.data
+    actual_real: duckarray[Any, np.dtype[np.float64]] = named_array.real.data
     assert np.array_equal(actual_real, expected_real)
     assert actual_real.dtype == expected_real.dtype
 
-    actual_imag: np.ndarray[Any, np.dtype[np.float64]] = named_array.imag.data
+    actual_imag: duckarray[Any, np.dtype[np.float64]] = named_array.imag.data
     assert np.array_equal(actual_imag, expected_imag)
     assert actual_imag.dtype == expected_imag.dtype
 

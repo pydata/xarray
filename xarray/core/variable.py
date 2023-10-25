@@ -66,12 +66,6 @@ if TYPE_CHECKING:
         Self,
         T_DuckArray,
     )
-    from xarray.namedarray._typing import (
-        _ScalarType,
-        _ShapeType,
-        _SupportsImag,
-        _SupportsReal,
-    )
 
 NON_NANOSECOND_WARNING = (
     "Converting non-nanosecond precision {case} values to nanosecond precision. "
@@ -2372,9 +2366,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         )
 
     @property
-    def imag(
-        self: Variable[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]]
-    ) -> Variable[_ShapeType, np.dtype[_ScalarType]]:
+    def imag(self) -> Variable:
         """
         The imaginary part of the variable.
 
@@ -2385,9 +2377,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self._new(data=self.data.imag)
 
     @property
-    def real(
-        self: Variable[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]]
-    ) -> Variable[_ShapeType, np.dtype[_ScalarType]]:
+    def real(self) -> Variable:
         """
         The real part of the variable.
 
