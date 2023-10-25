@@ -139,11 +139,11 @@ class _arrayfunction(
         ...
 
     @property
-    def imag(self) -> Any:
+    def imag(self) -> _arrayfunction[_ShapeType_co, Any]:
         ...
 
     @property
-    def real(self) -> Any:
+    def real(self) -> _arrayfunction[_ShapeType_co, Any]:
         ...
 
 
