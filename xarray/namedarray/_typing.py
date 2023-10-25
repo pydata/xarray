@@ -138,6 +138,14 @@ class _arrayfunction(
     ) -> Any:
         ...
 
+    @property
+    def imag(self) -> _arrayfunction[_ShapeType_co, Any]:
+        ...
+
+    @property
+    def real(self) -> _arrayfunction[_ShapeType_co, Any]:
+        ...
+
 
 # Corresponds to np.typing.NDArray:
 _ArrayFunction = _arrayfunction[Any, np.dtype[_ScalarType_co]]
