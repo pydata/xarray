@@ -55,6 +55,7 @@ _ShapeType = TypeVar("_ShapeType", bound=Any)
 _ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
 
 _Chunks = tuple[_Shape, ...]
+_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]

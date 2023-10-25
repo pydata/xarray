@@ -831,7 +831,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def to_numpy(self) -> np.ndarray:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
-        data = self.data
+        data = self._data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if hasattr(data, "chunks"):
@@ -995,13 +995,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._replace(data=data_)
         else:
             raise TypeError("self.data is not a sparse array")
-
-    def _nonzero(self) -> tuple[Self, ...]:
-        """Equivalent to numpy's nonzero but returns a tuple of NamedArrays."""
-        # TODO we should replace dask's native nonzero
-        # after https://github.com/dask/dask/issues/1076 is implemented.
-        nonzeros = np.nonzero(self.data)
-        return tuple(type(self)((dim,), nz) for nz, dim in zip(nonzeros, self.dims))
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]

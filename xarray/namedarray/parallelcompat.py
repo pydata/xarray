@@ -10,22 +10,16 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
 
 from xarray.namedarray.pycompat import is_chunked_array
 
-T_ChunkedArray = TypeVar("T_ChunkedArray")
-
 if TYPE_CHECKING:
-    from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
+    from xarray.namedarray._typing import T_DuckArray, _Chunks, _NormalizedChunks
+
+    T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 
 @functools.lru_cache(maxsize=1)
@@ -195,7 +189,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return isinstance(data, self.array_cls)
 
     @abstractmethod
-    def chunks(self, data: T_ChunkedArray) -> T_NormalizedChunks:
+    def chunks(self, data: T_ChunkedArray) -> _NormalizedChunks:
         """
         Return the current chunks of the given array.
 
@@ -221,12 +215,12 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def normalize_chunks(
         self,
-        chunks: T_Chunks | T_NormalizedChunks,
+        chunks: _Chunks | _NormalizedChunks,
         shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: np.dtype | None = None,
-        previous_chunks: T_NormalizedChunks | None = None,
-    ) -> T_NormalizedChunks:
+        previous_chunks: _NormalizedChunks | None = None,
+    ) -> _NormalizedChunks:
         """
         Normalize given chunking pattern into an explicit tuple of tuples representation.
 
@@ -257,7 +251,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def from_array(
-        self, data: T_DuckArray | np.typing.ArrayLike, chunks: T_Chunks, **kwargs
+        self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs
     ) -> T_ChunkedArray:
         """
         Create a chunked array from a non-chunked numpy-like array.
@@ -284,7 +278,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     def rechunk(
         self,
         data: T_ChunkedArray,
-        chunks: T_NormalizedChunks | tuple[int, ...] | T_Chunks,
+        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
         **kwargs,
     ) -> T_ChunkedArray:
         """
@@ -593,7 +587,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         self,
         *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
         **kwargs,
-    ) -> tuple[dict[str, T_NormalizedChunks], list[T_ChunkedArray]]:
+    ) -> tuple[dict[str, _NormalizedChunks], list[T_ChunkedArray]]:
         """
         Unify chunks across a sequence of arrays.
 
