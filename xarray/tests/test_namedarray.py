@@ -359,7 +359,9 @@ def test_new_namedarray() -> None:
 
 def test_replace_namedarray() -> None:
     dtype_float = np.dtype(np.float32)
+    np_val: np.ndarray[Any, np.dtype[np.float32]]
     np_val = np.array([1.5, 3.2], dtype=dtype_float)
+    np_val2: np.ndarray[Any, np.dtype[np.float32]]
     np_val2 = 2 * np_val
 
     narr_float: NamedArray[Any, np.dtype[np.float32]]
