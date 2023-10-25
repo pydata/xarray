@@ -1708,6 +1708,13 @@ def dot(
     -------
     DataArray
 
+
+    See Also
+    --------
+    numpy.einsum
+    dask.array.einsum
+    opt_einsum.contract
+
     Notes
     -----
     We recommend either passing `optimize=True` or installing the optional
