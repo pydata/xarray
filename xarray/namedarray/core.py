@@ -28,7 +28,6 @@ from xarray.namedarray._typing import (
     _ScalarType_co,
     _ShapeType_co,
 )
-from xarray.namedarray.indexing import IndexCallable, _oindex, _vindex
 from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
 if TYPE_CHECKING:
@@ -75,13 +74,6 @@ if TYPE_CHECKING:
     T_NamedArrayInteger = TypeVar(
         "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any]]"
     )
-
-
-def _get_axis_num(dims: Any, dim: Hashable) -> int:
-    try:
-        return dims.index(dim)  # type: ignore[no-any-return]
-    except ValueError:
-        raise ValueError(f"{dim!r} not found in array dimensions {dims!r}")
 
 
 @overload
@@ -311,23 +303,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             Will copy the attrs from x by default.
         """
         return _new(self, dims, data, attrs)
-
-    def __getitem__(self, key) -> Self:
-        ...
-
-    def _oindex(self, key) -> Self:
-        return _oindex(self, *key)
-
-    @property
-    def oindex(self) -> Self:
-        return IndexCallable(self._oindex)
-
-    def _vindex(self, key) -> Self:
-        return _vindex(self, *key)
-
-    @property
-    def vindex(self) -> Self:
-        return IndexCallable(self._vindex)
 
     def _replace(
         self,
@@ -659,7 +634,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
-        return _get_axis_num(self.dims, dim)
+        try:
+            return self.dims.index(dim)  # type: ignore[no-any-return]
+        except ValueError:
+            raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
     def chunks(self) -> _Chunks | None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Hashable, Iterable, Iterator, Mapping, MutableSet
+from collections.abc import Hashable, Iterable, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, TypeVar
 
@@ -124,48 +124,6 @@ def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
 
 def is_0d_dask_array(x):
     return is_duck_dask_array(x) and is_scalar(x)
-
-
-class OrderedSet(MutableSet[T]):
-    """A simple ordered set.
-
-    The API matches the builtin set, but it preserves insertion order of elements, like
-    a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
-    """
-
-    _d: dict[T, None]
-
-    __slots__ = ("_d",)
-
-    def __init__(self, values: Iterable[T] | None = None):
-        self._d = {}
-        if values is not None:
-            self.update(values)
-
-    # Required methods for MutableSet
-
-    def __contains__(self, value: Hashable) -> bool:
-        return value in self._d
-
-    def __iter__(self) -> Iterator[T]:
-        return iter(self._d)
-
-    def __len__(self) -> int:
-        return len(self._d)
-
-    def add(self, value: T) -> None:
-        self._d[value] = None
-
-    def discard(self, value: T) -> None:
-        del self._d[value]
-
-    # Additional methods
-
-    def update(self, values: Iterable[T]) -> None:
-        self._d.update(dict.fromkeys(values))
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({list(self)!r})"
 
 
 class ReprObject:
