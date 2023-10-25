@@ -3,8 +3,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Hashable, Mapping
 from enum import Enum
-from types import ModuleType
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 import numpy as np
 
@@ -16,9 +15,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import (
-        duckarray,
-    )
+    from xarray.namedarray._typing import T_DuckArray, duckarray
 
     try:
         from dask.array.core import Array as DaskArray
@@ -32,33 +29,6 @@ T = TypeVar("T")
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
 T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
-
-
-class _Array(Protocol[T_DType_co]):
-    @property
-    def dtype(self) -> T_DType_co:
-        ...
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        ...
-
-    # TODO: numpy doesn't use any inputs:
-    # https://github.com/numpy/numpy/blob/v1.24.3/numpy/_typing/_array_like.py#L38
-    def __array__(self) -> np.ndarray[Any, T_DType_co]:
-        ...
-
-
-class _ChunkedArray(_Array[T_DType_co], Protocol[T_DType_co]):
-    @property
-    def chunks(self) -> tuple[tuple[int, ...], ...]:
-        ...
-
-
-# temporary placeholder for indicating an array api compliant type.
-# hopefully in the future we can narrow this down more
-T_DuckArray = TypeVar("T_DuckArray", bound=_Array[np.dtype[np.generic]])
-T_ChunkedArray = TypeVar("T_ChunkedArray", bound=_ChunkedArray[np.dtype[np.generic]])
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -148,33 +118,6 @@ class ReprObject:
         from dask.base import normalize_token
 
         return normalize_token((type(self), self._value))  # type: ignore[no-any-return]
-
-
-# %% Array API functions
-def get_array_namespace(x: _Array[Any]) -> ModuleType:
-    if hasattr(x, "__array_namespace__"):
-        return x.__array_namespace__()  # type: ignore[no-any-return]
-    else:
-        return np
-
-
-def astype(x: _Array[Any], dtype: T_DType, /, *, copy: bool = True) -> _Array[T_DType]:
-    if hasattr(x, "__array_namespace__"):
-        xp = x.__array_namespace__()
-        return xp.astype(x, dtype, copy=copy)  # type: ignore[no-any-return]
-
-    # np.astype doesn't exist yet:
-    return x.astype(dtype, copy=copy)  # type: ignore[no-any-return, attr-defined]
-
-
-def imag(x: _Array[Any], /) -> _Array[Any]:
-    xp = get_array_namespace(x)
-    return xp.imag(x)  # type: ignore[no-any-return]
-
-
-def real(x: _Array[Any], /) -> _Array[Any]:
-    xp = get_array_namespace(x)
-    return xp.real(x)  # type: ignore[no-any-return]
 
 
 # It's probably OK to give this as a TypeGuard; though it's not perfectly robust.

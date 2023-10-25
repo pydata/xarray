@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.utils import is_scalar, module_available
-from xarray.namedarray.utils import is_duck_array
+from xarray.core.utils import is_scalar
+from xarray.namedarray.utils import is_duck_array, module_available
 
 integer_types = (int, np.integer)
 

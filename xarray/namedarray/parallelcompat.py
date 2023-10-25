@@ -19,7 +19,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from xarray.namedarray._typing import T_DuckArray, _Chunks, _NormalizedChunks
 
-    T_ChunkedArray = TypeVar("T_ChunkedArray")
+T_ChunkedArray = TypeVar("T_ChunkedArray")
 
 
 @functools.lru_cache(maxsize=1)
