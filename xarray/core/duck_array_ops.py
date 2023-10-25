@@ -48,7 +48,9 @@ def get_array_namespace(x):
 
 
 def einsum(*args, **kwargs):
-    if module_available("opt_einsum"):
+    from xarray.core.options import OPTIONS
+
+    if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
         import opt_einsum
 
         return opt_einsum.contract(*args, **kwargs)

@@ -1505,7 +1505,8 @@ def test_dot_dataarray(dtype):
     expected = attach_units(
         xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
     )
-    actual = xr.dot(data_array, other)
+    with xr.set_options(use_opt_einsum=False):
+        actual = xr.dot(data_array, other)
 
     assert_units_equal(expected, actual)
     assert_identical(expected, actual)
