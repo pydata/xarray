@@ -17,7 +17,11 @@ import numpy as np
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
-    from xarray.namedarray._typing import T_DuckArray, _Chunks, _NormalizedChunks
+    from xarray.namedarray._typing import (
+        _Chunks,
+        _NormalizedChunks,
+        duckarray,
+    )
 
 T_ChunkedArray = TypeVar("T_ChunkedArray")
 
@@ -168,7 +172,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """Used to set the array_cls attribute at import time."""
         raise NotImplementedError()
 
-    def is_chunked_array(self, data: Any) -> bool:
+    def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         """
         Check if the given object is an instance of this type of chunked array.
 
@@ -251,7 +255,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def from_array(
-        self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs
+        self, data: duckarray[Any, Any], chunks: _Chunks, **kwargs
     ) -> T_ChunkedArray:
         """
         Create a chunked array from a non-chunked numpy-like array.

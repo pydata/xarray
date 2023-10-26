@@ -129,11 +129,11 @@ def either_dict_or_kwargs(
 
 
 def consolidate_dask_from_array_kwargs(
-    from_array_kwargs: dict,
+    from_array_kwargs: dict[Any, Any],
     name: str | None = None,
     lock: bool | None = None,
     inline_array: bool | None = None,
-) -> dict:
+) -> dict[Any, Any]:
     """
     Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
 
@@ -166,12 +166,12 @@ def consolidate_dask_from_array_kwargs(
 
 
 def _resolve_doubly_passed_kwarg(
-    kwargs_dict: dict,
+    kwargs_dict: dict[Any, Any],
     kwarg_name: str,
     passed_kwarg_value: str | bool | None,
     default: bool | None,
     err_msg_dict_name: str,
-) -> dict:
+) -> dict[Any, Any]:
     # if in kwargs_dict but not passed explicitly then just pass kwargs_dict through unaltered
     if kwarg_name in kwargs_dict and passed_kwarg_value is None:
         pass

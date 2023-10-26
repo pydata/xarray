@@ -12,6 +12,7 @@ from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
     from xarray.core.types import DaskArray, T_Chunks, T_NormalizedChunks
+    from xarray.namedarray._typing import duckarray
 
 
 dask_available = module_available("dask")
@@ -28,7 +29,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         self.array_cls = Array
 
-    def is_chunked_array(self, data: Any) -> bool:
+    def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
     def chunks(self, data: DaskArray) -> T_NormalizedChunks:

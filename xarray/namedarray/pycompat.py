@@ -16,6 +16,7 @@ integer_types = (int, np.integer)
 if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
+    from xarray.namedarray._typing import _DType, _ShapeType, duckarray
 
 
 class DuckArrayModule:
@@ -91,11 +92,11 @@ def is_chunked_array(x) -> bool:
     )
 
 
-def is_0d_dask_array(x):
+def is_0d_dask_array(x) -> bool:
     return is_duck_dask_array(x) and is_scalar(x)
 
 
-def to_numpy(data) -> np.ndarray:
+def to_numpy(data) -> np.ndarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
@@ -118,7 +119,7 @@ def to_numpy(data) -> np.ndarray:
     return data
 
 
-def to_duck_array(data):
+def to_duck_array(data) -> duckarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
 
     if isinstance(data, ExplicitlyIndexed):
