@@ -1073,7 +1073,8 @@ class DataWithCoords(AttrAccessMixin):
         ----------
         cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
-            If a callable, it must expect this object as its only parameter.
+            If a callable, the callable is passed this object, and the result is used as
+            the value for cond.
         other : scalar, DataArray, Dataset, or callable, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations are filled with NA. If a callable, it must
@@ -1162,7 +1163,7 @@ class DataWithCoords(AttrAccessMixin):
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
 
-            self, cond = align(self, cond)  # type: ignore[assignment]
+            self, cond = align(self, cond)
 
             def _dataarray_indexer(dim: Hashable) -> DataArray:
                 return cond.any(dim=(d for d in cond.dims if d != dim))

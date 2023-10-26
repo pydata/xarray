@@ -289,8 +289,14 @@ def apply_dataarray_vfunc(
     from xarray.core.dataarray import DataArray
 
     if len(args) > 1:
-        args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
+        args = tuple(
+            deep_align(
+                args,
+                join=join,
+                copy=False,
+                exclude=exclude_dims,
+                raise_on_invalid=False,
+            )
         )
 
     objs = _all_of_type(args, DataArray)
@@ -506,8 +512,14 @@ def apply_dataset_vfunc(
     objs = _all_of_type(args, Dataset)
 
     if len(args) > 1:
-        args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
+        args = tuple(
+            deep_align(
+                args,
+                join=join,
+                copy=False,
+                exclude=exclude_dims,
+                raise_on_invalid=False,
+            )
         )
 
     list_of_coords, list_of_indexes = build_output_coords_and_indexes(
@@ -2123,7 +2135,8 @@ def _calc_idxminmax(
         chunkmanager = get_chunked_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
-        res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
+        data = dask_coord[duck_array_ops.ravel(indx.data)]
+        res = indx.copy(data=duck_array_ops.reshape(data, indx.shape))
         # we need to attach back the dim name
         res.name = dim
     else:

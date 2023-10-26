@@ -184,6 +184,9 @@ def cumulative_trapezoid(y, x, axis):
 def astype(data, dtype, **kwargs):
     if hasattr(data, "__array_namespace__"):
         xp = get_array_namespace(data)
+        if xp == np:
+            # numpy currently doesn't have a astype:
+            return data.astype(dtype, **kwargs)
         return xp.astype(data, dtype, **kwargs)
     return data.astype(dtype, **kwargs)
 
@@ -337,6 +340,10 @@ def reshape(array, shape):
     return xp.reshape(array, shape)
 
 
+def ravel(array):
+    return reshape(array, (-1,))
+
+
 @contextlib.contextmanager
 def _ignore_warnings_if(condition):
     if condition:
@@ -363,7 +370,7 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in "SU":
-            values = values.astype(object)
+            values = astype(values, object)
 
         func = None
         if skipna or (skipna is None and values.dtype.kind in "cfO"):
