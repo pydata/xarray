@@ -622,7 +622,7 @@ class TestConcatDataset:
             concat([data, data], "new_dim", data_vars=["not_found"])
 
         with pytest.raises(ValueError, match=r"global attributes not"):
-            # call deepcopy seperately to get unique attrs
+            # call deepcopy separately to get unique attrs
             data0 = deepcopy(split_data[0])
             data1 = deepcopy(split_data[1])
             data1.attrs["foo"] = "bar"
