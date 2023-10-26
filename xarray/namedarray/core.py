@@ -22,11 +22,15 @@ import numpy as np
 from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
+    _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
+    _dtype,
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
+    _SupportsImag,
+    _SupportsReal,
 )
 from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
@@ -334,7 +338,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         if NamedArray in cls.__bases__ and (cls._new == NamedArray._new):
             # Type hinting does not work for subclasses unless _new is
-            # overriden with the correct class.
+            # overridden with the correct class.
             raise TypeError(
                 "Subclasses of `NamedArray` must override the `_new` method."
             )
@@ -596,7 +600,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._data = data
 
     @property
-    def imag(self) -> Self:
+    def imag(
+        self: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    ) -> NamedArray[_ShapeType, _dtype[_ScalarType]]:
         """
         The imaginary part of the array.
 
@@ -604,10 +610,17 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self.data.imag)  # type: ignore
+        if isinstance(self._data, _arrayapi):
+            from xarray.namedarray._array_api import imag
+
+            return imag(self)
+
+        return self._new(data=self._data.imag)
 
     @property
-    def real(self) -> Self:
+    def real(
+        self: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    ) -> NamedArray[_ShapeType, _dtype[_ScalarType]]:
         """
         The real part of the array.
 
@@ -615,7 +628,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.real
         """
-        return self._replace(data=self.data.real)  # type: ignore
+        if isinstance(self._data, _arrayapi):
+            from xarray.namedarray._array_api import real
+
+            return real(self)
+        return self._new(data=self._data.real)
 
     def __dask_tokenize__(self) -> Hashable:
         # Use v.data, instead of v._data, in order to cope with the wrappers

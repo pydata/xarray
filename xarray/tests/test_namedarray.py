@@ -175,13 +175,25 @@ def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
 
 
 def test_real_and_imag() -> None:
-    named_array: NamedArray[Any, Any]
-    named_array = NamedArray(["x"], np.arange(3) - 1j * np.arange(3))
-    expected_real = np.arange(3)
-    assert np.array_equal(named_array.real.data, expected_real)
+    expected_real: np.ndarray[Any, np.dtype[np.float64]]
+    expected_real = np.arange(3, dtype=np.float64)
 
-    expected_imag = -np.arange(3)
-    assert np.array_equal(named_array.imag.data, expected_imag)
+    expected_imag: np.ndarray[Any, np.dtype[np.float64]]
+    expected_imag = -np.arange(3, dtype=np.float64)
+
+    arr: np.ndarray[Any, np.dtype[np.complex128]]
+    arr = expected_real + 1j * expected_imag
+
+    named_array: NamedArray[Any, np.dtype[np.complex128]]
+    named_array = NamedArray(["x"], arr)
+
+    actual_real: duckarray[Any, np.dtype[np.float64]] = named_array.real.data
+    assert np.array_equal(actual_real, expected_real)
+    assert actual_real.dtype == expected_real.dtype
+
+    actual_imag: duckarray[Any, np.dtype[np.float64]] = named_array.imag.data
+    assert np.array_equal(actual_imag, expected_imag)
+    assert actual_imag.dtype == expected_imag.dtype
 
 
 # Additional tests as per your original class-based code
@@ -366,7 +378,9 @@ def test_new_namedarray() -> None:
 
 def test_replace_namedarray() -> None:
     dtype_float = np.dtype(np.float32)
+    np_val: np.ndarray[Any, np.dtype[np.float32]]
     np_val = np.array([1.5, 3.2], dtype=dtype_float)
+    np_val2: np.ndarray[Any, np.dtype[np.float32]]
     np_val2 = 2 * np_val
 
     narr_float: NamedArray[Any, np.dtype[np.float32]]
