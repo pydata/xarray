@@ -34,14 +34,19 @@ from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defi
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
-from xarray.core.utils import module_available
-from xarray.namedarray._array_api import _get_data_namespace
 from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.namedarray.pycompat import array_type
-from xarray.namedarray.utils import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 dask_available = module_available("dask")
+
+
+def get_array_namespace(x):
+    if hasattr(x, "__array_namespace__"):
+        return x.__array_namespace__()
+    else:
+        return np
 
 
 def _dask_or_eager_func(
@@ -121,7 +126,7 @@ def isnull(data):
         return isnat(data)
     elif issubclass(scalar_type, np.inexact):
         # float types use NaN for null
-        xp = _get_data_namespace(data)
+        xp = get_array_namespace(data)
         return xp.isnan(data)
     elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
@@ -179,7 +184,7 @@ def cumulative_trapezoid(y, x, axis):
 
 def astype(data, dtype, **kwargs):
     if hasattr(data, "__array_namespace__"):
-        xp = _get_data_namespace(data)
+        xp = get_array_namespace(data)
         if xp == np:
             # numpy currently doesn't have a astype:
             return data.astype(dtype, **kwargs)
@@ -211,7 +216,7 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
 
 
 def broadcast_to(array, shape):
-    xp = _get_data_namespace(array)
+    xp = get_array_namespace(array)
     return xp.broadcast_to(array, shape)
 
 
@@ -289,7 +294,7 @@ def count(data, axis=None):
 
 
 def sum_where(data, axis=None, dtype=None, where=None):
-    xp = _get_data_namespace(data)
+    xp = get_array_namespace(data)
     if where is not None:
         a = where_method(xp.zeros_like(data), where, data)
     else:
@@ -300,7 +305,7 @@ def sum_where(data, axis=None, dtype=None, where=None):
 
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
-    xp = _get_data_namespace(condition)
+    xp = get_array_namespace(condition)
     return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
 
 
@@ -320,19 +325,19 @@ def fillna(data, other):
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
     if hasattr(arrays[0], "__array_namespace__"):
-        xp = _get_data_namespace(arrays[0])
+        xp = get_array_namespace(arrays[0])
         return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
     return _concatenate(as_shared_dtype(arrays), axis=axis)
 
 
 def stack(arrays, axis=0):
     """stack() with better dtype promotion rules."""
-    xp = _get_data_namespace(arrays[0])
+    xp = get_array_namespace(arrays[0])
     return xp.stack(as_shared_dtype(arrays, xp=xp), axis=axis)
 
 
 def reshape(array, shape):
-    xp = _get_data_namespace(array)
+    xp = get_array_namespace(array)
     return xp.reshape(array, shape)
 
 
@@ -376,7 +381,7 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            xp = _get_data_namespace(values)
+            xp = get_array_namespace(values)
             func = getattr(xp, name)
 
         try:
