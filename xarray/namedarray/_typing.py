@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Literal,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -263,3 +264,6 @@ class _sparsearrayapi(
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
+
+ErrorOptions = Literal["raise", "ignore"]
+ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]

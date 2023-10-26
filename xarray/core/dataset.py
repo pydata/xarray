@@ -110,8 +110,6 @@ from xarray.core.utils import (
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
-    infix_dims,
-    is_dict_like,
     is_scalar,
     maybe_wrap_array,
 )
@@ -122,6 +120,7 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.namedarray.utils import infix_dims, is_dict_like
 from xarray.plot.accessor import DatasetPlotAccessor
 from xarray.util.deprecation_helpers import _deprecate_positional_args
 

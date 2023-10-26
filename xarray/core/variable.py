@@ -42,7 +42,6 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
-    infix_dims,
     is_duck_array,
     maybe_coerce_to_str,
 )
@@ -1381,107 +1380,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for dim, count in shifts.items():
             result = result._roll_one_dim(dim, count)
         return result
-
-    def transpose(
-        self,
-        *dims: Hashable | ellipsis,
-        missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Self:
-        """Return a new Variable object with transposed dimensions.
-
-        Parameters
-        ----------
-        *dims : Hashable, optional
-            By default, reverse the dimensions. Otherwise, reorder the
-            dimensions to this order.
-        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
-            What to do if dimensions that should be selected from are not present in the
-            Variable:
-            - "raise": raise an exception
-            - "warn": raise a warning, and ignore the missing dimensions
-            - "ignore": ignore the missing dimensions
-
-        Returns
-        -------
-        transposed : Variable
-            The returned object has transposed data and dimensions with the
-            same attributes as the original.
-
-        Notes
-        -----
-        This operation returns a view of this variable's data. It is
-        lazy for dask-backed Variables but not for numpy-backed Variables.
-
-        See Also
-        --------
-        numpy.transpose
-        """
-        if len(dims) == 0:
-            dims = self.dims[::-1]
-        else:
-            dims = tuple(infix_dims(dims, self.dims, missing_dims))
-
-        if len(dims) < 2 or dims == self.dims:
-            # no need to transpose if only one dimension
-            # or dims are in same order
-            return self.copy(deep=False)
-
-        axes = self.get_axis_num(dims)
-        data = as_indexable(self._data).transpose(axes)
-        return self._replace(dims=dims, data=data)
-
-    @property
-    def T(self) -> Self:
-        return self.transpose()
-
-    def set_dims(self, dims, shape=None):
-        """Return a new variable with given set of dimensions.
-        This method might be used to attach new dimension(s) to variable.
-
-        When possible, this operation does not copy this variable's data.
-
-        Parameters
-        ----------
-        dims : str or sequence of str or dict
-            Dimensions to include on the new variable. If a dict, values are
-            used to provide the sizes of new dimensions; otherwise, new
-            dimensions are inserted with length 1.
-
-        Returns
-        -------
-        Variable
-        """
-        if isinstance(dims, str):
-            dims = [dims]
-
-        if shape is None and utils.is_dict_like(dims):
-            shape = dims.values()
-
-        missing_dims = set(self.dims) - set(dims)
-        if missing_dims:
-            raise ValueError(
-                f"new dimensions {dims!r} must be a superset of "
-                f"existing dimensions {self.dims!r}"
-            )
-
-        self_dims = set(self.dims)
-        expanded_dims = tuple(d for d in dims if d not in self_dims) + self.dims
-
-        if self.dims == expanded_dims:
-            # don't use broadcast_to unless necessary so the result remains
-            # writeable if possible
-            expanded_data = self.data
-        elif shape is not None:
-            dims_map = dict(zip(dims, shape))
-            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
-        else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
-
-        expanded_var = Variable(
-            expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
-        )
-        return expanded_var.transpose(*dims)
 
     def _stack_once(self, dims: list[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):

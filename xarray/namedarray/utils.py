@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Hashable
+import warnings
+from collections.abc import Collection, Hashable, Iterable, Iterator, Mapping
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-)
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
+
+from xarray.namedarray._typing import ErrorOptionsWithWarn
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
@@ -19,9 +18,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import (
-        duckarray,
-    )
+    from xarray.namedarray._typing import duckarray
 
     try:
         from dask.array.core import Array as DaskArray
@@ -78,6 +75,83 @@ def to_0d_object_array(
     result = np.empty((), dtype=object)
     result[()] = value
     return result
+
+
+def is_dict_like(value: Any) -> TypeGuard[Mapping]:
+    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+
+
+def drop_missing_dims(
+    supplied_dims: Iterable[Hashable],
+    dims: Iterable[Hashable],
+    missing_dims: ErrorOptionsWithWarn,
+) -> Iterable[Hashable]:
+    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
+    are not present in dims.
+
+    Parameters
+    ----------
+    supplied_dims : Iterable of Hashable
+    dims : Iterable of Hashable
+    missing_dims : {"raise", "warn", "ignore"}
+    """
+
+    if missing_dims == "raise":
+        supplied_dims_set = {val for val in supplied_dims if val is not ...}
+        invalid = supplied_dims_set - set(dims)
+        if invalid:
+            raise ValueError(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return supplied_dims
+
+    elif missing_dims == "warn":
+        invalid = set(supplied_dims) - set(dims)
+        if invalid:
+            warnings.warn(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return [val for val in supplied_dims if val in dims or val is ...]
+
+    elif missing_dims == "ignore":
+        return [val for val in supplied_dims if val in dims or val is ...]
+
+    else:
+        raise ValueError(
+            f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+def infix_dims(
+    dims_supplied: Collection,
+    dims_all: Collection,
+    missing_dims: ErrorOptionsWithWarn = "raise",
+) -> Iterator:
+    """
+    Resolves a supplied list containing an ellipsis representing other items, to
+    a generator with the 'realized' list of all items
+    """
+    if ... in dims_supplied:
+        if len(set(dims_all)) != len(dims_all):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        if list(dims_supplied).count(...) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = [d for d in dims_all if d not in dims_supplied]
+        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        for d in existing_dims:
+            if d is ...:
+                yield from other_dims
+            else:
+                yield d
+    else:
+        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        if set(existing_dims) ^ set(dims_all):
+            raise ValueError(
+                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
+            )
+        yield from existing_dims
 
 
 class ReprObject:

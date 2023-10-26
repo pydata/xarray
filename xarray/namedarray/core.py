@@ -22,17 +22,25 @@ import numpy as np
 from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
+    ErrorOptionsWithWarn,
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
     _dtype,
     _DType_co,
     _ScalarType_co,
+    _ShapeLike,
     _ShapeType_co,
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
+from xarray.namedarray.utils import (
+    _default,
+    infix_dims,
+    is_dict_like,
+    is_duck_dask_array,
+    to_0d_object_array,
+)
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -846,6 +854,109 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._replace(data=data_)
         else:
             raise TypeError("self.data is not a sparse array")
+
+    def transpose(
+        self,
+        *dims: Hashable | ellipsis,
+        missing_dims: ErrorOptionsWithWarn = "raise",
+    ) -> Self:
+        """Return a new object with transposed dimensions.
+
+        Parameters
+        ----------
+        *dims : Hashable, optional
+            By default, reverse the dimensions. Otherwise, reorder the
+            dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            NamedArray:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+
+        Returns
+        -------
+        transposed : NamedArray
+            The returned object has transposed data and dimensions with the
+            same attributes as the original.
+
+        Notes
+        -----
+        This operation returns a view of this variable's data. It is
+        lazy for dask-backed Variables but not for numpy-backed Variables.
+
+        See Also
+        --------
+        numpy.transpose
+        """
+        from xarray.core.indexing import as_indexable
+
+        if len(dims) == 0:
+            dims = self.dims[::-1]
+        else:
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+
+        if len(dims) < 2 or dims == self.dims:
+            # no need to transpose if only one dimension
+            # or dims are in same order
+            return self.copy(deep=False)
+
+        axes = self.get_axis_num(dims)
+        data = as_indexable(self._data).transpose(axes)
+        return self._replace(dims=dims, data=data)
+
+    @property
+    def T(self) -> Self:
+        return self.transpose()
+
+    def set_dims(self, dims: _DimsLike, shape: _ShapeLike = None) -> Self:
+        """
+        Return a new namedarray with given set of dimensions.
+        This method might be used to attach new dimension(s) to namedarray.
+
+        When possible, this operation does not copy this namedarray's data.
+
+        Parameters
+        ----------
+        dims : str or sequence of str or dict
+            Dimensions to include on the new namedarray. If a dict, values are used to
+            provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+
+        shape : sequence of int, optional
+            Shape of the new namedarray. If not provided, the shape is inferred from the data.
+        """
+
+        from xarray.core import duck_array_ops  # TODO: remove this import
+
+        if isinstance(dims, str):
+            dims = [dims]
+
+        if shape is None and is_dict_like(dims):
+            shape = dims.values()
+
+        missing_dims = set(self.dims) - set(dims)
+        if missing_dims:
+            raise ValueError(
+                f"new dimensions {dims!r} must be a superset of "
+                f"existing dimensions {self.dims!r}"
+            )
+
+        self_dims = set(self.dims)
+        expanded_dims = tuple(dim for dim in dims if dim not in self_dims) + self.dims
+
+        if self.dims == expanded_dims:
+            # don't use broadcast_to unless necessary so the result remains
+            # writeable if possible
+            expanded_data = self.data
+        elif shape is not None:
+            dims_map = dict(zip(dims, shape))
+            temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
+            expanded_data = duck_array_ops.broadcast_to(self.data, temporary_shape)
+        else:
+            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+
+        expanded_obj = self._replace(data=expanded_data, dims=expanded_dims)
+        return expanded_obj.transpose(*dims)
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
