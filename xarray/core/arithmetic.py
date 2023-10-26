@@ -14,12 +14,9 @@ from xarray.core._typed_ops import (
     VariableOpsMixin,
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.ops import (
-    IncludeNumpySameMethods,
-    IncludeReduceMethods,
-)
+from xarray.core.ops import IncludeNumpySameMethods, IncludeReduceMethods
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.namedarray.pycompat import is_duck_array
+from xarray.namedarray._typing import _arrayfunction_or_api
 
 
 class SupportsArithmetic:
@@ -48,7 +45,7 @@ class SupportsArithmetic:
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())
         for x in inputs + out:
-            if not is_duck_array(x) and not isinstance(
+            if not isinstance(x, _arrayfunction_or_api) and not isinstance(
                 x, self._HANDLED_TYPES + (SupportsArithmetic,)
             ):
                 return NotImplemented

@@ -13,7 +13,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.utils import is_duck_array
+from xarray.namedarray._typing import _arrayfunction_or_api
 
 __all__ = (
     "assert_allclose",
@@ -229,14 +229,14 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """Like `np.testing.assert_array_equal`, but for duckarrays"""
     __tracebackhide__ = True
 
-    if not is_duck_array(x) and not utils.is_scalar(x):
+    if not isinstance(x, _arrayfunction_or_api) and not utils.is_scalar(x):
         x = np.asarray(x)
 
-    if not is_duck_array(y) and not utils.is_scalar(y):
+    if not isinstance(y, _arrayfunction_or_api) and not utils.is_scalar(y):
         y = np.asarray(y)
 
-    if (is_duck_array(x) and utils.is_scalar(y)) or (
-        utils.is_scalar(x) and is_duck_array(y)
+    if (isinstance(x, _arrayfunction_or_api) and utils.is_scalar(y)) or (
+        utils.is_scalar(x) and isinstance(y, _arrayfunction_or_api)
     ):
         equiv = (x == y).all()
     else:

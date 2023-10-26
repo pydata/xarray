@@ -8,7 +8,8 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
-from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
+from xarray.namedarray._typing import _arrayfunction_or_api
+from xarray.namedarray.utils import is_duck_dask_array
 
 integer_types = (int, np.integer)
 
@@ -85,7 +86,9 @@ def mod_version(mod: ModType) -> Version:
 
 
 def is_chunked_array(x) -> bool:
-    return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
+    return is_duck_dask_array(x) or (
+        isinstance(x, _arrayfunction_or_api) and hasattr(x, "chunks")
+    )
 
 
 def is_0d_dask_array(x):
@@ -120,7 +123,7 @@ def to_duck_array(data):
 
     if isinstance(data, ExplicitlyIndexed):
         return data.get_duck_array()
-    elif is_duck_array(data):
+    elif isinstance(data, _arrayfunction_or_api):
         return data
     else:
         return np.asarray(data)

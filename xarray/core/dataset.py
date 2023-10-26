@@ -112,17 +112,14 @@ from xarray.core.variable import (
     broadcast_variables,
     calculate_dimensions,
 )
+from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
-from xarray.namedarray.pycompat import (
-    array_type,
-    is_chunked_array,
-)
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.namedarray.utils import (
     consolidate_dask_from_array_kwargs,
     either_dict_or_kwargs,
     is_dict_like,
-    is_duck_array,
     is_duck_dask_array,
 )
 from xarray.plot.accessor import DatasetPlotAccessor
@@ -2719,7 +2716,7 @@ class Dataset(
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                if not is_duck_array(v):
+                if not isinstance(v, _arrayfunction_or_api):
                     v = np.asarray(v)
 
                 if v.dtype.kind in "US":

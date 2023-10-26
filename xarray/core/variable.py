@@ -36,17 +36,13 @@ from xarray.core.utils import (
     infix_dims,
     maybe_coerce_to_str,
 )
+from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.core import NamedArray
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import (
-    integer_types,
-    is_0d_dask_array,
-    is_chunked_array,
-)
+from xarray.namedarray.pycompat import integer_types, is_0d_dask_array, is_chunked_array
 from xarray.namedarray.utils import (
     either_dict_or_kwargs,
     is_dict_like,
-    is_duck_array,
     is_duck_dask_array,
 )
 
@@ -411,7 +407,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Variable.as_numpy
         Variable.values
         """
-        if is_duck_array(self._data):
+        if isinstance(self._data, _arrayfunction_or_api):
             return self._data
         elif isinstance(self._data, indexing.ExplicitlyIndexed):
             return self._data.get_duck_array()
@@ -636,7 +632,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for dim, k in zip(self.dims, key):
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
-                    if not is_duck_array(k):
+                    if not isinstance(k, _arrayfunction_or_api):
                         k = np.asarray(k)
                     if k.ndim > 1:
                         raise IndexError(
@@ -681,7 +677,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             if isinstance(k, Variable):
                 k = k.data
             if not isinstance(k, BASIC_INDEXING_TYPES):
-                if not is_duck_array(k):
+                if not isinstance(k, _arrayfunction_or_api):
                     k = np.asarray(k)
                 if k.size == 0:
                     # Slice by empty list; numpy could not infer the dtype
@@ -940,7 +936,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             self._data = as_compatible_data(loaded_data)
         elif isinstance(self._data, ExplicitlyIndexed):
             self._data = self._data.get_duck_array()
-        elif not is_duck_array(self._data):
+        elif not isinstance(self._data, _arrayfunction_or_api):
             self._data = np.asarray(self._data)
         return self
 

@@ -19,8 +19,8 @@ from pandas.errors import OutOfBoundsDatetime
 from xarray.core.duck_array_ops import array_equiv, astype
 from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
-from xarray.namedarray.utils import is_duck_array
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
@@ -630,7 +630,7 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
-    elif is_duck_array(internal_data):
+    elif isinstance(internal_data, _arrayfunction_or_api):
         return limit_lines(repr(array.data), limit=40)
     elif getattr(array, "_in_memory", None):
         return short_array_repr(array)
@@ -789,7 +789,9 @@ def _diff_mapping_repr(
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
+            if isinstance(a_mapping[k], _arrayfunction_or_api) or isinstance(
+                b_mapping[k], _arrayfunction_or_api
+            ):
                 compatible = array_equiv(a_mapping[k], b_mapping[k])
             else:
                 compatible = a_mapping[k] == b_mapping[k]

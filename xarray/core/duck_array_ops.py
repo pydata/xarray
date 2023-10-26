@@ -16,17 +16,11 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import (  # noqa
+from numpy import (
     around,  # noqa
-    einsum,
-    gradient,
     isclose,
-    isin,
     isnat,
-    take,
-    tensordot,
-    transpose,
-    unravel_index,
+    take,  # noqa
     zeros_like,  # noqa
 )
 from numpy import concatenate as _concatenate
@@ -35,9 +29,10 @@ from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.utils import module_available
+from xarray.namedarray._typing import _arrayfunction_or_api
 from xarray.namedarray.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.namedarray.pycompat import array_type
-from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
+from xarray.namedarray.utils import is_duck_dask_array
 
 dask_available = module_available("dask")
 
@@ -193,7 +188,7 @@ def astype(data, dtype, **kwargs):
 
 
 def asarray(data, xp=np):
-    return data if is_duck_array(data) else xp.asarray(data)
+    return data if isinstance(data, _arrayfunction_or_api) else xp.asarray(data)
 
 
 def as_shared_dtype(scalars_or_arrays, xp=np):

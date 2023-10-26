@@ -14,7 +14,7 @@ except ImportError:
     from numpy import RankWarning
 
 from xarray.core.options import OPTIONS
-from xarray.namedarray.pycompat import is_duck_array
+from xarray.namedarray._typing import _arrayfunction_or_api
 
 try:
     import bottleneck as bn
@@ -143,7 +143,10 @@ def _advanced_indexer_subspaces(key):
 
     non_slices = [k for k in key if not isinstance(k, slice)]
     broadcasted_shape = np.broadcast_shapes(
-        *[item.shape if is_duck_array(item) else (0,) for item in non_slices]
+        *[
+            item.shape if isinstance(item, _arrayfunction_or_api) else (0,)
+            for item in non_slices
+        ]
     )
     ndim = len(broadcasted_shape)
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)

@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 import numpy as np
 
+from xarray.namedarray._typing import _arrayfunction_or_api
+
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-    from xarray.namedarray._typing import T_DuckArray, duckarray
+    from xarray.namedarray._typing import duckarray
 
     try:
         from dask.array.core import Array as DaskArray
@@ -25,10 +27,6 @@ if TYPE_CHECKING:
         DaskCollection: Any = NDArray  # type: ignore
 
 T = TypeVar("T")
-
-# https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
-T_DType_co = TypeVar("T_DType_co", bound=np.dtype[np.generic], covariant=True)
-T_DType = TypeVar("T_DType", bound=np.dtype[np.generic])
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -68,21 +66,7 @@ def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
 
 
 def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
-    return is_dask_collection(x)
-
-
-def is_duck_array(value: Any) -> TypeGuard[T_DuckArray]:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and (
-            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-            or hasattr(value, "__array_namespace__")
-        )
-    )
+    return isinstance(x, _arrayfunction_or_api) and is_dask_collection(x)
 
 
 def to_0d_object_array(
