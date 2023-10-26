@@ -23,6 +23,7 @@ from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     ErrorOptionsWithWarn,
+    SupportsIndex,
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
@@ -891,7 +892,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         from xarray.core.indexing import as_indexable
 
-        if len(dims) == 0:
+        if not dims:
             dims = self.dims[::-1]
         else:
             dims = tuple(infix_dims(dims, self.dims, missing_dims))
@@ -902,14 +903,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self.copy(deep=False)
 
         axes = self.get_axis_num(dims)
-        data = as_indexable(self._data).transpose(axes)
+        data = as_indexable(self._data).transpose(axes)  # type: ignore
         return self._replace(dims=dims, data=data)
 
     @property
     def T(self) -> Self:
         return self.transpose()
 
-    def set_dims(self, dims: _DimsLike, shape: _ShapeLike = None) -> Self:
+    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
         """
         Return a new namedarray with given set of dimensions.
         This method might be used to attach new dimension(s) to namedarray.
@@ -932,13 +933,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             dims = [dims]
 
         if shape is None and is_dict_like(dims):
-            shape = dims.values()
+            shape = list(dims.values())
 
-        missing_dims = set(self.dims) - set(dims)
-        if missing_dims:
+        if missing_dims := set(self.dims) - set(dims):
             raise ValueError(
                 f"new dimensions {dims!r} must be a superset of "
-                f"existing dimensions {self.dims!r}"
+                f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
             )
 
         self_dims = set(self.dims)
@@ -949,9 +949,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # writeable if possible
             expanded_data = self.data
         elif shape is not None:
-            dims_map = dict(zip(dims, shape))
+            dims_map = dict(zip(dims, cast(Iterable[SupportsIndex], shape)))
             temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, temporary_shape)
+            expanded_data = duck_array_ops.broadcast_to(self.data, temporary_shape)  # type: ignore
         else:
             expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
 

@@ -77,7 +77,7 @@ def to_0d_object_array(
     return result
 
 
-def is_dict_like(value: Any) -> TypeGuard[Mapping]:
+def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
@@ -125,10 +125,10 @@ def drop_missing_dims(
 
 
 def infix_dims(
-    dims_supplied: Collection,
-    dims_all: Collection,
+    dims_supplied: Collection[Any],
+    dims_all: Collection[Any],
     missing_dims: ErrorOptionsWithWarn = "raise",
-) -> Iterator:
+) -> Iterator[Any]:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
     a generator with the 'realized' list of all items
