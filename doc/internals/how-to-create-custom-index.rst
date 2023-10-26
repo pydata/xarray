@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _internals.custom indexes:
+
 How to create a custom index
 ============================
 

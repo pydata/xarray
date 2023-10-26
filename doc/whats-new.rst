@@ -137,6 +137,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the interoperability of xarray objects.
+  (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
   By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
 
