@@ -84,6 +84,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinxext.rediraffe",
     "sphinx_design",
+    "sphinx_inline_tabs",
 ]
 
 
@@ -230,6 +231,7 @@ html_theme_options = dict(
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
     repository_branch="main",
+    navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,

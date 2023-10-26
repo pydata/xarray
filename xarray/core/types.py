@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     _DTypeLikeNested = Any  # TODO: wait for support for recursive types
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
-    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # conflicts with numpys own DTypeLike (with dtypes for fields).
     # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[
@@ -187,9 +187,7 @@ OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = Union[
-    T_ChunkDim, Mapping[Any, T_ChunkDim], tuple[T_ChunkDim, ...]
-]
+T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]

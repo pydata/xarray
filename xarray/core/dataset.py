@@ -309,7 +309,8 @@ def _maybe_chunk(
             # when rechunking by different amounts, make sure dask names change
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
-            token2 = tokenize(name, token if token else var._data, chunks)
+            # we use str() for speed, and use the name for the final array name on the next line
+            token2 = tokenize(token if token else var._data, str(chunks))
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
@@ -2647,11 +2648,17 @@ class Dataset(
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
+                category=DeprecationWarning,
             )
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
+            if isinstance(chunks, (tuple, list)):
+                utils.emit_user_level_warning(
+                    "Supplying chunks as dimension-order tuples is deprecated. "
+                    "It will raise an error in the future. Instead use a dict with dimensions as keys.",
+                    category=DeprecationWarning,
+                )
             chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
             chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -3422,8 +3429,10 @@ class Dataset(
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
     ) -> Self:
-        """Conform this object onto the indexes of another object, filling in
-        missing values with ``fill_value``. The default fill value is NaN.
+        """
+        Conform this object onto the indexes of another object, for indexes which the
+        objects share. Missing values are filled with ``fill_value``. The default fill
+        value is NaN.
 
         Parameters
         ----------
@@ -3469,7 +3478,9 @@ class Dataset(
         See Also
         --------
         Dataset.reindex
+        DataArray.reindex_like
         align
+
         """
         return alignment.reindex_like(
             self,
@@ -6280,7 +6291,7 @@ class Dataset(
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))  # type: ignore[attr-defined]
+                count += np.asarray(array.count(dims))
                 size += math.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
