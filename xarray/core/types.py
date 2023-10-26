@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     _DTypeLikeNested = Any  # TODO: wait for support for recursive types
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
-    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # conflicts with numpys own DTypeLike (with dtypes for fields).
     # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[

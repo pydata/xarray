@@ -601,7 +601,7 @@ class CombinedDatetimelikeAccessor(
     DatetimeAccessor[T_DataArray], TimedeltaAccessor[T_DataArray]
 ):
     def __new__(cls, obj: T_DataArray) -> CombinedDatetimelikeAccessor:
-        # CombinedDatetimelikeAccessor isn't really instatiated. Instead
+        # CombinedDatetimelikeAccessor isn't really instantiated. Instead
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.

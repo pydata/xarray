@@ -121,7 +121,7 @@ template_other_unary = """
 # We need to add "# type: ignore[override]"
 # Keep an eye out for:
 # https://discuss.python.org/t/make-type-hints-for-eq-of-primitives-less-strict/34240
-# The type ignores might not be neccesary anymore at some point.
+# The type ignores might not be necessary anymore at some point.
 #
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
 # In reality this returns NotImplementes, but this is not a valid type in python 3.9.
