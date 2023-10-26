@@ -989,7 +989,7 @@ class GroupBy(Generic[T_Xarray]):
             if kwargs["func"] not in ["sum", "prod"]:
                 raise TypeError("Received an unexpected keyword argument 'min_count'")
             elif kwargs["min_count"] is None:
-                # set explicitly to avoid unncessarily accumulating count
+                # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
 
         # weird backcompat

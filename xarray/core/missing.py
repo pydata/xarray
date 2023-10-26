@@ -678,7 +678,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
 
     Notes
     -----
-    This requiers scipy installed.
+    This requires scipy installed.
 
     See Also
     --------
@@ -724,7 +724,7 @@ def interp_func(var, x, new_x, method: InterpOptions, kwargs):
             for i in range(new_x[0].ndim)
         }
 
-        # if useful, re-use localize for each chunk of new_x
+        # if useful, reuse localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and new_x0_chunks_is_not_none
 
         # scipy.interpolate.interp1d always forces to float.

@@ -409,7 +409,7 @@ def _unpack_dict_tuples(
 
 def _check_core_dims(signature, variable_args, name):
     """
-    Chcek if an arg has all the core dims required by the signature.
+    Check if an arg has all the core dims required by the signature.
 
     Slightly awkward design, of returning the error message. But we want to
     give a detailed error message, which requires inspecting the variable in
