@@ -86,17 +86,17 @@ def mod_version(mod: ModType) -> Version:
     return _get_cached_duck_array_module(mod).version
 
 
-def is_chunked_array(x) -> bool:
+def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or (
         isinstance(x, _arrayfunction_or_api) and hasattr(x, "chunks")
     )
 
 
-def is_0d_dask_array(x) -> bool:
+def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) and is_scalar(x)
 
 
-def to_numpy(data) -> np.ndarray[_ShapeType, _DType]:
+def to_numpy(data: duckarray[Any, Any]) -> np.ndarray[_ShapeType, _DType]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 

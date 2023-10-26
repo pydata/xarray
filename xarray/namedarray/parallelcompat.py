@@ -19,7 +19,10 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         _Chunks,
+        _DType,
+        _DTypeLike,
         _NormalizedChunks,
+        _ShapeType,
         duckarray,
     )
 
@@ -220,9 +223,9 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     def normalize_chunks(
         self,
         chunks: _Chunks | _NormalizedChunks,
-        shape: tuple[int, ...] | None = None,
+        shape: _ShapeType | None = None,
         limit: int | None = None,
-        dtype: np.dtype | None = None,
+        dtype: _DType | None = None,
         previous_chunks: _NormalizedChunks | None = None,
     ) -> _NormalizedChunks:
         """
@@ -359,7 +362,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         combine_func: Callable | None = None,
         aggregate_func: Callable | None = None,
         axis: int | Sequence[int] | None = None,
-        dtype: np.dtype | None = None,
+        dtype: _DTypeLike | None = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         """
@@ -409,7 +412,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         *args: Any,
         axes: Sequence[tuple[int, ...]] | None = None,
         keepdims: bool = False,
-        output_dtypes: Sequence[np.typing.DTypeLike] | None = None,
+        output_dtypes: Sequence[_DTypeLike] | None = None,
         vectorize: bool | None = None,
         **kwargs,
     ):
@@ -492,7 +495,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         self,
         func: Callable,
         *args: Any,
-        dtype: np.typing.DTypeLike | None = None,
+        dtype: _DTypeLike | None = None,
         chunks: tuple[int, ...] | None = None,
         drop_axis: int | Sequence[int] | None = None,
         new_axis: int | Sequence[int] | None = None,
