@@ -11,13 +11,9 @@ from xarray.core._typed_ops import (
     DataArrayOpsMixin,
     DatasetGroupByOpsMixin,
     DatasetOpsMixin,
-    VariableOpsMixin,
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
-from xarray.core.ops import (
-    IncludeNumpySameMethods,
-    IncludeReduceMethods,
-)
+from xarray.core.ops import IncludeNumpySameMethods, IncludeReduceMethods
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_array
 
@@ -97,10 +93,7 @@ class SupportsArithmetic:
 
 
 class VariableArithmetic(
-    ImplementsArrayReduce,
-    IncludeNumpySameMethods,
-    SupportsArithmetic,
-    VariableOpsMixin,
+    ImplementsArrayReduce, IncludeNumpySameMethods, SupportsArithmetic
 ):
     __slots__ = ()
     # prioritize our operations over those of numpy.ndarray (priority=0)

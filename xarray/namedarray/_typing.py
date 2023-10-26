@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from types import ModuleType
 from typing import (
@@ -14,10 +15,22 @@ from typing import (
     runtime_checkable,
 )
 
+if sys.version_info >= (3, 11):
+    from typing import Self  # noqa
+else:
+    from typing_extensions import Self  # noqa
+
 import numpy as np
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
+
+    from xarray.namedarray.core import NamedArray
+
+    try:
+        from dask.array import Array as DaskArray
+    except ImportError:
+        DaskArray = np.ndarray  # type: ignore
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
@@ -263,3 +276,7 @@ class _sparsearrayapi(
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
+
+
+ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
+NamedArrayCompatible = Union["NamedArray", "ScalarOrArray"]

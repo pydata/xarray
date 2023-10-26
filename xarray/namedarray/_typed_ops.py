@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from xarray.core import nputils, ops
 
 if TYPE_CHECKING:
-    from xarray.namedarray.utils import NamedArrayCompatible, Self
+    from xarray.namedarray._typing import NamedArrayCompatible, Self
 
 
 class NamedArrayOpsMixin:
