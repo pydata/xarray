@@ -11,6 +11,7 @@ from typing import (
     Callable,
     Generic,
     Literal,
+    SupportsIndex,
     TypeVar,
     cast,
     overload,
@@ -23,7 +24,6 @@ from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     ErrorOptionsWithWarn,
-    SupportsIndex,
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
@@ -953,7 +953,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
             expanded_data = duck_array_ops.broadcast_to(self.data, temporary_shape)  # type: ignore
         else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]  # type: ignore
 
         expanded_obj = self._replace(data=expanded_data, dims=expanded_dims)
         return expanded_obj.transpose(*dims)

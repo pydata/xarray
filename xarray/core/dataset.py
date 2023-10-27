@@ -5142,7 +5142,7 @@ class Dataset(
                 add_dims = [d for d in dims if d not in var.dims]
                 vdims = list(var.dims) + add_dims
                 shape = [self.dims[d] for d in vdims]
-                exp_var = var.set_dims(vdims, shape)
+                exp_var = var.set_dims(vdims, shape)  # type: ignore
                 stacked_var = exp_var.stack(**{new_dim: dims})
                 new_variables[name] = stacked_var
                 stacked_var_names.append(name)
@@ -7337,7 +7337,7 @@ class Dataset(
 
             # Broadcast then flatten the array:
             var_new_dims = var.set_dims(ordered_dims).chunk(ds_chunks)
-            dask_array = var_new_dims._data.reshape(-1)
+            dask_array = var_new_dims._data.reshape(-1)  # type: ignore
 
             series = dd.from_dask_array(dask_array, columns=name, meta=df_meta)
             series_list.append(series)
