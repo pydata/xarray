@@ -539,7 +539,7 @@ See that the same change (fast-forwarding by adding 10 years to the age of each 
 Mapping Custom Functions Over Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can map custom computation over each node in a tree using :py:func:`map_over_subtree`.
+You can map custom computation over each node in a tree using :py:meth:`DataTree.map_over_subtree`.
 You can map any function, so long as it takes `xarray.Dataset` objects as one (or more) of the input arguments,
 and returns one (or more) xarray datasets.
 
@@ -559,9 +559,12 @@ Then calculate the RMS value of these signals:
 
 .. ipython:: python
 
-    rms(readings)
+    voltages.map_over_subtree(rms)
 
 .. _multiple trees:
+
+We can also use the :py:func:`map_over_subtree` decorator to promote a function which accepts datasets into one which
+accepts datatrees.
 
 Operating on Multiple Trees
 ---------------------------
