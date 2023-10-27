@@ -15,9 +15,32 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.v0.0.14:
+
+v0.0.14 (unreleased)
+--------------------
+
+New Features
+~~~~~~~~~~~~
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+Deprecations
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+Documentation
+~~~~~~~~~~~~~
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.v0.0.13:
 
-v0.0.13 (unreleased)
+v0.0.13 (27/10/2023)
 --------------------
 
 New Features
@@ -38,9 +61,6 @@ Breaking changes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Disallow altering of given dataset inside function called by :py:func:`map_over_subtree` (:pull:`269`, reverts part of :pull:`194`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-Deprecations
-~~~~~~~~~~~~
 
 Bug fixes
 ~~~~~~~~~
