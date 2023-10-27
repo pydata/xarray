@@ -911,10 +911,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self.transpose()
 
     def _get_expanded_data_and_dims(
-        self, dims: _DimsLike, shape: _ShapeLike
+        self, dims: _DimsLike, shape: _ShapeLike | None = None
     ) -> tuple[duckarray[Any, _DType_co], _Dims]:
         """
-        Return a new namedarray with given set of dimensions.
+        Return a tuple of new namedarray with given set of dimensions and dims
         This method might be used to attach new dimension(s) to namedarray.
 
         When possible, this operation does not copy this namedarray's data.
@@ -930,9 +930,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
 
         from xarray.core import duck_array_ops  # TODO: remove this import
-
-        if isinstance(dims, str):
-            dims = [dims]
 
         if shape is None and is_dict_like(dims):
             shape = list(dims.values())
@@ -975,6 +972,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         shape : sequence of int, optional
             Shape of the new namedarray. If not provided, the shape is inferred from the data.
         """
+
+        if isinstance(dims, str):
+            dims = [dims]
 
         expanded_data, expanded_dims = self._get_expanded_data_and_dims(dims, shape)
         expanded_obj = self._replace(data=expanded_data, dims=expanded_dims)

@@ -2750,7 +2750,7 @@ class IndexVariable(Variable):
             "Values of an IndexVariable are immutable and can not be modified inplace"
         )
 
-    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Variable:
+    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Variable:  # type: ignore
         """
         Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
