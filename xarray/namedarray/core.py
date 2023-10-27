@@ -255,7 +255,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         if NamedArray in cls.__bases__ and (cls._new == NamedArray._new):
             # Type hinting does not work for subclasses unless _new is
-            # overriden with the correct class.
+            # overridden with the correct class.
             raise TypeError(
                 "Subclasses of `NamedArray` must override the `_new` method."
             )
