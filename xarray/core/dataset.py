@@ -4482,7 +4482,7 @@ class Dataset(
 
         # Expand the dataset with a new dimension called "time"
 
-        >>> dataset.set_dims(dim="time")
+        >>> dataset.expand_dims(dim="time")
         <xarray.Dataset>
         Dimensions:      (time: 1)
         Dimensions without coordinates: time
@@ -4502,7 +4502,7 @@ class Dataset(
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
-        >>> dataset_1d.set_dims(dim="time", axis=0)
+        >>> dataset_1d.expand_dims(dim="time", axis=0)
         <xarray.Dataset>
         Dimensions:      (time: 1, x: 3)
         Dimensions without coordinates: time, x
@@ -4522,7 +4522,7 @@ class Dataset(
 
         # Expand the dataset with a new dimension called "time" using axis argument
 
-        >>> dataset_2d.set_dims(dim="time", axis=2)
+        >>> dataset_2d.expand_dims(dim="time", axis=2)
         <xarray.Dataset>
         Dimensions:      (y: 3, x: 4, time: 1)
         Dimensions without coordinates: y, x, time
@@ -4531,7 +4531,7 @@ class Dataset(
 
         See Also
         --------
-        DataArray.set_dims
+        DataArray.expand_dims
         """
         if dim is None:
             pass
@@ -5143,7 +5143,7 @@ class Dataset(
                 vdims = list(var.dims) + add_dims
                 shape = [self.dims[d] for d in vdims]
                 exp_var = var.set_dims(vdims, shape)
-                stacked_var = exp_var.stack(**{new_dim: dims})  # type: ignore
+                stacked_var = exp_var.stack(**{new_dim: dims})
                 new_variables[name] = stacked_var
                 stacked_var_names.append(name)
             else:
@@ -5327,7 +5327,7 @@ class Dataset(
 
             return (
                 da.assign_coords(**missing_stack_coords)
-                .set_dims(missing_stack_dims)
+                .expand_dims(missing_stack_dims)
                 .stack({new_dim: (variable_dim,) + stacking_dims})
             )
 
@@ -7337,7 +7337,7 @@ class Dataset(
 
             # Broadcast then flatten the array:
             var_new_dims = var.set_dims(ordered_dims).chunk(ds_chunks)
-            dask_array = var_new_dims._data.reshape(-1)  # type: ignore
+            dask_array = var_new_dims._data.reshape(-1)
 
             series = dd.from_dask_array(dask_array, columns=name, meta=df_meta)
             series_list.append(series)

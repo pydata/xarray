@@ -2537,7 +2537,7 @@ class DataArray(
 
         See Also
         --------
-        Dataset.set_dims
+        Dataset.expand_dims
 
         Examples
         --------
@@ -2549,13 +2549,13 @@ class DataArray(
 
         Add new dimension of length 2:
 
-        >>> da.set_dims(dim={"y": 2})
+        >>> da.expand_dims(dim={"y": 2})
         <xarray.DataArray (y: 2, x: 5)>
         array([[0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4]])
         Dimensions without coordinates: y, x
 
-        >>> da.set_dims(dim={"y": 2}, axis=1)
+        >>> da.expand_dims(dim={"y": 2}, axis=1)
         <xarray.DataArray (x: 5, y: 2)>
         array([[0, 0],
                [1, 1],
@@ -2566,7 +2566,7 @@ class DataArray(
 
         Add a new dimension with coordinates from array:
 
-        >>> da.set_dims(dim={"y": np.arange(5)}, axis=0)
+        >>> da.expand_dims(dim={"y": np.arange(5)}, axis=0)
         <xarray.DataArray (y: 5, x: 5)>
         array([[0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4],
@@ -2587,7 +2587,7 @@ class DataArray(
             dim = {dim: 1}
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
-        ds = self._to_temp_dataset().set_dims(dim, axis)
+        ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
     def set_index(

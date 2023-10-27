@@ -109,7 +109,7 @@ def test_variable_property(prop):
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
-        (do("expand_dims", dims=("x", "y", "z")), True),
+        (do("set_dims", dims=("x", "y", "z")), True),
         (do("stack", dimensions={"flat": ("x", "y")}), True),
         (do("to_base_variable"), True),
         (do("transpose"), True),

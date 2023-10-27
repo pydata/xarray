@@ -872,7 +872,7 @@ class GroupBy(Generic[T_Xarray]):
         for var in other.coords:
             if other[var].ndim == 0:
                 other[var] = (
-                    other[var].drop_vars(var).set_dims({name: other.sizes[name]})
+                    other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
                 )
 
         # need to handle NaNs in group or elements that don't belong to any bins
