@@ -860,7 +860,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
         *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Self:
+    ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
 
         Parameters
