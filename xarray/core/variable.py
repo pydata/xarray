@@ -45,6 +45,7 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
+from xarray.namedarray._typing import _DimsLike, _ShapeLike
 from xarray.namedarray.core import NamedArray
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -2748,6 +2749,33 @@ class IndexVariable(Variable):
         raise TypeError(
             "Values of an IndexVariable are immutable and can not be modified inplace"
         )
+
+    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Variable:
+        """
+        Return a new variable with given set of dimensions.
+        This method might be used to attach new dimension(s) to variable.
+
+        When possible, this operation does not copy this variable's data.
+
+        Parameters
+        ----------
+        dims : str or sequence of str or dict
+            Dimensions to include on the new variable. If a dict, values are used to
+            provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+
+        shape : sequence of int, optional
+            Shape of the new variable. If not provided, the shape is inferred from the data.
+        """
+
+        expanded_data, expanded_dims = self._get_expanded_data_and_dims(dims, shape)
+        expanded_obj = Variable(
+            data=expanded_data,
+            dims=expanded_dims,
+            attrs=self._attrs,
+            encoding=self._encoding,
+            fastpath=True,
+        )
+        return expanded_obj.transpose(*dims)
 
 
 def _unified_dims(variables):

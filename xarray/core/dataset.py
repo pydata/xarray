@@ -5142,8 +5142,8 @@ class Dataset(
                 add_dims = [d for d in dims if d not in var.dims]
                 vdims = list(var.dims) + add_dims
                 shape = [self.dims[d] for d in vdims]
-                exp_var = var.set_dims(vdims, shape)  # type: ignore
-                stacked_var = exp_var.stack(**{new_dim: dims})
+                exp_var = var.set_dims(vdims, shape)
+                stacked_var = exp_var.stack(**{new_dim: dims})  # type: ignore
                 new_variables[name] = stacked_var
                 stacked_var_names.append(name)
             else:
