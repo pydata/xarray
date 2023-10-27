@@ -26,6 +26,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Split :py:meth:`Variable.set_dims` into :py:meth:`Variable.expand_dims` and :py:meth:`Variable.broadcast_to`
+  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~

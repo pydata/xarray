@@ -208,6 +208,7 @@
    Variable.argsort
    Variable.astype
    Variable.broadcast_equals
+   Variable.broadcast_to
    Variable.chunk
    Variable.clip
    Variable.coarsen
@@ -220,6 +221,7 @@
    Variable.cumprod
    Variable.cumsum
    Variable.equals
+   Variable.expand_dims
    Variable.fillna
    Variable.get_axis_num
    Variable.identical
@@ -242,7 +244,6 @@
    Variable.rolling_window
    Variable.round
    Variable.searchsorted
-   Variable.set_dims
    Variable.shift
    Variable.squeeze
    Variable.stack
