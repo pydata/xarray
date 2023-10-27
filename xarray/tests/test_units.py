@@ -2147,7 +2147,7 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    def test_set_dims(self, dtype):
+    def test_expand_dims(self, dtype):
         array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
         variable = xr.Variable(("x", "y"), array)
 

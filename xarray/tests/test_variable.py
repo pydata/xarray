@@ -1606,7 +1606,7 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"not found in array dim"):
             v.get_axis_num("foobar")
 
-    def test_set_dims(self):
+    def test_expand_dims(self):
         v = Variable(["x"], [0, 1])
         actual = v.expand_dims(["x", "y"])
         expected = Variable(["x", "y"], [[0], [1]])
@@ -1627,7 +1627,7 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"must be a superset"):
             v.expand_dims(["z"])
 
-    def test_set_dims_object_dtype(self):
+    def test_expand_dims_object_dtype(self):
         v = Variable([], ("a", 1))
         actual = v.expand_dims(("x",), (3,))
         exp_values = np.empty((3,), dtype=object)
