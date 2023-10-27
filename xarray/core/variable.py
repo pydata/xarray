@@ -1382,7 +1382,43 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result = result._roll_one_dim(dim, count)
         return result
 
-    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
+    def transpose(
+        self,
+        *dims: Hashable | ellipsis,
+        missing_dims: ErrorOptionsWithWarn = "raise",
+    ) -> Variable:
+        """Return a new object with transposed dimensions.
+
+        Parameters
+        ----------
+        *dims : Hashable, optional
+            By default, reverse the dimensions. Otherwise, reorder the
+            dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            NamedArray:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+
+        Returns
+        -------
+        transposed : NamedArray
+            The returned object has transposed data and dimensions with the
+            same attributes as the original.
+
+        Notes
+        -----
+        This operation returns a view of this variable's data. It is
+        lazy for dask-backed Variables but not for numpy-backed Variables.
+
+        See Also
+        --------
+        numpy.transpose
+        """
+        return self.permute_dims(*dims, missing_dims=missing_dims)
+
+    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Variable:
         """
         Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
@@ -2770,6 +2806,7 @@ class IndexVariable(Variable):
         )
 
     def _create_expanded_obj(self, expanded_data, expanded_dims) -> Variable:  # type: ignore
+        # override NamedArray's version to use Variable constructor instead of cls
         return Variable(
             expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
         )

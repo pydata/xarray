@@ -856,7 +856,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         else:
             raise TypeError("self.data is not a sparse array")
 
-    def transpose(
+    def permute_dims(
         self,
         *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
@@ -908,7 +908,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     @property
     def T(self) -> Self:
-        return self.transpose()
+        return self.permute_dims()
 
     def broadcast_to(self, shape: _ShapeLike) -> NamedArray[Any, _DType_co]:
         from xarray.core import duck_array_ops  # TODO: remove this import
@@ -920,7 +920,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     ) -> Self:
         return self._replace(dims=expanded_dims, data=expanded_data)
 
-    def expand_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
+    def expand_dims(
+        self, dims: _DimsLike, shape: _ShapeLike | None = None
+    ) -> NamedArray[Any, _DType_co]:
         """
         Expand the dimensions of the object.
 
