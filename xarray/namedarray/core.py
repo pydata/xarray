@@ -916,8 +916,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return duck_array_ops.broadcast_to(self.data, shape)  # type: ignore
 
     def _create_expanded_obj(
-        self, expanded_data, expanded_dims
-    ) -> Self:  # type: ignore
+        self, expanded_data: duckarray[Any, Any], expanded_dims: _DimsLike
+    ) -> Self:
         return self._replace(dims=expanded_dims, data=expanded_data)
 
     def expand_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
@@ -967,7 +967,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]  # type: ignore
 
         expanded_obj = self._create_expanded_obj(expanded_data, expanded_dims)
-        return expanded_obj.transpose(*dims)  # type: ignore
+        return expanded_obj.transpose(*dims)
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
