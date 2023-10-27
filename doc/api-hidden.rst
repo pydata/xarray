@@ -295,6 +295,7 @@
    IndexVariable.cumprod
    IndexVariable.cumsum
    IndexVariable.equals
+   IndexVariable.expand_dims
    IndexVariable.fillna
    IndexVariable.get_axis_num
    IndexVariable.get_level_variable
@@ -318,7 +319,6 @@
    IndexVariable.rolling_window
    IndexVariable.round
    IndexVariable.searchsorted
-   IndexVariable.set_dims
    IndexVariable.shift
    IndexVariable.squeeze
    IndexVariable.stack
