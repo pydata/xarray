@@ -45,6 +45,7 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
+from xarray.namedarray._typing import _DimsLike, _ShapeLike
 from xarray.namedarray.core import NamedArray
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -1380,6 +1381,25 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         for dim, count in shifts.items():
             result = result._roll_one_dim(dim, count)
         return result
+
+    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
+        """
+        Return a new variable with given set of dimensions.
+        This method might be used to attach new dimension(s) to variable.
+        When possible, this operation does not copy this variable's data.
+
+        Parameters
+        ----------
+        dims : str or sequence of str or dict
+             Dimensions to include on the new object (must be a superset of the existing dimensions).
+             If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+
+        shape : sequence of int, optional
+             Shape to broadcast the data to. Must be specified in the same order as `dims`.
+             If not provided, new dimensions are inserted with length 1.
+        """
+
+        return self.expand_dims(dims, shape)
 
     def _stack_once(self, dims: list[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):

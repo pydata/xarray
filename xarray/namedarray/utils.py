@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import sys
 import warnings
-from collections.abc import Collection, Hashable, Iterable, Iterator, Mapping
+from collections.abc import Hashable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 
-from xarray.namedarray._typing import ErrorOptionsWithWarn
+from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
 
 if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
@@ -82,10 +82,10 @@ def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
 
 
 def drop_missing_dims(
-    supplied_dims: Iterable[Hashable],
-    dims: Iterable[Hashable],
+    supplied_dims: _DimsLike,
+    dims: _DimsLike,
     missing_dims: ErrorOptionsWithWarn,
-) -> Iterable[Hashable]:
+) -> _DimsLike:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
 
@@ -98,8 +98,7 @@ def drop_missing_dims(
 
     if missing_dims == "raise":
         supplied_dims_set = {val for val in supplied_dims if val is not ...}
-        invalid = supplied_dims_set - set(dims)
-        if invalid:
+        if invalid := supplied_dims_set - set(dims):
             raise ValueError(
                 f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
@@ -107,8 +106,7 @@ def drop_missing_dims(
         return supplied_dims
 
     elif missing_dims == "warn":
-        invalid = set(supplied_dims) - set(dims)
-        if invalid:
+        if invalid := set(supplied_dims) - set(dims):
             warnings.warn(
                 f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
@@ -125,10 +123,10 @@ def drop_missing_dims(
 
 
 def infix_dims(
-    dims_supplied: Collection[Any],
-    dims_all: Collection[Any],
+    dims_supplied: _DimsLike,
+    dims_all: _DimsLike,
     missing_dims: ErrorOptionsWithWarn = "raise",
-) -> Iterator[Any]:
+) -> Iterator[_DimsLike]:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
     a generator with the 'realized' list of all items

@@ -913,8 +913,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def broadcast_to(self, shape: _ShapeLike) -> NamedArray[Any, _DType_co]:
         from xarray.core import duck_array_ops  # TODO: remove this import
 
-        data = duck_array_ops.broadcast_to(self.data, shape)
-        return self._replace(data=data)
+        return duck_array_ops.broadcast_to(self.data, shape)
 
     def _create_expanded_obj(
         self, expanded_data: duckarray[Any, Any], expanded_dims: _DimsLike
