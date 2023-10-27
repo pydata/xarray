@@ -552,7 +552,7 @@ def _dataset_concat(
         for var, dim_len in zip(vars, concat_dim_lengths):
             if var.dims != common_dims:
                 common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
-                var = var.set_dims(common_dims, common_shape)
+                var = var.expand_dims(common_dims, common_shape)
             yield var
 
     # get the indexes to concatenate together, create a PandasIndex
@@ -567,7 +567,7 @@ def _dataset_concat(
             elif name == dim:
                 var = ds._variables[name]
                 if not var.dims:
-                    data = var.set_dims(dim).values
+                    data = var.expand_dims(dim).values
                     yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing

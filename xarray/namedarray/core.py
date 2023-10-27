@@ -910,26 +910,36 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def T(self) -> Self:
         return self.transpose()
 
-    def _get_expanded_data_and_dims(
-        self, dims: _DimsLike, shape: _ShapeLike | None = None
-    ) -> tuple[duckarray[Any, _DType_co], _Dims]:
-        """
-        Return a tuple of new namedarray with given set of dimensions and dims
-        This method might be used to attach new dimension(s) to namedarray.
-
-        When possible, this operation does not copy this namedarray's data.
-
-        Parameters
-        ----------
-        dims : str or sequence of str or dict
-            Dimensions to include on the new namedarray. If a dict, values are used to
-            provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
-
-        shape : sequence of int, optional
-            Shape of the new namedarray. If not provided, the shape is inferred from the data.
-        """
-
+    def broadcast_to(self, shape: _ShapeLike) -> duckarray[Any, Any]:
         from xarray.core import duck_array_ops  # TODO: remove this import
+
+        return duck_array_ops.broadcast_to(self.data, shape)  # type: ignore
+
+    def _create_expanded_obj(
+        self, expanded_data, expanded_dims
+    ) -> Self:  # type: ignore
+        return self._replace(dims=expanded_dims, data=expanded_data)
+
+    def expand_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
+        """
+        Expand the dimensions of the object.
+
+         This method adds new dimensions to the object and optionally broadcasts
+         the data to the new shape if provided.
+
+         Parameters
+         ----------
+         dims : str or sequence of str or dict
+             Dimensions to include on the new object (must be a superset of the existing dimensions).
+             If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+
+         shape : sequence of int, optional
+             Shape to broadcast the data to. Must be specified in the same order as `dims`.
+             If not provided, new dimensions are inserted with length 1.
+        """
+
+        if isinstance(dims, str):
+            dims = [dims]
 
         if shape is None and is_dict_like(dims):
             shape = list(dims.values())
@@ -947,38 +957,17 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
+
         elif shape is not None:
             dims_map = dict(zip(dims, cast(Iterable[SupportsIndex], shape)))
             temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, temporary_shape)  # type: ignore
+            expanded_data = self.broadcast_to(temporary_shape)
+
         else:
             expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]  # type: ignore
 
-        return expanded_data, expanded_dims
-
-    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Self:
-        """
-        Return a new namedarray with given set of dimensions.
-        This method might be used to attach new dimension(s) to namedarray.
-
-        When possible, this operation does not copy this namedarray's data.
-
-        Parameters
-        ----------
-        dims : str or sequence of str or dict
-            Dimensions to include on the new namedarray. If a dict, values are used to
-            provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
-
-        shape : sequence of int, optional
-            Shape of the new namedarray. If not provided, the shape is inferred from the data.
-        """
-
-        if isinstance(dims, str):
-            dims = [dims]
-
-        expanded_data, expanded_dims = self._get_expanded_data_and_dims(dims, shape)
-        expanded_obj = self._replace(data=expanded_data, dims=expanded_dims)
-        return expanded_obj.transpose(*dims)
+        expanded_obj = self._create_expanded_obj(expanded_data, expanded_dims)
+        return expanded_obj.transpose(*dims)  # type: ignore
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]

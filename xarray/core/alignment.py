@@ -1068,7 +1068,7 @@ def _broadcast_helper(
                 # ignore dim not in var.dims
                 var_dims_map[dim] = var.shape[var.dims.index(dim)]
 
-        return var.set_dims(var_dims_map)
+        return var.expand_dims(var_dims_map)
 
     def _broadcast_array(array: T_DataArray) -> T_DataArray:
         data = _set_dims(array.variable)

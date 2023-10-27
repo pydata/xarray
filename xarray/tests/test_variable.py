@@ -466,7 +466,7 @@ class VariableSubclassobjects(ABC):
             expected[...],
             expected.squeeze(),
             expected.isel(x=slice(None)),
-            expected.set_dims({"x": 3}),
+            expected.expand_dims({"x": 3}),
             expected.copy(deep=True),
             expected.copy(deep=False),
         ]:
@@ -1608,28 +1608,28 @@ class TestVariable(VariableSubclassobjects):
 
     def test_set_dims(self):
         v = Variable(["x"], [0, 1])
-        actual = v.set_dims(["x", "y"])
+        actual = v.expand_dims(["x", "y"])
         expected = Variable(["x", "y"], [[0], [1]])
         assert_identical(actual, expected)
 
-        actual = v.set_dims(["y", "x"])
+        actual = v.expand_dims(["y", "x"])
         assert_identical(actual, expected.T)
 
-        actual = v.set_dims({"x": 2, "y": 2})
+        actual = v.expand_dims({"x": 2, "y": 2})
         expected = Variable(["x", "y"], [[0, 0], [1, 1]])
         assert_identical(actual, expected)
 
         v = Variable(["foo"], [0, 1])
-        actual = v.set_dims("foo")
+        actual = v.expand_dims("foo")
         expected = v
         assert_identical(actual, expected)
 
         with pytest.raises(ValueError, match=r"must be a superset"):
-            v.set_dims(["z"])
+            v.expand_dims(["z"])
 
     def test_set_dims_object_dtype(self):
         v = Variable([], ("a", 1))
-        actual = v.set_dims(("x",), (3,))
+        actual = v.expand_dims(("x",), (3,))
         exp_values = np.empty((3,), dtype=object)
         for i in range(3):
             exp_values[i] = ("a", 1)

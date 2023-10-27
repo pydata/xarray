@@ -5,14 +5,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Literal,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union
 
 import numpy as np
 import pandas as pd
@@ -1052,7 +1045,7 @@ class GroupBy(Generic[T_Xarray]):
         # broadcast and restore non-numeric data variables (backcompat)
         for name, var in non_numeric.items():
             if all(d not in var.dims for d in parsed_dim):
-                result[name] = var.variable.set_dims(
+                result[name] = var.variable.expand_dims(
                     (grouper.name,) + var.dims,
                     (result.sizes[grouper.name],) + var.shape,
                 )

@@ -45,7 +45,6 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray._typing import _DimsLike, _ShapeLike
 from xarray.namedarray.core import NamedArray
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -878,7 +877,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 value = Variable(dims[-value.ndim :], value)
         # broadcast to become assignable
-        value = value.set_dims(dims).data
+        value = value.expand_dims(dims).data
 
         if new_order:
             value = duck_array_ops.asarray(value)
@@ -2750,32 +2749,10 @@ class IndexVariable(Variable):
             "Values of an IndexVariable are immutable and can not be modified inplace"
         )
 
-    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Variable:  # type: ignore
-        """
-        Return a new variable with given set of dimensions.
-        This method might be used to attach new dimension(s) to variable.
-
-        When possible, this operation does not copy this variable's data.
-
-        Parameters
-        ----------
-        dims : str or sequence of str or dict
-            Dimensions to include on the new variable. If a dict, values are used to
-            provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
-
-        shape : sequence of int, optional
-            Shape of the new variable. If not provided, the shape is inferred from the data.
-        """
-
-        expanded_data, expanded_dims = self._get_expanded_data_and_dims(dims, shape)
-        expanded_obj = Variable(
-            data=expanded_data,
-            dims=expanded_dims,
-            attrs=self._attrs,
-            encoding=self._encoding,
-            fastpath=True,
+    def _create_expanded_obj(self, expanded_data, expanded_dims) -> Variable:  # type: ignore
+        return Variable(
+            expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
         )
-        return expanded_obj.transpose(*dims)
 
 
 def _unified_dims(variables):
@@ -2806,7 +2783,9 @@ def _broadcast_compat_variables(*variables):
     dimensions of size 1 instead of the size of the broadcast dimension.
     """
     dims = tuple(_unified_dims(variables))
-    return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
+    return tuple(
+        var.expand_dims(dims) if var.dims != dims else var for var in variables
+    )
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
@@ -2822,7 +2801,8 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
     dims_map = _unified_dims(variables)
     dims_tuple = tuple(dims_map)
     return tuple(
-        var.set_dims(dims_map) if var.dims != dims_tuple else var for var in variables
+        var.expand_dims(dims_map) if var.dims != dims_tuple else var
+        for var in variables
     )
 
 

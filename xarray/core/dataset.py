@@ -4614,12 +4614,12 @@ class Dataset(
                     all_dims = list(zip(v.dims, v.shape))
                     for d, c in zip_axis_dim:
                         all_dims.insert(d, c)
-                    variables[k] = v.set_dims(dict(all_dims))
+                    variables[k] = v.expand_dims(dict(all_dims))
             else:
                 if k not in variables:
                     # If dims includes a label of a non-dimension coordinate,
                     # it will be promoted to a 1D coordinate with a single value.
-                    index, index_vars = create_default_index_implicit(v.set_dims(k))
+                    index, index_vars = create_default_index_implicit(v.expand_dims(k))
                     indexes[k] = index
                     variables.update(index_vars)
 
@@ -5142,7 +5142,7 @@ class Dataset(
                 add_dims = [d for d in dims if d not in var.dims]
                 vdims = list(var.dims) + add_dims
                 shape = [self.dims[d] for d in vdims]
-                exp_var = var.set_dims(vdims, shape)
+                exp_var = var.expand_dims(vdims, shape)
                 stacked_var = exp_var.stack(**{new_dim: dims})  # type: ignore
                 new_variables[name] = stacked_var
                 stacked_var_names.append(name)
@@ -7090,7 +7090,7 @@ class Dataset(
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
-            self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+            self._variables[k].expand_dims(ordered_dims).values.reshape(-1)
             for k in columns
         ]
         index = self.coords.to_index([*ordered_dims])
@@ -7336,7 +7336,7 @@ class Dataset(
                 var = var.chunk()
 
             # Broadcast then flatten the array:
-            var_new_dims = var.set_dims(ordered_dims).chunk(ds_chunks)
+            var_new_dims = var.expand_dims(ordered_dims).chunk(ds_chunks)
             dask_array = var_new_dims._data.reshape(-1)  # type: ignore
 
             series = dd.from_dask_array(dask_array, columns=name, meta=df_meta)
