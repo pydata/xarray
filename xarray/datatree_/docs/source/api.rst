@@ -101,6 +101,7 @@ For manipulating, traversing, navigating, or mapping over the tree structure.
    DataTree.relative_to
    DataTree.iter_lineage
    DataTree.find_common_ancestor
+   DataTree.map_over_subtree
    map_over_subtree
    DataTree.pipe
    DataTree.match
