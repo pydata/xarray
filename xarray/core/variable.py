@@ -877,7 +877,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 value = Variable(dims[-value.ndim :], value)
         # broadcast to become assignable
-        value = value.expand_dims(dims).data
+        value = value.set_dims(dims).data
 
         if new_order:
             value = duck_array_ops.asarray(value)
@@ -2783,9 +2783,7 @@ def _broadcast_compat_variables(*variables):
     dimensions of size 1 instead of the size of the broadcast dimension.
     """
     dims = tuple(_unified_dims(variables))
-    return tuple(
-        var.expand_dims(dims) if var.dims != dims else var for var in variables
-    )
+    return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
@@ -2801,8 +2799,7 @@ def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
     dims_map = _unified_dims(variables)
     dims_tuple = tuple(dims_map)
     return tuple(
-        var.expand_dims(dims_map) if var.dims != dims_tuple else var
-        for var in variables
+        var.set_dims(dims_map) if var.dims != dims_tuple else var for var in variables
     )
 
 

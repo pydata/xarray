@@ -910,10 +910,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def T(self) -> Self:
         return self.transpose()
 
-    def broadcast_to(self, shape: _ShapeLike) -> duckarray[Any, Any]:
+    def broadcast_to(self, shape: _ShapeLike) -> NamedArray[Any, _DType_co]:
         from xarray.core import duck_array_ops  # TODO: remove this import
 
-        return duck_array_ops.broadcast_to(self.data, shape)  # type: ignore
+        data = duck_array_ops.broadcast_to(self.data, shape)
+        return self._replace(data=data)
 
     def _create_expanded_obj(
         self, expanded_data: duckarray[Any, Any], expanded_dims: _DimsLike
@@ -924,16 +925,16 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         Expand the dimensions of the object.
 
-         This method adds new dimensions to the object and optionally broadcasts
-         the data to the new shape if provided.
+        This method adds new dimensions to the object and optionally broadcasts
+        the data to the new shape if provided.
 
-         Parameters
-         ----------
-         dims : str or sequence of str or dict
+        Parameters
+        ----------
+        dims : str or sequence of str or dict
              Dimensions to include on the new object (must be a superset of the existing dimensions).
              If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
 
-         shape : sequence of int, optional
+        shape : sequence of int, optional
              Shape to broadcast the data to. Must be specified in the same order as `dims`.
              If not provided, new dimensions are inserted with length 1.
         """

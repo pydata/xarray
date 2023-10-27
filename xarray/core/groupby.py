@@ -872,7 +872,7 @@ class GroupBy(Generic[T_Xarray]):
         for var in other.coords:
             if other[var].ndim == 0:
                 other[var] = (
-                    other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
+                    other[var].drop_vars(var).set_dims({name: other.sizes[name]})
                 )
 
         # need to handle NaNs in group or elements that don't belong to any bins
@@ -1045,7 +1045,7 @@ class GroupBy(Generic[T_Xarray]):
         # broadcast and restore non-numeric data variables (backcompat)
         for name, var in non_numeric.items():
             if all(d not in var.dims for d in parsed_dim):
-                result[name] = var.variable.expand_dims(
+                result[name] = var.variable.set_dims(
                     (grouper.name,) + var.dims,
                     (result.sizes[grouper.name],) + var.shape,
                 )

@@ -2153,9 +2153,9 @@ class TestVariable:
 
         dims = {"z": 6, "x": 3, "a": 1, "b": 4, "y": 10}
         expected = attach_units(
-            strip_units(variable).expand_dims(dims), extract_units(variable)
+            strip_units(variable).set_dims(dims), extract_units(variable)
         )
-        actual = variable.expand_dims(dims)
+        actual = variable.set_dims(dims)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)

@@ -120,7 +120,7 @@ def unique_variable(
 
     if compat == "broadcast_equals":
         dim_lengths = broadcast_dimension_size(variables)
-        out = out.expand_dims(dim_lengths)
+        out = out.set_dims(dim_lengths)
 
     if compat == "no_conflicts":
         combine_method = "fillna"

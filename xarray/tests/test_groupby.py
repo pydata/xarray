@@ -746,7 +746,7 @@ def test_groupby_dataset_reduce() -> None:
     )
 
     expected = data.mean("y")
-    expected["yonly"] = expected["yonly"].variable.expand_dims({"x": 3})
+    expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
     actual = data.groupby("x").mean(...)
     assert_allclose(expected, actual)
 
@@ -757,7 +757,7 @@ def test_groupby_dataset_reduce() -> None:
     expected = Dataset(
         {
             "xy": data["xy"].groupby(letters).mean(...),
-            "xonly": (data["xonly"].mean().variable.expand_dims({"letters": 2})),
+            "xonly": (data["xonly"].mean().variable.set_dims({"letters": 2})),
             "yonly": data["yonly"].groupby(letters).mean(),
         }
     )

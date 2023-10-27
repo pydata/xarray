@@ -22,12 +22,13 @@ v2023.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`NamedArray.expand_dims` and :py:meth:`NamedArray.broadcast_to`
+  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Split ``Variable.set_dims`` into :py:meth:`Variable.expand_dims` and :py:meth:`Variable.broadcast_to`
-  (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
 Deprecations
@@ -351,7 +352,7 @@ Documentation
 - Added page on the internal design of xarray objects.
   (:pull:`7991`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
-  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.set_dims`,:py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Add docstrings for the :py:class:`Index` base class and add some documentation on how to
   create custom, Xarray-compatible indexes (:pull:`6975`)
@@ -396,7 +397,7 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
-  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`,:py:meth:`Dataset.drop_vars`
+  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.set_dims`,:py:meth:`Dataset.drop_vars`
   (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -1128,7 +1129,7 @@ Documentation
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
-- Added examples to docstrings for :py:meth:`DataArray.expand_dims`, :py:meth:`DataArray.drop_duplicates`, :py:meth:`DataArray.reset_coords`, :py:meth:`DataArray.equals`, :py:meth:`DataArray.identical`, :py:meth:`DataArray.broadcast_equals`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.dropna`, :py:meth:`DataArray.drop_isel`, :py:meth:`DataArray.drop_sel`, :py:meth:`DataArray.head`, :py:meth:`DataArray.tail`. (:issue:`5816`, :pull:`7088`)
+- Added examples to docstrings for :py:meth:`DataArray.set_dims`, :py:meth:`DataArray.drop_duplicates`, :py:meth:`DataArray.reset_coords`, :py:meth:`DataArray.equals`, :py:meth:`DataArray.identical`, :py:meth:`DataArray.broadcast_equals`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.dropna`, :py:meth:`DataArray.drop_isel`, :py:meth:`DataArray.drop_sel`, :py:meth:`DataArray.head`, :py:meth:`DataArray.tail`. (:issue:`5816`, :pull:`7088`)
   By `Patrick Naylor <https://github.com/patrick-naylor>`_.
 - Add missing docstrings to various array properties. (:pull:`7090`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -3533,7 +3534,7 @@ Breaking changes
 - ``xarray.broadcast_array`` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
 - ``Variable.expand_dims`` is removed (previously deprecated in favor of
-  ``Variable.set_dims``)
+  :py:meth:`Variable.set_dims`)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -3640,7 +3641,7 @@ Bug fixes
 - Fix regression introduced in v0.12.2 where ``copy(deep=True)`` would convert
   unicode indices to dtype=object (:issue:`3094`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- Improved error handling and documentation for `.expand_dims()`
+- Improved error handling and documentation for `.set_dims()`
   read-only view.
 - Fix tests for big-endian systems (:issue:`3125`).
   By `Graham Inggs <https://github.com/ginggs>`_.
@@ -5464,7 +5465,7 @@ Enhancements
   enable persisting data in distributed memory when using Dask (:issue:`1344`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
-- New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
+- New :py:meth:`~xarray.DataArray.set_dims` method for ``DataArray`` and
   ``Dataset`` (:issue:`1326`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 

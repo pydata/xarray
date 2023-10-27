@@ -221,7 +221,7 @@
    Variable.cumprod
    Variable.cumsum
    Variable.equals
-   Variable.expand_dims
+   Variable.set_dims
    Variable.fillna
    Variable.get_axis_num
    Variable.identical
@@ -295,7 +295,7 @@
    IndexVariable.cumprod
    IndexVariable.cumsum
    IndexVariable.equals
-   IndexVariable.expand_dims
+   IndexVariable.set_dims
    IndexVariable.fillna
    IndexVariable.get_axis_num
    IndexVariable.get_level_variable
