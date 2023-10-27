@@ -26,7 +26,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Split :py:meth:`Variable.set_dims` into :py:meth:`Variable.expand_dims` and :py:meth:`Variable.broadcast_to`
+- Split ``Variable.set_dims`` into :py:meth:`Variable.expand_dims` and :py:meth:`Variable.broadcast_to`
   (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
@@ -3533,7 +3533,7 @@ Breaking changes
 - ``xarray.broadcast_array`` is removed (previously deprecated in favor of
   :py:func:`~xarray.broadcast`)
 - ``Variable.expand_dims`` is removed (previously deprecated in favor of
-  :py:meth:`Variable.set_dims`)
+  ``Variable.set_dims``)
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
