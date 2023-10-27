@@ -2383,6 +2383,7 @@ class ZarrBase(CFEncodedBase):
             )
 
     @requires_dask
+    @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
@@ -2438,6 +2439,19 @@ class ZarrBase(CFEncodedBase):
 
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
+
+    def test_to_zarr_append_with_transposed_dims_works(self) -> None:
+        original = create_test_data().chunk()
+
+        with self.create_zarr_target() as store:
+            self.save(original, store)
+
+            to_append = original.transpose(*reversed(list(original.dims)))
+
+            self.save(to_append, store, mode="a")
+
+            with self.open(store) as actual:
+                assert_identical(original, actual)
 
     @pytest.mark.parametrize("chunk", [False, True])
     def test_save_emptydim(self, chunk) -> None:

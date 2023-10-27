@@ -22,6 +22,9 @@ v2023.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Writing to an existing zarr file with differently ordered, but identically
+  named, dimensions is supported. 
+  By `Maximilian Roos  <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -4,7 +4,7 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Iterable
+from collections.abc import Hashable, Iterable, Mapping
 from glob import glob
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -15,6 +15,7 @@ from xarray.core import indexing
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
@@ -271,7 +272,7 @@ class ArrayWriter:
 class AbstractWritableDataStore(AbstractDataStore):
     __slots__ = ()
 
-    def encode(self, variables, attributes):
+    def encode(self, variables: Mapping[Hashable, Variable], attributes: Mapping):
         """
         Encode the variables and attributes in this store
 

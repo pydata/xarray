@@ -320,14 +320,19 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
-def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
+def _validate_existing_dims(
+    var_name, new_var, existing_var, region, append_dim
+) -> Variable:
     if new_var.dims != existing_var.dims:
-        raise ValueError(
-            f"variable {var_name!r} already exists with different "
-            f"dimension names {existing_var.dims} != "
-            f"{new_var.dims}, but changing variable "
-            f"dimensions is not supported by to_zarr()."
-        )
+        if set(new_var.dims) == set(existing_var.dims):
+            new_var = new_var.transpose(*existing_var.dims)
+        else:
+            raise ValueError(
+                f"variable {var_name!r} already exists with different "
+                f"dimension names {existing_var.dims} != "
+                f"{new_var.dims}, but changing variable "
+                f"dimensions is not supported by to_zarr()."
+            )
 
     existing_sizes = {}
     for dim, size in existing_var.sizes.items():
@@ -346,6 +351,8 @@ def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim)
             f"to_zarr() only supports changing dimension sizes when "
             f"explicitly appending, but append_dim={append_dim!r}."
         )
+
+    return new_var
 
 
 def _put_attrs(zarr_obj, attrs):
@@ -614,12 +621,10 @@ class ZarrStore(AbstractWritableDataStore):
             variables_encoded.update(vars_with_encoding)
 
             for var_name in existing_variable_names:
-                new_var = variables_encoded[var_name]
-                existing_var = existing_vars[var_name]
-                _validate_existing_dims(
+                variables_encoded[var_name] = _validate_existing_dims(
                     var_name,
-                    new_var,
-                    existing_var,
+                    variables_encoded[var_name],
+                    existing_vars[var_name],
                     self._write_region,
                     self._append_dim,
                 )
