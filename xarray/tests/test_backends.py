@@ -2383,7 +2383,6 @@ class ZarrBase(CFEncodedBase):
             )
 
     @requires_dask
-    @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
