@@ -155,9 +155,6 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
         ...
 
 
-# NamedArray can most likely use both __array_function__ and __array_namespace__:
-_arrayfunction_or_api = (_arrayfunction, _arrayapi)
-
 duckarray = Union[
     _arrayfunction[_ShapeType_co, _DType_co], _arrayapi[_ShapeType_co, _DType_co]
 ]
@@ -211,8 +208,6 @@ class _chunkedarrayapi(
         ...
 
 
-# NamedArray can most likely use both __array_function__ and __array_namespace__:
-_chunkedarrayfunction_or_api = (_chunkedarrayfunction, _chunkedarrayapi)
 chunkedduckarray = Union[
     _chunkedarrayfunction[_ShapeType_co, _DType_co],
     _chunkedarrayapi[_ShapeType_co, _DType_co],
@@ -261,5 +256,7 @@ class _sparsearrayapi(
         ...
 
 
-# NamedArray can most likely use both __array_function__ and __array_namespace__:
-_sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
+sparseduckarray = Union[
+    _sparsearrayfunction[_ShapeType_co, _DType_co],
+    _sparsearrayapi[_ShapeType_co, _DType_co],
+]

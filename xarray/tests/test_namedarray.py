@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Generic, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, cast, overload, get_args
 
 import numpy as np
 import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._typing import _arrayfunction_or_api, _DType_co, _ShapeType_co
+from xarray.namedarray._typing import duckarray, _DType_co, _ShapeType_co
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import _default
 
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
         _DimsLike,
         _DType,
         _Shape,
-        duckarray,
     )
     from xarray.namedarray.utils import Default
 
@@ -281,7 +280,7 @@ def test_duck_array_class() -> None:
         b: duckarray[Any, _DType] = a
 
         # Runtime check if valid:
-        if isinstance(b, _arrayfunction_or_api):
+        if isinstance(b, get_args(duckarray)):
             return b
         else:
             raise TypeError(f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi")

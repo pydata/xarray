@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    get_args,
 )
 
 import numpy as np
@@ -23,7 +24,6 @@ from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
     _arrayapi,
-    _arrayfunction_or_api,
     _chunkedarray,
     _dtype,
     _DType_co,
@@ -31,6 +31,8 @@ from xarray.namedarray._typing import (
     _ShapeType_co,
     _SupportsImag,
     _SupportsReal,
+    duckarray,
+    sparseduckarray,
 )
 from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
@@ -50,7 +52,6 @@ if TYPE_CHECKING:
         _ScalarType,
         _Shape,
         _ShapeType,
-        duckarray,
     )
     from xarray.namedarray.utils import Default
 
@@ -193,7 +194,7 @@ def from_array(
 
         return NamedArray(dims, data, attrs)
 
-    if isinstance(data, _arrayfunction_or_api):
+    if isinstance(data, get_args(duckarray)):
         return NamedArray(dims, data, attrs)
 
     if isinstance(data, tuple):
@@ -838,9 +839,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         """
         Change backend from sparse to np.array
         """
-        from xarray.namedarray._typing import _sparsearrayfunction_or_api
-
-        if isinstance(self._data, _sparsearrayfunction_or_api):
+        if isinstance(self._data, get_args(sparseduckarray)):
             # return self._replace(data=self._data.todense())
             data_: np.ndarray[Any, Any] = self._data.todense()
             return self._replace(data=data_)
