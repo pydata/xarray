@@ -907,18 +907,45 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self._replace(dims=dims, data=data)
 
     @property
-    def T(self) -> Self:
+    def T(self) -> NamedArray[Any, _DType_co]:
         return self.permute_dims()
 
-    def broadcast_to(self, shape: _ShapeLike) -> NamedArray[Any, _DType_co]:
-        from xarray.core import duck_array_ops  # TODO: remove this import
+    def _check_dims(self, dims: Mapping[Any, _Dim] | _Dim):
+        if isinstance(dims, dict):
+            dims_keys = dims
+        else:
+            dims_keys = dims if isinstance(dims, str) else list(dims)
+        if missing_dims := set(self.dims) - set(dims_keys):
+            raise ValueError(
+                f"new dimensions {dims!r} must be a superset of "
+                f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
+            )
 
-        return duck_array_ops.broadcast_to(self.data, shape)
+    def _get_expanded_dims(self, dims: Mapping[Any, _Dim] | _Dim) -> _DimsLike:
+        self_dims = set(self.dims)
+        return tuple(dim for dim in dims if dim not in self_dims) + self.dims
 
-    def _create_expanded_obj(
-        self, expanded_data: duckarray[Any, Any], expanded_dims: _DimsLike
-    ) -> Self:
-        return self._replace(dims=expanded_dims, data=expanded_data)
+    def broadcast_to(self, dims: Mapping[Any, _Dim]) -> NamedArray[Any, _DType_co]:
+        """
+        Broadcast namedarray to a new shape.
+
+        Parameters
+        ----------
+        dims : dict
+            Dimensions to broadcast the array to. Keys are dimension names and values are the new sizes.
+        """
+
+        from xarray.core import duck_array_ops  # TODO: Remove this import in the future
+
+        self._check_dims(dims)
+        expanded_dims = self._get_expanded_dims(dims)
+        shape = list(dims.values())
+
+        dims_map = dict(zip(dims, cast(Iterable[SupportsIndex], shape)))
+        temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
+
+        data = duck_array_ops.broadcast_to(self.data, temporary_shape)  # type: ignore
+        return self._new(data=data, dims=expanded_dims)
 
     def expand_dims(
         self, dims: _DimsLike, shape: _ShapeLike | None = None
@@ -943,33 +970,27 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if isinstance(dims, str):
             dims = [dims]
 
+        self._check_dims(dims)
+
         if shape is None and is_dict_like(dims):
             shape = list(dims.values())
 
-        if missing_dims := set(self.dims) - set(dims):
-            raise ValueError(
-                f"new dimensions {dims!r} must be a superset of "
-                f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
-            )
-
-        self_dims = set(self.dims)
-        expanded_dims = tuple(dim for dim in dims if dim not in self_dims) + self.dims
+        expanded_dims = self._get_expanded_dims(dims)
 
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
+            expanded_obj = self._replace(dims=expanded_dims, data=expanded_data)
 
         elif shape is not None:
             dims_map = dict(zip(dims, cast(Iterable[SupportsIndex], shape)))
-            temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
-            expanded_data = self.broadcast_to(temporary_shape)
-
+            expanded_obj = self.broadcast_to(dims_map)
         else:
             expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]  # type: ignore
+            expanded_obj = self._replace(dims=expanded_dims, data=expanded_data)
 
-        expanded_obj = self._create_expanded_obj(expanded_data, expanded_dims)
-        return expanded_obj.transpose(*dims)
+        return expanded_obj.permute_dims(*dims)
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]

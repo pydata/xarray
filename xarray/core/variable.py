@@ -45,7 +45,6 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray._typing import _DimsLike, _ShapeLike
 from xarray.namedarray.core import NamedArray
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -1418,24 +1417,54 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self.permute_dims(*dims, missing_dims=missing_dims)
 
-    def set_dims(self, dims: _DimsLike, shape: _ShapeLike | None = None) -> Variable:
-        """
-        Return a new variable with given set of dimensions.
+    def set_dims(self, dims, shape=None):
+        """Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
+
         When possible, this operation does not copy this variable's data.
 
         Parameters
         ----------
         dims : str or sequence of str or dict
-             Dimensions to include on the new object (must be a superset of the existing dimensions).
-             If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+            Dimensions to include on the new variable. If a dict, values are
+            used to provide the sizes of new dimensions; otherwise, new
+            dimensions are inserted with length 1.
 
-        shape : sequence of int, optional
-             Shape to broadcast the data to. Must be specified in the same order as `dims`.
-             If not provided, new dimensions are inserted with length 1.
+        Returns
+        -------
+        Variable
         """
+        if isinstance(dims, str):
+            dims = [dims]
 
-        return self.expand_dims(dims, shape)
+        if shape is None and utils.is_dict_like(dims):
+            shape = dims.values()
+
+        missing_dims = set(self.dims) - set(dims)
+        if missing_dims:
+            raise ValueError(
+                f"new dimensions {dims!r} must be a superset of "
+                f"existing dimensions {self.dims!r}"
+            )
+
+        self_dims = set(self.dims)
+        expanded_dims = tuple(d for d in dims if d not in self_dims) + self.dims
+
+        if self.dims == expanded_dims:
+            # don't use broadcast_to unless necessary so the result remains
+            # writeable if possible
+            expanded_data = self.data
+        elif shape is not None:
+            dims_map = dict(zip(dims, shape))
+            tmp_shape = tuple(dims_map[d] for d in expanded_dims)
+            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
+        else:
+            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
+
+        expanded_var = Variable(
+            expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
+        )
+        return expanded_var.transpose(*dims)
 
     def _stack_once(self, dims: list[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
@@ -2803,12 +2832,6 @@ class IndexVariable(Variable):
     def _inplace_binary_op(self, other, f):
         raise TypeError(
             "Values of an IndexVariable are immutable and can not be modified inplace"
-        )
-
-    def _create_expanded_obj(self, expanded_data, expanded_dims) -> Variable:  # type: ignore
-        # override NamedArray's version to use Variable constructor instead of cls
-        return Variable(
-            expanded_dims, expanded_data, self._attrs, self._encoding, fastpath=True
         )
 
 
