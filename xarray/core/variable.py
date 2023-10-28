@@ -2599,6 +2599,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Use sparse-array as backend.
         """
+        from xarray.namedarray._typing import _default as _default_named
+
+        if sparse_format is _default:
+            sparse_format = _default_named
+
+        if fill_value is _default:
+            fill_value = _default_named
+
         out = super()._as_sparse(sparse_format, fill_value)
         return cast("Variable", out)
 
