@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import warnings
 from types import ModuleType
 from typing import Any
 
@@ -13,12 +16,23 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray
 
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        r"The numpy.array_api submodule is still experimental",
+        category=UserWarning,
+    )
+    import numpy.array_api as nxp  # noqa: F401
+
 
 def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
     if isinstance(x._data, _arrayapi):
         return x._data.__array_namespace__()
-    else:
-        return np
+
+    return np
+
+
+# %% Creation Functions
 
 
 def astype(
@@ -49,16 +63,23 @@ def astype(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.array([1.5, 2.5]))
-    >>> astype(narr, np.dtype(int)).data
-    array([1, 2])
+    >>> narr = NamedArray(("x",), nxp.asarray([1.5, 2.5]))
+    >>> narr
+    <xarray.NamedArray (x: 2)>
+    Array([1.5, 2.5], dtype=float64)
+    >>> astype(narr, np.dtype(np.int32))
+    <xarray.NamedArray (x: 2)>
+    Array([1, 2], dtype=int32)
     """
     if isinstance(x._data, _arrayapi):
         xp = x._data.__array_namespace__()
-        return x._new(data=xp.astype(x, dtype, copy=copy))
+        return x._new(data=xp.astype(x._data, dtype, copy=copy))
 
     # np.astype doesn't exist yet:
     return x._new(data=x._data.astype(dtype, copy=copy))  # type: ignore[attr-defined]
+
+
+# %% Elementwise Functions
 
 
 def imag(
@@ -83,8 +104,9 @@ def imag(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.array([1 + 2j, 2 + 4j]))
-    >>> imag(narr).data
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
+    >>> imag(narr)
+    <xarray.NamedArray (x: 2)>
     array([2., 4.])
     """
     xp = _get_data_namespace(x)
@@ -114,9 +136,11 @@ def real(
 
     Examples
     --------
-    >>> narr = NamedArray(("x",), np.array([1 + 2j, 2 + 4j]))
-    >>> real(narr).data
+    >>> narr = NamedArray(("x",), np.asarray([1.0 + 2j, 2 + 4j]))  # TODO: Use nxp
+    >>> real(narr)
+    <xarray.NamedArray (x: 2)>
     array([1., 2.])
     """
     xp = _get_data_namespace(x)
-    return x._new(data=xp.real(x._data))
+    out = x._new(data=xp.real(x._data))
+    return out

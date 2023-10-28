@@ -59,9 +59,9 @@ which is used as the basic building block behind xarray's
 - ``data``: The N-dimensional array (typically a NumPy or Dask array) storing
   the Variable's data. It must have the same number of dimensions as the length
   of ``dims``.
-- ``attrs``: An ordered dictionary of metadata associated with this array. By
+- ``attrs``: A dictionary of metadata associated with this array. By
   convention, xarray's built-in operations never use this metadata.
-- ``encoding``: Another ordered dictionary used to store information about how
+- ``encoding``: Another dictionary used to store information about how
   these variable's data is represented on disk. See :ref:`io.encoding` for more
   details.
 
@@ -95,7 +95,7 @@ all of which are implemented by forwarding on to the underlying ``Variable`` obj
 
 In addition, a :py:class:`~xarray.DataArray` stores additional ``Variable`` objects stored in a dict under the private ``_coords`` attribute,
 each of which is referred to as a "Coordinate Variable". These coordinate variable objects are only allowed to have ``dims`` that are a subset of the data variable's ``dims``,
-and each dim has a specific length. This means that the full :py:attr:`~xarray.DataArray.sizes` of the dataarray can be represented by a dictionary mapping dimension names to integer sizes.
+and each dim has a specific length. This means that the full :py:attr:`~xarray.DataArray.size` of the dataarray can be represented by a dictionary mapping dimension names to integer sizes.
 The underlying data variable has this exact same size, and the attached coordinate variables have sizes which are some subset of the size of the data variable.
 Another way of saying this is that all coordinate variables must be "alignable" with the data variable.
 
@@ -124,7 +124,7 @@ The :py:class:`~xarray.Dataset` class is a generalization of the :py:class:`~xar
 Internally all data variables and coordinate variables are stored under a single ``variables`` dict, and coordinates are
 specified by storing their names in a private ``_coord_names`` dict.
 
-The dataset's dimensions are the set of all dims present across any variable, but (similar to in dataarrays) coordinate
+The dataset's ``dims`` are the set of all dims present across any variable, but (similar to in dataarrays) coordinate
 variables cannot have a dimension that is not present on any data variable.
 
 When a data variable or coordinate variable is accessed, a new ``DataArray`` is again constructed from all compatible

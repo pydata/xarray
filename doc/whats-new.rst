@@ -26,6 +26,8 @@ New Features
   to return an object without ``attrs``. A ``deep`` parameter controls whether
   variables' ``attrs`` are also dropped.
   By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8288`)
+- Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,6 +36,13 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
+  :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
+  dimensions, or a single ``int`` or ``"auto"`` argument covering all
+  dimensions. Xarray favors using dimensions names rather than positions, and
+  this was one place in the API where dimension positions were used.
+  (:pull:`8341`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -134,6 +143,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the interoperability of xarray objects.
+  (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
   By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
 
