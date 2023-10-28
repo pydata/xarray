@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Generic, cast, overload, get_args
+from typing import TYPE_CHECKING, Any, Generic, cast, get_args, overload
 
 import numpy as np
 import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._typing import duckarray, _DType_co, _ShapeType_co
+from xarray.namedarray._typing import _DType_co, _ShapeType_co, duckarray
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import _default
 

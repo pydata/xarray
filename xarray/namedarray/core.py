@@ -13,8 +13,8 @@ from typing import (
     Literal,
     TypeVar,
     cast,
-    overload,
     get_args,
+    overload,
 )
 
 import numpy as np
