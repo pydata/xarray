@@ -29,9 +29,9 @@ from xarray.namedarray._typing import (
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
+    _sparsearrayfunction_or_api,
     _SupportsImag,
     _SupportsReal,
-    _sparsearrayfunction_or_api,
 )
 from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
 
