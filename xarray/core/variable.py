@@ -2599,13 +2599,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Use sparse-array as backend.
         """
-        return super()._as_sparse(sparse_format, fill_value)
+        out: Variable = super()._as_sparse(sparse_format, fill_value)
+        return out
 
     def _to_dense(self) -> Variable:
         """
         Change backend from sparse to np.array.
         """
-        return super()._to_dense()
+        out: Variable = super()._to_dense()
+        return out
 
 
 class IndexVariable(Variable):
