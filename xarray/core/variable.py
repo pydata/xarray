@@ -2599,7 +2599,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Use sparse-array as backend.
         """
-        from xarray.namedarray._typing import _default as _default_named
+        from xarray.namedarray.utils import _default as _default_named
 
         if sparse_format is _default:
             sparse_format = _default_named
