@@ -2614,7 +2614,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Change backend from sparse to np.array.
         """
-        out = Variable = super()._to_dense()
+        out = super()._to_dense()
         return cast("Variable", out)
 
 
