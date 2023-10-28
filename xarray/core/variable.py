@@ -1385,8 +1385,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self,
         *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Variable:
-        """Return a new object with transposed dimensions.
+    ) -> Self:
+        """Return a new Variable with transposed dimensions.
 
         Parameters
         ----------
@@ -1395,14 +1395,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
-            NamedArray:
+            Variable:
             - "raise": raise an exception
             - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         Returns
         -------
-        transposed : NamedArray
+        transposed : Variable
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
