@@ -24,7 +24,7 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
-  
+
 - Add :py:meth:`NamedArray.expand_dims` and :py:meth:`NamedArray.broadcast_to`
   (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
