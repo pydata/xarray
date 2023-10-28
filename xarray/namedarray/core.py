@@ -959,12 +959,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Parameters
         ----------
         dims : str or sequence of str or dict
-             Dimensions to include on the new object (must be a superset of the existing dimensions).
-             If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+            Dimensions to include on the new object (must be a superset of the existing dimensions).
+            If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
 
         shape : sequence of int, optional
-             Shape to broadcast the data to. Must be specified in the same order as `dims`.
-             If not provided, new dimensions are inserted with length 1.
+            Shape to broadcast the data to. Must be specified in the same order as `dims`.
+            If not provided, new dimensions are inserted with length 1.
         """
 
         if isinstance(dims, str):

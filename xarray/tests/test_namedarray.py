@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         _Dim,
         _DimsLike,
         _DType,
+        _IntOrUnknown,
         _Shape,
         _ShapeLike,
         duckarray,
@@ -68,6 +69,16 @@ def data() -> NamedArray[Any, np.dtype[np.float32]]:
     dtype_float = np.dtype(np.float32)
     narr_float: NamedArray[Any, np.dtype[np.float32]]
     narr_float = NamedArray(("x",), np.array([1.5, 3.2], dtype=dtype_float))
+    return narr_float
+
+
+@pytest.fixture
+def random_data() -> NamedArray[Any, np.dtype[np.float32]]:
+    dtype_float = np.dtype(np.float32)
+    narr_float: NamedArray[Any, np.dtype[np.float32]]
+    narr_float = NamedArray(
+        ("x", "y", "z"), np.arange(60).reshape(3, 4, 5).astype(dtype_float)
+    )
     return narr_float
 
 
@@ -491,3 +502,35 @@ def test_broadcast_to(
 ) -> None:
     actual = data.broadcast_to(dims)
     assert actual.sizes == dims
+
+
+@pytest.mark.parametrize(
+    "dims, expected_sizes",
+    [
+        # Basic case: reversing the dimensions
+        ((), {"z": 5, "y": 4, "x": 3}),
+        (["y", "x", "z"], {"y": 4, "x": 3, "z": 5}),
+        (["y", "x", ...], {"y": 4, "x": 3, "z": 5}),
+    ],
+)
+def test_permute_dims(
+    random_data: NamedArray[Any, np.dtype[np.float32]],
+    dims: _DimsLike,
+    expected_sizes: dict[_Dim, _IntOrUnknown],
+) -> None:
+    actual = random_data.permute_dims(*dims)
+    assert actual.sizes == expected_sizes
+
+
+@pytest.mark.parametrize(
+    "dims",
+    [
+        (["y", "x"]),
+    ],
+)
+def test_permute_dims_errors(
+    random_data: NamedArray[Any, np.dtype[np.float32]],
+    dims: _DimsLike,
+) -> None:
+    with pytest.raises(ValueError):
+        random_data.permute_dims(*dims)
