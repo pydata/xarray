@@ -813,7 +813,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         fill_value: ArrayLike | Default = _default,
     ) -> NamedArray[Any, _DType_co]:
         """
-        use sparse-array as backend.
+        Use sparse-array as backend.
         """
         import sparse
 
@@ -837,7 +837,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def _to_dense(self) -> NamedArray[Any, _DType_co]:
         """
-        Change backend from sparse to np.array
+        Change backend from sparse to np.array.
         """
         if isinstance(self._data, _sparsearrayfunction_or_api):
             data_dense: np.ndarray[Any, _DType_co] = self._data.todense()
