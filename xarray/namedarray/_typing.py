@@ -243,7 +243,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
@@ -257,9 +257,14 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
+
+sparseduckarray = Union[
+    _sparsearrayfunction[_ShapeType_co, _DType_co],
+    _sparsearrayapi[_ShapeType_co, _DType_co],
+]
