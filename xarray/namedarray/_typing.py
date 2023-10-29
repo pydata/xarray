@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from enum import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Final,
     Protocol,
     SupportsIndex,
     TypeVar,

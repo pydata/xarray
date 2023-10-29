@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.namedarray._typing import (
+        Default,
         _AttrsLike,
         _Axes,
         _Axis,
@@ -54,7 +55,6 @@ if TYPE_CHECKING:
         _Shape,
         _ShapeType,
         duckarray,
-        Default,
     )
 
     try:
