@@ -25,6 +25,7 @@ from xarray.namedarray._typing import (
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
+    _default,
     _dtype,
     _DType_co,
     _ScalarType_co,
@@ -32,7 +33,7 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
+from xarray.namedarray.utils import is_duck_dask_array, to_0d_object_array
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -49,11 +50,12 @@ if TYPE_CHECKING:
         _DimsLikeAgg,
         _DType,
         _IntOrUnknown,
+        _ScalarType,
         _Shape,
         _ShapeType,
         duckarray,
+        Default,
     )
-    from xarray.namedarray.utils import Default
 
     try:
         from dask.typing import (
@@ -82,12 +84,33 @@ if TYPE_CHECKING:
 
 
 def _normalize_dimensions(dims: _DimsLike) -> _Dims:
-    return (dims,) if isinstance(dims, str) else tuple(dims)
+    """
+    Normalize dimensions.
+
+    Examples
+    --------
+    >>> _normalize_dimensions(None)
+    (None,)
+    >>> _normalize_dimensions(1)
+    (1,)
+    >>> _normalize_dimensions("2")
+    ('2',)
+    >>> _normalize_dimensions(("time",))
+    ('time', )
+    >>> _normalize_dimensions(["time"])
+    ('time',)
+    >>> _normalize_dimensions([("time", "x", "y")])
+    (('time', 'x', 'y'),)
+    """
+    if isinstance(dims, str) or not isinstance(dims, Iterable):
+        return (dims,)
+
+    return tuple(dims)
 
 
 def _dims_to_axis(
-    x: NamedArray[Any, Any], dims: _Dims | None, axis: _AxisLike | None
-) -> _Axes | None:
+    x: NamedArray[Any, Any], dims: _Dim | _Dims | Default, axis: _AxisLike | None
+) -> _AxisLike | None:
     """
     Convert dims to axis indices.
 
@@ -100,12 +123,11 @@ def _dims_to_axis(
     (0,)
     >>> _dims_to_axis(narr, None, None)
     """
-    if dims is not None and axis is not None:
+    if dims is not _default and axis is not None:
         raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
-    if dims is not None:
-        dims_: _Dims = (dims,) if isinstance(dims, str) else dims
-        return x.get_axis_num(dims_)
+    if dims is not _default:
+        return x._dims_to_axes(dims)
 
     if isinstance(axis, int):
         return (axis,)
@@ -116,7 +138,7 @@ def _dims_to_axis(
 def _get_remaining_dims(
     x: NamedArray[Any, _DType],
     data: duckarray[Any, _DType],
-    axis: _Axes | None,
+    axis: _AxisLike | None,
     *,
     keepdims: bool,
 ) -> tuple[_Dims, duckarray[Any, _DType]]:
@@ -226,6 +248,15 @@ def _new(
 @overload
 def from_array(
     dims: _DimsLike,
+    data: np.ma.masked_array[_ShapeType, _DType],
+    attrs: _AttrsLike = ...,
+) -> NamedArray[_ShapeType, _DType]:
+    ...
+
+
+@overload
+def from_array(
+    dims: _DimsLike,
     data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
 ) -> NamedArray[_ShapeType, _DType]:
@@ -267,14 +298,18 @@ def from_array(
         )
 
     # TODO: dask.array.ma.masked_array also exists, better way?
-    if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
+    reveal_type(data)
+    if isinstance(data, np.ma.masked_array):
+        data_masked = cast("np.ma.masked_array[_ShapeType, _DType]", data)
+        reveal_type(data_masked)
+
+        mask = np.ma.getmaskarray(data_masked)  # type: ignore[no-untyped-call]
         if mask.any():
             # TODO: requires refactoring/vendoring xarray.core.dtypes and
             # xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
 
-        return NamedArray(dims, data, attrs)
+        return NamedArray(dims, data_masked, attrs)
 
     if isinstance(data, _arrayfunction_or_api):
         return NamedArray(dims, data, attrs)
@@ -716,14 +751,20 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @overload
-    def get_axis_num(self, dim: _Dims) -> _Axes:
+    def _dims_to_axes(self, dims: _Dims) -> _Axes:
         ...
 
     @overload
-    def get_axis_num(self, dim: _Dim) -> _Axis:
+    def _dims_to_axes(self, dims: _Dim) -> _Axis:
         ...
 
-    def get_axis_num(self, dim: _Dim | _Dims) -> _Axis | _Axes:
+    @overload
+    def _dims_to_axes(self, dims: Default = _default) -> None:
+        ...
+
+    def _dims_to_axes(
+        self, dims: _Dims | _Dim | Default = _default
+    ) -> _Axes | _Axis | None:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -736,12 +777,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         int or tuple of int
             Axis number or numbers corresponding to the given dimensions.
         """
-        if not isinstance(dim, str) and isinstance(dim, Iterable):
-            return tuple(self._get_axis_num(d) for d in dim)
-        else:
-            return self._get_axis_num(dim)
+        if dims is _default:
+            return None
 
-    def _get_axis_num(self, dim: _Dim) -> int:
+        if isinstance(dims, tuple):
+            return tuple(self._dim_to_axis(d) for d in dims)
+
+        return self._dim_to_axis(dims)
+
+    def _dim_to_axis(self, dim: _Dim) -> int:
         try:
             out = self.dims.index(dim)
             return out
@@ -798,7 +842,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: _DimsLikeAgg = None,
+        dim: _DimsLikeAgg | Default = _default,
         axis: int | Sequence[int] | None = None,  # TODO: Use _AxisLike
         keepdims: bool = False,
         **kwargs: Any,
@@ -915,7 +959,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = as_sparse(astype(self, dtype).data, fill_value=fill_value)
         return self._replace(data=data)
 
-    def _to_dense(self) -> Self:
+    def _to_dense(self) -> NamedArray[Any, _DType_co]:
         """
         Change backend from sparse to np.array
         """
@@ -923,8 +967,8 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         if isinstance(self._data, _sparsearrayfunction_or_api):
             # return self._replace(data=self._data.todense())
-            data_: np.ndarray[Any, _DType_co] = self._data.todense()
-            return self._replace(data=data_)
+            data_: np.ndarray[Any, Any] = self._data.todense()
+            return self._new(data=data_)
         else:
             raise TypeError("self.data is not a sparse array")
 

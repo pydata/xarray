@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Hashable
-from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
 )
 
 import numpy as np
@@ -29,14 +27,6 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = NDArray  # type: ignore
         DaskCollection: Any = NDArray  # type: ignore
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token: Final = 0
-
-
-_default = Default.token
 
 
 def module_available(module: str) -> bool:

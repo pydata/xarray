@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from enum import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -63,7 +65,7 @@ _Chunks = tuple[_Shape, ...]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
-_DimsLike = Union[str, Iterable[_Dim]]
+_DimsLike = Union[str, Iterable[_Dim], Default]
 _DimsLikeAgg = Union[_DimsLike, "ellipsis", None]
 
 
