@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
@@ -12,6 +13,7 @@ from typing import (
     Union,
     overload,
     runtime_checkable,
+    Final,
 )
 
 import numpy as np
@@ -19,6 +21,13 @@ import numpy as np
 if TYPE_CHECKING:
     pass
 
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(Enum):
+    token: Final = 0
+
+
+_default = Default.token
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
