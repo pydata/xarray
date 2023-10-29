@@ -96,7 +96,7 @@ def _normalize_dimensions(dims: _DimsLike) -> _Dims:
     >>> _normalize_dimensions("2")
     ('2',)
     >>> _normalize_dimensions(("time",))
-    ('time', )
+    ('time',)
     >>> _normalize_dimensions(["time"])
     ('time',)
     >>> _normalize_dimensions([("time", "x", "y")])

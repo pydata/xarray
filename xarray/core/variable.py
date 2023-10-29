@@ -1746,6 +1746,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim is None:
+            from xarray.namedarray._typing import _default
+
+            dim = _default
+
         keep_attrs_ = (
             _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
         )
