@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-import Enum
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Protocol,
     SupportsIndex,
     TypeVar,
     Union,
     overload,
     runtime_checkable,
-    Final,
 )
 
+import Enum
 import numpy as np
 
 if TYPE_CHECKING:
