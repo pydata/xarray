@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         _DType,
         _Shape,
         duckarray,
-        _arrayapi,
     )
     from xarray.namedarray.utils import Default
 
