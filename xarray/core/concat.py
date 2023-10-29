@@ -16,7 +16,7 @@ from xarray.core.merge import (
     merge_attrs,
     merge_collected,
 )
-from xarray.core.types import T_DataArray, T_Dataset
+from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 @overload
 def concat(
     objs: Iterable[T_Dataset],
-    dim: Hashable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -49,7 +49,7 @@ def concat(
 @overload
 def concat(
     objs: Iterable[T_DataArray],
-    dim: Hashable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -80,11 +80,11 @@ def concat(
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
-    dim : Hashable or DataArray or pandas.Index
+    dim : Hashable or Variable or DataArray or pandas.Index
         Name of the dimension to concatenate along. This can either be a new
         dimension name, in which case it is added along axis=0, or an existing
         dimension name, in which case the location of the dimension is
-        unchanged. If dimension is provided as a DataArray or Index, its name
+        unchanged. If dimension is provided as a Variable, DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
     data_vars : {"minimal", "different", "all"} or list of Hashable, optional
@@ -450,7 +450,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: list[T_Dataset],
-    dim: str | T_DataArray | pd.Index,
+    dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
@@ -676,7 +676,7 @@ def _dataset_concat(
 
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
-    dim: str | T_DataArray | pd.Index,
+    dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
