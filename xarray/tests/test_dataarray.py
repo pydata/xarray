@@ -287,7 +287,7 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         array = self.mda
         encoding = {"scale_factor": 10}
         array.encoding = encoding
@@ -296,7 +296,7 @@ class TestDataArray:
         assert array.encoding == encoding
         assert array["x"].encoding == encoding
 
-        actual = array.reset_encoding()
+        actual = array.drop_encoding()
 
         # did not modify in place
         assert array.encoding == encoding
@@ -879,13 +879,14 @@ class TestDataArray:
         assert blocked.chunks == ((3,), (4,))
         first_dask_name = blocked.data.name
 
-        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
-        assert blocked.chunks == ((2, 1), (2, 2))
-        assert blocked.data.name != first_dask_name
+        with pytest.warns(DeprecationWarning):
+            blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore
+            assert blocked.chunks == ((2, 1), (2, 2))
+            assert blocked.data.name != first_dask_name
 
-        blocked = unblocked.chunk(chunks=(3, 3))
-        assert blocked.chunks == ((3,), (3, 1))
-        assert blocked.data.name != first_dask_name
+            blocked = unblocked.chunk(chunks=(3, 3))
+            assert blocked.chunks == ((3,), (3, 1))
+            assert blocked.data.name != first_dask_name
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -1883,6 +1884,16 @@ class TestDataArray:
         ):
             da.rename(x="y")
 
+        # No operation should not raise a warning
+        da = xr.DataArray(
+            data=np.ones((2, 3)),
+            dims=["x", "y"],
+            coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            da.rename(x="x")
+
     def test_init_value(self) -> None:
         expected = DataArray(
             np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
@@ -2715,6 +2726,14 @@ class TestDataArray:
         arr = DataArray(np.arange(4), dims="y")
         expected = arr.sel(y=slice(2))
         actual = arr.where(lambda x: x.y < 2, drop=True)
+        assert_identical(actual, expected)
+
+    def test_where_other_lambda(self) -> None:
+        arr = DataArray(np.arange(4), dims="y")
+        expected = xr.concat(
+            [arr.sel(y=slice(2)), arr.sel(y=slice(2, None)) + 1], dim="y"
+        )
+        actual = arr.where(lambda x: x.y < 2, lambda x: x + 1)
         assert_identical(actual, expected)
 
     def test_where_string(self) -> None:

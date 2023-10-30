@@ -260,12 +260,12 @@ Note that all operations that manipulate variables other than indexing
 will remove encoding information.
 
 In some cases it is useful to intentionally reset a dataset's original encoding values.
-This can be done with either the :py:meth:`Dataset.reset_encoding` or
-:py:meth:`DataArray.reset_encoding` methods.
+This can be done with either the :py:meth:`Dataset.drop_encoding` or
+:py:meth:`DataArray.drop_encoding` methods.
 
 .. ipython:: python
 
-    ds_no_encoding = ds_disk.reset_encoding()
+    ds_no_encoding = ds_disk.drop_encoding()
     ds_no_encoding.encoding
 
 .. _combining multiple files:
@@ -819,7 +819,7 @@ with ``mode='a'`` on a Dataset containing the new variables, passing in an
 existing Zarr store or path to a Zarr store.
 
 To resize and then append values along an existing dimension in a store, set
-``append_dim``. This is a good option if data always arives in a particular
+``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
 .. ipython:: python

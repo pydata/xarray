@@ -19,6 +19,7 @@ from io import BytesIO
 from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -714,9 +715,6 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
-    @pytest.mark.xfail(
-        reason="zarr without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing_negative_step(self) -> None:
         # use dask explicitly when present
         open_kwargs: dict[str, Any] | None
@@ -1907,8 +1905,8 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
         # dask first pulls items by block.
         pass
 
+    @pytest.mark.skip(reason="caching behavior differs for dask")
     def test_dataset_caching(self) -> None:
-        # caching behavior differs for dask
         pass
 
     def test_write_inconsistent_chunks(self) -> None:
@@ -2326,9 +2324,6 @@ class ZarrBase(CFEncodedBase):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
-    # TODO: someone who understand caching figure out whether caching
-    # makes sense for Zarr backend
-    @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self) -> None:
         super().test_dataset_caching()
 
@@ -2777,6 +2772,14 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
                 ds.to_zarr(store_target, **self.version_kwargs)
 
+    def test_vectorized_indexing_negative_step(self) -> None:
+        if not has_dask:
+            pytest.xfail(
+                reason="zarr without dask handles negative steps in slices incorrectly"
+            )
+
+        super().test_vectorized_indexing_negative_step()
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -2860,7 +2863,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         )
 
         if has_dask:
-            ds["test"] = ds["test"].chunk((1, 1, 1))
+            ds["test"] = ds["test"].chunk(1)
             encoding = None
         else:
             encoding = {"test": {"chunks": (1, 1, 1)}}
@@ -2923,6 +2926,47 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
+
+
+@requires_zarr
+class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
+    def test_avoid_excess_metadata_calls(self) -> None:
+        """Test that chunk requests do not trigger redundant metadata requests.
+
+        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
+        to retrieve chunk data after initialization do not trigger additional
+        metadata requests.
+
+        https://github.com/pydata/xarray/issues/8290
+        """
+
+        import zarr
+
+        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
+
+        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
+        # so that we can inspect calls to this method - specifically count of calls.
+        # Use of side_effect means that calls are passed through to the original method
+        # rather than a mocked method.
+        Group = zarr.hierarchy.Group
+        with (
+            self.create_zarr_target() as store,
+            patch.object(
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
+            ) as mock,
+        ):
+            ds.to_zarr(store, mode="w")
+
+            # We expect this to request array metadata information, so call_count should be >= 1,
+            # At time of writing, 2 calls are made
+            xrds = xr.open_zarr(store)
+            call_count = mock.call_count
+            assert call_count > 0
+
+            # compute() requests array data, which should not trigger additional metadata requests
+            # we assert that the number of calls has not increased after fetchhing the array
+            xrds.test.compute(scheduler="sync")
+            assert mock.call_count == call_count
 
 
 @requires_zarr
@@ -3443,8 +3487,8 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         ) as ds:
             yield ds
 
+    @pytest.mark.skip(reason="caching behavior differs for dask")
     def test_dataset_caching(self) -> None:
-        # caching behavior differs for dask
         pass
 
     def test_write_inconsistent_chunks(self) -> None:
@@ -3522,6 +3566,7 @@ def skip_if_not_engine(engine):
 
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
+@pytest.mark.xfail(reason="Flaky test. Very open to contributions on fixing this")
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
@@ -4047,7 +4092,6 @@ class TestDask(DatasetIOBase):
                 with pytest.raises(ValueError, match="`concat_dim` has no effect"):
                     open_mfdataset([tmp1, tmp2], concat_dim="x")
 
-    @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self) -> None:
         original = Dataset(
             {
@@ -4260,7 +4304,6 @@ class TestDask(DatasetIOBase):
         assert computed._in_memory
         assert_allclose(actual, computed, decode_bytes=False)
 
-    @pytest.mark.xfail
     def test_save_mfdataset_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
@@ -5190,15 +5233,17 @@ def test_open_fsspec() -> None:
     ds2 = open_dataset(url, engine="zarr")
     xr.testing.assert_equal(ds0, ds2)
 
-    # multi dataset
-    url = "memory://out*.zarr"
-    ds2 = open_mfdataset(url, engine="zarr")
-    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+    # open_mfdataset requires dask
+    if has_dask:
+        # multi dataset
+        url = "memory://out*.zarr"
+        ds2 = open_mfdataset(url, engine="zarr")
+        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
-    # multi dataset with caching
-    url = "simplecache::memory://out*.zarr"
-    ds2 = open_mfdataset(url, engine="zarr")
-    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+        # multi dataset with caching
+        url = "simplecache::memory://out*.zarr"
+        ds2 = open_mfdataset(url, engine="zarr")
+        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf

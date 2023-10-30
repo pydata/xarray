@@ -87,13 +87,15 @@ template_binop = """
         return self._binary_op(other, {func})"""
 template_binop_overload = """
     @overload{overload_type_ignore}
-    def {method}(self, other: {overload_type}) -> NoReturn:
+    def {method}(self, other: {overload_type}) -> {overload_type}:
         ...
 
     @overload
     def {method}(self, other: {other_type}) -> {return_type}:
         ...
-"""
+
+    def {method}(self, other: {other_type}) -> {return_type} | {overload_type}:{type_ignore}
+        return self._binary_op(other, {func})"""
 template_reflexive = """
     def {method}(self, other: {other_type}) -> {return_type}:
         return self._binary_op(other, {func}, reflexive=True)"""
@@ -119,11 +121,11 @@ template_other_unary = """
 # We need to add "# type: ignore[override]"
 # Keep an eye out for:
 # https://discuss.python.org/t/make-type-hints-for-eq-of-primitives-less-strict/34240
-# The type ignores might not be neccesary anymore at some point.
+# The type ignores might not be necessary anymore at some point.
 #
 # We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
 # In reality this returns NotImplementes, but this is not a valid type in python 3.9.
-# Therefore, we use NoReturn which mypy seems to recognise!
+# Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
 # TODO: change once python 3.10 is the minimum.
 #
 # Mypy seems to require that __iadd__ and __add__ have the same signature.
@@ -165,7 +167,7 @@ def binops_overload(
         ([(None, None)], required_method_binary, extras),
         (
             BINOPS_NUM + BINOPS_CMP,
-            template_binop_overload + template_binop,
+            template_binop_overload,
             extras
             | {
                 "overload_type": overload_type,
@@ -175,7 +177,7 @@ def binops_overload(
         ),
         (
             BINOPS_EQNE,
-            template_binop_overload + template_binop,
+            template_binop_overload,
             extras
             | {
                 "overload_type": overload_type,
@@ -233,7 +235,7 @@ MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, NoReturn, overload
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 from xarray.core import nputils, ops
 from xarray.core.types import (

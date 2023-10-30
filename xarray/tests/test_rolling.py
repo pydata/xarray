@@ -394,7 +394,7 @@ class TestDataArrayRollingExp:
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-    @pytest.mark.parametrize("func", ["mean", "sum"])
+    @pytest.mark.parametrize("func", ["mean", "sum", "var", "std"])
     def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
         da = da.where(da > 0.2)
 
@@ -766,9 +766,7 @@ class TestDatasetRolling:
         )
         assert_allclose(actual, expected)
 
-    @pytest.mark.xfail(
-        reason="See https://github.com/pydata/xarray/pull/4369 or docstring"
-    )
+    @requires_dask
     @pytest.mark.filterwarnings("error")
     @pytest.mark.parametrize("ds", (2,), indirect=True)
     @pytest.mark.parametrize("name", ("mean", "max"))
@@ -790,7 +788,9 @@ class TestDatasetRolling:
 
 @requires_numbagg
 class TestDatasetRollingExp:
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=requires_dask)], indirect=True
+    )
     def test_rolling_exp(self, ds) -> None:
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)

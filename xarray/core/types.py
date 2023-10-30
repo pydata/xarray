@@ -19,9 +19,9 @@ import pandas as pd
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import Self
+        from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self
+        from typing_extensions import Self, TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     _DTypeLikeNested = Any  # TODO: wait for support for recursive types
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
-    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # conflicts with numpys own DTypeLike (with dtypes for fields).
     # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[
@@ -145,6 +145,8 @@ class Alignable(Protocol):
         ...
 
 
+T_Alignable = TypeVar("T_Alignable", bound="Alignable")
+
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
@@ -168,7 +170,6 @@ T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray
 # on `DataWithCoords`.
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
-T_Alignable = TypeVar("T_Alignable", bound="Alignable")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
@@ -183,7 +184,10 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
-T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
+T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# We allow the tuple form of this (though arguably we could transition to named dims only)
+T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
