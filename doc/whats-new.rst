@@ -43,6 +43,13 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Port `bug fix from pandas <https://github.com/pandas-dev/pandas/pull/55283>`_
+  to eliminate the adjustment of resample bin edges in the case that the
+  resampling frequency has units of days and is greater than one day
+  (e.g. ``"2D"``, ``"3D"`` etc.) and the ``closed`` argument is set to
+  ``"right"`` to xarray's implementation of resample for data indexed by a
+  :py:class:`CFTimeIndex` (:pull:`8393`).  By `Spencer Clark
+      <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
