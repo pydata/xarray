@@ -528,8 +528,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 fill_value=fill_value,
             )
             default_args.update(encoding)
-            if "_FillValue" in default_args:
-                default_args.pop("_FillValue")
+            default_args.pop("_FillValue", None)
             nc4_var = self.ds.createVariable(**default_args)
 
         nc4_var.setncatts(attrs)
