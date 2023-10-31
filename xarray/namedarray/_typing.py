@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from types import ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Protocol,
@@ -15,10 +14,6 @@ from typing import (
 )
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
@@ -234,7 +229,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
