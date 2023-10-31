@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 
     from xarray.core.types import Dims
     from xarray.namedarray._typing import (
-        DuckArray,
         _AttrsLike,
         _Chunks,
         _Dim,
