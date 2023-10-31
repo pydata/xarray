@@ -30,6 +30,7 @@ from xarray.namedarray._typing import (
     _DType_co,
     _ScalarType_co,
     _ShapeType_co,
+    _sparsearrayfunction_or_api,
     _SupportsImag,
     _SupportsReal,
 )
@@ -935,9 +936,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self,
         sparse_format: Literal["coo"] | Default = _default,
         fill_value: ArrayLike | Default = _default,
-    ) -> Self:
+    ) -> NamedArray[Any, _DType_co]:
         """
-        use sparse-array as backend.
+        Use sparse-array as backend.
         """
         import sparse
 
@@ -957,18 +958,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             raise ValueError(f"{sparse_format} is not a valid sparse format") from exc
 
         data = as_sparse(astype(self, dtype).data, fill_value=fill_value)
-        return self._replace(data=data)
+        return self._new(data=data)
 
     def _to_dense(self) -> NamedArray[Any, _DType_co]:
         """
-        Change backend from sparse to np.array
+        Change backend from sparse to np.array.
         """
-        from xarray.namedarray._typing import _sparsearrayfunction_or_api
-
         if isinstance(self._data, _sparsearrayfunction_or_api):
-            # return self._replace(data=self._data.todense())
-            data_: np.ndarray[Any, Any] = self._data.todense()
-            return self._new(data=data_)
+            data_dense: np.ndarray[Any, _DType_co] = self._data.todense()
+            return self._new(data=data_dense)
         else:
             raise TypeError("self.data is not a sparse array")
 
