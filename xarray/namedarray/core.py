@@ -21,6 +21,7 @@ import numpy as np
 # TODO: get rid of this after migrating this class to array API
 from xarray.core import dtypes, formatting, formatting_html
 from xarray.namedarray._aggregations import NamedArrayAggregations
+from xarray.namedarray._typed_ops import NamedArrayOpsMixin
 from xarray.namedarray._typing import (
     _arrayapi,
     _arrayfunction_or_api,
@@ -203,7 +204,9 @@ def from_array(
     return NamedArray(dims, np.asarray(data), attrs)
 
 
-class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
+class NamedArray(
+    NamedArrayAggregations, NamedArrayOpsMixin, Generic[_ShapeType_co, _DType_co]
+):
     """
     A wrapper around duck arrays with named dimensions
     and attributes which describe a single Array.

@@ -4,6 +4,7 @@ For internal xarray development use only.
 
 Usage:
     python xarray/util/generate_ops.py > xarray/core/_typed_ops.py
+    python xarray/util/generate_ops.py namedarray > xarray/namedarray/_typed_ops.py
 
 """
 # Note: the comments in https://github.com/pydata/xarray/pull/4904 provide some
@@ -11,6 +12,7 @@ Usage:
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterator, Sequence
 from typing import Optional
 
@@ -216,17 +218,18 @@ ops_info["DatasetOpsMixin"] = (
 ops_info["DataArrayOpsMixin"] = (
     binops(other_type="DaCompatible") + inplace(other_type="DaCompatible") + unops()
 )
-ops_info["VariableOpsMixin"] = (
-    binops_overload(other_type="VarCompatible", overload_type="T_DataArray")
-    + inplace(other_type="VarCompatible", type_ignore="misc")
-    + unops()
-)
+# ops_info["VariableOpsMixin"] = (
+#     binops_overload(other_type="VarCompatible", overload_type="T_DataArray")
+#     + inplace(other_type="VarCompatible", type_ignore="misc")
+#     + unops()
+# )
 ops_info["DatasetGroupByOpsMixin"] = binops(
     other_type="GroupByCompatible", return_type="Dataset"
 )
 ops_info["DataArrayGroupByOpsMixin"] = binops(
     other_type="T_Xarray", return_type="T_Xarray"
 )
+
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
@@ -235,7 +238,7 @@ MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import TYPE_CHECKING, Any, Callable
 
 from xarray.core import nputils, ops
 from xarray.core.types import (
@@ -243,9 +246,7 @@ from xarray.core.types import (
     DsCompatible,
     GroupByCompatible,
     Self,
-    T_DataArray,
     T_Xarray,
-    VarCompatible,
 )
 
 if TYPE_CHECKING:
@@ -260,9 +261,9 @@ COPY_DOCSTRING = """\
     {method}.__doc__ = {func}.__doc__"""
 
 
-def render(ops_info: dict[str, list[OpsType]]) -> Iterator[str]:
+def render(preamble: str, ops_info: dict[str, list[OpsType]]) -> Iterator[str]:
     """Render the module or stub file."""
-    yield MODULE_PREAMBLE
+    yield preamble
 
     for cls_name, method_blocks in ops_info.items():
         yield CLASS_PREAMBLE.format(cls_name=cls_name, newline="\n")
@@ -282,6 +283,42 @@ def _render_classbody(method_blocks: list[OpsType]) -> Iterator[str]:
                 yield COPY_DOCSTRING.format(method=method, func=func)
 
 
+### NamedArray typed ops ###
+
+ops_info_namedarray = {}
+ops_info_namedarray["NamedArrayOpsMixin"] = (
+    binops(other_type="NamedArrayCompatible")
+    + inplace(other_type="NamedArrayCompatible")
+    + unops()
+)
+
+
+MODULE_PREAMBLE_NAMEDARRAY = '''\
+"""Mixin classes with arithmetic operators."""
+# This file was generated using xarray.util.generate_ops. Do not edit manually.
+
+from __future__ import annotations
+
+import operator
+from typing import TYPE_CHECKING, Any, Callable
+
+from xarray.core import nputils, ops
+
+if TYPE_CHECKING:
+    from xarray.namedarray._typing import NamedArrayCompatible, Self'''
+
+
 if __name__ == "__main__":
-    for line in render(ops_info):
+    argv = sys.argv[1:]
+
+    if len(argv) == 0:
+        preamble = MODULE_PREAMBLE
+        info = ops_info
+    elif len(argv) == 1 and argv[0] == "namedarray":
+        preamble = MODULE_PREAMBLE_NAMEDARRAY
+        info = ops_info_namedarray
+    else:
+        raise ValueError('run generate_ops.py without arguments or only "namedarray"')
+
+    for line in render(preamble, info):
         print(line)
