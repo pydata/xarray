@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from types import ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Protocol,
@@ -15,9 +14,6 @@ from typing import (
 )
 
 import numpy as np
-
-if TYPE_CHECKING:
-    pass
 
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
