@@ -234,7 +234,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
