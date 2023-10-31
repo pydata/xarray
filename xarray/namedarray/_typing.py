@@ -4,7 +4,6 @@ from collections.abc import Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Final,
@@ -17,9 +16,6 @@ from typing import (
 )
 
 import numpy as np
-
-if TYPE_CHECKING:
-    pass
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
