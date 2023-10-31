@@ -19,7 +19,7 @@ import numpy as np
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-
+_dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
@@ -55,9 +55,15 @@ _Dim = Hashable
 _Dims = tuple[_Dim, ...]
 
 _DimsLike = Union[str, Iterable[_Dim]]
-_AttrsLike = Union[Mapping[Any, Any], None]
 
-_dtype = np.dtype
+# https://data-apis.org/array-api/latest/API_specification/indexing.html
+# TODO: np.array_api doesn't allow None for some reason, maybe they're
+# recommending to use expand_dims?
+_IndexKey = Union[int, slice, "ellipsis"]
+_IndexKeys = tuple[Union[_IndexKey, None], ...]
+_IndexKeyLike = Union[_IndexKey, _IndexKeys]
+
+_AttrsLike = Union[Mapping[Any, Any], None]
 
 
 class _SupportsReal(Protocol[_T_co]):
