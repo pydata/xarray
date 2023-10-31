@@ -141,12 +141,21 @@ def _new(
         return cls_(dims_, data, attrs_)
 
 
+# @overload
+# def from_array(
+#     dims: _DimsLike,
+#     data: np.ma.masked_array[_ShapeType, _DType],
+#     attrs: _AttrsLike = ...,
+# ) -> NamedArray[_ShapeType, _DType]:
+#     ...
+
+
 @overload
 def from_array(
     dims: _DimsLike,
-    data: DuckArray[_ScalarType],
+    data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
-) -> _NamedArray[_ScalarType]:
+) -> NamedArray[_ShapeType, _DType]:
     ...
 
 
@@ -155,15 +164,15 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = ...,
-) -> _NamedArray[Any]:
+) -> NamedArray[Any, Any]:
     ...
 
 
 def from_array(
     dims: _DimsLike,
-    data: DuckArray[_ScalarType] | ArrayLike,
+    data: duckarray[_ShapeType, _DType] | ArrayLike,
     attrs: _AttrsLike = None,
-) -> _NamedArray[_ScalarType] | _NamedArray[Any]:
+) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
     Create a Named array from an array-like object.
 
@@ -184,7 +193,7 @@ def from_array(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
         )
 
-    # TODO: dask.array.ma.masked_array also exists, better way?
+    # TODO: dask.array.ma.MaskedArray also exists, better way?
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
         if mask.any():
