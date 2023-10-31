@@ -114,19 +114,6 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def dtype(self) -> _DType_co:
         ...
 
-    @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
-        ...
-
-    @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
-        ...
-
-    def __array__(
-        self, dtype: _DType | None = ..., /
-    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
-        ...
-
 
 @runtime_checkable
 class _arrayfunction(
@@ -153,6 +140,16 @@ class _arrayfunction(
         key: _IndexKeyLike | _arrayfunction[Any, Any],
         /,
     ) -> _arrayfunction[Any, _DType_co] | Any:
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
+        ...
+
+    @overload
+    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
+        ...
+
+    def __array__(
+        self, dtype: _DType | None = ..., /
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
         ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
