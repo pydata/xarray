@@ -15,7 +15,6 @@ from typing import (
 
 import numpy as np
 
-
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
