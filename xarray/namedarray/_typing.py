@@ -136,6 +136,9 @@ class _arrayfunction(
         key: _IndexKeyLike | _arrayfunction[Any, Any],
         /,
     ) -> _arrayfunction[Any, _DType_co] | Any:
+        ...
+
+    @overload
     def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
         ...
 
