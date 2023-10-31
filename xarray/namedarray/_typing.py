@@ -106,6 +106,23 @@ class _arrayfunction(
     """
 
     @overload
+    def __getitem__(self, key: _IndexKeyLike) -> Any:
+        ...
+
+    @overload
+    def __getitem__(
+        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...]
+    ) -> _arrayfunction[Any, _DType_co]:
+        ...
+
+    def __getitem__(
+        self,
+        key: _IndexKeyLike | _arrayfunction[Any, Any],
+        /,
+    ) -> _arrayfunction[Any, _DType_co] | Any:
+        ...
+
+    @overload
     def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
         ...
 
@@ -156,6 +173,27 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 
     Corresponds to np.ndarray.
     """
+
+    # TODO: Only integer _arrayapi:
+    # def __getitem__(
+    #     self,
+    #     key: Union[
+    #         int,
+    #         slice,
+    #         "ellipsis",
+    #         tuple[Union[int, slice, "ellipsis", None], ...],
+    #         _arrayapi[Any, Any],
+    #     ],
+    #     /,
+    # ) -> _arrayapi[Any, _DType_co]:
+    #     ...
+
+    def __getitem__(
+        self,
+        key: Any,
+        /,
+    ) -> _arrayapi[Any, _DType_co]:
+        ...
 
     def __array_namespace__(self) -> ModuleType:
         ...
