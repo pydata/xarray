@@ -48,8 +48,8 @@ Bug fixes
   resampling frequency has units of days and is greater than one day
   (e.g. ``"2D"``, ``"3D"`` etc.) and the ``closed`` argument is set to
   ``"right"`` to xarray's implementation of resample for data indexed by a
-  :py:class:`CFTimeIndex` (:pull:`8393`).  By `Spencer Clark
-      <https://github.com/spencerkclark>`_.
+  :py:class:`CFTimeIndex` (:pull:`8393`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
