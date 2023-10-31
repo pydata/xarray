@@ -140,15 +140,6 @@ def _new(
         return cls_(dims_, data, attrs_)
 
 
-# @overload
-# def from_array(
-#     dims: _DimsLike,
-#     data: np.ma.masked_array[_ShapeType, _DType],
-#     attrs: _AttrsLike = ...,
-# ) -> NamedArray[_ShapeType, _DType]:
-#     ...
-
-
 @overload
 def from_array(
     dims: _DimsLike,
