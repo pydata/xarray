@@ -7,9 +7,11 @@ from typing import Any
 import numpy as np
 
 from xarray.namedarray._typing import (
+    Default,
     _arrayapi,
     _Axis,
     _AxisLike,
+    _default,
     _Dim,
     _Dims,
     _DType,
@@ -17,8 +19,6 @@ from xarray.namedarray._typing import (
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
-    Default,
-    _default,
 )
 from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
 
