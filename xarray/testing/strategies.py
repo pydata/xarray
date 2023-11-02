@@ -273,21 +273,6 @@ def variables(
     <xarray.Variable (a: 2, b: 1)>
     array([[-1.00000000e+007+3.40282347e+038j],
            [-2.75034266e-225+2.22507386e-311j]])
-
-    Generate completely arbitrary Variable objects backed by a cupy GPU array:
-
-    >>> from hypothesis.extra.array_api import make_strategies_namespace
-    >>> import cupy as cp  # doctest: +SKIP
-    >>> cupy_strategy_fn = make_strategies_namespace(cp).arrays  # doctest: +SKIP
-    >>> cupy_da = variables(
-    ...     array_strategy_fn=cupy_strategy_fn
-    ... ).example()  # doctest: +SKIP
-    >>> cupy_da  # doctest: +SKIP
-    <xarray.Variable (c: 3, d: 1)>
-    array([[ 0.,  1.,  2.],
-           [ 3.,  4.,  5.]], dtype=float32)
-    >>> cupy_da.data.device  # doctest: +SKIP
-    <CUDA Device 0>
     """
 
     if any(
