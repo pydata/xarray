@@ -238,10 +238,10 @@ def variables(
     --------
     Generate completely arbitrary Variable objects backed by a numpy array:
 
-    >>> variables().example()
+    >>> variables().example()  # doctest: +SKIP
     <xarray.Variable (żō: 3)>
     array([43506,   -16,  -151], dtype=int32)
-    >>> variables().example()
+    >>> variables().example()  # doctest: +SKIP
     <xarray.Variable (eD: 4, ğŻżÂĕ: 2, T: 2)>
     array([[[-10000000., -10000000.],
             [-10000000., -10000000.]],
@@ -259,7 +259,7 @@ def variables(
 
     Generate only Variable objects with certain dimension names:
 
-    >>> variables(dims=st.just(["a", "b"])).example()
+    >>> variables(dims=st.just(["a", "b"])).example()  # doctest: +SKIP
     <xarray.Variable (a: 5, b: 3)>
     array([[       248, 4294967295, 4294967295],
            [2412855555, 3514117556, 4294967295],
@@ -269,7 +269,7 @@ def variables(
 
     Generate only Variable objects with certain dimension names and lengths:
 
-    >>> variables(dims=st.just({"a": 2, "b": 1})).example()
+    >>> variables(dims=st.just({"a": 2, "b": 1})).example()  # doctest: +SKIP
     <xarray.Variable (a: 2, b: 1)>
     array([[-1.00000000e+007+3.40282347e+038j],
            [-2.75034266e-225+2.22507386e-311j]])
@@ -280,7 +280,7 @@ def variables(
     >>> import cupy as cp
     >>> cupy_strategy_fn = make_strategies_namespace(cp).arrays
     >>> cupy_da = variables(array_strategy_fn=cupy_strategy_fn).example()
-    >>> cupy_da
+    >>> cupy_da  # doctest: +SKIP
     <xarray.Variable (c: 3, d: 1)>
     array([[ 0.,  1.,  2.],
            [ 3.,  4.,  5.]], dtype=float32)
