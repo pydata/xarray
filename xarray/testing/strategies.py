@@ -22,8 +22,8 @@ class ArrayStrategyFn(Protocol):
     def __call__(
         self,
         *,
-        shape: tuple[int, ...] | None = None,
-        dtype: np.dtype | None = None,
+        shape: Union[tuple[int, ...], None] = None,
+        dtype: Union[np.dtype, None] = None,
         **kwargs,
     ) -> st.SearchStrategy[T_DuckArray]:
         ...
@@ -118,7 +118,7 @@ def dimension_sizes(
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
-    max_side: int = None,
+    max_side: Union[int, None] = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -188,8 +188,10 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
 def variables(
     draw: st.DrawFn,
     *,
-    array_strategy_fn: ArrayStrategyFn = None,
-    dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
+    array_strategy_fn: Union[ArrayStrategyFn, None] = None,
+    dims: Union[
+        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]], None
+    ] = None,
     dtype: st.SearchStrategy[np.dtype] = numeric_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Variable:
@@ -294,12 +296,18 @@ def variables(
             "To specify fixed contents, use hypothesis.strategies.just()."
         )
 
+    _array_strategy_fn: ArrayStrategyFn
+    array_strategy: st.SearchStrategy[T_DuckArray]
     if array_strategy_fn is None:
-        array_strategy_fn = np_arrays
+        _array_strategy_fn = np_arrays  # type: ignore[assignment]
     elif not callable(array_strategy_fn):
         raise TypeError(
             "array_strategy_fn must be a Callable that accepts the kwargs dtype and shape and returns a hypothesis "
             "strategy which generates corresponding array-like objects."
+        )
+    else:
+        _array_strategy_fn = (
+            array_strategy_fn  # satisfy mypy that this new variable cannot be None
         )
 
     _dtype = draw(dtype)
@@ -311,11 +319,11 @@ def variables(
             dim_names = list(_dims)
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
-            array_strategy = array_strategy_fn(shape=_shape, dtype=_dtype)
+            array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
         elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
-            array_strategy = array_strategy_fn(shape=_shape, dtype=_dtype)
+            array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
         else:
             raise TypeError(
                 f"Invalid type returned by dims strategy - drew an object of type {type(dims)}"
@@ -332,7 +340,7 @@ def variables(
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
-        array_strategy = array_strategy_fn(dtype=_dtype)
+        array_strategy = _array_strategy_fn(dtype=_dtype)
         _data = draw(array_strategy)
         dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
 
