@@ -216,12 +216,60 @@ def variables(
 
     Raises
     ------
-    hypothesis.errors.InvalidArgument
-        If custom strategies passed try to draw examples which together cannot create a valid Variable.
+    TypeError
+        If custom strategies passed try to draw examples which are not of the correct type.
 
     Examples
     --------
+    Generate completely arbitrary Variable objects backed by a numpy array:
 
+    >>> variables().example()
+    <xarray.Variable (żō: 3)>
+    array([43506,   -16,  -151], dtype=int32)
+    >>> variables().example()
+    <xarray.Variable (żō: 3)>
+    <xarray.Variable (eD: 4, ğŻżÂĕ: 2, T: 2)>
+    array([[[-10000000., -10000000.],
+            [-10000000., -10000000.]],
+
+           [[-10000000., -10000000.],
+            [        0., -10000000.]],
+
+           [[        0., -10000000.],
+            [-10000000.,        inf]],
+
+           [[       -0., -10000000.],
+            [-10000000.,        -0.]]], dtype=float32)
+
+    Generate only Variable objects with certain dimension names:
+
+    >>> variables(dims=st.just(["a", "b"])).example()
+    <xarray.Variable (a: 5, b: 3)>
+    array([[       248, 4294967295, 4294967295],
+           [2412855555, 3514117556, 4294967295],
+           [       111, 4294967295, 4294967295],
+           [4294967295, 1084434988,      51688],
+           [     47714,        252,      11207]], dtype=uint32)
+
+    Generate only Variable objects with certain dimension names and lengths:
+
+    >>> variables(dims=st.just({"a": 2, "b": 1})).example()
+    <xarray.Variable (a: 2, b: 1)>
+    array([[-1.00000000e+007+3.40282347e+038j],
+           [-2.75034266e-225+2.22507386e-311j]])
+
+    Generate completely arbitrary Variable objects backed by a sparse array:
+
+    >>> from hypothesis.extra.array_api import make_strategies_namespace
+    >>> import cupy as cp
+    >>> cupy_strategy_fn = make_strategies_namespace(cp).arrays
+    >>> cupy_da = variables(array_strategy_fn=cupy_strategy_fn).example()
+    >>> cupy_da
+    <xarray.Variable (c: 3, d: 1)>
+    array([[ 0.,  1.,  2.],
+           [ 3.,  4.,  5.]], dtype=float32)
+    >>> cupy_da.data.device
+    <CUDA Device 0>
     """
 
     if any(
@@ -250,7 +298,7 @@ def variables(
             dim_names, shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = array_strategy_fn(shape=shape, dtype=draw(dtype))
         else:
-            raise ValueError(
+            raise TypeError(
                 f"Invalid type returned by dims strategy - drew an object of type {type(dims)}"
             )
         _data = draw(array_strategy)
