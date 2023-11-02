@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import warnings
-from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
@@ -59,10 +58,6 @@ class CustomArrayIndexable(
 
 
 class NamedArraySubclassobjects:
-    @abstractmethod
-    def cls(self, *args, **kwargs):
-        raise NotImplementedError
-
     @pytest.fixture
     def target(self):
         """Fixture that needs to be re-declared"""
