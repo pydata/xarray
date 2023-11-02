@@ -406,7 +406,11 @@ class TestFormatting:
                 "var2": ("x", np.array([3, 4], dtype="int64")),
             },
             coords={
-                "x": ("x", np.array(["a", "b"], dtype="U1"), {"foo": "bar"}),
+                "x": (
+                    "x",
+                    np.array(["a", "b"], dtype="U1"),
+                    {"foo": "bar", "same": "same"},
+                ),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
             attrs={"units": "m", "description": "desc"},
@@ -418,7 +422,7 @@ class TestFormatting:
                 "x": (
                     "x",
                     np.array(["a", "c"], dtype="U1"),
-                    {"source": 0, "foo": "baz"},
+                    {"source": 0, "foo": "baz", "same": "same"},
                 ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
@@ -433,8 +437,10 @@ class TestFormatting:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
         L * x        (x) %cU1 'a' 'b'
+            foo: bar
         R * x        (x) %cU1 'a' 'c'
             source: 0
+            foo: baz
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
         Coordinates only on the right object:
