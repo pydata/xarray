@@ -1,4 +1,5 @@
-from typing import Any, Dict, Hashable, List, Mapping, Sequence, Tuple, Union
+from collections.abc import Hashable, Mapping, Sequence
+from typing import Any, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -40,7 +41,7 @@ def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
 def np_arrays(
     *,
     shape: Union[
-        Tuple[int, ...], st.SearchStrategy[Tuple[int, ...]]
+        tuple[int, ...], st.SearchStrategy[tuple[int, ...]]
     ] = npst.array_shapes(max_side=4),
     dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = numeric_dtypes(),
 ) -> st.SearchStrategy[np.ndarray]:
@@ -72,7 +73,7 @@ def dimension_names(
     *,
     min_dims: int = 0,
     max_dims: int = 3,
-) -> st.SearchStrategy[List[Hashable]]:
+) -> st.SearchStrategy[list[Hashable]]:
     """
     Generates an arbitrary list of valid dimension names.
 
@@ -320,7 +321,6 @@ def coordinate_variables(
     if draw(
         st.booleans()
     ):  # Allow for no coordinate variables - explicit possibility not to helps with shrinking
-
         dim_names = list(dim_sizes.keys())
 
         # Possibly generate 1D "dimension coordinates" - explicit possibility not to helps with shrinking
@@ -337,7 +337,6 @@ def coordinate_variables(
 
         # Possibly generate ND "non-dimension coordinates" - explicit possibility not to helps with shrinking
         if draw(st.booleans()):
-
             # can't have same name as a dimension
             valid_non_dim_coord_names = coord_names.filter(lambda n: n not in dim_names)
             non_dim_coords = draw(
@@ -352,7 +351,7 @@ def coordinate_variables(
 
 def _sizes_from_dim_names(
     dims: Sequence[Hashable],
-) -> st.SearchStrategy[Dict[Hashable, int]]:
+) -> st.SearchStrategy[dict[Hashable, int]]:
     size_along_dim = st.integers(min_value=1, max_value=6)
     return st.fixed_dictionaries({d: size_along_dim for d in dims})
 

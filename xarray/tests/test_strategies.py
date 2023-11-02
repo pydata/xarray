@@ -172,7 +172,6 @@ class TestVariablesStrategy:
 class TestCoordinateVariablesStrategy:
     @given(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
     def test_alignable(self, coord_vars):
-
         # TODO there must be a better way of checking align-ability than this
         for v in coord_vars.values():
             if "x" in v.dims:
@@ -320,7 +319,6 @@ class TestDatasetsStrategy:
 
     @given(st.data())
     def test_given_data_and_dims(self, data):
-
         # pass dims as mapping
         dim_sizes = {"x": 3, "y": 4}
         data_vars = data.draw(data_variables(dim_sizes=dim_sizes))

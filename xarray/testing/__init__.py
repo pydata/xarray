@@ -1,4 +1,4 @@
-from .testing import (  # noqa: F401
+from xarray.testing.testing import (  # noqa: F401
     _assert_dataarray_invariants,
     _assert_dataset_invariants,
     _assert_indexes_invariants_checks,
