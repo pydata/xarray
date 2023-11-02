@@ -52,10 +52,6 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
    testing.strategies.dimension_sizes
    testing.strategies.attrs
    testing.strategies.variables
-   testing.strategies.coordinate_variables
-   testing.strategies.dataarrays
-   testing.strategies.data_variables
-   testing.strategies.datasets
 
 These build upon the numpy strategies offered in :py:mod:`hypothesis.extra.numpy`:
 

@@ -1087,10 +1087,6 @@ Hypothesis Testing Strategies
    testing.strategies.dimension_sizes
    testing.strategies.attrs
    testing.strategies.variables
-   testing.strategies.coordinate_variables
-   testing.strategies.dataarrays
-   testing.strategies.data_variables
-   testing.strategies.datasets
 
 Exceptions
 ==========

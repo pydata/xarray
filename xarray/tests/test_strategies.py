@@ -1,5 +1,3 @@
-import contextlib
-
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -9,17 +7,12 @@ pytest.importorskip("hypothesis")
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-from hypothesis import Phase, given, settings
+from hypothesis import given
 from hypothesis.errors import InvalidArgument
 
-from xarray import DataArray, Dataset
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
     attrs,
-    coordinate_variables,
-    data_variables,
-    dataarrays,
-    datasets,
     dimension_names,
     dimension_sizes,
     np_arrays,
@@ -167,181 +160,3 @@ class TestVariablesStrategy:
         var = data.draw(variables(data=arrs, dims=st.just({"x": 2, "y": 3})))
 
         assert var.shape == (2, 3)
-
-
-class TestCoordinateVariablesStrategy:
-    @given(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
-    def test_alignable(self, coord_vars):
-
-        # TODO there must be a better way of checking align-ability than this
-        for v in coord_vars.values():
-            if "x" in v.dims:
-                assert v.sizes["x"] == 2
-            if "y" in v.dims:
-                assert v.sizes["y"] == 3
-            if not set(v.dims).issubset({"x", "y"}):
-                assert False, v
-
-    @given(st.data())
-    def test_valid_set_of_coords(self, data):
-        coord_vars = data.draw(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
-
-        arr = data.draw(np_arrays(shape=(2, 3)))
-        da = DataArray(data=arr, coords=coord_vars, dims=["x", "y"])
-        assert isinstance(da, DataArray)
-
-    def test_sometimes_generates_1d_dim_coords(self):
-        found_one = False
-
-        @given(st.data())
-        @settings(phases=[Phase.generate])
-        def inner(data):
-            coord_vars = data.draw(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
-            for name, var in coord_vars.items():
-                if var.ndim == 1 and name == var.dims[0]:
-                    nonlocal found_one
-                    found_one = True
-                    raise AssertionError  # early stopping - test is correct but slower without this
-
-        with contextlib.suppress(AssertionError):
-            inner()
-
-        assert found_one
-
-    def test_sometimes_generates_non_dim_coords(self):
-        found_one = False
-
-        @given(st.data())
-        @settings(phases=[Phase.generate])
-        def inner(data):
-            coord_vars = data.draw(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
-            for name, var in coord_vars.items():
-                if var.ndim != 1 or (var.ndim == 1 and name != var.dims[0]):
-                    nonlocal found_one
-                    found_one = True
-                    raise AssertionError  # early stopping - test is correct but slower without this
-
-        with contextlib.suppress(AssertionError):
-            inner()
-
-        assert found_one
-
-    @given(st.data())
-    def test_restrict_names(self, data):
-        capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
-        coord_vars = data.draw(
-            coordinate_variables(
-                dim_sizes={"x": 2, "y": 3}, coord_names=capitalized_names
-            )
-        )
-        for name in coord_vars.keys():
-            if name not in ["x", "y"]:
-                assert name.upper() == name
-
-
-class TestDataArraysStrategy:
-    @given(dataarrays())
-    def test_given_nothing(self, da):
-        assert isinstance(da, DataArray)
-
-    @given(st.data())
-    def test_given_dims(self, data):
-        da = data.draw(dataarrays(dims=st.just(["x", "y"])))
-        assert da.dims == ("x", "y")
-
-        da = data.draw(dataarrays(dims=st.just({"x": 2, "y": 3})))
-        assert da.sizes == {"x": 2, "y": 3}
-
-    @given(st.data())
-    def test_given_data(self, data):
-        shape = (2, 3)
-        arrs = np_arrays(shape=shape)
-        da = data.draw(dataarrays(data=arrs))
-
-        assert da.shape == shape
-
-    @given(st.data())
-    def test_given_data_and_dims(self, data):
-        arrs = np_arrays(shape=(2, 3))
-        dims = dimension_names(min_dims=2, max_dims=2)
-        da = data.draw(dataarrays(data=arrs, dims=dims))
-        assert da.shape == (2, 3)
-
-        dims = dimension_names(min_dims=3, max_dims=3)
-        with pytest.raises(InvalidArgument):
-            data.draw(dataarrays(data=arrs, dims=dims))
-
-        arrs = np_arrays(shape=(3, 4))
-        dims = st.just({"x": 3, "y": 4})
-        da = data.draw(dataarrays(data=arrs, dims=dims))
-        assert da.sizes == {"x": 3, "y": 4}
-
-
-class TestDataVariablesStrategy:
-    @given(st.data())
-    def test_given_only_sizes(self, data):
-        dim_sizes = {"x": 2, "y": 3}
-        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
-        for k, v in data_vars.items():
-            assert isinstance(v, Variable)
-            assert set(v.sizes.items()).issubset(set(dim_sizes.items()))
-
-    @given(st.data())
-    def test_restrict_names(self, data):
-        capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
-        data_vars = data.draw(
-            data_variables(dim_sizes={"x": 2, "y": 3}, var_names=capitalized_names)
-        )
-        for name in data_vars.keys():
-            assert name.upper() == name
-
-
-class TestDatasetsStrategy:
-    @given(datasets())
-    def test_given_nothing(self, ds):
-        assert isinstance(ds, Dataset)
-
-    @given(st.data())
-    def test_given_data(self, data):
-        dim_sizes = {"x": 3, "y": 4}
-        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
-        ds = data.draw(datasets(data_vars=st.just(data_vars)))
-        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
-
-    @given(st.data())
-    def test_given_dims(self, data):
-        dims = ["x", "y"]
-        ds = data.draw(datasets(dims=st.just(dims)))
-        assert set(ds.dims).issubset(set(dims))
-
-        dim_sizes = {"x": 3, "y": 4}
-        ds = data.draw(datasets(dims=st.just(dim_sizes)))
-        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
-
-    @given(st.data())
-    def test_given_data_and_dims(self, data):
-
-        # pass dims as mapping
-        dim_sizes = {"x": 3, "y": 4}
-        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
-        ds = data.draw(datasets(data_vars=st.just(data_vars), dims=st.just(dim_sizes)))
-        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
-
-        incompatible_dim_sizes = {"x": 1, "y": 4}
-        data_vars = {"foo": Variable(data=[0, 1, 2], dims="x")}
-        with pytest.raises(InvalidArgument, match="drawn variable"):
-            data.draw(
-                datasets(
-                    data_vars=st.just(data_vars), dims=st.just(incompatible_dim_sizes)
-                )
-            )
-
-    @pytest.mark.xfail(reason="not implemented")
-    @given(st.data())
-    def test_given_data_and_dims_as_sequence(self, data):
-        # pass dims as sequence
-        dim_sizes = {"x": 3, "y": 4}
-        dims = list(dim_sizes.keys())
-        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
-        ds = data.draw(datasets(data_vars=st.just(data_vars), dims=st.just(dims)))
-        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
