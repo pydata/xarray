@@ -163,7 +163,7 @@ class TestVariablesStrategy:
 
         var = data.draw(
             variables(
-                array_strategy_fn=fixed_array_strategy_fn, dtype=st.just(arr.dtype)  # type: ignore[arg-type]
+                array_strategy_fn=fixed_array_strategy_fn, dims=st.just({"x": 2, "y": 2}), dtype=st.just(arr.dtype)  # type: ignore[arg-type]
             )
         )
 

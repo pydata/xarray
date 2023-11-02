@@ -327,8 +327,10 @@ def variables(
             )
 
     else:
-        # nothing provided, so generate everything consistently by drawing dims to match data
-        array_strategy = _array_strategy_fn(dtype=_dtype)
+        # nothing provided, so generate everything consistently
+        # We still generate the shape first here just so that we always pass shape to array_strategy_fn
+        _shape = draw(npst.array_shapes())
+        array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
         _data = draw(array_strategy)
         dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
 
