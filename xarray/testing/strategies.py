@@ -63,17 +63,20 @@ def np_arrays(
     return npst.arrays(dtype=dtype, shape=shape)
 
 
+# TODO Generalize to all valid unicode characters once formatting bugs in xarray's reprs are fixed + docs can handle it.
+_readable_characters = st.characters(
+    categories=["L", "N"], max_codepoint=0x017F
+)  # only use characters within the "Latin Extended-A" subset of unicode
+
+
 def names() -> st.SearchStrategy[str]:
     """
     Generates arbitrary string names for dimensions / variables.
 
     Requires the hypothesis package to be installed.
     """
-    # TODO Generalize to all valid unicode characters after formatting bugs in xarray's reprs are fixed.
     return st.text(
-        st.characters(
-            categories=["L", "N"], max_codepoint=0x017F
-        ),  # only use characters within the "Latin Extended-A" subset of unicode
+        _readable_characters,
         min_size=1,
         max_size=5,
     )
@@ -148,16 +151,18 @@ def dimension_sizes(
     )
 
 
-_attr_keys = st.text(st.characters())
+_readable_strings = st.text(
+    _readable_characters,
+    max_size=5,
+)
+_attr_keys = _readable_strings
 _small_arrays = np_arrays(
     shape=npst.array_shapes(
         max_side=2,
         max_dims=2,
     )
 )
-_attr_values = (
-    st.none() | st.booleans() | st.text(st.characters(), max_size=5) | _small_arrays
-)
+_attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
@@ -227,7 +232,6 @@ def variables(
     <xarray.Variable (żō: 3)>
     array([43506,   -16,  -151], dtype=int32)
     >>> variables().example()
-    <xarray.Variable (żō: 3)>
     <xarray.Variable (eD: 4, ğŻżÂĕ: 2, T: 2)>
     array([[[-10000000., -10000000.],
             [-10000000., -10000000.]],
@@ -240,6 +244,8 @@ def variables(
 
            [[       -0., -10000000.],
             [-10000000.,        -0.]]], dtype=float32)
+    Attributes:
+        śřĴ:      {'ĉ': {'iĥſ': array([-30117,  -1740], dtype=int16)}}
 
     Generate only Variable objects with certain dimension names:
 
