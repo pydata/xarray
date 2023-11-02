@@ -69,7 +69,14 @@ def names() -> st.SearchStrategy[str]:
 
     Requires the hypothesis package to be installed.
     """
-    return st.text(st.characters(), min_size=1, max_size=5)
+    # TODO Generalize to all valid unicode characters after formatting bugs in xarray's reprs are fixed.
+    return st.text(
+        st.characters(
+            categories=["L", "N"], max_codepoint=0x017F
+        ),  # only use characters within the "Latin Extended-A" subset of unicode
+        min_size=1,
+        max_size=5,
+    )
 
 
 def dimension_names(
@@ -211,6 +218,10 @@ def variables(
     ------
     hypothesis.errors.InvalidArgument
         If custom strategies passed try to draw examples which together cannot create a valid Variable.
+
+    Examples
+    --------
+
     """
 
     if any(
