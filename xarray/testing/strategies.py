@@ -335,7 +335,7 @@ def variables(
     if _data.dtype != _dtype:
         raise TypeError(
             "array_strategy_fn returned an array object with a different dtype than it was passed."
-            f"Passed {_data.dtype}, but returned {_dtype}"
+            f"Passed {_dtype}, but returned {_data.dtype}"
             "Please either specify a consistent dtype via the dtype kwarg or ensure the array_strategy_fn callable "
             "obeys the dtype argument passed to it."
         )

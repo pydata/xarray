@@ -166,10 +166,10 @@ Creating Duck-type Arrays
 Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
 numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duck_arrays>`).
 
-Imagine we want to write a strategy which generates arbitrary ``DataArray`` objects, each of which wraps a
+Imagine we want to write a strategy which generates arbitrary ``Variable`` objects, each of which wraps a
 :py:class:`sparse.COO` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
 
-1. Create a xarray object with numpy data and use ``.map()`` to convert the underlying array to a
+1. Create a xarray object with numpy data and use the hypothesis' ``.map()`` method to convert the underlying array to a
 different type:
 
 .. ipython:: python
@@ -180,68 +180,67 @@ different type:
 .. ipython:: python
     :okexcept:
 
-    def convert_to_sparse(da):
-        if da.ndim == 0:
-            return da
+    def convert_to_sparse(var):
+        if var.ndim == 0:
+            return var
         else:
-            da.data = sparse.COO.from_numpy(da.values)
-            return da
+            var.data = sparse.COO.from_numpy(da.values)
+            return var
 
 .. ipython:: python
     :okexcept:
 
-    sparse_dataarrays = xrst.dataarrays().map(convert_to_sparse)
+    sparse_variables = xrst.variables().map(convert_to_sparse)
 
-    sparse_dataarrays.example()
-    sparse_dataarrays.example()
+    sparse_variables.example()
+    sparse_variables.example()
 
-2. Pass a strategy which generates the duck-typed arrays directly to the ``data`` argument of the xarray
-strategies:
+2. Pass a function which returns a strategy which generates the duck-typed arrays directly to the ``array_strategy_fn`` argument of the xarray strategies:
 
 .. ipython:: python
     :okexcept:
 
     @st.composite
-    def sparse_arrays(draw) -> st.SearchStrategy[sparse._coo.core.COO]:
+    def sparse_random_arrays(
+        draw, shape: tuple[int] = None
+    ) -> st.SearchStrategy[sparse._coo.core.COO]:
         """Strategy which generates random sparse.COO arrays"""
-        shape = draw(npst.array_shapes())
+        if shape is None:
+            shape = draw(npst.array_shapes())
         density = draw(st.integers(min_value=0, max_value=1))
-        return sparse.random(shape, density=density)
+        return sparse.random(
+            shape=shape, density=density
+        )  # note sparse.random does not accept a dtype kwarg
+
+
+    def sparse_random_arrays_fn(
+        *, shape: tuple[int] = None, dtype: np.dtype = None
+    ) -> st.SearchStrategy[sparse._coo.core.COO]:
+        return sparse_arrays(shape=shape)
+
 
 .. ipython:: python
     :okexcept:
 
-    sparse_dataarrays = xrst.dataarrays(data=sparse_arrays())
-
-    sparse_dataarrays.example()
-    sparse_dataarrays.example()
+    sparse_random_variables = xrst.variables(
+        array_strategy_fn=sparse_random_arrays_fn, dtype=st.just(np.dtype("float64"))
+    )
+    sparse_random_variables.example()
 
 Either approach is fine, but one may be more convenient than the other depending on the type of the duck array which you
 want to wrap.
 
-Creating datasets can be a little more involved. Using method (1) is simple:
+If the array type you want to generate has a top-level namespace (e.g. that which is conventionally imported as ``xp`` or similar),
+you can use this neat trick:
 
 .. ipython:: python
     :okexcept:
 
-    def convert_ds_to_sparse(ds):
-        return ds.map(convert_to_sparse)
+    import numpy.array_api as xp  # available in numpy 1.26.0
 
-.. ipython:: python
-    :okexcept:
+    from hypothesis.extra.array_api import make_strategies_namespace
 
-    sparse_datasets = xrst.datasets().map(convert_ds_to_sparse)
-
-    sparse_datasets.example()
-
-but building a dataset from scratch (i.e. method (2)) requires building the dataset object in such as way that all of
-the data variables have compatible dimensions. You can build up a dictionary of the form ``{var_name: data_variable}``
-yourself, or you can use the ``data_vars`` argument to the ``data_variables`` strategy (TODO):
-
-.. ipython:: python
-    :okexcept:
-
-    sparse_data_vars = xrst.data_variables(data=sparse_arrays())
-    sparse_datasets = xrst.datasets(data_vars=sparse_data_vars)
-
-    sparse_datasets.example()
+    numpy_variables = xrst.variables(
+        array_strategy_fn=make_strategies_namespace(xp).arrays
+    )
+    numpy_variables.example()
