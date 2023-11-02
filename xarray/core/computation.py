@@ -408,7 +408,7 @@ def _unpack_dict_tuples(
 
 def _check_core_dims(signature, variable_args, name):
     """
-    Chcek if an arg has all the core dims required by the signature.
+    Check if an arg has all the core dims required by the signature.
 
     Slightly awkward design, of returning the error message. But we want to
     give a detailed error message, which requires inspecting the variable in
@@ -1694,8 +1694,8 @@ def dot(
     dims: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like np.einsum, but
-    provides a simpler interface based on array dimensions.
+    """Generalized dot product for xarray objects. Like ``np.einsum``, but
+    provides a simpler interface based on array dimension names.
 
     Parameters
     ----------
@@ -1705,12 +1705,23 @@ def dot(
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict
-        Additional keyword arguments passed to numpy.einsum or
-        dask.array.einsum
+        Additional keyword arguments passed to ``numpy.einsum`` or
+        ``dask.array.einsum``
 
     Returns
     -------
     DataArray
+
+    See Also
+    --------
+    numpy.einsum
+    dask.array.einsum
+    opt_einsum.contract
+
+    Notes
+    -----
+    We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
+    which is passed through to ``np.einsum``, and works for most array backends.
 
     Examples
     --------

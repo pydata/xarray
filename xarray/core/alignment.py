@@ -604,7 +604,7 @@ def align(
 
 
 @overload
-def align(  # type: ignore[misc]
+def align(
     obj1: T_Obj1,
     obj2: T_Obj2,
     /,
@@ -619,7 +619,7 @@ def align(  # type: ignore[misc]
 
 
 @overload
-def align(  # type: ignore[misc]
+def align(
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -635,7 +635,7 @@ def align(  # type: ignore[misc]
 
 
 @overload
-def align(  # type: ignore[misc]
+def align(
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -652,7 +652,7 @@ def align(  # type: ignore[misc]
 
 
 @overload
-def align(  # type: ignore[misc]
+def align(
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1101,14 +1101,14 @@ def broadcast(
 
 
 @overload
-def broadcast(  # type: ignore[misc]
+def broadcast(
     obj1: T_Obj1, obj2: T_Obj2, /, *, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Obj1, T_Obj2]:
     ...
 
 
 @overload
-def broadcast(  # type: ignore[misc]
+def broadcast(
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1120,7 +1120,7 @@ def broadcast(  # type: ignore[misc]
 
 
 @overload
-def broadcast(  # type: ignore[misc]
+def broadcast(
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1133,7 +1133,7 @@ def broadcast(  # type: ignore[misc]
 
 
 @overload
-def broadcast(  # type: ignore[misc]
+def broadcast(
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
