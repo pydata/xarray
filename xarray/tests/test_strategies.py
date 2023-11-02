@@ -19,6 +19,8 @@ from xarray.testing.strategies import (
     variables,
 )
 
+ALLOWED_ATTRS_VALUES_TYPES = (int, bool, str, np.ndarray)
+
 
 class TestNumpyArraysStrategy:
     @given(np_arrays())
@@ -84,11 +86,25 @@ class TestDimensionSizesStrategy:
             assert dim.upper() == dim
 
 
+def check_dict_values(dictionary: dict) -> bool:
+    for key, value in dictionary.items():
+        if isinstance(value, ALLOWED_ATTRS_VALUES_TYPES) or value is None:
+            continue
+        elif isinstance(value, dict):
+            # If the value is a dictionary, recursively check it
+            if not check_dict_values(value):
+                return False
+        else:
+            # If the value is not an integer or a dictionary, it's not valid
+            return False
+    return True
+
+
 class TestAttrsStrategy:
     @given(attrs())
     def test_type(self, attrs):
         assert isinstance(attrs, dict)
-        # TODO how to test the types of values in a recursive object?
+        check_dict_values(attrs)
 
 
 class TestVariablesStrategy:
