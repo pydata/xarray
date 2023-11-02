@@ -20,7 +20,11 @@ __all__ = [
 
 class ArrayStrategyFn(Protocol):
     def __call__(
-        self, *, shape: tuple[int, ...] = None, dtype: np.dtype = None, **kwargs
+        self,
+        *,
+        shape: tuple[int, ...] | None = None,
+        dtype: np.dtype | None = None,
+        **kwargs,
     ) -> st.SearchStrategy[T_DuckArray]:
         ...
 
