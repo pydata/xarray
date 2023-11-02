@@ -22,7 +22,7 @@ v2023.10.2 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Added a suite of hypothesis strategies for generating xarray objects containing arbitrary data, useful for testing.
+- Added hypothesis strategies for generating :py:class:`xarray.Variable` objects containing arbitrary data, useful for parametrizing downstream tests.
   Accessible under :py:func:`testing.strategies`, and documented in a new page on testing in the User Guide.
   (:issue:`6911`, :pull:`6908`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
