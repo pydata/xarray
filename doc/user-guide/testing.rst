@@ -164,7 +164,7 @@ Creating Duck-type Arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
-numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duck_arrays>`).
+numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duckarrays>`).
 
 Imagine we want to write a strategy which generates arbitrary ``Variable`` objects, each of which wraps a
 :py:class:`sparse.COO` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
