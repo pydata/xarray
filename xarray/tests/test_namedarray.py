@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import warnings
+from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
@@ -55,6 +56,39 @@ class CustomArrayIndexable(
 ):
     def __array_namespace__(self) -> ModuleType:
         return np
+
+
+class NamedArraySubclassobjects:
+    @abstractmethod
+    def cls(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @pytest.fixture
+    def target(self):
+        """Fixture that needs to be re-declared"""
+        assert 0
+
+    @pytest.fixture
+    def data(self):
+        return 0.5 * np.arange(10).reshape(2, 5)
+
+    def test_properties(self, target, data):
+        assert target.dims == ("x", "y")
+        assert np.array_equal(target.data, data)
+        assert target.dtype == float
+        assert target.shape == (2, 5)
+        assert target.attrs == {"key": "value"}
+        assert target.ndim == 2
+        assert target.sizes == {"x": 2, "y": 5}
+        assert target.size == 10
+        assert target.nbytes == 80
+        assert len(target) == 2
+
+
+class TestNamedArray(NamedArraySubclassobjects):
+    @pytest.fixture
+    def target(self, data):
+        return NamedArray(["x", "y"], data, {"key": "value"})
 
 
 @pytest.fixture
@@ -135,20 +169,6 @@ def test_from_array_with_explicitly_indexed(
     output2: NamedArray[Any, Any]
     output2 = from_array(("x", "y", "z"), array2)
     assert isinstance(output2.data, CustomArrayIndexable)
-
-
-def test_properties() -> None:
-    data = 0.5 * np.arange(10).reshape(2, 5)
-    named_array: NamedArray[Any, Any]
-    named_array = NamedArray(["x", "y"], data, {"key": "value"})
-    assert named_array.dims == ("x", "y")
-    assert np.array_equal(np.asarray(named_array.data), data)
-    assert named_array.attrs == {"key": "value"}
-    assert named_array.ndim == 2
-    assert named_array.sizes == {"x": 2, "y": 5}
-    assert named_array.size == 10
-    assert named_array.nbytes == 80
-    assert len(named_array) == 2
 
 
 def test_attrs() -> None:
