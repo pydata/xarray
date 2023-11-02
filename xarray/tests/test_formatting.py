@@ -413,7 +413,7 @@ class TestFormatting:
                 ),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
-            attrs={"units": "m", "description": "desc"},
+            attrs={"title": "mytitle", "description": "desc"},
         )
 
         ds_b = xr.Dataset(
@@ -426,7 +426,7 @@ class TestFormatting:
                 ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
-            attrs={"units": "kg"},
+            attrs={"title": "newtitle"},
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
@@ -437,10 +437,12 @@ class TestFormatting:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
         L * x        (x) %cU1 'a' 'b'
-            foo: bar
+            Differing variable attributes:
+                foo: bar
         R * x        (x) %cU1 'a' 'c'
-            source: 0
-            foo: baz
+            Differing variable attributes:
+                source: 0
+                foo: baz
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
         Coordinates only on the right object:
@@ -451,8 +453,8 @@ class TestFormatting:
         Data variables only on the left object:
             var2     (x) int64 3 4
         Differing attributes:
-        L   units: m
-        R   units: kg
+        L   title: mytitle
+        R   title: newtitle
         Attributes only on the left object:
             description: desc"""
             % (byteorder, byteorder)
