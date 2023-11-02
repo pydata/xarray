@@ -471,7 +471,7 @@ class StringAccessor(Generic[T_DataArray]):
         ... )
         >>> values_2 = np.array(3.4)
         >>> values_3 = ""
-        >>> values_4 = np.array("test", dtype=np.unicode_)
+        >>> values_4 = np.array("test", dtype=np.str_)
 
         Determine the separator to use
 
@@ -2386,7 +2386,7 @@ class StringAccessor(Generic[T_DataArray]):
 
         # _apply breaks on an empty array in this case
         if not self._obj.size:
-            return self._obj.copy().expand_dims({dim: 0}, axis=-1)  # type: ignore[return-value]
+            return self._obj.copy().expand_dims({dim: 0}, axis=-1)
 
         arrfunc = lambda x, isep: np.array(func(x, isep), dtype=self._obj.dtype)
 

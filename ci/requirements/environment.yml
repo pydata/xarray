@@ -25,7 +25,8 @@ dependencies:
   - numba
   - numbagg
   - numexpr
-  - numpy<1.24
+  - numpy
+  - opt_einsum
   - packaging
   - pandas
   - pint<0.21

@@ -43,6 +43,7 @@ from xarray.core.utils import (
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -699,7 +700,7 @@ class GroupBy(Generic[T_Xarray]):
 
     _groups: dict[GroupKey, GroupIndex] | None
     _dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None
-    _sizes: Frozen[Hashable, int] | None
+    _sizes: Mapping[Hashable, int] | None
 
     def __init__(
         self,
@@ -746,7 +747,7 @@ class GroupBy(Generic[T_Xarray]):
         self._sizes = None
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -888,6 +889,21 @@ class GroupBy(Generic[T_Xarray]):
             group = group.where(~mask, drop=True)
             codes = codes.where(~mask, drop=True).astype(int)
 
+        # if other is dask-backed, that's a hint that the
+        # "expanded" dataset is too big to hold in memory.
+        # this can be the case when `other` was read from disk
+        # and contains our lazy indexing classes
+        # We need to check for dask-backed Datasets
+        # so utils.is_duck_dask_array does not work for this check
+        if obj.chunks and not other.chunks:
+            # TODO: What about datasets with some dask vars, and others not?
+            # This handles dims other than `name``
+            chunks = {k: v for k, v in obj.chunksizes.items() if k in other.dims}
+            # a chunk size of 1 seems reasonable since we expect individual elements of
+            # other to be repeated multiple times across the reduced dimension(s)
+            chunks[name] = 1
+            other = other.chunk(chunks)
+
         # codes are defined for coord, so we align `other` with `coord`
         # before indexing
         other, _ = align(other, coord, join="right", copy=False)
@@ -973,7 +989,7 @@ class GroupBy(Generic[T_Xarray]):
             if kwargs["func"] not in ["sum", "prod"]:
                 raise TypeError("Received an unexpected keyword argument 'min_count'")
             elif kwargs["min_count"] is None:
-                # set explicitly to avoid unncessarily accumulating count
+                # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
 
         # weird backcompat
@@ -1077,10 +1093,12 @@ class GroupBy(Generic[T_Xarray]):
         """
         return ops.fillna(self, value)
 
+    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
         dim: Dims = None,
+        *,
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -1102,15 +1120,15 @@ class GroupBy(Generic[T_Xarray]):
             desired quantile lies between two data points. The options sorted by their R
             type as summarized in the H&F paper [1]_ are:
 
-                1. "inverted_cdf" (*)
-                2. "averaged_inverted_cdf" (*)
-                3. "closest_observation" (*)
-                4. "interpolated_inverted_cdf" (*)
-                5. "hazen" (*)
-                6. "weibull" (*)
+                1. "inverted_cdf"
+                2. "averaged_inverted_cdf"
+                3. "closest_observation"
+                4. "interpolated_inverted_cdf"
+                5. "hazen"
+                6. "weibull"
                 7. "linear"  (default)
-                8. "median_unbiased" (*)
-                9. "normal_unbiased" (*)
+                8. "median_unbiased"
+                9. "normal_unbiased"
 
             The first three methods are discontiuous.  The following discontinuous
             variations of the default "linear" (7.) option are also available:
@@ -1120,9 +1138,8 @@ class GroupBy(Generic[T_Xarray]):
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterisk require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
         keep_attrs : bool or None, default: None
             If True, the dataarray's attributes (`attrs`) will be copied from

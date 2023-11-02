@@ -10,16 +10,20 @@ from collections.abc import Collection, Hashable
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray.core.duck_array_ops import array_equiv
-from xarray.core.indexing import ExplicitlyIndexed, MemoryCachedArray
+from xarray.core.duck_array_ops import array_equiv, astype
+from xarray.core.indexing import MemoryCachedArray
 from xarray.core.options import OPTIONS, _get_boolean_with_default
-from xarray.core.pycompat import array_type
+from xarray.core.pycompat import array_type, to_duck_array, to_numpy
 from xarray.core.utils import is_duck_array
+
+if TYPE_CHECKING:
+    from xarray.core.coordinates import AbstractCoordinates
 
 
 def pretty_print(x, numchars: int):
@@ -64,6 +68,8 @@ def first_n_items(array, n_desired):
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
+    from xarray.core.variable import Variable
+
     if n_desired < 1:
         raise ValueError("must request at least one item")
 
@@ -74,7 +80,14 @@ def first_n_items(array, n_desired):
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
         array = array[indexer]
-    return np.asarray(array).flat[:n_desired]
+
+    # We pass variable objects in to handle indexing
+    # with indexer above. It would not work with our
+    # lazy indexing classes at the moment, so we cannot
+    # pass Variable._data
+    if isinstance(array, Variable):
+        array = array._data
+    return np.ravel(to_duck_array(array))[:n_desired]
 
 
 def last_n_items(array, n_desired):
@@ -83,13 +96,22 @@ def last_n_items(array, n_desired):
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
     # of our way to get them in a single call to __getitem__ using only slices.
+    from xarray.core.variable import Variable
+
     if (n_desired == 0) or (array.size == 0):
         return []
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
         array = array[indexer]
-    return np.asarray(array).flat[-n_desired:]
+
+    # We pass variable objects in to handle indexing
+    # with indexer above. It would not work with our
+    # lazy indexing classes at the moment, so we cannot
+    # pass Variable._data
+    if isinstance(array, Variable):
+        array = array._data
+    return np.ravel(to_duck_array(array))[-n_desired:]
 
 
 def last_item(array):
@@ -99,7 +121,8 @@ def last_item(array):
         return []
 
     indexer = (slice(-1, None),) * array.ndim
-    return np.ravel(np.asarray(array[indexer])).tolist()
+    # to_numpy since dask doesn't support tolist
+    return np.ravel(to_numpy(array[indexer])).tolist()
 
 
 def calc_max_rows_first(max_rows: int) -> int:
@@ -156,6 +179,8 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     if isinstance(x, (np.timedelta64, timedelta)):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
+        if hasattr(x, "dtype"):
+            x = x.item()
         return repr(x) if quote_strings else x
     elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
         return f"{x.item():.4}"
@@ -165,10 +190,10 @@ def format_item(x, timedelta_format=None, quote_strings=True):
 
 def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
-    x = np.asarray(x)
+    x = to_duck_array(x)
     timedelta_format = "datetime"
     if np.issubdtype(x.dtype, np.timedelta64):
-        x = np.asarray(x, dtype="timedelta64[ns]")
+        x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
@@ -398,7 +423,7 @@ attrs_repr = functools.partial(
 )
 
 
-def coords_repr(coords, col_width=None, max_rows=None):
+def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     return _mapping_repr(
@@ -412,7 +437,7 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index, max_width=None):
+def inline_index_repr(index: pd.Index, max_width=None):
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
@@ -424,20 +449,36 @@ def inline_index_repr(index, max_width=None):
 
 
 def summarize_index(
-    name: Hashable, index, col_width: int, max_width: int | None = None
-):
+    names: tuple[Hashable, ...],
+    index,
+    col_width: int,
+    max_width: int | None = None,
+) -> str:
     if max_width is None:
         max_width = OPTIONS["display_width"]
 
-    preformatted = pretty_print(f"    {name} ", col_width)
+    def prefixes(length: int) -> list[str]:
+        if length in (0, 1):
+            return [" "]
 
-    index_width = max_width - len(preformatted)
+        return ["┌"] + ["│"] * max(length - 2, 0) + ["└"]
+
+    preformatted = [
+        pretty_print(f"  {prefix} {name}", col_width)
+        for prefix, name in zip(prefixes(len(names)), names)
+    ]
+
+    head, *tail = preformatted
+    index_width = max_width - len(head)
     repr_ = inline_index_repr(index, max_width=index_width)
-    return preformatted + repr_
+    return "\n".join([head + repr_] + [line.rstrip() for line in tail])
 
 
-def nondefault_indexes(indexes):
+def filter_nondefault_indexes(indexes, filter_indexes: bool):
     from xarray.core.indexes import PandasIndex, PandasMultiIndex
+
+    if not filter_indexes:
+        return indexes
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -448,7 +489,9 @@ def nondefault_indexes(indexes):
     }
 
 
-def indexes_repr(indexes, col_width=None, max_rows=None):
+def indexes_repr(indexes, max_rows: int | None = None) -> str:
+    col_width = _calculate_col_width(chain.from_iterable(indexes))
+
     return _mapping_repr(
         indexes,
         "Indexes",
@@ -560,12 +603,9 @@ def limit_lines(string: str, *, limit: int):
 def short_array_repr(array):
     from xarray.core.common import AbstractArray
 
-    if isinstance(array, ExplicitlyIndexed):
-        array = array.get_duck_array()
-    elif isinstance(array, AbstractArray):
+    if isinstance(array, AbstractArray):
         array = array.data
-    if not is_duck_array(array):
-        array = np.asarray(array)
+    array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -592,11 +632,17 @@ def short_data_repr(array):
         return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
-    elif array._in_memory:
+    elif getattr(array, "_in_memory", None):
         return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
+
+
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
 
 
 @recursive_repr("<recursive array>")
@@ -643,15 +689,13 @@ def array_repr(arr):
         display_default_indexes = _get_boolean_with_default(
             "display_default_indexes", False
         )
-        if display_default_indexes:
-            xindexes = arr.xindexes
-        else:
-            xindexes = nondefault_indexes(arr.xindexes)
+
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
 
         if xindexes:
-            summary.append(
-                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
-            )
+            summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
@@ -682,12 +726,11 @@ def dataset_repr(ds):
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
-    if display_default_indexes:
-        xindexes = ds.xindexes
-    else:
-        xindexes = nondefault_indexes(ds.xindexes)
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
     if xindexes:
-        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
+        summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))

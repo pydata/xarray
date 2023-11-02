@@ -61,27 +61,29 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("datastore", "dtype", "shape", "variable_name")
+    __slots__ = ("datastore", "dtype", "shape", "variable_name", "_array")
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
 
-        array = self.get_array()
-        self.shape = array.shape
+        # some callers attempt to evaluate an array if an `array` property exists on the object.
+        # we prefix with _ to avoid this inference.
+        self._array = self.datastore.zarr_group[self.variable_name]
+        self.shape = self._array.shape
 
         # preserve vlen string object dtype (GH 7328)
-        if array.filters is not None and any(
-            [filt.codec_id == "vlen-utf8" for filt in array.filters]
+        if self._array.filters is not None and any(
+            [filt.codec_id == "vlen-utf8" for filt in self._array.filters]
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
-            dtype = array.dtype
+            dtype = self._array.dtype
 
         self.dtype = dtype
 
     def get_array(self):
-        return self.datastore.zarr_group[self.variable_name]
+        return self._array
 
     def _oindex(self, key):
         return self.get_array().oindex[key]
@@ -368,6 +370,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_synchronizer",
         "_write_region",
         "_safe_chunks",
+        "_write_empty",
     )
 
     @classmethod
@@ -386,6 +389,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
         zarr_version=None,
+        write_empty: bool | None = None,
     ):
         import zarr
 
@@ -457,6 +461,7 @@ class ZarrStore(AbstractWritableDataStore):
             append_dim,
             write_region,
             safe_chunks,
+            write_empty,
         )
 
     def __init__(
@@ -467,6 +472,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        write_empty: bool | None = None,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -477,6 +483,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._append_dim = append_dim
         self._write_region = write_region
         self._safe_chunks = safe_chunks
+        self._write_empty = write_empty
 
     @property
     def ds(self):
@@ -648,6 +655,8 @@ class ZarrStore(AbstractWritableDataStore):
             dimensions.
         """
 
+        import zarr
+
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -665,7 +674,14 @@ class ZarrStore(AbstractWritableDataStore):
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
                 # and append_dim.
-                zarr_array = self.zarr_group[name]
+                if self._write_empty is not None:
+                    zarr_array = zarr.open(
+                        store=self.zarr_group.store,
+                        path=f"{self.zarr_group.name}/{name}",
+                        write_empty_chunks=self._write_empty,
+                    )
+                else:
+                    zarr_array = self.zarr_group[name]
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -679,8 +695,25 @@ class ZarrStore(AbstractWritableDataStore):
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
+
+                if self._write_empty is not None:
+                    if (
+                        "write_empty_chunks" in encoding
+                        and encoding["write_empty_chunks"] != self._write_empty
+                    ):
+                        raise ValueError(
+                            'Differing "write_empty_chunks" values in encoding and parameters'
+                            f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
+                        )
+                    else:
+                        encoding["write_empty_chunks"] = self._write_empty
+
                 zarr_array = self.zarr_group.create(
-                    name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
+                    name,
+                    shape=shape,
+                    dtype=dtype,
+                    fill_value=fill_value,
+                    **encoding,
                 )
                 zarr_array = _put_attrs(zarr_array, encoded_attrs)
 

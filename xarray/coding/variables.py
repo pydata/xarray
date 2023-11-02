@@ -179,10 +179,10 @@ def safe_setitem(dest, key: Hashable, value, name: T_Name = None):
     if key in dest:
         var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
-            "failed to prevent overwriting existing key {} in attrs{}. "
+            f"failed to prevent overwriting existing key {key} in attrs{var_str}. "
             "This is probably an encoding field used by xarray to describe "
             "how a variable is serialized. To proceed, remove this key from "
-            "the variable's attributes manually.".format(key, var_str)
+            "the variable's attributes manually."
         )
     dest[key] = value
 
@@ -215,6 +215,34 @@ def _apply_mask(
     return np.where(condition, decoded_fill_value, data)
 
 
+def _is_time_like(units):
+    # test for time-like
+    if units is None:
+        return False
+    time_strings = [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
+    units = str(units)
+    # to prevent detecting units like `days accumulated` as time-like
+    # special casing for datetime-units and timedelta-units (GH-8269)
+    if "since" in units:
+        from xarray.coding.times import _unpack_netcdf_time_units
+
+        try:
+            _unpack_netcdf_time_units(units)
+        except ValueError:
+            return False
+        return True
+    else:
+        return any(tstr == units for tstr in time_strings)
+
+
 class CFMaskCoder(VariableCoder):
     """Mask or unmask fill values according to CF conventions."""
 
@@ -236,19 +264,32 @@ class CFMaskCoder(VariableCoder):
                 f"Variable {name!r} has conflicting _FillValue ({fv}) and missing_value ({mv}). Cannot encode data."
             )
 
+        # special case DateTime to properly handle NaT
+        is_time_like = _is_time_like(attrs.get("units"))
+
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
-                data = duck_array_ops.fillna(data, fill_value)
+                if is_time_like and data.dtype.kind in "iu":
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
 
         if mv_exists:
             # Ensure missing_value is cast to same dtype as data's
             encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and not fv_exists:
-                data = duck_array_ops.fillna(data, fill_value)
+                if is_time_like and data.dtype.kind in "iu":
+                    data = duck_array_ops.where(
+                        data != np.iinfo(np.int64).min, data, fill_value
+                    )
+                else:
+                    data = duck_array_ops.fillna(data, fill_value)
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
@@ -275,7 +316,13 @@ class CFMaskCoder(VariableCoder):
                     stacklevel=3,
                 )
 
-            dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
+            # special case DateTime to properly handle NaT
+            dtype: np.typing.DTypeLike
+            decoded_fill_value: Any
+            if _is_time_like(attrs.get("units")) and data.dtype.kind in "iu":
+                dtype, decoded_fill_value = np.int64, np.iinfo(np.int64).min
+            else:
+                dtype, decoded_fill_value = dtypes.maybe_promote(data.dtype)
 
             if encoded_fill_values:
                 transform = partial(

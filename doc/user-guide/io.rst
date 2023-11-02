@@ -115,10 +115,7 @@ you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
 
 There may be minor differences in the :py:class:`Dataset` object returned
-when reading a NetCDF file with different engines. For example,
-single-valued attributes are returned as scalars by the default
-``engine=netcdf4``, but as arrays of size ``(1,)`` when reading with
-``engine=h5netcdf``.
+when reading a NetCDF file with different engines.
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
@@ -263,12 +260,12 @@ Note that all operations that manipulate variables other than indexing
 will remove encoding information.
 
 In some cases it is useful to intentionally reset a dataset's original encoding values.
-This can be done with either the :py:meth:`Dataset.reset_encoding` or
-:py:meth:`DataArray.reset_encoding` methods.
+This can be done with either the :py:meth:`Dataset.drop_encoding` or
+:py:meth:`DataArray.drop_encoding` methods.
 
 .. ipython:: python
 
-    ds_no_encoding = ds_disk.reset_encoding()
+    ds_no_encoding = ds_disk.drop_encoding()
     ds_no_encoding.encoding
 
 .. _combining multiple files:
@@ -559,6 +556,67 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
   Note that this produces a file that is likely to be not readable by other netCDF
   libraries!
 
+.. _io.hdf5:
+
+HDF5
+----
+`HDF5`_ is both a file format and a data model for storing information. HDF5 stores
+data hierarchically, using groups to create a nested structure. HDF5 is a more
+general version of the netCDF4 data model, so the nested structure is one of many
+similarities between the two data formats.
+
+Reading HDF5 files in xarray requires the ``h5netcdf`` engine, which can be installed
+with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 files:
+
+.. code:: python
+
+    xr.open_dataset("/path/to/my/file.h5")
+
+The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the
+same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
+
+.. ipython:: python
+
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 5))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": pd.date_range("2000-01-01", periods=5),
+            "z": ("x", list("abcd")),
+        },
+    )
+
+    ds.to_netcdf("saved_on_disk.h5")
+
+Groups
+~~~~~~
+
+If you have multiple or highly nested groups, xarray by default may not read the group
+that you want. A particular group of an HDF5 file can be specified using the ``group``
+argument:
+
+.. code:: python
+
+    xr.open_dataset("/path/to/my/file.h5", group="/my/group")
+
+While xarray cannot interrogate an HDF5 file to determine which groups are available,
+the HDF5 Python reader `h5py`_ can be used instead.
+
+Natively the xarray data structures can only handle one level of nesting, organized as
+DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
+can only access one group and a time and will need to specify group names.
+
+.. note::
+
+    For native handling of multiple HDF5 groups with xarray, including I/O, you might be
+    interested in the experimental
+    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
+
+.. _HDF5: https://hdfgroup.github.io/hdf5/index.html
+.. _h5py: https://www.h5py.org/
+
+
 .. _io.zarr:
 
 Zarr
@@ -761,7 +819,7 @@ with ``mode='a'`` on a Dataset containing the new variables, passing in an
 existing Zarr store or path to a Zarr store.
 
 To resize and then append values along an existing dimension in a store, set
-``append_dim``. This is a good option if data always arives in a particular
+``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
 .. ipython:: python
