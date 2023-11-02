@@ -60,7 +60,7 @@ _DimsLike = Union[str, Iterable[_Dim]]
 # TODO: np.array_api doesn't allow None for some reason, maybe they're
 # recommending to use expand_dims?
 _IndexKey = Union[int, slice, "ellipsis"]
-_IndexKeys = tuple[Union[_IndexKey, None], ...]
+_IndexKeys = tuple[Union[_IndexKey], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
@@ -106,18 +106,20 @@ class _arrayfunction(
     """
 
     @overload
-    def __getitem__(self, key: _IndexKeyLike) -> Any:
+    def __getitem__(
+        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...], /
+    ) -> _arrayfunction[Any, _DType_co]:
         ...
 
     @overload
-    def __getitem__(
-        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...]
-    ) -> _arrayfunction[Any, _DType_co]:
+    def __getitem__(self, key: _IndexKeyLike, /) -> Any:
         ...
 
     def __getitem__(
         self,
-        key: _IndexKeyLike | _arrayfunction[Any, Any],
+        key: _IndexKeyLike
+        | _arrayfunction[Any, Any]
+        | tuple[_arrayfunction[Any, Any], ...],
         /,
     ) -> _arrayfunction[Any, _DType_co] | Any:
         ...
@@ -174,25 +176,11 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
     Corresponds to np.ndarray.
     """
 
-    # TODO: Only integer _arrayapi:
-    # def __getitem__(
-    #     self,
-    #     key: Union[
-    #         int,
-    #         slice,
-    #         "ellipsis",
-    #         tuple[Union[int, slice, "ellipsis", None], ...],
-    #         _arrayapi[Any, Any],
-    #     ],
-    #     /,
-    # ) -> _arrayapi[Any, _DType_co]:
-    #     ...
-
     def __getitem__(
         self,
-        key: Any,
+        key: _IndexKeyLike | Any,  # TODO: Any should be _arrayapi
         /,
-    ) -> _arrayapi[Any, _DType_co]:
+    ) -> _arrayapi[Any, Any]:
         ...
 
     def __array_namespace__(self) -> ModuleType:
