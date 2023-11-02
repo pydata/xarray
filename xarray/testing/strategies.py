@@ -1,15 +1,12 @@
 from collections.abc import Hashable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Protocol, Union
+from typing import Any, Protocol, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 
 import xarray as xr
-
-if TYPE_CHECKING:
-    from xarray.core.types import T_DuckArray
-
+from xarray.core.types import T_DuckArray
 
 __all__ = [
     "numeric_dtypes",
