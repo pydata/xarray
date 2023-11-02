@@ -810,9 +810,9 @@ def _diff_mapping_repr(
                 b_attrs = b_mapping[k].attrs
 
                 attrs_to_print = set(a_attrs) ^ set(b_attrs)
-                for attr in set(a_attrs) & set(b_attrs):
-                    if a_attrs[attr] != b_attrs[attr]:
-                        attrs_to_print.update([attr])
+                attrs_to_print.update(
+                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
                         summarize_attr(ak, av)
