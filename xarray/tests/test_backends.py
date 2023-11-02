@@ -2803,7 +2803,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         )
 
         if has_dask:
-            ds["test"] = ds["test"].chunk((1, 1, 1))
+            ds["test"] = ds["test"].chunk(1)
             encoding = None
         else:
             encoding = {"test": {"chunks": (1, 1, 1)}}

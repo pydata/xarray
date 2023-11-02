@@ -22,7 +22,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 dependencies = [
-  "numpy>=1.21",
+  "numpy>=1.22",
   "packaging>=21.3",
   "pandas>=1.4",
 ]
@@ -38,7 +38,7 @@ source-code = "https://github.com/pydata/xarray"
 dask = "xarray.core.daskmanager:DaskManager"
 
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox"]
+accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
 complete = ["xarray[accel,io,parallel,viz]"]
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
 parallel = ["dask[complete]"]
@@ -106,6 +106,7 @@ module = [
   "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
+  "opt_einsum.*",
   "pandas.*",
   "pooch.*",
   "PseudoNetCDF.*",
@@ -209,7 +210,9 @@ defineConstant = {DEBUG = true}
 # stubPath = "src/stubs"
 # venv = "env367"
 
-reportMissingImports = true
+# Enabling this means that developers who have disabled the warning locally —
+# because not all dependencies are installable — are overridden
+# reportMissingImports = true
 reportMissingTypeStubs = false
 
 # pythonVersion = "3.6"

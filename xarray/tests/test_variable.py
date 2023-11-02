@@ -617,7 +617,7 @@ class VariableSubclassobjects(ABC):
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
-            orig.copy(data=new_data)
+            orig.copy(data=new_data)  # type: ignore[arg-type]
 
     def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
@@ -2663,7 +2663,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
     def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
-        ).chunk(((1, 1), (2,)))
+        ).chunk(dict(x=(1, 1), y=(2,)))
 
         def check(actual, expect_dtype, expect_values):
             assert actual.dtype == expect_dtype

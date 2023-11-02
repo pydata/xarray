@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -28,12 +28,13 @@ from xarray.core.indexing import (
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.core.pycompat import (
-    array_type,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
     is_duck_dask_array,
+    to_numpy,
 )
+from xarray.core.types import T_Chunks
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -368,6 +369,25 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         self._encoding = None
         if encoding is not None:
             self.encoding = encoding
+
+    def _new(
+        self,
+        dims=_default,
+        data=_default,
+        attrs=_default,
+    ):
+        dims_ = copy.copy(self._dims) if dims is _default else dims
+
+        if attrs is _default:
+            attrs_ = None if self._attrs is None else self._attrs.copy()
+        else:
+            attrs_ = attrs
+
+        if data is _default:
+            return type(self)(dims_, copy.copy(self._data), attrs_)
+        else:
+            cls_ = type(self)
+            return cls_(dims_, data, attrs_)
 
     @property
     def _in_memory(self):
@@ -905,16 +925,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 ndata = data_old
             else:
                 # don't share caching between copies
-                ndata = indexing.MemoryCachedArray(data_old.array)
+                # TODO: MemoryCachedArray doesn't match the array api:
+                ndata = indexing.MemoryCachedArray(data_old.array)  # type: ignore[assignment]
 
             if deep:
                 ndata = copy.deepcopy(ndata, memo)
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -945,13 +966,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(
         self,
-        chunks: (
-            int
-            | Literal["auto"]
-            | tuple[int, ...]
-            | tuple[tuple[int, ...], ...]
-            | Mapping[Any, None | int | tuple[int, ...]]
-        ) = {},
+        chunks: T_Chunks = {},
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
@@ -1054,7 +1069,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # Using OuterIndexer is a pragmatic choice: dask does not yet handle
                 # different indexing types in an explicit way:
                 # https://github.com/dask/dask/issues/2883
-                ndata = indexing.ImplicitToExplicitIndexingAdapter(
+                # TODO: ImplicitToExplicitIndexingAdapter doesn't match the array api:
+                ndata = indexing.ImplicitToExplicitIndexingAdapter(  # type: ignore[assignment]
                     data_old, indexing.OuterIndexer
                 )
 
@@ -1072,22 +1088,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def to_numpy(self) -> np.ndarray:
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
-        data = self.data
-
-        # TODO first attempt to call .to_numpy() once some libraries implement it
-        if hasattr(data, "chunks"):
-            chunkmanager = get_chunked_array_type(data)
-            data, *_ = chunkmanager.compute(data)
-        if isinstance(data, array_type("cupy")):
-            data = data.get()
-        # pint has to be imported dynamically as pint imports xarray
-        if isinstance(data, array_type("pint")):
-            data = data.magnitude
-        if isinstance(data, array_type("sparse")):
-            data = data.todense()
-        data = np.asarray(data)
-
-        return data
+        return to_numpy(self._data)
 
     def as_numpy(self) -> Self:
         """Coerces wrapped data into a numpy array, returning a Variable."""
@@ -2161,7 +2162,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     raise ValueError(
                         f"Expected {name}={arg!r} to be a scalar like 'dim'."
                     )
-            dim = [dim]
+            dim = (dim,)
 
         # dim is now a list
         nroll = len(dim)
@@ -2192,7 +2193,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pads[d] = (win - 1, 0)
 
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
-        axis = tuple(self.get_axis_num(d) for d in dim)
+        axis = self.get_axis_num(dim)
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
@@ -2365,18 +2366,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         )
 
     @property
-    def real(self):
-        """
-        The real part of the variable.
-
-        See Also
-        --------
-        numpy.ndarray.real
-        """
-        return self._replace(data=self.data.real)
-
-    @property
-    def imag(self):
+    def imag(self) -> Variable:
         """
         The imaginary part of the variable.
 
@@ -2384,7 +2374,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self.data.imag)
+        return self._new(data=self.data.imag)
+
+    @property
+    def real(self) -> Variable:
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._new(data=self.data.real)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
@@ -2594,6 +2595,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
+    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
+        """
+        Use sparse-array as backend.
+        """
+        from xarray.namedarray.utils import _default as _default_named
+
+        if sparse_format is _default:
+            sparse_format = _default_named
+
+        if fill_value is _default:
+            fill_value = _default_named
+
+        out = super()._as_sparse(sparse_format, fill_value)
+        return cast("Variable", out)
+
+    def _to_dense(self) -> Variable:
+        """
+        Change backend from sparse to np.array.
+        """
+        out = super()._to_dense()
+        return cast("Variable", out)
+
 
 class IndexVariable(Variable):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
@@ -2607,6 +2630,9 @@ class IndexVariable(Variable):
     """
 
     __slots__ = ()
+
+    # TODO: PandasIndexingAdapter doesn't match the array api:
+    _data: PandasIndexingAdapter  # type: ignore[assignment]
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
@@ -2756,9 +2782,9 @@ class IndexVariable(Variable):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:
+            if self.shape != ndata.shape:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
                 )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
