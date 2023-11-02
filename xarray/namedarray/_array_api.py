@@ -8,13 +8,17 @@ import numpy as np
 
 from xarray.namedarray._typing import (
     _arrayapi,
+    _Axis,
     _AxisLike,
+    _Dim,
     _Dims,
     _DType,
     _ScalarType,
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
+    Default,
+    _default,
 )
 from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
 
@@ -148,6 +152,52 @@ def real(
     return out
 
 
+# %% Manipulation functions
+def expand_dims(
+    x: NamedArray[Any, _DType],
+    /,
+    *,
+    dims: _Dim | Default = _default,
+    axis: _Axis | None = None,
+) -> NamedArray[Any, _DType]:
+    """
+    Expands the shape of an array by inserting a new dimension of size one at the
+    position specified by dims.
+
+    Parameters
+    ----------
+    x :
+        Array to expand.
+    dims :
+        Dimension name. New dimension will be stored in the 0 position.
+    axis :
+        Axis position (zero-based). If x has rank (i.e, number of dimensions) N,
+        a valid axis must reside on the closed-interval [-N-1, N]. If provided a
+        negative axis, the axis position at which to insert a singleton dimension
+        must be computed as N + axis + 1. Hence, if provided -1, the resolved axis
+        position must be N (i.e., a singleton dimension must be appended to the
+        input array x). If provided -N-1, the resolved axis position must be 0
+        (i.e., a singleton dimension must be prepended to the input array x).
+
+    Returns
+    -------
+        out :
+            An expanded output array having the same data type as x.
+
+    Examples
+    --------
+    >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
+    >>> expand_dims(x, dims="new_dim")
+    <xarray.NamedArray (new_dim: 1, x: 2, y: 2)>
+    Array([[[1., 2.],
+            [3., 4.]]], dtype=float64)
+    """
+    xp = _get_data_namespace(x)
+    dims_new = (dims,) + x.dims
+    out = x._new(dims=dims_new, data=xp.expand_dims(x._data, axis=0))
+    return out
+
+
 # %% Statistical Functions
 
 
@@ -155,7 +205,7 @@ def mean(
     x: NamedArray[Any, _DType],
     /,
     *,
-    dims: _Dims | None = None,
+    dims: _Dims | Default = _default,
     keepdims: bool = False,
     axis: _AxisLike | None = None,
 ) -> NamedArray[Any, _DType]:
@@ -218,7 +268,7 @@ def mean(
     return out
 
 
-# if __name__ == "__main__":
-#     import doctest
+if __name__ == "__main__":
+    import doctest
 
-#     doctest.testmod()
+    doctest.testmod()
