@@ -8,7 +8,6 @@ pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import given
-from hypothesis.errors import InvalidArgument
 
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
@@ -98,39 +97,18 @@ class TestVariablesStrategy:
         assert isinstance(var, Variable)
 
     @given(st.data())
-    def test_given_fixed_dims_list_and_fixed_data(self, data):
-        dims = ["x", "y"]
-        arr = np.asarray([[1, 2], [3, 4]])
-        var = data.draw(variables(dims=st.just(dims), data=st.just(arr)))
+    def test_given_incorrect_types(self, data):
+        with pytest.raises(TypeError, match="SearchStrategy object"):
+            data.draw(variables(dims=["x", "y"]))
 
-        assert list(var.dims) == dims
-        npt.assert_equal(var.data, arr)
+        with pytest.raises(TypeError, match="SearchStrategy object"):
+            data.draw(variables(dtype=np.dtype("int32")))
 
-    @given(st.data())
-    def test_given_arbitrary_dims_list_and_arbitrary_data(self, data):
-        arrs = np_arrays(shape=(2, 3))
-        dims = dimension_names(min_dims=2, max_dims=2)
-        var = data.draw(variables(data=arrs, dims=dims))
-        assert var.shape == (2, 3)
+        with pytest.raises(TypeError, match="SearchStrategy object"):
+            data.draw(variables(attrs=dict()))
 
-        dims = dimension_names(min_dims=3)
-        with pytest.raises(InvalidArgument):
-            data.draw(variables(data=arrs, dims=dims))
-
-    @given(st.data())
-    def test_given_fixed_data(self, data):
-        arr = np.asarray([[1, 2], [3, 4]])
-        var = data.draw(variables(data=st.just(arr)))
-
-        npt.assert_equal(var.data, arr)
-
-    @given(st.data())
-    def test_given_arbitrary_data(self, data):
-        shape = (2, 3)
-        arrs = np_arrays(shape=shape)
-        var = data.draw(variables(data=arrs))
-
-        assert var.data.shape == shape
+        with pytest.raises(TypeError, match="Callable"):
+            data.draw(variables(array_strategy_fn=np.array([0])))
 
     @given(st.data())
     def test_given_fixed_dims_list(self, data):
@@ -155,8 +133,58 @@ class TestVariablesStrategy:
         assert var.shape == (3, 4)
 
     @given(st.data())
-    def test_given_fixed_sizes_and_arbitrary_data(self, data):
-        arrs = np_arrays(shape=(2, 3))
-        var = data.draw(variables(data=arrs, dims=st.just({"x": 2, "y": 3})))
+    def test_given_fixed_dtype(self, data):
+        var = data.draw(variables(dtype=st.just(np.dtype("int32"))))
 
-        assert var.shape == (2, 3)
+        assert var.dtype == np.dtype("int32")
+
+    @given(st.data())
+    def test_given_fixed_data(self, data):
+        arr = np.asarray([[1, 2], [3, 4]])
+
+        def fixed_array_strategy_fn(*, shape=None, dtype=None):
+            return st.just(arr)
+
+        var = data.draw(
+            variables(
+                array_strategy_fn=fixed_array_strategy_fn, dtype=st.just(arr.dtype)
+            )
+        )
+
+        npt.assert_equal(var.data, arr)
+        assert var.dtype == arr.dtype
+
+    @given(st.data())
+    def test_given_fixed_dims_and_fixed_data(self, data):
+        dims = {"x": 2, "y": 2}
+        arr = np.asarray([[1, 2], [3, 4]])
+
+        def fixed_array_strategy_fn(*, shape=None, dtype=None):
+            return st.just(arr)
+
+        var = data.draw(
+            variables(
+                array_strategy_fn=fixed_array_strategy_fn,
+                dims=st.just(dims),
+                dtype=st.just(arr.dtype),
+            )
+        )
+
+        assert var.sizes == dims
+        npt.assert_equal(var.data, arr)
+
+    @given(st.data())
+    def test_given_fixed_shape_arbitrary_dims_and_arbitrary_data(self, data):
+        dims = dimension_names(min_dims=2, max_dims=2)
+
+        def fixed_shape_array_strategy_fn(*, shape=None, dtype=None):
+            return np_arrays(shape=shape, dtype=dtype)
+
+        var = data.draw(
+            variables(
+                array_strategy_fn=fixed_shape_array_strategy_fn,
+                dims=dims,
+            )
+        )
+
+        assert var.ndim == 2
