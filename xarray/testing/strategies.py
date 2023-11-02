@@ -286,7 +286,7 @@ def variables(
     <xarray.Variable (c: 3, d: 1)>
     array([[ 0.,  1.,  2.],
            [ 3.,  4.,  5.]], dtype=float32)
-    >>> cupy_da.data.device
+    >>> cupy_da.data.device  # doctest: +SKIP
     <CUDA Device 0>
     """
 
