@@ -22,7 +22,6 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import (
     NamedArray,
-    _assert_either_dim_or_axis,
     _dims_to_axis,
     _get_remaining_dims,
 )
