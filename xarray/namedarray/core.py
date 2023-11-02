@@ -109,6 +109,13 @@ def _normalize_dimensions(dims: _DimsLike) -> _Dims:
     return tuple(dims)
 
 
+def _assert_either_dim_or_axis(
+    dims: _Dim | _Dims | Default, axis: _AxisLike | None
+) -> None:
+    if dims is not _default and axis is not None:
+        raise ValueError("cannot supply both 'axis' and 'dim(s)' arguments")
+
+
 def _dims_to_axis(
     x: NamedArray[Any, Any], dims: _Dim | _Dims | Default, axis: _AxisLike | None
 ) -> _AxisLike | None:
@@ -124,8 +131,7 @@ def _dims_to_axis(
     (0,)
     >>> _dims_to_axis(narr, None, None)
     """
-    if dims is not _default and axis is not None:
-        raise ValueError("cannot supply both 'axis' and 'dim' arguments")
+    _assert_either_dim_or_axis(dims, axis)
 
     if dims is not _default:
         return x._dims_to_axes(dims)

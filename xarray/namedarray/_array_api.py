@@ -20,7 +20,12 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.core import NamedArray, _dims_to_axis, _get_remaining_dims
+from xarray.namedarray.core import (
+    NamedArray,
+    _assert_either_dim_or_axis,
+    _dims_to_axis,
+    _get_remaining_dims,
+)
 
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -157,8 +162,8 @@ def expand_dims(
     x: NamedArray[Any, _DType],
     /,
     *,
-    dims: _Dim | Default = _default,
-    axis: _Axis | None = None,
+    dim: _Dim | Default = _default,
+    axis: _Axis = 0,
 ) -> NamedArray[Any, _DType]:
     """
     Expands the shape of an array by inserting a new dimension of size one at the
@@ -168,7 +173,7 @@ def expand_dims(
     ----------
     x :
         Array to expand.
-    dims :
+    dim :
         Dimension name. New dimension will be stored in the 0 position.
     axis :
         Axis position (zero-based). If x has rank (i.e, number of dimensions) N,
@@ -193,8 +198,9 @@ def expand_dims(
             [3., 4.]]], dtype=float64)
     """
     xp = _get_data_namespace(x)
-    dims_new = (dims,) + x.dims
-    out = x._new(dims=dims_new, data=xp.expand_dims(x._data, axis=0))
+    d = list(x.dims)
+    d.insert(axis, dim)
+    out = x._new(dims=tuple(d), data=xp.expand_dims(x._data, axis=axis))
     return out
 
 
