@@ -1,12 +1,15 @@
 from collections.abc import Hashable, Mapping, Sequence
-from typing import Any, Protocol, Union
+from typing import TYPE_CHECKING, Any, Protocol, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 
 import xarray as xr
-from xarray.core.types import T_DuckArray
+
+if TYPE_CHECKING:
+    from xarray.core.types import T_DuckArray
+
 
 __all__ = [
     "numeric_dtypes",
@@ -190,7 +193,8 @@ def variables(
     *,
     array_strategy_fn: Union[ArrayStrategyFn, None] = None,
     dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]], None
+        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
+        None,
     ] = None,
     dtype: st.SearchStrategy[np.dtype] = numeric_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
@@ -320,7 +324,7 @@ def variables(
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        elif isinstance(_dims, Mapping):
+        elif isinstance(_dims, (Mapping, dict)):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)

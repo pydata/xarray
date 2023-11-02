@@ -115,16 +115,16 @@ class TestVariablesStrategy:
     @given(st.data())
     def test_given_incorrect_types(self, data):
         with pytest.raises(TypeError, match="SearchStrategy object"):
-            data.draw(variables(dims=["x", "y"]))
+            data.draw(variables(dims=["x", "y"]))  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match="SearchStrategy object"):
-            data.draw(variables(dtype=np.dtype("int32")))
+            data.draw(variables(dtype=np.dtype("int32")))  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match="SearchStrategy object"):
-            data.draw(variables(attrs=dict()))
+            data.draw(variables(attrs=dict()))  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match="Callable"):
-            data.draw(variables(array_strategy_fn=np.array([0])))
+            data.draw(variables(array_strategy_fn=np.array([0])))  # type: ignore[arg-type]
 
     @given(st.data())
     def test_given_fixed_dims_list(self, data):
@@ -143,7 +143,7 @@ class TestVariablesStrategy:
     @given(st.data())
     def test_given_fixed_sizes(self, data):
         dims = {"x": 3, "y": 4}
-        var = data.draw(variables(dims=st.just(dims)))
+        var = data.draw(variables(dims=st.just(dims)))  # type: ignore[arg-type]
 
         assert var.dims == ("x", "y")
         assert var.shape == (3, 4)
@@ -163,7 +163,7 @@ class TestVariablesStrategy:
 
         var = data.draw(
             variables(
-                array_strategy_fn=fixed_array_strategy_fn, dtype=st.just(arr.dtype)
+                array_strategy_fn=fixed_array_strategy_fn, dtype=st.just(arr.dtype)  # type: ignore[arg-type]
             )
         )
 
@@ -181,7 +181,7 @@ class TestVariablesStrategy:
         var = data.draw(
             variables(
                 array_strategy_fn=fixed_array_strategy_fn,
-                dims=st.just(dims),
+                dims=st.just(dims),  # type: ignore[arg-type]
                 dtype=st.just(arr.dtype),
             )
         )
