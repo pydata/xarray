@@ -1,12 +1,12 @@
 from collections.abc import Hashable, Mapping, Sequence
-from typing import Any, Union
+from typing import Any, Protocol, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
-from hypothesis.errors import InvalidArgument
 
 import xarray as xr
+from xarray.core.types import T_DuckArray
 
 __all__ = [
     "numeric_dtypes",
@@ -16,6 +16,13 @@ __all__ = [
     "attrs",
     "variables",
 ]
+
+
+class ArrayStrategyFn(Protocol):
+    def __call__(
+        self, *, shape: tuple[int, ...] = None, dtype: np.dtype = None, **kwargs
+    ) -> st.SearchStrategy[T_DuckArray]:
+        ...
 
 
 # required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
@@ -161,32 +168,30 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     )
 
 
-# Is there a way to do this in general?
-# Could make a Protocol...
-T_Array = Any
-
-
 @st.composite
 def variables(
     draw: st.DrawFn,
     *,
-    data: st.SearchStrategy[T_Array] = None,
+    array_strategy_fn: ArrayStrategyFn = None,
     dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
+    dtype: st.SearchStrategy[np.dtype] = numeric_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Variable:
     """
     Generates arbitrary xarray.Variable objects.
 
-    Follows the signature of the xarray.Variable constructor, but you can also pass alternative strategies to generate
-    either numpy-like array data or dimension names.
+    Follows the basic signature of the xarray.Variable constructor, but allows passing alternative strategies to
+    generate either numpy-like array data or dimensions.
 
-    Passing nothing will generate a completely arbitrary Variable (backed by a numpy array).
+    Passing nothing will generate a completely arbitrary Variable (containing a numpy array).
 
     Requires the hypothesis package to be installed.
 
     Parameters
     ----------
-    data: Strategy generating array-likes, optional
+    array_strategy_fn: Callable which returns a strategy generating array-likes, optional
+        Callable must accept shape and dtype kwargs if passed.
+        If array_strategy_fn is not passed then the shapes will be derived from the dims kwarg.
         Default is to generate numpy data of arbitrary shape, values and dtype.
     dims: Strategy for generating the dimensions, optional
         Can either be a strategy for generating a sequence of string dimension names,
@@ -194,7 +199,13 @@ def variables(
         If provided in the former form the lengths of the returned Variable will either be determined from the
         data argument if given or arbitrarily generated if not.
         Default is to generate arbitrary dimension names for each axis in data.
+    dtype: Strategy which generates np.dtype objects, optional
     attrs: Strategy which generates dicts, optional
+
+    Returns
+    -------
+    variable_strategy
+        Strategy for generating xarray.Variable objects.
 
     Raises
     ------
@@ -204,60 +215,39 @@ def variables(
 
     if any(
         not isinstance(arg, st.SearchStrategy) and arg is not None
-        for arg in [data, dims, attrs]
+        for arg in [dims, dtype, attrs]
     ):
         raise TypeError(
             "Contents must be provided as a hypothesis.strategies.SearchStrategy object (or None)."
             "To specify fixed contents, use hypothesis.strategies.just()."
         )
 
-    if data is not None and dims is None:
-        # no dims -> generate dims to match data
-        _data = draw(data)
-        dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
+    if not array_strategy_fn:
+        array_strategy_fn = np_arrays
 
-    elif dims is not None and data is None:
-        # no data -> generate data to match dims
+    if dims is not None:
+        # generate dims first then draw data to match
         _dims = draw(dims)
         if isinstance(_dims, Sequence):
             dim_names = list(_dims)
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
-            _data = draw(np_arrays(shape=draw(valid_shapes)))
+            array_strategy = array_strategy_fn(
+                shape=draw(valid_shapes), dtype=draw(dtype)
+            )
         elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             dim_names, shape = list(_dims.keys()), tuple(_dims.values())
-            _data = draw(np_arrays(shape=shape))
+            array_strategy = array_strategy_fn(shape=shape, dtype=draw(dtype))
         else:
-            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
-
-    elif data is not None and dims is not None:
-        # both data and dims provided -> check drawn examples are compatible
-        _dims = draw(dims)
-        _data = draw(data)
-
-        if isinstance(_dims, Sequence):
-            dim_names = list(_dims)
-            if _data.ndim != len(_dims):
-                raise InvalidArgument(
-                    f"Strategy attempting to generate data with {_data.ndim} dims but {len(_dims)} "
-                    "unique dimension names. Please only pass strategies which are guaranteed to "
-                    "draw compatible examples for data and dims."
-                )
-        elif isinstance(_dims, Mapping):
-            # should be a mapping of form {dim_names: lengths}
-            dim_names, shape = list(_dims.keys()), tuple(_dims.values())
-            if _data.shape != shape:
-                raise InvalidArgument(
-                    f"Strategy attempting to generate data with shape {_data.shape} dims but dimension "
-                    f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
-                    "draw compatible examples for data and dims."
-                )
-        else:
-            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+            raise ValueError(
+                f"Invalid type returned by dims strategy - drew an object of type {type(dims)}"
+            )
+        _data = draw(array_strategy)
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
-        _data = draw(np_arrays())
+        array_strategy = array_strategy_fn(dtype=draw(dtype))
+        _data = draw(array_strategy)
         dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
 
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
