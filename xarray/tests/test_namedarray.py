@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from xarray.namedarray._typing import (
-        _arrayapi,
         _AttrsLike,
         _DimsLike,
         _DType,
