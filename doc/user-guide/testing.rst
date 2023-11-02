@@ -234,7 +234,7 @@ If the array type you want to generate has a top-level namespace (e.g. that whic
 you can use this neat trick:
 
 .. ipython:: python
-    :okexcept:
+    :okwarning:
 
     import numpy.array_api as xp  # available in numpy 1.26.0
 
