@@ -914,9 +914,15 @@ class DataArray(
         self.variable.encoding = dict(value)
 
     def reset_encoding(self) -> Self:
+        warnings.warn(
+            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead"
+        )
+        return self.drop_encoding()
+
+    def drop_encoding(self) -> Self:
         """Return a new DataArray without encoding on the array or any attached
         coords."""
-        ds = self._to_temp_dataset().reset_encoding()
+        ds = self._to_temp_dataset().drop_encoding()
         return self._from_temp_dataset(ds)
 
     @property
@@ -1365,6 +1371,11 @@ class DataArray(
             # ignoring type; unclear why it won't accept a Literal into the value.
             chunks = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
+            utils.emit_user_level_warning(
+                "Supplying chunks as dimension-order tuples is deprecated. "
+                "It will raise an error in the future. Instead use a dict with dimension names as keys.",
+                category=DeprecationWarning,
+            )
             chunks = dict(zip(self.dims, chunks))
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -1865,8 +1876,10 @@ class DataArray(
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> Self:
-        """Conform this object onto the indexes of another object, filling in
-        missing values with ``fill_value``. The default fill value is NaN.
+        """
+        Conform this object onto the indexes of another object, for indexes which the
+        objects share. Missing values are filled with ``fill_value``. The default fill
+        value is NaN.
 
         Parameters
         ----------
@@ -1954,20 +1967,14 @@ class DataArray(
           * x        (x) int64 40 30 20 10
           * y        (y) int64 90 80 70
 
-        Reindexing with the other array having coordinates which the source array doesn't have:
+        Reindexing with the other array having additional coordinates:
 
-        >>> data = np.arange(12).reshape(4, 3)
-        >>> da1 = xr.DataArray(
-        ...     data=data,
-        ...     dims=["x", "y"],
-        ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
-        ... )
-        >>> da2 = xr.DataArray(
+        >>> da3 = xr.DataArray(
         ...     data=data,
         ...     dims=["x", "y"],
         ...     coords={"x": [20, 10, 29, 39], "y": [70, 80, 90]},
         ... )
-        >>> da1.reindex_like(da2)
+        >>> da1.reindex_like(da3)
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 3.,  4.,  5.],
                [ 0.,  1.,  2.],
@@ -1979,7 +1986,7 @@ class DataArray(
 
         Filling missing values with the previous valid index with respect to the coordinates' value:
 
-        >>> da1.reindex_like(da2, method="ffill")
+        >>> da1.reindex_like(da3, method="ffill")
         <xarray.DataArray (x: 4, y: 3)>
         array([[3, 4, 5],
                [0, 1, 2],
@@ -1991,7 +1998,7 @@ class DataArray(
 
         Filling missing values while tolerating specified error for inexact matches:
 
-        >>> da1.reindex_like(da2, method="ffill", tolerance=5)
+        >>> da1.reindex_like(da3, method="ffill", tolerance=5)
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 3.,  4.,  5.],
                [ 0.,  1.,  2.],
@@ -2003,7 +2010,7 @@ class DataArray(
 
         Filling missing values with manually specified values:
 
-        >>> da1.reindex_like(da2, fill_value=19)
+        >>> da1.reindex_like(da3, fill_value=19)
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 3,  4,  5],
                [ 0,  1,  2],
@@ -2013,9 +2020,28 @@ class DataArray(
           * x        (x) int64 20 10 29 39
           * y        (y) int64 70 80 90
 
+        Note that unlike ``broadcast_like``, ``reindex_like`` doesn't create new dimensions:
+
+        >>> da1.sel(x=20)
+        <xarray.DataArray (y: 3)>
+        array([3, 4, 5])
+        Coordinates:
+            x        int64 20
+          * y        (y) int64 70 80 90
+
+        ...so ``b`` in not added here:
+
+        >>> da1.sel(x=20).reindex_like(da1)
+        <xarray.DataArray (y: 3)>
+        array([3, 4, 5])
+        Coordinates:
+            x        int64 20
+          * y        (y) int64 70 80 90
+
         See Also
         --------
         DataArray.reindex
+        DataArray.broadcast_like
         align
         """
         return alignment.reindex_like(
@@ -6292,7 +6318,7 @@ class DataArray(
         >>> def exp_decay(t, time_constant, amplitude):
         ...     return np.exp(-t / time_constant) * amplitude
         ...
-        >>> t = np.linspace(0, 10, 11)
+        >>> t = np.arange(11)
         >>> da = xr.DataArray(
         ...     np.stack(
         ...         [
@@ -6317,7 +6343,7 @@ class DataArray(
                  0.00910995]])
         Coordinates:
           * x        (x) int64 0 1 2
-          * time     (time) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0
+          * time     (time) int64 0 1 2 3 4 5 6 7 8 9 10
 
         Fit the exponential decay function to the data along the ``time`` dimension:
 

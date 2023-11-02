@@ -473,12 +473,12 @@ class VariableSubclassobjects(ABC):
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         encoding1 = {"scale_factor": 1}
         # encoding set via cls constructor
         v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
         assert v1.encoding == encoding1
-        v2 = v1.reset_encoding()
+        v2 = v1.drop_encoding()
         assert v1.encoding == encoding1
         assert v2.encoding == {}
 
@@ -486,7 +486,7 @@ class VariableSubclassobjects(ABC):
         encoding3 = {"scale_factor": 10}
         v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
         assert v3.encoding == encoding3
-        v4 = v3.reset_encoding()
+        v4 = v3.drop_encoding()
         assert v3.encoding == encoding3
         assert v4.encoding == {}
 
@@ -617,7 +617,7 @@ class VariableSubclassobjects(ABC):
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
-            orig.copy(data=new_data)
+            orig.copy(data=new_data)  # type: ignore[arg-type]
 
     def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
@@ -2663,7 +2663,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
     def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
-        ).chunk(((1, 1), (2,)))
+        ).chunk(dict(x=(1, 1), y=(2,)))
 
         def check(actual, expect_dtype, expect_values):
             assert actual.dtype == expect_dtype
@@ -2945,6 +2945,7 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("America/New_York")
         )
@@ -2978,6 +2979,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("America/New_York")
         )

@@ -497,7 +497,7 @@ class TestFormatting:
     def test_array_repr_recursive(self) -> None:
         # GH:issue:7111
 
-        # direct recurion
+        # direct recursion
         var = xr.Variable("x", [0, 1])
         var.attrs["x"] = var
         formatting.array_repr(var)
