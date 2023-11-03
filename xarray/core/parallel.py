@@ -453,10 +453,11 @@ def map_blocks(
         for name, variable in dataset.variables.items():
             # make a task that creates tuple of (dims, chunk)
             if dask.is_dask_collection(variable.data):
-                # recursively index into dask_keys nested list to get chunk
-                chunk = variable.__dask_keys__()
-                for dim in variable.dims:
-                    chunk = chunk[chunk_index[dim]]
+                # get task name for chunk
+                chunk = (
+                    variable.data.name,
+                    *tuple(chunk_index[dim] for dim in variable.dims),
+                )
 
                 chunk_variable_task = (f"{name}-{gname}-{chunk[0]!r}",) + chunk_tuple
                 graph[chunk_variable_task] = (
@@ -484,7 +485,7 @@ def map_blocks(
                 if chunk_variable_task not in graph:
                     graph[chunk_variable_task] = (
                         tuple,
-                        [subset.dims, subset, subset.attrs],
+                        [subset.dims, subset._data, subset.attrs],
                     )
 
             # this task creates dict mapping variable name to above tuple
