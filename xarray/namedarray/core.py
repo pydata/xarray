@@ -41,7 +41,6 @@ if TYPE_CHECKING:
 
     from xarray.core.types import Dims
     from xarray.namedarray._typing import (
-        DuckArray,
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -145,9 +144,9 @@ def _new(
 @overload
 def from_array(
     dims: _DimsLike,
-    data: DuckArray[_ScalarType],
+    data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
-) -> _NamedArray[_ScalarType]:
+) -> NamedArray[_ShapeType, _DType]:
     ...
 
 
@@ -156,15 +155,15 @@ def from_array(
     dims: _DimsLike,
     data: ArrayLike,
     attrs: _AttrsLike = ...,
-) -> _NamedArray[Any]:
+) -> NamedArray[Any, Any]:
     ...
 
 
 def from_array(
     dims: _DimsLike,
-    data: DuckArray[_ScalarType] | ArrayLike,
+    data: duckarray[_ShapeType, _DType] | ArrayLike,
     attrs: _AttrsLike = None,
-) -> _NamedArray[_ScalarType] | _NamedArray[Any]:
+) -> NamedArray[_ShapeType, _DType] | NamedArray[Any, Any]:
     """
     Create a Named array from an array-like object.
 
@@ -185,7 +184,7 @@ def from_array(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
         )
 
-    # TODO: dask.array.ma.masked_array also exists, better way?
+    # TODO: dask.array.ma.MaskedArray also exists, better way?
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
         if mask.any():
