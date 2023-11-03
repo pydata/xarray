@@ -196,9 +196,3 @@ def expand_dims(
     d.insert(axis, dim)
     out = x._new(dims=tuple(d), data=xp.expand_dims(x._data, axis=axis))
     return out
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()
