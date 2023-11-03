@@ -53,8 +53,8 @@ if TYPE_CHECKING:
         _Shape,
         _ShapeType,
         duckarray,
+        Default,
     )
-    from xarray.namedarray.utils import Default
 
     try:
         from dask.typing import (
