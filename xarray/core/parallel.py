@@ -471,13 +471,21 @@ def map_blocks(
                     for dim in variable.dims
                 }
                 subset = variable.isel(subsetter)
+                if name in chunk_index:
+                    # We are including a dimension coordinate,
+                    # minimize duplication by not copying it in the graph for every chunk.
+                    this_var_chunk_tuple = (chunk_index[name],)
+                else:
+                    this_var_chunk_tuple = chunk_tuple
+
                 chunk_variable_task = (
                     f"{name}-{gname}-{dask.base.tokenize(subset)}",
-                ) + chunk_tuple
-                graph[chunk_variable_task] = (
-                    tuple,
-                    [subset.dims, subset, subset.attrs],
-                )
+                ) + this_var_chunk_tuple
+                if chunk_variable_task not in graph:
+                    graph[chunk_variable_task] = (
+                        tuple,
+                        [subset.dims, subset, subset.attrs],
+                    )
 
             # this task creates dict mapping variable name to above tuple
             if name in dataset._coord_names:
