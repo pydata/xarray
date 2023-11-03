@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 
 from xarray.namedarray._typing import (
+    Default,
     _arrayapi,
     _Dim,
     _DType,
@@ -14,7 +15,6 @@ from xarray.namedarray._typing import (
     _ShapeType,
     _SupportsImag,
     _SupportsReal,
-    Default,
 )
 from xarray.namedarray.core import NamedArray
 
