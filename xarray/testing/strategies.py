@@ -41,7 +41,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Also required to dodge bugs with pandas non-nanosecond datetime overflows.
     """
     # TODO should this be exposed publicly?
-    # We should at least decide what the set of numpy dtypes that xarray officially supports is.
+    # We should decide what the set of numpy dtypes that xarray officially supports is.
     return (
         npst.integer_dtypes()
         | npst.unsigned_integer_dtypes()
@@ -341,9 +341,6 @@ def variables(
         array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
         dim_names = draw(dimension_names(min_dims=len(_shape), max_dims=len(_shape)))
 
-    # TODO move this inside the else loop above so that dim_names can be made consistently with it
-    # this allows for passing a restrictive array_strategy_function without specifying dims to match
-    # TODO same problem also for dtype
     _data = draw(array_strategy)
 
     if _data.shape != _shape:
