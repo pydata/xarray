@@ -14,6 +14,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.merge import merge
 from xarray.core.pycompat import is_dask_collection
+from xarray.core.variable import IndexVariable
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
@@ -169,10 +170,16 @@ def _insert_in_memory_data_in_graph(
     ) + chunk_tuple
     if chunk_variable_task not in graph:
         graph[chunk_variable_task] = (
-            tuple,
-            [subset.dims, subset._data, subset.attrs],
+            type(variable),
+            subset.dims,
+            subset._data,
+            subset.attrs,
         )
     return chunk_variable_task
+
+
+def assemble_dict(*args):
+    return {k: v for k, v in zip(args[::2], args[1::2])}
 
 
 def map_blocks(
@@ -286,6 +293,7 @@ def map_blocks(
         kwargs: dict,
         arg_is_array: Iterable[bool],
         expected: dict,
+        expected_indexes: dict,
     ):
         """
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
@@ -314,8 +322,8 @@ def map_blocks(
                         f"Received dimension {name!r} of length {result.sizes[name]}. "
                         f"Expected length {expected['shapes'][name]}."
                     )
-            if name in expected["indexes"]:
-                expected_index = expected["indexes"][name]
+            if name in expected_indexes:
+                expected_index = expected_indexes[name]
                 if not index.equals(expected_index):
                     raise ValueError(
                         f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
@@ -495,12 +503,7 @@ def map_blocks(
                 )
             else:
                 chunk_variable_task = _insert_in_memory_data_in_graph(
-                    graph,
-                    gname,
-                    name,
-                    variable,
-                    chunk_index,
-                    input_chunk_bounds,
+                    graph, gname, name, variable, chunk_index, input_chunk_bounds
                 )
 
             # this task creates dict mapping variable name to above tuple
@@ -533,15 +536,34 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        expected["indexes"] = {
-            dim: coordinates.xindexes[dim][
-                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-            ]
-            for dim in coordinates.xindexes
-        }
+
+        # dask does not replace task names present in the values of a dictionary
+        # So, we have to be very indirect about it.
+        expect_ = []
+        for dim, index in coordinates.indexes.items():
+            expect_ += [dim]
+            expect_.append(
+                _insert_in_memory_data_in_graph(
+                    graph,
+                    gname + "-expected",
+                    dim,
+                    IndexVariable(dim, index.index),
+                    chunk_index,
+                    output_chunk_bounds,
+                )
+            )
+        expected_indexes = (assemble_dict, *expect_)
 
         from_wrapper = (gname,) + chunk_tuple
-        graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
+        graph[from_wrapper] = (
+            _wrapper,
+            func,
+            blocked_args,
+            kwargs,
+            is_array,
+            expected,
+            expected_indexes,
+        )
 
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
