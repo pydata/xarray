@@ -9,7 +9,11 @@ import numpy as np
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
+    _Axis,
+    _AxisLike,
+    _default,
     _Dim,
+    _Dims,
     _DType,
     _ScalarType,
     _ShapeType,

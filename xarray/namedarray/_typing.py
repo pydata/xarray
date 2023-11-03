@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Mapping, Sequence
+from enum import Enum
 from types import ModuleType
 from typing import (
     Any,
     Callable,
+    Final,
     Protocol,
     SupportsIndex,
     TypeVar,
@@ -14,6 +16,14 @@ from typing import (
 )
 
 import numpy as np
+
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(Enum):
+    token: Final = 0
+
+
+_default = Default.token
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
