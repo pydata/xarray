@@ -61,13 +61,14 @@ class TestDimensionSizesStrategy:
             assert dim.upper() == dim
 
 
-def check_dict_values(dictionary: dict) -> bool:
+def check_dict_values(dictionary: dict, allowed_attrs_values_types: set) -> bool:
+    """Helper function to assert that all values in recursive dict match one of a set of types."""
     for key, value in dictionary.items():
-        if isinstance(value, ALLOWED_ATTRS_VALUES_TYPES) or value is None:
+        if isinstance(value, allowed_attrs_values_types) or value is None:
             continue
         elif isinstance(value, dict):
             # If the value is a dictionary, recursively check it
-            if not check_dict_values(value):
+            if not check_dict_values(value, allowed_attrs_values_types):
                 return False
         else:
             # If the value is not an integer or a dictionary, it's not valid
@@ -79,7 +80,7 @@ class TestAttrsStrategy:
     @given(attrs())
     def test_type(self, attrs):
         assert isinstance(attrs, dict)
-        check_dict_values(attrs)
+        check_dict_values(attrs, ALLOWED_ATTRS_VALUES_TYPES)
 
 
 class TestVariablesStrategy:
