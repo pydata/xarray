@@ -10,8 +10,8 @@ import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
-    _default,
     _arrayfunction_or_api,
+    _default,
     _DType_co,
     _ShapeType_co,
 )
@@ -23,12 +23,12 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from xarray.namedarray._typing import (
+        Default,
         _AttrsLike,
         _DimsLike,
         _DType,
         _Shape,
         duckarray,
-        Default,
     )
 
 
