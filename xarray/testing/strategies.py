@@ -9,7 +9,7 @@ import xarray as xr
 from xarray.core.types import T_DuckArray
 
 __all__ = [
-    "numeric_dtypes",
+    "supported_dtypes",
     "names",
     "dimension_names",
     "dimension_sizes",
@@ -29,14 +29,19 @@ class ArrayStrategyFn(Protocol):
         ...
 
 
-# required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
-def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
+#
+def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     """
     Generates only those numpy dtypes which xarray can handle.
 
     Requires the hypothesis package to be installed.
-    """
 
+    Not just using hypothesis.extra.numpy.scalar_dtypes is required to exclude weirder dtypes
+    e.g. unicode, byte_string, array, or nested dtypes.
+    Also required to dodge bugs with pandas non-nanosecond datetime overflows.
+    """
+    # TODO should this be exposed publicly?
+    # We should at least decide what the set of numpy dtypes that xarray officially supports is.
     return (
         npst.integer_dtypes()
         | npst.unsigned_integer_dtypes()
@@ -45,15 +50,20 @@ def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
     )
 
 
-def np_arrays(
-    *,
+def smallish_arrays(
     shape: Union[
         tuple[int, ...], st.SearchStrategy[tuple[int, ...]]
     ] = npst.array_shapes(max_side=4),
-    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = numeric_dtypes(),
+    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = supported_dtypes(),
+    *,
+    elements=None,
+    fill=None,
+    unique=False,
 ) -> st.SearchStrategy[np.ndarray]:
     """
-    Generates arbitrary numpy arrays with xarray-compatible dtypes.
+    Generates arbitrary array API-compliant numpy arrays.
+
+    By default generates arrays with no more than 4 elements per axis for performance, using supported_dtypes.
 
     Requires the hypothesis package to be installed.
 
@@ -61,10 +71,15 @@ def np_arrays(
     ----------
     shape
     dtype
-        Default is to use any of the numeric_dtypes defined for xarray.
+        Default is to use any of the scalar dtypes defined in the array API standard.
+    elements
+    fill
+    unique
     """
-
-    return npst.arrays(dtype=dtype, shape=shape)
+    # TODO here we may also wish to generalize/restrict the dtypes produced by xarray's default test strategies
+    return npst.arrays(
+        dtype=dtype, shape=shape, elements=elements, fill=fill, unique=unique
+    )
 
 
 # TODO Generalize to all valid unicode characters once formatting bugs in xarray's reprs are fixed + docs can handle it.
@@ -160,11 +175,12 @@ _readable_strings = st.text(
     max_size=5,
 )
 _attr_keys = _readable_strings
-_small_arrays = np_arrays(
+_small_arrays = npst.arrays(
     shape=npst.array_shapes(
         max_side=2,
         max_dims=2,
-    )
+    ),
+    dtype=npst.scalar_dtypes(),
 )
 _attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
 
@@ -193,7 +209,7 @@ def variables(
         st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
         None,
     ] = None,
-    dtype: st.SearchStrategy[np.dtype] = numeric_dtypes(),
+    dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> xr.Variable:
     """
@@ -210,9 +226,8 @@ def variables(
     Parameters
     ----------
     array_strategy_fn: Callable which returns a strategy generating array-likes, optional
-        Callable must accept shape and dtype kwargs if passed.
-        If array_strategy_fn is not passed then the shapes will be derived from the dims kwarg.
-        Default is to generate a numpy array of arbitrary shape, values and dtype.
+        Callable must accept shape and dtype kwargs, and must generate results consistent with its input.
+        If not passed the default is to generate a small numpy array with one of the supported_dtypes.
     dims: Strategy for generating the dimensions, optional
         Can either be a strategy for generating a sequence of string dimension names,
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
@@ -220,6 +235,8 @@ def variables(
         Default is to generate arbitrary dimension names for each axis in data.
     dtype: Strategy which generates np.dtype objects, optional
         Will be passed in to array_strategy_fn.
+        Default is to generate any scalar dtype using supported_dtypes.
+        Be aware that this default set of dtypes includes some not strictly allowed by the array API standard.
     attrs: Strategy which generates dicts, optional
         Default is to generate a nested attributes dictionary containing arbitrary strings, booleans, integers, Nones,
         and numpy arrays.
@@ -232,7 +249,8 @@ def variables(
     Raises
     ------
     TypeError
-        If custom strategies passed attempt to draw any examples which are not of the correct type.
+        If a custom array_strategy_fn returns a strategy which generates an example array inconsistent with the shape
+        & dtype input passed to it.
 
     Examples
     --------
@@ -287,7 +305,7 @@ def variables(
     _array_strategy_fn: ArrayStrategyFn
     array_strategy: st.SearchStrategy[T_DuckArray]
     if array_strategy_fn is None:
-        _array_strategy_fn = np_arrays  # type: ignore[assignment]
+        _array_strategy_fn = smallish_arrays  # type: ignore[assignment]
     elif not callable(array_strategy_fn):
         raise TypeError(
             "array_strategy_fn must be a Callable that accepts the kwargs dtype and shape and returns a hypothesis "
@@ -316,24 +334,25 @@ def variables(
             raise TypeError(
                 f"Invalid type returned by dims strategy - drew an object of type {type(dims)}"
             )
-
-        _data = draw(array_strategy)
-        if _data.shape != _shape:
-            raise TypeError(
-                "array_strategy_fn returned an array object with a different shape than it was passed."
-                f"Passed {_data.shape}, but returned {_shape}."
-                "Please either specify a consistent shape via the dims kwarg or ensure the array_strategy_fn callable "
-                "obeys the shape argument passed to it."
-            )
-
     else:
         # nothing provided, so generate everything consistently
         # We still generate the shape first here just so that we always pass shape to array_strategy_fn
         _shape = draw(npst.array_shapes())
         array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        _data = draw(array_strategy)
-        dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
+        dim_names = draw(dimension_names(min_dims=len(_shape), max_dims=len(_shape)))
 
+    # TODO move this inside the else loop above so that dim_names can be made consistently with it
+    # this allows for passing a restrictive array_strategy_function without specifying dims to match
+    # TODO same problem also for dtype
+    _data = draw(array_strategy)
+
+    if _data.shape != _shape:
+        raise TypeError(
+            "array_strategy_fn returned an array object with a different shape than it was passed."
+            f"Passed {_shape}, but returned {_data.shape}."
+            "Please either specify a consistent shape via the dims kwarg or ensure the array_strategy_fn callable "
+            "obeys the shape argument passed to it."
+        )
     if _data.dtype != _dtype:
         raise TypeError(
             "array_strategy_fn returned an array object with a different dtype than it was passed."

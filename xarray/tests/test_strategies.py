@@ -8,44 +8,19 @@ pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import given
+from hypothesis.extra.array_api import make_strategies_namespace
 
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
     attrs,
     dimension_names,
     dimension_sizes,
-    np_arrays,
-    numeric_dtypes,
+    supported_dtypes,
     variables,
 )
+from xarray.tests import requires_numpy_array_api
 
 ALLOWED_ATTRS_VALUES_TYPES = (int, bool, str, np.ndarray)
-
-
-class TestNumpyArraysStrategy:
-    @given(np_arrays())
-    def test_given_nothing(self, arr):
-        assert isinstance(arr, np.ndarray)
-
-    @given(np_arrays(dtype=np.dtype("int32")))
-    def test_fixed_dtype(self, arr):
-        assert arr.dtype == np.dtype("int32")
-
-    @given(st.data())
-    def test_arbitrary_valid_dtype(self, data):
-        valid_dtype = data.draw(numeric_dtypes())
-        arr = data.draw(np_arrays(dtype=valid_dtype))
-        assert arr.dtype == valid_dtype
-
-    @given(np_arrays(shape=(2, 3)))
-    def test_fixed_shape(self, arr):
-        assert arr.shape == (2, 3)
-
-    @given(st.data())
-    def test_arbitrary_shape(self, data):
-        shape = data.draw(npst.array_shapes())
-        arr = data.draw(np_arrays(shape=shape))
-        assert arr.shape == shape
 
 
 class TestDimensionNamesStrategy:
@@ -193,14 +168,37 @@ class TestVariablesStrategy:
     def test_given_fixed_shape_arbitrary_dims_and_arbitrary_data(self, data):
         dims = dimension_names(min_dims=2, max_dims=2)
 
-        def fixed_shape_array_strategy_fn(*, shape=None, dtype=None):
-            return np_arrays(shape=shape, dtype=dtype)
+        def array_strategy_fn(*, shape=None, dtype=None):
+            return npst.arrays(shape=shape, dtype=dtype)
 
         var = data.draw(
             variables(
-                array_strategy_fn=fixed_shape_array_strategy_fn,
+                array_strategy_fn=array_strategy_fn,
                 dims=dims,
+                dtype=supported_dtypes(),
             )
         )
 
         assert var.ndim == 2
+
+    @requires_numpy_array_api
+    @given(st.data())
+    def test_make_strategies_namespace(self, data):
+        """
+        Test not causing a hypothesis.InvalidArgument by generating a dtype that's not in the array API.
+
+        We still want to generate dtypes not in the array API by default, but this checks we don't accidentally override
+        the user's choice of dtypes with non-API-compliant ones.
+        """
+        from numpy import (
+            array_api as np_array_api,  # requires numpy>=1.26.0, and we expect a UserWarning to be raised
+        )
+
+        np_array_api_st = make_strategies_namespace(np_array_api)
+
+        data.draw(
+            variables(
+                array_strategy_fn=np_array_api_st.arrays,
+                dtype=np_array_api_st.scalar_dtypes(),
+            )
+        )
