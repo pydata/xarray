@@ -197,6 +197,23 @@ class TestVariablesStrategy:
                 )
             )
 
+    @given(st.data())
+    def test_catch_unruly_shape_from_custom_array_strategy_fn(self, data):
+        def dodgy_array_strategy_fn(*, shape=None, dtype=None):
+            """Dodgy function which ignores the shape it was passed"""
+            return npst.arrays(shape=(3, 2), dtype=dtype)
+
+        with pytest.raises(
+            ValueError, match="returned an array object with a different shape"
+        ):
+            data.draw(
+                variables(
+                    array_strategy_fn=dodgy_array_strategy_fn,
+                    dims=st.just({"a": 2, "b": 1}),
+                    dtype=supported_dtypes(),
+                )
+            )
+
     @requires_numpy_array_api
     @given(st.data())
     def test_make_strategies_namespace(self, data):
