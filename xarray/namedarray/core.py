@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 
     from xarray.core.types import Dims
     from xarray.namedarray._typing import (
+        Default,
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -52,7 +53,6 @@ if TYPE_CHECKING:
         _Shape,
         _ShapeType,
         duckarray,
-        Default,
     )
 
     try:
