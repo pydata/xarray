@@ -303,7 +303,7 @@ def from_array(
             # xarray.core.duck_array_ops
             raise NotImplementedError("MaskedArray is not supported yet")
 
-        return NamedArray(dims, data_masked, attrs)
+        return NamedArray(dims, data, attrs)
 
     if isinstance(data, _arrayfunction_or_api):
         return NamedArray(dims, data, attrs)
