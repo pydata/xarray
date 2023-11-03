@@ -59,6 +59,10 @@ _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 _ShapeType = TypeVar("_ShapeType", bound=Any)
 _ShapeType_co = TypeVar("_ShapeType_co", bound=Any, covariant=True)
 
+_Axis = int
+_Axes = tuple[_Axis, ...]
+_AxisLike = Union[_Axis, _Axes]
+
 _Chunks = tuple[_Shape, ...]
 
 _Dim = Hashable

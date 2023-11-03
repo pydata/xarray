@@ -9,8 +9,8 @@ import numpy as np
 from xarray.namedarray._typing import (
     Default,
     _arrayapi,
-    _Axis,
     _default,
+    _Axis,
     _Dim,
     _DType,
     _ScalarType,
@@ -167,15 +167,9 @@ def expand_dims(
     x :
         Array to expand.
     dim :
-        Dimension name. New dimension will be stored in the 0 position.
+        Dimension name. New dimension will be stored in the axis position.
     axis :
-        Axis position (zero-based). If x has rank (i.e, number of dimensions) N,
-        a valid axis must reside on the closed-interval [-N-1, N]. If provided a
-        negative axis, the axis position at which to insert a singleton dimension
-        must be computed as N + axis + 1. Hence, if provided -1, the resolved axis
-        position must be N (i.e., a singleton dimension must be appended to the
-        input array x). If provided -N-1, the resolved axis position must be 0
-        (i.e., a singleton dimension must be prepended to the input array x).
+        (Not recommended) Axis position (zero-based). Default is 0.
 
     Returns
     -------
@@ -185,13 +179,26 @@ def expand_dims(
     Examples
     --------
     >>> x = NamedArray(("x", "y"), nxp.asarray([[1.0, 2.0], [3.0, 4.0]]))
-    >>> expand_dims(x, dims="new_dim")
-    <xarray.NamedArray (new_dim: 1, x: 2, y: 2)>
+    >>> expand_dims(x)
+    <xarray.NamedArray (dim_2: 1, x: 2, y: 2)>
+    Array([[[1., 2.],
+            [3., 4.]]], dtype=float64)
+    >>> expand_dims(x, dim="z")
+    <xarray.NamedArray (z: 1, x: 2, y: 2)>
     Array([[[1., 2.],
             [3., 4.]]], dtype=float64)
     """
     xp = _get_data_namespace(x)
-    d = list(x.dims)
+    dims = x.dims
+    if dim is _default:
+        dim = f"dim_{len(dims)}"
+    d = list(dims)
     d.insert(axis, dim)
     out = x._new(dims=tuple(d), data=xp.expand_dims(x._data, axis=axis))
     return out
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
