@@ -255,15 +255,6 @@ def _new(
 @overload
 def from_array(
     dims: _DimsLike,
-    data: np.ma.masked_array[_ShapeType, _DType],
-    attrs: _AttrsLike = ...,
-) -> NamedArray[_ShapeType, _DType]:
-    ...
-
-
-@overload
-def from_array(
-    dims: _DimsLike,
     data: duckarray[_ShapeType, _DType],
     attrs: _AttrsLike = ...,
 ) -> NamedArray[_ShapeType, _DType]:
@@ -304,13 +295,9 @@ def from_array(
             "Array is already a Named array. Use 'data.data' to retrieve the data array"
         )
 
-    # TODO: dask.array.ma.masked_array also exists, better way?
-    reveal_type(data)
-    if isinstance(data, np.ma.masked_array):
-        data_masked = cast("np.ma.masked_array[_ShapeType, _DType]", data)
-        reveal_type(data_masked)
-
-        mask = np.ma.getmaskarray(data_masked)  # type: ignore[no-untyped-call]
+    # TODO: dask.array.ma.MaskedArray also exists, better way?
+    if isinstance(data, np.ma.MaskedArray):
+        mask = np.ma.getmaskarray(data)  # type: ignore[no-untyped-call]
         if mask.any():
             # TODO: requires refactoring/vendoring xarray.core.dtypes and
             # xarray.core.duck_array_ops
