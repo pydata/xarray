@@ -860,8 +860,8 @@ def explicit_indexing_adapter(
     raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
     result = raw_indexing_method(raw_key.tuple)
     if numpy_indices.tuple:
-        # index the loaded np.ndarray
-        result = NumpyIndexingAdapter(result)[numpy_indices]
+        # index the loaded ndarray
+        result = as_indexable(result)[numpy_indices]
     return result
 
 
