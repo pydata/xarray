@@ -290,10 +290,14 @@ def test_duck_array_class() -> None:
 
     numpy_a: NDArray[np.int64]
     numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
+    test_duck_array_typevar(numpy_a)
+
+    masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
+    masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
+    test_duck_array_typevar(masked_a)
+
     custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
     custom_a = CustomArrayIndexable(numpy_a)
-
-    test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)
 
     # Test numpy's array api:
