@@ -248,7 +248,7 @@ def variables(
 
     Raises
     ------
-    TypeError
+    ValueError
         If a custom array_strategy_fn returns a strategy which generates an example array inconsistent with the shape
         & dtype input passed to it.
 
@@ -347,14 +347,14 @@ def variables(
     _data = draw(array_strategy)
 
     if _data.shape != _shape:
-        raise TypeError(
+        raise ValueError(
             "array_strategy_fn returned an array object with a different shape than it was passed."
             f"Passed {_shape}, but returned {_data.shape}."
             "Please either specify a consistent shape via the dims kwarg or ensure the array_strategy_fn callable "
             "obeys the shape argument passed to it."
         )
     if _data.dtype != _dtype:
-        raise TypeError(
+        raise ValueError(
             "array_strategy_fn returned an array object with a different dtype than it was passed."
             f"Passed {_dtype}, but returned {_data.dtype}"
             "Please either specify a consistent dtype via the dtype kwarg or ensure the array_strategy_fn callable "

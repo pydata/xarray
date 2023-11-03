@@ -181,6 +181,22 @@ class TestVariablesStrategy:
 
         assert var.ndim == 2
 
+    @given(st.data())
+    def test_catch_unruly_dtype_from_custom_array_strategy_fn(self, data):
+        def dodgy_array_strategy_fn(*, shape=None, dtype=None):
+            """Dodgy function which ignores the dtype it was passed"""
+            return npst.arrays(shape=shape, dtype=npst.floating_dtypes())
+
+        with pytest.raises(
+            ValueError, match="returned an array object with a different dtype"
+        ):
+            data.draw(
+                variables(
+                    array_strategy_fn=dodgy_array_strategy_fn,
+                    dtype=st.just(np.dtype("int32")),
+                )
+            )
+
     @requires_numpy_array_api
     @given(st.data())
     def test_make_strategies_namespace(self, data):
