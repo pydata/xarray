@@ -286,16 +286,16 @@ along any possible valid subset of the Variable's dimensions.
         """Test that the mean of an xarray Variable is always equal to the mean of the underlying array."""
 
         # create arbitrary data
-        array_dims = data.draw(dimension_names())
-        var = data.draw(variables(dims=array_dims))
+        array_dims = data.draw(dimension_names(min_dims=1))
+        var = data.draw(variables(dims=st.just(array_dims)))
 
         # specify arbitrary reduction
-        reduction_dims = data.draw(xrst.unique_subset_of(array_dims))
+        reduction_dims = data.draw(xrst.unique_subset_of(array_dims, min_size=1))
 
-        # create expected result
-        reduction_axes = [var.get_axis_num(dim) for dim in reduction_dims]
-        expected = var.data.mean(axis=reduction_axes)
+        # create expected result (using nanmean because arrays with Nans will be generated)
+        reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
+        expected = np.nanmean(var.data, axis=reduction_axes)
 
         # assert property is always satisfied
-        result = var.mean(dims=reduction_dims).data
+        result = var.mean(dim=reduction_dims).data
         npt.assert_equal(expected, result)

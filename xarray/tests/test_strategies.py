@@ -264,23 +264,3 @@ class TestUniqueSubsetOf:
 
         for dim in subset_of_dim_names:
             assert dim in dim_names
-
-
-@given(st.data())
-def test_mean(data):
-    """Test that the mean of any xarray Variable is always equal to the mean of the underlying numpy array."""
-
-    # create arbitrary data
-    array_dims = data.draw(dimension_names(min_dims=1))
-    var = data.draw(variables(dims=st.just(array_dims)))
-
-    # specify arbitrary reduction
-    reduction_dims = data.draw(unique_subset_of(array_dims, min_size=1))
-
-    # create expected result (using nanmean because arrays with Nans will be generated)
-    reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-    expected = np.nanmean(var.data, axis=reduction_axes)
-
-    # assert property is always satisfied
-    result = var.mean(dim=reduction_dims).data
-    npt.assert_equal(expected, result)
