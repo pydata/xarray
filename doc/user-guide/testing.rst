@@ -269,9 +269,9 @@ It works for lists of dimension names
 
 .. ipython:: python
 
-    dim_sizes = ["x", "y", "z"]
-    xrst.unique_subset_of(dim_sizes).example()
-    xrst.unique_subset_of(dim_sizes).example()
+    dims = ["x", "y", "z"]
+    xrst.unique_subset_of(dims).example()
+    xrst.unique_subset_of(dims).example()
 
 as well as for mappings of dimension names to sizes
 
@@ -287,7 +287,6 @@ along any possible valid subset of the Variable's dimensions.
 
 .. code-block:: python
 
-    from hypothesis import given
     import numpy.testing as npt
 
 
@@ -299,7 +298,7 @@ along any possible valid subset of the Variable's dimensions.
         array_dims = data.draw(dimension_names(min_dims=1))
         var = data.draw(variables(dims=st.just(array_dims)))
 
-        # specify arbitrary reduction
+        # specify arbitrary reduction along at least one dimension
         reduction_dims = data.draw(xrst.unique_subset_of(array_dims, min_size=1))
 
         # create expected result (using nanmean because arrays with Nans will be generated)
