@@ -270,16 +270,16 @@ It works for lists of dimension names
 .. ipython:: python
 
     dim_sizes = ["x", "y", "z"]
-    unique_subset_of(dim_sizes).example()
-    unique_subset_of(dim_sizes).example()
+    xrst.unique_subset_of(dim_sizes).example()
+    xrst.unique_subset_of(dim_sizes).example()
 
 as well as for mappings of dimension names to sizes
 
 .. ipython:: python
 
     dim_sizes = {"x": 2, "y": 3, "z": 4}
-    unique_subset_of(dim_sizes).example()
-    unique_subset_of(dim_sizes).example()
+    xrst.unique_subset_of(dim_sizes).example()
+    xrst.unique_subset_of(dim_sizes).example()
 
 This is useful because operations like reductions can be performed over any subset of the xarray object's dimensions.
 For example we can write a pytest test that tests that a reduction gives the expected result when applying that reduction
