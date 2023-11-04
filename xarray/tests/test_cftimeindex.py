@@ -741,10 +741,10 @@ def test_cftimeindex_add_timedeltaindex(calendar) -> None:
     "freq,units",
     [
         ("D", "D"),
-        ("H", "H"),
-        ("T", "min"),
-        ("S", "S"),
-        ("L", "ms"),
+        ("h", "h"),
+        ("min", "min"),
+        ("s", "s"),
+        ("ms", "ms"),
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
@@ -766,7 +766,7 @@ def test_cftimeindex_shift_float_us() -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["AS", "A", "YS", "Y", "QS", "Q", "MS", "M"])
+@pytest.mark.parametrize("freq", ["YS", "Y", "QS", "QE", "MS", "ME"])
 def test_cftimeindex_shift_float_fails_for_non_tick_freqs(freq) -> None:
     a = xr.cftime_range("2000", periods=3, freq="D")
     with pytest.raises(TypeError, match="unsupported operand type"):
@@ -991,7 +991,7 @@ def test_cftimeindex_periods_repr(periods):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", ["noleap", "360_day", "standard"])
-@pytest.mark.parametrize("freq", ["D", "H"])
+@pytest.mark.parametrize("freq", ["D", "h"])
 def test_cftimeindex_freq_in_repr(freq, calendar):
     """Test that cftimeindex has frequency property in repr."""
     index = xr.cftime_range(start="2000", periods=3, freq=freq, calendar=calendar)
@@ -1142,12 +1142,12 @@ def test_multiindex():
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["3663S", "33T", "2H"])
+@pytest.mark.parametrize("freq", ["3663s", "33min", "2h"])
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_against_datetimeindex(freq, method):
-    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    expected = pd.date_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     expected = getattr(expected, method)(freq)
-    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    result = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     result = getattr(result, method)(freq).to_datetimeindex()
     assert result.equals(expected)
 
@@ -1155,7 +1155,7 @@ def test_rounding_methods_against_datetimeindex(freq, method):
 @requires_cftime
 @pytest.mark.parametrize("method", ["floor", "ceil", "round"])
 def test_rounding_methods_invalid_freq(method):
-    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777S")
+    index = xr.cftime_range("2000-01-02T01:03:51", periods=10, freq="1777s")
     with pytest.raises(ValueError, match="fixed"):
         getattr(index, method)("MS")
 
@@ -1173,7 +1173,7 @@ def rounding_index(date_type):
 
 @requires_cftime
 def test_ceil(rounding_index, date_type):
-    result = rounding_index.ceil("S")
+    result = rounding_index.ceil("s")
     expected = xr.CFTimeIndex(
         [
             date_type(1, 1, 1, 2, 0, 0, 0),
@@ -1186,7 +1186,7 @@ def test_ceil(rounding_index, date_type):
 
 @requires_cftime
 def test_floor(rounding_index, date_type):
-    result = rounding_index.floor("S")
+    result = rounding_index.floor("s")
     expected = xr.CFTimeIndex(
         [
             date_type(1, 1, 1, 1, 59, 59, 0),
@@ -1199,7 +1199,7 @@ def test_floor(rounding_index, date_type):
 
 @requires_cftime
 def test_round(rounding_index, date_type):
-    result = rounding_index.round("S")
+    result = rounding_index.round("s")
     expected = xr.CFTimeIndex(
         [
             date_type(1, 1, 1, 2, 0, 0, 0),
@@ -1278,19 +1278,19 @@ def test_infer_freq_invalid_inputs():
 @pytest.mark.parametrize(
     "freq",
     [
-        "300AS-JAN",
-        "A-DEC",
-        "AS-JUL",
-        "2AS-FEB",
-        "Q-NOV",
+        "300YS-JAN",
+        "Y-DEC",
+        "YS-JUL",
+        "2YS-FEB",
+        "QE-NOV",
         "3QS-DEC",
         "MS",
-        "4M",
+        "4ME",
         "7D",
         "D",
-        "30H",
-        "5T",
-        "40S",
+        "30h",
+        "5min",
+        "40s",
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)

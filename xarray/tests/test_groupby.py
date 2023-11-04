@@ -644,7 +644,7 @@ def test_groupby_bins_timeseries() -> None:
         pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
     )
     ds["val"] = xr.DataArray(np.ones(ds["time"].shape), dims="time")
-    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24H")
+    time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24h")
     actual = ds.groupby_bins("time", time_bins).sum()
     expected = xr.DataArray(
         96 * np.ones((14,)),
@@ -957,7 +957,7 @@ def test_groupby_math_dim_order() -> None:
     da = DataArray(
         np.ones((10, 10, 12)),
         dims=("x", "y", "time"),
-        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6H")},
+        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6h")},
     )
     grouped = da.groupby("time.day")
     result = grouped - grouped.mean()
@@ -1623,7 +1623,7 @@ class TestDataArrayResample:
         if use_cftime and not has_cftime:
             pytest.skip()
         times = xr.date_range(
-            "2000-01-01", freq="6H", periods=10, use_cftime=use_cftime
+            "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
         )
 
         def resample_as_pandas(array, *args, **kwargs):
@@ -1641,15 +1641,15 @@ class TestDataArrayResample:
 
         array = DataArray(np.arange(10), [("time", times)])
 
-        actual = array.resample(time="24H").mean()
-        expected = resample_as_pandas(array, "24H")
+        actual = array.resample(time="24h").mean()
+        expected = resample_as_pandas(array, "24h")
         assert_identical(expected, actual)
 
-        actual = array.resample(time="24H").reduce(np.mean)
+        actual = array.resample(time="24h").reduce(np.mean)
         assert_identical(expected, actual)
 
-        actual = array.resample(time="24H", closed="right").mean()
-        expected = resample_as_pandas(array, "24H", closed="right")
+        actual = array.resample(time="24h", closed="right").mean()
+        expected = resample_as_pandas(array, "24h", closed="right")
         assert_identical(expected, actual)
 
         with pytest.raises(ValueError, match=r"index must be monotonic"):
@@ -1697,7 +1697,7 @@ class TestDataArrayResample:
         assert_identical(actual, expected)
 
     def test_resample_first(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         actual = array.resample(time="1D").first()
@@ -1705,8 +1705,8 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # verify that labels don't use the first value
-        actual = array.resample(time="24H").first()
-        expected = DataArray(array.to_series().resample("24H").first())
+        actual = array.resample(time="24h").first()
+        expected = DataArray(array.to_series().resample("24h").first())
         assert_identical(expected, actual)
 
         # missing values
@@ -1730,7 +1730,7 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
     def test_resample_bad_resample_dim(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("__resample_dim__", times)])
         with pytest.raises(ValueError, match=r"Proxy resampling dimension"):
             array.resample(**{"__resample_dim__": "1D"}).first()
@@ -1739,7 +1739,7 @@ class TestDataArrayResample:
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
         xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
@@ -1754,21 +1754,21 @@ class TestDataArrayResample:
         array = ds["data"]
 
         # Re-sample
-        actual = array.resample(time="12H", restore_coord_dims=True).mean("time")
+        actual = array.resample(time="12h", restore_coord_dims=True).mean("time")
         assert "tc" not in actual.coords
 
         # Up-sample - filling
-        actual = array.resample(time="1H", restore_coord_dims=True).ffill()
+        actual = array.resample(time="1h", restore_coord_dims=True).ffill()
         assert "tc" not in actual.coords
 
         # Up-sample - interpolation
-        actual = array.resample(time="1H", restore_coord_dims=True).interpolate(
+        actual = array.resample(time="1h", restore_coord_dims=True).interpolate(
             "linear"
         )
         assert "tc" not in actual.coords
 
     def test_resample_keep_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
         array.attrs["meta"] = "data"
 
@@ -1782,7 +1782,7 @@ class TestDataArrayResample:
             array.resample(time="1D", keep_attrs=True)
 
     def test_resample_skipna(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
         array[1] = np.nan
 
@@ -1791,31 +1791,31 @@ class TestDataArrayResample:
         assert_identical(result, expected)
 
     def test_upsample(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         array = DataArray(np.arange(5), [("time", times)])
 
         # Forward-fill
-        actual = array.resample(time="3H").ffill()
-        expected = DataArray(array.to_series().resample("3H").ffill())
+        actual = array.resample(time="3h").ffill()
+        expected = DataArray(array.to_series().resample("3h").ffill())
         assert_identical(expected, actual)
 
         # Backward-fill
-        actual = array.resample(time="3H").bfill()
-        expected = DataArray(array.to_series().resample("3H").bfill())
+        actual = array.resample(time="3h").bfill()
+        expected = DataArray(array.to_series().resample("3h").bfill())
         assert_identical(expected, actual)
 
         # As frequency
-        actual = array.resample(time="3H").asfreq()
-        expected = DataArray(array.to_series().resample("3H").asfreq())
+        actual = array.resample(time="3h").asfreq()
+        expected = DataArray(array.to_series().resample("3h").asfreq())
         assert_identical(expected, actual)
 
         # Pad
-        actual = array.resample(time="3H").pad()
-        expected = DataArray(array.to_series().resample("3H").ffill())
+        actual = array.resample(time="3h").pad()
+        expected = DataArray(array.to_series().resample("3h").ffill())
         assert_identical(expected, actual)
 
         # Nearest
-        rs = array.resample(time="3H")
+        rs = array.resample(time="3h")
         actual = rs.nearest()
         new_times = rs.groupers[0].full_index
         expected = DataArray(array.reindex(time=new_times, method="nearest"))
@@ -1825,14 +1825,14 @@ class TestDataArrayResample:
         # Same as before, but now we try on multi-dimensional DataArrays.
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
 
         # Forward-fill
-        actual = array.resample(time="3H").ffill()
+        actual = array.resample(time="3h").ffill()
         expected_data = np.repeat(data, 2, axis=-1)
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected_data = expected_data[..., : len(expected_times)]
         expected = DataArray(
             expected_data,
@@ -1842,10 +1842,10 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # Backward-fill
-        actual = array.resample(time="3H").ffill()
+        actual = array.resample(time="3h").ffill()
         expected_data = np.repeat(np.flipud(data.T).T, 2, axis=-1)
         expected_data = np.flipud(expected_data.T).T
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected_data = expected_data[..., : len(expected_times)]
         expected = DataArray(
             expected_data,
@@ -1855,10 +1855,10 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # As frequency
-        actual = array.resample(time="3H").asfreq()
+        actual = array.resample(time="3h").asfreq()
         expected_data = np.repeat(data, 2, axis=-1).astype(float)[..., :-1]
         expected_data[..., 1::2] = np.nan
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected = DataArray(
             expected_data,
             {"time": expected_times, "x": xs, "y": ys},
@@ -1867,11 +1867,11 @@ class TestDataArrayResample:
         assert_identical(expected, actual)
 
         # Pad
-        actual = array.resample(time="3H").pad()
+        actual = array.resample(time="3h").pad()
         expected_data = np.repeat(data, 2, axis=-1)
         expected_data[..., 1::2] = expected_data[..., ::2]
         expected_data = expected_data[..., :-1]
-        expected_times = times.to_series().resample("3H").asfreq().index
+        expected_times = times.to_series().resample("3h").asfreq().index
         expected = DataArray(
             expected_data,
             {"time": expected_times, "x": xs, "y": ys},
@@ -1882,21 +1882,21 @@ class TestDataArrayResample:
     def test_upsample_tolerance(self):
         # Test tolerance keyword for upsample methods bfill, pad, nearest
         times = pd.date_range("2000-01-01", freq="1D", periods=2)
-        times_upsampled = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times_upsampled = pd.date_range("2000-01-01", freq="6h", periods=5)
         array = DataArray(np.arange(2), [("time", times)])
 
         # Forward fill
-        actual = array.resample(time="6H").ffill(tolerance="12H")
+        actual = array.resample(time="6h").ffill(tolerance="12h")
         expected = DataArray([0.0, 0.0, 0.0, np.nan, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Backward fill
-        actual = array.resample(time="6H").bfill(tolerance="12H")
+        actual = array.resample(time="6h").bfill(tolerance="12h")
         expected = DataArray([0.0, np.nan, 1.0, 1.0, 1.0], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
         # Nearest
-        actual = array.resample(time="6H").nearest(tolerance="6H")
+        actual = array.resample(time="6h").nearest(tolerance="6h")
         expected = DataArray([0, 0, np.nan, 1, 1], [("time", times_upsampled)])
         assert_identical(expected, actual)
 
@@ -1906,18 +1906,18 @@ class TestDataArrayResample:
 
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
 
         z = np.arange(5) ** 2
         data = np.tile(z, (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
 
-        expected_times = times.to_series().resample("1H").asfreq().index
+        expected_times = times.to_series().resample("1h").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-            actual = array.resample(time="1H").interpolate(kind)
+            actual = array.resample(time="1h").interpolate(kind)
             f = interp1d(
                 np.arange(len(times)),
                 data,
@@ -1968,7 +1968,7 @@ class TestDataArrayResample:
 
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
 
         z = np.arange(5) ** 2
         data = np.tile(z, (6, 3, 1))
@@ -1977,12 +1977,12 @@ class TestDataArrayResample:
         if chunked_time:
             chunks["time"] = 3
 
-        expected_times = times.to_series().resample("1H").asfreq().index
+        expected_times = times.to_series().resample("1h").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-            actual = array.chunk(chunks).resample(time="1H").interpolate(kind)
+            actual = array.chunk(chunks).resample(time="1h").interpolate(kind)
             actual = actual.compute()
             f = interp1d(
                 np.arange(len(times)),
@@ -2005,34 +2005,34 @@ class TestDataArrayResample:
 
     @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
     def test_resample_base(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         base = 11
 
         with pytest.warns(FutureWarning, match="the `base` parameter to resample"):
-            actual = array.resample(time="24H", base=base).mean()
+            actual = array.resample(time="24h", base=base).mean()
         expected = DataArray(
-            array.to_series().resample("24H", offset=f"{base}H").mean()
+            array.to_series().resample("24h", offset=f"{base}h").mean()
         )
         assert_identical(expected, actual)
 
     def test_resample_offset(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
-        offset = pd.Timedelta("11H")
-        actual = array.resample(time="24H", offset=offset).mean()
-        expected = DataArray(array.to_series().resample("24H", offset=offset).mean())
+        offset = pd.Timedelta("11h")
+        actual = array.resample(time="24h", offset=offset).mean()
+        expected = DataArray(array.to_series().resample("24h", offset=offset).mean())
         assert_identical(expected, actual)
 
     def test_resample_origin(self) -> None:
-        times = pd.date_range("2000-01-01T02:03:01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01T02:03:01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         origin = "start"
-        actual = array.resample(time="24H", origin=origin).mean()
-        expected = DataArray(array.to_series().resample("24H", origin=origin).mean())
+        actual = array.resample(time="24h", origin=origin).mean()
+        expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
     @pytest.mark.skipif(has_pandas_version_two, reason="requires pandas < 2.0.0")
@@ -2046,12 +2046,12 @@ class TestDataArrayResample:
         ],
     )
     def test_resample_loffset(self, loffset) -> None:
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         with pytest.warns(FutureWarning, match="`loffset` parameter"):
-            actual = array.resample(time="24H", loffset=loffset).mean()
-        series = array.to_series().resample("24H").mean()
+            actual = array.resample(time="24h", loffset=loffset).mean()
+        series = array.to_series().resample("24h").mean()
         if not isinstance(loffset, pd.DateOffset):
             loffset = pd.Timedelta(loffset)
         series.index = series.index + loffset
@@ -2059,19 +2059,19 @@ class TestDataArrayResample:
         assert_identical(actual, expected)
 
     def test_resample_invalid_loffset(self) -> None:
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
         with pytest.warns(
             FutureWarning, match="Following pandas, the `loffset` parameter"
         ):
             with pytest.raises(ValueError, match="`loffset` must be"):
-                array.resample(time="24H", loffset=1).mean()  # type: ignore
+                array.resample(time="24h", loffset=1).mean()  # type: ignore
 
 
 class TestDatasetResample:
     def test_resample_and_first(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2085,9 +2085,9 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
         # upsampling
-        expected_time = pd.date_range("2000-01-01", freq="3H", periods=19)
+        expected_time = pd.date_range("2000-01-01", freq="3h", periods=19)
         expected = ds.reindex(time=expected_time)
-        actual = ds.resample(time="3H")
+        actual = ds.resample(time="3h")
         for how in ["mean", "sum", "first", "last"]:
             method = getattr(actual, how)
             result = method()
@@ -2097,7 +2097,7 @@ class TestDatasetResample:
             assert_equal(expected, result)
 
     def test_resample_min_count(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2119,7 +2119,7 @@ class TestDatasetResample:
         assert_allclose(expected, actual)
 
     def test_resample_by_mean_with_keep_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2144,7 +2144,7 @@ class TestDatasetResample:
             ds.resample(time="1D", keep_attrs=True)
 
     def test_resample_loffset(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2155,7 +2155,7 @@ class TestDatasetResample:
         ds.attrs["dsmeta"] = "dsdata"
 
     def test_resample_by_mean_discarding_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2171,7 +2171,7 @@ class TestDatasetResample:
         assert resampled_ds.attrs == {}
 
     def test_resample_by_last_discarding_attrs(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2190,7 +2190,7 @@ class TestDatasetResample:
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
         ys = np.arange(3)
-        times = pd.date_range("2000-01-01", freq="6H", periods=5)
+        times = pd.date_range("2000-01-01", freq="6h", periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
         xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
@@ -2202,19 +2202,19 @@ class TestDatasetResample:
         ds = ds.set_coords(["xc", "yc", "tc"])
 
         # Re-sample
-        actual = ds.resample(time="12H").mean("time")
+        actual = ds.resample(time="12h").mean("time")
         assert "tc" not in actual.coords
 
         # Up-sample - filling
-        actual = ds.resample(time="1H").ffill()
+        actual = ds.resample(time="1h").ffill()
         assert "tc" not in actual.coords
 
         # Up-sample - interpolation
-        actual = ds.resample(time="1H").interpolate("linear")
+        actual = ds.resample(time="1h").interpolate("linear")
         assert "tc" not in actual.coords
 
     def test_resample_old_api(self):
-        times = pd.date_range("2000-01-01", freq="6H", periods=10)
+        times = pd.date_range("2000-01-01", freq="6h", periods=10)
         ds = Dataset(
             {
                 "foo": (["time", "x", "y"], np.random.randn(10, 5, 3)),
@@ -2233,7 +2233,7 @@ class TestDatasetResample:
             ds.resample("1D", dim="time")
 
     def test_resample_ds_da_are_the_same(self):
-        time = pd.date_range("2000-01-01", freq="6H", periods=365 * 4)
+        time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
         ds = xr.Dataset(
             {
                 "foo": (("time", "x"), np.random.randn(365 * 4, 5)),
