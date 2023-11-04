@@ -1,5 +1,5 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import Any, Protocol, Union
+from typing import Any, Protocol, Union, overload
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -362,7 +362,26 @@ def variables(
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
 
 
-# TODO use overloads for typing
+@overload
+def unique_subset_of(
+    objs: Iterable[Hashable],
+    *,
+    min_size: int = 0,
+    max_size: Union[int, None] = None,
+) -> st.SearchStrategy[Iterable[Hashable]]:
+    ...
+
+
+@overload
+def unique_subset_of(
+    objs: Mapping[Hashable, Any],
+    *,
+    min_size: int = 0,
+    max_size: Union[int, None] = None,
+) -> st.SearchStrategy[Mapping[Hashable, Any]]:
+    ...
+
+
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
