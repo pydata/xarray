@@ -271,13 +271,11 @@ def test_mean(data):
     """Test that the mean of any xarray Variable is always equal to the mean of the underlying numpy array."""
 
     # create arbitrary data
-    array_dims = data.draw(dimension_sizes(min_dims=1))
-    # print(array_dims)
+    array_dims = data.draw(dimension_names(min_dims=1))
     var = data.draw(variables(dims=st.just(array_dims)))
 
     # specify arbitrary reduction
-    reduction_dims = list(data.draw(unique_subset_of(array_dims, min_size=1)).keys())
-    # print(reduction_dims)
+    reduction_dims = data.draw(unique_subset_of(array_dims, min_size=1))
 
     # create expected result (using nanmean because arrays with Nans will be generated)
     reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
