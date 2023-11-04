@@ -15,6 +15,7 @@ __all__ = [
     "dimension_sizes",
     "attrs",
     "variables",
+    "unique_subset_of",
 ]
 
 
@@ -364,7 +365,7 @@ def variables(
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    d: Mapping[Hashable, Any],
+    d: dict[Hashable, Any],
     *,
     min_size: int = 0,
     max_size: Union[int, None] = None,
@@ -392,8 +393,17 @@ def unique_subset_of(
 
     Examples
     --------
-
+    >>> unique_subset_of({"x": 2, "y": 3}).example()  # doctest: +SKIP
+    {'y': 3}
     """
+    if not isinstance(d, dict):
+        raise TypeError(
+            f"Object to sample from must be a dict, but received type {type(d)}"
+        )
+
+    if len(d) == 0:
+        raise ValueError("Can't sample from a length-zero sequence.")
+
     # TODO generalize this to work for any iterable? Could then be used on dimension_names as well as dimension_sizes.
     subset_keys = draw(
         st.lists(

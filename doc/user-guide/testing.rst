@@ -50,6 +50,7 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
    testing.strategies.dimension_sizes
    testing.strategies.attrs
    testing.strategies.variables
+   testing.strategies.unique_subset_of
 
 These build upon the numpy and array API strategies offered in :py:mod:`hypothesis.extra.numpy` and :py:mod:`hypothesis.extra.array_api`:
 
@@ -157,8 +158,8 @@ length either 3 or 4, and will sometimes also generate a ``z`` dimension of leng
 By feeding this strategy for dictionaries into the ``dims`` argument of xarray's :py:func:`~st.variables` strategy,
 we can generate arbitrary :py:class:`~xarray.Variable` objects whose dimensions will always match these specifications.
 
-Creating Duck-type Arrays
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Generating Duck-type Arrays
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
 numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arrays <internals.duckarrays>`).
@@ -256,3 +257,45 @@ you can use this neat trick:
     xp_variables.example()
 
 Another array API-compliant duck array library would replace the import, e.g. ``import cupy as cp`` instead.
+
+Testing over Subsets of Dimensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A common task when testing xarray user code is checking that your function works for all valid input dimensions.
+We can chain strategies to achieve this, for which the helper strategy :py:func:`~testing.strategies.unique_subset_of`
+is useful.
+
+.. ipython:: python
+
+    dim_sizes = {"x": 2, "y": 3, "z": 4}
+    unique_subset_of(dim_sizes).example()
+    unique_subset_of(dim_sizes).example()
+
+This is useful because operations like reductions can be performed over any subset of the xarray object's dimensions.
+For example we can write a pytest test that tests that a reduction gives the expected result when applying that reduction
+along any possible valid subset of the Variable's dimensions.
+
+.. code-block:: python
+
+    from hypothesis import given
+    import numpy.testing as npt
+
+
+    @given(st.data())
+    def test_mean(data):
+        """Test that the mean of an xarray Variable is always equal to the mean of the underlying array."""
+
+        # create arbitrary data
+        array_dims = data.draw(dimension_names())
+        var = data.draw(variables(dims=array_dims))
+
+        # specify arbitrary reduction
+        reduction_dims = data.draw(xrst.unique_subset_of(array_dims))
+
+        # create expected result
+        reduction_axes = [var.get_axis_num(dim) for dim in reduction_dims]
+        expected = var.data.mean(axis=reduction_axes)
+
+        # assert property is always satisfied
+        result = var.mean(dims=reduction_dims).data
+        npt.assert_equal(expected, result)

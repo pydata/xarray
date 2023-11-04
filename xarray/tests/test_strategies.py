@@ -239,6 +239,28 @@ class TestVariablesStrategy:
         )
 
 
+class TestUniqueSubsetOf:
+    @given(st.data())
+    def test_invalid(self, data):
+        with pytest.raises(TypeError, match="must be a dict"):
+            data.draw(unique_subset_of(0))
+
+        with pytest.raises(ValueError, match="length-zero sequence"):
+            data.draw(unique_subset_of({}))
+
+    @given(st.data())
+    def test_mapping(self, data):
+        dim_sizes = data.draw(dimension_sizes(min_dims=1))
+        subset_of_dim_sizes = data.draw(unique_subset_of(dim_sizes))
+
+        for dim, length in subset_of_dim_sizes.items():
+            assert dim in dim_sizes
+            assert dim_sizes[dim] == length
+
+    def test_iterable(self):
+        ...
+
+
 @given(st.data())
 def test_mean(data):
     """Test that the mean of any xarray Variable is always equal to the mean of the underlying numpy array."""

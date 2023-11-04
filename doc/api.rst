@@ -1087,6 +1087,7 @@ Hypothesis Testing Strategies
    testing.strategies.dimension_sizes
    testing.strategies.attrs
    testing.strategies.variables
+   testing.strategies.unique_subset_of
 
 Exceptions
 ==========
