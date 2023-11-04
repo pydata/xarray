@@ -1081,7 +1081,7 @@ Hypothesis Testing Strategies
 .. autosummary::
    :toctree: generated/
 
-   testing.strategies.numeric_dtypes
+   testing.strategies.supported_dtypes
    testing.strategies.names
    testing.strategies.dimension_names
    testing.strategies.dimension_sizes
