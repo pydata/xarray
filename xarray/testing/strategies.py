@@ -30,16 +30,13 @@ class ArrayStrategyFn(Protocol):
         ...
 
 
-#
 def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     """
     Generates only those numpy dtypes which xarray can handle.
 
-    Avoiding using hypothesis.extra.numpy.scalar_dtypes is required to exclude weirder dtypes
-    e.g. unicode, byte_string, array, or nested dtypes.
+    Avoiding using hypothesis.extra.numpy.scalar_dtypes is required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
     Also required to dodge bugs with pandas non-nanosecond datetime overflows.
-
-    Does not generate all dtypes that xarray can handle - just only generates dtypes which it definitely can.
+    Note does not generate all dtypes that xarray can handle - just only generates dtypes which it definitely can.
 
     Requires the hypothesis package to be installed.
     """
@@ -412,6 +409,7 @@ def unique_subset_of(
     Returns
     -------
     unique_subset_strategy
+        Strategy generating subset of the input.
 
     Examples
     --------
@@ -439,9 +437,6 @@ def unique_subset_of(
         )
     )
 
-    if isinstance(objs, dict):
-        subset_objs = {k: objs[k] for k in subset_keys}
-    else:
-        subset_objs = tuple(subset_keys)
-
-    return subset_objs
+    return (
+        {k: objs[k] for k in subset_keys} if isinstance(objs, Mapping) else subset_keys
+    )
