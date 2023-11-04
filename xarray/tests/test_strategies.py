@@ -242,7 +242,7 @@ class TestVariablesStrategy:
 class TestUniqueSubsetOf:
     @given(st.data())
     def test_invalid(self, data):
-        with pytest.raises(TypeError, match="must be a dict"):
+        with pytest.raises(TypeError, match="must be an Iterable or a Mapping"):
             data.draw(unique_subset_of(0))
 
         with pytest.raises(ValueError, match="length-zero sequence"):
@@ -257,8 +257,13 @@ class TestUniqueSubsetOf:
             assert dim in dim_sizes
             assert dim_sizes[dim] == length
 
-    def test_iterable(self):
-        ...
+    @given(st.data())
+    def test_iterable(self, data):
+        dim_names = data.draw(dimension_names(min_dims=1))
+        subset_of_dim_names = data.draw(unique_subset_of(dim_names))
+
+        for dim in subset_of_dim_names:
+            assert dim in dim_names
 
 
 @given(st.data())

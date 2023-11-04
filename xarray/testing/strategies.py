@@ -1,4 +1,4 @@
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, Union
 
 import hypothesis.extra.numpy as npst
@@ -362,25 +362,26 @@ def variables(
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
 
 
+# TODO use overloads for typing
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    d: dict[Hashable, Any],
+    objs: Union[Iterable[Hashable], Mapping[Hashable, Any]],
     *,
     min_size: int = 0,
     max_size: Union[int, None] = None,
-) -> Mapping[Hashable, Any]:
+) -> Union[Iterable[Hashable], Mapping[Hashable, Any]]:
     """
-    Return a strategy which generates a unique subset of the given mapping.
+    Return a strategy which generates a unique subset of the given objs.
 
-    Each entry in the output subset will have a unique key.
+    Each entry in the output subset will be unique (if input was an iterable) or have a unique key (if it was a mapping).
 
     Requires the hypothesis package to be installed.
 
     Parameters
     ----------
-    d: Mapping[Hashable, Any]
-        Mapping from which to sample to produce the subset.
+    objs: Union[Iterable[Hashable], Mapping[Hashable, Any]]
+        Objects from which to sample to produce the subset.
     min_size: int, optional
         Minimum size of the returned subset. Default is 0.
     max_size: int, optional
@@ -395,22 +396,31 @@ def unique_subset_of(
     --------
     >>> unique_subset_of({"x": 2, "y": 3}).example()  # doctest: +SKIP
     {'y': 3}
+    >>> unique_subset_of(["x", "y"]).example()  # doctest: +SKIP
+    ['x']
     """
-    if not isinstance(d, dict):
+    if not isinstance(objs, Iterable):
         raise TypeError(
-            f"Object to sample from must be a dict, but received type {type(d)}"
+            f"Object to sample from must be an Iterable or a Mapping, but received type {type(objs)}"
         )
 
-    if len(d) == 0:
+    if len(objs) == 0:
         raise ValueError("Can't sample from a length-zero sequence.")
 
-    # TODO generalize this to work for any iterable? Could then be used on dimension_names as well as dimension_sizes.
+    keys = list(objs.keys()) if isinstance(objs, Mapping) else objs
+
     subset_keys = draw(
         st.lists(
-            st.sampled_from(list(d.keys())),
+            st.sampled_from(keys),
             unique=True,
             min_size=min_size,
             max_size=max_size,
         )
     )
-    return {k: d[k] for k in subset_keys}
+
+    if isinstance(objs, dict):
+        subset_objs = {k: objs[k] for k in subset_keys}
+    else:
+        subset_objs = tuple(subset_keys)
+
+    return subset_objs
