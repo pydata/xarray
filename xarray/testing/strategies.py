@@ -359,3 +359,48 @@ def variables(
         )
 
     return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
+
+
+@st.composite
+def unique_subset_of(
+    draw: st.DrawFn,
+    d: Mapping[Hashable, Any],
+    *,
+    min_size: int = 0,
+    max_size: Union[int, None] = None,
+) -> Mapping[Hashable, Any]:
+    """
+    Return a strategy which generates a unique subset of the given mapping.
+
+    Each entry in the output subset will have a unique key.
+
+    Requires the hypothesis package to be installed.
+
+    Parameters
+    ----------
+    d: Mapping[Hashable, Any]
+        Mapping from which to sample to produce the subset.
+    min_size: int, optional
+        Minimum size of the returned subset. Default is 0.
+    max_size: int, optional
+        Maximum size of the returned subset. Default is the full length of the input.
+        If set to 0 the result will be an empty mapping.
+
+    Returns
+    -------
+    unique_subset_strategy
+
+    Examples
+    --------
+
+    """
+    # TODO generalize this to work for any iterable? Could then be used on dimension_names as well as dimension_sizes.
+    subset_keys = draw(
+        st.lists(
+            st.sampled_from(list(d.keys())),
+            unique=True,
+            min_size=min_size,
+            max_size=max_size,
+        )
+    )
+    return {k: d[k] for k in subset_keys}
