@@ -265,6 +265,16 @@ A common task when testing xarray user code is checking that your function works
 We can chain strategies to achieve this, for which the helper strategy :py:func:`~testing.strategies.unique_subset_of`
 is useful.
 
+It works for lists of dimension names
+
+.. ipython:: python
+
+    dim_sizes = ["x", "y", "z"]
+    unique_subset_of(dim_sizes).example()
+    unique_subset_of(dim_sizes).example()
+
+as well as for mappings of dimension names to sizes
+
 .. ipython:: python
 
     dim_sizes = {"x": 2, "y": 3, "z": 4}
