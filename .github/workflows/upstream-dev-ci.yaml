@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,7 +58,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: ci/requirements/environment.yml
+          environment-file: ci/requirements/environment-py311.yml
           environment-name: xarray-tests
           create-args: >-
             python=${{ matrix.python-version }}
@@ -110,7 +110,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,7 +118,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/provision-with-micromamba@v15
         with:
-          environment-file: ci/requirements/environment.yml
+          environment-file: ci/requirements/environment-py311.yml
           environment-name: xarray-tests
           extra-specs: |
             python=${{ matrix.python-version }}
