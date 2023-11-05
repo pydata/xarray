@@ -146,35 +146,6 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
     return slice(None)
 
 
-def _insert_in_memory_data_in_graph(
-    graph, gname, name, variable, chunk_index, chunk_bounds
-):
-    import dask
-
-    # non-dask array possibly with dimensions chunked on other variables
-    # index into variable appropriately
-    subsetter = {
-        dim: _get_chunk_slicer(dim, chunk_index, chunk_bounds) for dim in variable.dims
-    }
-    subset = variable.isel(subsetter)
-    if name in chunk_index:
-        # We are including a dimension coordinate,
-        # minimize duplication by not copying it in the graph for every chunk.
-        chunk_tuple = (chunk_index[name],)
-    else:
-        chunk_tuple = tuple(chunk_index.values())
-
-    chunk_variable_task = (
-        f"{name}-{gname}-{dask.base.tokenize(subset)}",
-    ) + chunk_tuple
-    if chunk_variable_task not in graph:
-        graph[chunk_variable_task] = (
-            tuple,
-            [subset.dims, subset._data, subset.attrs],
-        )
-    return chunk_variable_task
-
-
 def map_blocks(
     func: Callable[..., T_Xarray],
     obj: DataArray | Dataset,
@@ -494,14 +465,28 @@ def map_blocks(
                     [variable.dims, chunk, variable.attrs],
                 )
             else:
-                chunk_variable_task = _insert_in_memory_data_in_graph(
-                    graph,
-                    gname,
-                    name,
-                    variable,
-                    chunk_index,
-                    input_chunk_bounds,
-                )
+                # non-dask array possibly with dimensions chunked on other variables
+                # index into variable appropriately
+                subsetter = {
+                    dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
+                    for dim in variable.dims
+                }
+                subset = variable.isel(subsetter)
+                if name in chunk_index:
+                    # We are including a dimension coordinate,
+                    # minimize duplication by not copying it in the graph for every chunk.
+                    this_var_chunk_tuple = (chunk_index[name],)
+                else:
+                    this_var_chunk_tuple = chunk_tuple
+
+                chunk_variable_task = (
+                    f"{name}-{gname}-{dask.base.tokenize(subset)}",
+                ) + this_var_chunk_tuple
+                if chunk_variable_task not in graph:
+                    graph[chunk_variable_task] = (
+                        tuple,
+                        [subset.dims, subset._data, subset.attrs],
+                    )
 
             # this task creates dict mapping variable name to above tuple
             if name in dataset._coord_names:
