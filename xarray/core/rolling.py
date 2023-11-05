@@ -852,6 +852,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         Returns
         -------
         coarsen
+
         """
         self.obj = obj
         self.windows = windows
