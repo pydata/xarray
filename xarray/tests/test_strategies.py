@@ -110,12 +110,12 @@ class TestVariablesStrategy:
 
         assert list(var.dims) == dims
 
-    @given(st.data())
-    def test_given_arbitrary_dims_list(self, data):
-        dims = dimension_names(min_dims=1, max_dims=1)
+    @given(st.data(), st.integers(0, 10))
+    def test_given_arbitrary_dims_list(self, data, n):
+        dims = dimension_names(min_dims=n, max_dims=n)
         var = data.draw(variables(dims=dims))
 
-        assert len(list(var.dims)) == 1
+        assert len(list(var.dims)) == n
 
     @given(st.data())
     def test_given_fixed_sizes(self, data):
