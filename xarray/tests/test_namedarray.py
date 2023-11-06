@@ -60,8 +60,8 @@ class CustomArrayIndexable(
 class NamedArraySubclassobjects:
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> Any:
-        """Fixture that needs to be re-declared"""
-        assert 0
+        """Fixture that needs to be overridden"""
+        raise NotImplementedError
 
     @pytest.fixture
     def data(self) -> np.ndarray[Any, np.dtype[Any]]:
