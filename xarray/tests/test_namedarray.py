@@ -59,15 +59,15 @@ class CustomArrayIndexable(
 
 class NamedArraySubclassobjects:
     @pytest.fixture
-    def target(self):
+    def target(self, data: np.ndarray[Any, Any]) -> Any:
         """Fixture that needs to be re-declared"""
         assert 0
 
     @pytest.fixture
-    def data(self):
+    def data(self) -> np.ndarray[Any, np.dtype[Any]]:
         return 0.5 * np.arange(10).reshape(2, 5)
 
-    def test_properties(self, target, data) -> None:
+    def test_properties(self, target: Any, data: Any) -> None:
         assert target.dims == ("x", "y")
         assert np.array_equal(target.data, data)
         assert target.dtype == float
@@ -82,7 +82,7 @@ class NamedArraySubclassobjects:
 
 class TestNamedArray(NamedArraySubclassobjects):
     @pytest.fixture
-    def target(self, data):
+    def target(self, data: np.ndarray[Any, Any]) -> NamedArray[Any, Any]:
         return NamedArray(["x", "y"], data, {"key": "value"})
 
 
