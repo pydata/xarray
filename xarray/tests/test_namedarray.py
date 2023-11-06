@@ -67,7 +67,7 @@ class NamedArraySubclassobjects:
     def data(self):
         return 0.5 * np.arange(10).reshape(2, 5)
 
-    def test_properties(self, target, data):
+    def test_properties(self, target, data) -> None:
         assert target.dims == ("x", "y")
         assert np.array_equal(target.data, data)
         assert target.dtype == float
