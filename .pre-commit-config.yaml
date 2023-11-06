@@ -3,7 +3,7 @@ ci:
     autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -18,24 +18,24 @@ repos:
         files: ^xarray/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.0.292'
+    rev: 'v0.1.4'
     hooks:
       - id: ruff
         args: ["--fix"]
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 23.9.1
+    rev: 23.10.1
     hooks:
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.8
+    rev: v0.3.9
     hooks:
       - id: blackdoc
         exclude: "generate_aggregations.py"
-        additional_dependencies: ["black==23.9.1"]
+        additional_dependencies: ["black==23.10.1"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.5.1
+    rev: v1.6.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
