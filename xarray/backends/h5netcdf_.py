@@ -91,7 +91,7 @@ def _h5netcdf_create_group(dataset, name):
 def _h5netcdf_opener(filename, mode, storage_options=None, **kwargs):
     import h5netcdf
 
-    if is_remote_uri(filename):
+    if isinstance(filename, str) and is_remote_uri(filename):
         import fsspec
 
         mode_ = "rb" if mode == "r" else mode
