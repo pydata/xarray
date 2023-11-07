@@ -1422,7 +1422,6 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
 
     assert len(out) == 12
 
-    print(out)
     if exp_pd:
         assert infer_freq(out) == expected_pandas_freq
     else:

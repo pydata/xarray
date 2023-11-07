@@ -987,7 +987,7 @@ def cftime_range(
     +--------+--------------------------+
     | QS     | Quarter-start frequency  |
     +--------+--------------------------+
-    | MS     | Month-end frequency      |
+    | ME     | Month-end frequency      |
     +--------+--------------------------+
     | MS     | Month-start frequency    |
     +--------+--------------------------+
