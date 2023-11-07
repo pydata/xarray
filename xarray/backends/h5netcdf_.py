@@ -88,6 +88,20 @@ def _h5netcdf_create_group(dataset, name):
     return dataset.create_group(name)
 
 
+def _h5netcdf_opener(filename, mode, storage_options=None, **kwargs):
+    import h5netcdf
+
+    if is_remote_uri(filename):
+        import fsspec
+
+        mode_ = "rb" if mode == "r" else mode
+        fs, _, _ = fsspec.get_fs_token_paths(
+            filename, mode=mode_, storage_options=storage_options
+        )
+        filename = fs.open(filename, mode=mode_)
+    return h5netcdf.File(filename, mode=mode, **kwargs)
+
+
 class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf"""
 
@@ -140,9 +154,8 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        storage_options=None,
     ):
-        import h5netcdf
-
         if isinstance(filename, bytes):
             raise ValueError(
                 "can't open netCDF4/HDF5 as bytes "
@@ -161,6 +174,7 @@ class H5NetCDFStore(WritableCFDataStore):
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
             "decode_vlen_strings": decode_vlen_strings,
+            "storage_options": storage_options,
         }
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
@@ -171,7 +185,9 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        manager = CachingFileManager(
+            _h5netcdf_opener, filename, mode=mode, kwargs=kwargs
+        )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
@@ -397,6 +413,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        storage_options=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -407,6 +424,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
             decode_vlen_strings=decode_vlen_strings,
+            storage_options=storage_options,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
