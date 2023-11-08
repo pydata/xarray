@@ -751,7 +751,7 @@ class ZarrStore(AbstractWritableDataStore):
             writer.add(v.data, zarr_array, region)
 
     def close(self):
-        pass
+        self.zarr_group.store.close()
 
 
 def open_zarr(
