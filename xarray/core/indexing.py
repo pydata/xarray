@@ -143,7 +143,10 @@ def group_indexers_by_index(
         elif key in obj.coords:
             raise KeyError(f"no index found for coordinate {key!r}")
         elif key not in obj.dims:
-            raise KeyError(f"{key!r} is not a valid dimension or coordinate")
+            raise KeyError(
+                f"{key!r} is not a valid dimension or coordinate for "
+                f"{obj.__class__.__name__} with dimensions {obj.dims!r}"
+            )
         elif len(options):
             raise ValueError(
                 f"cannot supply selection options {options!r} for dimension {key!r}"
@@ -1303,7 +1306,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if not isinstance(array, np.ndarray):
             raise TypeError(
                 "NumpyIndexingAdapter only wraps np.ndarray. "
-                "Trying to wrap {}".format(type(array))
+                f"Trying to wrap {type(array)}"
             )
         self.array = array
 

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Literal, Union
 
 import numpy as np
 import pandas as pd
@@ -16,6 +15,7 @@ from xarray.core.common import (
     contains_cftime_datetimes,
 )
 from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
 
 CF_RELATED_DATA = (
@@ -71,20 +71,18 @@ def _infer_dtype(array, name: T_Name = None) -> np.dtype:
         return dtype
 
     raise ValueError(
-        "unable to infer dtype on variable {!r}; xarray "
-        "cannot serialize arbitrary Python objects".format(name)
+        f"unable to infer dtype on variable {name!r}; xarray "
+        "cannot serialize arbitrary Python objects"
     )
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
     if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
         raise NotImplementedError(
-            "variable {!r} is a MultiIndex, which cannot yet be "
+            f"variable {name!r} is a MultiIndex, which cannot yet be "
             "serialized to netCDF files. Instead, either use reset_index() "
             "to convert MultiIndex levels into coordinate variables instead "
-            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html.".format(
-                name
-            )
+            "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
         )
 
 
@@ -109,13 +107,13 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
             return var
 
         if is_duck_dask_array(data):
-            warnings.warn(
-                "variable {} has data in the form of a dask array with "
+            emit_user_level_warning(
+                f"variable {name} has data in the form of a dask array with "
                 "dtype=object, which means it is being loaded into memory "
                 "to determine a data type that can be safely stored on disk. "
                 "To avoid this, coerce this variable to a fixed-size dtype "
-                "with astype() before saving it.".format(name),
-                SerializationWarning,
+                "with astype() before saving it.",
+                category=SerializationWarning,
             )
             data = data.compute()
 
@@ -352,15 +350,14 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
             and "bounds" in attrs
             and attrs["bounds"] in variables
         ):
-            warnings.warn(
-                "Variable '{0}' has datetime type and a "
-                "bounds variable but {0}.encoding does not have "
-                "units specified. The units encodings for '{0}' "
-                "and '{1}' will be determined independently "
+            emit_user_level_warning(
+                f"Variable {name:s} has datetime type and a "
+                f"bounds variable but {name:s}.encoding does not have "
+                f"units specified. The units encodings for {name:s} "
+                f"and {attrs['bounds']} will be determined independently "
                 "and may not be equal, counter to CF-conventions. "
                 "If this is a concern, specify a units encoding for "
-                "'{0}' before writing to a file.".format(name, attrs["bounds"]),
-                UserWarning,
+                f"{name:s} before writing to a file.",
             )
 
         if has_date_units and "bounds" in attrs:
@@ -377,7 +374,7 @@ def decode_cf_variables(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: bool = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
@@ -439,11 +436,14 @@ def decode_cf_variables(
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
-                coord_str = var_attrs["coordinates"]
-                var_coord_names = coord_str.split()
-                if all(k in variables for k in var_coord_names):
-                    new_vars[k].encoding["coordinates"] = coord_str
-                    del var_attrs["coordinates"]
+                var_coord_names = [
+                    c for c in var_attrs["coordinates"].split() if c in variables
+                ]
+                # propagate as is
+                new_vars[k].encoding["coordinates"] = var_attrs["coordinates"]
+                del var_attrs["coordinates"]
+                # but only use as coordinate if existing
+                if var_coord_names:
                     coord_names.update(var_coord_names)
 
         if decode_coords == "all":
@@ -459,8 +459,8 @@ def decode_cf_variables(
                             for role_or_name in part.split()
                         ]
                         if len(roles_and_names) % 2 == 1:
-                            warnings.warn(
-                                f"Attribute {attr_name:s} malformed", stacklevel=5
+                            emit_user_level_warning(
+                                f"Attribute {attr_name:s} malformed"
                             )
                         var_names = roles_and_names[1::2]
                     if all(var_name in variables for var_name in var_names):
@@ -472,9 +472,8 @@ def decode_cf_variables(
                             for proj_name in var_names
                             if proj_name not in variables
                         ]
-                        warnings.warn(
+                        emit_user_level_warning(
                             f"Variable(s) referenced in {attr_name:s} not in variables: {referenced_vars_not_in_variables!s}",
-                            stacklevel=5,
                         )
                     del var_attrs[attr_name]
 
@@ -491,7 +490,7 @@ def decode_cf(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
-    decode_coords: bool = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
@@ -630,12 +629,11 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
 
     for name in list(non_dim_coord_names):
         if isinstance(name, str) and " " in name:
-            warnings.warn(
-                "coordinate {!r} has a space in its name, which means it "
+            emit_user_level_warning(
+                f"coordinate {name!r} has a space in its name, which means it "
                 "cannot be marked as a coordinate on disk and will be "
-                "saved as a data variable instead".format(name),
-                SerializationWarning,
-                stacklevel=6,
+                "saved as a data variable instead",
+                category=SerializationWarning,
             )
             non_dim_coord_names.discard(name)
 
@@ -708,11 +706,11 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     if global_coordinates:
         attributes = dict(attributes)
         if "coordinates" in attributes:
-            warnings.warn(
+            emit_user_level_warning(
                 f"cannot serialize global coordinates {global_coordinates!r} because the global "
                 f"attribute 'coordinates' already exists. This may prevent faithful roundtripping"
                 f"of xarray datasets",
-                SerializationWarning,
+                category=SerializationWarning,
             )
         else:
             attributes["coordinates"] = " ".join(sorted(map(str, global_coordinates)))

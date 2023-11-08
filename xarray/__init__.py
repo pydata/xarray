@@ -1,3 +1,5 @@
+from importlib.metadata import version as _version
+
 from xarray import testing, tutorial
 from xarray.backends.api import (
     load_dataarray,
@@ -42,17 +44,11 @@ from xarray.core.variable import IndexVariable, Variable, as_variable
 from xarray.util.print_versions import show_versions
 
 try:
-    from importlib.metadata import version as _version
-except ImportError:
-    # if the fallback library is missing, we are doomed.
-    from importlib_metadata import version as _version
-
-try:
     __version__ = _version("xarray")
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
-    __version__ = "999"
+    __version__ = "9999"
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.

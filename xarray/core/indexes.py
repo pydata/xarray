@@ -24,7 +24,7 @@ from xarray.core.utils import (
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import ErrorOptions, JoinOptions, T_Index
+    from xarray.core.types import ErrorOptions, JoinOptions, Self
     from xarray.core.variable import Variable
 
 
@@ -60,11 +60,11 @@ class Index:
 
     @classmethod
     def from_variables(
-        cls: type[T_Index],
+        cls,
         variables: Mapping[Any, Variable],
         *,
         options: Mapping[str, Any],
-    ) -> T_Index:
+    ) -> Self:
         """Create a new index object from one or more coordinate variables.
 
         This factory method must be implemented in all subclasses of Index.
@@ -88,11 +88,11 @@ class Index:
 
     @classmethod
     def concat(
-        cls: type[T_Index],
-        indexes: Sequence[T_Index],
+        cls,
+        indexes: Sequence[Self],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
-    ) -> T_Index:
+    ) -> Self:
         """Create a new index by concatenating one or more indexes of the same
         type.
 
@@ -120,9 +120,7 @@ class Index:
         raise NotImplementedError()
 
     @classmethod
-    def stack(
-        cls: type[T_Index], variables: Mapping[Any, Variable], dim: Hashable
-    ) -> T_Index:
+    def stack(cls, variables: Mapping[Any, Variable], dim: Hashable) -> Self:
         """Create a new index by stacking coordinate variables into a single new
         dimension.
 
@@ -208,8 +206,8 @@ class Index:
         raise TypeError(f"{self!r} cannot be cast to a pandas.Index object")
 
     def isel(
-        self: T_Index, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> T_Index | None:
+        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> Self | None:
         """Maybe returns a new index from the current index itself indexed by
         positional indexers.
 
@@ -264,7 +262,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
-    def join(self: T_Index, other: T_Index, how: JoinOptions = "inner") -> T_Index:
+    def join(self, other: Self, how: JoinOptions = "inner") -> Self:
         """Return a new index from the combination of this index with another
         index of the same type.
 
@@ -286,7 +284,7 @@ class Index:
             f"{self!r} doesn't support alignment with inner/outer join method"
         )
 
-    def reindex_like(self: T_Index, other: T_Index) -> dict[Hashable, Any]:
+    def reindex_like(self, other: Self) -> dict[Hashable, Any]:
         """Query the index with another index of the same type.
 
         Implementation is optional but required in order to support alignment.
@@ -304,10 +302,10 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self: T_Index, other: T_Index) -> bool:
+    def equals(self, other: Self) -> bool:
         """Compare this index with another index of the same type.
 
-        Implemenation is optional but required in order to support alignment.
+        Implementation is optional but required in order to support alignment.
 
         Parameters
         ----------
@@ -321,7 +319,7 @@ class Index:
         """
         raise NotImplementedError()
 
-    def roll(self: T_Index, shifts: Mapping[Any, int]) -> T_Index | None:
+    def roll(self, shifts: Mapping[Any, int]) -> Self | None:
         """Roll this index by an offset along one or more dimensions.
 
         This method can be re-implemented in subclasses of Index, e.g., when the
@@ -347,10 +345,10 @@ class Index:
         return None
 
     def rename(
-        self: T_Index,
+        self,
         name_dict: Mapping[Any, Hashable],
         dims_dict: Mapping[Any, Hashable],
-    ) -> T_Index:
+    ) -> Self:
         """Maybe update the index with new coordinate and dimension names.
 
         This method should be re-implemented in subclasses of Index if it has
@@ -377,7 +375,7 @@ class Index:
         """
         return self
 
-    def copy(self: T_Index, deep: bool = True) -> T_Index:
+    def copy(self, deep: bool = True) -> Self:
         """Return a (deep) copy of this index.
 
         Implementation in subclasses of Index is optional. The base class
@@ -396,15 +394,13 @@ class Index:
         """
         return self._copy(deep=deep)
 
-    def __copy__(self: T_Index) -> T_Index:
+    def __copy__(self) -> Self:
         return self.copy(deep=False)
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Index:
         return self._copy(deep=True, memo=memo)
 
-    def _copy(
-        self: T_Index, deep: bool = True, memo: dict[int, Any] | None = None
-    ) -> T_Index:
+    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Self:
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:
@@ -414,7 +410,7 @@ class Index:
             copied.__dict__.update(self.__dict__)
         return copied
 
-    def __getitem__(self: T_Index, indexer: Any) -> T_Index:
+    def __getitem__(self, indexer: Any) -> Self:
         raise NotImplementedError()
 
     def _repr_inline_(self, max_width):
@@ -674,10 +670,10 @@ class PandasIndex(Index):
     @classmethod
     def concat(
         cls,
-        indexes: Sequence[PandasIndex],
+        indexes: Sequence[Self],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
-    ) -> PandasIndex:
+    ) -> Self:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
         if not indexes:
@@ -800,7 +796,11 @@ class PandasIndex(Index):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
 
-    def join(self: PandasIndex, other: PandasIndex, how: str = "inner") -> PandasIndex:
+    def join(
+        self,
+        other: Self,
+        how: str = "inner",
+    ) -> Self:
         if how == "outer":
             index = self.index.union(other.index)
         else:
@@ -811,7 +811,7 @@ class PandasIndex(Index):
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def reindex_like(
-        self, other: PandasIndex, method=None, tolerance=None
+        self, other: Self, method=None, tolerance=None
     ) -> dict[Hashable, Any]:
         if not self.index.is_unique:
             raise ValueError(
@@ -963,12 +963,12 @@ class PandasMultiIndex(PandasIndex):
         return obj
 
     @classmethod
-    def concat(  # type: ignore[override]
+    def concat(
         cls,
-        indexes: Sequence[PandasMultiIndex],
+        indexes: Sequence[Self],
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
-    ) -> PandasMultiIndex:
+    ) -> Self:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
         if not indexes:
@@ -1203,12 +1203,12 @@ class PandasMultiIndex(PandasIndex):
             coord_name, label = next(iter(labels.items()))
 
             if is_dict_like(label):
-                invalid_levels = [
+                invalid_levels = tuple(
                     name for name in label if name not in self.index.names
-                ]
+                )
                 if invalid_levels:
                     raise ValueError(
-                        f"invalid multi-index level names {invalid_levels}"
+                        f"multi-index level names {invalid_levels} not found in indexes {tuple(self.index.names)}"
                     )
                 return self.sel(label)
 
@@ -1602,7 +1602,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return Indexes(indexes, self._variables, index_type=pd.Index)
 
     def copy_indexes(
-        self, deep: bool = True, memo: dict[int, Any] | None = None
+        self, deep: bool = True, memo: dict[int, T_PandasOrXarrayIndex] | None = None
     ) -> tuple[dict[Hashable, T_PandasOrXarrayIndex], dict[Hashable, Variable]]:
         """Return a new dictionary with copies of indexes, preserving
         unique indexes.
@@ -1619,6 +1619,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         new_indexes = {}
         new_index_vars = {}
 
+        idx: T_PandasOrXarrayIndex
         for idx, coords in self.group_by_index():
             if isinstance(idx, pd.Index):
                 convert_new_idx = True

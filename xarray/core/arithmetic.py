@@ -15,7 +15,6 @@ from xarray.core._typed_ops import (
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.ops import (
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     IncludeReduceMethods,
 )
@@ -56,10 +55,10 @@ class SupportsArithmetic:
 
         if ufunc.signature is not None:
             raise NotImplementedError(
-                "{} not supported: xarray objects do not directly implement "
+                f"{ufunc} not supported: xarray objects do not directly implement "
                 "generalized ufuncs. Instead, use xarray.apply_ufunc or "
                 "explicitly convert to xarray objects to NumPy arrays "
-                "(e.g., with `.values`).".format(ufunc)
+                "(e.g., with `.values`)."
             )
 
         if method != "__call__":
@@ -99,8 +98,6 @@ class SupportsArithmetic:
 
 class VariableArithmetic(
     ImplementsArrayReduce,
-    IncludeReduceMethods,
-    IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
     VariableOpsMixin,
