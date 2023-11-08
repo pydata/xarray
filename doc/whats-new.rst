@@ -24,6 +24,11 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
+- Open netCDF4 enums and turn them into CF flag_meanings/flag_values.
+  This also adds a new encoding key `enum` to DataArray that tells the netCDF4 backend
+  to turn flag_meanings and flag_values into Enums when calling
+  :py:meth:`Dataset.to_netcdf`.
+  By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
