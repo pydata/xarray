@@ -73,31 +73,8 @@ class BaseNetCDF4Array(BackendArray):
         self.dtype = dtype
 
     def __setitem__(self, key, value):
-        import netCDF4
-
         with self.datastore.lock:
             data = self.get_array(needs_lock=False)
-            if isinstance(data.datatype, netCDF4.EnumType):
-                # Make sure the values we are trying to assign are in enums valid range.
-                error_message = (
-                    "Cannot save the variable `{0}` to netCDF4:"
-                    " `{0}` has values, such as `{1}`, which are not in the"
-                    " enum/flag_values valid values: `{2}`. Fix the variable data or edit"
-                    " its flag_values and flag_meanings attributes and try again. Note that"
-                    " if the enum values are not contiguous, there might be other invalid"
-                    " values too"
-                )
-                valid_values = tuple(data.datatype.enum_dict.values())
-                max_val = np.max(value)
-                min_val = np.min(value)
-                if max_val not in valid_values:
-                    raise ValueError(
-                        error_message.format(data.name, max_val, valid_values)
-                    )
-                if min_val not in valid_values:
-                    raise ValueError(
-                        error_message.format(data.name, min_val, valid_values)
-                    )
             data[key] = value
             if self.datastore.autoclose:
                 self.datastore.close(needs_lock=False)
@@ -521,7 +498,11 @@ class NetCDF4DataStore(WritableCFDataStore):
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
-        if encoding.get("enum") is not None:
+        if (
+            encoding.get("enum")
+            and attrs.get("flag_meanings")
+            and attrs.get("flag_values")
+        ):
             enum_dict = {
                 k: v for k, v in zip(attrs["flag_meanings"], attrs["flag_values"])
             }
@@ -534,6 +515,22 @@ class NetCDF4DataStore(WritableCFDataStore):
                     enum_name,
                     enum_dict,
                 )
+            # Make sure the values we are trying to assign are in enums valid range.
+            error_message = (
+                "Cannot save the variable `{0}` to netCDF4: `{0}` has values, such"
+                " as `{1}`, which are not in the enum/flag_values valid values:"
+                " `{2}`. Fix the variable data or edit its flag_values and"
+                " flag_meanings attributes and try again. Note that if the enum"
+                " values are not contiguous, there might be other invalid values"
+                " too."
+            )
+            valid_values = tuple(attrs["flag_values"])
+            max_val = np.max(variable.data)
+            min_val = np.min(variable.data)
+            if max_val not in valid_values:
+                raise ValueError(error_message.format(name, max_val, valid_values))
+            if min_val not in valid_values:
+                raise ValueError(error_message.format(name, min_val, valid_values))
             del attrs["flag_values"]
             del attrs["flag_meanings"]
         else:

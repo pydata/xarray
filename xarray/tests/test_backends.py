@@ -1740,10 +1740,10 @@ class NetCDF4Base(NetCDFBase):
             with open_dataset(tmp_file) as ds:
                 assert np.all(ds.clouds.values == 255)
                 with create_tmp_file() as tmp_file2:
-                    with pytest.raises(ValueError) as err:
+                    with pytest.raises(
+                        ValueError, match="Cannot save the variable `clouds` .*"
+                    ):
                         ds.to_netcdf(tmp_file2)
-                        assert True is False
-                        assert "Cannot save the variable clouds" in err.args[0]
 
     @requires_netCDF4
     def test_encoding_enum__multiple_variable_with_enum(self):
