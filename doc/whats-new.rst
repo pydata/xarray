@@ -50,6 +50,9 @@ Bug fixes
   ``"right"`` to xarray's implementation of resample for data indexed by a
   :py:class:`CFTimeIndex` (:pull:`8393`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix to once again support date offset strings as input to the loffset
+  parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
+  By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
 
 Documentation
 ~~~~~~~~~~~~~
