@@ -628,8 +628,21 @@ class ZarrStore(AbstractWritableDataStore):
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
 
+        # if we are appending to an append_dim, only write either
+        # - new variables not already present, OR
+        # - variables with the append_dim in their dimensions
+        # We do NOT overwrite other variables.
+        if self._append_dim is not None:
+            variables_to_set = {
+                k: v
+                for k, v in variables_encoded.items()
+                if (k not in existing_variable_names) or (self._append_dim in v.dims)
+            }
+        else:
+            variables_to_set = variables_encoded
+
         self.set_variables(
-            variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
+            variables_to_set, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
             zarr.consolidate_metadata(self.zarr_group.store)
