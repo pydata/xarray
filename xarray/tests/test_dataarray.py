@@ -3822,6 +3822,51 @@ class TestDataArray:
 
         assert_equal(array, result)
 
+    def test_to_dataset_coord_value_is_dim(self) -> None:
+        # github issue #7823
+
+        array = DataArray(
+            np.zeros((3, 3)),
+            coords={
+                # 'a' is both a coordinate value and the name of a coordinate
+                "x": ["a", "b", "c"],
+                "a": [1, 2, 3],
+            },
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape("dimension 'x' would produce the variables ('a',)")
+                + ".*"
+                + re.escape("DataArray.rename(a=...) or DataArray.assign_coords(x=...)")
+            ),
+        ):
+            array.to_dataset("x")
+
+        # test error message formatting when there are multiple ambiguous
+        # values/coordinates
+        array2 = DataArray(
+            np.zeros((3, 3, 2)),
+            coords={
+                "x": ["a", "b", "c"],
+                "a": [1, 2, 3],
+                "b": [0.0, 0.1],
+            },
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape("dimension 'x' would produce the variables ('a', 'b')")
+                + ".*"
+                + re.escape(
+                    "DataArray.rename(a=..., b=...) or DataArray.assign_coords(x=...)"
+                )
+            ),
+        ):
+            array2.to_dataset("x")
+
     def test__title_for_slice(self) -> None:
         array = DataArray(
             np.ones((4, 3, 2)),
