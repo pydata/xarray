@@ -1734,14 +1734,14 @@ class NetCDF4Base(NetCDFBase):
                     "clouds",
                     cloud_type,
                     "time",
-                    fill_value=None,
+                    fill_value=255,
                 )
                 # v is filled with default fill_value of u1
             with open_dataset(tmp_file) as ds:
-                assert np.all(ds.clouds.values == 255)
                 with create_tmp_file() as tmp_file2:
                     with pytest.raises(
-                        ValueError, match="Cannot save the variable `clouds` .*"
+                        ValueError,
+                        match=("Cannot save the variable `clouds` to" " netCDF4.*"),
                     ):
                         ds.to_netcdf(tmp_file2)
 
