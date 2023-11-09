@@ -1371,6 +1371,11 @@ class DataArray(
             # ignoring type; unclear why it won't accept a Literal into the value.
             chunks = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
+            utils.emit_user_level_warning(
+                "Supplying chunks as dimension-order tuples is deprecated. "
+                "It will raise an error in the future. Instead use a dict with dimension names as keys.",
+                category=DeprecationWarning,
+            )
             chunks = dict(zip(self.dims, chunks))
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -1425,6 +1430,12 @@ class DataArray(
         --------
         Dataset.isel
         DataArray.sel
+
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
 
         Examples
         --------
@@ -1557,6 +1568,12 @@ class DataArray(
         --------
         Dataset.sel
         DataArray.isel
+
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
 
         Examples
         --------
@@ -2190,6 +2207,9 @@ class DataArray(
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
+            Tutorial material on manipulating data resolution using :py:func:`~xarray.DataArray.interp`
 
         Examples
         --------
@@ -5456,6 +5476,9 @@ class DataArray(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
+        :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
+            Advanced Tutorial on map_blocks with dask
+
         Examples
         --------
         Calculate an anomaly from climatology using ``.groupby()``. Using
@@ -6671,10 +6694,20 @@ class DataArray(
         --------
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
+
+        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
+
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
+
         DataArray.groupby_bins
         Dataset.groupby
         core.groupby.DataArrayGroupBy
+        DataArray.coarsen
         pandas.DataFrame.groupby
+        Dataset.resample
+        DataArray.resample
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -6809,6 +6842,13 @@ class DataArray(
         See Also
         --------
         Dataset.weighted
+
+        :ref:`comput.weighted`
+            User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
+
+        :doc:`xarray-tutorial:fundamentals/03.4_weighted`
+            Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
+
         """
         from xarray.core.weighted import DataArrayWeighted
 
@@ -6950,6 +6990,16 @@ class DataArray(
         --------
         core.rolling.DataArrayCoarsen
         Dataset.coarsen
+
+        :ref:`reshape.coarsen`
+            User guide describing :py:func:`~xarray.DataArray.coarsen`
+
+        :ref:`compute.coarsen`
+            User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
+
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
+            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
+
         """
         from xarray.core.rolling import DataArrayCoarsen
 

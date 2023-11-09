@@ -14,6 +14,54 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2023.10.2:
+
+v2023.10.2 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+- Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
+  :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
+  dimensions, or a single ``int`` or ``"auto"`` argument covering all
+  dimensions. Xarray favors using dimensions names rather than positions, and
+  this was one place in the API where dimension positions were used.
+  (:pull:`8341`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Port `bug fix from pandas <https://github.com/pandas-dev/pandas/pull/55283>`_
+  to eliminate the adjustment of resample bin edges in the case that the
+  resampling frequency has units of days and is greater than one day
+  (e.g. ``"2D"``, ``"3D"`` etc.) and the ``closed`` argument is set to
+  ``"right"`` to xarray's implementation of resample for data indexed by a
+  :py:class:`CFTimeIndex` (:pull:`8393`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix to once again support date offset strings as input to the loffset
+  parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
+  By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2023.10.1:
 
 v2023.10.1 (19 Oct, 2023)
@@ -104,10 +152,17 @@ Bug fixes
   (:issue:`8290`, :pull:`8297`).
   By `Oliver McCormack <https://github.com/olimcc>`_.
 
+- Fix to_zarr ending in a ReadOnlyError when consolidated metadata was used and the
+  write_empty_chunks was provided.
+  (:issue:`8323`, :pull:`8326`)
+  By `Matthijs Amesz <https://github.com/Metamess>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Added page on the interoperability of xarray objects.
+  (:pull:`7992`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Added xarray-regrid to the list of xarray related projects (:pull:`8272`).
   By `Bart Schilperoort <https://github.com/BSchilperoort>`_.
 

@@ -683,8 +683,23 @@ class ZarrStore(AbstractWritableDataStore):
                 # metadata. This would need some case work properly with region
                 # and append_dim.
                 if self._write_empty is not None:
+                    # Write to zarr_group.chunk_store instead of zarr_group.store
+                    # See https://github.com/pydata/xarray/pull/8326#discussion_r1365311316 for a longer explanation
+                    #    The open_consolidated() enforces a mode of r or r+
+                    #    (and to_zarr with region provided enforces a read mode of r+),
+                    #    and this function makes sure the resulting Group has a store of type ConsolidatedMetadataStore
+                    #    and a 'normal Store subtype for chunk_store.
+                    #    The exact type depends on if a local path was used, or a URL of some sort,
+                    #    but the point is that it's not a read-only ConsolidatedMetadataStore.
+                    #    It is safe to write chunk data to the chunk_store because no metadata would be changed by
+                    #    to_zarr with the region parameter:
+                    #     - Because the write mode is enforced to be r+, no new variables can be added to the store
+                    #       (this is also checked and enforced in xarray.backends.api.py::to_zarr()).
+                    #     - Existing variables already have their attrs included in the consolidated metadata file.
+                    #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
+                    #        which is mutually exclusive with `region`
                     zarr_array = zarr.open(
-                        store=self.zarr_group.store,
+                        store=self.zarr_group.chunk_store,
                         path=f"{self.zarr_group.name}/{name}",
                         write_empty_chunks=self._write_empty,
                     )

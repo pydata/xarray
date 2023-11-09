@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
@@ -8,11 +9,7 @@ import numpy as np
 import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._typing import (
-    _arrayfunction_or_api,
-    _DType_co,
-    _ShapeType_co,
-)
+from xarray.namedarray._typing import _arrayfunction_or_api, _DType_co, _ShapeType_co
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import _default
 
@@ -70,13 +67,13 @@ def test_namedarray_init() -> None:
     expected = np.array([1, 2], dtype=dtype)
     actual: NamedArray[Any, np.dtype[np.int8]]
     actual = NamedArray(("x",), expected)
-    assert np.array_equal(actual.data, expected)
+    assert np.array_equal(np.asarray(actual.data), expected)
 
     with pytest.raises(AttributeError):
         expected2 = [1, 2]
         actual2: NamedArray[Any, Any]
         actual2 = NamedArray(("x",), expected2)  # type: ignore[arg-type]
-        assert np.array_equal(actual2.data, expected2)
+        assert np.array_equal(np.asarray(actual2.data), expected2)
 
 
 @pytest.mark.parametrize(
@@ -105,7 +102,7 @@ def test_from_array(
     else:
         actual = from_array(dims, data)
 
-        assert np.array_equal(actual.data, expected)
+        assert np.array_equal(np.asarray(actual.data), expected)
 
 
 def test_from_array_with_masked_array() -> None:
@@ -118,7 +115,8 @@ def test_from_array_with_masked_array() -> None:
 def test_from_array_with_0d_object() -> None:
     data = np.empty((), dtype=object)
     data[()] = (10, 12, 12)
-    np.array_equal(from_array((), data).data, data)
+    narr = from_array((), data)
+    np.array_equal(np.asarray(narr.data), data)
 
 
 # TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of_arrayfunction_or_api
@@ -144,7 +142,7 @@ def test_properties() -> None:
     named_array: NamedArray[Any, Any]
     named_array = NamedArray(["x", "y"], data, {"key": "value"})
     assert named_array.dims == ("x", "y")
-    assert np.array_equal(named_array.data, data)
+    assert np.array_equal(np.asarray(named_array.data), data)
     assert named_array.attrs == {"key": "value"}
     assert named_array.ndim == 2
     assert named_array.sizes == {"x": 2, "y": 5}
@@ -166,9 +164,31 @@ def test_attrs() -> None:
 def test_data(random_inputs: np.ndarray[Any, Any]) -> None:
     named_array: NamedArray[Any, Any]
     named_array = NamedArray(["x", "y", "z"], random_inputs)
-    assert np.array_equal(named_array.data, random_inputs)
+    assert np.array_equal(np.asarray(named_array.data), random_inputs)
     with pytest.raises(ValueError):
         named_array.data = np.random.random((3, 4)).astype(np.float64)
+
+
+def test_real_and_imag() -> None:
+    expected_real: np.ndarray[Any, np.dtype[np.float64]]
+    expected_real = np.arange(3, dtype=np.float64)
+
+    expected_imag: np.ndarray[Any, np.dtype[np.float64]]
+    expected_imag = -np.arange(3, dtype=np.float64)
+
+    arr: np.ndarray[Any, np.dtype[np.complex128]]
+    arr = expected_real + 1j * expected_imag
+
+    named_array: NamedArray[Any, np.dtype[np.complex128]]
+    named_array = NamedArray(["x"], arr)
+
+    actual_real: duckarray[Any, np.dtype[np.float64]] = named_array.real.data
+    assert np.array_equal(np.asarray(actual_real), expected_real)
+    assert actual_real.dtype == expected_real.dtype
+
+    actual_imag: duckarray[Any, np.dtype[np.float64]] = named_array.imag.data
+    assert np.array_equal(np.asarray(actual_imag), expected_imag)
+    assert actual_imag.dtype == expected_imag.dtype
 
 
 # Additional tests as per your original class-based code
@@ -196,7 +216,7 @@ def test_0d_object() -> None:
     named_array = from_array([], (10, 12, 12))
     expected_data = np.empty((), dtype=object)
     expected_data[()] = (10, 12, 12)
-    assert np.array_equal(named_array.data, expected_data)
+    assert np.array_equal(np.asarray(named_array.data), expected_data)
 
     assert named_array.dims == ()
     assert named_array.sizes == {}
@@ -270,11 +290,29 @@ def test_duck_array_class() -> None:
 
     numpy_a: NDArray[np.int64]
     numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
+    test_duck_array_typevar(numpy_a)
+
+    masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
+    masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
+    test_duck_array_typevar(masked_a)
+
     custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
     custom_a = CustomArrayIndexable(numpy_a)
-
-    test_duck_array_typevar(numpy_a)
     test_duck_array_typevar(custom_a)
+
+    # Test numpy's array api:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            r"The numpy.array_api submodule is still experimental",
+            category=UserWarning,
+        )
+        import numpy.array_api as nxp
+
+    # TODO: nxp doesn't use dtype typevars, so can only use Any for the moment:
+    arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
+    arrayapi_a = nxp.asarray([2.1, 4], dtype=np.dtype(np.int64))
+    test_duck_array_typevar(arrayapi_a)
 
 
 def test_new_namedarray() -> None:
@@ -341,7 +379,9 @@ def test_new_namedarray() -> None:
 
 def test_replace_namedarray() -> None:
     dtype_float = np.dtype(np.float32)
+    np_val: np.ndarray[Any, np.dtype[np.float32]]
     np_val = np.array([1.5, 3.2], dtype=dtype_float)
+    np_val2: np.ndarray[Any, np.dtype[np.float32]]
     np_val2 = 2 * np_val
 
     narr_float: NamedArray[Any, np.dtype[np.float32]]

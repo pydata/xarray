@@ -309,7 +309,8 @@ def _maybe_chunk(
             # when rechunking by different amounts, make sure dask names change
             # by providing chunks as an input to tokenize.
             # subtle bugs result otherwise. see GH3350
-            token2 = tokenize(name, token if token else var._data, chunks)
+            # we use str() for speed, and use the name for the final array name on the next line
+            token2 = tokenize(token if token else var._data, str(chunks))
             name2 = f"{name_prefix}{name}-{token2}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
@@ -2647,11 +2648,17 @@ class Dataset(
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
+                category=DeprecationWarning,
             )
             chunks = {}
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
+            if isinstance(chunks, (tuple, list)):
+                utils.emit_user_level_warning(
+                    "Supplying chunks as dimension-order tuples is deprecated. "
+                    "It will raise an error in the future. Instead use a dict with dimensions as keys.",
+                    category=DeprecationWarning,
+                )
             chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
             chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
@@ -2895,6 +2902,13 @@ class Dataset(
         --------
         Dataset.sel
         DataArray.isel
+
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
+
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
@@ -3042,6 +3056,13 @@ class Dataset(
         --------
         Dataset.isel
         DataArray.sel
+
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
+
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         query_results = map_index_queries(
@@ -3793,6 +3814,9 @@ class Dataset(
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
+            Tutorial material on manipulating data resolution using :py:func:`~xarray.Dataset.interp`
 
         Examples
         --------
@@ -8643,6 +8667,10 @@ class Dataset(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
+        :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
+            Advanced Tutorial on map_blocks with dask
+
+
         Examples
         --------
         Calculate an anomaly from climatology using ``.groupby()``. Using
@@ -10028,10 +10056,18 @@ class Dataset(
         --------
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
+
+        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
+
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparision with :py:func:`~xarray.Dataset.resample`.
+
         Dataset.groupby_bins
         DataArray.groupby
         core.groupby.DatasetGroupBy
         pandas.DataFrame.groupby
+        Dataset.coarsen
         Dataset.resample
         DataArray.resample
         """
@@ -10169,6 +10205,13 @@ class Dataset(
         See Also
         --------
         DataArray.weighted
+
+        :ref:`comput.weighted`
+            User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
+
+        :doc:`xarray-tutorial:fundamentals/03.4_weighted`
+            Tutorial on Weighted Reduction using :py:func:`~xarray.Dataset.weighted`
+
         """
         from xarray.core.weighted import DatasetWeighted
 
@@ -10245,6 +10288,16 @@ class Dataset(
         --------
         core.rolling.DatasetCoarsen
         DataArray.coarsen
+
+        :ref:`reshape.coarsen`
+            User guide describing :py:func:`~xarray.Dataset.coarsen`
+
+        :ref:`compute.coarsen`
+            User guide on block arrgragation :py:func:`~xarray.Dataset.coarsen`
+
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
+            Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
+
         """
         from xarray.core.rolling import DatasetCoarsen
 

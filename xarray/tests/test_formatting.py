@@ -406,19 +406,27 @@ class TestFormatting:
                 "var2": ("x", np.array([3, 4], dtype="int64")),
             },
             coords={
-                "x": np.array(["a", "b"], dtype="U1"),
+                "x": (
+                    "x",
+                    np.array(["a", "b"], dtype="U1"),
+                    {"foo": "bar", "same": "same"},
+                ),
                 "y": np.array([1, 2, 3], dtype="int64"),
             },
-            attrs={"units": "m", "description": "desc"},
+            attrs={"title": "mytitle", "description": "desc"},
         )
 
         ds_b = xr.Dataset(
             data_vars={"var1": ("x", np.array([1, 2], dtype="int64"))},
             coords={
-                "x": ("x", np.array(["a", "c"], dtype="U1"), {"source": 0}),
+                "x": (
+                    "x",
+                    np.array(["a", "c"], dtype="U1"),
+                    {"source": 0, "foo": "baz", "same": "same"},
+                ),
                 "label": ("x", np.array([1, 2], dtype="int64")),
             },
-            attrs={"units": "kg"},
+            attrs={"title": "newtitle"},
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
@@ -429,8 +437,12 @@ class TestFormatting:
             (x: 2, y: 3) != (x: 2)
         Differing coordinates:
         L * x        (x) %cU1 'a' 'b'
+            Differing variable attributes:
+                foo: bar
         R * x        (x) %cU1 'a' 'c'
-            source: 0
+            Differing variable attributes:
+                source: 0
+                foo: baz
         Coordinates only on the left object:
           * y        (y) int64 1 2 3
         Coordinates only on the right object:
@@ -441,8 +453,8 @@ class TestFormatting:
         Data variables only on the left object:
             var2     (x) int64 3 4
         Differing attributes:
-        L   units: m
-        R   units: kg
+        L   title: mytitle
+        R   title: newtitle
         Attributes only on the left object:
             description: desc"""
             % (byteorder, byteorder)
@@ -497,7 +509,7 @@ class TestFormatting:
     def test_array_repr_recursive(self) -> None:
         # GH:issue:7111
 
-        # direct recurion
+        # direct recursion
         var = xr.Variable("x", [0, 1])
         var.attrs["x"] = var
         formatting.array_repr(var)

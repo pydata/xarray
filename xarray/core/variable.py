@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Hashable, Mapping, Sequence
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Callable, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -34,6 +34,7 @@ from xarray.core.pycompat import (
     is_duck_dask_array,
     to_numpy,
 )
+from xarray.core.types import T_Chunks
 from xarray.core.utils import (
     OrderedSet,
     _default,
@@ -965,13 +966,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def chunk(
         self,
-        chunks: (
-            int
-            | Literal["auto"]
-            | tuple[int, ...]
-            | tuple[tuple[int, ...], ...]
-            | Mapping[Any, None | int | tuple[int, ...]]
-        ) = {},
+        chunks: T_Chunks = {},
         name: str | None = None,
         lock: bool | None = None,
         inline_array: bool | None = None,
@@ -2167,7 +2162,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     raise ValueError(
                         f"Expected {name}={arg!r} to be a scalar like 'dim'."
                     )
-            dim = [dim]
+            dim = (dim,)
 
         # dim is now a list
         nroll = len(dim)
@@ -2198,7 +2193,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pads[d] = (win - 1, 0)
 
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
-        axis = tuple(self.get_axis_num(d) for d in dim)
+        axis = self.get_axis_num(dim)
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
@@ -2371,18 +2366,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         )
 
     @property
-    def real(self):
-        """
-        The real part of the variable.
-
-        See Also
-        --------
-        numpy.ndarray.real
-        """
-        return self._replace(data=self.data.real)
-
-    @property
-    def imag(self):
+    def imag(self) -> Variable:
         """
         The imaginary part of the variable.
 
@@ -2390,7 +2374,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self.data.imag)
+        return self._new(data=self.data.imag)
+
+    @property
+    def real(self) -> Variable:
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._new(data=self.data.real)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
@@ -2599,6 +2594,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.argmax, DataArray.idxmax
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
+
+    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
+        """
+        Use sparse-array as backend.
+        """
+        from xarray.namedarray.utils import _default as _default_named
+
+        if sparse_format is _default:
+            sparse_format = _default_named
+
+        if fill_value is _default:
+            fill_value = _default_named
+
+        out = super()._as_sparse(sparse_format, fill_value)
+        return cast("Variable", out)
+
+    def _to_dense(self) -> Variable:
+        """
+        Change backend from sparse to np.array.
+        """
+        out = super()._to_dense()
+        return cast("Variable", out)
 
 
 class IndexVariable(Variable):
