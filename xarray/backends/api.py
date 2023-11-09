@@ -27,6 +27,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
+from xarray.backends.zarr import open_zarr
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -1446,6 +1447,44 @@ def save_mfdataset(
         )
 
 
+def _auto_detect_region(ds_new, ds_orig, dim):
+    # Create a mapping array of coordinates to indices on the original array
+    coord = ds_orig[dim]
+    da_map = DataArray(np.arange(coord.size), coords={dim: coord})
+
+    try:
+        da_idxs = da_map.sel({dim: ds_new[dim]})
+    except KeyError as e:
+        if "not all values found" in str(e):
+            raise KeyError(
+                f"Not all values of coordinate '{dim}' in the new array were"
+                " found in the original store. Writing to a zarr region slice"
+                " requires that no dimensions or metadata are changed by the write."
+            )
+        else:
+            raise e
+
+    if (da_idxs.diff(dim) != 1).any():
+        raise ValueError(
+            f"The auto-detected region of coordinate '{dim}' for writing new data"
+            " to the original store had non-contiguous indices. Writing to a zarr"
+            " region slice requires that the new data constitute a contiguous subset"
+            " of the original store."
+        )
+
+    dim_slice = slice(da_idxs.values[0], da_idxs.values[-1] + 1)
+
+    return dim_slice
+
+
+def _auto_detect_regions(ds, region, store):
+    ds_original = open_zarr(store)
+    for key, val in region.items():
+        if val == "auto":
+            region[key] = _auto_detect_region(ds, ds_original, key)
+    return region
+
+
 def _validate_region(ds, region):
     if not isinstance(region, dict):
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
@@ -1532,7 +1571,7 @@ def to_zarr(
     compute: Literal[True] = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1556,7 +1595,7 @@ def to_zarr(
     compute: Literal[False],
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1578,7 +1617,7 @@ def to_zarr(
     compute: bool = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1643,6 +1682,7 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if region is not None:
+        region = _auto_detect_regions(dataset, region, store)
         _validate_region(dataset, region)
         if append_dim is not None and append_dim in region:
             raise ValueError(

@@ -322,12 +322,15 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
 
 def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
     if new_var.dims != existing_var.dims:
-        raise ValueError(
-            f"variable {var_name!r} already exists with different "
-            f"dimension names {existing_var.dims} != "
-            f"{new_var.dims}, but changing variable "
-            f"dimensions is not supported by to_zarr()."
-        )
+        if set(existing_var.dims) == set(new_var.dims):
+            new_var = new_var.transpose(*existing_var.dims)
+        else:
+            raise ValueError(
+                f"variable {var_name!r} already exists with different "
+                f"dimension names {existing_var.dims} != "
+                f"{new_var.dims}, but changing variable "
+                f"dimensions is not supported by to_zarr()."
+            )
 
     existing_sizes = {}
     for dim, size in existing_var.sizes.items():
@@ -346,6 +349,8 @@ def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim)
             f"to_zarr() only supports changing dimension sizes when "
             f"explicitly appending, but append_dim={append_dim!r}."
         )
+
+    return new_var
 
 
 def _put_attrs(zarr_obj, attrs):
@@ -616,7 +621,7 @@ class ZarrStore(AbstractWritableDataStore):
             for var_name in existing_variable_names:
                 new_var = variables_encoded[var_name]
                 existing_var = existing_vars[var_name]
-                _validate_existing_dims(
+                new_var = _validate_existing_dims(
                     var_name,
                     new_var,
                     existing_var,
