@@ -271,4 +271,3 @@ sparseduckarray = Union[
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
-
