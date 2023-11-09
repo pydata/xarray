@@ -2578,6 +2578,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
+    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
+        """
+        Use sparse-array as backend.
+        """
+        from xarray.namedarray.utils import _default as _default_named
+
+        if sparse_format is _default:
+            sparse_format = _default_named
+
+        if fill_value is _default:
+            fill_value = _default_named
+
+        out = super()._as_sparse(sparse_format, fill_value)
+        return cast("Variable", out)
+
+    def _to_dense(self) -> Variable:
+        """
+        Change backend from sparse to np.array.
+        """
+        out = super()._to_dense()
+        return cast("Variable", out)
+
 
 class IndexVariable(Variable):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
