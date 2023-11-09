@@ -1485,9 +1485,12 @@ def _auto_detect_regions(ds, region, store):
     return region
 
 
-def _validate_region(ds, region):
+def _validate_and_autodetect_region(ds, region, store) -> dict[str, slice]:
     if not isinstance(region, dict):
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
+
+    if any(v == "auto" for v in region.values()):
+        region = _auto_detect_regions(ds, region, store)
 
     for k, v in region.items():
         if k not in ds.dims:
@@ -1519,6 +1522,8 @@ def _validate_region(ds, region):
             f"from this dataset before exporting to zarr, write: "
             f".drop_vars({non_matching_vars!r})"
         )
+
+    return region
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1682,8 +1687,7 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if region is not None:
-        region = _auto_detect_regions(dataset, region, store)
-        _validate_region(dataset, region)
+        region = _validate_and_autodetect_region(dataset, region, store)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "

@@ -320,7 +320,9 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
-def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
+def _validate_and_transpose_existing_dims(
+    var_name, new_var, existing_var, region, append_dim
+):
     if new_var.dims != existing_var.dims:
         if set(existing_var.dims) == set(new_var.dims):
             new_var = new_var.transpose(*existing_var.dims)
@@ -621,7 +623,7 @@ class ZarrStore(AbstractWritableDataStore):
             for var_name in existing_variable_names:
                 new_var = variables_encoded[var_name]
                 existing_var = existing_vars[var_name]
-                new_var = _validate_existing_dims(
+                new_var = _validate_and_transpose_existing_dims(
                     var_name,
                     new_var,
                     existing_var,
