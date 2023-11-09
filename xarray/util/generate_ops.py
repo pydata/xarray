@@ -116,6 +116,10 @@ template_unary = """
 template_other_unary = """
     def {method}(self, *args: Any, **kwargs: Any) -> Self:
         return self._unary_op({func}, *args, **kwargs)"""
+unhashable = """
+    # When __eq__ is defined but __hash__ is not, then an object is unhashable,
+    # and it should be declared as follows:
+    __hash__: None  # type:ignore[assignment]"""
 
 # For some methods we override return type `bool` defined by base class `object`.
 # We need to add "# type: ignore[override]"
@@ -152,6 +156,7 @@ def binops(
             template_binop,
             extras | {"type_ignore": _type_ignore(type_ignore_eq)},
         ),
+        ([(None, None)], unhashable, extras),
         (BINOPS_REFLEXIVE, template_reflexive, extras),
     ]
 
@@ -185,6 +190,7 @@ def binops_overload(
                 "overload_type_ignore": _type_ignore(type_ignore_eq),
             },
         ),
+        ([(None, None)], unhashable, extras),
         (BINOPS_REFLEXIVE, template_reflexive, extras),
     ]
 
