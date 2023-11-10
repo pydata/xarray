@@ -330,7 +330,8 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     var = coding.strings.ensure_fixed_length_bytes(var)
 
     if original_chunks and not var.chunks and "chunks" not in var.encoding:
-        var.encoding["chunks"] = _squeeze_var_chunks(original_chunks, name=name)
+        var = var.chunk(original_chunks)
+        # var.encoding["chunks"] = _squeeze_var_chunks(original_chunks, name=name)
     return var
 
 
