@@ -29,6 +29,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- drop support for `cdms2 <https://github.com/CDAT/cdms>`_ (:pull:`8441`).
+  By `Justus Magin <https://github.com/keewis`_.
 
 
 Deprecations
