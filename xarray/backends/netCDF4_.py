@@ -503,17 +503,28 @@ class NetCDF4DataStore(WritableCFDataStore):
             and attrs.get("flag_meanings")
             and attrs.get("flag_values")
         ):
-            enum_dict = {
+            var_enum_dict = {
                 k: v for k, v in zip(attrs["flag_meanings"], attrs["flag_values"])
             }
             enum_name = encoding["enum"]
             if enum_name in self.ds.enumtypes:
                 datatype = self.ds.enumtypes[enum_name]
+                if datatype.enum_dict != var_enum_dict:
+                    datatype = None
+                    for e_name, e_val in self.ds.enumtypes.items():
+                        if e_val.enum_dict == var_enum_dict:
+                            datatype = self.ds.enumtypes[e_name]
+                    if datatype is None:
+                        datatype = self.ds.createEnumType(
+                            variable.dtype,
+                            f"{enum_name}_{name}",
+                            var_enum_dict,
+                        )
             else:
                 datatype = self.ds.createEnumType(
                     variable.dtype,
                     enum_name,
-                    enum_dict,
+                    var_enum_dict,
                 )
             # Make sure the values we are trying to assign are in enums valid range.
             error_message = (

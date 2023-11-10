@@ -1768,6 +1768,42 @@ class NetCDF4Base(NetCDFBase):
                 with create_tmp_file() as tmp_file2:
                     ds.to_netcdf(tmp_file2)
 
+    @requires_netCDF4
+    def test_encoding_enum__multiple_variable_with_changing_enum(self):
+        with create_tmp_file() as tmp_file:
+            cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("time", size=2)
+                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
+                nc.createVariable(
+                    "cloud",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "tifa",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+                nc.createVariable(
+                    "barret",
+                    cloud_type,
+                    "time",
+                    fill_value=255,
+                )
+            with open_dataset(tmp_file) as ds:
+                ds.cloud.attrs["flag_values"] += (2,)
+                ds.cloud.attrs["flag_meanings"] += ("neblig",)
+                ds.tifa.attrs["flag_values"] += (2,)
+                ds.tifa.attrs["flag_meanings"] += ("neblig",)
+                with create_tmp_file() as tmp_file2:
+                    ds.to_netcdf(tmp_file2)
+                    with nc4.Dataset(tmp_file2, mode="r") as nc:
+                        # We want to assert that two different enums are written.
+                        assert len(nc.enumtypes.keys()) == 2
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
