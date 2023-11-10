@@ -628,11 +628,9 @@ DataArray methods
    load_dataarray
    open_dataarray
    DataArray.as_numpy
-   DataArray.from_cdms2
    DataArray.from_dict
    DataArray.from_iris
    DataArray.from_series
-   DataArray.to_cdms2
    DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
