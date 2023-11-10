@@ -44,7 +44,8 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
 .. currentmodule:: xarray
 
 .. autosummary::
-    testing.supported_dtypes
+
+   testing.strategies.supported_dtypes
    testing.strategies.names
    testing.strategies.dimension_names
    testing.strategies.dimension_sizes
