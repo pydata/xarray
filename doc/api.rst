@@ -602,7 +602,7 @@ Dataset methods
    Dataset.as_numpy
    Dataset.from_dataframe
    Dataset.from_dict
-   Dataset.to_array
+   Dataset.to_dataarray
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
