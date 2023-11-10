@@ -176,7 +176,7 @@ def _create_empty_zarr_group(store, group, mode):
 def _datatree_to_zarr(
     dt: DataTree,
     store,
-    mode: str = "w",
+    mode: str = "w-",
     encoding=None,
     consolidated: bool = True,
     **kwargs,

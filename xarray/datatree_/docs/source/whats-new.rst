@@ -26,6 +26,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Change default write mode of :py:meth:`DataTree.to_zarr` to ``'w-'`` to match ``xarray``
+  default and prevent accidental directory overwrites. (:issue:`274`, :pull:`275`)
+  By `Sam Levang <https://github.com/slevang>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 

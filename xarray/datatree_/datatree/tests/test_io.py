@@ -1,4 +1,5 @@
 import pytest
+import zarr.errors
 
 from datatree.io import open_datatree
 from datatree.testing import assert_equal
@@ -109,3 +110,11 @@ class TestIO:
         with pytest.warns(RuntimeWarning, match="consolidated"):
             roundtrip_dt = open_datatree(filepath, engine="zarr")
         assert_equal(original_dt, roundtrip_dt)
+
+    @requires_zarr
+    def test_to_zarr_default_write_mode(self, tmpdir, simple_datatree):
+        simple_datatree.to_zarr(tmpdir)
+
+        # with default settings, to_zarr should not overwrite an existing dir
+        with pytest.raises(zarr.errors.ContainsGroupError):
+            simple_datatree.to_zarr(tmpdir)

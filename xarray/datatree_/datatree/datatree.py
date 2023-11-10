@@ -1496,7 +1496,12 @@ class DataTree(
         )
 
     def to_zarr(
-        self, store, mode: str = "w", encoding=None, consolidated: bool = True, **kwargs
+        self,
+        store,
+        mode: str = "w-",
+        encoding=None,
+        consolidated: bool = True,
+        **kwargs,
     ):
         """
         Write datatree contents to a Zarr store.
@@ -1505,7 +1510,7 @@ class DataTree(
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system
-        mode : {{"w", "w-", "a", "r+", None}, default: "w"
+        mode : {{"w", "w-", "a", "r+", None}, default: "w-"
             Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
             “a” means override existing variables (create if does not exist); “r+” means modify existing
             array values only (raise an error if any metadata or shapes would change). The default mode
