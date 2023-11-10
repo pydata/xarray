@@ -510,16 +510,16 @@ class NetCDF4DataStore(WritableCFDataStore):
             if enum_name in self.ds.enumtypes:
                 datatype = self.ds.enumtypes[enum_name]
                 if datatype.enum_dict != var_enum_dict:
-                    datatype = None
-                    for e_name, e_val in self.ds.enumtypes.items():
-                        if e_val.enum_dict == var_enum_dict:
-                            datatype = self.ds.enumtypes[e_name]
-                    if datatype is None:
-                        datatype = self.ds.createEnumType(
-                            variable.dtype,
-                            f"{enum_name}_{name}",
-                            var_enum_dict,
-                        )
+                    raise ValueError(
+                        f"Cannot save variable `{name}` because an enum"
+                        f" `{enum_name}` already exists in the Dataset but have"
+                        " a different definition. Enums are created when"
+                        " `encoding['enum']` is set by combining flag_values"
+                        " and flag_meanings attributes. To fix this error, make sure"
+                        " each variable have a unique name for `encoding['enum']` or "
+                        " if they should have the same enum, that their flag_values and"
+                        " flag_meanings are identical."
+                    )
             else:
                 datatype = self.ds.createEnumType(
                     variable.dtype,
