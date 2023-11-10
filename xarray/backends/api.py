@@ -1477,20 +1477,23 @@ def _auto_detect_region(ds_new, ds_orig, dim):
     return dim_slice
 
 
-def _auto_detect_regions(ds, region, store):
-    ds_original = open_zarr(store)
+def _auto_detect_regions(ds, region, open_kwargs):
+    ds_original = open_zarr(**open_kwargs)
     for key, val in region.items():
         if val == "auto":
             region[key] = _auto_detect_region(ds, ds_original, key)
     return region
 
 
-def _validate_and_autodetect_region(ds, region, store) -> dict[str, slice]:
+def _validate_and_autodetect_region(ds, region, open_kwargs) -> dict[str, slice]:
+    if region == "auto":
+        region = {dim: "auto" for dim in ds.dims}
+
     if not isinstance(region, dict):
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
 
     if any(v == "auto" for v in region.values()):
-        region = _auto_detect_regions(ds, region, store)
+        region = _auto_detect_regions(ds, region, open_kwargs)
 
     for k, v in region.items():
         if k not in ds.dims:
@@ -1576,7 +1579,7 @@ def to_zarr(
     compute: Literal[True] = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice | Literal["auto"]] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1600,7 +1603,7 @@ def to_zarr(
     compute: Literal[False],
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice | Literal["auto"]] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1622,7 +1625,7 @@ def to_zarr(
     compute: bool = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice | Literal["auto"]] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1687,7 +1690,15 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if region is not None:
-        region = _validate_and_autodetect_region(dataset, region, store)
+        open_kwargs = dict(
+            store=store,
+            synchronizer=synchronizer,
+            group=group,
+            consolidated=consolidated,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+        )
+        region = _validate_and_autodetect_region(dataset, region, open_kwargs)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "

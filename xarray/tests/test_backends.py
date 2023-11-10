@@ -5435,7 +5435,7 @@ def test_pickle_open_mfdataset_dataset():
 
 @requires_zarr
 class TestZarrRegionAuto:
-    def test_zarr_region_auto_success(self, tmp_path):
+    def test_zarr_region_auto_all(self, tmp_path):
         x = np.arange(0, 50, 10)
         y = np.arange(0, 20, 2)
         data = np.ones((5, 10))
@@ -5451,7 +5451,33 @@ class TestZarrRegionAuto:
         ds.to_zarr(tmp_path / "test.zarr")
 
         ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
-        ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+        ds_region.to_zarr(tmp_path / "test.zarr", region="auto")
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_mixed(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(
+            tmp_path / "test.zarr", region={"x": "auto", "y": slice(6, 8)}
+        )
 
         ds_updated = xr.open_zarr(tmp_path / "test.zarr")
 

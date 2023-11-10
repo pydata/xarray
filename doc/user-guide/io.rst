@@ -876,17 +876,20 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     ds.to_zarr(path, compute=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
-mapping from dimension names to Python ``slice`` objects indicating where the
-data should be written (in index space, not coordinate space), e.g.,
+can be filled out by subsequent calls to ``to_zarr``. ``region`` can be
+specified as ``"auto"``, which opens the existing store and determines the
+correct alignment of the new data with the existing coordinates, or as an
+explicit mapping from dimension names to Python ``slice`` objects indicating
+where the data should be written (in index space, not coordinate space), e.g.,
 
 .. ipython:: python
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    # Any of the following region specifications are valid
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
