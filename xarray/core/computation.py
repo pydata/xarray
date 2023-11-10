@@ -1603,7 +1603,9 @@ def cross(
     >>> ds_a = xr.Dataset(dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
     >>> ds_b = xr.Dataset(dict(x=("dim_0", [4]), y=("dim_0", [5]), z=("dim_0", [6])))
     >>> c = xr.cross(
-    ...     ds_a.to_dataarray("cartesian"), ds_b.to_dataarray("cartesian"), dim="cartesian"
+    ...     ds_a.to_dataarray("cartesian"),
+    ...     ds_b.to_dataarray("cartesian"),
+    ...     dim="cartesian",
     ... )
     >>> c.to_dataset(dim="cartesian")
     <xarray.Dataset>
