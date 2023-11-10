@@ -578,7 +578,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_to_dataset_roundtrip(self):
         x = self.sp_xr
-        assert_equal(x, x.to_dataset("x").to_array("x"))
+        assert_equal(x, x.to_dataset("x").to_dataarray("x"))
 
     def test_align(self):
         a1 = xr.DataArray(
@@ -830,7 +830,7 @@ class TestSparseDataArrayAndDataset:
     @pytest.mark.xfail
     def test_merge(self):
         x = self.sp_xr
-        y = xr.merge([x, x.rename("bar")]).to_array()
+        y = xr.merge([x, x.rename("bar")]).to_dataarray()
         assert isinstance(y, sparse.SparseArray)
 
     @pytest.mark.xfail

@@ -59,11 +59,11 @@ use :py:meth:`~xarray.DataArray.squeeze`
 Converting between datasets and arrays
 --------------------------------------
 
-To convert from a Dataset to a DataArray, use :py:meth:`~xarray.Dataset.to_array`:
+To convert from a Dataset to a DataArray, use :py:meth:`~xarray.Dataset.to_dataarray`:
 
 .. ipython:: python
 
-    arr = ds.to_array()
+    arr = ds.to_dataarray()
     arr
 
 This method broadcasts all data variables in the dataset against each other,
@@ -77,7 +77,7 @@ To convert back from a DataArray to a Dataset, use
 
     arr.to_dataset(dim="variable")
 
-The broadcasting behavior of ``to_array`` means that the resulting array
+The broadcasting behavior of ``to_dataarray`` means that the resulting array
 includes the union of data variable dimensions:
 
 .. ipython:: python
@@ -88,7 +88,7 @@ includes the union of data variable dimensions:
     ds2
 
     # the resulting array has 6 elements
-    ds2.to_array()
+    ds2.to_dataarray()
 
 Otherwise, the result could not be represented as an orthogonal array.
 
@@ -161,8 +161,8 @@ arrays as inputs. For datasets with only one variable, we only need ``stack``
 and ``unstack``, but combining multiple variables in a
 :py:class:`xarray.Dataset` is more complicated. If the variables in the dataset
 have matching numbers of dimensions, we can call
-:py:meth:`~xarray.Dataset.to_array` and then stack along the the new coordinate.
-But :py:meth:`~xarray.Dataset.to_array` will broadcast the dataarrays together,
+:py:meth:`~xarray.Dataset.to_dataarray` and then stack along the the new coordinate.
+But :py:meth:`~xarray.Dataset.to_dataarray` will broadcast the dataarrays together,
 which will effectively tile the lower dimensional variable along the missing
 dimensions. The method :py:meth:`xarray.Dataset.to_stacked_array` allows
 combining variables of differing dimensions without this wasteful copying while
