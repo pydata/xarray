@@ -24,6 +24,8 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
+- Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
+  By `Ben Mares <https://github.com/maresb>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -38,6 +40,12 @@ Deprecations
   dimensions. Xarray favors using dimensions names rather than positions, and
   this was one place in the API where dimension positions were used.
   (:pull:`8341`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Rename :py:meth:`Dataset.to_array` to  :py:meth:`Dataset.to_dataarray` for
+  consistency with :py:meth:`DataArray.to_dataset` &
+  :py:func:`open_dataarray` functions. This is a "soft" deprecation — the
+  existing methods work and don't raise any warnings, given the relatively small
+  benefits of the change.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
@@ -6714,7 +6722,7 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- New ``xray.Dataset.to_array`` and enhanced
+- New ``xray.Dataset.to_dataarray`` and enhanced
   ``xray.DataArray.to_dataset`` methods make it easy to switch back
   and forth between arrays and datasets:
 
@@ -6725,8 +6733,8 @@ Enhancements
           coords={"c": 42},
           attrs={"Conventions": "None"},
       )
-      ds.to_array()
-      ds.to_array().to_dataset(dim="variable")
+      ds.to_dataarray()
+      ds.to_dataarray().to_dataset(dim="variable")
 
 - New ``xray.Dataset.fillna`` method to fill missing values, modeled
   off the pandas method of the same name:
