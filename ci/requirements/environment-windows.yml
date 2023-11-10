@@ -5,7 +5,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # Not available on Windows
   - cftime
   - dask-core
   - distributed
