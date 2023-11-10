@@ -557,6 +557,7 @@ Datetimelike properties
    DataArray.dt.seconds
    DataArray.dt.microseconds
    DataArray.dt.nanoseconds
+   DataArray.dt.total_seconds
 
 **Timedelta methods**:
 
