@@ -29,7 +29,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- drop support for `cdms2 <https://github.com/CDAT/cdms>`_ (:pull:`8441`).
+- drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
+  `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
   By `Justus Magin <https://github.com/keewis`_.
 
 
