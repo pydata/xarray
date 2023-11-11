@@ -3,6 +3,7 @@ from typing import Any, Protocol, Union, overload
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
+from hypothesis.errors import InvalidArgument
 import numpy as np
 
 import xarray as xr
@@ -294,17 +295,17 @@ def variables(
     """
 
     if not isinstance(dims, st.SearchStrategy) and dims is not None:
-        raise TypeError(
+        raise InvalidArgument(
             f"dims must be provided as a hypothesis.strategies.SearchStrategy object (or None), but got type {type(dims)}. "
             "To specify fixed contents, use hypothesis.strategies.just()."
         )
     if not isinstance(dtype, st.SearchStrategy) and dtype is not None:
-        raise TypeError(
+        raise InvalidArgument(
             f"dtype must be provided as a hypothesis.strategies.SearchStrategy object (or None), but got type {type(dtype)}. "
             "To specify fixed contents, use hypothesis.strategies.just()."
         )
     if not isinstance(attrs, st.SearchStrategy) and attrs is not None:
-        raise TypeError(
+        raise InvalidArgument(
             f"attrs must be provided as a hypothesis.strategies.SearchStrategy object (or None), but got type {type(attrs)}. "
             "To specify fixed contents, use hypothesis.strategies.just()."
         )
@@ -314,7 +315,7 @@ def variables(
     if array_strategy_fn is None:
         _array_strategy_fn = smallish_arrays  # type: ignore[assignment]
     elif not callable(array_strategy_fn):
-        raise TypeError(
+        raise InvalidArgument(
             "array_strategy_fn must be a Callable that accepts the kwargs dtype and shape and returns a hypothesis "
             "strategy which generates corresponding array-like objects."
         )
@@ -338,7 +339,7 @@ def variables(
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
         else:
-            raise TypeError(
+            raise InvalidArgument(
                 f"Invalid type returned by dims strategy - drew an object of type {type(dims)}"
             )
     else:
