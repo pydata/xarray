@@ -69,7 +69,7 @@ class TestDimensionSizesStrategy:
             assert dim.upper() == dim
 
 
-def check_dict_values(dictionary: dict, allowed_attrs_values_types: set) -> bool:
+def check_dict_values(dictionary: dict, allowed_attrs_values_types) -> bool:
     """Helper function to assert that all values in recursive dict match one of a set of types."""
     for key, value in dictionary.items():
         if isinstance(value, allowed_attrs_values_types) or value is None:
@@ -118,7 +118,7 @@ class TestVariablesStrategy:
 
     @given(st.data(), dimension_sizes())
     def test_given_fixed_dim_sizes(self, data, dim_sizes):
-        var = data.draw(variables(dims=st.just(dim_sizes)))  # type: ignore[arg-type]
+        var = data.draw(variables(dims=st.just(dim_sizes)))
 
         assert var.dims == tuple(dim_sizes.keys())
         assert var.shape == tuple(dim_sizes.values())
@@ -226,7 +226,7 @@ class TestUniqueSubsetOf:
     @given(st.data())
     def test_invalid(self, data):
         with pytest.raises(TypeError, match="must be an Iterable or a Mapping"):
-            data.draw(unique_subset_of(0))
+            data.draw(unique_subset_of(0))  # type: ignore[call-overload]
 
         with pytest.raises(ValueError, match="length-zero object"):
             data.draw(unique_subset_of({}))

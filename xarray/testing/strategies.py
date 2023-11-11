@@ -1,5 +1,5 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import Any, Protocol, Union, overload
+from typing import TYPE_CHECKING, Any, Protocol, Union, overload
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -8,6 +8,10 @@ from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 from xarray.core.types import T_DuckArray
+
+if TYPE_CHECKING:
+    from xarray.core.types import _DTypeLikeNested, _ShapeLike
+
 
 __all__ = [
     "supported_dtypes",
@@ -20,12 +24,12 @@ __all__ = [
 ]
 
 
-class ArrayStrategyFn(Protocol):
+class ArrayStrategyFn(Protocol[T_DuckArray]):
     def __call__(
         self,
         *,
-        shape: Union[tuple[int, ...], None] = None,
-        dtype: Union[np.dtype, None] = None,
+        shape: "_ShapeLike",
+        dtype: "_DTypeLikeNested",
         **kwargs,
     ) -> st.SearchStrategy[T_DuckArray]:
         ...
@@ -351,17 +355,17 @@ def variables(
 
     _data = draw(array_strategy)
 
-    if _data.shape != _shape:
+    if _data.shape != _shape:  # type: ignore[attr-defined]
         raise ValueError(
             "array_strategy_fn returned an array object with a different shape than it was passed."
-            f"Passed {_shape}, but returned {_data.shape}."
+            f"Passed {_shape}, but returned {_data.shape}."  # type: ignore[attr-defined]
             "Please either specify a consistent shape via the dims kwarg or ensure the array_strategy_fn callable "
             "obeys the shape argument passed to it."
         )
-    if _data.dtype != _dtype:
+    if _data.dtype != _dtype:  # type: ignore[attr-defined]
         raise ValueError(
             "array_strategy_fn returned an array object with a different dtype than it was passed."
-            f"Passed {_dtype}, but returned {_data.dtype}"
+            f"Passed {_dtype}, but returned {_data.dtype}"  # type: ignore[attr-defined]
             "Please either specify a consistent dtype via the dtype kwarg or ensure the array_strategy_fn callable "
             "obeys the dtype argument passed to it."
         )
@@ -371,11 +375,11 @@ def variables(
 
 @overload
 def unique_subset_of(
-    objs: Iterable[Hashable],
+    objs: Sequence[Hashable],
     *,
     min_size: int = 0,
     max_size: Union[int, None] = None,
-) -> st.SearchStrategy[Iterable[Hashable]]:
+) -> st.SearchStrategy[Sequence[Hashable]]:
     ...
 
 
@@ -392,21 +396,21 @@ def unique_subset_of(
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    objs: Union[Iterable[Hashable], Mapping[Hashable, Any]],
+    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]],
     *,
     min_size: int = 0,
     max_size: Union[int, None] = None,
-) -> Union[Iterable[Hashable], Mapping[Hashable, Any]]:
+) -> Union[Sequence[Hashable], Mapping[Hashable, Any]]:
     """
-    Return a strategy which generates a unique subset of the given objs.
+    Return a strategy which generates a unique subset of the given objects.
 
-    Each entry in the output subset will be unique (if input was an iterable) or have a unique key (if it was a mapping).
+    Each entry in the output subset will be unique (if input was a sequence) or have a unique key (if it was a mapping).
 
     Requires the hypothesis package to be installed.
 
     Parameters
     ----------
-    objs: Union[Iterable[Hashable], Mapping[Hashable, Any]]
+    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]]
         Objects from which to sample to produce the subset.
     min_size: int, optional
         Minimum size of the returned subset. Default is 0.

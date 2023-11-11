@@ -175,6 +175,7 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 # hopefully in the future we can narrow this down more:
 T_DuckArray = TypeVar("T_DuckArray", bound=Any)
 
+
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
