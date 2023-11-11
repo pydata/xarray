@@ -3,8 +3,8 @@ from typing import Any, Protocol, Union, overload
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-from hypothesis.errors import InvalidArgument
 import numpy as np
+from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 from xarray.core.types import T_DuckArray

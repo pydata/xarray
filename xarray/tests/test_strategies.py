@@ -35,11 +35,12 @@ class TestDimensionNamesStrategy:
     def test_unique(self, dims):
         assert len(set(dims)) == len(dims)
 
-    @given(st.data(), st.integers(min_value=0, max_value=3))
-    def test_fixed_number_of_dims(self, data, ndims):
-        dim_names = data.draw(dimension_names(min_dims=ndims, max_dims=ndims))
+    @given(st.data(), st.tuples(st.integers(0, 10), st.integers(0, 10)).map(sorted))
+    def test_number_of_dims(self, data, ndims):
+        min_dims, max_dims = ndims
+        dim_names = data.draw(dimension_names(min_dims=min_dims, max_dims=max_dims))
         assert isinstance(dim_names, list)
-        assert len(dim_names) == ndims
+        assert min_dims <= len(dim_names) <= max_dims
 
 
 class TestDimensionSizesStrategy:
@@ -53,11 +54,12 @@ class TestDimensionSizesStrategy:
             assert isinstance(n, int)
             assert n >= 0
 
-    @given(st.data(), st.integers(min_value=0, max_value=3))
-    def test_fixed_number_of_dims(self, data, ndims):
-        dim_sizes = data.draw(dimension_sizes(min_dims=ndims, max_dims=ndims))
+    @given(st.data(), st.tuples(st.integers(0, 10), st.integers(0, 10)).map(sorted))
+    def test_number_of_dims(self, data, ndims):
+        min_dims, max_dims = ndims
+        dim_sizes = data.draw(dimension_sizes(min_dims=min_dims, max_dims=max_dims))
         assert isinstance(dim_sizes, dict)
-        assert len(dim_sizes) == ndims
+        assert min_dims <= len(dim_sizes) <= max_dims
 
     @given(st.data())
     def test_restrict_names(self, data):
@@ -147,7 +149,7 @@ class TestVariablesStrategy:
         npt.assert_equal(var.data, arr)
         assert var.dtype == arr.dtype
 
-    @given(st.data(), st.integers(min_value=0, max_value=3))
+    @given(st.data(), st.integers(0, 3))
     def test_given_array_strat_arbitrary_size_and_arbitrary_data(self, data, ndims):
         dim_names = data.draw(dimension_names(min_dims=ndims, max_dims=ndims))
 
