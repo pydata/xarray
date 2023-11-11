@@ -96,13 +96,13 @@ class TestVariablesStrategy:
 
     @given(st.data())
     def test_given_incorrect_types(self, data):
-        with pytest.raises(TypeError, match="SearchStrategy object"):
+        with pytest.raises(TypeError, match="dims must be provided as a"):
             data.draw(variables(dims=["x", "y"]))  # type: ignore[arg-type]
 
-        with pytest.raises(TypeError, match="SearchStrategy object"):
+        with pytest.raises(TypeError, match="dtype must be provided as a"):
             data.draw(variables(dtype=np.dtype("int32")))  # type: ignore[arg-type]
 
-        with pytest.raises(TypeError, match="SearchStrategy object"):
+        with pytest.raises(TypeError, match="attrs must be provided as a"):
             data.draw(variables(attrs=dict()))  # type: ignore[arg-type]
 
         with pytest.raises(TypeError, match="Callable"):
@@ -226,7 +226,7 @@ class TestUniqueSubsetOf:
         with pytest.raises(TypeError, match="must be an Iterable or a Mapping"):
             data.draw(unique_subset_of(0))
 
-        with pytest.raises(ValueError, match="length-zero sequence"):
+        with pytest.raises(ValueError, match="length-zero object"):
             data.draw(unique_subset_of({}))
 
     @given(st.data(), dimension_sizes(min_dims=1))

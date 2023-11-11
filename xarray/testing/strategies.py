@@ -293,12 +293,19 @@ def variables(
            [-2.75034266e-225+2.22507386e-311j]])
     """
 
-    if any(
-        not isinstance(arg, st.SearchStrategy) and arg is not None
-        for arg in [dims, dtype, attrs]
-    ):
+    if not isinstance(dims, st.SearchStrategy) and dims is not None:
         raise TypeError(
-            "Contents dims, dtype, and attrs must each be provided as a hypothesis.strategies.SearchStrategy object (or None)."
+            f"dims must be provided as a hypothesis.strategies.SearchStrategy object (or None), but got type {type(dims)}. "
+            "To specify fixed contents, use hypothesis.strategies.just()."
+        )
+    if not isinstance(dtype, st.SearchStrategy) and dtype is not None:
+        raise TypeError(
+            f"dtype must be provided as a hypothesis.strategies.SearchStrategy object (or None), but got type {type(dtype)}. "
+            "To specify fixed contents, use hypothesis.strategies.just()."
+        )
+    if not isinstance(attrs, st.SearchStrategy) and attrs is not None:
+        raise TypeError(
+            f"attrs must be provided as a hypothesis.strategies.SearchStrategy object (or None), but got type {type(attrs)}. "
             "To specify fixed contents, use hypothesis.strategies.just()."
         )
 
@@ -424,7 +431,7 @@ def unique_subset_of(
         )
 
     if len(objs) == 0:
-        raise ValueError("Can't sample from a length-zero sequence.")
+        raise ValueError("Can't sample from a length-zero object.")
 
     keys = list(objs.keys()) if isinstance(objs, Mapping) else objs
 
