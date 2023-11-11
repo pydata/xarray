@@ -1075,7 +1075,7 @@ Hypothesis Testing Strategies
 
 .. currentmodule:: xarray
 
-See the :ref:`documentation page on testing <userguide.testing.hypothesis>` for a guide on how to use these strategies.
+See the :ref:`documentation page on testing <testing.hypothesis>` for a guide on how to use these strategies.
 
 .. warning::
     These strategies should be considered highly experimental, and liable to change at any time.
