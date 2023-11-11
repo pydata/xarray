@@ -172,22 +172,19 @@ Imagine we want to write a strategy which generates arbitrary ``Variable`` objec
 different type:
 
 .. ipython:: python
-    :okexcept:
 
     import sparse
 
 .. ipython:: python
-    :okexcept:
 
     def convert_to_sparse(var):
         if var.ndim == 0:
             return var
         else:
-            var.data = sparse.COO.from_numpy(da.values)
+            var.data = sparse.COO.from_numpy(var.to_numpy())
             return var
 
 .. ipython:: python
-    :okexcept:
 
     sparse_variables = xrst.variables().map(convert_to_sparse)
 
@@ -197,7 +194,6 @@ different type:
 2. Pass a function which returns a strategy which generates the duck-typed arrays directly to the ``array_strategy_fn`` argument of the xarray strategies:
 
 .. ipython:: python
-    :okexcept:
 
     @st.composite
     def sparse_random_arrays(
@@ -215,11 +211,10 @@ different type:
     def sparse_random_arrays_fn(
         *, shape: tuple[int] = None, dtype: np.dtype = None
     ) -> st.SearchStrategy[sparse._coo.core.COO]:
-        return sparse_arrays(shape=shape)
+        return sparse_random_arrays(shape=shape)
 
 
 .. ipython:: python
-    :okexcept:
 
     sparse_random_variables = xrst.variables(
         array_strategy_fn=sparse_random_arrays_fn, dtype=st.just(np.dtype("float64"))
