@@ -35,10 +35,11 @@ class TestDimensionNamesStrategy:
     def test_unique(self, dims):
         assert len(set(dims)) == len(dims)
 
-    @given(dimension_names(min_dims=3, max_dims=3))
-    def test_fixed_number_of_dims(self, dims):
-        assert isinstance(dims, list)
-        assert len(dims) == 3
+    @given(st.data(), st.integers(min_value=0, max_value=3))
+    def test_fixed_number_of_dims(self, data, ndims):
+        dim_names = data.draw(dimension_names(min_dims=ndims, max_dims=ndims))
+        assert isinstance(dim_names, list)
+        assert len(dim_names) == ndims
 
 
 class TestDimensionSizesStrategy:
@@ -47,12 +48,16 @@ class TestDimensionSizesStrategy:
         assert isinstance(dims, dict)
         for d, n in dims.items():
             assert isinstance(d, str)
-            assert isinstance(n, int)
+            assert len(d) >= 1
 
-    @given(dimension_sizes(min_dims=3, max_dims=3))
-    def test_fixed_number_of_dims(self, dims):
-        assert isinstance(dims, dict)
-        assert len(dims) == 3
+            assert isinstance(n, int)
+            assert n >= 0
+
+    @given(st.data(), st.integers(min_value=0, max_value=3))
+    def test_fixed_number_of_dims(self, data, ndims):
+        dim_sizes = data.draw(dimension_sizes(min_dims=ndims, max_dims=ndims))
+        assert isinstance(dim_sizes, dict)
+        assert len(dim_sizes) == ndims
 
     @given(st.data())
     def test_restrict_names(self, data):
@@ -103,71 +108,47 @@ class TestVariablesStrategy:
         with pytest.raises(TypeError, match="Callable"):
             data.draw(variables(array_strategy_fn=np.array([0])))  # type: ignore[arg-type]
 
-    @given(st.data())
-    def test_given_fixed_dims_list(self, data):
-        dims = ["x", "y"]
-        var = data.draw(variables(dims=st.just(dims)))
+    @given(st.data(), dimension_names())
+    def test_given_fixed_dim_names(self, data, fixed_dim_names):
+        var = data.draw(variables(dims=st.just(fixed_dim_names)))
 
-        assert list(var.dims) == dims
+        assert list(var.dims) == fixed_dim_names
 
-    @given(st.data(), st.integers(0, 3))
-    def test_given_arbitrary_dims_list(self, data, ndims):
-        dims = dimension_names(min_dims=ndims, max_dims=ndims)
-        var = data.draw(variables(dims=dims))
+    @given(st.data(), dimension_sizes())
+    def test_given_fixed_dim_sizes(self, data, dim_sizes):
+        var = data.draw(variables(dims=st.just(dim_sizes)))  # type: ignore[arg-type]
 
-        assert len(list(var.dims)) == ndims
+        assert var.dims == tuple(dim_sizes.keys())
+        assert var.shape == tuple(dim_sizes.values())
 
-    @given(st.data())
-    def test_given_fixed_sizes(self, data):
-        dims = {"x": 3, "y": 4}
-        var = data.draw(variables(dims=st.just(dims)))  # type: ignore[arg-type]
+    @given(st.data(), supported_dtypes())
+    def test_given_fixed_dtype(self, data, dtype):
+        var = data.draw(variables(dtype=st.just(dtype)))
 
-        assert var.dims == ("x", "y")
-        assert var.shape == (3, 4)
+        assert var.dtype == dtype
 
-    @given(st.data())
-    def test_given_fixed_dtype(self, data):
-        var = data.draw(variables(dtype=st.just(np.dtype("int32"))))
-
-        assert var.dtype == np.dtype("int32")
-
-    @given(st.data())
-    def test_given_fixed_data(self, data):
-        arr = np.asarray([[1, 2], [3, 4]])
-
+    @given(st.data(), npst.arrays(shape=npst.array_shapes(), dtype=supported_dtypes()))
+    def test_given_fixed_data_dims_and_dtype(self, data, arr):
         def fixed_array_strategy_fn(*, shape=None, dtype=None):
+            """The fact this ignores shape and dtype is only okay because compatible shape & dtype will be passed separately."""
             return st.just(arr)
+
+        dim_names = data.draw(dimension_names(min_dims=arr.ndim, max_dims=arr.ndim))
+        dim_sizes = {name: size for name, size in zip(dim_names, arr.shape)}
 
         var = data.draw(
             variables(
-                array_strategy_fn=fixed_array_strategy_fn, dims=st.just({"x": 2, "y": 2}), dtype=st.just(arr.dtype)  # type: ignore[arg-type]
+                array_strategy_fn=fixed_array_strategy_fn,
+                dims=st.just(dim_sizes),
+                dtype=st.just(arr.dtype),
             )
         )
 
         npt.assert_equal(var.data, arr)
         assert var.dtype == arr.dtype
 
-    @given(st.data())
-    def test_given_fixed_dims_and_fixed_data(self, data):
-        dims = {"x": 2, "y": 2}
-        arr = np.asarray([[1, 2], [3, 4]])
-
-        def fixed_array_strategy_fn(*, shape=None, dtype=None):
-            return st.just(arr)
-
-        var = data.draw(
-            variables(
-                array_strategy_fn=fixed_array_strategy_fn,
-                dims=st.just(dims),  # type: ignore[arg-type]
-                dtype=st.just(arr.dtype),
-            )
-        )
-
-        assert var.sizes == dims
-        npt.assert_equal(var.data, arr)
-
     @given(st.data(), st.integers(min_value=0, max_value=3))
-    def test_given_fixed_shape_arbitrary_dims_and_arbitrary_data(self, data, ndims):
+    def test_given_array_strat_arbitrary_size_and_arbitrary_data(self, data, ndims):
         dim_names = data.draw(dimension_names(min_dims=ndims, max_dims=ndims))
 
         def array_strategy_fn(*, shape=None, dtype=None):
