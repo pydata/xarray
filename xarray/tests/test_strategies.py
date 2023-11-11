@@ -110,12 +110,12 @@ class TestVariablesStrategy:
 
         assert list(var.dims) == dims
 
-    @given(st.data(), st.integers(0, 10))
-    def test_given_arbitrary_dims_list(self, data, n):
-        dims = dimension_names(min_dims=n, max_dims=n)
+    @given(st.data(), st.integers(0, 3))
+    def test_given_arbitrary_dims_list(self, data, ndims):
+        dims = dimension_names(min_dims=ndims, max_dims=ndims)
         var = data.draw(variables(dims=dims))
 
-        assert len(list(var.dims)) == n
+        assert len(list(var.dims)) == ndims
 
     @given(st.data())
     def test_given_fixed_sizes(self, data):
@@ -166,9 +166,9 @@ class TestVariablesStrategy:
         assert var.sizes == dims
         npt.assert_equal(var.data, arr)
 
-    @given(st.data())
-    def test_given_fixed_shape_arbitrary_dims_and_arbitrary_data(self, data):
-        dims = dimension_names(min_dims=2, max_dims=2)
+    @given(st.data(), st.integers(min_value=0, max_value=3))
+    def test_given_fixed_shape_arbitrary_dims_and_arbitrary_data(self, data, ndims):
+        dim_names = data.draw(dimension_names(min_dims=ndims, max_dims=ndims))
 
         def array_strategy_fn(*, shape=None, dtype=None):
             return npst.arrays(shape=shape, dtype=dtype)
@@ -176,12 +176,12 @@ class TestVariablesStrategy:
         var = data.draw(
             variables(
                 array_strategy_fn=array_strategy_fn,
-                dims=dims,
+                dims=st.just(dim_names),
                 dtype=supported_dtypes(),
             )
         )
 
-        assert var.ndim == 2
+        assert var.ndim == ndims
 
     @given(st.data())
     def test_catch_unruly_dtype_from_custom_array_strategy_fn(self, data):
@@ -248,18 +248,16 @@ class TestUniqueSubsetOf:
         with pytest.raises(ValueError, match="length-zero sequence"):
             data.draw(unique_subset_of({}))
 
-    @given(st.data())
-    def test_mapping(self, data):
-        dim_sizes = data.draw(dimension_sizes(min_dims=1))
+    @given(st.data(), dimension_sizes(min_dims=1))
+    def test_mapping(self, data, dim_sizes):
         subset_of_dim_sizes = data.draw(unique_subset_of(dim_sizes))
 
         for dim, length in subset_of_dim_sizes.items():
             assert dim in dim_sizes
             assert dim_sizes[dim] == length
 
-    @given(st.data())
-    def test_iterable(self, data):
-        dim_names = data.draw(dimension_names(min_dims=1))
+    @given(st.data(), dimension_names(min_dims=1))
+    def test_iterable(self, data, dim_names):
         subset_of_dim_names = data.draw(unique_subset_of(dim_names))
 
         for dim in subset_of_dim_names:

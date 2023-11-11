@@ -227,7 +227,7 @@ want to wrap.
 Compatibility with the Python Array API Standard
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Xarray aims to be compatible with any duck-array type that conforms to the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_ 
+Xarray aims to be compatible with any duck-array type that conforms to the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_
 (see our :ref:`docs on Array API Standard support <internals.duckarrays.array_api_standard>`).
 
 .. warning::

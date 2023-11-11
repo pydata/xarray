@@ -53,7 +53,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 def smallish_arrays(
     shape: Union[
         tuple[int, ...], st.SearchStrategy[tuple[int, ...]]
-    ] = npst.array_shapes(max_side=4),
+    ] = npst.array_shapes(min_dims=0, max_dims=3, min_side=0, max_side=4),
     dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = supported_dtypes(),
     *,
     elements=None,
