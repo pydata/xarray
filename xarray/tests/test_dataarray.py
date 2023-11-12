@@ -3801,7 +3801,7 @@ class TestDataArray:
         with pytest.raises(TypeError):
             array.to_dataset("x", name="foo")
 
-        roundtripped = actual.to_array(dim="x")
+        roundtripped = actual.to_dataarray(dim="x")
         assert_identical(array, roundtripped)
 
         array = DataArray([1, 2, 3], dims="x")
@@ -3818,7 +3818,7 @@ class TestDataArray:
         array = DataArray([1, 2, 3], coords=[("x", dates)], attrs={"a": 1})
 
         # convert to dateset and back again
-        result = array.to_dataset("x").to_array(dim="x")
+        result = array.to_dataset("x").to_dataarray(dim="x")
 
         assert_equal(array, result)
 
