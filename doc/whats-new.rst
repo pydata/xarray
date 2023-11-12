@@ -30,6 +30,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Deprecations
 ~~~~~~~~~~~~
