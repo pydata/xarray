@@ -33,7 +33,6 @@ dependencies:
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov

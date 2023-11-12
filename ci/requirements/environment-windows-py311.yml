@@ -28,7 +28,6 @@ dependencies:
   - pint<0.21
   - pip
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov

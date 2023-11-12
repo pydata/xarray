@@ -37,7 +37,6 @@ dependencies:
   - pandas=1.4
   - pint=0.19
   - pip
-  - pseudonetcdf=3.2
   - pydap=3.3
   - pytest
   - pytest-cov

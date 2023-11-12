@@ -28,7 +28,6 @@ dependencies:
   - pandas
   - pint<0.21
   - pip
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov

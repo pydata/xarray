@@ -109,7 +109,6 @@ module = [
   "opt_einsum.*",
   "pandas.*",
   "pooch.*",
-  "PseudoNetCDF.*",
   "pydap.*",
   "pytest.*",
   "scipy.*",
