@@ -860,7 +860,6 @@ class DataWithCoords(AttrAccessMixin):
         base: int | None,
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
-        keep_attrs: bool | None,
         loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
         **indexer_kwargs: str,
@@ -988,13 +987,6 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.core.groupby import ResolvedTimeResampleGrouper, TimeResampleGrouper
         from xarray.core.pdcompat import _convert_base_to_offset
         from xarray.core.resample import RESAMPLE_DIM
-
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``resample`` has no effect and will raise an"
-                " error in xarray 0.20. Pass ``keep_attrs`` directly to the applied"
-                " function, e.g. ``resample(...).mean(keep_attrs=True)``."
-            )
 
         # note: the second argument (now 'skipna') use to be 'dim'
         if (
