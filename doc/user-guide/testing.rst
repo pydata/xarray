@@ -178,15 +178,14 @@ different type:
 .. ipython:: python
 
     def convert_to_sparse(var):
-        if var.ndim == 0:
-            return var
-        else:
-            var.data = sparse.COO.from_numpy(var.to_numpy())
-            return var
+        var.data = sparse.COO.from_numpy(var.to_numpy())
+        return var
 
 .. ipython:: python
 
-    sparse_variables = xrst.variables().map(convert_to_sparse)
+    sparse_variables = xrst.variables(dims=dimension_names(min_dims=1)).map(
+        convert_to_sparse
+    )
 
     sparse_variables.example()
     sparse_variables.example()
