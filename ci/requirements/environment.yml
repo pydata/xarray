@@ -29,7 +29,7 @@ dependencies:
   - opt_einsum
   - packaging
   - pandas
-  - pint
+  - pint>=0.21
   - pip
   - pooch
   - pre-commit
