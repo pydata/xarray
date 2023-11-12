@@ -291,16 +291,12 @@ along any possible valid subset of the Variable's dimensions.
     import numpy.testing as npt
 
 
-    @given(st.data())
-    def test_mean(data):
+    @given(st.data(), xrst.variables(dims=xrst.dimension_names(min_dims=1)))
+    def test_mean(data, var):
         """Test that the mean of an xarray Variable is always equal to the mean of the underlying array."""
 
-        # create arbitrary data
-        array_dims = data.draw(dimension_names(min_dims=1))
-        var = data.draw(variables(dims=st.just(array_dims)))
-
         # specify arbitrary reduction along at least one dimension
-        reduction_dims = data.draw(xrst.unique_subset_of(array_dims, min_size=1))
+        reduction_dims = data.draw(xrst.unique_subset_of(var.dims, min_size=1))
 
         # create expected result (using nanmean because arrays with Nans will be generated)
         reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)

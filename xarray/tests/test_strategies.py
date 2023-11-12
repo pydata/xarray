@@ -245,3 +245,27 @@ class TestUniqueSubsetOf:
 
         for dim in subset_of_dim_names:
             assert dim in dim_names
+
+
+class TestReduction:
+    """
+    These tests are for checking that the examples given in the docs page on testing actually work.
+    """
+
+    @given(st.data(), variables(dims=dimension_names(min_dims=1)))
+    def test_mean(self, data, var):
+        """
+        Test that given a Variable of at least one dimension,
+        the mean of the Variable is always equal to the mean of the underlying array.
+        """
+
+        # specify arbitrary reduction along at least one dimension
+        reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
+
+        # create expected result (using nanmean because arrays with Nans will be generated)
+        reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
+        expected = np.nanmean(var.data, axis=reduction_axes)
+
+        # assert property is always satisfied
+        result = var.mean(dim=reduction_dims).data
+        npt.assert_equal(expected, result)
