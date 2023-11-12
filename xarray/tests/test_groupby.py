@@ -1776,11 +1776,6 @@ class TestDataArrayResample:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            array.resample(time="1D", keep_attrs=True)
-
     def test_resample_skipna(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
@@ -2137,11 +2132,6 @@ class TestDatasetResample:
         actual = resampled_ds.attrs
         expected = ds.attrs
         assert expected == actual
-
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            ds.resample(time="1D", keep_attrs=True)
 
     def test_resample_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
