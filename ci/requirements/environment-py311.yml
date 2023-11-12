@@ -28,7 +28,7 @@ dependencies:
   - numpy
   - packaging
   - pandas
-  - pint
+  - pint>=0.22
   - pip
   - pooch
   - pre-commit
