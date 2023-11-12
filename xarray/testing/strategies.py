@@ -30,7 +30,6 @@ class ArrayStrategyFn(Protocol[T_DuckArray]):
         *,
         shape: "_ShapeLike",
         dtype: "_DTypeLikeNested",
-        **kwargs,
     ) -> st.SearchStrategy[T_DuckArray]:
         ...
 
@@ -231,7 +230,7 @@ def variables(
     Parameters
     ----------
     array_strategy_fn: Callable which returns a strategy generating array-likes, optional
-        Callable must accept shape and dtype kwargs, and must generate results consistent with its input.
+        Callable must only accept shape and dtype kwargs, and must generate results consistent with its input.
         If not passed the default is to generate a small numpy array with one of the supported_dtypes.
     dims: Strategy for generating the dimensions, optional
         Can either be a strategy for generating a sequence of string dimension names,
@@ -315,7 +314,6 @@ def variables(
         )
 
     _array_strategy_fn: ArrayStrategyFn
-    array_strategy: st.SearchStrategy[T_DuckArray]
     if array_strategy_fn is None:
         _array_strategy_fn = smallish_arrays  # type: ignore[assignment]
     elif not callable(array_strategy_fn):
@@ -355,17 +353,17 @@ def variables(
 
     _data = draw(array_strategy)
 
-    if _data.shape != _shape:  # type: ignore[attr-defined]
+    if _data.shape != _shape:
         raise ValueError(
             "array_strategy_fn returned an array object with a different shape than it was passed."
-            f"Passed {_shape}, but returned {_data.shape}."  # type: ignore[attr-defined]
+            f"Passed {_shape}, but returned {_data.shape}."
             "Please either specify a consistent shape via the dims kwarg or ensure the array_strategy_fn callable "
             "obeys the shape argument passed to it."
         )
-    if _data.dtype != _dtype:  # type: ignore[attr-defined]
+    if _data.dtype != _dtype:
         raise ValueError(
             "array_strategy_fn returned an array object with a different dtype than it was passed."
-            f"Passed {_dtype}, but returned {_data.dtype}"  # type: ignore[attr-defined]
+            f"Passed {_dtype}, but returned {_data.dtype}"
             "Please either specify a consistent dtype via the dtype kwarg or ensure the array_strategy_fn callable "
             "obeys the dtype argument passed to it."
         )
