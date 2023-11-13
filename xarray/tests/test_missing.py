@@ -92,32 +92,43 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
     return da, df
 
 
+@pytest.mark.parametrize("fill_value", [None, np.nan, 47.11])
+@pytest.mark.parametrize(
+    "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+)
 @requires_scipy
-def test_interpolate_pd_compat():
+def test_interpolate_pd_compat(method, fill_value) -> None:
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
     frac_nans = [0, 0.5, 1]
-    methods = ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 
-    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
+    for shape, frac_nan in itertools.product(shapes, frac_nans):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
-            actual = da.interpolate_na(method=method, dim=dim, fill_value=np.nan)
+            actual = da.interpolate_na(method=method, dim=dim, fill_value=fill_value)
+            # need limit_direction="both" here, to let pandas fill
+            # in both directions instead of default forward direction only
             expected = df.interpolate(
-                method=method, axis=da.get_axis_num(dim), fill_value=(np.nan, np.nan)
+                method=method,
+                axis=da.get_axis_num(dim),
+                limit_direction="both",
+                fill_value=fill_value,
             )
-            # Note, Pandas does some odd things with the left/right fill_value
-            # for the linear methods. This next line inforces the xarray
-            # fill_value convention on the pandas output. Therefore, this test
-            # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+
+            if method == "linear":
+                # Note, Pandas does not take left/right fill_value into account
+                # for the numpy linear methods.
+                # see https://github.com/pandas-dev/pandas/issues/55144
+                # This aligns the pandas output with the xarray output
+                expected.values[pd.isnull(actual.values)] = np.nan
+                expected.values[actual.values == fill_value] = fill_value
 
             np.testing.assert_allclose(actual.values, expected.values)
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["barycentric", "krog", "pchip", "spline", "akima"])
-def test_scipy_methods_function(method):
+@pytest.mark.parametrize("method", ["barycentric", "krogh", "pchip", "spline", "akima"])
+def test_scipy_methods_function(method) -> None:
     # Note: Pandas does some wacky things with these methods and the full
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
@@ -140,7 +151,8 @@ def test_interpolate_pd_compat_non_uniform_index():
                 method="linear", dim=dim, use_coordinate=True, fill_value=np.nan
             )
             expected = df.interpolate(
-                method=method, axis=da.get_axis_num(dim), fill_value=np.nan
+                method=method,
+                axis=da.get_axis_num(dim),
             )
 
             # Note, Pandas does some odd things with the left/right fill_value

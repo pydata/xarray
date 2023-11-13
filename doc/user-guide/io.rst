@@ -115,10 +115,7 @@ you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
 
 There may be minor differences in the :py:class:`Dataset` object returned
-when reading a NetCDF file with different engines. For example,
-single-valued attributes are returned as scalars by the default
-``engine=netcdf4``, but as arrays of size ``(1,)`` when reading with
-``engine=h5netcdf``.
+when reading a NetCDF file with different engines.
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
@@ -263,12 +260,12 @@ Note that all operations that manipulate variables other than indexing
 will remove encoding information.
 
 In some cases it is useful to intentionally reset a dataset's original encoding values.
-This can be done with either the :py:meth:`Dataset.reset_encoding` or
-:py:meth:`DataArray.reset_encoding` methods.
+This can be done with either the :py:meth:`Dataset.drop_encoding` or
+:py:meth:`DataArray.drop_encoding` methods.
 
 .. ipython:: python
 
-    ds_no_encoding = ds_disk.reset_encoding()
+    ds_no_encoding = ds_disk.drop_encoding()
     ds_no_encoding.encoding
 
 .. _combining multiple files:
@@ -565,7 +562,7 @@ HDF5
 ----
 `HDF5`_ is both a file format and a data model for storing information. HDF5 stores
 data hierarchically, using groups to create a nested structure. HDF5 is a more
-general verion of the netCDF4 data model, so the nested structure is one of many
+general version of the netCDF4 data model, so the nested structure is one of many
 similarities between the two data formats.
 
 Reading HDF5 files in xarray requires the ``h5netcdf`` engine, which can be installed
@@ -822,7 +819,7 @@ with ``mode='a'`` on a Dataset containing the new variables, passing in an
 existing Zarr store or path to a Zarr store.
 
 To resize and then append values along an existing dimension in a store, set
-``append_dim``. This is a good option if data always arives in a particular
+``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
 .. ipython:: python

@@ -9,6 +9,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
+from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
     InaccessibleArray,
@@ -614,11 +615,14 @@ class TestConcatDataset:
         with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with pytest.raises(ValueError, match=r"are not coordinates"):
+        with pytest.raises(ValueError, match=r"are not found in the coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
+        with pytest.raises(ValueError, match=r"are not found in the data variables"):
+            concat([data, data], "new_dim", data_vars=["not_found"])
+
         with pytest.raises(ValueError, match=r"global attributes not"):
-            # call deepcopy seperately to get unique attrs
+            # call deepcopy separately to get unique attrs
             data0 = deepcopy(split_data[0])
             data1 = deepcopy(split_data[1])
             data1.attrs["foo"] = "bar"
@@ -906,8 +910,9 @@ class TestConcatDataset:
         assert_identical(actual, expected)
 
     def test_concat_multiindex(self) -> None:
-        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
-        expected = Dataset(coords={"x": x})
+        midx = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        expected = Dataset(coords=midx_coords)
         actual = concat(
             [expected.isel(x=slice(2)), expected.isel(x=slice(2, None))], "x"
         )
@@ -917,8 +922,9 @@ class TestConcatDataset:
     def test_concat_along_new_dim_multiindex(self) -> None:
         # see https://github.com/pydata/xarray/issues/6881
         level_names = ["x_level_0", "x_level_1"]
-        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]], names=level_names)
-        ds = Dataset(coords={"x": x})
+        midx = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]], names=level_names)
+        midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
+        ds = Dataset(coords=midx_coords)
         concatenated = concat([ds], "new")
         actual = list(concatenated.xindexes.get_all_coords("x"))
         expected = ["x"] + level_names
@@ -1064,10 +1070,10 @@ class TestConcatDataArray:
     def test_concat_join_kwarg(self) -> None:
         ds1 = Dataset(
             {"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]}
-        ).to_array()
+        ).to_dataarray()
         ds2 = Dataset(
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
-        ).to_array()
+        ).to_dataarray()
 
         expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
@@ -1095,7 +1101,7 @@ class TestConcatDataArray:
 
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join].to_array())
+            assert_equal(actual, expected[join].to_dataarray())
 
     def test_concat_combine_attrs_kwarg(self) -> None:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
@@ -1218,7 +1224,7 @@ def test_concat_preserve_coordinate_order() -> None:
 
 def test_concat_typing_check() -> None:
     ds = Dataset({"foo": 1}, {"bar": 2})
-    da = Dataset({"foo": 3}, {"bar": 4}).to_array(dim="foo")
+    da = Dataset({"foo": 3}, {"bar": 4}).to_dataarray(dim="foo")
 
     # concatenate a list of non-homogeneous types must raise TypeError
     with pytest.raises(

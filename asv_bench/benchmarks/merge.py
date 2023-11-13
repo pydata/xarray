@@ -41,7 +41,7 @@ class DatasetCreation:
         data = np.array(["0", "b"], dtype=str)
         self.dataset_coords = dict(time=np.array([0, 1]))
         self.dataset_attrs = dict(description="Test data")
-        attrs = dict(units="Celcius")
+        attrs = dict(units="Celsius")
         if strategy == "dict_of_DataArrays":
 
             def create_data_vars():

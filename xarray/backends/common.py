@@ -247,7 +247,7 @@ class ArrayWriter:
             chunkmanager = get_chunked_array_type(*self.sources)
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
-            # for any discernible difference in perforance, e.g.,
+            # for any discernible difference in performance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
             if chunkmanager_store_kwargs is None:

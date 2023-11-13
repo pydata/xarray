@@ -6,10 +6,8 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 from xarray.core.utils import FrozenDict
 
 if TYPE_CHECKING:
-    try:
-        from matplotlib.colors import Colormap
-    except ImportError:
-        Colormap = str
+    from matplotlib.colors import Colormap
+
     Options = Literal[
         "arithmetic_join",
         "cmap_divergent",
@@ -29,6 +27,8 @@ if TYPE_CHECKING:
         "keep_attrs",
         "warn_for_unclosed_files",
         "use_bottleneck",
+        "use_numbagg",
+        "use_opt_einsum",
         "use_flox",
     ]
 
@@ -52,6 +52,8 @@ if TYPE_CHECKING:
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
+        use_numbagg: bool
+        use_opt_einsum: bool
 
 
 OPTIONS: T_Options = {
@@ -74,6 +76,8 @@ OPTIONS: T_Options = {
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
+    "use_numbagg": True,
+    "use_opt_einsum": True,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -100,6 +104,8 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_numbagg": lambda value: isinstance(value, bool),
+    "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
@@ -164,11 +170,11 @@ class set_options:
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
+        (e.g. mpl.colormaps["magma"])
     cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
         Colormap to use for nondivergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
+        (e.g. mpl.colormaps["magma"])
     display_expand_attrs : {"default", True, False}
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
@@ -232,6 +238,11 @@ class set_options:
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and `flox`` to
         accelerate groupby and resampling reductions.
+    use_numbagg : bool, default: True
+        Whether to use ``numbagg`` to accelerate reductions.
+        Takes precedence over ``use_bottleneck`` when both are True.
+    use_opt_einsum : bool, default: True
+        Whether to use ``opt_einsum`` to accelerate dot products.
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.

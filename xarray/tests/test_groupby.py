@@ -232,11 +232,11 @@ def test_da_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     array = xr.DataArray(
-        data=[np.NaN, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+        data=[np.nan, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
         actual = array.groupby("x").quantile(0.5, skipna=skipna)
@@ -346,12 +346,12 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
     ds = xr.Dataset(
-        data_vars={"a": ("x", [np.NaN, 2, 3, 4, 5, 6])},
+        data_vars={"a": ("x", [np.nan, 2, 3, 4, 5, 6])},
         coords={"x": [1, 1, 1, 2, 2, 2]},
     )
 
     for skipna in (True, False, None):
-        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+        e = [np.nan, 5] if skipna is False else [2.5, 5]
 
         expected = xr.Dataset(
             data_vars={"a": ("x", e)}, coords={"quantile": 0.5, "x": [1, 2]}
@@ -600,19 +600,19 @@ def test_groupby_grouping_errors() -> None:
     with pytest.raises(
         ValueError, match=r"None of the data falls within bins with edges"
     ):
-        dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
+        dataset.to_dataarray().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
-        dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+        dataset.to_dataarray().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
     with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.groupby(dataset.foo * np.nan)
 
     with pytest.raises(ValueError, match=r"Failed to group data."):
-        dataset.to_array().groupby(dataset.foo * np.nan)
+        dataset.to_dataarray().groupby(dataset.foo * np.nan)
 
 
 def test_groupby_reduce_dimension_error(array) -> None:
@@ -728,7 +728,7 @@ def test_groupby_dataset_iter() -> None:
 def test_groupby_dataset_errors() -> None:
     data = create_test_data()
     with pytest.raises(TypeError, match=r"`group` must be"):
-        data.groupby(np.arange(10))
+        data.groupby(np.arange(10))  # type: ignore[arg-type,unused-ignore]
     with pytest.raises(ValueError, match=r"length does not match"):
         data.groupby(data["dim1"][:3])
     with pytest.raises(TypeError, match=r"`group` must be"):
@@ -810,9 +810,9 @@ def test_groupby_math_more() -> None:
     with pytest.raises(TypeError, match=r"only support binary ops"):
         grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + grouped
+        grouped + grouped  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"in-place operations"):
-        ds += grouped
+        ds += grouped  # type: ignore[arg-type]
 
     ds = Dataset(
         {
@@ -1776,11 +1776,6 @@ class TestDataArrayResample:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            array.resample(time="1D", keep_attrs=True)
-
     def test_resample_skipna(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
@@ -2137,11 +2132,6 @@ class TestDatasetResample:
         actual = resampled_ds.attrs
         expected = ds.attrs
         assert expected == actual
-
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            ds.resample(time="1D", keep_attrs=True)
 
     def test_resample_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)

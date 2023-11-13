@@ -90,7 +90,7 @@ complete examples, please consult the relevant documentation.*
         dimensions although in most cases it is also a :term:`Dimension
         coordinate`. It may or may not be grouped with other indexed coordinates
         depending on whether they share the same index. Indexed coordinates are
-        marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+        marked by an asterisk ``*`` when printing a ``DataArray`` or ``Dataset``.
 
     Non-indexed coordinate
         A coordinate which has no associated :term:`Index`. It may still
@@ -131,3 +131,128 @@ complete examples, please consult the relevant documentation.*
         ``__array_ufunc__`` and ``__array_function__`` protocols are also required.
 
         __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
+
+        .. ipython:: python
+            :suppress:
+
+            import numpy as np
+            import xarray as xr
+
+    Aligning
+        Aligning refers to the process of ensuring that two or more DataArrays or Datasets
+        have the same dimensions and coordinates, so that they can be combined or compared properly.
+
+        .. ipython:: python
+
+            x = xr.DataArray(
+                [[25, 35], [10, 24]],
+                dims=("lat", "lon"),
+                coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+            )
+            y = xr.DataArray(
+                [[20, 5], [7, 13]],
+                dims=("lat", "lon"),
+                coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
+            )
+            x
+            y
+
+    Broadcasting
+        A technique that allows operations to be performed on arrays with different shapes and dimensions.
+        When performing operations on arrays with different shapes and dimensions, xarray will automatically attempt to broadcast the
+        arrays to a common shape before the operation is applied.
+
+        .. ipython:: python
+
+            # 'a' has shape (3,) and 'b' has shape (4,)
+            a = xr.DataArray(np.array([1, 2, 3]), dims=["x"])
+            b = xr.DataArray(np.array([4, 5, 6, 7]), dims=["y"])
+
+            # 2D array with shape (3, 4)
+            a + b
+
+    Merging
+        Merging is used to combine two or more Datasets or DataArrays that have different variables or coordinates along
+        the same dimensions. When merging, xarray aligns the variables and coordinates of the different datasets along
+        the specified dimensions and creates a new ``Dataset`` containing all the variables and coordinates.
+
+        .. ipython:: python
+
+            # create two 1D arrays with names
+            arr1 = xr.DataArray(
+                [1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]}, name="arr1"
+            )
+            arr2 = xr.DataArray(
+                [4, 5, 6], dims=["x"], coords={"x": [20, 30, 40]}, name="arr2"
+            )
+
+            # merge the two arrays into a new dataset
+            merged_ds = xr.Dataset({"arr1": arr1, "arr2": arr2})
+            merged_ds
+
+    Concatenating
+        Concatenating is used to combine two or more Datasets or DataArrays along a dimension. When concatenating,
+        xarray arranges the datasets or dataarrays along a new dimension, and the resulting ``Dataset`` or ``Dataarray``
+        will have the same variables and coordinates along the other dimensions.
+
+        .. ipython:: python
+
+            a = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))
+            b = xr.DataArray([[5, 6], [7, 8]], dims=("x", "y"))
+            c = xr.concat([a, b], dim="c")
+            c
+
+    Combining
+        Combining is the process of arranging two or more DataArrays or Datasets into a single ``DataArray`` or
+        ``Dataset`` using some combination of merging and concatenation operations.
+
+        .. ipython:: python
+
+            ds1 = xr.Dataset(
+                {"data": xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"))},
+                coords={"x": [1, 2], "y": [3, 4]},
+            )
+            ds2 = xr.Dataset(
+                {"data": xr.DataArray([[5, 6], [7, 8]], dims=("x", "y"))},
+                coords={"x": [2, 3], "y": [4, 5]},
+            )
+
+            # combine the datasets
+            combined_ds = xr.combine_by_coords([ds1, ds2])
+            combined_ds
+
+    lazy
+        Lazily-evaluated operations do not load data into memory until necessary.Instead of doing calculations
+        right away, xarray lets you plan what calculations you want to do, like finding the
+        average temperature in a dataset.This planning is called "lazy evaluation." Later, when
+        you're ready to see the final result, you tell xarray, "Okay, go ahead and do those calculations now!"
+        That's when xarray starts working through the steps you planned and gives you the answer you wanted.This
+        lazy approach helps save time and memory because xarray only does the work when you actually need the
+        results.
+
+    labeled
+        Labeled data has metadata describing the context of the data, not just the raw data values.
+        This contextual information can be labels for array axes (i.e. dimension names) tick labels along axes (stored as Coordinate variables) or unique names for each array. These labels
+        provide context and meaning to the data, making it easier to understand and work with. If you have
+        temperature data for different cities over time. Using xarray, you can label the dimensions: one for
+        cities and another for time.
+
+    serialization
+        Serialization is the process of converting your data into a format that makes it easy to save and share.
+        When you serialize data in xarray, you're taking all those temperature measurements, along with their
+        labels and other information, and turning them into a format that can be stored in a file or sent over
+        the internet. xarray objects can be serialized into formats which store the labels alongside the data.
+        Some supported serialization formats are files that can then be stored or transferred (e.g. netCDF),
+        whilst others are protocols that allow for data access over a network (e.g. Zarr).
+
+    indexing
+        :ref:`Indexing` is how you select subsets of your data which you are interested in.
+
+        - Label-based Indexing: Selecting data by passing a specific label and comparing it to the labels
+          stored in the associated coordinates. You can use labels to specify what you want like "Give me the
+          temperature for New York on July 15th."
+
+        - Positional Indexing: You can use numbers to refer to positions in the data like "Give me the third temperature value" This is useful when you know the order of your data but don't need to remember the exact labels.
+
+        - Slicing: You can take a "slice" of your data, like you might want all temperatures from July 1st
+          to July 10th. xarray supports slicing for both positional and label-based indexing.
