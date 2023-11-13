@@ -178,8 +178,7 @@ different type:
 .. ipython:: python
 
     def convert_to_sparse(var):
-        var.data = sparse.COO.from_numpy(var.to_numpy())
-        return var
+        return var.copy(data=sparse.COO.from_numpy(var.to_numpy()))
 
 .. ipython:: python
 
