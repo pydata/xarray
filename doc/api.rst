@@ -1071,6 +1071,28 @@ Testing
    testing.assert_allclose
    testing.assert_chunks_equal
 
+Hypothesis Testing Strategies
+=============================
+
+.. currentmodule:: xarray
+
+.. warning::
+    These strategies should be considered highly experimental, and liable to change at any time.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.strategies.numeric_dtypes
+   testing.strategies.names
+   testing.strategies.dimension_names
+   testing.strategies.dimension_sizes
+   testing.strategies.attrs
+   testing.strategies.variables
+   testing.strategies.coordinate_variables
+   testing.strategies.dataarrays
+   testing.strategies.data_variables
+   testing.strategies.datasets
+
 Exceptions
 ==========
 
