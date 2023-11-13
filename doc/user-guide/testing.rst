@@ -183,7 +183,7 @@ different type:
 
 .. ipython:: python
 
-    sparse_variables = xrst.variables(dims=dimension_names(min_dims=1)).map(
+    sparse_variables = xrst.variables(dims=xrst.dimension_names(min_dims=1)).map(
         convert_to_sparse
     )
 
