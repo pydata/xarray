@@ -413,6 +413,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             phony_dims=phony_dims,
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
+            driver_kwds=driver_kwds,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
