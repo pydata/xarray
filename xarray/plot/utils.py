@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -1827,3 +1827,27 @@ def _guess_coords_to_plot(
         _assert_valid_xy(darray, dim, k)
 
     return coords_to_plot
+
+
+def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
+    """
+    Use ConciseDateFormatter which is meant to improve the
+    strings chosen for the ticklabels, and to minimize the
+    strings used in those tick labels as much as possible.
+
+    https://matplotlib.org/stable/gallery/ticks/date_concise_formatter.html
+
+    Parameters
+    ----------
+    ax : Axes
+        Figure axes.
+    axis : Literal["x", "y", "z"], optional
+        Which axis to make concise. The default is "x".
+    """
+    import matplotlib.dates as mdates
+
+    locator = mdates.AutoDateLocator()
+    formatter = mdates.ConciseDateFormatter(locator)
+    axis = getattr(ax, f"{axis}axis")
+    axis.set_major_locator(locator)
+    axis.set_major_formatter(formatter)
