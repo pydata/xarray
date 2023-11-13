@@ -38,9 +38,8 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     """
     Generates only those numpy dtypes which xarray can handle.
 
-    Avoiding using hypothesis.extra.numpy.scalar_dtypes is required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
-    Also required to dodge bugs with pandas non-nanosecond datetime overflows.
-    Note does not generate all dtypes that xarray can handle - just only generates dtypes which it definitely can.
+    Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
+    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
 
     Requires the hypothesis package to be installed.
     """
