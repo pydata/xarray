@@ -1848,6 +1848,6 @@ def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
 
     locator = mdates.AutoDateLocator()
     formatter = mdates.ConciseDateFormatter(locator)
-    axis = getattr(ax, f"{axis}axis")
-    axis.set_major_locator(locator)
-    axis.set_major_formatter(formatter)
+    _axis = getattr(ax, f"{axis}axis")
+    _axis.set_major_locator(locator)
+    _axis.set_major_formatter(formatter)
