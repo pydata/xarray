@@ -30,6 +30,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -47,6 +48,9 @@ Deprecations
   existing methods work and don't raise any warnings, given the relatively small
   benefits of the change.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Finally remove ``keep_attrs`` kwarg from :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample`. These were deprecated a long time ago.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
