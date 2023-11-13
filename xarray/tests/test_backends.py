@@ -3452,7 +3452,11 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
     )
 
     def test_get_variable_list(self) -> None:
-        with open_dataset(self.test_remote_dataset, engine="h5netcdf", backend_kwargs={"driver": "ros3"}) as actual:
+        with open_dataset(
+            self.test_remote_dataset,
+            engine="h5netcdf",
+            backend_kwargs={"driver": "ros3"},
+        ) as actual:
             assert "Temperature" in list(actual)
 
     def test_get_variable_list_empty_driver_kwds(self) -> None:
@@ -3460,12 +3464,11 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             "secret_id": b"",
             "secret_key": b"",
         }
-        backend_kwargs = {
-            "driver": "ros3",
-            "driver_kwds": driver_kwds
-        }
+        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
 
-        with open_dataset(self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs) as actual:
+        with open_dataset(
+            self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
+        ) as actual:
             assert "Temperature" in list(actual)
 
 
