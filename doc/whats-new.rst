@@ -23,10 +23,9 @@ New Features
 ~~~~~~~~~~~~
 
 - Added hypothesis strategies for generating :py:class:`xarray.Variable` objects containing arbitrary data, useful for parametrizing downstream tests.
-  Accessible under :py:func:`testing.strategies`, and documented in a new page on testing in the User Guide.
+  Accessible under :py:mod:`testing.strategies`, and documented in a new page on testing in the User Guide.
   (:issue:`6911`, :pull:`8404`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
