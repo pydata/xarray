@@ -141,6 +141,7 @@ class H5NetCDFStore(WritableCFDataStore):
         phony_dims=None,
         decode_vlen_strings=True,
         driver=None,
+        driver_kwds=None,
     ):
         import h5netcdf
 
