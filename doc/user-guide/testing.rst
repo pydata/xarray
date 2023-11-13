@@ -196,8 +196,8 @@ different type:
 
     @st.composite
     def sparse_random_arrays(
-        draw, shape: tuple[int] = None
-    ) -> st.SearchStrategy[sparse._coo.core.COO]:
+        draw, shape: tuple[int]
+    ) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
         if shape is None:
             shape = draw(npst.array_shapes())
@@ -208,7 +208,7 @@ different type:
 
 
     def sparse_random_arrays_fn(
-        *, shape: tuple[int] = None, dtype: np.dtype = None
+        *, shape: tuple[int, ...], dtype: np.dtype
     ) -> st.SearchStrategy[sparse._coo.core.COO]:
         return sparse_random_arrays(shape=shape)
 
