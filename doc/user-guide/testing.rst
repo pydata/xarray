@@ -178,8 +178,7 @@ different type:
 .. ipython:: python
 
     def convert_to_sparse(var):
-        var.data = sparse.COO.from_numpy(var.to_numpy())
-        return var
+        return var.copy(data=sparse.COO.from_numpy(var.to_numpy()))
 
 .. ipython:: python
 
@@ -194,15 +193,15 @@ different type:
 
 .. ipython:: python
 
-    @st.composite
-    def sparse_random_arrays(draw, shape: tuple[int]) -> sparse._coo.core.COO:
+    def sparse_random_arrays(shape: tuple[int]) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
         if shape is None:
-            shape = draw(npst.array_shapes())
-        density = draw(st.integers(min_value=0, max_value=1))
-        return sparse.random(
-            shape=shape, density=density
-        )  # note sparse.random does not accept a dtype kwarg
+            shape = npst.array_shapes()
+        else:
+            shape = st.just(shape)
+        density = st.integers(min_value=0, max_value=1)
+        # note sparse.random does not accept a dtype kwarg
+        return st.builds(sparse.random, shape=shape, density=density)
 
 
     def sparse_random_arrays_fn(
