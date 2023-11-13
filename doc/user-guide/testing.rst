@@ -195,9 +195,7 @@ different type:
 .. ipython:: python
 
     @st.composite
-    def sparse_random_arrays(
-        draw, shape: tuple[int]
-    ) -> sparse._coo.core.COO:
+    def sparse_random_arrays(draw, shape: tuple[int]) -> sparse._coo.core.COO:
         """Strategy which generates random sparse.COO arrays"""
         if shape is None:
             shape = draw(npst.array_shapes())
