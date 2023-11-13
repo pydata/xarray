@@ -15,7 +15,6 @@ from xarray.backends import common, plugins
 from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
-    has_pseudonetcdf,
     has_pydap,
     has_pynio,
     has_scipy,
@@ -222,7 +221,6 @@ def test_lazy_import() -> None:
     blacklisted = [
         "h5netcdf",
         "netCDF4",
-        "PseudoNetCDF",
         "pydap",
         "Nio",
         "scipy",
@@ -279,7 +277,6 @@ def test_list_engines() -> None:
     assert ("scipy" in engines) == has_scipy
     assert ("h5netcdf" in engines) == has_h5netcdf
     assert ("netcdf4" in engines) == has_netCDF4
-    assert ("pseudonetcdf" in engines) == has_pseudonetcdf
     assert ("pydap" in engines) == has_pydap
     assert ("zarr" in engines) == has_zarr
     assert ("pynio" in engines) == has_pynio
