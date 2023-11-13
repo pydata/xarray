@@ -1,8 +1,14 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Protocol, Union, overload
 
+try:
+    import hypothesis.strategies as st
+except ImportError as e:
+    raise ImportError(
+        "`xarray.stesting.strategies` requires `hypothesis` to be installed."
+    ) from e
+
 import hypothesis.extra.numpy as npst
-import hypothesis.strategies as st
 import numpy as np
 from hypothesis.errors import InvalidArgument
 
