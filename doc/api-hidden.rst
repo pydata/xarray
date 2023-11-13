@@ -591,20 +591,6 @@
    backends.H5netcdfBackendEntrypoint.guess_can_open
    backends.H5netcdfBackendEntrypoint.open_dataset
 
-   backends.PseudoNetCDFDataStore.close
-   backends.PseudoNetCDFDataStore.get_attrs
-   backends.PseudoNetCDFDataStore.get_dimensions
-   backends.PseudoNetCDFDataStore.get_encoding
-   backends.PseudoNetCDFDataStore.get_variables
-   backends.PseudoNetCDFDataStore.open
-   backends.PseudoNetCDFDataStore.open_store_variable
-   backends.PseudoNetCDFDataStore.ds
-
-   backends.PseudoNetCDFBackendEntrypoint.description
-   backends.PseudoNetCDFBackendEntrypoint.url
-   backends.PseudoNetCDFBackendEntrypoint.guess_can_open
-   backends.PseudoNetCDFBackendEntrypoint.open_dataset
-
    backends.PydapDataStore.close
    backends.PydapDataStore.get_attrs
    backends.PydapDataStore.get_dimensions

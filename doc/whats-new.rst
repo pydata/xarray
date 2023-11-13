@@ -34,7 +34,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The PseudoNetCDF backend has been removed. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
   :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
   dimensions, or a single ``int`` or ``"auto"`` argument covering all
@@ -4530,7 +4530,7 @@ Enhancements
 
 - New PseudoNetCDF backend for many Atmospheric data formats including
   GEOS-Chem, CAMx, NOAA arlpacked bit and many others. See
-  :ref:`io.PseudoNetCDF` for more details.
+  ``io.PseudoNetCDF`` for more details.
   By `Barron Henderson <https://github.com/barronh>`_.
 
 - The :py:class:`Dataset` constructor now aligns :py:class:`DataArray`

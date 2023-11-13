@@ -1117,7 +1117,6 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
-   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
    backends.ZarrStore
@@ -1133,7 +1132,6 @@ used filetypes in the xarray universe.
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint
-   backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
    backends.StoreBackendEntrypoint
