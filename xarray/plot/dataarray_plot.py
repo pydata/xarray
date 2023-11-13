@@ -529,14 +529,6 @@ def line(
     if np.issubdtype(xplt.dtype, np.datetime64):
         _set_concise_date(ax, axis="x")
 
-        # # Rotate dates on xlabels
-        # # Do this without calling autofmt_xdate so that x-axes ticks
-        # # on other subplots (if any) are not deleted.
-        # # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-        # for xlabels in ax.get_xticklabels():
-        #     xlabels.set_rotation(30)
-        #     xlabels.set_horizontalalignment("right")
-
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
     return primitive
@@ -1106,13 +1098,6 @@ def _add_labels(
 
         if np.issubdtype(darray.dtype, np.datetime64):
             _set_concise_date(ax, axis=axis)
-            # # Rotate dates on xlabels
-            # # Do this without calling autofmt_xdate so that x-axes ticks
-            # # on other subplots (if any) are not deleted.
-            # # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-            # for labels in getattr(ax, f"get_{axis}ticklabels")():
-            #     labels.set_rotation(30)
-            #     labels.set_horizontalalignment("right")
 
 
 @overload
@@ -1657,14 +1642,6 @@ def _plot2d(plotfunc):
 
         if np.issubdtype(xplt.dtype, np.datetime64):
             _set_concise_date(ax, "x")
-
-            # # Rotate dates on xlabels
-            # # Do this without calling autofmt_xdate so that x-axes ticks
-            # # on other subplots (if any) are not deleted.
-            # # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-            # for xlabels in ax.get_xticklabels():
-            #     xlabels.set_rotation(30)
-            #     xlabels.set_horizontalalignment("right")
 
         return primitive
 
