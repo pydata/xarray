@@ -165,6 +165,8 @@ class H5NetCDFStore(WritableCFDataStore):
             "decode_vlen_strings": decode_vlen_strings,
             "driver": driver,
         }
+        if driver_kwds is not None:
+            kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
 
