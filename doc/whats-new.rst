@@ -34,7 +34,7 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-- The PseudoNetCDF backend has been removed. By `Deepak Cherian <https://github.com/dcherian/>`_.
+- The PseudoNetCDF backend has been removed. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
   :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
   dimensions, or a single ``int`` or ``"auto"`` argument covering all
