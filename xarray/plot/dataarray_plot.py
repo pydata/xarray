@@ -1094,6 +1094,7 @@ def _add_labels(
 ) -> None:
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
+    axis: Literal["x", "y", "z"]
     for axis, add_label, darray, suffix in zip(
         ("x", "y", "z"), add_labels, darrays, suffixes
     ):
