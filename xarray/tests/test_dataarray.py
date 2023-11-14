@@ -3793,8 +3793,16 @@ class TestDataArray:
             actual = named.to_dataset("bar")
 
     def test_to_dataset_split(self) -> None:
-        array = DataArray([1, 2, 3], coords=[("x", list("abc"))], attrs={"a": 1})
-        expected = Dataset({"a": 1, "b": 2, "c": 3}, attrs={"a": 1})
+        array = DataArray(
+            [[1, 2], [3, 4], [5, 6]],
+            coords=[("x", list("abc")), ("y", [0.0, 0.1])],
+            attrs={"a": 1},
+        )
+        expected = Dataset(
+            {"a": ("y", [1, 2]), "b": ("y", [3, 4]), "c": ("y", [5, 6])},
+            coords={"y": [0.0, 0.1]},
+            attrs={"a": 1},
+        )
         actual = array.to_dataset("x")
         assert_identical(expected, actual)
 
