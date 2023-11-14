@@ -40,7 +40,6 @@ from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.utils import is_remote_uri
-from xarray.core.variable import IndexVariable
 
 if TYPE_CHECKING:
     try:
@@ -1708,13 +1707,7 @@ def to_zarr(
         )
         # drop indices to avoid potential race condition with auto region
         if region_was_autodetected:
-            dataset = dataset.drop_vars(
-                [
-                    name
-                    for name, v in dataset.variables.items()
-                    if isinstance(v, IndexVariable)
-                ]
-            )
+            dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "
