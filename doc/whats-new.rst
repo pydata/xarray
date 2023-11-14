@@ -72,6 +72,9 @@ Bug fixes
 - Fix to once again support date offset strings as input to the loffset
   parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
   By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
+- Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
+  if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Documentation
 ~~~~~~~~~~~~~
