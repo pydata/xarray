@@ -77,6 +77,7 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_h5netcdf_ros3,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -3444,7 +3445,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
-@requires_h5netcdf
+@requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
     test_remote_dataset: str = (
