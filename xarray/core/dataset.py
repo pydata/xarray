@@ -1502,7 +1502,7 @@ class Dataset(
                 "cannot directly convert an xarray.Dataset into a "
                 "numpy array. Instead, create an xarray.DataArray "
                 "first, either with indexing on the Dataset or by "
-                "invoking the `to_array()` method."
+                "invoking the `to_dataarray()` method."
             )
 
     @property
@@ -5266,7 +5266,7 @@ class Dataset(
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
-        This method is similar to Dataset.to_array but does not broadcast the
+        This method is similar to Dataset.to_dataarray but does not broadcast the
         variables.
 
         Parameters
@@ -5295,7 +5295,7 @@ class Dataset(
 
         See Also
         --------
-        Dataset.to_array
+        Dataset.to_dataarray
         Dataset.stack
         DataArray.to_unstacked_dataset
 
@@ -7025,7 +7025,7 @@ class Dataset(
 
         return data
 
-    def to_array(
+    def to_dataarray(
         self, dim: Hashable = "variable", name: Hashable | None = None
     ) -> DataArray:
         """Convert this dataset into an xarray.DataArray
@@ -7061,6 +7061,12 @@ class Dataset(
         coords.update(new_dim_index.create_variables())
 
         return DataArray._construct_direct(variable, coords, name, indexes)
+
+    def to_array(
+        self, dim: Hashable = "variable", name: Hashable | None = None
+    ) -> DataArray:
+        """Deprecated version of to_dataarray"""
+        return self.to_dataarray(dim=dim, name=name)
 
     def _normalize_dim_order(
         self, dim_order: Sequence[Hashable] | None = None
@@ -10327,7 +10333,6 @@ class Dataset(
         base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: str,
@@ -10404,7 +10409,6 @@ class Dataset(
             base=base,
             offset=offset,
             origin=origin,
-            keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,
