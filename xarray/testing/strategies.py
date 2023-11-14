@@ -5,7 +5,7 @@ try:
     import hypothesis.strategies as st
 except ImportError as e:
     raise ImportError(
-        "`xarray.stesting.strategies` requires `hypothesis` to be installed."
+        "`xarray.testing.strategies` requires `hypothesis` to be installed."
     ) from e
 
 import hypothesis.extra.numpy as npst
