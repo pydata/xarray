@@ -28,11 +28,10 @@ dependencies:
   - opt_einsum
   - packaging
   - pandas
-  - pint<0.21
+  - pint>=0.22
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov

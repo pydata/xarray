@@ -34,9 +34,8 @@ dependencies:
   - numpy=1.22
   - packaging=21.3
   - pandas=1.4
-  - pint=0.19
+  - pint=0.22
   - pip
-  - pseudonetcdf=3.2
   - pydap=3.3
   - pytest
   - pytest-cov

@@ -1308,27 +1308,6 @@ We recommend installing PyNIO via conda::
 .. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
 .. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
-.. _io.PseudoNetCDF:
-
-Formats supported by PseudoNetCDF
----------------------------------
-
-Xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
-formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
-PseudoNetCDF can also provide Climate Forecasting Conventions to
-CMAQ files. In addition, PseudoNetCDF can automatically register custom
-readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
-identify readers either heuristically, or by a format specified via a key in
-`backend_kwargs`.
-
-To use PseudoNetCDF to read such files, supply
-``engine='pseudonetcdf'`` to :py:func:`open_dataset`.
-
-Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
-options are listed on the PseudoNetCDF page.
-
-.. _PseudoNetCDF: https://github.com/barronh/PseudoNetCDF
-
 
 CSV and other formats supported by pandas
 -----------------------------------------
