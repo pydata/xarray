@@ -574,9 +574,24 @@ class DataArray(
             array.attrs = {}
             return as_variable(array)
 
-        variables = {label: subset(dim, label) for label in self.get_index(dim)}
-        variables.update({k: v for k, v in self._coords.items() if k != dim})
+        variables_from_split = {
+            label: subset(dim, label) for label in self.get_index(dim)
+        }
         coord_names = set(self._coords) - {dim}
+
+        ambiguous_vars = set(variables_from_split) & coord_names
+        if ambiguous_vars:
+            rename_msg_fmt = ", ".join([f"{v}=..." for v in sorted(ambiguous_vars)])
+            raise ValueError(
+                f"Splitting along the dimension {dim!r} would produce the variables "
+                f"{tuple(sorted(ambiguous_vars))} which are also existing coordinate "
+                f"variables. Use DataArray.rename({rename_msg_fmt}) or "
+                f"DataArray.assign_coords({dim}=...) to resolve this ambiguity."
+            )
+
+        variables = variables_from_split | {
+            k: v for k, v in self._coords.items() if k != dim
+        }
         indexes = filter_indexes_from_coords(self._indexes, coord_names)
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
