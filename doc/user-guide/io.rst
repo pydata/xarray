@@ -880,7 +880,7 @@ can be filled out by subsequent calls to ``to_zarr``. ``region`` can be
 specified as ``"auto"``, which opens the existing store and determines the
 correct alignment of the new data with the existing coordinates, or as an
 explicit mapping from dimension names to Python ``slice`` objects indicating
-where the data should be written (in index space, not coordinate space), e.g.,
+where the data should be written (in index space, not label space), e.g.,
 
 .. ipython:: python
 
