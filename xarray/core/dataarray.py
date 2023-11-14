@@ -594,7 +594,9 @@ class DataArray(
                 f"DataArray.assign_coords({dim}=...) to resolve this ambiguity."
             )
 
-        variables = variables_from_split | {c: self._coords[c] for c in coord_names}
+        variables = variables_from_split | {
+            k: v for k, v in self._coords.items() if k != dim
+        }
         indexes = filter_indexes_from_coords(self._indexes, coord_names)
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
