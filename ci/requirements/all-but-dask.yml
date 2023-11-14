@@ -3,13 +3,11 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.10
   - black
   - aiobotocore
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cftime
   - coveralls
   - flox

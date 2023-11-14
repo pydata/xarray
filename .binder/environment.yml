@@ -6,7 +6,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cfgrib
   - cftime
   - coveralls
@@ -38,5 +37,4 @@ dependencies:
   - toolz
   - xarray
   - zarr
-  - pip:
-    - numbagg
+  - numbagg

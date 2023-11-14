@@ -7,7 +7,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cftime
   - dask-core
   - distributed
