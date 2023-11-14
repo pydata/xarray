@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     T_Variables = Mapping[Any, Variable]
     T_Attrs = MutableMapping[Any, Any]
     T_DropVariables = Union[str, Iterable[Hashable], None]
+    T_KeepVariables = Union[str, Iterable[Hashable], None]
     T_DatasetOrAbstractstore = Union[Dataset, AbstractDataStore]
 
 
@@ -380,6 +381,7 @@ def decode_cf_variables(
     decode_times: bool = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
+    keep_variables: T_KeepVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
@@ -410,13 +412,19 @@ def decode_cf_variables(
         drop_variables = []
     drop_variables = set(drop_variables)
 
+    if isinstance(keep_variables, str):
+        keep_variables = [keep_variables]
+        keep_variables = set(keep_variables)
+
     # Time bounds coordinates might miss the decoding attributes
     if decode_times:
         _update_bounds_attributes(variables)
 
     new_vars = {}
     for k, v in variables.items():
-        if k in drop_variables:
+        if k in drop_variables or (
+            keep_variables is not None and k not in keep_variables
+        ):
             continue
         stack_char_dim = (
             concat_characters
@@ -496,6 +504,7 @@ def decode_cf(
     decode_times: bool = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
+    keep_variables: T_KeepVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
 ) -> Dataset:
@@ -527,6 +536,10 @@ def decode_cf(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    keep_variables: str or iterable of str, optional
+        A variable or list of variables to load from the dataset. This is
+        useful if you don't need all the variables in the file and don't
+        want to spend time loading them. Default is to load all variables.
     use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -574,6 +587,7 @@ def decode_cf(
         decode_times,
         decode_coords,
         drop_variables=drop_variables,
+        keep_variables=keep_variables,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
     )

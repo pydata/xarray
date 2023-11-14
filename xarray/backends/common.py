@@ -452,8 +452,8 @@ class BackendEntrypoint:
 
     - ``open_dataset`` method: it shall implement reading from file, variables
       decoding and it returns an instance of :py:class:`~xarray.Dataset`.
-      It shall take in input at least ``filename_or_obj`` argument and
-      ``drop_variables`` keyword argument.
+      It shall take in input at least ``filename_or_obj`` argument,
+      ``keep_variables`` argument, and ``drop_variables`` keyword argument.
       For more details see :ref:`RST open_dataset`.
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
@@ -490,6 +490,7 @@ class BackendEntrypoint:
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
+        keep_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
     ) -> Dataset:
         """

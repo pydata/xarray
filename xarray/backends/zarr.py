@@ -765,6 +765,7 @@ def open_zarr(
     concat_characters=True,
     decode_coords=True,
     drop_variables=None,
+    keep_variables=None,
     consolidated=None,
     overwrite_encoded_chunks=False,
     chunk_store=None,
@@ -826,6 +827,10 @@ def open_zarr(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    keep_variables: str or iterable of str, optional
+        A variable or list of variables to load from the dataset. This is
+        useful if you don't need all the variables in the file and don't
+        want to spend time loading them. Default is to load all variables.
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
@@ -923,6 +928,7 @@ def open_zarr(
         engine="zarr",
         chunks=chunks,
         drop_variables=drop_variables,
+        keep_variables=keep_variables,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
         backend_kwargs=backend_kwargs,
@@ -967,6 +973,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         concat_characters=True,
         decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
+        keep_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
@@ -1001,6 +1008,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 concat_characters=concat_characters,
                 decode_coords=decode_coords,
                 drop_variables=drop_variables,
+                keep_variables=keep_variables,
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
             )
