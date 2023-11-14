@@ -69,6 +69,7 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -77,7 +78,6 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
-    requires_h5netcdf_ros3,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
