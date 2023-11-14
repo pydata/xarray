@@ -48,6 +48,10 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
 
     Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
@@ -84,6 +88,10 @@ def smallish_arrays(
     elements
     fill
     unique
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
     # TODO here we may also wish to generalize/restrict the dtypes produced by xarray's default test strategies
     return npst.arrays(
@@ -102,6 +110,10 @@ def names() -> st.SearchStrategy[str]:
     Generates arbitrary string names for dimensions / variables.
 
     Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
     return st.text(
         _readable_characters,
@@ -166,6 +178,10 @@ def dimension_sizes(
     max_side: int, optional
         Minimum size of a dimension.
         Default is `min_length` + 5.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
 
     if max_side is None:
@@ -201,6 +217,10 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     The generated dictionaries can potentially be recursive.
 
     Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
     return st.recursive(
         st.dictionaries(_attr_keys, _attr_values),
@@ -300,6 +320,10 @@ def variables(
     <xarray.Variable (a: 2, b: 1)>
     array([[-1.00000000e+007+3.40282347e+038j],
            [-2.75034266e-225+2.22507386e-311j]])
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
 
     if not isinstance(dims, st.SearchStrategy) and dims is not None:
@@ -432,6 +456,10 @@ def unique_subset_of(
     {'y': 3}
     >>> unique_subset_of(["x", "y"]).example()  # doctest: +SKIP
     ['x']
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
     """
     if not isinstance(objs, Iterable):
         raise TypeError(
