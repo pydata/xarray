@@ -27,6 +27,7 @@ from xarray.backends.common import (
     _normalize_path,
 )
 from xarray.backends.locks import _get_scheduler
+from xarray.backends.zarr import open_zarr
 from xarray.core import indexing
 from xarray.core.combine import (
     _infer_concat_order_from_positions,
@@ -1443,9 +1444,62 @@ def save_mfdataset(
         )
 
 
-def _validate_region(ds, region):
+def _auto_detect_region(ds_new, ds_orig, dim):
+    # Create a mapping array of coordinates to indices on the original array
+    coord = ds_orig[dim]
+    da_map = DataArray(np.arange(coord.size), coords={dim: coord})
+
+    try:
+        da_idxs = da_map.sel({dim: ds_new[dim]})
+    except KeyError as e:
+        if "not all values found" in str(e):
+            raise KeyError(
+                f"Not all values of coordinate '{dim}' in the new array were"
+                " found in the original store. Writing to a zarr region slice"
+                " requires that no dimensions or metadata are changed by the write."
+            )
+        else:
+            raise e
+
+    if (da_idxs.diff(dim) != 1).any():
+        raise ValueError(
+            f"The auto-detected region of coordinate '{dim}' for writing new data"
+            " to the original store had non-contiguous indices. Writing to a zarr"
+            " region slice requires that the new data constitute a contiguous subset"
+            " of the original store."
+        )
+
+    dim_slice = slice(da_idxs.values[0], da_idxs.values[-1] + 1)
+
+    return dim_slice
+
+
+def _auto_detect_regions(ds, region, open_kwargs):
+    ds_original = open_zarr(**open_kwargs)
+    for key, val in region.items():
+        if val == "auto":
+            region[key] = _auto_detect_region(ds, ds_original, key)
+    return region
+
+
+def _validate_and_autodetect_region(
+    ds, region, mode, open_kwargs
+) -> tuple[dict[str, slice], bool]:
+    if region == "auto":
+        region = {dim: "auto" for dim in ds.dims}
+
     if not isinstance(region, dict):
         raise TypeError(f"``region`` must be a dict, got {type(region)}")
+
+    if any(v == "auto" for v in region.values()):
+        region_was_autodetected = True
+        if mode != "r+":
+            raise ValueError(
+                f"``mode`` must be 'r+' when using ``region='auto'``, got {mode}"
+            )
+        region = _auto_detect_regions(ds, region, open_kwargs)
+    else:
+        region_was_autodetected = False
 
     for k, v in region.items():
         if k not in ds.dims:
@@ -1477,6 +1531,8 @@ def _validate_region(ds, region):
             f"from this dataset before exporting to zarr, write: "
             f".drop_vars({non_matching_vars!r})"
         )
+
+    return region, region_was_autodetected
 
 
 def _validate_datatypes_for_zarr_append(zstore, dataset):
@@ -1529,7 +1585,7 @@ def to_zarr(
     compute: Literal[True] = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1553,7 +1609,7 @@ def to_zarr(
     compute: Literal[False],
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1575,7 +1631,7 @@ def to_zarr(
     compute: bool = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
-    region: Mapping[str, slice] | None = None,
+    region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
     zarr_version: int | None = None,
@@ -1640,7 +1696,20 @@ def to_zarr(
     _validate_dataset_names(dataset)
 
     if region is not None:
-        _validate_region(dataset, region)
+        open_kwargs = dict(
+            store=store,
+            synchronizer=synchronizer,
+            group=group,
+            consolidated=consolidated,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+        )
+        region, region_was_autodetected = _validate_and_autodetect_region(
+            dataset, region, mode, open_kwargs
+        )
+        # drop indices to avoid potential race condition with auto region
+        if region_was_autodetected:
+            dataset = dataset.drop_vars(dataset.indexes)
         if append_dim is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "
