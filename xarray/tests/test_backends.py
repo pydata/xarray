@@ -5536,7 +5536,43 @@ class TestZarrRegionAuto:
         with pytest.raises(KeyError):
             ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
 
+    def test_zarr_region_index_write(self, tmp_path):
+        from xarray.backends.zarr import ZarrStore
 
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        with patch.object(
+            ZarrStore,
+            "set_variables",
+            side_effect=ZarrStore.set_variables,
+            autospec=True,
+        ) as mock:
+            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+
+            # should write the data vars but never the index vars with auto mode
+            for call in mock.call_args_list:
+                written_variables = call.args[1].keys()
+                assert "test" in written_variables
+                assert "x" not in written_variables
+                assert "y" not in written_variables
+
+
+@requires_zarr
 def test_zarr_region_transpose(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)

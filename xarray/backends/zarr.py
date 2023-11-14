@@ -349,7 +349,10 @@ def _validate_and_transpose_existing_dims(
             f"variable {var_name!r} already exists with different "
             f"dimension sizes: {existing_sizes} != {new_sizes}. "
             f"to_zarr() only supports changing dimension sizes when "
-            f"explicitly appending, but append_dim={append_dim!r}."
+            f"explicitly appending, but append_dim={append_dim!r}. "
+            f"If you are attempting to write to a subset of the "
+            f"existing store without changing dimension sizes, "
+            f"consider using the region argument in to_zarr()."
         )
 
     return new_var
