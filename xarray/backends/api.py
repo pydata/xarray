@@ -1482,7 +1482,9 @@ def _auto_detect_regions(ds, region, open_kwargs):
     return region
 
 
-def _validate_and_autodetect_region(ds, region, mode, open_kwargs) -> dict[str, slice]:
+def _validate_and_autodetect_region(
+    ds, region, mode, open_kwargs
+) -> tuple[dict[str, slice], bool]:
     if region == "auto":
         region = {dim: "auto" for dim in ds.dims}
 
