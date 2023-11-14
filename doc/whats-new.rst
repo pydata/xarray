@@ -24,6 +24,8 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
+- Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
+  By `Ben Mares <https://github.com/maresb>`_.
 
 - Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
@@ -32,10 +34,11 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The PseudoNetCDF backend has been removed. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
   :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
   dimensions, or a single ``int`` or ``"auto"`` argument covering all
@@ -43,10 +46,29 @@ Deprecations
   this was one place in the API where dimension positions were used.
   (:pull:`8341`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Rename :py:meth:`Dataset.to_array` to  :py:meth:`Dataset.to_dataarray` for
+  consistency with :py:meth:`DataArray.to_dataset` &
+  :py:func:`open_dataarray` functions. This is a "soft" deprecation — the
+  existing methods work and don't raise any warnings, given the relatively small
+  benefits of the change.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Finally remove ``keep_attrs`` kwarg from :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample`. These were deprecated a long time ago.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Port `bug fix from pandas <https://github.com/pandas-dev/pandas/pull/55283>`_
+  to eliminate the adjustment of resample bin edges in the case that the
+  resampling frequency has units of days and is greater than one day
+  (e.g. ``"2D"``, ``"3D"`` etc.) and the ``closed`` argument is set to
+  ``"right"`` to xarray's implementation of resample for data indexed by a
+  :py:class:`CFTimeIndex` (:pull:`8393`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix to once again support date offset strings as input to the loffset
+  parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
+  By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -138,6 +160,11 @@ Bug fixes
   when they array is initialized.
   (:issue:`8290`, :pull:`8297`).
   By `Oliver McCormack <https://github.com/olimcc>`_.
+
+- Fix to_zarr ending in a ReadOnlyError when consolidated metadata was used and the
+  write_empty_chunks was provided.
+  (:issue:`8323`, :pull:`8326`)
+  By `Matthijs Amesz <https://github.com/Metamess>`_.
 
 
 Documentation
@@ -4507,7 +4534,7 @@ Enhancements
 
 - New PseudoNetCDF backend for many Atmospheric data formats including
   GEOS-Chem, CAMx, NOAA arlpacked bit and many others. See
-  :ref:`io.PseudoNetCDF` for more details.
+  ``io.PseudoNetCDF`` for more details.
   By `Barron Henderson <https://github.com/barronh>`_.
 
 - The :py:class:`Dataset` constructor now aligns :py:class:`DataArray`
@@ -6696,7 +6723,7 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- New ``xray.Dataset.to_array`` and enhanced
+- New ``xray.Dataset.to_dataarray`` and enhanced
   ``xray.DataArray.to_dataset`` methods make it easy to switch back
   and forth between arrays and datasets:
 
@@ -6707,8 +6734,8 @@ Enhancements
           coords={"c": 42},
           attrs={"Conventions": "None"},
       )
-      ds.to_array()
-      ds.to_array().to_dataset(dim="variable")
+      ds.to_dataarray()
+      ds.to_dataarray().to_dataset(dim="variable")
 
 - New ``xray.Dataset.fillna`` method to fill missing values, modeled
   off the pandas method of the same name:

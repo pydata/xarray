@@ -1431,6 +1431,12 @@ class DataArray(
         Dataset.isel
         DataArray.sel
 
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
+
         Examples
         --------
         >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
@@ -1562,6 +1568,12 @@ class DataArray(
         --------
         Dataset.sel
         DataArray.isel
+
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
 
         Examples
         --------
@@ -2195,6 +2207,9 @@ class DataArray(
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
+            Tutorial material on manipulating data resolution using :py:func:`~xarray.DataArray.interp`
 
         Examples
         --------
@@ -5461,6 +5476,9 @@ class DataArray(
         dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
+        :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
+            Advanced Tutorial on map_blocks with dask
+
         Examples
         --------
         Calculate an anomaly from climatology using ``.groupby()``. Using
@@ -6676,10 +6694,20 @@ class DataArray(
         --------
         :ref:`groupby`
             Users guide explanation of how to group and bin data.
+
+        :doc:`xarray-tutorial:intermediate/01-high-level-computation-patterns`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
+
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
+
         DataArray.groupby_bins
         Dataset.groupby
         core.groupby.DataArrayGroupBy
+        DataArray.coarsen
         pandas.DataFrame.groupby
+        Dataset.resample
+        DataArray.resample
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -6814,6 +6842,13 @@ class DataArray(
         See Also
         --------
         Dataset.weighted
+
+        :ref:`comput.weighted`
+            User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
+
+        :doc:`xarray-tutorial:fundamentals/03.4_weighted`
+            Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
+
         """
         from xarray.core.weighted import DataArrayWeighted
 
@@ -6955,6 +6990,16 @@ class DataArray(
         --------
         core.rolling.DataArrayCoarsen
         Dataset.coarsen
+
+        :ref:`reshape.coarsen`
+            User guide describing :py:func:`~xarray.DataArray.coarsen`
+
+        :ref:`compute.coarsen`
+            User guide on block arrgragation :py:func:`~xarray.DataArray.coarsen`
+
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
+            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
+
         """
         from xarray.core.rolling import DataArrayCoarsen
 
@@ -6976,7 +7021,6 @@ class DataArray(
         base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: str,
@@ -7098,7 +7142,6 @@ class DataArray(
             base=base,
             offset=offset,
             origin=origin,
-            keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,

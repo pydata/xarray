@@ -631,7 +631,7 @@ class TestDatasetRolling:
         ds_rolling_mean = ds_rolling.construct("window", stride=2, fill_value=0.0).mean(
             "window"
         )
-        assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim="vars").all()
+        assert (ds_rolling_mean.isnull().sum() == 0).to_dataarray(dim="vars").all()
         assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
 
     @pytest.mark.parametrize("center", (True, False))

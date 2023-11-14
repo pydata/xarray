@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from types import ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Protocol,
@@ -15,10 +14,6 @@ from typing import (
 )
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
 
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T = TypeVar("_T")
@@ -93,14 +88,6 @@ class _array(Protocol[_ShapeType_co, _DType_co]):
     def dtype(self) -> _DType_co:
         ...
 
-    @overload
-    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
-        ...
-
-    @overload
-    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
-        ...
-
 
 @runtime_checkable
 class _arrayfunction(
@@ -111,6 +98,19 @@ class _arrayfunction(
 
     Corresponds to np.ndarray.
     """
+
+    @overload
+    def __array__(self, dtype: None = ..., /) -> np.ndarray[Any, _DType_co]:
+        ...
+
+    @overload
+    def __array__(self, dtype: _DType, /) -> np.ndarray[Any, _DType]:
+        ...
+
+    def __array__(
+        self, dtype: _DType | None = ..., /
+    ) -> np.ndarray[Any, _DType] | np.ndarray[Any, _DType_co]:
+        ...
 
     # TODO: Should return the same subclass but with a new dtype generic.
     # https://github.com/python/typing/issues/548
@@ -229,7 +229,7 @@ class _sparsearray(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
@@ -243,7 +243,7 @@ class _sparsearrayfunction(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
@@ -257,9 +257,14 @@ class _sparsearrayapi(
     Corresponds to np.ndarray.
     """
 
-    def todense(self) -> NDArray[_ScalarType_co]:
+    def todense(self) -> np.ndarray[Any, _DType_co]:
         ...
 
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (_sparsearrayfunction, _sparsearrayapi)
+
+sparseduckarray = Union[
+    _sparsearrayfunction[_ShapeType_co, _DType_co],
+    _sparsearrayapi[_ShapeType_co, _DType_co],
+]

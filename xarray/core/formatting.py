@@ -783,9 +783,11 @@ def _diff_mapping_repr(
         try:
             # compare xarray variable
             if not callable(compat):
-                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+                compatible = getattr(a_mapping[k].variable, compat)(
+                    b_mapping[k].variable
+                )
             else:
-                compatible = compat(a_mapping[k], b_mapping[k])
+                compatible = compat(a_mapping[k].variable, b_mapping[k].variable)
             is_variable = True
         except AttributeError:
             # compare attribute value
@@ -804,17 +806,39 @@ def _diff_mapping_repr(
 
             if compat == "identical" and is_variable:
                 attrs_summary = []
+                a_attrs = a_mapping[k].attrs
+                b_attrs = b_mapping[k].attrs
 
+                attrs_to_print = set(a_attrs) ^ set(b_attrs)
+                attrs_to_print.update(
+                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
+                        "    " + summarize_attr(ak, av)
+                        for ak, av in m[k].attrs.items()
+                        if ak in attrs_to_print
                     )
+                    if attr_s:
+                        attr_s = "    Differing variable attributes:\n" + attr_s
                     attrs_summary.append(attr_s)
 
                 temp = [
                     "\n".join([var_s, attr_s]) if attr_s else var_s
                     for var_s, attr_s in zip(temp, attrs_summary)
                 ]
+
+                # TODO: It should be possible recursively use _diff_mapping_repr
+                #       instead of explicitly handling variable attrs specially.
+                #       That would require some refactoring.
+                # newdiff = _diff_mapping_repr(
+                #     {k: v for k,v in a_attrs.items() if k in attrs_to_print},
+                #     {k: v for k,v in b_attrs.items() if k in attrs_to_print},
+                #     compat=compat,
+                #     summarizer=summarize_attr,
+                #     title="Variable Attributes"
+                # )
+                # temp += [newdiff]
 
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 

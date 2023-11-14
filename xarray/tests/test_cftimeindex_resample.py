@@ -6,6 +6,7 @@ from typing import TypedDict
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray.core.pdcompat import _convert_base_to_offset
@@ -122,6 +123,16 @@ def da(index) -> xr.DataArray:
 )
 def test_resample(freqs, closed, label, base, offset) -> None:
     initial_freq, resample_freq = freqs
+    if (
+        resample_freq == "4001D"
+        and closed == "right"
+        and Version(pd.__version__) < Version("2.2")
+    ):
+        pytest.skip(
+            "Pandas fixed a bug in this test case in version 2.2, which we "
+            "ported to xarray, so this test no longer produces the same "
+            "result as pandas for earlier pandas versions."
+        )
     start = "2000-01-01T12:07:01"
     loffset = "12H"
     origin = "start"
@@ -249,7 +260,7 @@ def test_timedelta_offset() -> None:
     xr.testing.assert_identical(timedelta_result, string_result)
 
 
-@pytest.mark.parametrize("loffset", ["12H", datetime.timedelta(hours=-12)])
+@pytest.mark.parametrize("loffset", ["MS", "12H", datetime.timedelta(hours=-12)])
 def test_resample_loffset_cftimeindex(loffset) -> None:
     datetimeindex = pd.date_range("2000-01-01", freq="6H", periods=10)
     da_datetimeindex = xr.DataArray(np.arange(10), [("time", datetimeindex)])

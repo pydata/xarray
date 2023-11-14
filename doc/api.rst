@@ -557,6 +557,7 @@ Datetimelike properties
    DataArray.dt.seconds
    DataArray.dt.microseconds
    DataArray.dt.nanoseconds
+   DataArray.dt.total_seconds
 
 **Timedelta methods**:
 
@@ -602,7 +603,7 @@ Dataset methods
    Dataset.as_numpy
    Dataset.from_dataframe
    Dataset.from_dict
-   Dataset.to_array
+   Dataset.to_dataarray
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
@@ -1116,7 +1117,6 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
-   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
    backends.ZarrStore
@@ -1132,7 +1132,6 @@ used filetypes in the xarray universe.
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint
-   backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
    backends.StoreBackendEntrypoint
