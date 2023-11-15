@@ -35,7 +35,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
   `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
-  By `Justus Magin <https://github.com/keewis`_.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -75,6 +75,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Internal Changes
