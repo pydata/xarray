@@ -98,6 +98,7 @@ from xarray.core.types import (
     Self,
     T_ChunkDim,
     T_Chunks,
+    T_DataArray,
     T_DataArrayOrSet,
     T_Dataset,
 )
@@ -9514,8 +9515,21 @@ class Dataset(
         self: T_Dataset,
         statement: str,
         parser: QueryParserOptions = "pandas",
-    ) -> T_Dataset:
+    ) -> T_Dataset | T_DataArray:
         """
+        Calculate an string-ified expression in the context of the dataset.
+
+        Currently experimental, API may change.
+
+        Parameters
+        ----------
+        statement : str
+            String containing the Python-like expression to evaluate.
+
+        Returns
+        -------
+        result : Dataset or DataArray, depending on whether ``statement`` contains an assignment.
+
         Examples
         --------
         >>> a = np.arange(0, 5, 1)
