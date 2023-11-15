@@ -30,6 +30,8 @@ New Features
   region to write in the original store. Also implement automatic transpose when dimension
   order does not match the original store. (:issue:`7702`, :issue:`8421`, :pull:`8434`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
+  By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
