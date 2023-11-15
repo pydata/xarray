@@ -600,19 +600,19 @@ def test_groupby_grouping_errors() -> None:
     with pytest.raises(
         ValueError, match=r"None of the data falls within bins with edges"
     ):
-        dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
+        dataset.to_dataarray().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
-        dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
+        dataset.to_dataarray().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
     with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.groupby(dataset.foo * np.nan)
 
     with pytest.raises(ValueError, match=r"Failed to group data."):
-        dataset.to_array().groupby(dataset.foo * np.nan)
+        dataset.to_dataarray().groupby(dataset.foo * np.nan)
 
 
 def test_groupby_reduce_dimension_error(array) -> None:
@@ -1776,11 +1776,6 @@ class TestDataArrayResample:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            array.resample(time="1D", keep_attrs=True)
-
     def test_resample_skipna(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
@@ -2137,11 +2132,6 @@ class TestDatasetResample:
         actual = resampled_ds.attrs
         expected = ds.attrs
         assert expected == actual
-
-        with pytest.warns(
-            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
-        ):
-            ds.resample(time="1D", keep_attrs=True)
 
     def test_resample_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
