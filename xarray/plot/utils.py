@@ -3,24 +3,20 @@ from __future__ import annotations
 import itertools
 import textwrap
 import warnings
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, overload
 
 import numpy as np
 import pandas as pd
 
-from ..core.indexes import PandasMultiIndex
-from ..core.options import OPTIONS
-from ..core.pycompat import DuckArrayModule
-from ..core.utils import is_scalar
+from xarray.core.indexes import PandasMultiIndex
+from xarray.core.options import OPTIONS
+from xarray.core.pycompat import DuckArrayModule
+from xarray.core.utils import is_scalar, module_available
 
-try:
-    import nc_time_axis  # noqa: F401
-
-    nc_time_axis_available = True
-except ImportError:
-    nc_time_axis_available = False
+nc_time_axis_available = module_available("nc_time_axis")
 
 
 try:
@@ -31,8 +27,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
+    from matplotlib.colors import Normalize
+    from matplotlib.ticker import FuncFormatter
+    from numpy.typing import ArrayLike
 
-    from ..core.dataarray import DataArray
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import AspectOptions, ScaleOptions
 
     try:
         import matplotlib.pyplot as plt
@@ -42,16 +43,8 @@ if TYPE_CHECKING:
 ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
-_LINEWIDTH_RANGE = np.array([1.5, 6.0])
-
-
-def import_matplotlib_pyplot():
-    """import pyplot"""
-    # TODO: This function doesn't do anything (after #6109), remove it?
-    import matplotlib.pyplot as plt
-
-    return plt
+_MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
+_LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -303,7 +296,7 @@ def _determine_cmap_params(
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+    if (levels is not None) and (not isinstance(norm, mpl.colors.BoundaryNorm)):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
@@ -319,7 +312,10 @@ def _determine_cmap_params(
 
 
 def _infer_xy_labels_3d(
-    darray: DataArray, x: Hashable | None, y: Hashable | None, rgb: Hashable | None
+    darray: DataArray | Dataset,
+    x: Hashable | None,
+    y: Hashable | None,
+    rgb: Hashable | None,
 ) -> tuple[Hashable, Hashable]:
     """
     Determine x and y labels for showing RGB images.
@@ -378,7 +374,7 @@ def _infer_xy_labels_3d(
 
 
 def _infer_xy_labels(
-    darray: DataArray,
+    darray: DataArray | Dataset,
     x: Hashable | None,
     y: Hashable | None,
     imshow: bool = False,
@@ -417,7 +413,9 @@ def _infer_xy_labels(
 
 
 # TODO: Can by used to more than x or y, rename?
-def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
+def _assert_valid_xy(
+    darray: DataArray | Dataset, xy: Hashable | None, name: str
+) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """
@@ -441,7 +439,7 @@ def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
 def get_axis(
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    aspect: float | None = None,
+    aspect: AspectOptions = None,
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
@@ -462,10 +460,14 @@ def get_axis(
     if size is not None:
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
-        if aspect is None:
+        if aspect is None or aspect == "auto":
             width, height = mpl.rcParams["figure.figsize"]
-            aspect = width / height
-        figsize = (size * aspect, size)
+            faspect = width / height
+        elif aspect == "equal":
+            faspect = 1
+        else:
+            faspect = aspect
+        figsize = (size * faspect, size)
         _, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kws)
         return ax
 
@@ -482,7 +484,6 @@ def get_axis(
 
 
 def _maybe_gca(**subplot_kws: Any) -> Axes:
-
     import matplotlib.pyplot as plt
 
     # can call gcf unconditionally: either it exists or would be created by plt.axes
@@ -496,28 +497,29 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
     return plt.axes(**subplot_kws)
 
 
-def _get_units_from_attrs(da) -> str:
+def _get_units_from_attrs(da: DataArray) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
-        units = units.format(str(da.data.units))
-    elif da.attrs.get("units"):
-        units = units.format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = units.format(da.attrs["unit"])
-    else:
-        units = ""
-    return units
+        return units.format(str(da.data.units))
+    if "units" in da.attrs:
+        return units.format(da.attrs["units"])
+    if "unit" in da.attrs:
+        return units.format(da.attrs["unit"])
+    return ""
 
 
-def label_from_attrs(da, extra: str = "") -> str:
+def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
+    if da is None:
+        return ""
+
     name: str = "{}"
-    if da.attrs.get("long_name"):
+    if "long_name" in da.attrs:
         name = name.format(da.attrs["long_name"])
-    elif da.attrs.get("standard_name"):
+    elif "standard_name" in da.attrs:
         name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
         name = name.format(da.name)
@@ -587,12 +589,11 @@ def _resolve_intervals_1dplot(
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
-
         remove_drawstyle = False
 
         # Convert intervals to double points
-        x_is_interval = _valid_other_type(xval, [pd.Interval])
-        y_is_interval = _valid_other_type(yval, [pd.Interval])
+        x_is_interval = _valid_other_type(xval, pd.Interval)
+        y_is_interval = _valid_other_type(yval, pd.Interval)
         if x_is_interval and y_is_interval:
             raise TypeError("Can't step plot intervals against intervals.")
         elif x_is_interval:
@@ -608,12 +609,11 @@ def _resolve_intervals_1dplot(
 
     # Is it another kind of plot?
     else:
-
         # Convert intervals to mid points and adjust labels
-        if _valid_other_type(xval, [pd.Interval]):
+        if _valid_other_type(xval, pd.Interval):
             xval = _interval_to_mid_points(xval)
             x_suffix = "_center"
-        if _valid_other_type(yval, [pd.Interval]):
+        if _valid_other_type(yval, pd.Interval):
             yval = _interval_to_mid_points(yval)
             y_suffix = "_center"
 
@@ -628,7 +628,7 @@ def _resolve_intervals_2dplot(val, func_name):
     increases length by 1.
     """
     label_extra = ""
-    if _valid_other_type(val, [pd.Interval]):
+    if _valid_other_type(val, pd.Interval):
         if func_name == "pcolormesh":
             val = _interval_to_bound_points(val)
         else:
@@ -638,11 +638,13 @@ def _resolve_intervals_2dplot(val, func_name):
     return val, label_extra
 
 
-def _valid_other_type(x, types):
+def _valid_other_type(
+    x: ArrayLike, types: type[object] | tuple[type[object], ...]
+) -> bool:
     """
     Do all elements of x have a type from types?
     """
-    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
+    return all(isinstance(el, types) for el in np.ravel(x))
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -657,47 +659,49 @@ def _valid_numpy_subdtype(x, numpy_types):
     return any(np.issubdtype(x.dtype, t) for t in numpy_types)
 
 
-def _ensure_plottable(*args):
+def _ensure_plottable(*args) -> None:
     """
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [
+    numpy_types: tuple[type[object], ...] = (
         np.floating,
         np.integer,
         np.timedelta64,
         np.datetime64,
         np.bool_,
         np.str_,
-    ]
-    other_types = [datetime]
-    if cftime is not None:
-        cftime_datetime_types = [cftime.datetime]
-        other_types = other_types + cftime_datetime_types
-    else:
-        cftime_datetime_types = []
+    )
+    other_types: tuple[type[object], ...] = (datetime,)
+    cftime_datetime_types: tuple[type[object], ...] = (
+        () if cftime is None else (cftime.datetime,)
+    )
+    other_types += cftime_datetime_types
+
     for x in args:
         if not (
-            _valid_numpy_subdtype(np.array(x), numpy_types)
-            or _valid_other_type(np.array(x), other_types)
+            _valid_numpy_subdtype(np.asarray(x), numpy_types)
+            or _valid_other_type(np.asarray(x), other_types)
         ):
             raise TypeError(
                 "Plotting requires coordinates to be numeric, boolean, "
                 "or dates of type numpy.datetime64, "
                 "datetime.datetime, cftime.datetime or "
-                f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
+                f"pandas.Interval. Received data of type {np.asarray(x).dtype} instead."
             )
-        if (
-            _valid_other_type(np.array(x), cftime_datetime_types)
-            and not nc_time_axis_available
-        ):
-            raise ImportError(
-                "Plotting of arrays of cftime.datetime "
-                "objects or arrays indexed by "
-                "cftime.datetime objects requires the "
-                "optional `nc-time-axis` (v1.2.0 or later) "
-                "package."
-            )
+        if _valid_other_type(np.asarray(x), cftime_datetime_types):
+            if nc_time_axis_available:
+                # Register cftime datetypes to matplotlib.units.registry,
+                # otherwise matplotlib will raise an error:
+                import nc_time_axis  # noqa: F401
+            else:
+                raise ImportError(
+                    "Plotting of arrays of cftime.datetime "
+                    "objects or arrays indexed by "
+                    "cftime.datetime objects requires the "
+                    "optional `nc-time-axis` (v1.2.0 or later) "
+                    "package."
+                )
 
 
 def _is_numeric(arr):
@@ -706,7 +710,6 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
@@ -757,16 +760,16 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
 
 
 def _update_axes(
-    ax,
-    xincrease,
-    yincrease,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-):
+    ax: Axes,
+    xincrease: bool | None,
+    yincrease: bool | None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: tuple[float, float] | None = None,
+    ylim: tuple[float, float] | None = None,
+) -> None:
     """
     Update axes with provided parameters
     """
@@ -885,7 +888,7 @@ def _process_cmap_cbar_kwargs(
     levels=None,
     _is_facetgrid=False,
     **kwargs,
-):
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     Parameters
     ----------
@@ -895,8 +898,8 @@ def _process_cmap_cbar_kwargs(
 
     Returns
     -------
-    cmap_params
-    cbar_kwargs
+    cmap_params : dict
+    cbar_kwargs : dict
     """
     if func.__name__ == "surface":
         # Leave user to specify cmap settings for surface plots
@@ -1121,7 +1124,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:
+        if type(num) == int:  # noqa: E721
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
@@ -1156,7 +1159,7 @@ def legend_elements(
 
 def _legend_add_subtitle(handles, labels, text):
     """Add a subtitle to legend handles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
@@ -1174,7 +1177,7 @@ def _legend_add_subtitle(handles, labels, text):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
-    plt = import_matplotlib_pyplot()
+    import matplotlib.pyplot as plt
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)
@@ -1284,23 +1287,41 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     }
 
 
-# copied from seaborn
-def _parse_size(data, norm):
+@overload
+def _parse_size(
+    data: None,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> None:
+    ...
 
+
+@overload
+def _parse_size(
+    data: DataArray,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> pd.Series:
+    ...
+
+
+# copied from seaborn
+def _parse_size(
+    data: DataArray | None,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> None | pd.Series:
     import matplotlib as mpl
 
     if data is None:
         return None
 
-    data = data.values.flatten()
+    flatdata = data.values.flatten()
 
-    if not _is_numeric(data):
-        levels = np.unique(data)
+    if not _is_numeric(flatdata):
+        levels = np.unique(flatdata)
         numbers = np.arange(1, 1 + len(levels))[::-1]
     else:
-        levels = numbers = np.sort(np.unique(data))
+        levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, max_width = _MARKERSIZE_RANGE
+    min_width, default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:
@@ -1310,6 +1331,7 @@ def _parse_size(data, norm):
     elif not isinstance(norm, mpl.colors.Normalize):
         err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
+    assert isinstance(norm, mpl.colors.Normalize)
 
     norm.clip = True
     if not norm.scaled():
@@ -1336,58 +1358,63 @@ class _Normalize(Sequence):
     ----------
     data : DataArray
         DataArray to normalize.
-    width : Sequence of two numbers, optional
-        Normalize the data to theses min and max values.
+    width : Sequence of three numbers, optional
+        Normalize the data to these (min, default, max) values.
         The default is None.
     """
 
+    _data: DataArray | None
+    _data_unique: np.ndarray
+    _data_unique_index: np.ndarray
+    _data_unique_inverse: np.ndarray
+    _data_is_numeric: bool
+    _width: tuple[float, float, float] | None
+
     __slots__ = (
         "_data",
+        "_data_unique",
+        "_data_unique_index",
+        "_data_unique_inverse",
         "_data_is_numeric",
         "_width",
-        "_unique",
-        "_unique_index",
-        "_unique_inverse",
-        "plt",
     )
 
-    def __init__(self, data, width=None, _is_facetgrid=False):
+    def __init__(
+        self,
+        data: DataArray | None,
+        width: tuple[float, float, float] | None = None,
+        _is_facetgrid: bool = False,
+    ) -> None:
         self._data = data
         self._width = width if not _is_facetgrid else None
-        self.plt = import_matplotlib_pyplot()
 
         pint_array_type = DuckArrayModule("pint").type
-        to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data
-        unique, unique_inverse = np.unique(to_unique, return_inverse=True)
-        self._unique = unique
-        self._unique_index = np.arange(0, unique.size)
-        if data is not None:
-            self._unique_inverse = data.copy(data=unique_inverse.reshape(data.shape))
-            self._data_is_numeric = _is_numeric(data)
-        else:
-            self._unique_inverse = unique_inverse
-            self._data_is_numeric = False
+        to_unique = (
+            data.to_numpy()  # type: ignore[union-attr]
+            if isinstance(data if data is None else data.data, pint_array_type)
+            else data
+        )
+        data_unique, data_unique_inverse = np.unique(to_unique, return_inverse=True)  # type: ignore[call-overload]
+        self._data_unique = data_unique
+        self._data_unique_index = np.arange(0, data_unique.size)
+        self._data_unique_inverse = data_unique_inverse
+        self._data_is_numeric = False if data is None else _is_numeric(data)
 
     def __repr__(self) -> str:
         with np.printoptions(precision=4, suppress=True, threshold=5):
             return (
                 f"<_Normalize(data, width={self._width})>\n"
-                f"{self._unique} -> {self.values_unique}"
+                f"{self._data_unique} -> {self._values_unique}"
             )
 
     def __len__(self) -> int:
-        return len(self._unique)
+        return len(self._data_unique)
 
     def __getitem__(self, key):
-        return self._unique[key]
+        return self._data_unique[key]
 
     @property
-    def _type(self):
-        data = self.data
-        return data.data if data is not None else data
-
-    @property
-    def data(self):
+    def data(self) -> DataArray | None:
         return self._data
 
     @property
@@ -1400,32 +1427,67 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).data_is_numeric
         False
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a).data_is_numeric
+        True
+
+        >>> # TODO: Datetime should be numeric right?
+        >>> a = xr.DataArray(pd.date_range("2000-1-1", periods=4))
+        >>> _Normalize(a).data_is_numeric
+        False
+
+        # TODO: Timedelta should be numeric right?
+        >>> a = xr.DataArray(pd.timedelta_range("-1D", periods=4, freq="D"))
+        >>> _Normalize(a).data_is_numeric
+        True
         """
         return self._data_is_numeric
 
-    def _calc_widths(self, y):
-        if self._width is None or y is None:
+    @overload
+    def _calc_widths(self, y: np.ndarray) -> np.ndarray:
+        ...
+
+    @overload
+    def _calc_widths(self, y: DataArray) -> DataArray:
+        ...
+
+    def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
+        """
+        Normalize the values so they're in between self._width.
+        """
+        if self._width is None:
             return y
 
-        x0, x1 = self._width
+        xmin, xdefault, xmax = self._width
 
-        k = (y - np.min(y)) / (np.max(y) - np.min(y))
-        widths = x0 + k * (x1 - x0)
-
+        diff_maxy_miny = np.max(y) - np.min(y)
+        if diff_maxy_miny == 0:
+            # Use default with if y is constant:
+            widths = xdefault + 0 * y
+        else:
+            # Normalize in between xmin and xmax:
+            k = (y - np.min(y)) / diff_maxy_miny
+            widths = xmin + k * (xmax - xmin)
         return widths
 
-    def _indexes_centered(self, x) -> None | Any:
+    @overload
+    def _indexes_centered(self, x: np.ndarray) -> np.ndarray:
+        ...
+
+    @overload
+    def _indexes_centered(self, x: DataArray) -> DataArray:
+        ...
+
+    def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
         Offset indexes to make sure being in the center of self.levels.
         ["a", "b", "c"] -> [1, 3, 5]
         """
-        if self.data is None:
-            return None
-        else:
-            return x * 2 + 1
+        return x * 2 + 1
 
     @property
-    def values(self):
+    def values(self) -> DataArray | None:
         """
         Return a normalized number array for the unique levels.
 
@@ -1437,7 +1499,7 @@ class _Normalize(Sequence):
         array([3, 1, 1, 3, 5])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a, width=[18, 72]).values
+        >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 5)>
         array([45., 18., 18., 45., 72.])
         Dimensions without coordinates: dim_0
@@ -1448,48 +1510,63 @@ class _Normalize(Sequence):
         array([0.5, 0. , 0. , 0.5, 2. , 3. ])
         Dimensions without coordinates: dim_0
 
-        >>> _Normalize(a, width=[18, 72]).values
+        >>> _Normalize(a, width=(18, 36, 72)).values
         <xarray.DataArray (dim_0: 6)>
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
-        """
-        return self._calc_widths(
-            self.data
-            if self.data_is_numeric
-            else self._indexes_centered(self._unique_inverse)
-        )
 
-    def _integers(self):
+        >>> _Normalize(a * 0, width=(18, 36, 72)).values
+        <xarray.DataArray (dim_0: 6)>
+        array([36., 36., 36., 36., 36., 36.])
+        Dimensions without coordinates: dim_0
+
         """
-        Return integers.
-        ["a", "b", "c"] -> [1, 3, 5]
-        """
-        return self._indexes_centered(self._unique_index)
+        if self.data is None:
+            return None
+
+        val: DataArray
+        if self.data_is_numeric:
+            val = self.data
+        else:
+            arr = self._indexes_centered(self._data_unique_inverse)
+            val = self.data.copy(data=arr.reshape(self.data.shape))
+
+        return self._calc_widths(val)
 
     @property
-    def values_unique(self) -> np.ndarray:
+    def _values_unique(self) -> np.ndarray | None:
         """
         Return unique values.
 
         Examples
         --------
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
-        >>> _Normalize(a).values_unique
+        >>> _Normalize(a)._values_unique
         array([1, 3, 5])
-        >>> a = xr.DataArray([2, 1, 1, 2, 3])
-        >>> _Normalize(a).values_unique
-        array([1, 2, 3])
-        >>> _Normalize(a, width=[18, 72]).values_unique
+
+        >>> _Normalize(a, width=(18, 36, 72))._values_unique
         array([18., 45., 72.])
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a)._values_unique
+        array([0. , 0.5, 2. , 3. ])
+
+        >>> _Normalize(a, width=(18, 36, 72))._values_unique
+        array([18., 27., 54., 72.])
         """
-        return (
-            self._integers()
-            if not self.data_is_numeric
-            else self._calc_widths(self._unique)
-        )
+        if self.data is None:
+            return None
+
+        val: np.ndarray
+        if self.data_is_numeric:
+            val = self._data_unique
+        else:
+            val = self._indexes_centered(self._data_unique_index)
+
+        return self._calc_widths(val)
 
     @property
-    def ticks(self) -> None | np.ndarray:
+    def ticks(self) -> np.ndarray | None:
         """
         Return ticks for plt.colorbar if the data is not numeric.
 
@@ -1499,7 +1576,13 @@ class _Normalize(Sequence):
         >>> _Normalize(a).ticks
         array([1, 3, 5])
         """
-        return self._integers() if not self.data_is_numeric else None
+        val: None | np.ndarray
+        if self.data_is_numeric:
+            val = None
+        else:
+            val = self._indexes_centered(self._data_unique_index)
+
+        return val
 
     @property
     def levels(self) -> np.ndarray:
@@ -1513,11 +1596,16 @@ class _Normalize(Sequence):
         >>> _Normalize(a).levels
         array([0, 2, 4, 6])
         """
-        return np.append(self._unique_index, np.max(self._unique_index) + 1) * 2
+        return (
+            np.append(self._data_unique_index, np.max(self._data_unique_index) + 1) * 2
+        )
 
     @property
     def _lookup(self) -> pd.Series:
-        return pd.Series(dict(zip(self.values_unique, self._unique)))
+        if self._values_unique is None:
+            raise ValueError("self.data can't be None.")
+
+        return pd.Series(dict(zip(self._values_unique, self._data_unique)))
 
     def _lookup_arr(self, x) -> np.ndarray:
         # Use reindex to be less sensitive to float errors. reindex only
@@ -1527,7 +1615,7 @@ class _Normalize(Sequence):
         return self._lookup.sort_index().reindex(x, method="nearest").to_numpy()
 
     @property
-    def format(self) -> plt.FuncFormatter:
+    def format(self) -> FuncFormatter:
         """
         Return a FuncFormatter that maps self.values elements back to
         the original value as a string. Useful with plt.colorbar.
@@ -1535,7 +1623,7 @@ class _Normalize(Sequence):
         Examples
         --------
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa = _Normalize(a, width=(0, 0.5, 1))
         >>> aa._lookup
         0.000000    0.0
         0.166667    0.5
@@ -1545,11 +1633,12 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
+        import matplotlib.pyplot as plt
 
         def _func(x: Any, pos: None | Any = None):
             return f"{self._lookup_arr([x])[0]}"
 
-        return self.plt.FuncFormatter(_func)
+        return plt.FuncFormatter(_func)
 
     @property
     def func(self) -> Callable[[Any, None | Any], Any]:
@@ -1560,7 +1649,7 @@ class _Normalize(Sequence):
         Examples
         --------
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa = _Normalize(a, width=(0, 0.5, 1))
         >>> aa._lookup
         0.000000    0.0
         0.166667    0.5
@@ -1582,7 +1671,7 @@ def _determine_guide(
     sizeplt_norm: _Normalize,
     add_colorbar: None | bool = None,
     add_legend: None | bool = None,
-    plotfunc_name: str = None,
+    plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
         return False, False
@@ -1595,7 +1684,7 @@ def _determine_guide(
         else:
             add_colorbar = False
 
-    if (add_legend) and hueplt_norm.data is None and sizeplt_norm.data is None:
+    if add_legend and hueplt_norm.data is None and sizeplt_norm.data is None:
         raise KeyError("Cannot create a legend when hue and markersize is None.")
     if add_legend is None:
         if (
@@ -1617,7 +1706,6 @@ def _add_legend(
     legend_ax,
     plotfunc: str,
 ):
-
     primitive = primitive if isinstance(primitive, list) else [primitive]
 
     handles, labels = [], []
@@ -1650,3 +1738,92 @@ def _add_legend(
     _adjust_legend_subtitles(legend)
 
     return legend
+
+
+def _guess_coords_to_plot(
+    darray: DataArray,
+    coords_to_plot: MutableMapping[str, Hashable | None],
+    kwargs: dict,
+    default_guess: tuple[str, ...] = ("x",),
+    # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
+    ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
+) -> MutableMapping[str, Hashable]:
+    """
+    Guess what coords to plot if some of the values in coords_to_plot are None which
+    happens when the user has not defined all available ways of visualizing
+    the data.
+
+    Parameters
+    ----------
+    darray : DataArray
+        The DataArray to check for available coords.
+    coords_to_plot : MutableMapping[str, Hashable]
+        Coords defined by the user to plot.
+    kwargs : dict
+        Extra kwargs that will be sent to matplotlib.
+    default_guess : Iterable[str], optional
+        Default values and order to retrieve dims if values in dims_plot is
+        missing, default: ("x", "hue", "size").
+    ignore_guess_kwargs : tuple[tuple[str, ...], ...]
+        Matplotlib arguments to ignore.
+
+    Examples
+    --------
+    >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
+    >>> # Only guess x by default:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ... )
+    {'x': 'x', 'z': None, 'hue': None, 'size': None}
+
+    >>> # Guess all plot dims with other default values:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'x', 'z': None, 'hue': 'y', 'size': 'z'}
+
+    >>> # Don't guess ´size´, since the matplotlib kwarg ´s´ has been defined:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": None},
+    ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'x', 'z': None, 'hue': 'y', 'size': None}
+
+    >>> # Prioritize ´size´ over ´s´:
+    >>> xr.plot.utils._guess_coords_to_plot(
+    ...     ds.A,
+    ...     coords_to_plot={"x": None, "z": None, "hue": None, "size": "x"},
+    ...     kwargs={"s": 5},
+    ...     default_guess=("x", "hue", "size"),
+    ...     ignore_guess_kwargs=((), ("c", "color"), ("s",)),
+    ... )
+    {'x': 'y', 'z': None, 'hue': 'z', 'size': 'x'}
+    """
+    coords_to_plot_exist = {k: v for k, v in coords_to_plot.items() if v is not None}
+    available_coords = tuple(
+        k for k in darray.coords.keys() if k not in coords_to_plot_exist.values()
+    )
+
+    # If dims_plot[k] isn't defined then fill with one of the available dims, unless
+    # one of related mpl kwargs has been used. This should have similar behaviour as
+    # * plt.plot(x, y) -> Multiple lines with different colors if y is 2d.
+    # * plt.plot(x, y, color="red") -> Multiple red lines if y is 2d.
+    for k, dim, ign_kws in zip(default_guess, available_coords, ignore_guess_kwargs):
+        if coords_to_plot.get(k, None) is None and all(
+            kwargs.get(ign_kw, None) is None for ign_kw in ign_kws
+        ):
+            coords_to_plot[k] = dim
+
+    for k, dim in coords_to_plot.items():
+        _assert_valid_xy(darray, dim, k)
+
+    return coords_to_plot

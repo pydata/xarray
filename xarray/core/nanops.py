@@ -4,8 +4,16 @@ import warnings
 
 import numpy as np
 
-from . import dtypes, nputils, utils
-from .duck_array_ops import count, fillna, isnull, where, where_method
+from xarray.core import dtypes, duck_array_ops, nputils, utils
+from xarray.core.duck_array_ops import (
+    astype,
+    count,
+    fillna,
+    isnull,
+    sum_where,
+    where,
+    where_method,
+)
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
@@ -13,12 +21,16 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     xarray version of pandas.core.nanops._maybe_null_out
     """
     if axis is not None and getattr(result, "ndim", False):
-        null_mask = (np.take(mask.shape, axis).prod() - mask.sum(axis) - min_count) < 0
+        null_mask = (
+            np.take(mask.shape, axis).prod()
+            - duck_array_ops.sum(mask, axis)
+            - min_count
+        ) < 0
         dtype, fill_value = dtypes.maybe_promote(result.dtype)
-        result = where(null_mask, fill_value, result.astype(dtype))
+        result = where(null_mask, fill_value, astype(result, dtype))
 
     elif getattr(result, "dtype", None) not in dtypes.NAT_TYPES:
-        null_mask = mask.size - mask.sum()
+        null_mask = mask.size - duck_array_ops.sum(mask)
         result = where(null_mask < min_count, np.nan, result)
 
     return result
@@ -84,7 +96,7 @@ def nanargmax(a, axis=None):
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
     mask = isnull(a)
-    result = np.nansum(a, axis=axis, dtype=dtype)
+    result = sum_where(a, axis=axis, dtype=dtype, where=mask)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -93,7 +105,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from .duck_array_ops import count, fillna, where_method
+    from xarray.core.duck_array_ops import count, fillna, where_method
 
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
@@ -133,7 +145,7 @@ def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):
     value_mean = _nanmean_ddof_object(
         ddof=0, value=value, axis=axis, keepdims=True, **kwargs
     )
-    squared = (value.astype(value_mean.dtype) - value_mean) ** 2
+    squared = (astype(value, value_mean.dtype) - value_mean) ** 2
     return _nanmean_ddof_object(ddof, squared, axis=axis, keepdims=keepdims, **kwargs)
 
 

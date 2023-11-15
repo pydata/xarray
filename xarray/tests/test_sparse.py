@@ -7,19 +7,18 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type, sparse_version
-
-from . import assert_equal, assert_identical, requires_dask
+from xarray.core.pycompat import array_type
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
 
 sparse = pytest.importorskip("sparse")
+sparse_array_type = array_type("sparse")
 
 
 def assert_sparse_equal(a, b):
@@ -60,7 +59,6 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-
         # cannot pass np.sum when using pytest-xdist
         kwargs = self.kwargs.copy()
         if "func" in self.kwargs:
@@ -149,7 +147,6 @@ def test_variable_property(prop):
                 ],
             ),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("conjugate"),
@@ -203,7 +200,6 @@ def test_variable_property(prop):
         param(
             do("reduce", func="sum", dim="x"),
             True,
-            marks=xfail(reason="Coercion to dense"),
         ),
         param(
             do("rolling_window", dim="x", window=2, window_dim="x_win"),
@@ -220,7 +216,7 @@ def test_variable_property(prop):
         param(
             do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
         ),
-        param(do("to_dict"), False, marks=xfail(reason="Coercion to dense")),
+        param(do("to_dict"), False),
         (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
     ],
     ids=repr,
@@ -239,7 +235,14 @@ def test_variable_method(func, sparse_output):
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
     else:
-        assert np.allclose(ret_s, ret_d, equal_nan=True)
+        if func.meth != "to_dict":
+            assert np.allclose(ret_s, ret_d)
+        else:
+            # pop the arrays from the dict
+            arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
+
+            assert np.allclose(arr_s, arr_d)
+            assert ret_s == ret_d
 
 
 @pytest.mark.parametrize(
@@ -575,7 +578,7 @@ class TestSparseDataArrayAndDataset:
 
     def test_to_dataset_roundtrip(self):
         x = self.sp_xr
-        assert_equal(x, x.to_dataset("x").to_array("x"))
+        assert_equal(x, x.to_dataset("x").to_dataarray("x"))
 
     def test_align(self):
         a1 = xr.DataArray(
@@ -827,7 +830,7 @@ class TestSparseDataArrayAndDataset:
     @pytest.mark.xfail
     def test_merge(self):
         x = self.sp_xr
-        y = xr.merge([x, x.rename("bar")]).to_array()
+        y = xr.merge([x, x.rename("bar")]).to_dataarray()
         assert isinstance(y, sparse.SparseArray)
 
     @pytest.mark.xfail
@@ -855,10 +858,6 @@ class TestSparseCoords:
         )
 
 
-@pytest.mark.xfail(
-    sparse_version < Version("0.13.0"),
-    reason="https://github.com/pydata/xarray/issues/5654",
-)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))

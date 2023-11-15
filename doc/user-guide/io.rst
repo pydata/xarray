@@ -115,10 +115,7 @@ you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
 
 There may be minor differences in the :py:class:`Dataset` object returned
-when reading a NetCDF file with different engines. For example,
-single-valued attributes are returned as scalars by the default
-``engine=netcdf4``, but as arrays of size ``(1,)`` when reading with
-``engine=h5netcdf``.
+when reading a NetCDF file with different engines.
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
@@ -162,11 +159,77 @@ To do so, pass a ``group`` keyword argument to the
 :py:func:`open_dataset` function. The group can be specified as a path-like
 string, e.g., to access subgroup ``'bar'`` within group ``'foo'`` pass
 ``'/foo/bar'`` as the ``group`` argument.
+
 In a similar way, the ``group`` keyword argument can be given to the
 :py:meth:`Dataset.to_netcdf` method to write to a group
 in a netCDF file.
 When writing multiple groups in one file, pass ``mode='a'`` to
 :py:meth:`Dataset.to_netcdf` to ensure that each call does not delete the file.
+For example:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: ds1 = xr.Dataset({"a": 0})
+
+    In [2]: ds2 = xr.Dataset({"b": 1})
+
+    In [3]: ds1.to_netcdf("file.nc", group="A")
+
+    In [4]: ds2.to_netcdf("file.nc", group="B", mode="a")
+
+We can verify that two groups have been saved using the ncdump command-line utility.
+
+.. code:: bash
+
+    $ ncdump file.nc
+    netcdf file {
+
+    group: A {
+      variables:
+        int64 a ;
+      data:
+
+       a = 0 ;
+      } // group A
+
+    group: B {
+      variables:
+        int64 b ;
+      data:
+
+       b = 1 ;
+      } // group B
+    }
+
+Either of these groups can be loaded from the file as an independent :py:class:`Dataset` object:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: group1 = xr.open_dataset("file.nc", group="A")
+
+    In [2]: group1
+    Out[2]:
+    <xarray.Dataset>
+    Dimensions:  ()
+    Data variables:
+        a        int64 ...
+
+    In [3]: group2 = xr.open_dataset("file.nc", group="B")
+
+    In [4]: group2
+    Out[4]:
+    <xarray.Dataset>
+    Dimensions:  ()
+    Data variables:
+        b        int64 ...
+
+.. note::
+
+    For native handling of multiple groups with xarray, including I/O, you might be interested in the experimental
+    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
 
 .. _io.encoding:
 
@@ -188,31 +251,22 @@ You can view this encoding information (among others) in the
 :py:attr:`DataArray.encoding` and
 :py:attr:`DataArray.encoding` attributes:
 
-.. ipython::
-    :verbatim:
+.. ipython:: python
 
-    In [1]: ds_disk["y"].encoding
-    Out[1]:
-    {'zlib': False,
-     'shuffle': False,
-     'complevel': 0,
-     'fletcher32': False,
-     'contiguous': True,
-     'chunksizes': None,
-     'source': 'saved_on_disk.nc',
-     'original_shape': (5,),
-     'dtype': dtype('int64'),
-     'units': 'days since 2000-01-01 00:00:00',
-     'calendar': 'proleptic_gregorian'}
-
-    In [9]: ds_disk.encoding
-    Out[9]:
-    {'unlimited_dims': set(),
-     'source': 'saved_on_disk.nc'}
+    ds_disk["y"].encoding
+    ds_disk.encoding
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
 
+In some cases it is useful to intentionally reset a dataset's original encoding values.
+This can be done with either the :py:meth:`Dataset.drop_encoding` or
+:py:meth:`DataArray.drop_encoding` methods.
+
+.. ipython:: python
+
+    ds_no_encoding = ds_disk.drop_encoding()
+    ds_no_encoding.encoding
 
 .. _combining multiple files:
 
@@ -428,7 +482,7 @@ If character arrays are used:
 Chunk based compression
 .......................
 
-``zlib``, ``complevel``, ``fletcher32``, ``continguous`` and ``chunksizes``
+``zlib``, ``complevel``, ``fletcher32``, ``contiguous`` and ``chunksizes``
 can be used for enabling netCDF4/HDF5's chunk based compression, as described
 in the `documentation for createVariable`_ for netCDF4-Python. This only works
 for netCDF4 files and thus requires using ``format='netCDF4'`` and either
@@ -502,6 +556,67 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
   Note that this produces a file that is likely to be not readable by other netCDF
   libraries!
 
+.. _io.hdf5:
+
+HDF5
+----
+`HDF5`_ is both a file format and a data model for storing information. HDF5 stores
+data hierarchically, using groups to create a nested structure. HDF5 is a more
+general version of the netCDF4 data model, so the nested structure is one of many
+similarities between the two data formats.
+
+Reading HDF5 files in xarray requires the ``h5netcdf`` engine, which can be installed
+with ``conda install h5netcdf``. Once installed we can use xarray to open HDF5 files:
+
+.. code:: python
+
+    xr.open_dataset("/path/to/my/file.h5")
+
+The similarities between HDF5 and netCDF4 mean that HDF5 data can be written with the
+same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
+
+.. ipython:: python
+
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 5))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": pd.date_range("2000-01-01", periods=5),
+            "z": ("x", list("abcd")),
+        },
+    )
+
+    ds.to_netcdf("saved_on_disk.h5")
+
+Groups
+~~~~~~
+
+If you have multiple or highly nested groups, xarray by default may not read the group
+that you want. A particular group of an HDF5 file can be specified using the ``group``
+argument:
+
+.. code:: python
+
+    xr.open_dataset("/path/to/my/file.h5", group="/my/group")
+
+While xarray cannot interrogate an HDF5 file to determine which groups are available,
+the HDF5 Python reader `h5py`_ can be used instead.
+
+Natively the xarray data structures can only handle one level of nesting, organized as
+DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
+can only access one group and a time and will need to specify group names.
+
+.. note::
+
+    For native handling of multiple HDF5 groups with xarray, including I/O, you might be
+    interested in the experimental
+    `xarray-datatree <https://github.com/xarray-contrib/datatree>`_ package.
+
+
+.. _HDF5: https://hdfgroup.github.io/hdf5/index.html
+.. _h5py: https://www.h5py.org/
+
+
 .. _io.zarr:
 
 Zarr
@@ -550,6 +665,13 @@ there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
+
+DataArrays can also be saved to disk using the :py:meth:`DataArray.to_zarr` method,
+and loaded from disk using the :py:func:`open_dataarray` function with `engine='zarr'`.
+Similar to :py:meth:`DataArray.to_netcdf`, :py:meth:`DataArray.to_zarr` will
+convert the ``DataArray`` to a ``Dataset`` before saving, and then convert back
+when loading, ensuring that the ``DataArray`` that is loaded is always exactly
+the same as the one that was saved.
 
 .. note::
 
@@ -618,9 +740,9 @@ instance and pass this, as follows:
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There are many different options for compression and filtering possible with
-zarr. These are described in the
-`zarr documentation <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+There are many different `options for compression and filtering possible with
+zarr <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
@@ -654,7 +776,7 @@ As of xarray version 0.18, xarray by default uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
-`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+`zarr docs on consolidating metadata <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
 By default, xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
@@ -697,7 +819,7 @@ with ``mode='a'`` on a Dataset containing the new variables, passing in an
 existing Zarr store or path to a Zarr store.
 
 To resize and then append values along an existing dimension in a store, set
-``append_dim``. This is a good option if data always arives in a particular
+``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
 .. ipython:: python
@@ -754,17 +876,20 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     ds.to_zarr(path, compute=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
-mapping from dimension names to Python ``slice`` objects indicating where the
-data should be written (in index space, not coordinate space), e.g.,
+can be filled out by subsequent calls to ``to_zarr``. ``region`` can be
+specified as ``"auto"``, which opens the existing store and determines the
+correct alignment of the new data with the existing coordinates, or as an
+explicit mapping from dimension names to Python ``slice`` objects indicating
+where the data should be written (in index space, not label space), e.g.,
 
 .. ipython:: python
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    # Any of the following region specifications are valid
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
@@ -1091,46 +1216,7 @@ search indices or other automated data discovery tools.
 Rasterio
 --------
 
-GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
-rasterio is installed. Here is an example of how to use
-:py:func:`open_rasterio` to read one of rasterio's `test files`_:
-
-.. deprecated:: 0.20.0
-
-        Deprecated in favor of rioxarray.
-        For information about transitioning, see:
-        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
-
-.. ipython::
-    :verbatim:
-
-    In [7]: rio = xr.open_rasterio("RGB.byte.tif")
-
-    In [8]: rio
-    Out[8]:
-    <xarray.DataArray (band: 3, y: 718, x: 791)>
-    [1703814 values with dtype=uint8]
-    Coordinates:
-      * band     (band) int64 1 2 3
-      * y        (y) float64 2.827e+06 2.826e+06 2.826e+06 2.826e+06 2.826e+06 ...
-      * x        (x) float64 1.021e+05 1.024e+05 1.027e+05 1.03e+05 1.033e+05 ...
-    Attributes:
-        res:        (300.0379266750948, 300.041782729805)
-        transform:  (300.0379266750948, 0.0, 101985.0, 0.0, -300.041782729805, 28...
-        is_tiled:   0
-        crs:        +init=epsg:32618
-
-
-The ``x`` and ``y`` coordinates are generated out of the file's metadata
-(``bounds``, ``width``, ``height``), and they can be understood as cartesian
-coordinates defined in the file's projection provided by the ``crs`` attribute.
-``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
-See :ref:`/examples/visualization_gallery.ipynb#Parsing-rasterio-geocoordinates`
-for an example of how to convert these to longitudes and latitudes.
-
-
-Additionally, you can use `rioxarray`_ for reading in GeoTiff, netCDF or other
-GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIFF.
+GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened using the `rioxarray`_ extension.
 `rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
 
 .. ipython::
@@ -1191,7 +1277,7 @@ GRIB format via cfgrib
 
 Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
-to :py:func:`open_dataset`:
+to :py:func:`open_dataset` after installing cfgrib_:
 
 .. ipython::
     :verbatim:
@@ -1209,6 +1295,10 @@ We recommend installing cfgrib via conda::
 Formats supported by PyNIO
 --------------------------
 
+.. warning::
+
+    The `PyNIO backend is deprecated`_. `PyNIO is no longer maintained`_.
+
 Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
 ``engine='pynio'`` to :py:func:`open_dataset`.
@@ -1217,33 +1307,9 @@ We recommend installing PyNIO via conda::
 
     conda install -c conda-forge pynio
 
-.. warning::
-
-    PyNIO is no longer actively maintained and conflicts with netcdf4 > 1.5.3.
-    The PyNIO backend may be moved outside of xarray in the future.
-
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
-
-.. _io.PseudoNetCDF:
-
-Formats supported by PseudoNetCDF
----------------------------------
-
-Xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
-formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
-PseudoNetCDF can also provide Climate Forecasting Conventions to
-CMAQ files. In addition, PseudoNetCDF can automatically register custom
-readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
-identify readers either heuristically, or by a format specified via a key in
-`backend_kwargs`.
-
-To use PseudoNetCDF to read such files, supply
-``engine='pseudonetcdf'`` to :py:func:`open_dataset`.
-
-Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
-options are listed on the PseudoNetCDF page.
-
-.. _PseudoNetCDF: https://github.com/barronh/PseudoNetCDF
+.. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
+.. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
 
 
 CSV and other formats supported by pandas

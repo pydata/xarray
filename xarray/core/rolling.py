@@ -4,25 +4,17 @@ import functools
 import itertools
 import math
 import warnings
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Hashable,
-    Iterator,
-    Mapping,
-    TypeVar,
-)
+from collections.abc import Hashable, Iterator, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
 
-from . import dtypes, duck_array_ops, utils
-from .arithmetic import CoarsenArithmetic
-from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array
-from .types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from .utils import either_dict_or_kwargs
+from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core.arithmetic import CoarsenArithmetic
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
+from xarray.core.utils import either_dict_or_kwargs
 
 try:
     import bottleneck
@@ -31,8 +23,8 @@ except ImportError:
     bottleneck = None
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
     RollingKey = Any
     _T = TypeVar("_T")
@@ -69,6 +61,11 @@ class Rolling(Generic[T_Xarray]):
 
     __slots__ = ("obj", "window", "min_periods", "center", "dim")
     _attributes = ("window", "min_periods", "center", "dim")
+    dim: list[Hashable]
+    window: list[int]
+    center: list[bool]
+    obj: T_Xarray
+    min_periods: int
 
     def __init__(
         self,
@@ -99,8 +96,8 @@ class Rolling(Generic[T_Xarray]):
         -------
         rolling : type of input argument
         """
-        self.dim: list[Hashable] = []
-        self.window: list[int] = []
+        self.dim = []
+        self.window = []
         for d, w in windows.items():
             self.dim.append(d)
             if w <= 0:
@@ -108,7 +105,15 @@ class Rolling(Generic[T_Xarray]):
             self.window.append(w)
 
         self.center = self._mapping_to_list(center, default=False)
-        self.obj: T_Xarray = obj
+        self.obj = obj
+
+        missing_dims = tuple(dim for dim in self.dim if dim not in self.obj.dims)
+        if missing_dims:
+            # NOTE: we raise KeyError here but ValueError in Coarsen.
+            raise KeyError(
+                f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
+                f"dimensions {tuple(self.obj.dims)}"
+            )
 
         # attributes
         if min_periods is not None and min_periods <= 0:
@@ -140,7 +145,8 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
+        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        """
         if rolling_agg_func:
             array_agg_func = None
         else:
@@ -149,7 +155,6 @@ class Rolling(Generic[T_Xarray]):
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, keep_attrs=None, **kwargs):
-
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
@@ -166,9 +171,9 @@ class Rolling(Generic[T_Xarray]):
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(keep_attrs=False, **kwargs) / self.count(
-            keep_attrs=False
-        ).astype(self.obj.dtype, copy=False)
+        result = self.sum(keep_attrs=False, **kwargs) / duck_array_ops.astype(
+            self.count(keep_attrs=False), dtype=self.obj.dtype, copy=False
+        )
         if keep_attrs:
             result.attrs = self.obj.attrs
         return result
@@ -280,7 +285,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         starts = stops - window0
         starts[: window0 - offset] = 0
 
-        for (label, start, stop) in zip(self.window_labels, starts, stops):
+        for label, start, stop in zip(self.window_labels, starts, stops):
             window = self.obj.isel({dim0: slice(start, stop)})
 
             counts = window.count(dim=[dim0])
@@ -372,7 +377,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         keep_attrs: bool | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -384,7 +389,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             window_dim = {d: window_dim_kwargs[str(d)] for d in self.dim}
 
         window_dims = self._mapping_to_list(
-            window_dim, allow_default=False, allow_allsame=False  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/12506
+            window_dim, allow_default=False, allow_allsame=False
         )
         strides = self._mapping_to_list(stride, default=1)
 
@@ -475,9 +480,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
 
-        result = windows.reduce(
-            func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
-        )
+        dim = list(rolling_dim.values())
+        result = windows.reduce(func, dim=dim, keep_attrs=keep_attrs, **kwargs)
 
         # Find valid windows based on count.
         counts = self._counts(keep_attrs=False)
@@ -494,6 +498,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
+        dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
@@ -501,12 +506,12 @@ class DataArrayRolling(Rolling["DataArray"]):
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
-            .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
+            .sum(dim=dim, skipna=False, keep_attrs=keep_attrs)
         )
         return counts
 
     def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
-        from .dataarray import DataArray
+        from xarray.core.dataarray import DataArray
 
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
@@ -572,7 +577,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             and not is_duck_dask_array(self.obj.data)
             and self.ndim == 1
         ):
-            # TODO: renable bottleneck with dask after the issues
+            # TODO: re-enable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
             return self._bottleneck_reduce(
@@ -632,8 +637,7 @@ class DatasetRolling(Rolling["Dataset"]):
         xarray.DataArray.groupby
         """
         super().__init__(obj, windows, min_periods, center)
-        if any(d not in self.obj.dims for d in self.dim):
-            raise KeyError(self.dim)
+
         # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
@@ -649,7 +653,7 @@ class DatasetRolling(Rolling["Dataset"]):
                 self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
 
     def _dataset_implementation(self, func, keep_attrs, **kwargs):
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -749,7 +753,7 @@ class DatasetRolling(Rolling["Dataset"]):
         Dataset with variables converted from rolling object.
         """
 
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -761,7 +765,7 @@ class DatasetRolling(Rolling["Dataset"]):
             window_dim = {d: window_dim_kwargs[str(d)] for d in self.dim}
 
         window_dims = self._mapping_to_list(
-            window_dim, allow_default=False, allow_allsame=False  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/12506
+            window_dim, allow_default=False, allow_allsame=False
         )
         strides = self._mapping_to_list(stride, default=1)
 
@@ -786,11 +790,14 @@ class DatasetRolling(Rolling["Dataset"]):
             if not keep_attrs:
                 dataset[key].attrs = {}
 
+        # Need to stride coords as well. TODO: is there a better way?
+        coords = self.obj.isel(
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
+        ).coords
+
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
-            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
-        )
+        return Dataset(dataset, coords=coords, attrs=attrs)
 
 
 class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
@@ -812,6 +819,10 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     )
     _attributes = ("windows", "side", "trim_excess")
     obj: T_Xarray
+    windows: Mapping[Hashable, int]
+    side: SideOptions | Mapping[Hashable, SideOptions]
+    boundary: CoarsenBoundaryOptions
+    coord_func: Mapping[Hashable, str | Callable]
 
     def __init__(
         self,
@@ -841,23 +852,28 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         Returns
         -------
         coarsen
+
         """
         self.obj = obj
         self.windows = windows
         self.side = side
         self.boundary = boundary
 
-        absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
-        if absent_dims:
+        missing_dims = tuple(dim for dim in windows.keys() if dim not in self.obj.dims)
+        if missing_dims:
             raise ValueError(
-                f"Dimensions {absent_dims!r} not found in {self.obj.__class__.__name__}."
+                f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
+                f"dimensions {tuple(self.obj.dims)}"
             )
-        if not utils.is_dict_like(coord_func):
-            coord_func = {d: coord_func for d in self.obj.dims}  # type: ignore[misc]
+
+        if utils.is_dict_like(coord_func):
+            coord_func_map = coord_func
+        else:
+            coord_func_map = {d: coord_func for d in self.obj.dims}
         for c in self.obj.coords:
-            if c not in coord_func:
-                coord_func[c] = duck_array_ops.mean  # type: ignore[index]
-        self.coord_func: Mapping[Hashable, str | Callable] = coord_func
+            if c not in coord_func_map:
+                coord_func_map[c] = duck_array_ops.mean  # type: ignore[index]
+        self.coord_func = coord_func_map
 
     def _get_keep_attrs(self, keep_attrs):
         if keep_attrs is None:
@@ -918,8 +934,8 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         DatasetRolling.construct
         """
 
-        from .dataarray import DataArray
-        from .dataset import Dataset
+        from xarray.core.dataarray import DataArray
+        from xarray.core.dataset import Dataset
 
         window_dim = either_dict_or_kwargs(
             window_dim, window_dim_kwargs, "Coarsen.construct"
@@ -973,7 +989,10 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             else:
                 reshaped[key] = var
 
-        should_be_coords = set(window_dim) & set(self.obj.coords)
+        # should handle window_dim being unindexed
+        should_be_coords = (set(window_dim) & set(self.obj.coords)) | set(
+            self.obj.coords
+        )
         result = reshaped.set_coords(should_be_coords)
         if isinstance(self.obj, DataArray):
             return self.obj._from_temp_dataset(result)
@@ -999,9 +1018,9 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
             kwargs["skipna"] = None
 
         def wrapped_func(
-            self: DataArrayCoarsen, keep_attrs: bool = None, **kwargs
+            self: DataArrayCoarsen, keep_attrs: bool | None = None, **kwargs
         ) -> DataArray:
-            from .dataarray import DataArray
+            from xarray.core.dataarray import DataArray
 
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
@@ -1030,7 +1049,9 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
 
         return wrapped_func
 
-    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs) -> DataArray:
+    def reduce(
+        self, func: Callable, keep_attrs: bool | None = None, **kwargs
+    ) -> DataArray:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1085,9 +1106,9 @@ class DatasetCoarsen(Coarsen["Dataset"]):
             kwargs["skipna"] = None
 
         def wrapped_func(
-            self: DatasetCoarsen, keep_attrs: bool = None, **kwargs
+            self: DatasetCoarsen, keep_attrs: bool | None = None, **kwargs
         ) -> Dataset:
-            from .dataset import Dataset
+            from xarray.core.dataset import Dataset
 
             keep_attrs = self._get_keep_attrs(keep_attrs)
 

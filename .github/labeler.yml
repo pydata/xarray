@@ -54,9 +54,8 @@ topic-indexing:
   - xarray/core/indexes.py
   - xarray/core/indexing.py
 
-run-benchmark:
-  - asv_bench/benchmarks/*
-  - asv_bench/benchmarks/**/*
+topic-NamedArray:
+  - xarray/namedarray/*
 
 topic-performance:
   - asv_bench/benchmarks/*

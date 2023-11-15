@@ -4,7 +4,6 @@ import importlib
 import platform
 import warnings
 from contextlib import contextmanager, nullcontext
-from typing import Any
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -36,6 +35,10 @@ try:
 except ImportError:
     pass
 
+# https://github.com/pydata/xarray/issues/7322
+warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
+warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
+warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -43,7 +46,9 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
-def _importorskip(modname: str, minversion: str | None = None) -> tuple[bool, Any]:
+def _importorskip(
+    modname: str, minversion: str | None = None
+) -> tuple[bool, pytest.MarkDecorator]:
     try:
         mod = importlib.import_module(modname)
         has = True
@@ -61,19 +66,15 @@ has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
-has_h5netcdf_0_12, requires_h5netcdf_0_12 = _importorskip("h5netcdf", minversion="0.12")
 has_pynio, requires_pynio = _importorskip("Nio")
-has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
-has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
-has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
-has_numbagg, requires_numbagg = _importorskip("numbagg")
+has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cupy, requires_cupy = _importorskip("cupy")
@@ -88,14 +89,21 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+# _importorskip does not work for development versions
+has_pandas_version_two = Version(pd.__version__).major >= 2
+requires_pandas_version_two = pytest.mark.skipif(
+    not has_pandas_version_two, reason="requires pandas 2.0.0"
+)
+has_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
+requires_h5netcdf_ros3 = pytest.mark.skipif(
+    not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
+)
 
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
 
 if has_dask:
     import dask
-
-    dask.config.set(scheduler="single-threaded")
 
 
 class CountingScheduler:
@@ -134,11 +142,44 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
+    """Disallows any loading."""
+
     def __init__(self, array):
         self.array = array
 
-    def __getitem__(self, key):
+    def get_duck_array(self):
         raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data.")
+
+
+class FirstElementAccessibleArray(InaccessibleArray):
+    def __getitem__(self, key):
+        tuple_idxr = key.tuple
+        if len(tuple_idxr) > 1:
+            raise UnexpectedDataAccess("Tried accessing more than one element.")
+        return self.array[tuple_idxr]
+
+
+class DuckArrayWrapper(utils.NDArrayMixin):
+    """Array-like that prevents casting to array.
+    Modeled after cupy."""
+
+    def __init__(self, array: np.ndarray):
+        self.array = array
+
+    def __getitem__(self, key):
+        return type(self)(self.array[key])
+
+    def __array__(self, dtype: np.typing.DTypeLike = None):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array_namespace__(self):
+        """Present to satisfy is_duck_array test."""
 
 
 class ReturnItem:
@@ -171,7 +212,6 @@ def source_ndarray(array):
 
 @contextmanager
 def assert_no_warnings():
-
     with warnings.catch_warnings(record=True) as record:
         yield record
         assert len(record) == 0, "got unexpected warning(s)"

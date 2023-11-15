@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import Counter
-from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Union
+from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING, Literal, Union
 
 import pandas as pd
 
-from . import dtypes
-from .concat import concat
-from .dataarray import DataArray
-from .dataset import Dataset
-from .merge import merge
-from .utils import iterate_nested
+from xarray.core import dtypes
+from xarray.core.concat import concat
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.merge import merge
+from xarray.core.utils import iterate_nested
 
 if TYPE_CHECKING:
-    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from xarray.core.types import CombineAttrsOptions, CompatOptions, JoinOptions
 
 
 def _infer_concat_order_from_positions(datasets):
@@ -52,7 +52,6 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 
 
 def _ensure_same_types(series, dim):
-
     if series.dtype == object:
         types = set(series.map(type))
         if len(types) > 1:
@@ -79,17 +78,14 @@ def _ensure_same_types(series, dim):
 
 
 def _infer_concat_order_from_coords(datasets):
-
     concat_dims = []
     tile_ids = [() for ds in datasets]
 
     # All datasets have same variables because they've been grouped as such
     ds0 = datasets[0]
     for dim in ds0.dims:
-
         # Check if dim is a coordinate dimension
         if dim in ds0:
-
             # Need to read coordinate values to do ordering
             indexes = [ds._indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
@@ -104,7 +100,6 @@ def _infer_concat_order_from_coords(datasets):
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
             if not all(index.equals(indexes[0]) for index in indexes[1:]):
-
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
 
@@ -114,9 +109,9 @@ def _infer_concat_order_from_coords(datasets):
                     ascending = False
                 else:
                     raise ValueError(
-                        "Coordinate variable {} is neither "
+                        f"Coordinate variable {dim} is neither "
                         "monotonically increasing nor "
-                        "monotonically decreasing on all datasets".format(dim)
+                        "monotonically decreasing on all datasets"
                     )
 
                 # Assume that any two datasets whose coord along dim starts
@@ -226,10 +221,8 @@ def _combine_nd(
     n_dims = len(example_tile_id)
     if len(concat_dims) != n_dims:
         raise ValueError(
-            "concat_dims has length {} but the datasets "
-            "passed are nested in a {}-dimensional structure".format(
-                len(concat_dims), n_dims
-            )
+            f"concat_dims has length {len(concat_dims)} but the datasets "
+            f"passed are nested in a {n_dims}-dimensional structure"
         )
 
     # Each iteration of this loop reduces the length of the tile_ids tuples
@@ -260,7 +253,6 @@ def _combine_all_along_first_dim(
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "drop",
 ):
-
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
     # TODO: is the sorted need?
@@ -344,7 +336,6 @@ def _nested_combine(
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "drop",
 ):
-
     if len(datasets) == 0:
         return Dataset()
 
@@ -375,9 +366,8 @@ def _nested_combine(
     return combined
 
 
-# Define type for arbitrarily-nested list of lists recursively
-# Currently mypy cannot handle this but other linters can (https://stackoverflow.com/a/53845083/3154101)
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore
+# Define type for arbitrarily-nested list of lists recursively:
+DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]
 
 
 def combine_nested(
@@ -654,13 +644,12 @@ def _combine_single_variable_hypercube(
         if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
             raise ValueError(
                 "Resulting object does not have monotonic"
-                " global indexes along dimension {}".format(dim)
+                f" global indexes along dimension {dim}"
             )
 
     return concatenated
 
 
-# TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions = "no_conflicts",
@@ -669,7 +658,6 @@ def combine_by_coords(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
-    datasets: Iterable[Dataset] = None,
 ) -> Dataset | DataArray:
     """
 
@@ -766,8 +754,6 @@ def combine_by_coords(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
-
-    datasets : Iterable of Datasets
 
     Returns
     -------
@@ -925,14 +911,6 @@ def combine_by_coords(
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
 
-    # TODO remove after version 0.21, see PR4696
-    if datasets is not None:
-        warnings.warn(
-            "The datasets argument has been renamed to `data_objects`."
-            " From 0.21 on passing a value for datasets will raise an error."
-        )
-        data_objects = datasets
-
     if not data_objects:
         return Dataset()
 
@@ -977,10 +955,9 @@ def combine_by_coords(
 
         # Perform the multidimensional combine on each group of data variables
         # before merging back together
-        concatenated_grouped_by_data_vars = []
-        for vars, datasets_with_same_vars in grouped_by_vars:
-            concatenated = _combine_single_variable_hypercube(
-                list(datasets_with_same_vars),
+        concatenated_grouped_by_data_vars = tuple(
+            _combine_single_variable_hypercube(
+                tuple(datasets_with_same_vars),
                 fill_value=fill_value,
                 data_vars=data_vars,
                 coords=coords,
@@ -988,7 +965,8 @@ def combine_by_coords(
                 join=join,
                 combine_attrs=combine_attrs,
             )
-            concatenated_grouped_by_data_vars.append(concatenated)
+            for vars, datasets_with_same_vars in grouped_by_vars
+        )
 
     return merge(
         concatenated_grouped_by_data_vars,

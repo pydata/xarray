@@ -7,7 +7,7 @@ on:
 
 jobs:
   benchmark:
-    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
     runs-on: ubuntu-20.04
     env:
@@ -17,18 +17,18 @@ jobs:
     steps:
       # We need the full repo to avoid this issue
       # https://github.com/actions/checkout/issues/23
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up conda environment
-        uses: mamba-org/provision-with-micromamba@v12
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
-          cache-env: true
-          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
-          extra-specs: |
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          create-args: >-
             asv
 
 

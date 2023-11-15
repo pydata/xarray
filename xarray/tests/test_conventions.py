@@ -20,15 +20,19 @@ from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
-
-from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
-from .test_backends import CFEncodedBase
+from xarray.tests import (
+    assert_array_equal,
+    requires_cftime,
+    requires_dask,
+    requires_netCDF4,
+)
+from xarray.tests.test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray:
     def test_booltype_array(self) -> None:
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
-        bx = conventions.BoolTypeArray(x)
+        bx = coding.variables.BoolTypeArray(x)
         assert bx.dtype == bool
         assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
@@ -37,7 +41,7 @@ class TestNativeEndiannessArray:
     def test(self) -> None:
         x = np.arange(5, dtype=">i8")
         expected = np.arange(5, dtype="int64")
-        a = conventions.NativeEndiannessArray(x)
+        a = coding.variables.NativeEndiannessArray(x)
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
@@ -74,6 +78,28 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
     actual = conventions.decode_cf_variable("t", var)
     assert_identical(actual, expected)
+
+
+def test_decode_cf_variable_with_mismatched_coordinates() -> None:
+    # tests for decoding mismatched coordinates attributes
+    # see GH #1809
+    zeros1 = np.zeros((1, 5, 3))
+    orig = Dataset(
+        {
+            "XLONG": (["x", "y"], zeros1.squeeze(0), {}),
+            "XLAT": (["x", "y"], zeros1.squeeze(0), {}),
+            "foo": (["time", "x", "y"], zeros1, {"coordinates": "XTIME XLONG XLAT"}),
+            "time": ("time", [0.0], {"units": "hours since 2017-01-01"}),
+        }
+    )
+    decoded = conventions.decode_cf(orig, decode_coords=True)
+    assert decoded["foo"].encoding["coordinates"] == "XTIME XLONG XLAT"
+    assert list(decoded.coords.keys()) == ["XLONG", "XLAT", "time"]
+
+    decoded = conventions.decode_cf(orig, decode_coords=False)
+    assert "coordinates" not in decoded["foo"].encoding
+    assert decoded["foo"].attrs.get("coordinates") == "XTIME XLONG XLAT"
+    assert list(decoded.coords.keys()) == ["time"]
 
 
 @requires_cftime
@@ -125,9 +151,9 @@ class TestEncodeCFVariable:
         foo1_coords = enc["foo1"].attrs.get("coordinates", "")
         foo2_coords = enc["foo2"].attrs.get("coordinates", "")
         foo3_coords = enc["foo3"].attrs.get("coordinates", "")
-        assert set(foo1_coords.split()) == {"lat1", "lon1"}
-        assert set(foo2_coords.split()) == {"lat2", "lon2"}
-        assert set(foo3_coords.split()) == {"lat3", "lon3"}
+        assert foo1_coords == "lon1 lat1"
+        assert foo2_coords == "lon2 lat2"
+        assert foo3_coords == "lon3 lat3"
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
@@ -146,11 +172,12 @@ class TestEncodeCFVariable:
         enc, attrs = conventions.encode_dataset_coordinates(orig)
         # Make sure we have the right coordinates for each variable.
         values_coords = enc["values"].attrs.get("coordinates", "")
-        assert set(values_coords.split()) == {"time", "lat", "lon"}
+        assert values_coords == "time lon lat"
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
     def test_do_not_overwrite_user_coordinates(self) -> None:
+        # don't overwrite user-defined "coordinates" encoding
         orig = Dataset(
             coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},
             data_vars={"a": ("x", [1, 2, 3]), "b": ("x", [3, 5, 6])},
@@ -164,6 +191,19 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
+    def test_deterministic_coords_encoding(self) -> None:
+        # the coordinates attribute is sorted when set by xarray.conventions ...
+        # ... on a variable's coordinates attribute
+        ds = Dataset({"foo": 0}, coords={"baz": 0, "bar": 0})
+        vars, attrs = conventions.encode_dataset_coordinates(ds)
+        assert vars["foo"].attrs["coordinates"] == "bar baz"
+        assert attrs.get("coordinates") is None
+        # ... on the global coordinates attribute
+        ds = ds.drop_vars("foo")
+        vars, attrs = conventions.encode_dataset_coordinates(ds)
+        assert attrs["coordinates"] == "bar baz"
+
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -181,6 +221,7 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
+    @pytest.mark.filterwarnings("ignore:Converting non-nanosecond")
     def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
@@ -227,9 +268,12 @@ class TestDecodeCF:
         assert_identical(expected, actual)
 
     def test_invalid_coordinates(self) -> None:
-        # regression test for GH308
+        # regression test for GH308, GH1809
         original = Dataset({"foo": ("t", [1, 2], {"coordinates": "invalid"})})
+        decoded = Dataset({"foo": ("t", [1, 2], {}, {"coordinates": "invalid"})})
         actual = conventions.decode_cf(original)
+        assert_identical(decoded, actual)
+        actual = conventions.decode_cf(original, decode_coords=False)
         assert_identical(original, actual)
 
     def test_decode_coordinates(self) -> None:
@@ -243,7 +287,7 @@ class TestDecodeCF:
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
         expected = Variable((), np.int64(0))
-        actual = conventions.maybe_encode_nonstring_dtype(original)
+        actual = coding.variables.NonStringCoder().encode(original)
         assert_identical(expected, actual)
 
     def test_decode_cf_with_multiple_missing_values(self) -> None:
@@ -288,6 +332,17 @@ class TestDecodeCF:
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})
         with pytest.raises(ValueError, match=r"unable to decode time"):
             decode_cf(ds)
+
+    @pytest.mark.parametrize("decode_times", [True, False])
+    def test_invalid_timedelta_units_do_not_decode(self, decode_times) -> None:
+        # regression test for #8269
+        ds = Dataset(
+            {"time": ("time", [0, 1, 20], {"units": "days invalid", "_FillValue": 20})}
+        )
+        expected = Dataset(
+            {"time": ("time", [0.0, 1.0, np.nan], {"units": "days invalid"})}
+        )
+        assert_identical(expected, decode_cf(ds, decode_times=decode_times))
 
     @requires_cftime
     def test_dataset_repr_with_netcdf4_datetimes(self) -> None:
@@ -481,3 +536,18 @@ def test_decode_cf_error_includes_variable_name():
     ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
     with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
         decode_cf(ds)
+
+
+def test_encode_cf_variable_with_vlen_dtype() -> None:
+    v = Variable(
+        ["x"], np.array(["a", "b"], dtype=coding.strings.create_vlen_dtype(str))
+    )
+    encoded_v = conventions.encode_cf_variable(v)
+    assert encoded_v.data.dtype.kind == "O"
+    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str
+
+    # empty array
+    v = Variable(["x"], np.array([], dtype=coding.strings.create_vlen_dtype(str)))
+    encoded_v = conventions.encode_cf_variable(v)
+    assert encoded_v.data.dtype.kind == "O"
+    assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) == str
