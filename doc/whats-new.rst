@@ -26,6 +26,12 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
+- Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
+  region to write in the original store. Also implement automatic transpose when dimension
+  order does not match the original store. (:issue:`7702`, :issue:`8421`, :pull:`8434`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
+  By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
 
 - Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
@@ -33,6 +39,9 @@ New Features
   new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
+  `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
+  By `Justus Magin <https://github.com/keewis`_.
 
 - Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -69,6 +78,9 @@ Bug fixes
 - Fix to once again support date offset strings as input to the loffset
   parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
   By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
+- Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
+  if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Documentation
 ~~~~~~~~~~~~~
