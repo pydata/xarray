@@ -69,6 +69,7 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
     requires_pydap,
@@ -3446,6 +3447,34 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         with self.roundtrip(ds) as actual:
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
+
+
+@requires_h5netcdf_ros3
+class TestH5NetCDFDataRos3Driver(TestCommon):
+    engine: T_NetcdfEngine = "h5netcdf"
+    test_remote_dataset: str = (
+        "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    )
+
+    def test_get_variable_list(self) -> None:
+        with open_dataset(
+            self.test_remote_dataset,
+            engine="h5netcdf",
+            backend_kwargs={"driver": "ros3"},
+        ) as actual:
+            assert "Temperature" in list(actual)
+
+    def test_get_variable_list_empty_driver_kwds(self) -> None:
+        driver_kwds = {
+            "secret_id": b"",
+            "secret_key": b"",
+        }
+        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+
+        with open_dataset(
+            self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
+        ) as actual:
+            assert "Temperature" in list(actual)
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
