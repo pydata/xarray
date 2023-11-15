@@ -72,18 +72,26 @@ class NamedArraySubclassobjects:
         assert np.array_equal(target.data, data)
         assert target.dtype == float
         assert target.shape == (2, 5)
-        assert target.attrs == {"key": "value"}
         assert target.ndim == 2
         assert target.sizes == {"x": 2, "y": 5}
         assert target.size == 10
         assert target.nbytes == 80
         assert len(target) == 2
 
+    def test_attrs(self, target: Any) -> None:
+        assert target.attrs == {}
+        attrs = {"foo": "bar"}
+        target.attrs = attrs
+        assert target.attrs == attrs
+        assert isinstance(target.attrs, dict)
+        target.attrs["foo"] = "baz"
+        assert target.attrs["foo"] == "baz"
+
 
 class TestNamedArray(NamedArraySubclassobjects):
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> NamedArray[Any, Any]:
-        return NamedArray(["x", "y"], data, {"key": "value"})
+        return NamedArray(["x", "y"], data)
 
 
 @pytest.fixture
@@ -164,16 +172,6 @@ def test_from_array_with_explicitly_indexed(
     output2: NamedArray[Any, Any]
     output2 = from_array(("x", "y", "z"), array2)
     assert isinstance(output2.data, CustomArrayIndexable)
-
-
-def test_attrs() -> None:
-    named_array: NamedArray[Any, Any]
-    named_array = NamedArray(["x", "y"], np.arange(10).reshape(2, 5))
-    assert named_array.attrs == {}
-    named_array.attrs["key"] = "value"
-    assert named_array.attrs == {"key": "value"}
-    named_array.attrs = {"key": "value2"}
-    assert named_array.attrs == {"key": "value2"}
 
 
 def test_data(random_inputs: np.ndarray[Any, Any]) -> None:

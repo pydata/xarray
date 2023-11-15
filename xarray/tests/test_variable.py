@@ -72,17 +72,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     @pytest.fixture
     def target(self, data):
         data = 0.5 * np.arange(10).reshape(2, 5)
-        return Variable(["x", "y"], data, {"key": "value"})
-
-    def test_attrs(self):
-        v = self.cls(["time"], 0.5 * np.arange(10))
-        assert v.attrs == {}
-        attrs = {"foo": "bar"}
-        v.attrs = attrs
-        assert v.attrs == attrs
-        assert isinstance(v.attrs, dict)
-        v.attrs["foo"] = "baz"
-        assert v.attrs["foo"] == "baz"
+        return Variable(["x", "y"], data)
 
     def test_getitem_dict(self):
         v = self.cls(["x"], np.random.randn(5))
