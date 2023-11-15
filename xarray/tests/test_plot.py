@@ -2768,7 +2768,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_facetgrid_hue_style(self) -> None:
         ds2 = self.ds.copy()
 
-        # Numbers plots as continous:
+        # Numbers plots as continuous:
         g = ds2.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
         assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
 

@@ -2366,18 +2366,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         )
 
     @property
-    def real(self):
-        """
-        The real part of the variable.
-
-        See Also
-        --------
-        numpy.ndarray.real
-        """
-        return self._replace(data=self.data.real)
-
-    @property
-    def imag(self):
+    def imag(self) -> Variable:
         """
         The imaginary part of the variable.
 
@@ -2385,7 +2374,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.ndarray.imag
         """
-        return self._replace(data=self.data.imag)
+        return self._new(data=self.data.imag)
+
+    @property
+    def real(self) -> Variable:
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
+        return self._new(data=self.data.real)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
@@ -2594,6 +2594,28 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.argmax, DataArray.idxmax
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
+
+    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
+        """
+        Use sparse-array as backend.
+        """
+        from xarray.namedarray.utils import _default as _default_named
+
+        if sparse_format is _default:
+            sparse_format = _default_named
+
+        if fill_value is _default:
+            fill_value = _default_named
+
+        out = super()._as_sparse(sparse_format, fill_value)
+        return cast("Variable", out)
+
+    def _to_dense(self) -> Variable:
+        """
+        Change backend from sparse to np.array.
+        """
+        out = super()._to_dense()
+        return cast("Variable", out)
 
 
 class IndexVariable(Variable):

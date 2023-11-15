@@ -72,7 +72,6 @@ from xarray.tests import (
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
-    requires_pseudonetcdf,
     requires_pydap,
     requires_pynio,
     requires_scipy,
@@ -2460,7 +2459,8 @@ class ZarrBase(CFEncodedBase):
     @pytest.mark.parametrize("consolidated", [False, True, None])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
-    def test_write_region(self, consolidated, compute, use_dask) -> None:
+    @pytest.mark.parametrize("write_empty", [False, True, None])
+    def test_write_region(self, consolidated, compute, use_dask, write_empty) -> None:
         if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
         if consolidated and self.zarr_version > 2:
@@ -2492,6 +2492,7 @@ class ZarrBase(CFEncodedBase):
                     store,
                     region=region,
                     consolidated=consolidated,
+                    write_empty_chunks=write_empty,
                     **self.version_kwargs,
                 )
             with xr.open_zarr(
@@ -2773,9 +2774,12 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         ) as ds:
             yield ds
 
-    @pytest.mark.parametrize("write_empty", [True, False])
-    def test_write_empty(self, write_empty: bool) -> None:
-        if not write_empty:
+    @pytest.mark.parametrize("consolidated", [True, False, None])
+    @pytest.mark.parametrize("write_empty", [True, False, None])
+    def test_write_empty(
+        self, consolidated: bool | None, write_empty: bool | None
+    ) -> None:
+        if write_empty is False:
             expected = ["0.1.0", "1.1.0"]
         else:
             expected = [
@@ -4464,226 +4468,6 @@ class TestPyNio(CFEncodedBase, NetCDF3Only):
             assert_identical(actual, expected)
 
 
-@requires_pseudonetcdf
-@pytest.mark.filterwarnings("ignore:IOAPI_ISPH is assumed to be 6370000")
-class TestPseudoNetCDFFormat:
-    def open(self, path, **kwargs):
-        return open_dataset(path, engine="pseudonetcdf", **kwargs)
-
-    @contextlib.contextmanager
-    def roundtrip(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
-        if save_kwargs is None:
-            save_kwargs = {}
-        if open_kwargs is None:
-            open_kwargs = {}
-        with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
-            self.save(data, path, **save_kwargs)
-            with self.open(path, **open_kwargs) as ds:
-                yield ds
-
-    def test_ict_format(self) -> None:
-        """
-        Open a CAMx file and test data variables
-        """
-        stdattr = {
-            "fill_value": -9999.0,
-            "missing_value": -9999,
-            "scale": 1,
-            "llod_flag": -8888,
-            "llod_value": "N/A",
-            "ulod_flag": -7777,
-            "ulod_value": "N/A",
-        }
-
-        def myatts(**attrs):
-            outattr = stdattr.copy()
-            outattr.update(attrs)
-            return outattr
-
-        input = {
-            "coords": {},
-            "attrs": {
-                "fmt": "1001",
-                "n_header_lines": 29,
-                "PI_NAME": "Henderson, Barron",
-                "ORGANIZATION_NAME": "U.S. EPA",
-                "SOURCE_DESCRIPTION": "Example file with artificial data",
-                "MISSION_NAME": "JUST_A_TEST",
-                "VOLUME_INFO": "1, 1",
-                "SDATE": "2018, 04, 27",
-                "WDATE": "2018, 04, 27",
-                "TIME_INTERVAL": "0",
-                "INDEPENDENT_VARIABLE_DEFINITION": "Start_UTC",
-                "INDEPENDENT_VARIABLE": "Start_UTC",
-                "INDEPENDENT_VARIABLE_UNITS": "Start_UTC",
-                "ULOD_FLAG": "-7777",
-                "ULOD_VALUE": "N/A",
-                "LLOD_FLAG": "-8888",
-                "LLOD_VALUE": ("N/A, N/A, N/A, N/A, 0.025"),
-                "OTHER_COMMENTS": (
-                    "www-air.larc.nasa.gov/missions/etc/" + "IcarttDataFormat.htm"
-                ),
-                "REVISION": "R0",
-                "R0": "No comments for this revision.",
-                "TFLAG": "Start_UTC",
-            },
-            "dims": {"POINTS": 4},
-            "data_vars": {
-                "Start_UTC": {
-                    "data": [43200.0, 46800.0, 50400.0, 50400.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="Start_UTC", standard_name="Start_UTC"),
-                },
-                "lat": {
-                    "data": [41.0, 42.0, 42.0, 42.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="degrees_north", standard_name="lat"),
-                },
-                "lon": {
-                    "data": [-71.0, -72.0, -73.0, -74.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="degrees_east", standard_name="lon"),
-                },
-                "elev": {
-                    "data": [5.0, 15.0, 20.0, 25.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="meters", standard_name="elev"),
-                },
-                "TEST_ppbv": {
-                    "data": [1.2345, 2.3456, 3.4567, 4.5678],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="ppbv", standard_name="TEST_ppbv"),
-                },
-                "TESTM_ppbv": {
-                    "data": [2.22, -9999.0, -7777.0, -8888.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(
-                        units="ppbv", standard_name="TESTM_ppbv", llod_value=0.025
-                    ),
-                },
-            },
-        }
-        chkfile = Dataset.from_dict(input)
-        with open_example_dataset(
-            "example.ict", engine="pseudonetcdf", backend_kwargs={"format": "ffi1001"}
-        ) as ictfile:
-            assert_identical(ictfile, chkfile)
-
-    def test_ict_format_write(self) -> None:
-        fmtkw = {"format": "ffi1001"}
-        with open_example_dataset(
-            "example.ict", engine="pseudonetcdf", backend_kwargs=fmtkw
-        ) as expected:
-            with self.roundtrip(
-                expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
-            ) as actual:
-                assert_identical(expected, actual)
-
-    def test_uamiv_format_read(self) -> None:
-        """
-        Open a CAMx file and test data variables
-        """
-
-        camxfile = open_example_dataset(
-            "example.uamiv", engine="pseudonetcdf", backend_kwargs={"format": "uamiv"}
-        )
-        data = np.arange(20, dtype="f").reshape(1, 1, 4, 5)
-        expected = xr.Variable(
-            ("TSTEP", "LAY", "ROW", "COL"),
-            data,
-            dict(units="ppm", long_name="O3".ljust(16), var_desc="O3".ljust(80)),
-        )
-        actual = camxfile.variables["O3"]
-        assert_allclose(expected, actual)
-
-        data = np.array([[[2002154, 0]]], dtype="i")
-        expected = xr.Variable(
-            ("TSTEP", "VAR", "DATE-TIME"),
-            data,
-            dict(
-                long_name="TFLAG".ljust(16),
-                var_desc="TFLAG".ljust(80),
-                units="DATE-TIME".ljust(16),
-            ),
-        )
-        actual = camxfile.variables["TFLAG"]
-        assert_allclose(expected, actual)
-        camxfile.close()
-
-    @requires_dask
-    def test_uamiv_format_mfread(self) -> None:
-        """
-        Open a CAMx file and test data variables
-        """
-
-        camxfile = open_example_mfdataset(
-            ["example.uamiv", "example.uamiv"],
-            engine="pseudonetcdf",
-            concat_dim="TSTEP",
-            combine="nested",
-            backend_kwargs={"format": "uamiv"},
-        )
-
-        data1 = np.arange(20, dtype="f").reshape(1, 1, 4, 5)
-        data = np.concatenate([data1] * 2, axis=0)
-        expected = xr.Variable(
-            ("TSTEP", "LAY", "ROW", "COL"),
-            data,
-            dict(units="ppm", long_name="O3".ljust(16), var_desc="O3".ljust(80)),
-        )
-        actual = camxfile.variables["O3"]
-        assert_allclose(expected, actual)
-
-        data = np.array([[[2002154, 0]]], dtype="i").repeat(2, 0)
-        attrs = dict(
-            long_name="TFLAG".ljust(16),
-            var_desc="TFLAG".ljust(80),
-            units="DATE-TIME".ljust(16),
-        )
-        dims = ("TSTEP", "VAR", "DATE-TIME")
-        expected = xr.Variable(dims, data, attrs)
-        actual = camxfile.variables["TFLAG"]
-        assert_allclose(expected, actual)
-        camxfile.close()
-
-    @pytest.mark.xfail(reason="Flaky; see GH3711")
-    def test_uamiv_format_write(self) -> None:
-        fmtkw = {"format": "uamiv"}
-
-        expected = open_example_dataset(
-            "example.uamiv", engine="pseudonetcdf", backend_kwargs=fmtkw
-        )
-        with self.roundtrip(
-            expected,
-            save_kwargs=fmtkw,
-            open_kwargs={"backend_kwargs": fmtkw},
-            allow_cleanup_failure=True,
-        ) as actual:
-            assert_identical(expected, actual)
-
-        expected.close()
-
-    def save(self, dataset, path, **save_kwargs):
-        import PseudoNetCDF as pnc
-
-        pncf = pnc.PseudoNetCDFFile()
-        pncf.dimensions = {
-            k: pnc.PseudoNetCDFDimension(pncf, k, v) for k, v in dataset.dims.items()
-        }
-        pncf.variables = {
-            k: pnc.PseudoNetCDFVariable(
-                pncf, k, v.dtype.char, v.dims, values=v.data[...], **v.attrs
-            )
-            for k, v in dataset.variables.items()
-        }
-        for pk, pv in dataset.attrs.items():
-            setattr(pncf, pk, pv)
-
-        pnc.pncwrite(pncf, path, **save_kwargs)
-
-
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
@@ -5455,3 +5239,198 @@ class TestNCZarr:
 def test_pickle_open_mfdataset_dataset():
     ds = open_example_mfdataset(["bears.nc"])
     assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+
+
+@requires_zarr
+class TestZarrRegionAuto:
+    def test_zarr_region_auto_all(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(tmp_path / "test.zarr", region="auto")
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_mixed(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(
+            tmp_path / "test.zarr", region={"x": "auto", "y": slice(6, 8)}
+        )
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_noncontiguous(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=[0, 2, 3], y=[5, 6])
+        with pytest.raises(ValueError):
+            ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+
+    def test_zarr_region_auto_new_coord_vals(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        x = np.arange(5, 55, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        with pytest.raises(KeyError):
+            ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+
+    def test_zarr_region_index_write(self, tmp_path):
+        from xarray.backends.zarr import ZarrStore
+
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        with patch.object(
+            ZarrStore,
+            "set_variables",
+            side_effect=ZarrStore.set_variables,
+            autospec=True,
+        ) as mock:
+            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+
+            # should write the data vars but never the index vars with auto mode
+            for call in mock.call_args_list:
+                written_variables = call.args[1].keys()
+                assert "test" in written_variables
+                assert "x" not in written_variables
+                assert "y" not in written_variables
+
+    def test_zarr_region_append(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        x_new = np.arange(40, 70, 10)
+        data_new = np.ones((3, 10))
+        ds_new = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data_new,
+                    dims=("x", "y"),
+                    coords={"x": x_new, "y": y},
+                )
+            }
+        )
+
+        # Don't allow auto region detection in append mode due to complexities in
+        # implementing the overlap logic and lack of safety with parallel writes
+        with pytest.raises(ValueError):
+            ds_new.to_zarr(
+                tmp_path / "test.zarr", mode="a", append_dim="x", region="auto"
+            )
+
+
+@requires_zarr
+def test_zarr_region_transpose(tmp_path):
+    x = np.arange(0, 50, 10)
+    y = np.arange(0, 20, 2)
+    data = np.ones((5, 10))
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                data,
+                dims=("x", "y"),
+                coords={"x": x, "y": y},
+            )
+        }
+    )
+    ds.to_zarr(tmp_path / "test.zarr")
+
+    ds_region = 1 + ds.isel(x=[0], y=[0]).transpose()
+    ds_region.to_zarr(
+        tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
+    )

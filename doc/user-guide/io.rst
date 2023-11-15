@@ -819,7 +819,7 @@ with ``mode='a'`` on a Dataset containing the new variables, passing in an
 existing Zarr store or path to a Zarr store.
 
 To resize and then append values along an existing dimension in a store, set
-``append_dim``. This is a good option if data always arives in a particular
+``append_dim``. This is a good option if data always arrives in a particular
 order, e.g., for time-stepping a simulation:
 
 .. ipython:: python
@@ -876,17 +876,20 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     ds.to_zarr(path, compute=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
-mapping from dimension names to Python ``slice`` objects indicating where the
-data should be written (in index space, not coordinate space), e.g.,
+can be filled out by subsequent calls to ``to_zarr``. ``region`` can be
+specified as ``"auto"``, which opens the existing store and determines the
+correct alignment of the new data with the existing coordinates, or as an
+explicit mapping from dimension names to Python ``slice`` objects indicating
+where the data should be written (in index space, not label space), e.g.,
 
 .. ipython:: python
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    # Any of the following region specifications are valid
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
@@ -1307,27 +1310,6 @@ We recommend installing PyNIO via conda::
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 .. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
 .. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
-
-.. _io.PseudoNetCDF:
-
-Formats supported by PseudoNetCDF
----------------------------------
-
-Xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
-formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
-PseudoNetCDF can also provide Climate Forecasting Conventions to
-CMAQ files. In addition, PseudoNetCDF can automatically register custom
-readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
-identify readers either heuristically, or by a format specified via a key in
-`backend_kwargs`.
-
-To use PseudoNetCDF to read such files, supply
-``engine='pseudonetcdf'`` to :py:func:`open_dataset`.
-
-Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
-options are listed on the PseudoNetCDF page.
-
-.. _PseudoNetCDF: https://github.com/barronh/PseudoNetCDF
 
 
 CSV and other formats supported by pandas

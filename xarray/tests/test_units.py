@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import functools
 import operator
-import sys
 
 import numpy as np
 import pandas as pd
 import pytest
-from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
@@ -1502,20 +1500,17 @@ def test_dot_dataarray(dtype):
     data_array = xr.DataArray(data=array1, dims=("x", "y"))
     other = xr.DataArray(data=array2, dims=("y", "z"))
 
-    expected = attach_units(
-        xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
-    )
-    actual = xr.dot(data_array, other)
+    with xr.set_options(use_opt_einsum=False):
+        expected = attach_units(
+            xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
+        )
+        actual = xr.dot(data_array, other)
 
     assert_units_equal(expected, actual)
     assert_identical(expected, actual)
 
 
 class TestVariable:
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -1538,13 +1533,6 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2347,10 +2335,6 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2403,13 +2387,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2428,10 +2405,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2465,8 +2438,9 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         units = extract_units(func(array))
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -3829,8 +3803,9 @@ class TestDataArray:
         if not isinstance(func, (function, method)):
             units.update(extract_units(func(array.reshape(-1))))
 
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -4082,10 +4057,6 @@ class TestDataset:
         # warnings or errors, but does not check the result
         func(ds)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -4107,13 +4078,6 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
@@ -5644,10 +5608,6 @@ class TestDataset:
 
 @requires_dask
 class TestPintWrappingDask:
-    @pytest.mark.skipif(
-        version.parse(pint.__version__) <= version.parse("0.21"),
-        reason="pint didn't support dask properly before 0.21",
-    )
     def test_duck_array_ops(self):
         import dask.array
 

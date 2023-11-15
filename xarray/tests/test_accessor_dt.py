@@ -6,6 +6,7 @@ import pytest
 
 import xarray as xr
 from xarray.tests import (
+    assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -99,6 +100,19 @@ class TestDatetimeAccessor:
 
         assert expected.dtype == actual.dtype
         assert_identical(expected, actual)
+
+    def test_total_seconds(self) -> None:
+        # Subtract a value in the middle of the range to ensure that some values
+        # are negative
+        delta = self.data.time - np.datetime64("2000-01-03")
+        actual = delta.dt.total_seconds()
+        expected = xr.DataArray(
+            np.arange(-48, 52, dtype=np.float64) * 3600,
+            name="total_seconds",
+            coords=[self.data.time],
+        )
+        # This works with assert_identical when pandas is >=1.5.0.
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",
