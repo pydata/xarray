@@ -64,7 +64,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Writing to unaligned zarr chunks with ``region`` will now raise an error
+- Partial writes to existing chunks with ``region`` will now raise an error
   (unless ``safe_chunks=False``); previously an error would only be raised on
   new variables. (:pull:`8459`, :issue:`8371`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
