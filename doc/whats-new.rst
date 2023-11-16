@@ -37,7 +37,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
   `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
-  By `Justus Magin <https://github.com/keewis`_.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - Following pandas, :py:meth:`infer_freq` will return ``"Y"``, ``"YS"``,
   ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``, ``"ms"``, ``"us"``, or
@@ -94,6 +94,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Internal Changes
