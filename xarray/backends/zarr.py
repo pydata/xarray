@@ -21,6 +21,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
+from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
@@ -377,7 +378,7 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(
         cls,
         store,
-        mode="r",
+        mode: ZarrWriteModes = "r",
         synchronizer=None,
         group=None,
         consolidated=False,
@@ -402,7 +403,8 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_version = getattr(store, "_store_version", 2)
 
         open_kwargs = dict(
-            mode=mode,
+            # mode='a-' is a handcrafted xarray specialty
+            mode="a" if mode == "a-" else mode,
             synchronizer=synchronizer,
             path=group,
         )
@@ -632,7 +634,7 @@ class ZarrStore(AbstractWritableDataStore):
         # - new variables not already present, OR
         # - variables with the append_dim in their dimensions
         # We do NOT overwrite other variables.
-        if self._append_dim is not None:
+        if self._mode == "a-" and self._append_dim is not None:
             variables_to_set = {
                 k: v
                 for k, v in variables_encoded.items()

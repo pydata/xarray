@@ -2387,13 +2387,23 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             original = xr.concat([ds, ds_to_append], dim="time")
+            original2 = xr.concat([original, ds_to_append], dim="time")
 
-            # overwrite a coordinate; this will not get written to the store
+            # overwrite a coordinate;
+            # for mode='a-', this will not get written to the store
             # because it does not have the append_dim as a dim
             ds_to_append.lon.data[:] = -999
-            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            ds_to_append.to_zarr(
+                store_target, mode="a-", append_dim="time", **self.version_kwargs
+            )
             actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
             assert_identical(original, actual)
+
+            # by default, mode="a" will overwrite all coordinates.
+            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            original2.lon.data[:] = -999
+            assert_identical(original2, actual)
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:
@@ -2591,7 +2601,7 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(
                 ValueError,
                 match=re.escape(
-                    "cannot set region unless mode='a', mode='r+' or mode=None"
+                    "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
                 ),
             ):
                 data.to_zarr(

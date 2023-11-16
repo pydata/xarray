@@ -38,6 +38,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
 from xarray.core.parallelcompat import guess_chunkmanager
+from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
@@ -67,7 +68,6 @@ if TYPE_CHECKING:
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
-
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -1524,7 +1524,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: Literal["w", "w-", "a", "r+", None] = None,
+    mode: ZarrWriteModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
@@ -1548,7 +1548,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: Literal["w", "w-", "a", "r+", None] = None,
+    mode: ZarrWriteModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
@@ -1570,7 +1570,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: Literal["w", "w-", "a", "r+", None] = None,
+    mode: ZarrWriteModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
@@ -1627,16 +1627,18 @@ def to_zarr(
         else:
             mode = "w-"
 
-    if mode != "a" and append_dim is not None:
+    if mode not in ["a", "a-"] and append_dim is not None:
         raise ValueError("cannot set append_dim unless mode='a' or mode=None")
 
-    if mode not in ["a", "r+"] and region is not None:
-        raise ValueError("cannot set region unless mode='a', mode='r+' or mode=None")
+    if mode not in ["a", "a-", "r+"] and region is not None:
+        raise ValueError(
+            "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
+        )
 
-    if mode not in ["w", "w-", "a", "r+"]:
+    if mode not in ["w", "w-", "a", "a-", "r+"]:
         raise ValueError(
             "The only supported options for mode are 'w', "
-            f"'w-', 'a' and 'r+', but mode={mode!r}"
+            f"'w-', 'a', 'a-', and 'r+', but mode={mode!r}"
         )
 
     # validate Dataset keys, DataArray names
@@ -1679,7 +1681,7 @@ def to_zarr(
         write_empty=write_empty_chunks,
     )
 
-    if mode in ["a", "r+"]:
+    if mode in ["a", "a-", "r+"]:
         _validate_datatypes_for_zarr_append(zstore, dataset)
         if append_dim is not None:
             existing_dims = zstore.get_dimensions()
