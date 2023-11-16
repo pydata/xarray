@@ -254,7 +254,7 @@ class _DummyGroup(Generic[T_Xarray]):
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            key = key[0]
+            (key,) = key
         return self.values[key]
 
     def to_index(self) -> pd.Index:

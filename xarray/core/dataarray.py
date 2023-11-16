@@ -6636,9 +6636,10 @@ class DataArray(
 
     def groupby(
         self,
-        group: Hashable | DataArray | IndexVariable,
+        group: Hashable | DataArray | IndexVariable = None,
         squeeze: bool | None = None,
         restore_coord_dims: bool = False,
+        **groupers,
     ) -> DataArrayGroupBy:
         """Returns a DataArrayGroupBy object for performing grouped operations.
 
@@ -6710,7 +6711,19 @@ class DataArray(
         )
 
         _validate_groupby_squeeze(squeeze)
-        rgrouper = ResolvedGrouper(UniqueGrouper(), group, self)
+
+        if group is not None:
+            assert not groupers
+            grouper = UniqueGrouper()
+        else:
+            if len(groupers) > 1:
+                raise ValueError("grouping by multiple variables is not supported yet.")
+            if not groupers:
+                raise ValueError
+            group, grouper = next(iter(groupers.items()))
+
+        rgrouper = ResolvedGrouper(grouper, group, self)
+
         return DataArrayGroupBy(
             self,
             (rgrouper,),

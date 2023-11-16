@@ -12,7 +12,11 @@ from packaging.version import Version
 
 import xarray as xr
 from xarray import DataArray, Dataset, Variable
-from xarray.core.groupby import _consolidate_slices
+from xarray.core.groupby import (
+    BinGrouper,
+    UniqueGrouper,
+    _consolidate_slices,
+)
 from xarray.tests import (
     InaccessibleArray,
     assert_allclose,
@@ -112,8 +116,9 @@ def test_multi_index_groupby_map(dataset) -> None:
     assert_equal(expected, actual)
 
 
-def test_reduce_numeric_only(dataset) -> None:
-    gb = dataset.groupby("x", squeeze=False)
+@pytest.mark.parametrize("grouper", [dict(group="x"), dict(x=UniqueGrouper())])
+def test_reduce_numeric_only(dataset, grouper) -> None:
+    gb = dataset.groupby(**grouper, squeeze=False)
     with xr.set_options(use_flox=False):
         expected = gb.sum()
     with xr.set_options(use_flox=True):
@@ -830,11 +835,12 @@ def test_groupby_dataset_reduce() -> None:
 
     expected = data.mean("y")
     expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
-    actual = data.groupby("x").mean(...)
-    assert_allclose(expected, actual)
+    for gb in [data.groupby("x"), data.groupby(x=UniqueGrouper())]:
+        actual = gb.mean(...)
+        assert_allclose(expected, actual)
 
-    actual = data.groupby("x").mean("y")
-    assert_allclose(expected, actual)
+        actual = gb.mean("y")
+        assert_allclose(expected, actual)
 
     letters = data["letters"]
     expected = Dataset(
@@ -844,8 +850,9 @@ def test_groupby_dataset_reduce() -> None:
             "yonly": data["yonly"].groupby(letters).mean(),
         }
     )
-    actual = data.groupby("letters").mean(...)
-    assert_allclose(expected, actual)
+    for gb in [data.groupby("letters"), data.groupby(letters=UniqueGrouper())]:
+        actual = gb.mean(...)
+        assert_allclose(expected, actual)
 
 
 @pytest.mark.parametrize("squeeze", [True, False])
@@ -975,6 +982,14 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
     )
     assert_identical(expected, actual)
 
+    with xr.set_options(use_flox=use_flox):
+        actual = da.groupby(
+            x=BinGrouper(
+                bins=x_bins, cut_kwargs=dict(include_lowest=True, right=False)
+            ),
+        ).mean()
+    assert_identical(expected, actual)
+
 
 @pytest.mark.parametrize("indexed_coord", [True, False])
 def test_groupby_bins_math(indexed_coord) -> None:
@@ -983,11 +998,17 @@ def test_groupby_bins_math(indexed_coord) -> None:
     if indexed_coord:
         da["x"] = np.arange(N)
         da["y"] = np.arange(N)
-    g = da.groupby_bins("x", np.arange(0, N + 1, 3))
-    mean = g.mean()
-    expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=("x", [0, 0, 0, 1, 1, 1]))
-    actual = g - mean
-    assert_identical(expected, actual)
+
+    for g in [
+        da.groupby_bins("x", np.arange(0, N + 1, 3)),
+        da.groupby(x=BinGrouper(bins=np.arange(0, N + 1, 3))),
+    ]:
+        mean = g.mean()
+        expected = da.isel(x=slice(1, None)) - mean.isel(
+            x_bins=("x", [0, 0, 0, 1, 1, 1])
+        )
+        actual = g - mean
+        assert_identical(expected, actual)
 
 
 def test_groupby_math_nD_group() -> None:

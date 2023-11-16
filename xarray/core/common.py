@@ -1049,7 +1049,7 @@ class DataWithCoords(AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from xarray.core.dataarray import DataArray
-        from xarray.core.groupby import ResolvedGrouper, TimeResampler
+        from xarray.core.groupby import Resampler, ResolvedGrouper, TimeResampler
         from xarray.core.resample import RESAMPLE_DIM
 
         # note: the second argument (now 'skipna') use to be 'dim'
@@ -1079,15 +1079,19 @@ class DataWithCoords(AttrAccessMixin):
             name=RESAMPLE_DIM,
         )
 
-        grouper = TimeResampler(
-            freq=freq,
-            closed=closed,
-            label=label,
-            origin=origin,
-            offset=offset,
-            loffset=loffset,
-            base=base,
-        )
+        if isinstance(freq, str):
+            grouper = TimeResampler(
+                freq=freq,
+                closed=closed,
+                label=label,
+                origin=origin,
+                offset=offset,
+                loffset=loffset,
+                base=base,
+            )
+        else:
+            assert isinstance(freq, Resampler)
+            grouper = freq
 
         rgrouper = ResolvedGrouper(grouper, group, self)
 
