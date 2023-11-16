@@ -64,6 +64,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Writing to unaligned zarr chunks with ``region`` will now raise an error
+  (unless ``safe_chunks=False``); previously an error would only be raised on
+  new variables. (:pull:`8459`, :issue:`8371`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Port `bug fix from pandas <https://github.com/pandas-dev/pandas/pull/55283>`_
   to eliminate the adjustment of resample bin edges in the case that the
   resampling frequency has units of days and is greater than one day
