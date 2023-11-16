@@ -6680,6 +6680,74 @@ class TestDataset:
         with pytest.raises(UndefinedVariableError):
             ds.query(x="spam > 50")  # name not present
 
+    @pytest.mark.parametrize("parser", ["pandas", "python"])
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
+    )
+    def test_eval(self, backend, parser) -> None:
+        """Currently much more minimal testing that `query` above, and much of the setup
+        isn't used. But the risks are fairly low — `query` shares much of the code, and
+        the method is currently experimental."""
+
+        # setup test data
+        np.random.seed(42)
+        a = np.arange(0, 10, 1)
+        b = np.random.randint(0, 100, size=10)
+        c = np.linspace(0, 1, 20)
+        d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
+            object
+        )
+        e = np.arange(0, 10 * 20).reshape(10, 20)
+        f = np.random.normal(0, 1, size=(10, 20, 30))
+        if backend == "numpy":
+            ds = Dataset(
+                {
+                    "a": ("x", a),
+                    "b": ("x", b),
+                    "c": ("y", c),
+                    "d": ("z", d),
+                    "e": (("x", "y"), e),
+                    "f": (("x", "y", "z"), f),
+                },
+                coords={
+                    "a2": ("x", a),
+                    "b2": ("x", b),
+                    "c2": ("y", c),
+                    "d2": ("z", d),
+                    "e2": (("x", "y"), e),
+                    "f2": (("x", "y", "z"), f),
+                },
+            )
+        elif backend == "dask":
+            ds = Dataset(
+                {
+                    "a": ("x", da.from_array(a, chunks=3)),
+                    "b": ("x", da.from_array(b, chunks=3)),
+                    "c": ("y", da.from_array(c, chunks=7)),
+                    "d": ("z", da.from_array(d, chunks=12)),
+                    "e": (("x", "y"), da.from_array(e, chunks=(3, 7))),
+                    "f": (("x", "y", "z"), da.from_array(f, chunks=(3, 7, 12))),
+                },
+                coords={
+                    "a2": ("x", a),
+                    "b2": ("x", b),
+                    "c2": ("y", c),
+                    "d2": ("z", d),
+                    "e2": (("x", "y"), e),
+                    "f2": (("x", "y", "z"), f),
+                },
+            )
+
+        actual = ds.eval("a + 5", parser=parser)
+        expect = ds["a"] + 5
+        assert_identical(expect, actual)
+
+        # check pandas query syntax is supported
+        if parser == "pandas":
+            actual = ds.eval("(a2 > 5) and (b2 > 50)", parser=parser)
+            expect = (ds["a"] > 5) & (ds["b"] > 50)
+            assert_identical(expect, actual)
+
 
 # pytest tests — new tests should go here, rather than in the class.
 

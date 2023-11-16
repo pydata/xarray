@@ -9514,12 +9514,16 @@ class Dataset(
     def eval(
         self: T_Dataset,
         statement: str,
+        *,
         parser: QueryParserOptions = "pandas",
     ) -> T_Dataset | T_DataArray:
         """
-        Calculate an string-ified expression in the context of the dataset.
+        Calculate an expression supplied as a string in the context of the dataset.
 
-        Currently experimental, API may change.
+        This is currently experimental; the API may change particularly around
+        assignments, which currently returnn a ``Dataset`` with the additional variable.
+        Currently only the ``python`` engine is supported, which has the same
+        performance as executing in python.
 
         Parameters
         ----------
@@ -9528,13 +9532,14 @@ class Dataset(
 
         Returns
         -------
-        result : Dataset or DataArray, depending on whether ``statement`` contains an assignment.
+        result : Dataset or DataArray, depending on whether ``statement`` contains an
+        assignment.
 
         Examples
         --------
-        >>> a = np.arange(0, 5, 1)
-        >>> b = np.linspace(0, 1, 5)
-        >>> ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        >>> ds = xr.Dataset(
+        ...     {"a": ("x", np.arange(0, 5, 1)), "b": ("x", np.linspace(0, 1, 5))}
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 5)
@@ -9547,7 +9552,6 @@ class Dataset(
         <xarray.DataArray (x: 5)>
         array([0.  , 1.25, 2.5 , 3.75, 5.  ])
         Dimensions without coordinates: x
-
 
         >>> ds.eval("c = a + b")
         <xarray.Dataset>
@@ -9564,8 +9568,8 @@ class Dataset(
             resolvers=[self],
             target=self,
             parser=parser,
-            # TODO: Currently numexpr returns a numpy array. Allow numexpr (pass
-            # `engine` through like in `query`) and handle the result.
+            # Because numexpr returns a numpy array, using that engine results in
+            # different behavior. We'd be very open to a contribution handling this.
             engine="python",
         )
 
