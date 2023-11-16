@@ -40,7 +40,7 @@ jobs:
         shell: bash -l {0}
 
     env:
-      CONDA_ENV_FILE: ci/requirements/environment-py311.yml
+      CONDA_ENV_FILE: ci/requirements/environment.yml
       PYTHON_VERSION: "3.11"
 
     steps:
@@ -86,7 +86,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      CONDA_ENV_FILE: ci/requirements/environment-py311.yml
+      CONDA_ENV_FILE: ci/requirements/environment.yml
       PYTHON_VERSION: "3.11"
 
     steps:

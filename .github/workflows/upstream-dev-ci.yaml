@@ -58,7 +58,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: ci/requirements/environment-py311.yml
+          environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           create-args: >-
             python=${{ matrix.python-version }}
@@ -118,7 +118,7 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/provision-with-micromamba@v15
         with:
-          environment-file: ci/requirements/environment-py311.yml
+          environment-file: ci/requirements/environment.yml
           environment-name: xarray-tests
           extra-specs: |
             python=${{ matrix.python-version }}
