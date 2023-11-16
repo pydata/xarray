@@ -32,6 +32,8 @@ New Features
   By `Sam Levang <https://github.com/slevang>`_.
 - Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
   By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
+- Enable VLEN string fill_values, preserve VLEN string dtypes (:issue:`1647`, :issue:`7652`, :issue:`7868`, :pull:`7869`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
