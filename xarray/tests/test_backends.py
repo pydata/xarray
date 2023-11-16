@@ -69,6 +69,7 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
     requires_pydap,
@@ -3448,6 +3449,34 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
+@requires_h5netcdf_ros3
+class TestH5NetCDFDataRos3Driver(TestCommon):
+    engine: T_NetcdfEngine = "h5netcdf"
+    test_remote_dataset: str = (
+        "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    )
+
+    def test_get_variable_list(self) -> None:
+        with open_dataset(
+            self.test_remote_dataset,
+            engine="h5netcdf",
+            backend_kwargs={"driver": "ros3"},
+        ) as actual:
+            assert "Temperature" in list(actual)
+
+    def test_get_variable_list_empty_driver_kwds(self) -> None:
+        driver_kwds = {
+            "secret_id": b"",
+            "secret_key": b"",
+        }
+        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+
+        with open_dataset(
+            self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
+        ) as actual:
+            assert "Temperature" in list(actual)
+
+
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
 def readengine(request):
     return request.param
@@ -5210,3 +5239,198 @@ class TestNCZarr:
 def test_pickle_open_mfdataset_dataset():
     ds = open_example_mfdataset(["bears.nc"])
     assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+
+
+@requires_zarr
+class TestZarrRegionAuto:
+    def test_zarr_region_auto_all(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(tmp_path / "test.zarr", region="auto")
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_mixed(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(
+            tmp_path / "test.zarr", region={"x": "auto", "y": slice(6, 8)}
+        )
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_noncontiguous(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=[0, 2, 3], y=[5, 6])
+        with pytest.raises(ValueError):
+            ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+
+    def test_zarr_region_auto_new_coord_vals(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        x = np.arange(5, 55, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        with pytest.raises(KeyError):
+            ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+
+    def test_zarr_region_index_write(self, tmp_path):
+        from xarray.backends.zarr import ZarrStore
+
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        with patch.object(
+            ZarrStore,
+            "set_variables",
+            side_effect=ZarrStore.set_variables,
+            autospec=True,
+        ) as mock:
+            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+
+            # should write the data vars but never the index vars with auto mode
+            for call in mock.call_args_list:
+                written_variables = call.args[1].keys()
+                assert "test" in written_variables
+                assert "x" not in written_variables
+                assert "y" not in written_variables
+
+    def test_zarr_region_append(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        x_new = np.arange(40, 70, 10)
+        data_new = np.ones((3, 10))
+        ds_new = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data_new,
+                    dims=("x", "y"),
+                    coords={"x": x_new, "y": y},
+                )
+            }
+        )
+
+        # Don't allow auto region detection in append mode due to complexities in
+        # implementing the overlap logic and lack of safety with parallel writes
+        with pytest.raises(ValueError):
+            ds_new.to_zarr(
+                tmp_path / "test.zarr", mode="a", append_dim="x", region="auto"
+            )
+
+
+@requires_zarr
+def test_zarr_region_transpose(tmp_path):
+    x = np.arange(0, 50, 10)
+    y = np.arange(0, 20, 2)
+    data = np.ones((5, 10))
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                data,
+                dims=("x", "y"),
+                coords={"x": x, "y": y},
+            )
+        }
+    )
+    ds.to_zarr(tmp_path / "test.zarr")
+
+    ds_region = 1 + ds.isel(x=[0], y=[0]).transpose()
+    ds_region.to_zarr(
+        tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
+    )

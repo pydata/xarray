@@ -26,10 +26,25 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
+- Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
+  region to write in the original store. Also implement automatic transpose when dimension
+  order does not match the original store. (:issue:`7702`, :issue:`8421`, :pull:`8434`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
+  By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
+  `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
+- Following pandas, :py:meth:`infer_freq` will return ``"Y"``, ``"YS"``,
+  ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``, ``"ms"``, ``"us"``, or
+  ``"ns"`` instead of ``"A"``, ``"AS"``, ``"Q"``, ``"M"``, ``"H"``, ``"T"``,
+  ``"S"``, ``"L"``, ``"U"``, or ``"N"``.  This is to be consistent with the
+  deprecation of the latter frequency strings (:issue:`8394`, :pull:`8415`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Deprecations
@@ -42,6 +57,14 @@ Deprecations
   this was one place in the API where dimension positions were used.
   (:pull:`8341`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Following pandas, the frequency strings ``"A"``, ``"AS"``, ``"Q"``, ``"M"``,
+  ``"H"``, ``"T"``, ``"S"``, ``"L"``, ``"U"``, and ``"N"`` are deprecated in
+  favor of ``"Y"``, ``"YS"``, ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``,
+  ``"ms"``, ``"us"``, and ``"ns"``, respectively.  These strings are used, for
+  example, in :py:func:`date_range`, :py:func:`cftime_range`,
+  :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample` among others
+  (:issue:`8394`, :pull:`8415`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Rename :py:meth:`Dataset.to_array` to  :py:meth:`Dataset.to_dataarray` for
   consistency with :py:meth:`DataArray.to_dataset` &
   :py:func:`open_dataarray` functions. This is a "soft" deprecation — the
@@ -65,9 +88,14 @@ Bug fixes
 - Fix to once again support date offset strings as input to the loffset
   parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
   By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
+- Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
+  if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+- Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Internal Changes
