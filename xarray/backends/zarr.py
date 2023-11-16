@@ -192,7 +192,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                         f"Writing this array in parallel with dask could lead to corrupted data."
                     )
                     if safe_chunks:
-                        raise NotImplementedError(
+                        raise ValueError(
                             base_error
                             + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
