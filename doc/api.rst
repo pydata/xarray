@@ -27,6 +27,7 @@ Top-level functions
    combine_nested
    where
    infer_freq
+   initialize_zarr
    full_like
    zeros_like
    ones_like

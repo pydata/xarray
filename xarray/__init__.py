@@ -9,7 +9,7 @@ from xarray.backends.api import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.zarr import open_zarr
+from xarray.backends.zarr import initialize_zarr, open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq
@@ -75,6 +75,7 @@ __all__ = (
     "full_like",
     "get_options",
     "infer_freq",
+    "initialize_zarr",
     "load_dataarray",
     "load_dataset",
     "map_blocks",

@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.common import zeros_like
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import (
@@ -34,9 +35,95 @@ if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
 
-
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+
+
+def initialize_zarr(
+    store,
+    ds: Dataset,
+    *,
+    region_dims: Iterable[Hashable] | None = None,
+    mode: Literal["w", "w-"] = "w-",
+    **kwargs,
+) -> Dataset:
+    """
+    Initialize a Zarr store with metadata.
+
+    This function initializes a Zarr store with metadata that describes the entire datasets.
+    If ``region_dims`` is specified, it will also
+    1. Write variables that don't contain any of ``region_dims``, and
+    2. Return a dataset with variables that do contain one or more of ``region_dims``.
+       This dataset can be used for region writes in parallel.
+
+    Parameters
+    ----------
+    store : MutableMapping or str
+        Zarr store to write to.
+    ds : Dataset
+        Dataset to write.
+    region_dims : Iterable[Hashable], optional
+        An iterable of dimension names that will be passed to the ``region``
+        kwarg of ``to_zarr`` later.
+    mode : {'w', 'w-'}
+        Write mode for initializing the store.
+
+    Returns
+    -------
+    Dataset
+        Dataset containing variables with one or more ``region_dims``
+        dimensions. Use this for writing to the store in parallel later.
+
+    Raises
+    ------
+    ValueError
+
+    """
+
+    if "compute" in kwargs:
+        raise ValueError("The ``compute`` kwarg is not supported in `initialize_zarr`.")
+
+    if not ds.chunks:
+        raise ValueError("This function should be used with chunked Datasets.")
+
+    if mode not in ["w", "w-"]:
+        raise ValueError(
+            f"Only mode='w' or mode='w-' is allowed for initialize_zarr. Received mode={mode!r}"
+        )
+
+    # TODO: what should we do here.
+    # compute=False only skips dask variables.
+    # - We could reaplce all dask variables with zeros_like
+    # - and then write all other variables eagerly.
+    # Right now we do two writes for eager variables
+    template = zeros_like(ds)
+    template.to_zarr(store, mode=mode, **kwargs, compute=False)
+
+    if region_dims:
+        after_drop = ds.drop_dims(region_dims)
+
+        # we have to remove the dropped variables from the encoding dictionary :/
+        new_encoding = kwargs.pop("encoding", None)
+        if new_encoding:
+            new_encoding = {k: v for k, v in new_encoding.items() if k in after_drop}
+
+        after_drop.to_zarr(
+            store, **kwargs, encoding=new_encoding, compute=True, mode="a"
+        )
+
+        # can't use drop_dims since that will also remove any variable
+        # with any of the dims to be dropped
+        # even if they also have one or more of region_dims
+        dims_to_drop = set(ds.dims) - set(region_dims)
+        vars_to_drop = [
+            name
+            for name, var in ds._variables.items()
+            if set(var.dims).issubset(dims_to_drop)
+        ]
+        return ds.drop_vars(vars_to_drop)
+
+    else:
+        return ds
 
 
 def encode_zarr_attr_value(value):

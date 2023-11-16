@@ -48,6 +48,7 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.backends.zarr import initialize_zarr
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
@@ -5434,3 +5435,57 @@ def test_zarr_region_transpose(tmp_path):
     ds_region.to_zarr(
         tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
     )
+
+
+@requires_dask
+@requires_zarr
+def test_initialize_zarr(tmp_path) -> None:
+    # TODO:
+    # 1. with encoding
+    # 2. with regions
+    # 3. w-
+    # 4. mode = r?
+    # 5. mode=w+?
+    # 5. no region_dims
+    x = np.arange(0, 50, 10)
+    y = np.arange(0, 20, 2)
+    data = dask.array.ones((5, 10), chunks=(1, -1))
+    ds = xr.Dataset(
+        {
+            "xy": (("x", "y"), data),
+            "xonly": ("x", data[:, 0]),
+            "yonly": ("y", data[0, :]),
+            "eager_xonly": ("x", data[:, 0].compute()),
+            "eager_yonly": ("y", data[0, :].compute().astype(int)),
+            "scalar": 2,
+        },
+        coords={"x": x, "y": y},
+    )
+    store = tmp_path / "foo.zarr"
+
+    with pytest.raises(ValueError, match="Only mode"):
+        initialize_zarr(store, ds, mode="r")
+
+    expected_on_disk = ds.copy(deep=True).assign(
+        {
+            # chunked variables are all NaNs (really fill_value?)
+            "xy": xr.full_like(ds.xy, fill_value=np.nan),
+            "xonly": xr.full_like(ds.xonly, fill_value=np.nan),
+            # eager variables with region_dim are all zeros (since we do zeros_like)
+            "eager_xonly": xr.full_like(ds.xonly, fill_value=0),
+            # eager variables without region_dim are identical
+            # but are subject to two writes, first zeros then actual values
+            "eager_yonly": ds.yonly,
+        }
+    )
+    expected_after_init = ds.drop_vars(["yonly", "eager_yonly", "y", "scalar"])
+    after_init = initialize_zarr(store, ds, region_dims=("x",))
+    assert_identical(expected_after_init, after_init)
+
+    with xr.open_zarr(store) as actual:
+        assert_identical(expected_on_disk, actual)
+
+    for i in range(ds.sizes["x"]):
+        after_init.isel(x=[i]).to_zarr(store, region={"x": slice(i, i + 1)})
+    with xr.open_zarr(store) as actual:
+        assert_identical(ds, actual)
