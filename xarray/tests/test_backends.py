@@ -5435,9 +5435,10 @@ def test_zarr_region_transpose(tmp_path):
 
 
 @requires_zarr
-def test_zarr_region_chunk_align(tmp_path):
+@requires_dask
+def test_zarr_region_chunk_partial(tmp_path):
     """
-    Check that writing to unaligned chunks with `region` fails, assuming `safe_chunks=False`.
+    Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
     """
     ds = (
         xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))
