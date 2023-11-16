@@ -5434,3 +5434,22 @@ def test_zarr_region_transpose(tmp_path):
     ds_region.to_zarr(
         tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
     )
+
+
+@requires_zarr
+def test_zarr_region_chunk_align(tmp_path):
+    """
+    Check that writing to unaligned chunks with `region` fails, assuming `safe_chunks=False`.
+    """
+    ds = (
+        xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))
+        .rename("var1")
+        .to_dataset()
+    )
+
+    ds.chunk(5).to_zarr(tmp_path / "foo.zarr", compute=False, mode="w")
+    with pytest.raises(ValueError):
+        for r in range(ds.sizes["a"]):
+            ds.chunk(3).isel(a=[r]).to_zarr(
+                tmp_path / "foo.zarr", region=dict(a=slice(r, r + 1))
+            )

@@ -679,6 +679,17 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=check,
+                name=vn,
+                safe_chunks=self._safe_chunks,
+            )
+
             if name in self.zarr_group:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
@@ -709,9 +720,6 @@ class ZarrStore(AbstractWritableDataStore):
                     zarr_array = self.zarr_group[name]
             else:
                 # new variable
-                encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
-                )
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
                 encoded_attrs[DIMENSION_KEY] = dims
