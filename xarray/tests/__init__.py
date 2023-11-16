@@ -67,7 +67,6 @@ has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
-has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
@@ -94,6 +93,10 @@ requires_scipy_or_netCDF4 = pytest.mark.skipif(
 has_pandas_version_two = Version(pd.__version__).major >= 2
 requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
+)
+has_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
+requires_h5netcdf_ros3 = pytest.mark.skipif(
+    not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
 )
 
 # change some global options for tests

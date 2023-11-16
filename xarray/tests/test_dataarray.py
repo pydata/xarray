@@ -12,7 +12,6 @@ from typing import Any, Final, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -31,7 +30,6 @@ from xarray import (
     set_options,
 )
 from xarray.coding.times import CFDatetimeCoder
-from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.coordinates import Coordinates
@@ -3663,111 +3661,6 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
-    @pytest.mark.skipif(
-        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
-        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
-    )
-    def test_to_and_from_cdms2_classic(self) -> None:
-        """Classic with 1D axes"""
-        pytest.importorskip("cdms2")
-
-        original = DataArray(
-            np.arange(6).reshape(2, 3),
-            [
-                ("distance", [-2, 2], {"units": "meters"}),
-                ("time", pd.date_range("2000-01-01", periods=3)),
-            ],
-            name="foo",
-            attrs={"baz": 123},
-        )
-        expected_coords = [
-            IndexVariable("distance", [-2, 2]),
-            IndexVariable("time", [0, 1, 2]),
-        ]
-        with pytest.deprecated_call(match=".*cdms2"):
-            actual = original.to_cdms2()
-        assert_array_equal(actual.asma(), original)
-        assert actual.id == original.name
-        assert tuple(actual.getAxisIds()) == original.dims
-        for axis, coord in zip(actual.getAxisList(), expected_coords):
-            assert axis.id == coord.name
-            assert_array_equal(axis, coord.values)
-        assert actual.baz == original.attrs["baz"]
-
-        component_times = actual.getAxis(1).asComponentTime()
-        assert len(component_times) == 3
-        assert str(component_times[0]) == "2000-1-1 0:0:0.0"
-
-        with pytest.deprecated_call(match=".*cdms2"):
-            roundtripped = DataArray.from_cdms2(actual)
-        assert_identical(original, roundtripped)
-
-        back = from_cdms2(actual)
-        assert original.dims == back.dims
-        assert original.coords.keys() == back.coords.keys()
-        for coord_name in original.coords.keys():
-            assert_array_equal(original.coords[coord_name], back.coords[coord_name])
-
-    @pytest.mark.skipif(
-        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
-        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
-    )
-    def test_to_and_from_cdms2_sgrid(self) -> None:
-        """Curvilinear (structured) grid
-
-        The rectangular grid case is covered by the classic case
-        """
-        pytest.importorskip("cdms2")
-
-        lonlat = np.mgrid[:3, :4]
-        lon = DataArray(lonlat[1], dims=["y", "x"], name="lon")
-        lat = DataArray(lonlat[0], dims=["y", "x"], name="lat")
-        x = DataArray(np.arange(lon.shape[1]), dims=["x"], name="x")
-        y = DataArray(np.arange(lon.shape[0]), dims=["y"], name="y")
-        original = DataArray(
-            lonlat.sum(axis=0),
-            dims=["y", "x"],
-            coords=dict(x=x, y=y, lon=lon, lat=lat),
-            name="sst",
-        )
-        with pytest.deprecated_call():
-            actual = original.to_cdms2()
-        assert tuple(actual.getAxisIds()) == original.dims
-        assert_array_equal(original.coords["lon"], actual.getLongitude().asma())
-        assert_array_equal(original.coords["lat"], actual.getLatitude().asma())
-
-        back = from_cdms2(actual)
-        assert original.dims == back.dims
-        assert set(original.coords.keys()) == set(back.coords.keys())
-        assert_array_equal(original.coords["lat"], back.coords["lat"])
-        assert_array_equal(original.coords["lon"], back.coords["lon"])
-
-    @pytest.mark.skipif(
-        Version(np.__version__) > Version("1.24") or sys.version_info[:2] > (3, 10),
-        reason="cdms2 is unmaintained and does not support newer `numpy` or python versions",
-    )
-    def test_to_and_from_cdms2_ugrid(self) -> None:
-        """Unstructured grid"""
-        pytest.importorskip("cdms2")
-
-        lon = DataArray(np.random.uniform(size=5), dims=["cell"], name="lon")
-        lat = DataArray(np.random.uniform(size=5), dims=["cell"], name="lat")
-        cell = DataArray(np.arange(5), dims=["cell"], name="cell")
-        original = DataArray(
-            np.arange(5), dims=["cell"], coords={"lon": lon, "lat": lat, "cell": cell}
-        )
-        with pytest.deprecated_call(match=".*cdms2"):
-            actual = original.to_cdms2()
-        assert tuple(actual.getAxisIds()) == original.dims
-        assert_array_equal(original.coords["lon"], actual.getLongitude().getValue())
-        assert_array_equal(original.coords["lat"], actual.getLatitude().getValue())
-
-        back = from_cdms2(actual)
-        assert set(original.dims) == set(back.dims)
-        assert set(original.coords.keys()) == set(back.coords.keys())
-        assert_array_equal(original.coords["lat"], back.coords["lat"])
-        assert_array_equal(original.coords["lon"], back.coords["lon"])
-
     def test_to_dataset_whole(self) -> None:
         unnamed = DataArray([1, 2], dims="x")
         with pytest.raises(ValueError, match=r"unable to convert unnamed"):
@@ -3793,15 +3686,23 @@ class TestDataArray:
             actual = named.to_dataset("bar")
 
     def test_to_dataset_split(self) -> None:
-        array = DataArray([1, 2, 3], coords=[("x", list("abc"))], attrs={"a": 1})
-        expected = Dataset({"a": 1, "b": 2, "c": 3}, attrs={"a": 1})
+        array = DataArray(
+            [[1, 2], [3, 4], [5, 6]],
+            coords=[("x", list("abc")), ("y", [0.0, 0.1])],
+            attrs={"a": 1},
+        )
+        expected = Dataset(
+            {"a": ("y", [1, 2]), "b": ("y", [3, 4]), "c": ("y", [5, 6])},
+            coords={"y": [0.0, 0.1]},
+            attrs={"a": 1},
+        )
         actual = array.to_dataset("x")
         assert_identical(expected, actual)
 
         with pytest.raises(TypeError):
             array.to_dataset("x", name="foo")
 
-        roundtripped = actual.to_array(dim="x")
+        roundtripped = actual.to_dataarray(dim="x")
         assert_identical(array, roundtripped)
 
         array = DataArray([1, 2, 3], dims="x")
@@ -3818,9 +3719,54 @@ class TestDataArray:
         array = DataArray([1, 2, 3], coords=[("x", dates)], attrs={"a": 1})
 
         # convert to dateset and back again
-        result = array.to_dataset("x").to_array(dim="x")
+        result = array.to_dataset("x").to_dataarray(dim="x")
 
         assert_equal(array, result)
+
+    def test_to_dataset_coord_value_is_dim(self) -> None:
+        # github issue #7823
+
+        array = DataArray(
+            np.zeros((3, 3)),
+            coords={
+                # 'a' is both a coordinate value and the name of a coordinate
+                "x": ["a", "b", "c"],
+                "a": [1, 2, 3],
+            },
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape("dimension 'x' would produce the variables ('a',)")
+                + ".*"
+                + re.escape("DataArray.rename(a=...) or DataArray.assign_coords(x=...)")
+            ),
+        ):
+            array.to_dataset("x")
+
+        # test error message formatting when there are multiple ambiguous
+        # values/coordinates
+        array2 = DataArray(
+            np.zeros((3, 3, 2)),
+            coords={
+                "x": ["a", "b", "c"],
+                "a": [1, 2, 3],
+                "b": [0.0, 0.1],
+            },
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=(
+                re.escape("dimension 'x' would produce the variables ('a', 'b')")
+                + ".*"
+                + re.escape(
+                    "DataArray.rename(a=..., b=...) or DataArray.assign_coords(x=...)"
+                )
+            ),
+        ):
+            array2.to_dataset("x")
 
     def test__title_for_slice(self) -> None:
         array = DataArray(

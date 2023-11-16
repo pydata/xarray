@@ -154,6 +154,8 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
         storage_options=None,
     ):
         if isinstance(filename, bytes):
@@ -174,8 +176,11 @@ class H5NetCDFStore(WritableCFDataStore):
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
             "decode_vlen_strings": decode_vlen_strings,
+            "driver": driver,
             "storage_options": storage_options,
         }
+        if driver_kwds is not None:
+            kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
 
@@ -413,6 +418,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
         storage_options=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -424,6 +431,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
             decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
             storage_options=storage_options,
         )
 
