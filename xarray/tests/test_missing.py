@@ -92,33 +92,43 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
     return da, df
 
 
+@pytest.mark.parametrize("fill_value", [None, np.nan, 47.11])
+@pytest.mark.parametrize(
+    "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+)
 @requires_scipy
-def test_interpolate_pd_compat():
+def test_interpolate_pd_compat(method, fill_value) -> None:
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
     frac_nans = [0, 0.5, 1]
-    methods = ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 
-    for shape, frac_nan, method in itertools.product(shapes, frac_nans, methods):
+    for shape, frac_nan in itertools.product(shapes, frac_nans):
         da, df = make_interpolate_example_data(shape, frac_nan)
 
         for dim in ["time", "x"]:
-            actual = da.interpolate_na(method=method, dim=dim, fill_value=np.nan)
+            actual = da.interpolate_na(method=method, dim=dim, fill_value=fill_value)
+            # need limit_direction="both" here, to let pandas fill
+            # in both directions instead of default forward direction only
             expected = df.interpolate(
                 method=method,
                 axis=da.get_axis_num(dim),
+                limit_direction="both",
+                fill_value=fill_value,
             )
-            # Note, Pandas does some odd things with the left/right fill_value
-            # for the linear methods. This next line inforces the xarray
-            # fill_value convention on the pandas output. Therefore, this test
-            # only checks that interpolated values are the same (not nans)
-            expected.values[pd.isnull(actual.values)] = np.nan
+
+            if method == "linear":
+                # Note, Pandas does not take left/right fill_value into account
+                # for the numpy linear methods.
+                # see https://github.com/pandas-dev/pandas/issues/55144
+                # This aligns the pandas output with the xarray output
+                expected.values[pd.isnull(actual.values)] = np.nan
+                expected.values[actual.values == fill_value] = fill_value
 
             np.testing.assert_allclose(actual.values, expected.values)
 
 
 @requires_scipy
-@pytest.mark.parametrize("method", ["barycentric", "krog", "pchip", "spline", "akima"])
-def test_scipy_methods_function(method):
+@pytest.mark.parametrize("method", ["barycentric", "krogh", "pchip", "spline", "akima"])
+def test_scipy_methods_function(method) -> None:
     # Note: Pandas does some wacky things with these methods and the full
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
@@ -635,12 +645,12 @@ def test_interpolate_na_max_gap_errors(da_time):
     with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
-    da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
+    da_time["t"] = pd.date_range("2001-01-01", freq="h", periods=11)
     with pytest.raises(TypeError, match=r"Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
     with pytest.raises(TypeError, match=r"Expected integer or floating point"):
-        da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
+        da_time.interpolate_na("t", max_gap="1h", use_coordinate=False)
 
     with pytest.raises(ValueError, match=r"Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
@@ -653,12 +663,12 @@ def test_interpolate_na_max_gap_errors(da_time):
 )
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
-    "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
+    "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
 )
 def test_interpolate_na_max_gap_time_specifier(
     da_time, max_gap, transform, time_range_func
 ):
-    da_time["t"] = time_range_func("2001-01-01", freq="H", periods=11)
+    da_time["t"] = time_range_func("2001-01-01", freq="h", periods=11)
     expected = transform(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )

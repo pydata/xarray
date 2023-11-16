@@ -43,6 +43,7 @@ from xarray.core.utils import (
     peek_at,
 )
 from xarray.core.variable import IndexVariable, Variable
+from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -249,6 +250,10 @@ class _DummyGroup(Generic[T_Xarray]):
         return DataArray(
             data=self.data, dims=(self.name,), coords=self.coords, name=self.name
         )
+
+    def to_array(self) -> DataArray:
+        """Deprecated version of to_dataarray."""
+        return self.to_dataarray()
 
 
 T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
@@ -699,7 +704,7 @@ class GroupBy(Generic[T_Xarray]):
 
     _groups: dict[GroupKey, GroupIndex] | None
     _dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None
-    _sizes: Frozen[Hashable, int] | None
+    _sizes: Mapping[Hashable, int] | None
 
     def __init__(
         self,
@@ -746,7 +751,7 @@ class GroupBy(Generic[T_Xarray]):
         self._sizes = None
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -988,7 +993,7 @@ class GroupBy(Generic[T_Xarray]):
             if kwargs["func"] not in ["sum", "prod"]:
                 raise TypeError("Received an unexpected keyword argument 'min_count'")
             elif kwargs["min_count"] is None:
-                # set explicitly to avoid unncessarily accumulating count
+                # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
 
         # weird backcompat
@@ -1092,10 +1097,12 @@ class GroupBy(Generic[T_Xarray]):
         """
         return ops.fillna(self, value)
 
+    @_deprecate_positional_args("v2023.10.0")
     def quantile(
         self,
         q: ArrayLike,
         dim: Dims = None,
+        *,
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,

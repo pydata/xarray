@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.times import infer_calendar_name
+from xarray.core import duck_array_ops
 from xarray.core.common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
@@ -50,7 +51,7 @@ def _access_through_cftimeindex(values, name):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if not isinstance(values, CFTimeIndex):
-        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
     else:
         values_as_cftimeindex = values
     if name == "season":
@@ -69,10 +70,12 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
-    values_as_series = pd.Series(values.ravel(), copy=False)
+    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif name == "total_seconds":
+        field_values = values_as_series.dt.total_seconds().values
     elif name == "isocalendar":
         # special NaT-handling can be removed when
         # https://github.com/pandas-dev/pandas/issues/54657 is resolved
@@ -148,10 +151,10 @@ def _round_through_series_or_index(values, name, freq):
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if is_np_datetime_like(values.dtype):
-        values_as_series = pd.Series(values.ravel(), copy=False)
+        values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
         method = getattr(values_as_series.dt, name)
     else:
-        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
         method = getattr(values_as_cftimeindex, name)
 
     field_values = method(freq=freq).values
@@ -195,7 +198,7 @@ def _strftime_through_cftimeindex(values, date_format: str):
     """
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    values_as_cftimeindex = CFTimeIndex(values.ravel())
+    values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
 
     field_values = values_as_cftimeindex.strftime(date_format)
     return field_values.values.reshape(values.shape)
@@ -205,7 +208,7 @@ def _strftime_through_series(values, date_format: str):
     """Coerce an array of datetime-like values to a pandas Series and
     apply string formatting
     """
-    values_as_series = pd.Series(values.ravel(), copy=False)
+    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     strs = values_as_series.dt.strftime(date_format)
     return strs.values.reshape(values.shape)
 
@@ -573,6 +576,13 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
            43200, 64800])
     Coordinates:
       * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt.total_seconds()
+    <xarray.DataArray 'total_seconds' (time: 20)>
+    array([ 86400., 108000., 129600., 151200., 172800., 194400., 216000.,
+           237600., 259200., 280800., 302400., 324000., 345600., 367200.,
+           388800., 410400., 432000., 453600., 475200., 496800.])
+    Coordinates:
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     """
 
     @property
@@ -595,12 +605,17 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
         """Number of nanoseconds (>= 0 and less than 1 microsecond) for each element"""
         return self._date_field("nanoseconds", np.int64)
 
+    # Not defined as a property in order to match the Pandas API
+    def total_seconds(self) -> T_DataArray:
+        """Total duration of each element expressed in seconds."""
+        return self._date_field("total_seconds", np.float64)
+
 
 class CombinedDatetimelikeAccessor(
     DatetimeAccessor[T_DataArray], TimedeltaAccessor[T_DataArray]
 ):
     def __new__(cls, obj: T_DataArray) -> CombinedDatetimelikeAccessor:
-        # CombinedDatetimelikeAccessor isn't really instatiated. Instead
+        # CombinedDatetimelikeAccessor isn't really instantiated. Instead
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
