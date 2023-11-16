@@ -739,7 +739,7 @@ def test_datetime_interp_noerror() -> None:
     xi = xr.DataArray(
         np.linspace(1, 3, 50),
         dims=["time"],
-        coords={"time": pd.date_range("01-01-2001", periods=50, freq="H")},
+        coords={"time": pd.date_range("01-01-2001", periods=50, freq="h")},
     )
     a.interp(x=xi, time=xi.time)  # should not raise an error
 

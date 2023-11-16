@@ -2319,7 +2319,7 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
 
     x = xr.DataArray(
-        xr.date_range(date, freq="1S", periods=3, use_cftime=True),
+        xr.date_range(date, freq="1s", periods=3, use_cftime=True),
         dims="x",
     )
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
@@ -2339,7 +2339,7 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
         xr.DataArray(
             [0, 1e9, 2e9],
             dims="x",
-            coords={"x": xr.date_range(date, freq="1S", periods=3, use_cftime=True)},
+            coords={"x": xr.date_range(date, freq="1s", periods=3, use_cftime=True)},
         )
         + offset
     )

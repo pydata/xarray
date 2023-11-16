@@ -4037,7 +4037,7 @@ class TestDataset:
 
     def test_virtual_variable_same_name(self) -> None:
         # regression test for GH367
-        times = pd.date_range("2000-01-01", freq="H", periods=5)
+        times = pd.date_range("2000-01-01", freq="h", periods=5)
         data = Dataset({"time": times})
         actual = data["time.time"]
         expected = DataArray(times.time, [("time", times)], name="time")
