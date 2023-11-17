@@ -5251,6 +5251,7 @@ def test_zarr_closing_internal_zip_store():
         assert_identical(original_da, loaded_da)
 
 
+@requires_zarr
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
         x = np.arange(0, 50, 10)
