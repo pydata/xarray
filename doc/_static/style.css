@@ -7,6 +7,11 @@ table.docutils td {
     word-wrap: break-word;
 }
 
+div.bd-header-announcement {
+  background-color: unset;
+  color: #000;
+}
+
 /* Reduce left and right margins */
 
 .container, .container-lg, .container-md, .container-sm, .container-xl {

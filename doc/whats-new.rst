@@ -14,10 +14,24 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.10.2:
+.. _whats-new.2023.11.0:
 
-v2023.10.2 (unreleased)
------------------------
+v2023.11.0 (Nov 16, 2023)
+-------------------------
+
+
+.. tip::
+
+     `This is our 10th year anniversary release! <https://github.com/pydata/xarray/discussions/8462>`_ Thank you for your love and support.
+
+
+This release brings the ability to use ``opt_einsum`` for :py:func:`xarray.dot` by default,
+support for auto-detecting ``region`` when writing partial datasets to Zarr, and the use of h5py
+drivers with ``h5netcdf``.
+
+Thanks to the 19 contributors to this release:
+Aman Bagrecha, Anderson Banihirwe, Ben Mares, Deepak Cherian, Dimitri Papadopoulos Orfanos, Ezequiel Cimadevilla Alvarez,
+Illviljan, Justus Magin, Katelyn FitzGerald, Kai Muehlbauer, Martin Durant, Maximilian Roos, Metamess, Sam Levang, Spencer Clark, Tom Nicholas, mgunyho, templiert
 
 New Features
 ~~~~~~~~~~~~
@@ -99,11 +113,6 @@ Documentation
 ~~~~~~~~~~~~~
 - Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
 
 .. _whats-new.2023.10.1:
 
