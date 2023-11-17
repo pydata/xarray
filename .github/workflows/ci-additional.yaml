@@ -41,7 +41,7 @@ jobs:
 
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: "3.11"
 
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +87,7 @@ jobs:
         shell: bash -l {0}
     env:
       CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.10"
+      PYTHON_VERSION: "3.11"
 
     steps:
       - uses: actions/checkout@v4
@@ -332,7 +332,7 @@ jobs:
         with:
           environment-name: xarray-tests
           create-args: >-
-            python=3.10
+            python=3.11
             pyyaml
             conda
             python-dateutil
