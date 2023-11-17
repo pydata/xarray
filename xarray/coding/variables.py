@@ -564,7 +564,7 @@ class NonStringCoder(VariableCoder):
         raise NotImplementedError()
 
 
-class ObjectStringCoder(VariableCoder):
+class ObjectVLenStringCoder(VariableCoder):
     def encode(self):
         return NotImplementedError
 

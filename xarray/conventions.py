@@ -266,7 +266,7 @@ def decode_cf_variable(
         var = strings.EncodedStringCoder().decode(var)
 
     if original_dtype == object:
-        var = variables.ObjectStringCoder().decode(var)
+        var = variables.ObjectVLenStringCoder().decode(var)
         original_dtype = var.dtype
 
     if mask_and_scale:
