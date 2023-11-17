@@ -63,7 +63,14 @@ def _importorskip(
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_pydap, requires_pydap = _importorskip("pydap.client")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="'cgi' is deprecated and slated for removal in Python 3.13",
+        category=DeprecationWarning,
+    )
+
+    has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
