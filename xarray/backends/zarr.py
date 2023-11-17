@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from collections.abc import Hashable, Iterable
+from collections.abc import Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -31,6 +31,8 @@ from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
+
+    import zarr
 
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
@@ -124,6 +126,79 @@ def initialize_zarr(
 
     else:
         return ds
+
+
+def add_array(vn: str, var: Variable, group: zarr.Group, is_coord: bool) -> None:
+    """
+    Add an array to the Zarr group after encoding it and its attributes
+    """
+    name = _encode_variable_name(vn)
+    var = encode_zarr_variable(var)
+
+    # handle the fill value
+    fill_value = var.attrs.pop("_FillValue", None)
+    if var.encoding == {"_FillValue": None} and fill_value is None:
+        var.encoding = {}
+
+    # encode the variable
+    encoding = extract_zarr_variable_encoding(var)
+
+    # create the array
+    arr = group.create(
+        name, shape=var.shape, dtype=var.dtype, fill_value=fill_value, **encoding
+    )
+
+    # handle the attributes
+    attrs = {DIMENSION_KEY: var.dims, **var.attrs}
+    encoded_attrs = {k: encode_zarr_attr_value(v) for k, v in attrs.items()}
+    _put_attrs(arr, encoded_attrs)
+
+    # write the data if this is a dimension coordinate
+    if is_coord:
+        arr[:] = var.data
+
+
+def init_zarr_v2(ds, store: MutableMapping | None = None) -> MutableMapping:
+    """
+    Initialize a Zarr store with metadata including dimension coordinates
+
+    Parameters
+    ----------
+    ds : Dataset
+    store : MutableMapping (optional)
+        Target store. If not provided, a temporary in-memory store will be created.
+    """
+    import zarr
+
+    temp_store = zarr.MemoryStore()
+    if store is None:
+        store = temp_store
+
+    # encode the dataset (importantly, coordinates)
+    variables, attrs = conventions.encode_dataset_coordinates(ds)
+
+    # create the group
+    group = zarr.open_group(store=temp_store)
+    # set the group's attributes
+    _put_attrs(group, attrs)
+
+    # add the arrays
+    for k, v in variables.items():
+        is_coord = k in ds.dims
+        add_array(k, v, group, is_coord)
+
+    # consolidate metadata
+    # TODO: this should be optional
+    zarr.consolidate_metadata(temp_store)
+
+    if store is not temp_store:
+        # if a store was provided, flush the temp store there at once
+        try:
+            store.setitems(temp_store)
+        except AttributeError:  # not all stores have setitems :(
+            store.update(temp_store)
+
+    return store
 
 
 def encode_zarr_attr_value(value):
