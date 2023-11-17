@@ -414,7 +414,7 @@ def decode_cf_variables(
 
     if isinstance(keep_variables, str):
         keep_variables = [keep_variables]
-        keep_variables = set(keep_variables)
+    keep_variables = set(keep_variables)
 
     # Time bounds coordinates might miss the decoding attributes
     if decode_times:
