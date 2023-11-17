@@ -23,9 +23,9 @@ This release brings the ability to use ``opt_einsum`` for :py:func:`xarray.dot` 
 support for auto-detecting ``region`` when writing partial datasets to Zarr, and the use of h5py
 drivers with ``h5netcdf``.
 
-Thanks to the 17 contributors to this release:
+Thanks to the 19 contributors to this release:
 Aman Bagrecha, Anderson Banihirwe, Ben Mares, Deepak Cherian, Dimitri Papadopoulos Orfanos, Ezequiel Cimadevilla Alvarez,
-Illviljan, Justus Magin, Katelyn FitzGerald, Martin Durant, Maximilian Roos, Metamess, Sam Levang, Spencer Clark, Tom Nicholas, mgunyho, templiert
+Illviljan, Justus Magin, Katelyn FitzGerald, Kai Muehlbauer, Martin Durant, Maximilian Roos, Metamess, Sam Levang, Spencer Clark, Tom Nicholas, mgunyho, templiert
 
 New Features
 ~~~~~~~~~~~~
