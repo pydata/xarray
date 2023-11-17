@@ -22,7 +22,7 @@ v2023.11.0 (Nov 16, 2023)
 
 .. tip::
 
-     `This is our 10th year anniversary release! <https://github.com/pydata/xarray/discussions/8462>`_
+     `This is our 10th year anniversary release! <https://github.com/pydata/xarray/discussions/8462>`_. Thank you for your love and support.
 
 
 This release brings the ability to use ``opt_einsum`` for :py:func:`xarray.dot` by default,
