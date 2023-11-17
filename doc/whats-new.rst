@@ -91,6 +91,9 @@ Bug fixes
 - Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
   if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Fix for :py:meth:`DataArray.to_zarr` & :py:meth:`Dataset.to_zarr` to close
+  the created zarr store when passing a path with `.zip` extension (:pull:`8425`).
+  By `Carl Andersson <https://github.com/CarlAndersson>_`.
 
 Documentation
 ~~~~~~~~~~~~~
