@@ -40,14 +40,12 @@ Breaking changes
 - drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
   `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
   By `Justus Magin <https://github.com/keewis>`_.
-
 - Following pandas, :py:meth:`infer_freq` will return ``"Y"``, ``"YS"``,
   ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``, ``"ms"``, ``"us"``, or
   ``"ns"`` instead of ``"A"``, ``"AS"``, ``"Q"``, ``"M"``, ``"H"``, ``"T"``,
   ``"S"``, ``"L"``, ``"U"``, or ``"N"``.  This is to be consistent with the
   deprecation of the latter frequency strings (:issue:`8394`, :pull:`8415`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
-  By `Justus Magin <https://github.com/keewis`_.
 - Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Minimum supported versions for the following packages have changed: ``h5py >=3.7``, ``h5netcdf>=1.1``.
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
