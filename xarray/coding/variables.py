@@ -562,3 +562,15 @@ class NonStringCoder(VariableCoder):
 
     def decode(self):
         raise NotImplementedError()
+
+
+class ObjectVLenStringCoder(VariableCoder):
+    def encode(self):
+        return NotImplementedError
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.dtype == object and variable.encoding.get("dtype", False) == str:
+            variable = variable.astype(variable.encoding["dtype"])
+            return variable
+        else:
+            return variable

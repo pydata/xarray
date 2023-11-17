@@ -490,16 +490,6 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         fill_value = attrs.pop("_FillValue", None)
 
-        if datatype is str and fill_value is not None:
-            raise NotImplementedError(
-                "netCDF4 does not yet support setting a fill value for "
-                "variable-length strings "
-                "(https://github.com/Unidata/netcdf4-python/issues/730). "
-                f"Either remove '_FillValue' from encoding on variable {name!r} "
-                "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type."
-            )
-
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )

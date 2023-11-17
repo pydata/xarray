@@ -271,15 +271,6 @@ class H5NetCDFStore(WritableCFDataStore):
         dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop("_FillValue", None)
-        if dtype is str and fillvalue is not None:
-            raise NotImplementedError(
-                "h5netcdf does not yet support setting a fill value for "
-                "variable-length strings "
-                "(https://github.com/h5netcdf/h5netcdf/issues/37). "
-                f"Either remove '_FillValue' from encoding on variable {name!r} "
-                "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type."
-            )
 
         if dtype is str:
             dtype = h5py.special_dtype(vlen=str)
