@@ -8696,7 +8696,7 @@ class Dataset(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -10075,7 +10075,7 @@ class Dataset(
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
-            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparision with :py:func:`~xarray.Dataset.resample`.
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
 
         Dataset.groupby_bins
         DataArray.groupby

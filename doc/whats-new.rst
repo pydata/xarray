@@ -32,14 +32,23 @@ New Features
   By `Sam Levang <https://github.com/slevang>`_.
 - Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
   By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
+- Enable VLEN string fill_values, preserve VLEN string dtypes (:issue:`1647`, :issue:`7652`, :issue:`7868`, :pull:`7869`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
   `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
-  By `Justus Magin <https://github.com/keewis`_.
-
+  By `Justus Magin <https://github.com/keewis>`_.
+- Following pandas, :py:meth:`infer_freq` will return ``"Y"``, ``"YS"``,
+  ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``, ``"ms"``, ``"us"``, or
+  ``"ns"`` instead of ``"A"``, ``"AS"``, ``"Q"``, ``"M"``, ``"H"``, ``"T"``,
+  ``"S"``, ``"L"``, ``"U"``, or ``"N"``.  This is to be consistent with the
+  deprecation of the latter frequency strings (:issue:`8394`, :pull:`8415`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Minimum supported versions for the following packages have changed: ``h5py >=3.7``, ``h5netcdf>=1.1``.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -51,6 +60,14 @@ Deprecations
   this was one place in the API where dimension positions were used.
   (:pull:`8341`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Following pandas, the frequency strings ``"A"``, ``"AS"``, ``"Q"``, ``"M"``,
+  ``"H"``, ``"T"``, ``"S"``, ``"L"``, ``"U"``, and ``"N"`` are deprecated in
+  favor of ``"Y"``, ``"YS"``, ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``,
+  ``"ms"``, ``"us"``, and ``"ns"``, respectively.  These strings are used, for
+  example, in :py:func:`date_range`, :py:func:`cftime_range`,
+  :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample` among others
+  (:issue:`8394`, :pull:`8415`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Rename :py:meth:`Dataset.to_array` to  :py:meth:`Dataset.to_dataarray` for
   consistency with :py:meth:`DataArray.to_dataset` &
   :py:func:`open_dataarray` functions. This is a "soft" deprecation — the
@@ -84,6 +101,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Internal Changes
