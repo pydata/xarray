@@ -58,7 +58,7 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
 @requires_cftime
 @requires_dask
 @pytest.mark.parametrize("time_chunks", (1, 5))
-@pytest.mark.parametrize("resample_spec", ("1AS", "5AS", "10AS"))
+@pytest.mark.parametrize("resample_spec", ("1YS", "5YS", "10YS"))
 def test_weighted_lazy_resample(time_chunks, resample_spec):
     # https://github.com/pydata/xarray/issues/4625
 
@@ -67,7 +67,7 @@ def test_weighted_lazy_resample(time_chunks, resample_spec):
         return ds.weighted(ds.weights).mean("time")
 
     # example dataset
-    t = xr.cftime_range(start="2000", periods=20, freq="1AS")
+    t = xr.cftime_range(start="2000", periods=20, freq="1YS")
     weights = xr.DataArray(np.random.rand(len(t)), dims=["time"], coords={"time": t})
     data = xr.DataArray(
         np.random.rand(len(t)), dims=["time"], coords={"time": t, "weights": weights}

@@ -44,9 +44,9 @@ __ https://www.unidata.ucar.edu/software/netcdf/
 
 .. _netCDF FAQ: https://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
 
-Reading and writing netCDF files with xarray requires scipy or the
-`netCDF4-Python`__ library to be installed (the latter is required to
-read/write netCDF V4 files and use the compression options described below).
+Reading and writing netCDF files with xarray requires scipy, h5netcdf, or the
+`netCDF4-Python`__ library to be installed. SciPy only supports reading and writing
+of netCDF V3 files.
 
 __ https://github.com/Unidata/netcdf4-python
 
@@ -675,8 +675,8 @@ the same as the one that was saved.
 
 .. note::
 
-    xarray does not write NCZarr attributes. Therefore, NCZarr data must be
-    opened in read-only mode.
+    xarray does not write `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ attributes.
+    Therefore, NCZarr data must be opened in read-only mode.
 
 To store variable length strings, convert them to object arrays first with
 ``dtype=object``.
@@ -696,10 +696,10 @@ It is possible to read and write xarray datasets directly from / to cloud
 storage buckets using zarr. This example uses the `gcsfs`_ package to provide
 an interface to `Google Cloud Storage`_.
 
-From v0.16.2: general `fsspec`_ URLs are parsed and the store set up for you
-automatically when reading, such that you can open a dataset in a single
-call. You should include any arguments to the storage backend as the
-key ``storage_options``, part of ``backend_kwargs``.
+General `fsspec`_ URLs, those that begin with ``s3://`` or ``gcs://`` for example,
+are parsed and the store set up for you automatically when reading.
+You should include any arguments to the storage backend as the
+key ```storage_options``, part of ``backend_kwargs``.
 
 .. code:: python
 
@@ -715,7 +715,7 @@ key ``storage_options``, part of ``backend_kwargs``.
 This also works with ``open_mfdataset``, allowing you to pass a list of paths or
 a URL to be interpreted as a glob string.
 
-For older versions, and for writing, you must explicitly set up a ``MutableMapping``
+For writing, you must explicitly set up a ``MutableMapping``
 instance and pass this, as follows:
 
 .. code:: python
@@ -769,10 +769,10 @@ Consolidated Metadata
 ~~~~~~~~~~~~~~~~~~~~~
 
 Xarray needs to read all of the zarr metadata when it opens a dataset.
-In some storage mediums, such as with cloud object storage (e.g. amazon S3),
+In some storage mediums, such as with cloud object storage (e.g. `Amazon S3`_),
 this can introduce significant overhead, because two separate HTTP calls to the
 object store must be made for each variable in the dataset.
-As of xarray version 0.18, xarray by default uses a feature called
+By default Xarray uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
@@ -796,16 +796,20 @@ reads. Because this fall-back option is so much slower, xarray issues a
 
 .. _io.zarr.appending:
 
-Appending to existing Zarr stores
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Modifying existing Zarr stores
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray supports several ways of incrementally writing variables to a Zarr
 store. These options are useful for scenarios when it is infeasible or
 undesirable to write your entire dataset at once.
 
+1. Use ``mode='a'`` to add or overwrite entire variables,
+2. Use ``append_dim`` to resize and append to exiting variables, and
+3. Use ``region`` to write to limited regions of existing arrays.
+
 .. tip::
 
-    If you can load all of your data into a single ``Dataset`` using dask, a
+    For ``Dataset`` objects containing dask arrays, a
     single call to ``to_zarr()`` will write all of your data in parallel.
 
 .. warning::
@@ -876,17 +880,20 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     ds.to_zarr(path, compute=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
-mapping from dimension names to Python ``slice`` objects indicating where the
-data should be written (in index space, not coordinate space), e.g.,
+can be filled out by subsequent calls to ``to_zarr``.
+Setting ``region="auto"`` will open the existing store and determine the
+correct alignment of the new data with the existing coordinates, or as an
+explicit mapping from dimension names to Python ``slice`` objects indicating
+where the data should be written (in index space, not label space), e.g.,
 
 .. ipython:: python
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    # Any of the following region specifications are valid
+    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto")
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"})
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
@@ -1307,27 +1314,6 @@ We recommend installing PyNIO via conda::
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 .. _PyNIO backend is deprecated: https://github.com/pydata/xarray/issues/4491
 .. _PyNIO is no longer maintained: https://github.com/NCAR/pynio/issues/53
-
-.. _io.PseudoNetCDF:
-
-Formats supported by PseudoNetCDF
----------------------------------
-
-Xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
-formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
-PseudoNetCDF can also provide Climate Forecasting Conventions to
-CMAQ files. In addition, PseudoNetCDF can automatically register custom
-readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
-identify readers either heuristically, or by a format specified via a key in
-`backend_kwargs`.
-
-To use PseudoNetCDF to read such files, supply
-``engine='pseudonetcdf'`` to :py:func:`open_dataset`.
-
-Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
-options are listed on the PseudoNetCDF page.
-
-.. _PseudoNetCDF: https://github.com/barronh/PseudoNetCDF
 
 
 CSV and other formats supported by pandas

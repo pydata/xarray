@@ -350,7 +350,7 @@ class AggregationGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        # we want Datset.count to refer to DataArray.count
+        # we want Dataset.count to refer to DataArray.count
         # but we also want DatasetGroupBy.count to refer to Dataset.count
         # The generic aggregations have self.cls == ''
         others = (
