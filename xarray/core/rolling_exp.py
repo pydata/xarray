@@ -21,10 +21,10 @@ except ImportError:
 
 
 def _get_alpha(
-    comass: float | None,
-    span: float | None,
-    halflife: float | None,
-    alpha: float | None,
+    comass: float | None = None,
+    span: float | None = None,
+    halflife: float | None = None,
+    alpha: float | None = None,
 ) -> float:
     """
     Convert comass, span, halflife to alpha.
