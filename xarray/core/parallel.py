@@ -186,8 +186,9 @@ def map_blocks(
 
     Returns
     -------
-    A single DataArray or Dataset with dask backend, reassembled from the outputs of the
-    function.
+    obj : same as obj
+        A single DataArray or Dataset with dask backend, reassembled from the outputs of the
+        function.
 
     Notes
     -----
