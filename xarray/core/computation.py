@@ -1142,14 +1142,15 @@ def apply_ufunc(
     dask.array.apply_gufunc
     xarray.map_blocks
 
+    References
+    ----------
+
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
     :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
         Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
 
-    References
-    ----------
     .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
     .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
