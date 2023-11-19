@@ -87,7 +87,6 @@ def push(array, n, axis):
     # The method parameter makes that the tests for python 3.7 fails.
     return da.reductions.cumreduction(
         func=_push,
-        # func=bottleneck.push,
         binop=_fill_with_last_one,
         ident=np.nan,
         x=array,
