@@ -24,6 +24,8 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_numbagg,
+    requires_numbagg_or_bottleneck,
     requires_scipy,
 )
 
@@ -407,7 +409,7 @@ def test_interpolate_dask_expected_dtype(dtype, method):
     assert da.dtype == da.compute().dtype
 
 
-@requires_bottleneck
+@requires_numbagg_or_bottleneck
 def test_ffill():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     expected = xr.DataArray(np.array([4, 5, 5], dtype=np.float64), dims="x")
@@ -415,25 +417,36 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
-def test_ffill_use_bottleneck():
+def test_ffill_use_bottleneck_numbagg():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     with xr.set_options(use_bottleneck=False):
-        with pytest.raises(RuntimeError):
-            da.ffill("x")
+        with xr.set_options(use_numbagg=False):
+            with pytest.raises(RuntimeError):
+                da.ffill("x")
 
 
 @requires_dask
 def test_ffill_use_bottleneck_dask():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.ffill("x")
 
 
+@requires_numbagg
+@requires_dask
+def test_ffill_use_numbagg_dask():
+    with xr.set_options(use_bottleneck=False):
+        da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+        da = da.chunk(x=-1)
+        # Succeeds with a single chunk:
+        _ = da.ffill("x").compute()
+
+
 def test_bfill_use_bottleneck():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.bfill("x")
 
@@ -442,7 +455,7 @@ def test_bfill_use_bottleneck():
 def test_bfill_use_bottleneck_dask():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.bfill("x")
 

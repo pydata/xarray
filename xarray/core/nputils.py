@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -25,14 +26,17 @@ except ImportError:
     bn = np
     _BOTTLENECK_AVAILABLE = False
 
+NUMBAGG_VERSION: Version | None
+
 try:
     import numbagg
 
-    _HAS_NUMBAGG = Version(numbagg.__version__) >= Version("0.5.0")
+    v = getattr(numbagg, "__version__", "999")
+    NUMBAGG_VERSION = Version(v)
 except ImportError:
     # use numpy methods instead
     numbagg = np
-    _HAS_NUMBAGG = False
+    NUMBAGG_VERSION = None
 
 
 def _select_along_axis(values, idx, axis):
@@ -171,14 +175,15 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_method(name, npmodule=np):
+def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
         nba_func = getattr(numbagg, name, None)
 
         if (
-            _HAS_NUMBAGG
+            NUMBAGG_VERSION is not None
+            and NUMBAGG_VERSION >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
             and nba_func is not None

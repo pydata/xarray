@@ -15,9 +15,9 @@ try:
     import numbagg
     from numbagg import move_exp_nanmean, move_exp_nansum
 
-    _NUMBAGG_VERSION: Version | None = Version(numbagg.__version__)
+    NUMBAGG_VERSION: Version | None = Version(numbagg.__version__)
 except ImportError:
-    _NUMBAGG_VERSION = None
+    NUMBAGG_VERSION = None
 
 
 def _get_alpha(
@@ -100,17 +100,17 @@ class RollingExp(Generic[T_DataWithCoords]):
         window_type: str = "span",
         min_weight: float = 0.0,
     ):
-        if _NUMBAGG_VERSION is None:
+        if NUMBAGG_VERSION is None:
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
-        elif _NUMBAGG_VERSION < Version("0.2.1"):
+        elif NUMBAGG_VERSION < Version("0.2.1"):
             raise ImportError(
-                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {NUMBAGG_VERSION} is installed"
             )
-        elif _NUMBAGG_VERSION < Version("0.3.1") and min_weight > 0:
+        elif NUMBAGG_VERSION < Version("0.3.1") and min_weight > 0:
             raise ImportError(
-                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {NUMBAGG_VERSION} is installed"
             )
 
         self.obj: T_DataWithCoords = obj
@@ -211,9 +211,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if NUMBAGG_VERSION is None or NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
@@ -243,9 +243,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if NUMBAGG_VERSION is None or NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
@@ -275,9 +275,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if NUMBAGG_VERSION is None or NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 
@@ -308,9 +308,9 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if NUMBAGG_VERSION is None or NUMBAGG_VERSION < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {NUMBAGG_VERSION} is installed"
             )
         dim_order = self.obj.dims
 

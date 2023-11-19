@@ -31,8 +31,10 @@ from numpy import (  # noqa
 from numpy import concatenate as _concatenate
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
+from packaging.version import Version
 
 from xarray.core import dask_array_ops, dtypes, nputils
+from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
 from xarray.core.utils import is_duck_array, module_available
@@ -688,13 +690,43 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
 
 
-def push(array, n, axis):
-    from bottleneck import push
+def _push(array, n: int | None = None, axis: int = -1):
+    """
+    Use either bottleneck or numbagg depending on options & what's available
+    """
+    from xarray.core.nputils import NUMBAGG_VERSION, numbagg
 
+    if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
+        raise RuntimeError(
+            "ffill & bfill requires bottleneck or numbagg to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
+        )
+    if OPTIONS["use_numbagg"] and NUMBAGG_VERSION is not None:
+        if NUMBAGG_VERSION < Version("0.6.2"):
+            warnings.warn(
+                f"numbagg >= 0.6.2 is required for bfill & ffill; {NUMBAGG_VERSION} is installed. We'll attempt with bottleneck instead."
+            )
+        else:
+            return numbagg.ffill(array, limit=n, axis=axis)
+
+    # work around for bottleneck 178
+    limit = n if n is not None else array.shape[axis]
+
+    import bottleneck as bn
+
+    return bn.push(array, limit, axis)
+
+
+def push(array, n, axis):
+    if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
+        raise RuntimeError(
+            "ffill & bfill requires bottleneck or numbagg to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
+        )
     if is_duck_dask_array(array):
         return dask_array_ops.push(array, n, axis)
     else:
-        return push(array, n, axis)
+        return _push(array, n, axis)
 
 
 def _first_last_wrapper(array, *, axis, op, keepdims):

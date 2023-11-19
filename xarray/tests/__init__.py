@@ -53,7 +53,8 @@ def _importorskip(
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if Version(mod.__version__) < Version(minversion):
+            v = getattr(mod, "__version__", "999")
+            if Version(v) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
@@ -87,6 +88,10 @@ has_flox, requires_flox = _importorskip("flox")
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
+has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
+requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
 # _importorskip does not work for development versions

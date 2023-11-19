@@ -413,11 +413,6 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "ffill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
@@ -436,11 +431,6 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "bfill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
