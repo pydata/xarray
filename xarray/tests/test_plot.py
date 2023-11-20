@@ -1899,7 +1899,11 @@ class TestImshow(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.imshow)
 
     @pytest.mark.xfail(
-        reason="Failing, should work. remove when works, already in Common2dMixin"
+        reason=(
+            "Failing inside matplotlib. Should probably be fixed upstream because "
+            "other plot functions can handle it. "
+            "Remove this test when it works, already in Common2dMixin"
+        )
     )
     def test_dates_are_concise(self) -> None:
         import matplotlib.dates as mdates
@@ -2058,7 +2062,11 @@ class TestSurface(Common2dMixin, PlotTestCase):
     subplot_kws = {"projection": "3d"}
 
     @pytest.mark.xfail(
-        reason="Failing, should work. remove when works, already in Common2dMixin"
+        reason=(
+            "Failing inside matplotlib. Should probably be fixed upstream because "
+            "other plot functions can handle it. "
+            "Remove this test when it works, already in Common2dMixin"
+        )
     )
     def test_dates_are_concise(self) -> None:
         import matplotlib.dates as mdates
