@@ -14,16 +14,15 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.10.2:
 
-v2023.10.2 (unreleased)
+.. _whats-new.2023.11.1:
+
+v2023.11.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
-- Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
-  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -32,6 +31,71 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.2023.11.0:
+
+v2023.11.0 (Nov 16, 2023)
+-------------------------
+
+
+.. tip::
+
+     `This is our 10th year anniversary release! <https://github.com/pydata/xarray/discussions/8462>`_ Thank you for your love and support.
+
+
+This release brings the ability to use ``opt_einsum`` for :py:func:`xarray.dot` by default,
+support for auto-detecting ``region`` when writing partial datasets to Zarr, and the use of h5py
+drivers with ``h5netcdf``.
+
+Thanks to the 19 contributors to this release:
+Aman Bagrecha, Anderson Banihirwe, Ben Mares, Deepak Cherian, Dimitri Papadopoulos Orfanos, Ezequiel Cimadevilla Alvarez,
+Illviljan, Justus Magin, Katelyn FitzGerald, Kai Muehlbauer, Martin Durant, Maximilian Roos, Metamess, Sam Levang, Spencer Clark, Tom Nicholas, mgunyho, templiert
+
+New Features
+~~~~~~~~~~~~
+
+- Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
+- Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
+  By `Ben Mares <https://github.com/maresb>`_.
+- Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
+  region to write in the original store. Also implement automatic transpose when dimension
+  order does not match the original store. (:issue:`7702`, :issue:`8421`, :pull:`8434`).
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
+  By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
+- Enable VLEN string fill_values, preserve VLEN string dtypes (:issue:`1647`, :issue:`7652`, :issue:`7868`, :pull:`7869`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
+  `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Following pandas, :py:meth:`infer_freq` will return ``"Y"``, ``"YS"``,
+  ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``, ``"ms"``, ``"us"``, or
+  ``"ns"`` instead of ``"A"``, ``"AS"``, ``"Q"``, ``"M"``, ``"H"``, ``"T"``,
+  ``"S"``, ``"L"``, ``"U"``, or ``"N"``.  This is to be consistent with the
+  deprecation of the latter frequency strings (:issue:`8394`, :pull:`8415`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Minimum supported versions for the following packages have changed: ``h5py >=3.7``, ``h5netcdf>=1.1``.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
+Deprecations
+~~~~~~~~~~~~
+- The PseudoNetCDF backend has been removed. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Supplying dimension-ordered sequences to :py:meth:`DataArray.chunk` &
   :py:meth:`Dataset.chunk` is deprecated in favor of supplying a dictionary of
   dimensions, or a single ``int`` or ``"auto"`` argument covering all
@@ -39,6 +103,23 @@ Deprecations
   this was one place in the API where dimension positions were used.
   (:pull:`8341`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Following pandas, the frequency strings ``"A"``, ``"AS"``, ``"Q"``, ``"M"``,
+  ``"H"``, ``"T"``, ``"S"``, ``"L"``, ``"U"``, and ``"N"`` are deprecated in
+  favor of ``"Y"``, ``"YS"``, ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``,
+  ``"ms"``, ``"us"``, and ``"ns"``, respectively.  These strings are used, for
+  example, in :py:func:`date_range`, :py:func:`cftime_range`,
+  :py:meth:`DataArray.resample`, and :py:meth:`Dataset.resample` among others
+  (:issue:`8394`, :pull:`8415`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Rename :py:meth:`Dataset.to_array` to  :py:meth:`Dataset.to_dataarray` for
+  consistency with :py:meth:`DataArray.to_dataset` &
+  :py:func:`open_dataarray` functions. This is a "soft" deprecation — the
+  existing methods work and don't raise any warnings, given the relatively small
+  benefits of the change.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Finally remove ``keep_attrs`` kwarg from :py:meth:`DataArray.resample` and
+  :py:meth:`Dataset.resample`. These were deprecated a long time ago.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -50,14 +131,17 @@ Bug fixes
   ``"right"`` to xarray's implementation of resample for data indexed by a
   :py:class:`CFTimeIndex` (:pull:`8393`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix to once again support date offset strings as input to the loffset
+  parameter of resample and test this functionality (:pull:`8422`, :issue:`8399`).
+  By `Katelyn FitzGerald <https://github.com/kafitzgerald>`_.
+- Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
+  if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
+- Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.2023.10.1:
 
@@ -4515,7 +4599,7 @@ Enhancements
 
 - New PseudoNetCDF backend for many Atmospheric data formats including
   GEOS-Chem, CAMx, NOAA arlpacked bit and many others. See
-  :ref:`io.PseudoNetCDF` for more details.
+  ``io.PseudoNetCDF`` for more details.
   By `Barron Henderson <https://github.com/barronh>`_.
 
 - The :py:class:`Dataset` constructor now aligns :py:class:`DataArray`
@@ -6704,7 +6788,7 @@ Backwards incompatible changes
 Enhancements
 ~~~~~~~~~~~~
 
-- New ``xray.Dataset.to_array`` and enhanced
+- New ``xray.Dataset.to_dataarray`` and enhanced
   ``xray.DataArray.to_dataset`` methods make it easy to switch back
   and forth between arrays and datasets:
 
@@ -6715,8 +6799,8 @@ Enhancements
           coords={"c": 42},
           attrs={"Conventions": "None"},
       )
-      ds.to_array()
-      ds.to_array().to_dataset(dim="variable")
+      ds.to_dataarray()
+      ds.to_dataarray().to_dataset(dim="variable")
 
 - New ``xray.Dataset.fillna`` method to fill missing values, modeled
   off the pandas method of the same name:

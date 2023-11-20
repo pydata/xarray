@@ -56,7 +56,6 @@ from xarray.core.utils import (
     ReprObject,
     _default,
     either_dict_or_kwargs,
-    emit_user_level_warning,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -81,10 +80,6 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
-    try:
-        from cdms2 import Variable as cdms2_Variable
-    except ImportError:
-        cdms2_Variable = None
     try:
         from iris.cube import Cube as iris_Cube
     except ImportError:
@@ -579,9 +574,24 @@ class DataArray(
             array.attrs = {}
             return as_variable(array)
 
-        variables = {label: subset(dim, label) for label in self.get_index(dim)}
-        variables.update({k: v for k, v in self._coords.items() if k != dim})
+        variables_from_split = {
+            label: subset(dim, label) for label in self.get_index(dim)
+        }
         coord_names = set(self._coords) - {dim}
+
+        ambiguous_vars = set(variables_from_split) & coord_names
+        if ambiguous_vars:
+            rename_msg_fmt = ", ".join([f"{v}=..." for v in sorted(ambiguous_vars)])
+            raise ValueError(
+                f"Splitting along the dimension {dim!r} would produce the variables "
+                f"{tuple(sorted(ambiguous_vars))} which are also existing coordinate "
+                f"variables. Use DataArray.rename({rename_msg_fmt}) or "
+                f"DataArray.assign_coords({dim}=...) to resolve this ambiguity."
+            )
+
+        variables = variables_from_split | {
+            k: v for k, v in self._coords.items() if k != dim
+        }
         indexes = filter_indexes_from_coords(self._indexes, coord_names)
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
@@ -4402,47 +4412,6 @@ class DataArray(
         result.name = series.name
         return result
 
-    def to_cdms2(self) -> cdms2_Variable:
-        """Convert this array into a cdms2.Variable
-
-        .. deprecated:: 2023.06.0
-            The `cdms2`_ library has been deprecated. Please consider using the
-            `xcdat`_ library instead.
-
-        .. _cdms2: https://github.com/CDAT/cdms
-        .. _xcdat: https://github.com/xCDAT/xcdat
-        """
-        from xarray.convert import to_cdms2
-
-        emit_user_level_warning(
-            "The cdms2 library has been deprecated."
-            " Please consider using the xcdat library instead.",
-            DeprecationWarning,
-        )
-
-        return to_cdms2(self)
-
-    @classmethod
-    def from_cdms2(cls, variable: cdms2_Variable) -> Self:
-        """Convert a cdms2.Variable into an xarray.DataArray
-
-        .. deprecated:: 2023.06.0
-            The `cdms2`_ library has been deprecated. Please consider using the
-            `xcdat`_ library instead.
-
-        .. _cdms2: https://github.com/CDAT/cdms
-        .. _xcdat: https://github.com/xCDAT/xcdat
-        """
-        from xarray.convert import from_cdms2
-
-        emit_user_level_warning(
-            "The cdms2 library has been deprecated."
-            " Please consider using the xcdat library instead.",
-            DeprecationWarning,
-        )
-
-        return from_cdms2(variable)
-
     def to_iris(self) -> iris_Cube:
         """Convert this array into a iris.cube.Cube"""
         from xarray.convert import to_iris
@@ -5490,7 +5459,7 @@ class DataArray(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -7021,7 +6990,6 @@ class DataArray(
         base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: str,
@@ -7143,7 +7111,6 @@ class DataArray(
             base=base,
             offset=offset,
             origin=origin,
-            keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,

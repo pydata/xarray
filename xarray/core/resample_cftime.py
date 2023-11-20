@@ -151,7 +151,10 @@ class CFTimeGrouper:
                     f"Got {self.loffset}."
                 )
 
-            labels = labels + pd.to_timedelta(self.loffset)
+            if isinstance(self.loffset, datetime.timedelta):
+                labels = labels + self.loffset
+            else:
+                labels = labels + to_offset(self.loffset)
 
         # check binner fits data
         if index[0] < datetime_bins[0]:
