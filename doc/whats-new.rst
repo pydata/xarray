@@ -23,6 +23,8 @@ v2023.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Use a concise format when plotting datetime arrays. (:pull:`8449`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -69,8 +71,6 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
-- Use a concise format when plotting datetime arrays. (:pull:`8449`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
   region to write in the original store. Also implement automatic transpose when dimension
   order does not match the original store. (:issue:`7702`, :issue:`8421`, :pull:`8434`).
