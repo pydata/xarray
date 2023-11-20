@@ -83,6 +83,10 @@ class DatasetOpsMixin:
     def __ne__(self, other: DsCompatible) -> Self:  # type:ignore[override]
         return self._binary_op(other, nputils.array_ne)
 
+    # When __eq__ is defined but __hash__ is not, then an object is unhashable,
+    # and it should be declared as follows:
+    __hash__: None  # type:ignore[assignment]
+
     def __radd__(self, other: DsCompatible) -> Self:
         return self._binary_op(other, operator.add, reflexive=True)
 
@@ -290,6 +294,10 @@ class DataArrayOpsMixin:
 
     def __ne__(self, other: DaCompatible) -> Self:  # type:ignore[override]
         return self._binary_op(other, nputils.array_ne)
+
+    # When __eq__ is defined but __hash__ is not, then an object is unhashable,
+    # and it should be declared as follows:
+    __hash__: None  # type:ignore[assignment]
 
     def __radd__(self, other: DaCompatible) -> Self:
         return self._binary_op(other, operator.add, reflexive=True)
@@ -643,6 +651,10 @@ class VariableOpsMixin:
     def __ne__(self, other: VarCompatible) -> Self | T_DataArray:
         return self._binary_op(other, nputils.array_ne)
 
+    # When __eq__ is defined but __hash__ is not, then an object is unhashable,
+    # and it should be declared as follows:
+    __hash__: None  # type:ignore[assignment]
+
     def __radd__(self, other: VarCompatible) -> Self:
         return self._binary_op(other, operator.add, reflexive=True)
 
@@ -851,6 +863,10 @@ class DatasetGroupByOpsMixin:
     def __ne__(self, other: GroupByCompatible) -> Dataset:  # type:ignore[override]
         return self._binary_op(other, nputils.array_ne)
 
+    # When __eq__ is defined but __hash__ is not, then an object is unhashable,
+    # and it should be declared as follows:
+    __hash__: None  # type:ignore[assignment]
+
     def __radd__(self, other: GroupByCompatible) -> Dataset:
         return self._binary_op(other, operator.add, reflexive=True)
 
@@ -972,6 +988,10 @@ class DataArrayGroupByOpsMixin:
 
     def __ne__(self, other: T_Xarray) -> T_Xarray:  # type:ignore[override]
         return self._binary_op(other, nputils.array_ne)
+
+    # When __eq__ is defined but __hash__ is not, then an object is unhashable,
+    # and it should be declared as follows:
+    __hash__: None  # type:ignore[assignment]
 
     def __radd__(self, other: T_Xarray) -> T_Xarray:
         return self._binary_op(other, operator.add, reflexive=True)

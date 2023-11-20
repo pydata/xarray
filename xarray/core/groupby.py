@@ -244,6 +244,10 @@ class _DummyGroup(Generic[T_Xarray]):
             data=self.data, dims=(self.name,), coords=self.coords, name=self.name
         )
 
+    def to_array(self) -> DataArray:
+        """Deprecated version of to_dataarray."""
+        return self.to_dataarray()
+
 
 T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
 
