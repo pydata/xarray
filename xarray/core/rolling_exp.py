@@ -21,23 +21,23 @@ except ImportError:
 
 
 def _get_alpha(
-    comass: float | None = None,
+    com: float | None = None,
     span: float | None = None,
     halflife: float | None = None,
     alpha: float | None = None,
 ) -> float:
     """
-    Convert comass, span, halflife to alpha.
+    Convert com, span, halflife to alpha.
     """
-    valid_count = count_not_none(comass, span, halflife, alpha)
+    valid_count = count_not_none(com, span, halflife, alpha)
     if valid_count > 1:
-        raise ValueError("comass, span, halflife, and alpha are mutually exclusive")
+        raise ValueError("com, span, halflife, and alpha are mutually exclusive")
 
     # Convert to alpha
-    if comass is not None:
-        if comass < 0:
-            raise ValueError("comass must satisfy: comass >= 0")
-        return 1 / (comass + 1)
+    if com is not None:
+        if com < 0:
+            raise ValueError("commust satisfy: com>= 0")
+        return 1 / (com + 1)
     elif span is not None:
         if span < 1:
             raise ValueError("span must satisfy: span >= 1")
