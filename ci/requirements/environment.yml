@@ -7,7 +7,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  - cdms2
   - cftime
   - dask-core
   - distributed
@@ -33,7 +32,6 @@ dependencies:
   - pip
   - pooch
   - pre-commit
-  - pseudonetcdf
   - pydap
   - pytest
   - pytest-cov
