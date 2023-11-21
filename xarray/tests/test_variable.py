@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -65,10 +65,6 @@ def var():
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
-    @abstractmethod
-    def cls(self, *args, **kwargs) -> Variable:
-        raise NotImplementedError
-
     @pytest.fixture
     def target(self, data):
         data = 0.5 * np.arange(10).reshape(2, 5)
@@ -350,7 +346,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             assert_array_equal(v >> 2, x >> 2)
         # binary ops with numpy arrays
         assert_array_equal((v * x).values, x**2)
-        assert_array_equal((x * v).values, x**2)  # type: ignore[attr-defined] # TODO: Fix mypy thinking numpy takes priority, GH7780
+        assert_array_equal((x * v).values, x**2)
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
         if dtype is int:

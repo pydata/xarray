@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import warnings
+from abc import abstractmethod
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
@@ -63,6 +64,11 @@ class NamedArraySubclassobjects:
         """Fixture that needs to be overridden"""
         raise NotImplementedError
 
+    @abstractmethod
+    def cls(self, *args: Any, **kwargs: Any) -> Any:
+        """Method that needs to be overridden"""
+        raise NotImplementedError
+
     @pytest.fixture
     def data(self) -> np.ndarray[Any, np.dtype[Any]]:
         return 0.5 * np.arange(10).reshape(2, 5)
@@ -87,30 +93,43 @@ class NamedArraySubclassobjects:
         target.attrs["foo"] = "baz"
         assert target.attrs["foo"] == "baz"
 
+    @pytest.mark.parametrize(
+        "expected", [np.array([1, 2], dtype=np.dtype(np.int8)), [1, 2]]
+    )
+    def test_init(self, expected) -> None:
+        dtype = np.dtype(np.int8)
+        expected = np.array([1, 2], dtype=dtype)
+        actual = self.cls(("x",), expected)
+        assert np.array_equal(np.asarray(actual.data), expected)
+
 
 class TestNamedArray(NamedArraySubclassobjects):
+    def cls(self, *args: Any, **kwargs: Any) -> NamedArray[Any, Any]:
+        return NamedArray(*args, **kwargs)
+
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> NamedArray[Any, Any]:
         return NamedArray(["x", "y"], data)
+
+    @pytest.mark.parametrize(
+        "expected",
+        [
+            np.array([1, 2], dtype=np.dtype(np.int8)),
+            pytest.param(
+                [1, 2],
+                marks=pytest.mark.xfail(
+                    reason="NamedArray only supports array-like objects"
+                ),
+            ),
+        ],
+    )
+    def test_init(self, expected):
+        super().test_init(expected)
 
 
 @pytest.fixture
 def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
     return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
-
-
-def test_namedarray_init() -> None:
-    dtype = np.dtype(np.int8)
-    expected = np.array([1, 2], dtype=dtype)
-    actual: NamedArray[Any, np.dtype[np.int8]]
-    actual = NamedArray(("x",), expected)
-    assert np.array_equal(np.asarray(actual.data), expected)
-
-    with pytest.raises(AttributeError):
-        expected2 = [1, 2]
-        actual2: NamedArray[Any, Any]
-        actual2 = NamedArray(("x",), expected2)  # type: ignore[arg-type]
-        assert np.array_equal(np.asarray(actual2.data), expected2)
 
 
 @pytest.mark.parametrize(
