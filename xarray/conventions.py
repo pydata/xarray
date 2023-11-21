@@ -52,54 +52,6 @@ def _var_as_tuple(var: Variable) -> T_VarTuple:
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
-def maybe_encode_nonstring_dtype(var, name=None):
-    if "dtype" in var.encoding and var.encoding["dtype"] not in ("S1", str):
-        dims, data, attrs, encoding = _var_as_tuple(var)
-        dtype = np.dtype(encoding.pop("dtype"))
-        if dtype != var.dtype:
-            if np.issubdtype(dtype, np.integer):
-                if (
-                    np.issubdtype(var.dtype, np.floating)
-                    and "_FillValue" not in var.attrs
-                    and "missing_value" not in var.attrs
-                ):
-                    warnings.warn(
-                        "saving variable %s with floating "
-                        "point data as an integer dtype without "
-                        "any _FillValue to use for NaNs" % name,
-                        SerializationWarning,
-                        stacklevel=10,
-                    )
-                data = duck_array_ops.around(data)[...]
-            data = data.astype(dtype=dtype)
-        var = Variable(dims, data, attrs, encoding)
-    return var
-
-
-def maybe_default_fill_value(var):
-    # make NaN the fill value for float types:
-    if (
-        "_FillValue" not in var.attrs
-        and "_FillValue" not in var.encoding
-        and np.issubdtype(var.dtype, np.floating)
-    ):
-        var.attrs["_FillValue"] = var.dtype.type(np.nan)
-    return var
-
-
-def maybe_encode_bools(var):
-    if (
-        (var.dtype == bool)
-        and ("dtype" not in var.encoding)
-        and ("dtype" not in var.attrs)
-    ):
-        dims, data, attrs, encoding = _var_as_tuple(var)
-        attrs["dtype"] = "bool"
-        data = data.astype(dtype="i1", copy=True)
-        var = Variable(dims, data, attrs, encoding)
-    return var
-
-
 def _infer_dtype(array, name=None):
     """Given an object array with no missing values, infer its dtype from all elements."""
     if array.dtype.kind != "O":
