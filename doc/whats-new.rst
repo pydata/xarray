@@ -23,6 +23,8 @@ v2023.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Use a concise format when plotting datetime arrays. (:pull:`8449`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
