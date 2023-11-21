@@ -63,13 +63,14 @@ def encode_zarr_attr_value(value):
 class ZarrArrayWrapper(BackendArray):
     __slots__ = ("datastore", "dtype", "shape", "variable_name", "_array")
 
-    def __init__(self, variable_name, datastore):
+    def __init__(self, variable_name, zarr_array, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
 
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
-        self._array = self.datastore.zarr_group[self.variable_name]
+
+        self._array = zarr_array
         self.shape = self._array.shape
 
         # preserve vlen string object dtype (GH 7328)
@@ -501,7 +502,7 @@ class ZarrStore(AbstractWritableDataStore):
         return self.zarr_group
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, zarr_array, self))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
