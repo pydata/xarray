@@ -1043,9 +1043,8 @@ class TestVariable(VariableSubclassobjects):
     def setup(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
-    def test_data_and_values(self):
+    def test_values(self):
         v = Variable(["time", "x"], self.d)
-        assert_array_equal(v.data, self.d)
         assert_array_equal(v.values, self.d)
         assert source_ndarray(v.values) is self.d
         with pytest.raises(ValueError):
@@ -1054,9 +1053,6 @@ class TestVariable(VariableSubclassobjects):
         d2 = np.random.random((10, 3))
         v.values = d2
         assert source_ndarray(v.values) is d2
-        d3 = np.random.random((10, 3))
-        v.data = d3
-        assert source_ndarray(v.data) is d3
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
