@@ -1141,8 +1141,12 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
+
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
+
+    :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
+        Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
 
     References
     ----------
@@ -1599,7 +1603,9 @@ def cross(
     >>> ds_a = xr.Dataset(dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
     >>> ds_b = xr.Dataset(dict(x=("dim_0", [4]), y=("dim_0", [5]), z=("dim_0", [6])))
     >>> c = xr.cross(
-    ...     ds_a.to_array("cartesian"), ds_b.to_array("cartesian"), dim="cartesian"
+    ...     ds_a.to_dataarray("cartesian"),
+    ...     ds_b.to_dataarray("cartesian"),
+    ...     dim="cartesian",
     ... )
     >>> c.to_dataset(dim="cartesian")
     <xarray.Dataset>
@@ -1690,8 +1696,8 @@ def dot(
     dims: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like np.einsum, but
-    provides a simpler interface based on array dimensions.
+    """Generalized dot product for xarray objects. Like ``np.einsum``, but
+    provides a simpler interface based on array dimension names.
 
     Parameters
     ----------
@@ -1701,12 +1707,23 @@ def dot(
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict
-        Additional keyword arguments passed to numpy.einsum or
-        dask.array.einsum
+        Additional keyword arguments passed to ``numpy.einsum`` or
+        ``dask.array.einsum``
 
     Returns
     -------
     DataArray
+
+    See Also
+    --------
+    numpy.einsum
+    dask.array.einsum
+    opt_einsum.contract
+
+    Notes
+    -----
+    We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
+    which is passed through to ``np.einsum``, and works for most array backends.
 
     Examples
     --------

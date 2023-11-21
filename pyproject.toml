@@ -38,7 +38,7 @@ source-code = "https://github.com/pydata/xarray"
 dask = "xarray.core.daskmanager:DaskManager"
 
 [project.optional-dependencies]
-accel = ["scipy", "bottleneck", "numbagg", "flox"]
+accel = ["scipy", "bottleneck", "numbagg", "flox", "opt_einsum"]
 complete = ["xarray[accel,io,parallel,viz]"]
 io = ["netCDF4", "h5netcdf", "scipy", 'pydap; python_version<"3.10"', "zarr", "fsspec", "cftime", "pooch"]
 parallel = ["dask[complete]"]
@@ -88,7 +88,6 @@ module = [
   "affine.*",
   "bottleneck.*",
   "cartopy.*",
-  "cdms2.*",
   "cf_units.*",
   "cfgrib.*",
   "cftime.*",
@@ -106,9 +105,9 @@ module = [
   "numbagg.*",
   "netCDF4.*",
   "netcdftime.*",
+  "opt_einsum.*",
   "pandas.*",
   "pooch.*",
-  "PseudoNetCDF.*",
   "pydap.*",
   "pytest.*",
   "scipy.*",

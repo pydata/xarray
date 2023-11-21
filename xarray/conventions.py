@@ -329,6 +329,10 @@ def decode_cf_variable(
             var = strings.CharacterArrayCoder().decode(var, name=name)
         var = strings.EncodedStringCoder().decode(var)
 
+    if original_dtype == object:
+        var = variables.ObjectVLenStringCoder().decode(var)
+        original_dtype = var.dtype
+
     if mask_and_scale:
         for coder in [
             variables.UnsignedIntegerCoder(),
