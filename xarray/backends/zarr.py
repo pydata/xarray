@@ -69,7 +69,6 @@ class ZarrArrayWrapper(BackendArray):
 
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
-
         self._array = zarr_array
         self.shape = self._array.shape
 
