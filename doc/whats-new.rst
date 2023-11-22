@@ -26,6 +26,11 @@ New Features
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
+
+- :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
+  the core dim has exactly one chunk. (:pull:`8475`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
