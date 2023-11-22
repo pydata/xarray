@@ -31,7 +31,7 @@ try:
     _HAS_NUMBAGG = Version(numbagg.__version__) >= Version("0.5.0")
 except ImportError:
     # use numpy methods instead
-    numbagg = np
+    numbagg = np  # type: ignore
     _HAS_NUMBAGG = False
 
 
