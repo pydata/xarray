@@ -100,7 +100,7 @@ class NamedArraySubclassobjects:
     @pytest.mark.parametrize(
         "expected", [np.array([1, 2], dtype=np.dtype(np.int8)), [1, 2]]
     )
-    def test_init(self, expected) -> None:
+    def test_init(self, expected: Any) -> None:
         actual = self.cls(("x",), expected)
         assert np.array_equal(np.asarray(actual.data), expected)
 
@@ -137,7 +137,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             ),
         ],
     )
-    def test_init(self, expected):
+    def test_init(self, expected: Any) -> None:
         super().test_init(expected)
 
     @pytest.mark.parametrize(
