@@ -2078,7 +2078,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             self,
             input_core_dims=[[dim]],
             output_core_dims=[[dim]],
-            dask="allowed",
+            dask="parallelized",
             kwargs=dict(axis=-1),
         ).transpose(*self.dims)
 
