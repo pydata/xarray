@@ -1539,7 +1539,7 @@ class Dataset(
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
-        from .formatting import shorten_list_repr
+        from xarray.core.formatting import shorten_list_repr
 
         if utils.is_dict_like(key):
             return self.isel(**key)
