@@ -41,6 +41,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Improved error message when getting a variable from a Dataset which doesn't
+  exist. (:pull:`8474`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
