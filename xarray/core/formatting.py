@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import functools
-import itertools
 import math
 from collections import defaultdict
 from collections.abc import Collection, Hashable, Sequence
