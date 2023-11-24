@@ -33,7 +33,7 @@ from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defi
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 from packaging.version import Version
 
-from xarray.core import dask_array_ops, dtypes, nputils
+from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
@@ -694,17 +694,18 @@ def _push(array, n: int | None = None, axis: int = -1):
     """
     Use either bottleneck or numbagg depending on options & what's available
     """
-    from xarray.core.nputils import NUMBAGG_VERSION, numbagg
 
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
-    if OPTIONS["use_numbagg"] and NUMBAGG_VERSION is not None:
-        if NUMBAGG_VERSION < Version("0.6.2"):
+    if OPTIONS["use_numbagg"] and pycompat.mod_version("numbagg") is not None:
+        import numbagg
+
+        if pycompat.mod_version("numbagg") < Version("0.6.2"):
             warnings.warn(
-                f"numbagg >= 0.6.2 is required for bfill & ffill; {NUMBAGG_VERSION} is installed. We'll attempt with bottleneck instead."
+                f"numbagg >= 0.6.2 is required for bfill & ffill; {pycompat.mod_version('numbagg')} is installed. We'll attempt with bottleneck instead."
             )
         else:
             return numbagg.ffill(array, limit=n, axis=axis)
