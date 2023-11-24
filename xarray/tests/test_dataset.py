@@ -4697,6 +4697,17 @@ class TestDataset:
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
 
+    def test_from_dataframe_categorical_string_categories(self) -> None:
+        cat = pd.CategoricalIndex(
+            pd.Categorical.from_codes(
+                np.array([1, 1, 0, 2]),
+                categories=pd.Index(["foo", "bar", "baz"], dtype="string"),
+            )
+        )
+        ser = pd.Series(1, index=cat)
+        ds = ser.to_xarray()
+        assert ds.coords.dtypes["index"] == np.dtype("O")
+
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
         import sparse
