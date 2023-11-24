@@ -76,7 +76,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         window_type: str = "span",
         min_weight: float = 0.0,
     ):
-        if pycompat.mod_version("numbagg") is None:
+        if pycompat.mod_version("numbagg") == Version("0.0.0"):
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
@@ -191,9 +191,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if pycompat.mod_version("numbagg") is None or pycompat.mod_version(
-            "numbagg"
-        ) < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
             )
@@ -226,10 +224,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([       nan, 0.        , 0.46153846, 0.18461538, 0.06446281])
         Dimensions without coordinates: x
         """
-
-        if pycompat.mod_version("numbagg") is None or pycompat.mod_version(
-            "numbagg"
-        ) < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
             )
@@ -262,9 +257,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if pycompat.mod_version("numbagg") is None or pycompat.mod_version(
-            "numbagg"
-        ) < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
             )
@@ -298,9 +291,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if pycompat.mod_version("numbagg") is None or pycompat.mod_version(
-            "numbagg"
-        ) < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
                 f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
             )
