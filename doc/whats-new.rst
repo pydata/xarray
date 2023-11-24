@@ -42,6 +42,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
+
 
 Documentation
 ~~~~~~~~~~~~~
