@@ -171,7 +171,7 @@ def _create_method(name, npmodule=np) -> Callable:
         bn_func = getattr(bn, name, None)
 
         if (
-            pycompat.mod_version("numbagg") is not None
+            module_available("numbagg")
             and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
