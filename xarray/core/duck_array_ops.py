@@ -700,7 +700,7 @@ def _push(array, n: int | None = None, axis: int = -1):
             "ffill & bfill requires bottleneck or numbagg to be enabled."
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
-    if OPTIONS["use_numbagg"] and pycompat.mod_version("numbagg") != Version("0.0.0"):
+    if OPTIONS["use_numbagg"] and not module_available("numbagg"):
         import numbagg
 
         if pycompat.mod_version("numbagg") < Version("0.6.2"):
