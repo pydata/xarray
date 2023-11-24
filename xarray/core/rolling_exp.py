@@ -76,7 +76,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         window_type: str = "span",
         min_weight: float = 0.0,
     ):
-        if pycompat.mod_version("numbagg") == Version("0.0.0"):
+        if not module_available("numbagg"):
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
