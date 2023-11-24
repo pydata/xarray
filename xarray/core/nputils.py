@@ -35,7 +35,7 @@ try:
     NUMBAGG_VERSION = Version(v)
 except ImportError:
     # use numpy methods instead
-    numbagg = np
+    numbagg = np  # type: ignore
     NUMBAGG_VERSION = None
 
 
