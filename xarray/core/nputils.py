@@ -175,7 +175,6 @@ def _create_method(name, npmodule=np) -> Callable:
             and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
-            # and nba_func is not None
             # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
             and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
             # TODO: bool?
