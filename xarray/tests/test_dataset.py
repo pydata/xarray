@@ -4697,7 +4697,7 @@ class TestDataset:
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
 
-    def test_from_dataframe_categorical_string_categories(self):
+    def test_from_dataframe_categorical_string_categories(self) -> None:
         cat = pd.CategoricalIndex(
             pd.Categorical.from_codes(
                 np.array([1, 1, 0, 2]),
