@@ -50,6 +50,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
+  default, which is up to 5x faster on wide arrays on multi-core machines. (:pull:`8339`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 .. _whats-new.2023.11.0:
 
 v2023.11.0 (Nov 16, 2023)
