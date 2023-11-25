@@ -43,6 +43,8 @@ Bug fixes
 ~~~~~~~~~
 
 - Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
+- Fix writing a variable that requires transposing when not writing to a region (:pull:`8484`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Documentation
