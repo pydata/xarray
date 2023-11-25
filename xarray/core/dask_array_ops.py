@@ -59,9 +59,10 @@ def push(array, n, axis):
     """
     Dask-aware bottleneck.push
     """
-    import bottleneck
     import dask.array as da
     import numpy as np
+
+    from xarray.core.duck_array_ops import _push
 
     def _fill_with_last_one(a, b):
         # cumreduction apply the push func over all the blocks first so, the only missing part is filling
@@ -85,7 +86,7 @@ def push(array, n, axis):
 
     # The method parameter makes that the tests for python 3.7 fails.
     return da.reductions.cumreduction(
-        func=bottleneck.push,
+        func=_push,
         binop=_fill_with_last_one,
         ident=np.nan,
         x=array,

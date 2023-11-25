@@ -177,8 +177,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
     # this avoids the need to get involved in zarr synchronization / locking
     # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a separate
-    #   region of the array, and if region boundaries are perfectly aligned
+    #  "If each worker in a parallel computation is writing to a
+    #   separate region of the array, and if region boundaries are perfectly aligned
     #   with chunk boundaries, then no synchronization is required."
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads

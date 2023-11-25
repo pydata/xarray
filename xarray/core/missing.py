@@ -14,7 +14,7 @@ from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.computation import apply_ufunc
 from xarray.core.duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.core.options import _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.types import Interp1dOptions, InterpOptions
 from xarray.core.utils import OrderedSet, is_scalar
@@ -413,11 +413,6 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "ffill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
@@ -436,11 +431,6 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
-    if not OPTIONS["use_bottleneck"]:
-        raise RuntimeError(
-            "bfill requires bottleneck to be enabled."
-            " Call `xr.set_options(use_bottleneck=True)` to enable it."
-        )
 
     axis = arr.get_axis_num(dim)
 
