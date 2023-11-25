@@ -227,7 +227,7 @@ class RollingExp(Generic[T_DataWithCoords]):
         """
         if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {pycompat.mod_version('numbagg')} is installed"
             )
         dim_order = self.obj.dims
         import numbagg
@@ -260,7 +260,7 @@ class RollingExp(Generic[T_DataWithCoords]):
 
         if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {pycompat.mod_version('numbagg')} is installed"
             )
         dim_order = self.obj.dims
         import numbagg
@@ -294,7 +294,7 @@ class RollingExp(Generic[T_DataWithCoords]):
 
         if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().corr(), currently {pycompat.mod_version('numbagg')} is installed"
             )
         dim_order = self.obj.dims
         import numbagg
