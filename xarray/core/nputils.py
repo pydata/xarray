@@ -9,6 +9,7 @@ from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defi
 from packaging.version import Version
 
 from xarray.core import pycompat
+from xarray.core.utils import module_available
 
 # remove once numpy 2.0 is the oldest supported version
 try:
