@@ -419,10 +419,9 @@ def test_ffill():
 
 def test_ffill_use_bottleneck_numbagg():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False):
-        with xr.set_options(use_numbagg=False):
-            with pytest.raises(RuntimeError):
-                da.ffill("x")
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
 
 
 @requires_dask
