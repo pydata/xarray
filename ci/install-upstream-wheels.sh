@@ -35,6 +35,7 @@ python -m pip install \
 python -m pip install \
     --no-deps \
     --upgrade \
+    --no-build-isolation \
     git+https://github.com/Unidata/cftime
 python -m pip install \
     --no-deps \
