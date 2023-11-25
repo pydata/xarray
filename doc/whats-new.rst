@@ -42,10 +42,15 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
+
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Improved error message when attempting to get a variable which doesn't exist from a Dataset.
+  (:pull:`8474`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
