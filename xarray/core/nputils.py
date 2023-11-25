@@ -4,8 +4,13 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from packaging.version import Version
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.lib.array_utils import normalize_axis_index
+except ImportError:
+    from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 
 # remove once numpy 2.0 is the oldest supported version
 try:

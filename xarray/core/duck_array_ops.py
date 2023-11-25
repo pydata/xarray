@@ -29,13 +29,19 @@ from numpy import (  # noqa
     zeros_like,  # noqa
 )
 from numpy import concatenate as _concatenate
-from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from xarray.core import dask_array_ops, dtypes, nputils
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
 from xarray.core.utils import is_duck_array, module_available
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.lib.array_utils import normalize_axis_index
+except ImportError:
+    from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+
 
 dask_available = module_available("dask")
 
