@@ -31,13 +31,17 @@ python -m pip install \
     scipy \
     matplotlib \
     pandas
+# without build isolation for packages compiling against numpy
+python -m pip install \
+    --no-deps \
+    --upgrade \
+    git+https://github.com/Unidata/cftime
 python -m pip install \
     --no-deps \
     --upgrade \
     git+https://github.com/dask/dask \
     git+https://github.com/dask/distributed \
     git+https://github.com/zarr-developers/zarr \
-    git+https://github.com/Unidata/cftime \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/pydata/bottleneck \
