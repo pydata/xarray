@@ -1010,10 +1010,11 @@ class DataWithCoords(AttrAccessMixin):
 
         if loffset is not None:
             emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample "
-                "is deprecated in a future version of xarray.  "
+                "Following pandas, the `loffset` parameter to resample is deprecated.  "
                 "Switch to updating the resampled dataset time coordinate using "
-                "time offset arithmetic.",
+                "time offset arithmetic.  For example:\n"
+                "    >>> offset = pd.tseries.frequencies.to_offset(freq) / 2\n"
+                '    >>> resampled_ds["time"] = resampled_ds.get_index("time") + offset',
                 FutureWarning,
             )
 
