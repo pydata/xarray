@@ -5423,7 +5423,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
-def test_zarr_region_transpose(tmp_path):
+def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
     data = np.ones((5, 10))
