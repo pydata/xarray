@@ -57,7 +57,6 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.attrs
    DataTree.encoding
    DataTree.indexes
-   DataTree.chunks
    DataTree.nbytes
    DataTree.ds
    DataTree.to_dataset
@@ -65,11 +64,6 @@ This interface echoes that of ``xarray.Dataset``.
    DataTree.has_attrs
    DataTree.is_empty
    DataTree.is_hollow
-
-..
-
-   Missing:
-   ``DataTree.chunksizes``
 
 Dictionary interface
 --------------------
