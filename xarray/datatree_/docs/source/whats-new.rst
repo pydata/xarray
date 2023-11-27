@@ -35,6 +35,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Keep attributes on nodes containing no data in :py:func:`map_over_subtree`. (:issue:`278`, :pull:`279`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~

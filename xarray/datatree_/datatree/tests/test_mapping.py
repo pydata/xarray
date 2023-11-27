@@ -264,6 +264,17 @@ class TestMapOverSubTree:
 
         dt.map_over_subtree(check_for_data)
 
+    def test_keep_attrs_on_empty_nodes(self, create_test_datatree):
+        # GH278
+        dt = create_test_datatree()
+        dt["set1/set2"].attrs["foo"] = "bar"
+
+        def empty_func(ds):
+            return ds
+
+        result = dt.map_over_subtree(empty_func)
+        assert result["set1/set2"].attrs == dt["set1/set2"].attrs
+
     @pytest.mark.xfail(
         reason="probably some bug in pytests handling of exception notes"
     )

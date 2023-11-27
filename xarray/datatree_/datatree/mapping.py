@@ -206,14 +206,17 @@ def map_over_subtree(func: Callable) -> Callable:
                 node_of_first_tree.path
             )(func)
 
-            # Now we can call func on the data in this particular set of corresponding nodes
-            results = (
-                func_with_error_context(
+            if node_of_first_tree.has_data:
+                # call func on the data in this particular set of corresponding nodes
+                results = func_with_error_context(
                     *node_args_as_datasetviews, **node_kwargs_as_datasetviews
                 )
-                if node_of_first_tree.has_data
-                else None
-            )
+            elif node_of_first_tree.has_attrs:
+                # propagate attrs
+                results = node_of_first_tree.ds
+            else:
+                # nothing to propagate so use fastpath to create empty node in new tree
+                results = None
 
             # TODO implement mapping over multiple trees in-place using if conditions from here on?
             out_data_objects[node_of_first_tree.path] = results
