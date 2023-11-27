@@ -1852,9 +1852,20 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     @requires_bottleneck
-    def test_rank_dask_raises(self):
-        v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
-        with pytest.raises(TypeError, match=r"arrays stored as dask"):
+    def test_rank_dask(self):
+        # Instead of a single test here, we could parameterize the other tests for both
+        # arrays. But this is sufficient.
+        v = Variable(
+            ["x", "y"], [[30.0, 1.0, np.nan, 20.0, 4.0], [30.0, 1.0, np.nan, 20.0, 4.0]]
+        ).chunk(x=1)
+        expected = Variable(
+            ["x", "y"], [[4.0, 1.0, np.nan, 3.0, 2.0], [4.0, 1.0, np.nan, 3.0, 2.0]]
+        )
+        assert_equal(v.rank("y").compute(), expected)
+
+        with pytest.raises(
+            ValueError, match=r" with dask='parallelized' consists of multiple chunks"
+        ):
             v.rank("x")
 
     def test_rank_use_bottleneck(self):
@@ -1886,7 +1897,8 @@ class TestVariable(VariableSubclassobjects):
         v_expect = Variable(["x"], [0.75, 0.25, np.nan, 0.5, 1.0])
         assert_equal(v.rank("x", pct=True), v_expect)
         # invalid dim
-        with pytest.raises(ValueError, match=r"not found"):
+        with pytest.raises(ValueError):
+            # apply_ufunc error message isn't great here — `ValueError: tuple.index(x): x not in tuple`
             v.rank("y")
 
     def test_big_endian_reduce(self):
