@@ -624,12 +624,10 @@ class ZarrStore(AbstractWritableDataStore):
             variables_encoded.update(vars_with_encoding)
 
             for var_name in existing_variable_names:
-                new_var = variables_encoded[var_name]
-                existing_var = existing_vars[var_name]
-                new_var = _validate_and_transpose_existing_dims(
+                variables_encoded[var_name] = _validate_and_transpose_existing_dims(
                     var_name,
-                    new_var,
-                    existing_var,
+                    variables_encoded[var_name],
+                    existing_vars[var_name],
                     self._write_region,
                     self._append_dim,
                 )
