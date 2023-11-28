@@ -41,6 +41,13 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- As part of an effort to standardize the API, we're renaming the ``dims``
+  keyword arg to ``dim`` for the minority of functions which current use
+  ``dims``. This started with :py:func:`xarray.dot` & :py:meth:`DataArray.dot`
+  and we'll gradually roll this out across all functions. The warnings are
+  currently ``PendingDeprecationWarning``, which are silenced by default. We'll
+  convert these to ``DeprecationWarning`` in a future release.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
