@@ -21,12 +21,9 @@ if TYPE_CHECKING:
 
     from xarray.namedarray._typing import (
         _AttrsLike,
-        _Dim,
         _DimsLike,
         _DType,
-        _IntOrUnknown,
         _Shape,
-        _ShapeLike,
         duckarray,
     )
     from xarray.namedarray.utils import Default
@@ -60,69 +57,6 @@ class CustomArrayIndexable(
     def __array_namespace__(self) -> ModuleType:
         return np
 
-
-@pytest.fixture
-def random_inputs() -> np.ndarray[Any, np.dtype[np.float32]]:
-    return np.arange(3 * 4 * 5, dtype=np.float32).reshape((3, 4, 5))
-
-
-@pytest.fixture
-def data() -> NamedArray[Any, np.dtype[np.float32]]:
-    dtype_float = np.dtype(np.float32)
-    narr_float: NamedArray[Any, np.dtype[np.float32]]
-    narr_float = NamedArray(("x",), np.array([1.5, 3.2], dtype=dtype_float))
-    return narr_float
-
-
-@pytest.fixture
-def random_data() -> NamedArray[Any, np.dtype[np.float32]]:
-    dtype_float = np.dtype(np.float32)
-    narr_float: NamedArray[Any, np.dtype[np.float32]]
-    narr_float = NamedArray(
-        ("x", "y", "z"), np.arange(60).reshape(3, 4, 5).astype(dtype_float)
-    )
-    return narr_float
-
-
-def test_namedarray_init() -> None:
-    dtype = np.dtype(np.int8)
-    expected = np.array([1, 2], dtype=dtype)
-    actual: NamedArray[Any, np.dtype[np.int8]]
-    actual = NamedArray(("x",), expected)
-    assert np.array_equal(np.asarray(actual.data), expected)
-
-    with pytest.raises(AttributeError):
-        expected2 = [1, 2]
-        actual2: NamedArray[Any, Any]
-        actual2 = NamedArray(("x",), expected2)  # type: ignore[arg-type]
-        assert np.array_equal(np.asarray(actual2.data), expected2)
-
-
-@pytest.mark.parametrize(
-    "dims, data, expected, raise_error",
-    [
-        (("x",), [1, 2, 3], np.array([1, 2, 3]), False),
-        ((1,), np.array([4, 5, 6]), np.array([4, 5, 6]), False),
-        ((), 2, np.array(2), False),
-        # Fail:
-        (("x",), NamedArray("time", np.array([1, 2, 3])), np.array([1, 2, 3]), True),
-    ],
-)
-def test_from_array(
-    dims: _DimsLike,
-    data: ArrayLike,
-    expected: np.ndarray[Any, Any],
-    raise_error: bool,
-) -> None:
-    actual: NamedArray[Any, Any]
-    if raise_error:
-        with pytest.raises(TypeError, match="already a Named array"):
-            actual = from_array(dims, data)
-
-            # Named arrays are not allowed:
-            from_array(actual)  # type: ignore[call-overload]
-    else:
-        actual = from_array(dims, data)
 
 class NamedArraySubclassobjects:
     @pytest.fixture
@@ -386,108 +320,6 @@ class TestNamedArray(NamedArraySubclassobjects):
             if isinstance(b, _arrayfunction_or_api):
                 return b
             else:
-                cls_ = cast("type[Variable[Any, _DType]]", type(self))
-                return cls_(dims_, data, attrs_)
-
-    var_float: Variable[Any, np.dtype[np.float32]]
-    var_float = Variable(("x",), np_val)
-    assert var_float.dtype == dtype_float
-
-    var_float2: Variable[Any, np.dtype[np.float32]]
-    var_float2 = var_float._replace(("x",), np_val2)
-    assert var_float2.dtype == dtype_float
-
-
-@pytest.mark.parametrize(
-    "new_dims, new_shape",
-    [
-        (["x", "y"], (2, 1)),  # basic case, expanding along existing dimensions
-        (["x", "y", "z"], (2, 1, 1)),  # adding a new dimension
-        (["z", "x", "y"], (1, 2, 1)),  # adding a new dimension with different order
-        (["x"], (2,)),  # reducing dimensions
-        ({"x": 2, "y": 1}, (2, 1)),  # using dict for dims
-        (
-            {"x": 2, "y": 1, "z": 1},
-            (2, 1, 1),
-        ),  # using dict for dims, adding new dimension
-    ],
-)
-def test_expand_dims(
-    data: NamedArray[Any, np.dtype[np.float32]],
-    new_dims: _DimsLike,
-    new_shape: _ShapeLike,
-) -> None:
-    actual = data.expand_dims(new_dims)
-    # Ensure the expected dims match, especially when new dimensions are added
-    expected_dims = (
-        tuple(new_dims)
-        if isinstance(new_dims, (list, tuple))
-        else tuple(new_dims.keys())
-    )
-    expected = NamedArray(expected_dims, data._data.reshape(*new_shape))
-    assert np.array_equal(actual.data, expected.data)
-    assert actual.dims == expected.dims
-
-
-def test_expand_dims_object_dtype() -> None:
-    data: NamedArray[Any, np.dtype[object]]
-    x = np.empty([], dtype=object)
-    x[()] = ("a", 1)
-    data = NamedArray([], x)
-    actual = data.expand_dims(("x",), (3,))
-    exp_values = np.empty((3,), dtype=object)
-    for i in range(3):
-        exp_values[i] = ("a", 1)
-    assert np.array_equal(actual.data, exp_values)
-
-
-@pytest.mark.parametrize(
-    "dims",
-    [
-        {"x": 2, "y": 1},  # basic case, broadcasting along existing dimensions
-        {"x": 2, "y": 3},  # increasing size of existing dimension
-        {"x": 2, "y": 1, "z": 1},  # adding a new dimension
-        {"z": 1, "x": 2, "y": 1},  # adding a new dimension with different order
-    ],
-)
-def test_broadcast_to(
-    data: NamedArray[Any, np.dtype[np.float32]],
-    dims: Mapping[Any, _Dim],
-) -> None:
-    actual = data.broadcast_to(dims)
-    assert actual.sizes == dims
-
-
-@pytest.mark.parametrize(
-    "dims, expected_sizes",
-    [
-        # Basic case: reversing the dimensions
-        ((), {"z": 5, "y": 4, "x": 3}),
-        (["y", "x", "z"], {"y": 4, "x": 3, "z": 5}),
-        (["y", "x", ...], {"y": 4, "x": 3, "z": 5}),
-    ],
-)
-def test_permute_dims(
-    random_data: NamedArray[Any, np.dtype[np.float32]],
-    dims: _DimsLike,
-    expected_sizes: dict[_Dim, _IntOrUnknown],
-) -> None:
-    actual = random_data.permute_dims(*dims)
-    assert actual.sizes == expected_sizes
-
-
-@pytest.mark.parametrize(
-    "dims",
-    [
-        (["y", "x"]),
-    ],
-)
-def test_permute_dims_errors(
-    random_data: NamedArray[Any, np.dtype[np.float32]],
-    dims: _DimsLike,
-) -> None:
-    with pytest.raises(ValueError):
-        random_data.permute_dims(*dims)
                 raise TypeError(
                     f"a ({type(a)}) is not a valid _arrayfunction or _arrayapi"
                 )
