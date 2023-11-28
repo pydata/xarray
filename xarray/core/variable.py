@@ -1541,15 +1541,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once_full(self, dims: Mapping[Any, int], old_dim: Hashable) -> Self:
+    def _unstack_once_full(self, dim: Mapping[Any, int], old_dim: Hashable) -> Self:
         """
         Unstacks the variable without needing an index.
 
         Unlike `_unstack_once`, this function requires the existing dimension to
         contain the full product of the new dimensions.
         """
-        new_dim_names = tuple(dims.keys())
-        new_dim_sizes = tuple(dims.values())
+        new_dim_names = tuple(dim.keys())
+        new_dim_sizes = tuple(dim.values())
 
         if old_dim not in self.dims:
             raise ValueError(f"invalid existing dimension: {old_dim}")
