@@ -2046,6 +2046,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        # This could / should arguably be implemented at the DataArray & Dataset level
         if not OPTIONS["use_bottleneck"]:
             raise RuntimeError(
                 "rank requires bottleneck to be enabled."
@@ -2054,24 +2055,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         import bottleneck as bn
 
-        data = self.data
-
-        if is_duck_dask_array(data):
-            raise TypeError(
-                "rank does not work for arrays stored as dask "
-                "arrays. Load the data via .compute() or .load() "
-                "prior to calling this method."
-            )
-        elif not isinstance(data, np.ndarray):
-            raise TypeError(f"rank is not implemented for {type(data)} objects.")
-
-        axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind == "f" else bn.rankdata
-        ranked = func(data, axis=axis)
+        ranked = xr.apply_ufunc(
+            func,
+            self,
+            input_core_dims=[[dim]],
+            output_core_dims=[[dim]],
+            dask="parallelized",
+            kwargs=dict(axis=-1),
+        ).transpose(*self.dims)
+
         if pct:
-            count = np.sum(~np.isnan(data), axis=axis, keepdims=True)
+            count = self.notnull().sum(dim)
             ranked /= count
-        return Variable(self.dims, ranked)
+        return ranked
 
     def rolling_window(
         self, dim, window, window_dim, center=False, fill_value=dtypes.NA
