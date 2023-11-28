@@ -177,8 +177,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
     # this avoids the need to get involved in zarr synchronization / locking
     # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a separate
-    #   region of the array, and if region boundaries are perfectly aligned
+    #  "If each worker in a parallel computation is writing to a
+    #   separate region of the array, and if region boundaries are perfectly aligned
     #   with chunk boundaries, then no synchronization is required."
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
@@ -624,12 +624,10 @@ class ZarrStore(AbstractWritableDataStore):
             variables_encoded.update(vars_with_encoding)
 
             for var_name in existing_variable_names:
-                new_var = variables_encoded[var_name]
-                existing_var = existing_vars[var_name]
-                new_var = _validate_and_transpose_existing_dims(
+                variables_encoded[var_name] = _validate_and_transpose_existing_dims(
                     var_name,
-                    new_var,
-                    existing_var,
+                    variables_encoded[var_name],
+                    existing_vars[var_name],
                     self._write_region,
                     self._append_dim,
                 )
