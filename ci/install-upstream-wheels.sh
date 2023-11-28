@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# install cython for building cftime without build isolation
+micromamba install "cython>=0.29.20"
 # temporarily (?) remove numbagg and numba
 pip uninstall -y numbagg
 conda uninstall -y numba
