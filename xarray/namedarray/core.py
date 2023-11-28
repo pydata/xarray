@@ -863,7 +863,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Parameters
         ----------
         *dims : Hashable, optional
-            By default, reverse the dimensions. Otherwise, reorder the
+            By default, reverse the order of the dimensions. Otherwise, reorder the
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
@@ -874,14 +874,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
         Returns
         -------
-        transposed : NamedArray
-            The returned object has transposed data and dimensions with the
+        NamedArray
+            The returned NamedArray has permuted dimensions and data with the
             same attributes as the original.
 
-        Notes
-        -----
-        This operation returns a view of this variable's data. It is
-        lazy for dask-backed Variables but not for numpy-backed Variables.
 
         See Also
         --------
