@@ -5,7 +5,7 @@ micromamba install "cython>=0.29.20"
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg
 # forcibly remove packages to avoid artifacts
-micromamba remove -y --force \
+conda uninstall -y --force \
     numpy \
     scipy \
     pandas \
