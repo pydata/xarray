@@ -4927,9 +4927,9 @@ class DataArray(
         Examples
         --------
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
-        >>> da = xr.DataArray(da_vals, dim=["x", "y", "z"])
+        >>> da = xr.DataArray(da_vals, dims=["x", "y", "z"])
         >>> dm_vals = np.arange(4)
-        >>> dm = xr.DataArray(dm_vals, dim=["z"])
+        >>> dm = xr.DataArray(dm_vals, dims=["z"])
 
         >>> dm.dims
         ('z',)
