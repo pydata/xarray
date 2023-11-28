@@ -21,9 +21,12 @@ if TYPE_CHECKING:
 
     from xarray.namedarray._typing import (
         _AttrsLike,
+        _Dim,
         _DimsLike,
         _DType,
+        _IntOrUnknown,
         _Shape,
+        _ShapeLike,
         duckarray,
     )
     from xarray.namedarray.utils import Default
@@ -475,3 +478,94 @@ class TestNamedArray(NamedArraySubclassobjects):
         var_float2: Variable[Any, np.dtype[np.float32]]
         var_float2 = var_float._replace(("x",), np_val2)
         assert var_float2.dtype == dtype_float
+
+    @pytest.mark.parametrize(
+        "new_dims, new_shape",
+        [
+            (["x", "y"], (2, 1)),  # basic case, expanding along existing dimensions
+            (["x", "y", "z"], (2, 1, 1)),  # adding a new dimension
+            (["z", "x", "y"], (1, 2, 1)),  # adding a new dimension with different order
+            (["x"], (2,)),  # reducing dimensions
+            ({"x": 2, "y": 1}, (2, 1)),  # using dict for dims
+            (
+                {"x": 2, "y": 1, "z": 1},
+                (2, 1, 1),
+            ),  # using dict for dims, adding new dimension
+        ],
+    )
+    def test_expand_dims(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        new_dims: _DimsLike,
+        new_shape: _ShapeLike,
+    ) -> None:
+        actual = target.expand_dims(new_dims)
+        # Ensure the expected dims match, especially when new dimensions are added
+        expected_dims = (
+            tuple(new_dims)
+            if isinstance(new_dims, (list, tuple))
+            else tuple(new_dims.keys())
+        )
+        expected = NamedArray(expected_dims, target._data.reshape(*new_shape))
+        assert np.array_equal(actual.data, expected.data)
+        assert actual.dims == expected.dims
+
+    def test_expand_dims_object_dtype(self) -> None:
+        data: NamedArray[Any, np.dtype[object]]
+        x = np.empty([], dtype=object)
+        x[()] = ("a", 1)
+        data = NamedArray([], x)
+        actual = data.expand_dims(("x",), (3,))
+        exp_values = np.empty((3,), dtype=object)
+        for i in range(3):
+            exp_values[i] = ("a", 1)
+        assert np.array_equal(actual.data, exp_values)
+
+    @pytest.mark.parametrize(
+        "dims",
+        [
+            {"x": 2, "y": 1},  # basic case, broadcasting along existing dimensions
+            {"x": 2, "y": 3},  # increasing size of existing dimension
+            {"x": 2, "y": 1, "z": 1},  # adding a new dimension
+            {"z": 1, "x": 2, "y": 1},  # adding a new dimension with different order
+        ],
+    )
+    def test_broadcast_to(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        dims: Mapping[Any, _Dim],
+    ) -> None:
+        actual = target.broadcast_to(dims)
+        assert actual.sizes == dims
+
+    @pytest.mark.parametrize(
+        "dims, expected_sizes",
+        [
+            # Basic case: reversing the dimensions
+            ((), {"z": 5, "y": 4, "x": 3}),
+            (["y", "x", "z"], {"y": 4, "x": 3, "z": 5}),
+            (["y", "x", ...], {"y": 4, "x": 3, "z": 5}),
+        ],
+    )
+    def test_permute_dims(
+        self,
+        random_data: NamedArray[Any, np.dtype[np.float32]],
+        dims: _DimsLike,
+        expected_sizes: dict[_Dim, _IntOrUnknown],
+    ) -> None:
+        actual = random_data.permute_dims(*dims)
+        assert actual.sizes == expected_sizes
+
+    @pytest.mark.parametrize(
+        "dims",
+        [
+            (["y", "x"]),
+        ],
+    )
+    def test_permute_dims_errors(
+        self,
+        random_data: NamedArray[Any, np.dtype[np.float32]],
+        dims: _DimsLike,
+    ) -> None:
+        with pytest.raises(ValueError):
+            random_data.permute_dims(*dims)
