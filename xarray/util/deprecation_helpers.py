@@ -34,16 +34,9 @@
 import inspect
 import warnings
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import Callable, TypeVar
 
-if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
-
-    P = ParamSpec("P")
-    R = TypeVar("R")
-else:
-    P = Any
-    R = Any
+from xarray.core.utils import emit_user_level_warning
 
 T = TypeVar("T", bound=Callable)
 
@@ -126,7 +119,7 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
     return _decorator
 
 
-def deprecate_dims(func: Callable[P, R]) -> Callable[P, R]:
+def deprecate_dims(func: T) -> T:
     """
     For functions that previously took `dims` as a kwarg, and have now transitioned to
     `dim`. This decorator will issue a warning if `dims` is passed while forwarding it
@@ -134,16 +127,18 @@ def deprecate_dims(func: Callable[P, R]) -> Callable[P, R]:
     """
 
     @wraps(func)
-    def wrapper(*args: "P.args", **kwargs: "P.kwargs") -> R:
+    def wrapper(*args, **kwargs):
         if "dims" in kwargs:
-            warnings.warn(
+            emit_user_level_warning(
                 "The `dims` argument has been renamed to `dim`, and will be removed "
-                "in the future. This is taking place throughout xarray.",
-                # Upgrade to `DeprecationWarning` in the future
+                "in the future. This renaming is taking place throughout xarray over the "
+                "next few releases.",
+                # Upgrade to `DeprecationWarning` in the future, when the renaming is complete.
                 PendingDeprecationWarning,
-                stacklevel=2,
             )
             kwargs["dim"] = kwargs.pop("dims")
         return func(*args, **kwargs)
 
-    return wrapper
+    # We're quite confident we're just returning `T` from this function, so it's fine to ignore typing
+    # within the function.
+    return wrapper  # type: ignore
