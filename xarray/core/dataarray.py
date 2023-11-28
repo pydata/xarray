@@ -115,7 +115,6 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
-@deprecate_dims
 def _check_coords_dims(shape, coords, dim):
     sizes = dict(zip(dim, shape))
     for k, v in coords.items():

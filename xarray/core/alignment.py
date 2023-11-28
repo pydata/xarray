@@ -22,7 +22,6 @@ from xarray.core.indexes import (
 from xarray.core.types import T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
-from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -325,7 +324,6 @@ class Aligner(Generic[T_Alignable]):
                     "- they may be used to reindex data along common dimensions"
                 )
 
-    @deprecate_dims
     def _need_reindex(self, dim, cmp_indexes) -> bool:
         """Whether or not we need to reindex variables for a set of
         matching indexes.

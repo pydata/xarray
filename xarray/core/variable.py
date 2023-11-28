@@ -47,7 +47,6 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
-from xarray.util.deprecation_helpers import deprecate_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -1542,7 +1541,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result = result._stack_once(dims, new_dim)
         return result
 
-    @deprecate_dims
     def _unstack_once_full(self, dim: Mapping[Any, int], old_dim: Hashable) -> Self:
         """
         Unstacks the variable without needing an index.
