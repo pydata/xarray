@@ -70,7 +70,7 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
-from xarray.util.deprecation_helpers import _deprecate_positional_args
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
@@ -120,14 +120,14 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
-def _check_coords_dims(shape, coords, dims):
-    sizes = dict(zip(dims, shape))
+def _check_coords_dims(shape, coords, dim):
+    sizes = dict(zip(dim, shape))
     for k, v in coords.items():
-        if any(d not in dims for d in v.dims):
+        if any(d not in dim for d in v.dims):
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                f"dimensions {dims}"
+                f"dimensions {dim}"
             )
 
         for d, s in v.sizes.items():
@@ -4901,10 +4901,11 @@ class DataArray(
         """
         return self._replace(self.variable.imag)
 
+    @deprecate_dims
     def dot(
         self,
         other: T_Xarray,
-        dims: Dims = None,
+        dim: Dims = None,
     ) -> T_Xarray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -4914,7 +4915,7 @@ class DataArray(
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims : ..., str, Iterable of Hashable or None, optional
+        dim : ..., str, Iterable of Hashable or None, optional
             Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
@@ -4953,7 +4954,7 @@ class DataArray(
         if not isinstance(other, DataArray):
             raise TypeError("dot only operates on DataArrays.")
 
-        return computation.dot(self, other, dims=dims)
+        return computation.dot(self, other, dim=dim)
 
     def sortby(
         self,
