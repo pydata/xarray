@@ -22,6 +22,7 @@ from xarray.core.indexes import (
 from xarray.core.types import T_Alignable
 from xarray.core.utils import is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
+from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -324,7 +325,8 @@ class Aligner(Generic[T_Alignable]):
                     "- they may be used to reindex data along common dimensions"
                 )
 
-    def _need_reindex(self, dims, cmp_indexes) -> bool:
+    @deprecate_dims
+    def _need_reindex(self, dim, cmp_indexes) -> bool:
         """Whether or not we need to reindex variables for a set of
         matching indexes.
 
@@ -340,14 +342,14 @@ class Aligner(Generic[T_Alignable]):
             return True
 
         unindexed_dims_sizes = {}
-        for dim in dims:
-            if dim in self.unindexed_dim_sizes:
-                sizes = self.unindexed_dim_sizes[dim]
+        for d in dim:
+            if d in self.unindexed_dim_sizes:
+                sizes = self.unindexed_dim_sizes[d]
                 if len(sizes) > 1:
                     # reindex if different sizes are found for unindexed dims
                     return True
                 else:
-                    unindexed_dims_sizes[dim] = next(iter(sizes))
+                    unindexed_dims_sizes[d] = next(iter(sizes))
 
         if unindexed_dims_sizes:
             indexed_dims_sizes = {}
@@ -356,8 +358,8 @@ class Aligner(Generic[T_Alignable]):
                 for var in index_vars.values():
                     indexed_dims_sizes.update(var.sizes)
 
-            for dim, size in unindexed_dims_sizes.items():
-                if indexed_dims_sizes.get(dim, -1) != size:
+            for d, size in unindexed_dims_sizes.items():
+                if indexed_dims_sizes.get(d, -1) != size:
                     # reindex if unindexed dimension size doesn't match
                     return True
 
