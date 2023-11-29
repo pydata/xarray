@@ -49,7 +49,7 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.types import DaCompatible, T_DataArray, T_DataArrayOrSet
+from xarray.core.types import DaCompatible, T_DataArray, T_DataArrayOrSet, T_DuckArray
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -245,6 +245,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    Generic[T_DuckArray],
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -399,7 +400,7 @@ class DataArray(
 
     def __init__(
         self,
-        data: Any = dtypes.NA,
+        data: T_DuckArray | ArrayLike = dtypes.NA,
         coords: Sequence[Sequence[Any] | pd.Index | DataArray]
         | Mapping[Any, Any]
         | None = None,
@@ -451,7 +452,7 @@ class DataArray(
             coords = {k: v.copy() for k, v in coords.variables.items()}
 
         # These fully describe a DataArray
-        self._variable = variable
+        self._variable: Variable = variable
         assert isinstance(coords, dict)
         self._coords = coords
         self._name = name
@@ -742,7 +743,7 @@ class DataArray(
         return len(self.variable)
 
     @property
-    def data(self) -> Any:
+    def data(self) -> T_DuckArray:
         """
         The DataArray's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
@@ -756,7 +757,7 @@ class DataArray(
         return self.variable.data
 
     @data.setter
-    def data(self, value: Any) -> None:
+    def data(self, value: T_DuckArray | ArrayLike) -> None:
         self.variable.data = value
 
     @property
