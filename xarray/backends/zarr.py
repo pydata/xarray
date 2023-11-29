@@ -599,7 +599,7 @@ class ZarrStore(AbstractWritableDataStore):
         """
         import zarr
 
-        existing_keys = tuple(self.zarr_group.keys())
+        existing_keys = tuple(self.zarr_group.array_keys())
         existing_variable_names = {
             vn for vn in variables if _encode_variable_name(vn) in existing_keys
         }
@@ -668,7 +668,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         import zarr
 
-        existing_keys = tuple(self.zarr_group.keys())
+        existing_keys = tuple(self.zarr_group.array_keys())
 
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
