@@ -1708,10 +1708,10 @@ class TestVariable(VariableSubclassobjects):
     def test_broadcasting_failures(self):
         a = Variable(["x"], np.arange(10))
         b = Variable(["x"], np.arange(5))
-        c = Variable(["x", "x"], np.arange(100).reshape(10, 10))
         with pytest.raises(ValueError, match=r"mismatched lengths"):
             a + b
-        with pytest.raises(ValueError, match=r"duplicate dimensions"):
+        with pytest.raises(ValueError, match=r"Duplicate dimension"):
+            c = Variable(["x", "x"], np.arange(100).reshape(10, 10))
             a + c
 
     def test_inplace_math(self):
