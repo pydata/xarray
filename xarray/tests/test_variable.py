@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -46,6 +46,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.test_namedarray import NamedArraySubclassobjects
 
 dask_array_type = array_type("dask")
 
@@ -63,34 +64,11 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
-class VariableSubclassobjects(ABC):
-    @abstractmethod
-    def cls(self, *args, **kwargs) -> Variable:
-        raise NotImplementedError
-
-    def test_properties(self):
-        data = 0.5 * np.arange(10)
-        v = self.cls(["time"], data, {"foo": "bar"})
-        assert v.dims == ("time",)
-        assert_array_equal(v.values, data)
-        assert v.dtype == float
-        assert v.shape == (10,)
-        assert v.size == 10
-        assert v.sizes == {"time": 10}
-        assert v.nbytes == 80
-        assert v.ndim == 1
-        assert len(v) == 10
-        assert v.attrs == {"foo": "bar"}
-
-    def test_attrs(self):
-        v = self.cls(["time"], 0.5 * np.arange(10))
-        assert v.attrs == {}
-        attrs = {"foo": "bar"}
-        v.attrs = attrs
-        assert v.attrs == attrs
-        assert isinstance(v.attrs, dict)
-        v.attrs["foo"] = "baz"
-        assert v.attrs["foo"] == "baz"
+class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
+    @pytest.fixture
+    def target(self, data):
+        data = 0.5 * np.arange(10).reshape(2, 5)
+        return Variable(["x", "y"], data)
 
     def test_getitem_dict(self):
         v = self.cls(["x"], np.random.randn(5))
@@ -368,7 +346,7 @@ class VariableSubclassobjects(ABC):
             assert_array_equal(v >> 2, x >> 2)
         # binary ops with numpy arrays
         assert_array_equal((v * x).values, x**2)
-        assert_array_equal((x * v).values, x**2)  # type: ignore[attr-defined] # TODO: Fix mypy thinking numpy takes priority, GH7780
+        assert_array_equal((x * v).values, x**2)
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
         if dtype is int:
@@ -1065,9 +1043,8 @@ class TestVariable(VariableSubclassobjects):
     def setup(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
-    def test_data_and_values(self):
+    def test_values(self):
         v = Variable(["time", "x"], self.d)
-        assert_array_equal(v.data, self.d)
         assert_array_equal(v.values, self.d)
         assert source_ndarray(v.values) is self.d
         with pytest.raises(ValueError):
@@ -1076,9 +1053,6 @@ class TestVariable(VariableSubclassobjects):
         d2 = np.random.random((10, 3))
         v.values = d2
         assert source_ndarray(v.values) is d2
-        d3 = np.random.random((10, 3))
-        v.data = d3
-        assert source_ndarray(v.data) is d3
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))

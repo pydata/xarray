@@ -38,9 +38,20 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- As part of an effort to standardize the API, we're renaming the ``dims``
+  keyword arg to ``dim`` for the minority of functions which current use
+  ``dims``. This started with :py:func:`xarray.dot` & :py:meth:`DataArray.dot`
+  and we'll gradually roll this out across all functions. The warnings are
+  currently ``PendingDeprecationWarning``, which are silenced by default. We'll
+  convert these to ``DeprecationWarning`` in a future release.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
+- Fix writing a variable that requires transposing when not writing to a region (:pull:`8484`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Documentation
@@ -52,9 +63,16 @@ Documentation
   in ``resample`` (:pull:`8479`).
   By `Doug Latornell <https://github.com/douglatornell>`_.
 
+- Improved error message when attempting to get a variable which doesn't exist from a Dataset.
+  (:pull:`8474`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
+  default, which is up to 5x faster where parallelization is possible. (:pull:`8339`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2023.11.0:
 

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import warnings
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 from packaging.version import Version
+
+from xarray.core import pycompat
+from xarray.core.utils import module_available
 
 # remove once numpy 2.0 is the oldest supported version
 try:
@@ -24,15 +28,6 @@ except ImportError:
     # use numpy methods instead
     bn = np
     _BOTTLENECK_AVAILABLE = False
-
-try:
-    import numbagg
-
-    _HAS_NUMBAGG = Version(numbagg.__version__) >= Version("0.5.0")
-except ImportError:
-    # use numpy methods instead
-    numbagg = np  # type: ignore
-    _HAS_NUMBAGG = False
 
 
 def _select_along_axis(values, idx, axis):
@@ -171,17 +166,16 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_method(name, npmodule=np):
+def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
-        nba_func = getattr(numbagg, name, None)
 
         if (
-            _HAS_NUMBAGG
+            module_available("numbagg")
+            and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
-            and nba_func is not None
             # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
             and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
             # TODO: bool?
@@ -189,11 +183,15 @@ def _create_method(name, npmodule=np):
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
         ):
-            # numbagg does not take care dtype, ddof
-            kwargs.pop("dtype", None)
-            kwargs.pop("ddof", None)
-            result = nba_func(values, axis=axis, **kwargs)
-        elif (
+            import numbagg
+
+            nba_func = getattr(numbagg, name, None)
+            if nba_func is not None:
+                # numbagg does not take care dtype, ddof
+                kwargs.pop("dtype", None)
+                kwargs.pop("ddof", None)
+                return nba_func(values, axis=axis, **kwargs)
+        if (
             _BOTTLENECK_AVAILABLE
             and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)

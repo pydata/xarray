@@ -1539,10 +1539,18 @@ class Dataset(
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
+        from xarray.core.formatting import shorten_list_repr
+
         if utils.is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
-            return self._construct_dataarray(key)
+            try:
+                return self._construct_dataarray(key)
+            except KeyError as e:
+                raise KeyError(
+                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                ) from e
+
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
         raise ValueError(f"Unsupported key-type {type(key)}")

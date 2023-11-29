@@ -5423,7 +5423,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
-def test_zarr_region_transpose(tmp_path):
+def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
     data = np.ones((5, 10))
@@ -5438,7 +5438,12 @@ def test_zarr_region_transpose(tmp_path):
     )
     ds.to_zarr(tmp_path / "test.zarr")
 
-    ds_region = 1 + ds.isel(x=[0], y=[0]).transpose()
+    ds_transposed = ds.transpose("y", "x")
+
+    ds_region = 1 + ds_transposed.isel(x=[0], y=[0])
     ds_region.to_zarr(
         tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
     )
+
+    # Write without region
+    ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")
