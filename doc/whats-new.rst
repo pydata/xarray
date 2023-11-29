@@ -57,6 +57,12 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added illustration of updating the time coordinate values of a resampled dataset using
+  time offset arithmetic.
+  This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
+  in ``resample`` (:pull:`8479`).
+  By `Doug Latornell <https://github.com/douglatornell>`_.
+
 - Improved error message when attempting to get a variable which doesn't exist from a Dataset.
   (:pull:`8474`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
