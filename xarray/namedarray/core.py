@@ -484,7 +484,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if len(set(dims)) < len(dims):
             repeated_dims = set([d for d in dims if dims.count(d) > 1])
             raise ValueError(
-                f"Repeated dimension names are forbidden, but dimensions {repeated_dims} appear more than once in dims={dims}"
+                f"Duplicate dimension names are forbidden, but dimensions {repeated_dims} appear more than once in dims={dims}"
             )
         return dims
 

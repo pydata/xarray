@@ -477,5 +477,5 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert var_float2.dtype == dtype_float
 
     def test_forbid_repeated_dimension_names(self) -> None:
-        with pytest.raises(ValueError, match="Repeated dimension names"):
+        with pytest.raises(ValueError, match="Duplicate dimension names"):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
