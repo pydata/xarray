@@ -475,3 +475,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         var_float2: Variable[Any, np.dtype[np.float32]]
         var_float2 = var_float._replace(("x",), np_val2)
         assert var_float2.dtype == dtype_float
+
+    def test_forbid_repeated_dimension_names(self) -> None:
+        with pytest.raises(ValueError, match="Repeated dimension names"):
+            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
