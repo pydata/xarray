@@ -245,6 +245,18 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
     ds.resample(time="1h").nearest(tolerance="1h")
 
+It is often desirable to center the time values after a resampling operation.
+That can be accomplished by updating the resampled dataset time coordinate values
+using time offset arithmetic via the `pandas.tseries.frequencies.to_offset`_ function.
+
+.. _pandas.tseries.frequencies.to_offset: https://pandas.pydata.org/docs/reference/api/pandas.tseries.frequencies.to_offset.html
+
+.. ipython:: python
+
+    resampled_ds = ds.resample(time="6h").mean()
+    offset = pd.tseries.frequencies.to_offset("6h") / 2
+    resampled_ds["time"] = resampled_ds.get_index("time") + offset
+    resampled_ds
 
 For more examples of using grouped operations on a time dimension, see
 :doc:`../examples/weather-data`.
