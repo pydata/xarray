@@ -804,7 +804,7 @@ store. These options are useful for scenarios when it is infeasible or
 undesirable to write your entire dataset at once.
 
 1. Use ``mode='a'`` to add or overwrite entire variables,
-2. Use ``append_dim`` to resize and append to exiting variables, and
+2. Use ``append_dim`` to resize and append to existing variables, and
 3. Use ``region`` to write to limited regions of existing arrays.
 
 .. tip::
