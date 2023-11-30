@@ -364,7 +364,6 @@ class TestNamedArray(NamedArraySubclassobjects):
         narr_int = narr_float._new(("x",), np.array([1, 3], dtype=dtype_int))
         assert narr_int.dtype == dtype_int
 
-        # Test with a subclass:
         class Variable(
             NamedArray[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
         ):
@@ -402,9 +401,8 @@ class TestNamedArray(NamedArraySubclassobjects):
 
                 if data is _default:
                     return type(self)(dims_, copy.copy(self._data), attrs_)
-                else:
-                    cls_ = cast("type[Variable[Any, _DType]]", type(self))
-                    return cls_(dims_, data, attrs_)
+                cls_ = cast("type[Variable[Any, _DType]]", type(self))
+                return cls_(dims_, data, attrs_)
 
         var_float: Variable[Any, np.dtype[np.float32]]
         var_float = Variable(("x",), np.array([1.5, 3.2], dtype=dtype_float))
@@ -429,7 +427,6 @@ class TestNamedArray(NamedArraySubclassobjects):
         narr_float2 = NamedArray(("x",), np_val2)
         assert narr_float2.dtype == dtype_float
 
-        # Test with a subclass:
         class Variable(
             NamedArray[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
         ):
@@ -467,9 +464,8 @@ class TestNamedArray(NamedArraySubclassobjects):
 
                 if data is _default:
                     return type(self)(dims_, copy.copy(self._data), attrs_)
-                else:
-                    cls_ = cast("type[Variable[Any, _DType]]", type(self))
-                    return cls_(dims_, data, attrs_)
+                cls_ = cast("type[Variable[Any, _DType]]", type(self))
+                return cls_(dims_, data, attrs_)
 
         var_float: Variable[Any, np.dtype[np.float32]]
         var_float = Variable(("x",), np_val)
