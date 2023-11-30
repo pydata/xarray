@@ -35,7 +35,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Explicitly warn when creating xarray objects with repeated dimension names.
-  Such objects will also now raise when :py:meth:`DataArray.get_axis_num` is called, 
+  Such objects will also now raise when :py:meth:`DataArray.get_axis_num` is called,
   which means many functions will raise.
   This latter change is technically a breaking change, but whilst allowed,
   this behaviour was never actually supported! (:issue:`3731`, :pull:`8491`)
