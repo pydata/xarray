@@ -218,7 +218,7 @@ class AbstractArray:
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
-        _raise_if_any_duplicate_dimensions(self.dims, dim)
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
         except ValueError:
