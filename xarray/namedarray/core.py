@@ -854,7 +854,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def permute_dims(
         self,
-        *dims: Hashable | ellipsis,
+        *dims: _DimsLike | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
@@ -901,7 +901,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
     def T(self) -> NamedArray[Any, _DType_co]:
         return self.permute_dims()
 
-    def _check_dims(self, dims: Mapping[Any, _Dim] | _Dim) -> None:
+    def _check_dims(self, dims: _DimsLike | Mapping[_Dim, int]) -> None:
         if isinstance(dims, dict):
             dims_keys = dims
         else:
@@ -1043,7 +1043,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             None if d in combined_dims else slice(None) for d in new_dims
         )
 
-        expanded_data: duckarray[_ShapeType, _DType] = self.data[slicing_tuple]
+        expanded_data: duckarray[Any, _DType_co] = self.data[slicing_tuple]
 
         return self._new(dims=new_dims, data=expanded_data)
 
