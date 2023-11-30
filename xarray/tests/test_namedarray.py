@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         _Dim,
         _DimsLike,
         _DType,
+        _IntOrUnknown,
         _Shape,
         _ShapeLike,
         duckarray,
@@ -500,34 +501,33 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert result.shape == expected_shape
         assert result.dims == expected_dims
 
-    # @pytest.mark.parametrize(
-    #     "dims, expected_sizes",
-    #     [
-    #         # Basic case: reversing the dimensions
-    #         ((), {"z": 5, "y": 4, "x": 3}),
-    #         (["y", "x", "z"], {"y": 4, "x": 3, "z": 5}),
-    #         (["y", "x", ...], {"y": 4, "x": 3, "z": 5}),
-    #     ],
-    # )
-    # def test_permute_dims(
-    #     self,
-    #     target: NamedArray[Any, np.dtype[np.float32]],
-    #     dims: _DimsLike,
-    #     expected_sizes: dict[_Dim, _IntOrUnknown],
-    # ) -> None:
-    #     actual = target.permute_dims(*dims)
-    #     assert actual.sizes == expected_sizes
+    @pytest.mark.parametrize(
+        "dims, expected_sizes",
+        [
+            ((), {"y": 5, "x": 2}),
+            (["y", "x"], {"y": 5, "x": 2}),
+            (["y", ...], {"y": 5, "x": 2}),
+        ],
+    )
+    def test_permute_dims(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        dims: _DimsLike,
+        expected_sizes: dict[_Dim, _IntOrUnknown],
+    ) -> None:
+        actual = target.permute_dims(*dims)
+        assert actual.sizes == expected_sizes
 
-    # @pytest.mark.parametrize(
-    #     "dims",
-    #     [
-    #         (["y", "x"]),
-    #     ],
-    # )
-    # def test_permute_dims_errors(
-    #     self,
-    #     random_data: NamedArray[Any, np.dtype[np.float32]],
-    #     dims: _DimsLike,
-    # ) -> None:
-    #     with pytest.raises(ValueError):
-    #         random_data.permute_dims(*dims)
+    @pytest.mark.parametrize(
+        "dims",
+        [
+            (["y"]),
+        ],
+    )
+    def test_permute_dims_errors(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        dims: _DimsLike,
+    ) -> None:
+        with pytest.raises(ValueError):
+            target.permute_dims(*dims)
