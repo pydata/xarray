@@ -45,6 +45,10 @@ Deprecations
   currently ``PendingDeprecationWarning``, which are silenced by default. We'll
   convert these to ``DeprecationWarning`` in a future release.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`Dataset.drop` &
+  :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+  several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
+  replace them for labels & variables respectively.
 
 Bug fixes
 ~~~~~~~~~
