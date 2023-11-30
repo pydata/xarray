@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
+from xarray.core.coordinates import Coordinates
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
@@ -474,7 +475,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def assign_coords(
         self,
-        coords: Mapping[Any, Any] | None = None,
+        coords: Mapping[Any, Any] | Coordinates | None = None,
         **coords_kwargs: Any,
     ) -> Self:
         """Assign new coordinates to this object.
@@ -484,7 +485,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict-like or None, optional
+        coords : dict-like or Coordinates, optional
             A dict where the keys are the names of the coordinates
             with the new values to assign. If the values are callable, they are
             computed on this object and assigned to new coordinate variables.
@@ -592,14 +593,6 @@ class DataWithCoords(AttrAccessMixin):
             precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
         Attributes:
             description:  Weather-related data
-
-        Notes
-        -----
-        Since ``coords_kwargs`` is a dictionary, the order of your arguments
-        may not be preserved, and so the order of the new variables is not well
-        defined. Assigning multiple variables within the same ``assign_coords``
-        is possible, but you cannot reference other variables created within
-        the same ``assign_coords`` call.
 
         See Also
         --------
