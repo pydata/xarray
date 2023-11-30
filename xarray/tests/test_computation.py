@@ -1936,7 +1936,7 @@ def test_dot(use_dask: bool) -> None:
         da_a = da_a.chunk({"a": 3})
         da_b = da_b.chunk({"a": 3})
         da_c = da_c.chunk({"c": 3})
-    actual = xr.dot(da_a, da_b, dims=["a", "b"])
+    actual = xr.dot(da_a, da_b, dim=["a", "b"])
     assert actual.dims == ("c",)
     assert (actual.data == np.einsum("ij,ijk->k", a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
@@ -1960,33 +1960,33 @@ def test_dot(use_dask: bool) -> None:
     if use_dask:
         da_a = da_a.chunk({"a": 3})
         da_b = da_b.chunk({"a": 3})
-        actual = xr.dot(da_a, da_b, dims=["b"])
+        actual = xr.dot(da_a, da_b, dim=["b"])
         assert actual.dims == ("a", "c")
         assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
         assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-    actual = xr.dot(da_a, da_b, dims=["b"])
+    actual = xr.dot(da_a, da_b, dim=["b"])
     assert actual.dims == ("a", "c")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, dims="b")
+    actual = xr.dot(da_a, da_b, dim="b")
     assert actual.dims == ("a", "c")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, dims="a")
+    actual = xr.dot(da_a, da_b, dim="a")
     assert actual.dims == ("b", "c")
     assert (actual.data == np.einsum("ij,ijk->jk", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, dims="c")
+    actual = xr.dot(da_a, da_b, dim="c")
     assert actual.dims == ("a", "b")
     assert (actual.data == np.einsum("ij,ijk->ij", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, da_c, dims=["a", "b"])
+    actual = xr.dot(da_a, da_b, da_c, dim=["a", "b"])
     assert actual.dims == ("c", "e")
     assert (actual.data == np.einsum("ij,ijk,kl->kl ", a, b, c)).all()
 
     # should work with tuple
-    actual = xr.dot(da_a, da_b, dims=("c",))
+    actual = xr.dot(da_a, da_b, dim=("c",))
     assert actual.dims == ("a", "b")
     assert (actual.data == np.einsum("ij,ijk->ij", a, b)).all()
 
@@ -1996,47 +1996,47 @@ def test_dot(use_dask: bool) -> None:
     assert (actual.data == np.einsum("ij,ijk,kl->l ", a, b, c)).all()
 
     # 1 array summation
-    actual = xr.dot(da_a, dims="a")
+    actual = xr.dot(da_a, dim="a")
     assert actual.dims == ("b",)
     assert (actual.data == np.einsum("ij->j ", a)).all()
 
     # empty dim
-    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims="a")
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dim="a")
     assert actual.dims == ("b",)
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Ellipsis (...) sums over all dimensions
-    actual = xr.dot(da_a, da_b, dims=...)
+    actual = xr.dot(da_a, da_b, dim=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij,ijk->", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, da_c, dims=...)
+    actual = xr.dot(da_a, da_b, da_c, dim=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij,ijk,kl-> ", a, b, c)).all()
 
-    actual = xr.dot(da_a, dims=...)
+    actual = xr.dot(da_a, dim=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij-> ", a)).all()
 
-    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims=...)
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dim=...)
     assert actual.dims == ()
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Invalid cases
     if not use_dask:
         with pytest.raises(TypeError):
-            xr.dot(da_a, dims="a", invalid=None)
+            xr.dot(da_a, dim="a", invalid=None)
     with pytest.raises(TypeError):
-        xr.dot(da_a.to_dataset(name="da"), dims="a")
+        xr.dot(da_a.to_dataset(name="da"), dim="a")
     with pytest.raises(TypeError):
-        xr.dot(dims="a")
+        xr.dot(dim="a")
 
     # einsum parameters
-    actual = xr.dot(da_a, da_b, dims=["b"], order="C")
+    actual = xr.dot(da_a, da_b, dim=["b"], order="C")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
     assert actual.values.flags["C_CONTIGUOUS"]
     assert not actual.values.flags["F_CONTIGUOUS"]
-    actual = xr.dot(da_a, da_b, dims=["b"], order="F")
+    actual = xr.dot(da_a, da_b, dim=["b"], order="F")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
     # dask converts Fortran arrays to C order when merging the final array
     if not use_dask:
@@ -2078,7 +2078,7 @@ def test_dot_align_coords(use_dask: bool) -> None:
     expected = (da_a * da_b).sum(["a", "b"])
     xr.testing.assert_allclose(expected, actual)
 
-    actual = xr.dot(da_a, da_b, dims=...)
+    actual = xr.dot(da_a, da_b, dim=...)
     expected = (da_a * da_b).sum()
     xr.testing.assert_allclose(expected, actual)
 

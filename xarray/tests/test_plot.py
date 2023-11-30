@@ -787,12 +787,17 @@ class TestPlot1D(PlotTestCase):
         self.darray[1] = np.nan
         self.darray.plot.line()
 
-    def test_x_ticks_are_rotated_for_time(self) -> None:
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
         time = pd.date_range("2000-01-01", "2000-01-10")
         a = DataArray(np.arange(len(time)), [("t", time)])
         a.plot.line()
-        rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        assert rotation != 0
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
 
     def test_xyincrease_false_changes_axes(self) -> None:
         self.darray.plot.line(xincrease=False, yincrease=False)
@@ -1356,12 +1361,17 @@ class Common2dMixin:
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
         assert all(abs(x) < 1 for x in diffs)
 
-    def test_x_ticks_are_rotated_for_time(self) -> None:
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
         time = pd.date_range("2000-01-01", "2000-01-10")
         a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
-        a.plot(x="t")
-        rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        assert rotation != 0
+        self.plotfunc(a, x="t")
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
 
     def test_plot_nans(self) -> None:
         x1 = self.darray[:5]
@@ -1888,6 +1898,25 @@ class TestPcolormeshLogscale(PlotTestCase):
 class TestImshow(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.imshow)
 
+    @pytest.mark.xfail(
+        reason=(
+            "Failing inside matplotlib. Should probably be fixed upstream because "
+            "other plot functions can handle it. "
+            "Remove this test when it works, already in Common2dMixin"
+        )
+    )
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
+        time = pd.date_range("2000-01-01", "2000-01-10")
+        a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
+        self.plotfunc(a, x="t")
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
+
     @pytest.mark.slow
     def test_imshow_called(self) -> None:
         # Having both statements ensures the test works properly
@@ -2031,6 +2060,25 @@ class TestImshow(Common2dMixin, PlotTestCase):
 class TestSurface(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.surface)
     subplot_kws = {"projection": "3d"}
+
+    @pytest.mark.xfail(
+        reason=(
+            "Failing inside matplotlib. Should probably be fixed upstream because "
+            "other plot functions can handle it. "
+            "Remove this test when it works, already in Common2dMixin"
+        )
+    )
+    def test_dates_are_concise(self) -> None:
+        import matplotlib.dates as mdates
+
+        time = pd.date_range("2000-01-01", "2000-01-10")
+        a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
+        self.plotfunc(a, x="t")
+
+        ax = plt.gca()
+
+        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
+        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
 
     def test_primitive_artist_returned(self) -> None:
         artist = self.plotmethod()

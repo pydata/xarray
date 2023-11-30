@@ -864,12 +864,13 @@ class CFEncodedBase(DatasetIOBase):
         assert check_vlen_dtype(original["a"].dtype) == str
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
-            assert object == actual["a"].dtype
-            assert actual["a"].dtype == original["a"].dtype
-            # only check metadata for capable backends
-            # eg. NETCDF3 based backends do not roundtrip metadata
-            if actual["a"].dtype.metadata is not None:
-                assert check_vlen_dtype(actual["a"].dtype) == str
+            if np.issubdtype(actual["a"].dtype, object):
+                # only check metadata for capable backends
+                # eg. NETCDF3 based backends do not roundtrip metadata
+                if actual["a"].dtype.metadata is not None:
+                    assert check_vlen_dtype(actual["a"].dtype) == str
+            else:
+                assert actual["a"].dtype == np.dtype("<U1")
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
@@ -1374,32 +1375,39 @@ class NetCDF4Base(NetCDFBase):
             with self.open(tmp_file, group="data/2") as actual2:
                 assert_identical(data2, actual2)
 
-    def test_encoding_kwarg_vlen_string(self) -> None:
-        for input_strings in [[b"foo", b"bar", b"baz"], ["foo", "bar", "baz"]]:
-            original = Dataset({"x": input_strings})
-            expected = Dataset({"x": ["foo", "bar", "baz"]})
-            kwargs = dict(encoding={"x": {"dtype": str}})
-            with self.roundtrip(original, save_kwargs=kwargs) as actual:
-                assert actual["x"].encoding["dtype"] is str
-                assert_identical(actual, expected)
+    @pytest.mark.parametrize(
+        "input_strings, is_bytes",
+        [
+            ([b"foo", b"bar", b"baz"], True),
+            (["foo", "bar", "baz"], False),
+            (["foó", "bár", "baź"], False),
+        ],
+    )
+    def test_encoding_kwarg_vlen_string(
+        self, input_strings: list[str], is_bytes: bool
+    ) -> None:
+        original = Dataset({"x": input_strings})
 
-    def test_roundtrip_string_with_fill_value_vlen(self) -> None:
+        expected_string = ["foo", "bar", "baz"] if is_bytes else input_strings
+        expected = Dataset({"x": expected_string})
+        kwargs = dict(encoding={"x": {"dtype": str}})
+        with self.roundtrip(original, save_kwargs=kwargs) as actual:
+            assert actual["x"].encoding["dtype"] == "<U3"
+            assert actual["x"].dtype == "<U3"
+            assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("fill_value", ["XXX", "", "bár"])
+    def test_roundtrip_string_with_fill_value_vlen(self, fill_value: str) -> None:
         values = np.array(["ab", "cdef", np.nan], dtype=object)
         expected = Dataset({"x": ("t", values)})
 
-        # netCDF4-based backends don't support an explicit fillvalue
-        # for variable length strings yet.
-        # https://github.com/Unidata/netcdf4-python/issues/730
-        # https://github.com/h5netcdf/h5netcdf/issues/37
-        original = Dataset({"x": ("t", values, {}, {"_FillValue": "XXX"})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                assert_identical(expected, actual)
+        original = Dataset({"x": ("t", values, {}, {"_FillValue": fill_value})})
+        with self.roundtrip(original) as actual:
+            assert_identical(expected, actual)
 
         original = Dataset({"x": ("t", values, {}, {"_FillValue": ""})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                assert_identical(expected, actual)
+        with self.roundtrip(original) as actual:
+            assert_identical(expected, actual)
 
     def test_roundtrip_character_array(self) -> None:
         with create_tmp_file() as tmp_file:
@@ -5425,7 +5433,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
-def test_zarr_region_transpose(tmp_path):
+def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
     data = np.ones((5, 10))
@@ -5440,7 +5448,12 @@ def test_zarr_region_transpose(tmp_path):
     )
     ds.to_zarr(tmp_path / "test.zarr")
 
-    ds_region = 1 + ds.isel(x=[0], y=[0]).transpose()
+    ds_transposed = ds.transpose("y", "x")
+
+    ds_region = 1 + ds_transposed.isel(x=[0], y=[0])
     ds_region.to_zarr(
         tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
     )
+
+    # Write without region
+    ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")

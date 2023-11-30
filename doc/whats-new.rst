@@ -14,10 +14,84 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2023.10.2:
 
-v2023.10.2 (unreleased)
+.. _whats-new.2023.11.1:
+
+v2023.11.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Use a concise format when plotting datetime arrays. (:pull:`8449`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+
+- :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
+  the core dim has exactly one chunk. (:pull:`8475`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+- As part of an effort to standardize the API, we're renaming the ``dims``
+  keyword arg to ``dim`` for the minority of functions which current use
+  ``dims``. This started with :py:func:`xarray.dot` & :py:meth:`DataArray.dot`
+  and we'll gradually roll this out across all functions. The warnings are
+  currently ``PendingDeprecationWarning``, which are silenced by default. We'll
+  convert these to ``DeprecationWarning`` in a future release.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
+- Fix writing a variable that requires transposing when not writing to a region (:pull:`8484`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added illustration of updating the time coordinate values of a resampled dataset using
+  time offset arithmetic.
+  This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
+  in ``resample`` (:pull:`8479`).
+  By `Doug Latornell <https://github.com/douglatornell>`_.
+
+- Improved error message when attempting to get a variable which doesn't exist from a Dataset.
+  (:pull:`8474`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
+  default, which is up to 5x faster where parallelization is possible. (:pull:`8339`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+.. _whats-new.2023.11.0:
+
+v2023.11.0 (Nov 16, 2023)
+-------------------------
+
+
+.. tip::
+
+     `This is our 10th year anniversary release! <https://github.com/pydata/xarray/discussions/8462>`_ Thank you for your love and support.
+
+
+This release brings the ability to use ``opt_einsum`` for :py:func:`xarray.dot` by default,
+support for auto-detecting ``region`` when writing partial datasets to Zarr, and the use of h5py
+drivers with ``h5netcdf``.
+
+Thanks to the 19 contributors to this release:
+Aman Bagrecha, Anderson Banihirwe, Ben Mares, Deepak Cherian, Dimitri Papadopoulos Orfanos, Ezequiel Cimadevilla Alvarez,
+Illviljan, Justus Magin, Katelyn FitzGerald, Kai Muehlbauer, Martin Durant, Maximilian Roos, Metamess, Sam Levang, Spencer Clark, Tom Nicholas, mgunyho, templiert
 
 New Features
 ~~~~~~~~~~~~
@@ -32,13 +106,14 @@ New Features
   By `Sam Levang <https://github.com/slevang>`_.
 - Allow the usage of h5py drivers (eg: ros3) via h5netcdf (:pull:`8360`).
   By `Ezequiel Cimadevilla <https://github.com/zequihg50>`_.
+- Enable VLEN string fill_values, preserve VLEN string dtypes (:issue:`1647`, :issue:`7652`, :issue:`7868`, :pull:`7869`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - drop support for `cdms2 <https://github.com/CDAT/cdms>`_. Please use
   `xcdat <https://github.com/xCDAT/xcdat>`_ instead (:pull:`8441`).
   By `Justus Magin <https://github.com/keewis>`_.
-
 - Following pandas, :py:meth:`infer_freq` will return ``"Y"``, ``"YS"``,
   ``"QE"``, ``"ME"``, ``"h"``, ``"min"``, ``"s"``, ``"ms"``, ``"us"``, or
   ``"ns"`` instead of ``"A"``, ``"AS"``, ``"Q"``, ``"M"``, ``"H"``, ``"T"``,
@@ -46,6 +121,8 @@ Breaking changes
   deprecation of the latter frequency strings (:issue:`8394`, :pull:`8415`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
 - Bump minimum tested pint version to ``>=0.22``. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Minimum supported versions for the following packages have changed: ``h5py >=3.7``, ``h5netcdf>=1.1``.
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -99,11 +176,6 @@ Documentation
 ~~~~~~~~~~~~~
 - Small updates to documentation on distributed writes: See :ref:`io.zarr.appending` to Zarr.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
 
 .. _whats-new.2023.10.1:
 
