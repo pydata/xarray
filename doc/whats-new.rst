@@ -34,8 +34,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Explicitly forbid creating xarray objects with repeated dimension names.
-  This is technically a breaking change, but whilst allowed by the constructor,
+- Explicitly warn when creating xarray objects with repeated dimension names.
+  Such objects will also now raise when :py:meth:`DataArray.get_axis_num` is called, 
+  which means many functions will raise.
+  This latter change is technically a breaking change, but whilst allowed,
   this behaviour was never actually supported! (:issue:`3731`, :pull:`8491`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
