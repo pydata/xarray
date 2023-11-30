@@ -1004,25 +1004,47 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 default_dim = f"dim_{dim_number}"
             dim = {default_dim: 0}
 
-        elif isinstance(dim, (str, list, tuple)):
-            # If dim is a string or list/tuple, convert to a dict with default positions
-            dim = {d: 0 for d in (dim if isinstance(dim, (list, tuple)) else [dim])}
+        if isinstance(dim, str):
+            dim = {dim: 0}
+
+        elif isinstance(dim, (list, tuple)):
+            # if dim is a list/tuple, convert to a dict with default positions
+            dim = {d: idx for idx, d in (enumerate(dim))}
 
         combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
 
-        # create a list of all dimensions, placing new ones at their specified positions
-        new_dims = list(self.dims)
-        for d, pos in sorted(combined_dims.items(), key=lambda x: x[1]):
-            if d in new_dims:
-                raise ValueError(f"Dimension {d} already exists")
-            new_dims.insert(pos, d)
+        # check for duplicate positions
+        positions = list(combined_dims.values())
+        if len(positions) != len(set(positions)):
+            raise ValueError(
+                f"Cannot assign multiple new dimensions to the same position: {positions}"
+            )
 
+        # create a list of all dimensions, placing new ones at their specified positions
+        all_dims_with_pos = [(d, i) for i, d in enumerate(self.dims)]
+
+        # adjust positions of existing dimensions based on new dimensions' positions
+        for new_dim, new_pos in combined_dims.items():
+            for i, (existing_dim, existing_pos) in enumerate(all_dims_with_pos):
+                if existing_pos >= new_pos:
+                    all_dims_with_pos[i] = (existing_dim, existing_pos + 1)
+
+        # add new dimensions to the list
+        all_dims_with_pos.extend(combined_dims.items())
+
+        # sort by position to get the final order
+        all_dims_with_pos.sort(key=lambda x: x[1])
+
+        # extract the ordered list of dimensions
+        new_dims = [dim[0] for dim in all_dims_with_pos]
+
+        # use slicing to expand dimensions
         slicing_tuple = tuple(
             None if d in combined_dims else slice(None) for d in new_dims
         )
 
         expanded_data: duckarray[_ShapeType, _DType] = self.data[slicing_tuple]
-        # use slicing to expand dimensions
+
         return self._new(dims=new_dims, data=expanded_data)
 
 
