@@ -905,7 +905,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
             )
 
-        data = self._data.T
+        data = self._data[::-1, ::-1]
         dims = self.dims[::-1]
         return self._replace(dims=dims, data=data)
 
