@@ -4,7 +4,7 @@ import sys
 import warnings
 from collections.abc import Hashable, Iterator, Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 import numpy as np
 
@@ -26,6 +26,11 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = NDArray  # type: ignore
         DaskCollection: Any = NDArray  # type: ignore
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+T = TypeVar("T")
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -150,6 +155,25 @@ def infix_dims(
                 f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
             )
         yield from existing_dims
+
+
+def either_dict_or_kwargs(
+    pos_kwargs: Mapping[Any, T] | None,
+    kw_kwargs: Mapping[str, T],
+    func_name: str,
+) -> Mapping[Hashable, T]:
+    if pos_kwargs is None or pos_kwargs == {}:
+        # Need an explicit cast to appease mypy due to invariance; see
+        # https://github.com/python/mypy/issues/6228
+        return cast(Mapping[Hashable, T], kw_kwargs)
+
+    if not is_dict_like(pos_kwargs):
+        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
+    if kw_kwargs:
+        raise ValueError(
+            f"cannot specify both keyword and positional arguments to .{func_name}"
+        )
+    return pos_kwargs
 
 
 class ReprObject:

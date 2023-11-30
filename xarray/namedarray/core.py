@@ -30,7 +30,6 @@ from xarray.namedarray._typing import (
     _dtype,
     _DType_co,
     _ScalarType_co,
-    _ShapeLike,
     _ShapeType_co,
     _sparsearrayfunction_or_api,
     _SupportsImag,
@@ -38,8 +37,8 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.utils import (
     _default,
+    either_dict_or_kwargs,
     infix_dims,
-    is_dict_like,
     is_duck_dask_array,
     to_0d_object_array,
 )
@@ -883,7 +882,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.transpose
         """
-        from xarray.core.indexing import as_indexable
 
         if not dims:
             dims = self.dims[::-1]
@@ -896,14 +894,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self.copy(deep=False)
 
         axes = self.get_axis_num(dims)
-        data = as_indexable(self._data).transpose(axes)  # type: ignore
+        data = self._data.transpose(axes)
         return self._replace(dims=dims, data=data)
 
     @property
     def T(self) -> NamedArray[Any, _DType_co]:
         return self.permute_dims()
 
-    def _check_dims(self, dims: Mapping[Any, _Dim] | _Dim):
+    def _check_dims(self, dims: Mapping[Any, _Dim] | _Dim) -> None:
         if isinstance(dims, dict):
             dims_keys = dims
         else:
@@ -941,49 +939,91 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         return self._new(data=data, dims=expanded_dims)
 
     def expand_dims(
-        self, dims: _DimsLike, shape: _ShapeLike | None = None
+        self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
     ) -> NamedArray[Any, _DType_co]:
         """
-        Expand the dimensions of the object.
+        Expand the dimensions of the NamedArray.
 
-        This method adds new dimensions to the object and optionally broadcasts
-        the data to the new shape if provided.
+        This method adds new dimensions to the object. New dimensions can be added
+        at specific positions with a given size, which defaults to 1 if not specified.
+        The method handles both positional and keyword arguments for specifying new dimensions.
 
         Parameters
         ----------
-        dims : str or sequence of str or dict
-            Dimensions to include on the new object (must be a superset of the existing dimensions).
-            If a dict, values are used to provide the sizes of new dimensions; otherwise, new dimensions are inserted with length 1.
+        dim : str, sequence of str, or dict, optional
+            Dimensions to include on the new object. It must be a superset of the existing dimensions.
+            If a dict, values are used to provide the axis position of dimensions; otherwise, new dimensions are inserted with length 1.
+            If not provided, a new dimension named 'dim_0', 'dim_1', etc., is added at the start, ensuring no name conflict with existing dimensions.
 
-        shape : sequence of int, optional
-            Shape to broadcast the data to. Must be specified in the same order as `dims`.
-            If not provided, new dimensions are inserted with length 1.
+        **dim_kwargs : Any
+            Additional dimensions specified as keyword arguments. Each keyword argument specifies the name of the new dimension and its position.
+
+        Returns
+        -------
+        NamedArray
+            A new NamedArray with expanded dimensions.
+
+        Raises
+        ------
+        ValueError
+            If any of the specified new dimensions already exist in the NamedArray.
+
+        Examples
+        --------
+
+        >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
+        >>> array = xr.NamedArray(("x", "y"), data)
+
+        # expand dimensions without specifying any name (adds 'dim_0')
+        >>> expanded = array.expand_dims()
+        >>> expanded.dims
+        ('dim_0', 'x', 'y')
+
+        # expand dimensions by specifying a new dimension name
+        >>> expanded = array.expand_dims(dim="z")
+        >>> expanded.dims
+        ('z', 'x', 'y')
+
+        # expand dimensions with multiple new dimensions
+        >>> expanded = array.expand_dims(dim={"z": 0, "a": 2})
+        >>> expanded.dims
+        ('z', 'x', 'a', 'y')
+
+        # using keyword arguments to specify new dimensions
+        >>> expanded = array.expand_dims(z=0, a=2)
+        >>> expanded.dims
+        ('z', 'x', 'a', 'y')
         """
 
-        if isinstance(dims, str):
-            dims = [dims]
+        if dim is None and not dim_kwargs:
+            # If no dimensions specified, find a unique default dimension name
+            dim_number = 0
+            default_dim = f"dim_{dim_number}"
+            while default_dim in self.dims:
+                dim_number += 1
+                default_dim = f"dim_{dim_number}"
+            dim = {default_dim: 0}
 
-        self._check_dims(dims)
+        elif isinstance(dim, (str, list, tuple)):
+            # If dim is a string or list/tuple, convert to a dict with default positions
+            dim = {d: 0 for d in (dim if isinstance(dim, (list, tuple)) else [dim])}
 
-        if shape is None and is_dict_like(dims):
-            shape = list(dims.values())
+        combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
 
-        expanded_dims = self._get_expanded_dims(dims)
+        # create a list of all dimensions, placing new ones at their specified positions
+        new_dims = list(self.dims)
+        for d, pos in sorted(combined_dims.items(), key=lambda x: x[1]):
+            if d in new_dims:
+                raise ValueError(f"Dimension {d} already exists")
+            new_dims.insert(pos, d)
 
-        if self.dims == expanded_dims:
-            # don't use broadcast_to unless necessary so the result remains
-            # writeable if possible
-            expanded_data = self.data
-            expanded_obj = self._replace(dims=expanded_dims, data=expanded_data)
+        slicing_tuple = tuple(
+            None if d in combined_dims else slice(None) for d in new_dims
+        )
 
-        elif shape is not None:
-            dims_map = dict(zip(dims, cast(Iterable[SupportsIndex], shape)))
-            expanded_obj = self.broadcast_to(dims_map)
-        else:
-            expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]  # type: ignore
-            expanded_obj = self._replace(dims=expanded_dims, data=expanded_data)
-
-        return expanded_obj.permute_dims(*dims)
+        expanded_data: duckarray[_ShapeType, _DType] = self.data[slicing_tuple]
+        # use slicing to expand dimensions
+        return self._new(dims=new_dims, data=expanded_data)
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]

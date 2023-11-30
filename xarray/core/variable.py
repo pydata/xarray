@@ -46,6 +46,7 @@ from xarray.core.utils import (
     maybe_coerce_to_str,
 )
 from xarray.namedarray.core import NamedArray
+from xarray.namedarray.utils import infix_dims
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -1386,7 +1387,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
-        """Return a new Variable with transposed dimensions.
+        """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
@@ -1415,7 +1416,23 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         numpy.transpose
         """
-        return self.permute_dims(*dims, missing_dims=missing_dims)
+        if len(dims) == 0:
+            dims = self.dims[::-1]
+        else:
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+
+        if len(dims) < 2 or dims == self.dims:
+            # no need to transpose if only one dimension
+            # or dims are in same order
+            return self.copy(deep=False)
+
+        axes = self.get_axis_num(dims)
+        data = as_indexable(self._data).transpose(axes)
+        return self._replace(dims=dims, data=data)
+
+    @property
+    def T(self) -> Self:
+        return self.transpose()
 
     def set_dims(self, dims, shape=None):
         """Return a new variable with given set of dimensions.
