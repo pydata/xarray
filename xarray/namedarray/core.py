@@ -659,6 +659,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)  # type: ignore[no-any-return]
         except ValueError:
@@ -854,3 +855,11 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
+
+
+def _raise_if_any_duplicate_dimensions(dims: _Dims, err_context: str = "This function"):
+    if len(set(dims)) < len(dims):
+        repeated_dims = set([d for d in dims if dims.count(d) > 1])
+        raise ValueError(
+            f"{err_context} cannot handle duplicate dimensions, but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
+        )
