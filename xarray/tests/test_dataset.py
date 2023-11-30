@@ -2651,19 +2651,19 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
