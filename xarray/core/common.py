@@ -23,7 +23,6 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 
-
 try:
     import cftime
 except ImportError:
