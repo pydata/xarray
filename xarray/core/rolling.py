@@ -14,7 +14,7 @@ from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from xarray.core.utils import either_dict_or_kwargs
+from xarray.core.utils import either_dict_or_kwargs, module_available
 
 try:
     import bottleneck
@@ -153,14 +153,21 @@ class Rolling(Generic[T_Xarray]):
             array_agg_func = getattr(duck_array_ops, name)
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
+        if module_available("numbagg"):
+            import numbagg
+
+            numbagg_move_func = getattr(numbagg, "move_" + name, None)
+        else:
+            numbagg_move_func = None
 
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
-                array_agg_func,
-                bottleneck_move_func,
-                rolling_agg_func,
+                array_agg_func=array_agg_func,
+                bottleneck_move_func=bottleneck_move_func,
+                numbagg_move_func=numbagg_move_func,
+                rolling_agg_func=rolling_agg_func,
                 keep_attrs=keep_attrs,
                 fillna=fillna,
                 **kwargs,
@@ -510,9 +517,47 @@ class DataArrayRolling(Rolling["DataArray"]):
         )
         return counts
 
-    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
-        from xarray.core.dataarray import DataArray
+    def _numbagg_reduce(self, func, keep_attrs, **kwargs):
+        # Some of this is copied from `_bottleneck_reduce`, we could reduce this as part
+        # of a wider refactor.
 
+        axis = self.obj.get_axis_num(self.dim[0])
+
+        padded = self.obj.variable
+        if self.center[0]:
+            if is_duck_dask_array(padded.data):
+                # workaround to make the padded chunk size larger than
+                # self.window - 1
+                shift = -(self.window[0] + 1) // 2
+                offset = (self.window[0] - 1) // 2
+                valid = (slice(None),) * axis + (
+                    slice(offset, offset + self.obj.shape[axis]),
+                )
+            else:
+                shift = (-self.window[0] // 2) + 1
+                valid = (slice(None),) * axis + (slice(-shift, None),)
+            padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
+
+        if is_duck_dask_array(padded.data):
+            raise AssertionError("should not be reachable")
+        else:
+            values = func(
+                padded.data,
+                window=self.window[0],
+                min_count=self.min_periods,
+                axis=axis,
+            )
+
+        if self.center[0]:
+            values = values[valid]
+
+        attrs = self.obj.attrs if keep_attrs else {}
+
+        return self.obj.__class__(
+            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        )
+
+    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
         # Note bottleneck only works with 1d-rolling.
@@ -550,12 +595,15 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
+        return self.obj.__class__(
+            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        )
 
     def _numpy_or_bottleneck_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
+        numbagg_move_func,
         rolling_agg_func,
         keep_attrs,
         fillna,
@@ -570,6 +618,26 @@ class DataArrayRolling(Rolling["DataArray"]):
                 stacklevel=3,
             )
             del kwargs["dim"]
+
+        if (
+            OPTIONS["use_numbagg"]
+            and numbagg_move_func is not None
+            # TODO: can we allow this with numbagg?
+            and not is_duck_dask_array(self.obj.data)
+            and self.obj.data.dtype.kind not in "Ob"
+        ):
+            import numbagg
+
+            # Numbagg has a default ddof of 1. I (@max-sixty) think we should make
+            # this the default in xarray too, but until we do, don't use numbagg for
+            # std and var unless ddof is set to 1.
+            if (
+                numbagg_move_func not in [numbagg.move_std, numbagg.move_var]
+                or kwargs.get("ddof") == 1
+            ):
+                return self._numbagg_reduce(
+                    numbagg_move_func, keep_attrs=keep_attrs, **kwargs
+                )
 
         if (
             OPTIONS["use_bottleneck"]
