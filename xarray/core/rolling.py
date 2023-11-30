@@ -8,8 +8,9 @@ from collections.abc import Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
+from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core import dtypes, duck_array_ops, pycompat, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
@@ -621,6 +622,8 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         if (
             OPTIONS["use_numbagg"]
+            and module_available("numbagg")
+            and pycompat.mod_version("numbagg") >= Version("0.6.3")
             and numbagg_move_func is not None
             # TODO: can we allow this with numbagg?
             and not is_duck_dask_array(self.obj.data)
