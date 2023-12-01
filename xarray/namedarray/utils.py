@@ -3,8 +3,7 @@ from __future__ import annotations
 import sys
 import warnings
 from collections.abc import Hashable, Iterator, Mapping
-from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import numpy as np
 
@@ -31,14 +30,6 @@ if TYPE_CHECKING:
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token: Final = 0
-
-
-_default = Default.token
 
 
 def module_available(module: str) -> bool:

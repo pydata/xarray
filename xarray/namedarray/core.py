@@ -36,7 +36,6 @@ from xarray.namedarray._typing import (
     _SupportsReal,
 )
 from xarray.namedarray.utils import (
-    _default,
     either_dict_or_kwargs,
     infix_dims,
     is_duck_dask_array,
