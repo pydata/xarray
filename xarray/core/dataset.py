@@ -777,13 +777,20 @@ class Dataset(
 
         Note that type of this object differs from `DataArray.dims`.
         See `Dataset.sizes` and `DataArray.sizes` for consistently named
-        properties.
+        properties. This property will be changed to return a type more consistent with
+        `DataArray.dims` in the future, i.e. a set of dimension names.
 
         See Also
         --------
         Dataset.sizes
         DataArray.dims
         """
+        warnings.warn(
+            "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
+            "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
+            "please use `Dataset.sizes`.",
+            FutureWarning,
+        )
         return Frozen(self._dims)
 
     @property
