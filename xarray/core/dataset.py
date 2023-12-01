@@ -100,6 +100,7 @@ from xarray.core.types import (
     T_Chunks,
     T_DataArrayOrSet,
     T_Dataset,
+    ZarrWriteModes,
 )
 from xarray.core.utils import (
     Default,
@@ -1502,7 +1503,7 @@ class Dataset(
                 "cannot directly convert an xarray.Dataset into a "
                 "numpy array. Instead, create an xarray.DataArray "
                 "first, either with indexing on the Dataset or by "
-                "invoking the `to_array()` method."
+                "invoking the `to_dataarray()` method."
             )
 
     @property
@@ -1539,10 +1540,18 @@ class Dataset(
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
+        from xarray.core.formatting import shorten_list_repr
+
         if utils.is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
-            return self._construct_dataarray(key)
+            try:
+                return self._construct_dataarray(key)
+            except KeyError as e:
+                raise KeyError(
+                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                ) from e
+
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
         raise ValueError(f"Unsupported key-type {type(key)}")
@@ -2297,7 +2306,7 @@ class Dataset(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -2305,7 +2314,7 @@ class Dataset(
         compute: Literal[True] = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -2320,7 +2329,7 @@ class Dataset(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -2328,7 +2337,7 @@ class Dataset(
         compute: Literal[False],
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -2341,7 +2350,7 @@ class Dataset(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -2349,7 +2358,7 @@ class Dataset(
         compute: bool = True,
         consolidated: bool | None = None,
         append_dim: Hashable | None = None,
-        region: Mapping[str, slice] | None = None,
+        region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
         zarr_version: int | None = None,
@@ -2379,10 +2388,11 @@ class Dataset(
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", "r+", None}, optional
+        mode : {"w", "w-", "a", "a-", r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist);
+            "a" means override all existing variables including dimension coordinates (create if does not exist);
+            "a-" means only append those variables that have ``append_dim``.
             "r+" means modify existing array *values* only (raise an error if
             any metadata or shapes would change).
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
@@ -2411,13 +2421,19 @@ class Dataset(
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
-        region : dict, optional
+        region : dict or "auto", optional
             Optional mapping from dimension names to integer slices along
             dataset dimensions to indicate the region of existing zarr array(s)
             in which to write this dataset's data. For example,
             ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
             that values should be written to the region ``0:1000`` along ``x``
             and ``10000:11000`` along ``y``.
+
+            Can also specify ``"auto"``, in which case the existing store will be
+            opened and the region inferred by matching the new data's coordinates.
+            ``"auto"`` can be used as a single string, which will automatically infer
+            the region for all dimensions, or as dictionary values for specific
+            dimensions mixed together with explicit slices for other dimensions.
 
             Two restrictions apply to the use of ``region``:
 
@@ -4410,16 +4426,18 @@ class Dataset(
         # rename_dims() method that only renames dimensions.
 
         dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
-        for k, v in dims_dict.items():
-            if k not in self.dims:
+        for current_name, new_name in dims_dict.items():
+            if current_name not in self.dims:
                 raise ValueError(
-                    f"cannot swap from dimension {k!r} because it is "
+                    f"cannot swap from dimension {current_name!r} because it is "
                     f"not one of the dimensions of this dataset {tuple(self.dims)}"
                 )
-            if v in self.variables and self.variables[v].dims != (k,):
+            if new_name in self.variables and self.variables[new_name].dims != (
+                current_name,
+            ):
                 raise ValueError(
-                    f"replacement dimension {v!r} is not a 1D "
-                    f"variable along the old dimension {k!r}"
+                    f"replacement dimension {new_name!r} is not a 1D "
+                    f"variable along the old dimension {current_name!r}"
                 )
 
         result_dims = {dims_dict.get(dim, dim) for dim in self.dims}
@@ -4429,24 +4447,24 @@ class Dataset(
 
         variables: dict[Hashable, Variable] = {}
         indexes: dict[Hashable, Index] = {}
-        for k, v in self.variables.items():
-            dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
+        for current_name, current_variable in self.variables.items():
+            dims = tuple(dims_dict.get(dim, dim) for dim in current_variable.dims)
             var: Variable
-            if k in result_dims:
-                var = v.to_index_variable()
+            if current_name in result_dims:
+                var = current_variable.to_index_variable()
                 var.dims = dims
-                if k in self._indexes:
-                    indexes[k] = self._indexes[k]
-                    variables[k] = var
+                if current_name in self._indexes:
+                    indexes[current_name] = self._indexes[current_name]
+                    variables[current_name] = var
                 else:
                     index, index_vars = create_default_index_implicit(var)
                     indexes.update({name: index for name in index_vars})
                     variables.update(index_vars)
                     coord_names.update(index_vars)
             else:
-                var = v.to_base_variable()
+                var = current_variable.to_base_variable()
                 var.dims = dims
-                variables[k] = var
+                variables[current_name] = var
 
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
@@ -5258,7 +5276,7 @@ class Dataset(
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
-        This method is similar to Dataset.to_array but does not broadcast the
+        This method is similar to Dataset.to_dataarray but does not broadcast the
         variables.
 
         Parameters
@@ -5287,7 +5305,7 @@ class Dataset(
 
         See Also
         --------
-        Dataset.to_array
+        Dataset.to_dataarray
         Dataset.stack
         DataArray.to_unstacked_dataset
 
@@ -7017,7 +7035,7 @@ class Dataset(
 
         return data
 
-    def to_array(
+    def to_dataarray(
         self, dim: Hashable = "variable", name: Hashable | None = None
     ) -> DataArray:
         """Convert this dataset into an xarray.DataArray
@@ -7053,6 +7071,12 @@ class Dataset(
         coords.update(new_dim_index.create_variables())
 
         return DataArray._construct_direct(variable, coords, name, indexes)
+
+    def to_array(
+        self, dim: Hashable = "variable", name: Hashable | None = None
+    ) -> DataArray:
+        """Deprecated version of to_dataarray"""
+        return self.to_dataarray(dim=dim, name=name)
 
     def _normalize_dim_order(
         self, dim_order: Sequence[Hashable] | None = None
@@ -8682,7 +8706,7 @@ class Dataset(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -10061,7 +10085,7 @@ class Dataset(
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
-            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparision with :py:func:`~xarray.Dataset.resample`.
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
 
         Dataset.groupby_bins
         DataArray.groupby
@@ -10319,7 +10343,6 @@ class Dataset(
         base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: str,
@@ -10361,6 +10384,12 @@ class Dataset(
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
+
+            .. deprecated:: 2023.03.0
+                Following pandas, the ``loffset`` parameter is deprecated in favor
+                of using time offset arithmetic, and will be removed in a future
+                version of xarray.
+
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -10396,7 +10425,6 @@ class Dataset(
             base=base,
             offset=offset,
             origin=origin,
-            keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,

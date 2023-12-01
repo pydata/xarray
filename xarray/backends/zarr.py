@@ -21,6 +21,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
+from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
@@ -61,15 +62,12 @@ def encode_zarr_attr_value(value):
 
 
 class ZarrArrayWrapper(BackendArray):
-    __slots__ = ("datastore", "dtype", "shape", "variable_name", "_array")
+    __slots__ = ("dtype", "shape", "_array")
 
-    def __init__(self, variable_name, datastore):
-        self.datastore = datastore
-        self.variable_name = variable_name
-
+    def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
-        self._array = self.datastore.zarr_group[self.variable_name]
+        self._array = zarr_array
         self.shape = self._array.shape
 
         # preserve vlen string object dtype (GH 7328)
@@ -86,10 +84,10 @@ class ZarrArrayWrapper(BackendArray):
         return self._array
 
     def _oindex(self, key):
-        return self.get_array().oindex[key]
+        return self._array.oindex[key]
 
     def __getitem__(self, key):
-        array = self.get_array()
+        array = self._array
         if isinstance(key, indexing.BasicIndexer):
             return array[key.tuple]
         elif isinstance(key, indexing.VectorizedIndexer):
@@ -177,8 +175,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
     # this avoids the need to get involved in zarr synchronization / locking
     # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a separate
-    #   region of the array, and if region boundaries are perfectly aligned
+    #  "If each worker in a parallel computation is writing to a
+    #   separate region of the array, and if region boundaries are perfectly aligned
     #   with chunk boundaries, then no synchronization is required."
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
@@ -320,14 +318,19 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
-def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
+def _validate_and_transpose_existing_dims(
+    var_name, new_var, existing_var, region, append_dim
+):
     if new_var.dims != existing_var.dims:
-        raise ValueError(
-            f"variable {var_name!r} already exists with different "
-            f"dimension names {existing_var.dims} != "
-            f"{new_var.dims}, but changing variable "
-            f"dimensions is not supported by to_zarr()."
-        )
+        if set(existing_var.dims) == set(new_var.dims):
+            new_var = new_var.transpose(*existing_var.dims)
+        else:
+            raise ValueError(
+                f"variable {var_name!r} already exists with different "
+                f"dimension names {existing_var.dims} != "
+                f"{new_var.dims}, but changing variable "
+                f"dimensions is not supported by to_zarr()."
+            )
 
     existing_sizes = {}
     for dim, size in existing_var.sizes.items():
@@ -344,8 +347,13 @@ def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim)
             f"variable {var_name!r} already exists with different "
             f"dimension sizes: {existing_sizes} != {new_sizes}. "
             f"to_zarr() only supports changing dimension sizes when "
-            f"explicitly appending, but append_dim={append_dim!r}."
+            f"explicitly appending, but append_dim={append_dim!r}. "
+            f"If you are attempting to write to a subset of the "
+            f"existing store without changing dimension sizes, "
+            f"consider using the region argument in to_zarr()."
         )
+
+    return new_var
 
 
 def _put_attrs(zarr_obj, attrs):
@@ -371,13 +379,14 @@ class ZarrStore(AbstractWritableDataStore):
         "_write_region",
         "_safe_chunks",
         "_write_empty",
+        "_close_store_on_close",
     )
 
     @classmethod
     def open_group(
         cls,
         store,
-        mode="r",
+        mode: ZarrWriteModes = "r",
         synchronizer=None,
         group=None,
         consolidated=False,
@@ -402,7 +411,8 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_version = getattr(store, "_store_version", 2)
 
         open_kwargs = dict(
-            mode=mode,
+            # mode='a-' is a handcrafted xarray specialty
+            mode="a" if mode == "a-" else mode,
             synchronizer=synchronizer,
             path=group,
         )
@@ -454,6 +464,7 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
+        close_store_on_close = zarr_group.store is not store
         return cls(
             zarr_group,
             mode,
@@ -462,6 +473,7 @@ class ZarrStore(AbstractWritableDataStore):
             write_region,
             safe_chunks,
             write_empty,
+            close_store_on_close,
         )
 
     def __init__(
@@ -473,6 +485,7 @@ class ZarrStore(AbstractWritableDataStore):
         write_region=None,
         safe_chunks=True,
         write_empty: bool | None = None,
+        close_store_on_close: bool = False,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -484,6 +497,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
         self._safe_chunks = safe_chunks
         self._write_empty = write_empty
+        self._close_store_on_close = close_store_on_close
 
     @property
     def ds(self):
@@ -491,7 +505,7 @@ class ZarrStore(AbstractWritableDataStore):
         return self.zarr_group
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
@@ -589,8 +603,9 @@ class ZarrStore(AbstractWritableDataStore):
         """
         import zarr
 
+        existing_keys = tuple(self.zarr_group.array_keys())
         existing_variable_names = {
-            vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
+            vn for vn in variables if _encode_variable_name(vn) in existing_keys
         }
         new_variables = set(variables) - existing_variable_names
         variables_without_encoding = {vn: variables[vn] for vn in new_variables}
@@ -614,12 +629,10 @@ class ZarrStore(AbstractWritableDataStore):
             variables_encoded.update(vars_with_encoding)
 
             for var_name in existing_variable_names:
-                new_var = variables_encoded[var_name]
-                existing_var = existing_vars[var_name]
-                _validate_existing_dims(
+                variables_encoded[var_name] = _validate_and_transpose_existing_dims(
                     var_name,
-                    new_var,
-                    existing_var,
+                    variables_encoded[var_name],
+                    existing_vars[var_name],
                     self._write_region,
                     self._append_dim,
                 )
@@ -628,8 +641,21 @@ class ZarrStore(AbstractWritableDataStore):
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
 
+        # if we are appending to an append_dim, only write either
+        # - new variables not already present, OR
+        # - variables with the append_dim in their dimensions
+        # We do NOT overwrite other variables.
+        if self._mode == "a-" and self._append_dim is not None:
+            variables_to_set = {
+                k: v
+                for k, v in variables_encoded.items()
+                if (k not in existing_variable_names) or (self._append_dim in v.dims)
+            }
+        else:
+            variables_to_set = variables_encoded
+
         self.set_variables(
-            variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
+            variables_to_set, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
             zarr.consolidate_metadata(self.zarr_group.store)
@@ -657,6 +683,8 @@ class ZarrStore(AbstractWritableDataStore):
 
         import zarr
 
+        existing_keys = tuple(self.zarr_group.array_keys())
+
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -669,7 +697,7 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if name in self.zarr_group:
+            if name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
@@ -751,7 +779,8 @@ class ZarrStore(AbstractWritableDataStore):
             writer.add(v.data, zarr_array, region)
 
     def close(self):
-        pass
+        if self._close_store_on_close:
+            self.zarr_group.store.close()
 
 
 def open_zarr(

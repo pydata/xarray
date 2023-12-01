@@ -534,11 +534,11 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> index = xr.cftime_range("2000", periods=1, freq="M")
+        >>> index = xr.cftime_range("2000", periods=1, freq="ME")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
-        >>> index.shift(1, "M")
+        >>> index.shift(1, "ME")
         CFTimeIndex([2000-02-29 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
         >>> index.shift(1.5, "D")
