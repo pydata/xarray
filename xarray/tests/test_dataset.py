@@ -750,6 +750,27 @@ class TestDataset:
             == 16
         )
 
+    def test_warn_ds_dims_deprecation(self) -> None:
+        # TODO remove after deprecation cycle in GH #8500 is complete
+        ds = create_test_data()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims["dim1"]
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.keys()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.values()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.items()
+
+        with assert_no_warnings():
+            len(ds.dims)
+            ds.dims.__iter__()
+            "dim1" in ds.dims
+
     def test_asarray(self) -> None:
         ds = Dataset({"x": 0})
         with pytest.raises(TypeError, match=r"cannot directly convert"):
