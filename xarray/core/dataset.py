@@ -1427,7 +1427,7 @@ class Dataset(
         for v in variables.values():
             needed_dims.update(v.dims)
 
-        dims = {k: self.dims[k] for k in needed_dims}
+        dims = {k: self.sizes[k] for k in needed_dims}
 
         # preserves ordering of coordinates
         for k in self._variables:
@@ -2553,7 +2553,7 @@ class Dataset(
         lines = []
         lines.append("xarray.Dataset {")
         lines.append("dimensions:")
-        for name, size in self.sizes():
+        for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
         for name, da in self.variables.items():
@@ -4160,7 +4160,7 @@ class Dataset(
         return variables, coord_names
 
     def _rename_dims(self, name_dict: Mapping[Any, Hashable]) -> dict[Hashable, int]:
-        return {name_dict.get(k, k): v for k, v in self.dims.items()}
+        return {name_dict.get(k, k): v for k, v in self.sizes.items()}
 
     def _rename_indexes(
         self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
@@ -5179,7 +5179,7 @@ class Dataset(
             if any(d in var.dims for d in dims):
                 add_dims = [d for d in dims if d not in var.dims]
                 vdims = list(var.dims) + add_dims
-                shape = [self.dims[d] for d in vdims]
+                shape = [self.sizes[d] for d in vdims]
                 exp_var = var.set_dims(vdims, shape)
                 stacked_var = exp_var.stack(**{new_dim: dims})
                 new_variables[name] = stacked_var
@@ -6321,7 +6321,7 @@ class Dataset(
         if subset is None:
             subset = iter(self.data_vars)
 
-        count = np.zeros(self.dims[dim], dtype=np.int64)
+        count = np.zeros(self.sizes[dim], dtype=np.int64)
         size = np.int_(0)  # for type checking
 
         for k in subset:
@@ -6329,7 +6329,7 @@ class Dataset(
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
                 count += np.asarray(array.count(dims))
-                size += math.prod([self.dims[d] for d in dims])
+                size += math.prod([self.sizes[d] for d in dims])
 
         if thresh is not None:
             mask = count >= thresh
@@ -7106,7 +7106,7 @@ class Dataset(
                 f"Dataset: {list(self.dims)}"
             )
 
-        ordered_dims = {k: self.dims[k] for k in dim_order}
+        ordered_dims = {k: self.sizes[k] for k in dim_order}
 
         return ordered_dims
 
@@ -7366,7 +7366,7 @@ class Dataset(
                 var = self.variables[name]
             except KeyError:
                 # dimension without a matching coordinate
-                size = self.dims[name]
+                size = self.sizes[name]
                 data = da.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 

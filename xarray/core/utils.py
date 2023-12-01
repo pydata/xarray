@@ -484,7 +484,8 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     `Dataset.dims` is being changed from returning a mapping of dimension names to lengths to just
     returning a frozen set of dimension names (to increase consistency with `DataArray.dims`).
     This class retains backwards compatibility but raises a warning only if the return value
-    of ds.dims is used like a dictionary.
+    of ds.dims is used like a dictionary (i.e. it doesn't raise a warning if used in a way that
+    would also be valid for a FrozenSet, e.g. iteration).
     """
 
     def _warn(self) -> None:
