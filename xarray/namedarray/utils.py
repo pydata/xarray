@@ -5,8 +5,6 @@ import warnings
 from collections.abc import Hashable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
-from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any
 
 import numpy as np
 

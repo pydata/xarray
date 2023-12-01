@@ -42,7 +42,6 @@ from xarray.namedarray.utils import (
     is_duck_dask_array,
     to_0d_object_array,
 )
-from xarray.namedarray.utils import is_duck_dask_array, to_0d_object_array
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray

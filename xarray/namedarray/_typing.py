@@ -6,8 +6,8 @@ from types import ModuleType
 from typing import (
     Any,
     Callable,
-    Literal,
     Final,
+    Literal,
     Protocol,
     SupportsIndex,
     TypeVar,
