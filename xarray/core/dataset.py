@@ -806,7 +806,7 @@ class Dataset(
         --------
         DataArray.sizes
         """
-        return self.dims
+        return Frozen(self._dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -1417,7 +1417,7 @@ class Dataset(
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name, self.dims
+                    self._variables, name, self.sizes
                 )
                 variables[var_name] = var
                 if ref_name in self._coord_names or ref_name in self.dims:
@@ -1454,7 +1454,7 @@ class Dataset(
         try:
             variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(self._variables, name, self.dims)
+            _, name, variable = _get_virtual_variable(self._variables, name, self.sizes)
 
         needed_dims = set(variable.dims)
 
@@ -1481,7 +1481,7 @@ class Dataset(
         yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.dims, mapping=self)
+        yield HybridMappingProxy(keys=self.sizes, mapping=self)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
@@ -2558,7 +2558,7 @@ class Dataset(
         lines = []
         lines.append("xarray.Dataset {")
         lines.append("dimensions:")
-        for name, size in self.dims.items():
+        for name, size in self.sizes():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
         for name, da in self.variables.items():
@@ -2686,10 +2686,10 @@ class Dataset(
         else:
             chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        bad_dims = chunks_mapping.keys() - self.dims.keys()
+        bad_dims = chunks_mapping.keys() - self.sizes.keys()
         if bad_dims:
             raise ValueError(
-                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
@@ -5157,7 +5157,7 @@ class Dataset(
             if dim in self._variables:
                 var = self._variables[dim]
             else:
-                _, _, var = _get_virtual_variable(self._variables, dim, self.dims)
+                _, _, var = _get_virtual_variable(self._variables, dim, self.sizes)
             # dummy index (only `stack_coords` will be used to construct the multi-index)
             stack_index = PandasIndex([0], dim)
             stack_coords = {dim: var}
