@@ -251,8 +251,8 @@ class set_options:
         Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.
     plot_unit_brackets: tuple[str, str], default: ("[", "]")
-        Enclosing brackets for units in plots. Sometimes `(unit)`
-        is preferred over `unit`, use this option.
+        Enclosing brackets for units in plots. Use this to change
+        `[unit]` (default) to e.g. `(unit)`.
 
     Examples
     --------
