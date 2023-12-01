@@ -2836,6 +2836,43 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 ls = listdir(os.path.join(store, "test"))
                 assert set(expected) == set([file for file in ls if file[0] != "."])
 
+    def test_avoid_excess_metadata_calls(self) -> None:
+        """Test that chunk requests do not trigger redundant metadata requests.
+
+        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
+        to retrieve chunk data after initialization do not trigger additional
+        metadata requests.
+
+        https://github.com/pydata/xarray/issues/8290
+        """
+
+        import zarr
+
+        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
+
+        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
+        # so that we can inspect calls to this method - specifically count of calls.
+        # Use of side_effect means that calls are passed through to the original method
+        # rather than a mocked method.
+        Group = zarr.hierarchy.Group
+        with (
+            self.create_zarr_target() as store,
+            patch.object(
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
+            ) as mock,
+        ):
+            ds.to_zarr(store, mode="w")
+
+            # We expect this to request array metadata information, so call_count should be == 1,
+            xrds = xr.open_zarr(store)
+            call_count = mock.call_count
+            assert call_count == 1
+
+            # compute() requests array data, which should not trigger additional metadata requests
+            # we assert that the number of calls has not increased after fetchhing the array
+            xrds.test.compute(scheduler="sync")
+            assert mock.call_count == call_count
+
 
 class ZarrBaseV3(ZarrBase):
     zarr_version = 3
@@ -2874,47 +2911,6 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
-
-
-@requires_zarr
-class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
-    def test_avoid_excess_metadata_calls(self) -> None:
-        """Test that chunk requests do not trigger redundant metadata requests.
-
-        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
-        to retrieve chunk data after initialization do not trigger additional
-        metadata requests.
-
-        https://github.com/pydata/xarray/issues/8290
-        """
-
-        import zarr
-
-        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
-
-        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
-        # so that we can inspect calls to this method - specifically count of calls.
-        # Use of side_effect means that calls are passed through to the original method
-        # rather than a mocked method.
-        Group = zarr.hierarchy.Group
-        with (
-            self.create_zarr_target() as store,
-            patch.object(
-                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
-            ) as mock,
-        ):
-            ds.to_zarr(store, mode="w")
-
-            # We expect this to request array metadata information, so call_count should be >= 1,
-            # At time of writing, 2 calls are made
-            xrds = xr.open_zarr(store)
-            call_count = mock.call_count
-            assert call_count > 0
-
-            # compute() requests array data, which should not trigger additional metadata requests
-            # we assert that the number of calls has not increased after fetchhing the array
-            xrds.test.compute(scheduler="sync")
-            assert mock.call_count == call_count
 
 
 @requires_zarr
