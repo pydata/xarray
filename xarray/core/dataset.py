@@ -105,6 +105,7 @@ from xarray.core.types import (
 from xarray.core.utils import (
     Default,
     Frozen,
+    FrozenMappingWarningOnValuesAccess,
     HybridMappingProxy,
     OrderedSet,
     _default,
@@ -785,13 +786,7 @@ class Dataset(
         Dataset.sizes
         DataArray.dims
         """
-        warnings.warn(
-            "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
-            "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
-            "please use `Dataset.sizes`.",
-            FutureWarning,
-        )
-        return Frozen(self._dims)
+        return FrozenMappingWarningOnValuesAccess(self._dims)
 
     @property
     def sizes(self) -> Frozen[Hashable, int]:
