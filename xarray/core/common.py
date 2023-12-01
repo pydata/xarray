@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import dtypes, duck_array_ops, formatting, formatting_html, ops
-from xarray.core.coordinates import Coordinates
 from xarray.core.indexing import BasicIndexer, ExplicitlyIndexed
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.parallelcompat import get_chunked_array_type, guess_chunkmanager
