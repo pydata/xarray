@@ -497,6 +497,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
             "please use `Dataset.sizes`.",
             FutureWarning,
         )
+        raise NotImplementedError()
 
     def __getitem__(self, key: K) -> V:
         self._warn()
