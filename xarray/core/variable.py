@@ -47,6 +47,7 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.core import NamedArray
 from xarray.namedarray.utils import infix_dims
+from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -2876,11 +2877,8 @@ def _unified_dims(variables):
     all_dims = {}
     for var in variables:
         var_dims = var.dims
-        if len(set(var_dims)) < len(var_dims):
-            raise ValueError(
-                "broadcasting cannot handle duplicate "
-                f"dimensions: {list(var_dims)!r}"
-            )
+        _raise_if_any_duplicate_dimensions(var_dims, err_context="Broadcasting")
+
         for d, s in zip(var_dims, var.shape):
             if d not in all_dims:
                 all_dims[d] = s

@@ -562,3 +562,6 @@ class TestNamedArray(NamedArraySubclassobjects):
             match=r"operands could not be broadcast together with remapped shapes",
         ):
             target.broadcast_to({"x": 2, "y": 2})
+    def test_warn_on_repeated_dimension_names(self) -> None:
+        with pytest.warns(UserWarning, match="Duplicate dimension names"):
+            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
