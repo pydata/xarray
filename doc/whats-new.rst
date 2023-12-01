@@ -58,7 +58,9 @@ Bug fixes
 - Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
 - Fix writing a variable that requires transposing when not writing to a region (:pull:`8484`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
+- Static typing of ``p0`` and ``bounds`` arguments of :py:func:`xarray.DataArray.curvefit` and :py:func:`xarray.Dataset.curvefit`
+  was changed to ``Mapping`` (:pull:`8502`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
