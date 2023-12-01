@@ -485,15 +485,17 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict-like or Coordinates, optional
-            A dict where the keys are the names of the coordinates
-            with the new values to assign. If the values are callable, they are
-            computed on this object and assigned to new coordinate variables.
-            If the values are not callable, (e.g. a ``DataArray``, scalar, or
-            array), they are simply assigned. A new coordinate can also be
-            defined and attached to an existing dimension using a tuple with
-            the first element the dimension name and the second element the
-            values for this new coordinate.
+        coords : mapping of dim to coord, optional
+            A mapping whose keys are the names of the coordinates and values are the
+            coordinates to assign. The mapping will generally be a dict or
+            :class:`Coordinates`.
+            - If a value is a standard data value — for example, a ``DataArray``,
+              scalar, or array — the data is simply assigned as a coordinate.
+            - If a value is callable, it is called with this object as the only
+              parameter, and the return value use as new coordinate variables.
+            - A coordinate can also be defined and attached to an existing dimension
+              using a tuple with the first element the dimension name and the second
+              element the values for this new coordinate.
         **coords_kwargs : optional
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
