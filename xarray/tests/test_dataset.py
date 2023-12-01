@@ -694,10 +694,11 @@ class TestDataset:
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
+        # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
         assert type(ds.dims.mapping) is dict  # noqa: E721
-        assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
-        assert ds.sizes == ds.dims
+        assert ds.dims == ds.sizes
+        assert ds.sizes == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
 
         # dtypes
         assert isinstance(ds.dtypes, utils.Frozen)
@@ -804,7 +805,7 @@ class TestDataset:
         b = Dataset()
         b["x"] = ("x", vec, attributes)
         assert_identical(a["x"], b["x"])
-        assert a.dims == b.dims
+        assert a.sizes == b.sizes
         # this should work
         a["x"] = ("x", vec[:5])
         a["z"] = ("x", np.arange(5))
@@ -865,7 +866,7 @@ class TestDataset:
         assert expected == actual
 
         # dims
-        assert coords.dims == {"x": 2, "y": 3}
+        assert coords.sizes == {"x": 2, "y": 3}
 
         # dtypes
         assert coords.dtypes == {
@@ -1215,9 +1216,9 @@ class TestDataset:
         assert list(data.dims) == list(ret.dims)
         for d in data.dims:
             if d in slicers:
-                assert ret.dims[d] == np.arange(data.dims[d])[slicers[d]].size
+                assert ret.sizes[d] == np.arange(data.sizes[d])[slicers[d]].size
             else:
-                assert data.dims[d] == ret.dims[d]
+                assert data.sizes[d] == ret.sizes[d]
         # Verify that the data is what we expect
         for v in data.variables:
             assert data[v].dims == ret[v].dims
@@ -4971,7 +4972,7 @@ class TestDataset:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
         # regression test for #167:
-        assert data.dims == roundtripped.dims
+        assert data.sizes == roundtripped.sizes
 
     def test_lazy_load(self) -> None:
         store = InaccessibleVariableDataStore()
