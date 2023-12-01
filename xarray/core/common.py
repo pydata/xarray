@@ -475,7 +475,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def assign_coords(
         self,
-        coords: Mapping[Any, Any] | Coordinates | None = None,
+        coords: Mapping | None = None,
         **coords_kwargs: Any,
     ) -> Self:
         """Assign new coordinates to this object.
