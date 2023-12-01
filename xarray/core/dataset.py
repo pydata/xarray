@@ -7978,8 +7978,8 @@ class Dataset(
             variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
-        aligned_self = aligned_vars[0]
-        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]
+        aligned_self = cast("Self", aligned_vars[0])
+        aligned_other_vars = cast(tuple[DataArray, ...], aligned_vars[1:])
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
@@ -9621,8 +9621,8 @@ class Dataset(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, float | DataArray] | None = None,
-        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
+        p0: Mapping[str, float | DataArray] | None = None,
+        bounds: Mapping[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
