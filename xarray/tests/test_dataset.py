@@ -1273,19 +1273,19 @@ class TestDataset:
         assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
 
         ret = data.isel(dim1=0)
-        assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
+        assert {"time": 20, "dim2": 9, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
-        assert {"time": 2, "dim2": 5, "dim3": 10} == ret.dims
+        assert {"time": 2, "dim2": 5, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
-        assert {"dim2": 5, "dim3": 10} == ret.dims
+        assert {"dim2": 5, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(list(ret.xindexes) + ["time"])
@@ -5451,7 +5451,7 @@ class TestDataset:
         data2 = create_test_data(seed=44)
         add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
-            size = tuple(data1.dims[d] for d in dims)
+            size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
 
@@ -6500,7 +6500,7 @@ class TestDataset:
         assert padded["var1"].shape == (8, 11)
         assert padded["var2"].shape == (8, 11)
         assert padded["var3"].shape == (10, 8)
-        assert dict(padded.dims) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+        assert dict(padded.sizes) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
 
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
@@ -7195,7 +7195,7 @@ def test_clip(ds) -> None:
     assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
-    assert result.dims == ds.dims
+    assert result.sizes == ds.sizes
 
 
 class TestDropDuplicates:

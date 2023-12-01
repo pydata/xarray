@@ -217,7 +217,7 @@ class TestDataArrayRolling:
         actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
@@ -237,7 +237,7 @@ class TestDataArrayRolling:
         actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
     def test_rolling_count_correct(self) -> None:
         da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
@@ -291,7 +291,7 @@ class TestDataArrayRolling:
         )()
 
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
         if name in ["mean"]:
             # test our reimplementation of nanmean using np.nanmean
@@ -700,7 +700,7 @@ class TestDatasetRolling:
         actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
         expected = getattr(rolling_obj, name)()
         assert_allclose(actual, expected)
-        assert ds.dims == actual.dims
+        assert ds.sizes == actual.sizes
         # make sure the order of data_var are not changed.
         assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
 
@@ -727,7 +727,7 @@ class TestDatasetRolling:
             name,
         )()
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
         # Do it in the opposite order
         expected = getattr(
@@ -738,7 +738,7 @@ class TestDatasetRolling:
         )()
 
         assert_allclose(actual, expected)
-        assert actual.dims == expected.dims
+        assert actual.sizes == expected.sizes
 
     @pytest.mark.parametrize("center", (True, False, (True, False)))
     @pytest.mark.parametrize("fill_value", (np.nan, 0.0))
