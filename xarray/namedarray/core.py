@@ -863,14 +863,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
     def permute_dims(
         self,
-        *dims: _DimsLike | ellipsis,
+        *dim: _DimsLike | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> NamedArray[Any, _DType_co]:
         """Return a new object with transposed dimensions.
 
         Parameters
         ----------
-        *dims : Hashable, optional
+        *dim : Hashable, optional
             By default, reverse the order of the dimensions. Otherwise, reorder the
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -892,10 +892,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         numpy.transpose
         """
 
-        if not dims:
+        if not dim:
             dims = self.dims[::-1]
         else:
-            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+            dims = tuple(infix_dims(dim, self.dims, missing_dims))
 
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
