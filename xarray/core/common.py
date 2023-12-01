@@ -21,6 +21,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     is_scalar,
 )
+from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 
 try:
     import cftime
@@ -217,6 +218,7 @@ class AbstractArray:
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
         except ValueError:

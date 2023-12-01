@@ -481,6 +481,15 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"dimensions {dims} must have the same length as the "
                 f"number of data dimensions, ndim={self.ndim}"
             )
+        if len(set(dims)) < len(dims):
+            repeated_dims = set([d for d in dims if dims.count(d) > 1])
+            warnings.warn(
+                f"Duplicate dimension names present: dimensions {repeated_dims} appear more than once in dims={dims}. "
+                "We do not yet support duplicate dimension names, but we do allow initial construction of the object. "
+                "We recommend you rename the dims immediately to become distinct, as most xarray functionality is likely to fail silently if you do not. "
+                "To rename the dimensions you will need to set the ``.dims`` attribute of each variable, ``e.g. var.dims=('x0', 'x1')``.",
+                UserWarning,
+            )
         return dims
 
     @property
@@ -651,6 +660,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)  # type: ignore[no-any-return]
         except ValueError:
@@ -846,3 +856,13 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
 
 
 _NamedArray = NamedArray[Any, np.dtype[_ScalarType_co]]
+
+
+def _raise_if_any_duplicate_dimensions(
+    dims: _Dims, err_context: str = "This function"
+) -> None:
+    if len(set(dims)) < len(dims):
+        repeated_dims = set([d for d in dims if dims.count(d) > 1])
+        raise ValueError(
+            f"{err_context} cannot handle duplicate dimensions, but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
+        )
