@@ -681,7 +681,7 @@ def align(
     ...
 
 
-def align(  # type: ignore[misc]
+def align(
     *objects: T_Alignable,
     join: JoinOptions = "inner",
     copy: bool = True,
@@ -1153,7 +1153,7 @@ def broadcast(
     ...
 
 
-def broadcast(  # type: ignore[misc]
+def broadcast(
     *args: T_Alignable, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Alignable, ...]:
     """Explicitly broadcast any number of DataArray or Dataset objects against

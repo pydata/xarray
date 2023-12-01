@@ -79,6 +79,8 @@ Internal Changes
 - :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
   default, which is up to 5x faster where parallelization is possible. (:pull:`8339`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Update mypy version to 1.7 (:issue:`8448`, :pull:`8501`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 .. _whats-new.2023.11.0:
 
