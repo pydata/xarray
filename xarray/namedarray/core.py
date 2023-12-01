@@ -925,13 +925,38 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
     ) -> NamedArray[Any, _DType_co]:
         """
-        Broadcast namedarray to a new shape.
+        Broadcast the NamedArray to a new shape by extending its dimensions.
+
+        This method allows for the expansion of the array's dimensions to a specified shape.
+        New dimensions with specified sizes can be added, and existing dimensions can be resized.
+        It handles both positional and keyword arguments for specifying the dimensions to broadcast.
 
         Parameters
         ----------
-        dims : dict
-            Dimensions to broadcast the array to. Keys are dimension names and values are the new sizes.
+        dim : dict, str, sequence of str, optional
+            Dimensions to broadcast the array to. If a dict, keys are dimension names and values are the new sizes.
+            If a string or sequence of strings, new dimensions are added with a size of 1.
+
+        **dim_kwargs : Any
+            Additional dimensions specified as keyword arguments. Each keyword argument specifies the name of the new dimension and its size.
+
+        Returns
+        -------
+        NamedArray
+            A new NamedArray with the broadcasted dimensions.
+
+        Examples
+        --------
+        >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
+        >>> array = xr.NamedArray(("x", "y"), data)
+        >>> array.sizes
+        {'x': 2, 'y': 2}
+
+        >>> broadcasted = array.expand_dims("lat").broadcast_to(x=2, y=2, lat=6)
+        >>> broadcasted.sizes
+        {'lat': 6, 'x': 2, 'y': 2}
         """
+
         from xarray.core import duck_array_ops
 
         combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "broadcast_to")
