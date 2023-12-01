@@ -10,9 +10,13 @@ import numpy as np
 import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._typing import _arrayfunction_or_api, _DType_co, _ShapeType_co
+from xarray.namedarray._typing import (
+    _arrayfunction_or_api,
+    _default,
+    _DType_co,
+    _ShapeType_co,
+)
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import _default
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -20,13 +24,13 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from xarray.namedarray._typing import (
+        Default,
         _AttrsLike,
         _DimsLike,
         _DType,
         _Shape,
         duckarray,
     )
-    from xarray.namedarray.utils import Default
 
 
 class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):

@@ -25,6 +25,7 @@ from xarray.namedarray._typing import (
     _arrayapi,
     _arrayfunction_or_api,
     _chunkedarray,
+    _default,
     _dtype,
     _DType_co,
     _ScalarType_co,
@@ -33,13 +34,14 @@ from xarray.namedarray._typing import (
     _SupportsImag,
     _SupportsReal,
 )
-from xarray.namedarray.utils import _default, is_duck_dask_array, to_0d_object_array
+from xarray.namedarray.utils import is_duck_dask_array, to_0d_object_array
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
     from xarray.core.types import Dims
     from xarray.namedarray._typing import (
+        Default,
         _AttrsLike,
         _Chunks,
         _Dim,
@@ -52,7 +54,6 @@ if TYPE_CHECKING:
         _ShapeType,
         duckarray,
     )
-    from xarray.namedarray.utils import Default
 
     try:
         from dask.typing import (
