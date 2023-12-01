@@ -7439,7 +7439,7 @@ class Dataset(
         d: dict = {
             "coords": {},
             "attrs": decode_numpy_dict_values(self.attrs),
-            "dims": dict(self.dims),
+            "dims": dict(self.sizes),
             "data_vars": {},
         }
         for k in self.coords:
