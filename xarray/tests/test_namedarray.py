@@ -497,6 +497,19 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert result.shape == expected_shape
         assert result.dims == expected_dims
 
+    def test_expand_dims_errors(
+        self, target: NamedArray[Any, np.dtype[np.float32]]
+    ) -> None:
+        with pytest.raises(ValueError, match=r"Dimension.*already exists"):
+            dim = {"x": 0}
+            target.expand_dims(dim=dim)
+
+        with pytest.raises(
+            ValueError, match=r"Cannot assign multiple new dimensions.*"
+        ):
+            dim = {"z": 0, "a": 0}
+            target.expand_dims(dim=dim)
+
     @pytest.mark.parametrize(
         "dims, expected_sizes",
         [
@@ -514,16 +527,38 @@ class TestNamedArray(NamedArraySubclassobjects):
         actual = target.permute_dims(*dims)
         assert actual.sizes == expected_sizes
 
-    @pytest.mark.parametrize(
-        "dims",
-        [
-            (["y"]),
-        ],
-    )
     def test_permute_dims_errors(
         self,
         target: NamedArray[Any, np.dtype[np.float32]],
-        dims: _DimsLike,
     ) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"'y'.*permuted list"):
+            dims = ["y"]
             target.permute_dims(*dims)
+
+    @pytest.mark.parametrize(
+        "broadcast_dims,expected_ndim",
+        [
+            ({"x": 2, "y": 5}, 2),
+            ({"x": 2, "y": 5, "z": 2}, 3),
+            ({"w": 1, "x": 2, "y": 5}, 3),
+        ],
+    )
+    def test_broadcast_to(
+        self,
+        target: NamedArray[Any, np.dtype[np.float32]],
+        broadcast_dims: Mapping[_Dim, int],
+        expected_ndim: int,
+    ) -> None:
+        expand_dims = set(broadcast_dims.keys()) - set(target.dims)
+        result = target.expand_dims(list(expand_dims)).broadcast_to(broadcast_dims)
+        assert result.ndim == expected_ndim
+        assert result.sizes == broadcast_dims
+
+    def test_broadcast_to_errors(
+        self, target: NamedArray[Any, np.dtype[np.float32]]
+    ) -> None:
+        with pytest.raises(
+            ValueError,
+            match=r"operands could not be broadcast together with remapped shapes",
+        ):
+            target.broadcast_to({"x": 2, "y": 2})

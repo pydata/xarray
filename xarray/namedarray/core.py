@@ -11,7 +11,6 @@ from typing import (
     Callable,
     Generic,
     Literal,
-    SupportsIndex,
     TypeVar,
     cast,
     overload,
@@ -894,7 +893,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             return self.copy(deep=False)
 
         axes = self.get_axis_num(dims)
-        data = self._data.transpose(axes)
+        data = self._data.transpose(
+            axes
+        )  # TODO: replace this with use array-api-compat function
         return self._replace(dims=dims, data=data)
 
     @property
@@ -920,11 +921,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"existing dimensions {self.dims!r}. missing dims: {missing_dims}"
             )
 
-    def _get_expanded_dims(self, dims: Mapping[Any, _Dim] | _Dim) -> _DimsLike:
-        self_dims = set(self.dims)
-        return tuple(dim for dim in dims if dim not in self_dims) + self.dims
-
-    def broadcast_to(self, dims: Mapping[Any, _Dim]) -> NamedArray[Any, _DType_co]:
+    def broadcast_to(
+        self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
+    ) -> NamedArray[Any, _DType_co]:
         """
         Broadcast namedarray to a new shape.
 
@@ -933,18 +932,25 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         dims : dict
             Dimensions to broadcast the array to. Keys are dimension names and values are the new sizes.
         """
+        from xarray.core import duck_array_ops
 
-        from xarray.core import duck_array_ops  # TODO: Remove this import in the future
+        combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "broadcast_to")
 
-        self._check_dims(dims)
-        expanded_dims = self._get_expanded_dims(dims)
-        shape = list(dims.values())
+        # check that the dimensions are valid
+        self._check_dims(list(combined_dims.keys()))
 
-        dims_map = dict(zip(dims, cast(Iterable[SupportsIndex], shape)))
-        temporary_shape = tuple(dims_map[dim] for dim in expanded_dims)
+        # create a dictionary of the current dimensions and their sizes
+        current_shape = dict(zip(self.dims, self._data.shape))
 
-        data = duck_array_ops.broadcast_to(self.data, temporary_shape)  # type: ignore
-        return self._new(data=data, dims=expanded_dims)
+        # update the current shape with the new dimensions, keeping the order of the original dimensions
+        broadcast_shape = {d: current_shape.get(d, 1) for d in self.dims}
+        broadcast_shape |= combined_dims
+
+        # ensure the dimensions are in the correct order
+        ordered_dims = list(broadcast_shape.keys())
+        ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
+        data = duck_array_ops.broadcast_to(self._data, ordered_shape)
+        return self._new(data=data, dims=ordered_dims)
 
     def expand_dims(
         self, dim: _DimsLike | Mapping[_Dim, int] | None = None, **dim_kwargs: Any
@@ -1027,6 +1033,12 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             raise ValueError(
                 f"Cannot assign multiple new dimensions to the same position: {positions}"
             )
+
+        for new_dim in combined_dims.keys():
+            if new_dim in self.dims:
+                raise ValueError(
+                    f"Dimension {new_dim} already exists. Please remove it from the specified dimensions: {combined_dims}"
+                )
 
         # create a list of all dimensions, placing new ones at their specified positions
         all_dims_with_pos = [(d, i) for i, d in enumerate(self.dims)]
