@@ -489,7 +489,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"number of data dimensions, ndim={self.ndim}"
             )
         if len(set(dims)) < len(dims):
-            repeated_dims = set([d for d in dims if dims.count(d) > 1])
+            repeated_dims = {d for d in dims if dims.count(d) > 1}
             warnings.warn(
                 f"Duplicate dimension names present: dimensions {repeated_dims} appear more than once in dims={dims}. "
                 "We do not yet support duplicate dimension names, but we do allow initial construction of the object. "
@@ -1112,7 +1112,7 @@ def _raise_if_any_duplicate_dimensions(
     dims: _Dims, err_context: str = "This function"
 ) -> None:
     if len(set(dims)) < len(dims):
-        repeated_dims = set([d for d in dims if dims.count(d) > 1])
+        repeated_dims = {d for d in dims if dims.count(d) > 1}
         raise ValueError(
             f"{err_context} cannot handle duplicate dimensions, but dimensions {repeated_dims} appear more than once on this object's dims: {dims}"
         )
