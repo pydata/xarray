@@ -23,25 +23,62 @@ v2023.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Use a concise format when plotting datetime arrays. (:pull:`8449`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+
+- :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
+  the core dim has exactly one chunk. (:pull:`8475`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Explicitly warn when creating xarray objects with repeated dimension names.
+  Such objects will also now raise when :py:meth:`DataArray.get_axis_num` is called,
+  which means many functions will raise.
+  This latter change is technically a breaking change, but whilst allowed,
+  this behaviour was never actually supported! (:issue:`3731`, :pull:`8491`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Deprecations
 ~~~~~~~~~~~~
 
+- As part of an effort to standardize the API, we're renaming the ``dims``
+  keyword arg to ``dim`` for the minority of functions which current use
+  ``dims``. This started with :py:func:`xarray.dot` & :py:meth:`DataArray.dot`
+  and we'll gradually roll this out across all functions. The warnings are
+  currently ``PendingDeprecationWarning``, which are silenced by default. We'll
+  convert these to ``DeprecationWarning`` in a future release.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix dtype inference for ``pd.CategoricalIndex`` when categories are backed by a ``pd.ExtensionDtype`` (:pull:`8481`)
+- Fix writing a variable that requires transposing when not writing to a region (:pull:`8484`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Added illustration of updating the time coordinate values of a resampled dataset using
+  time offset arithmetic.
+  This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
+  in ``resample`` (:pull:`8479`).
+  By `Doug Latornell <https://github.com/douglatornell>`_.
+
+- Improved error message when attempting to get a variable which doesn't exist from a Dataset.
+  (:pull:`8474`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
+  default, which is up to 5x faster where parallelization is possible. (:pull:`8339`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.2023.11.0:
 
@@ -137,6 +174,9 @@ Bug fixes
 - Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
   if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Fix for :py:meth:`DataArray.to_zarr` & :py:meth:`Dataset.to_zarr` to close
+  the created zarr store when passing a path with `.zip` extension (:pull:`8425`).
+  By `Carl Andersson <https://github.com/CarlAndersson>_`.
 
 Documentation
 ~~~~~~~~~~~~~

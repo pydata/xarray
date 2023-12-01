@@ -3460,6 +3460,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
     )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
@@ -3468,6 +3469,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         ) as actual:
             assert "Temperature" in list(actual)
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
         driver_kwds = {
             "secret_id": b"",
@@ -5246,6 +5248,16 @@ def test_pickle_open_mfdataset_dataset():
 
 
 @requires_zarr
+def test_zarr_closing_internal_zip_store():
+    store_name = "tmp.zarr.zip"
+    original_da = DataArray(np.arange(12).reshape((3, 4)))
+    original_da.to_zarr(store_name, mode="w")
+
+    with open_dataarray(store_name, engine="zarr") as loaded_da:
+        assert_identical(original_da, loaded_da)
+
+
+@requires_zarr
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
         x = np.arange(0, 50, 10)
@@ -5419,7 +5431,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
-def test_zarr_region_transpose(tmp_path):
+def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
     data = np.ones((5, 10))
@@ -5434,7 +5446,12 @@ def test_zarr_region_transpose(tmp_path):
     )
     ds.to_zarr(tmp_path / "test.zarr")
 
-    ds_region = 1 + ds.isel(x=[0], y=[0]).transpose()
+    ds_transposed = ds.transpose("y", "x")
+
+    ds_region = 1 + ds_transposed.isel(x=[0], y=[0])
     ds_region.to_zarr(
         tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
     )
+
+    # Write without region
+    ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")

@@ -174,8 +174,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
     # this avoids the need to get involved in zarr synchronization / locking
     # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a separate
-    #   region of the array, and if region boundaries are perfectly aligned
+    #  "If each worker in a parallel computation is writing to a
+    #   separate region of the array, and if region boundaries are perfectly aligned
     #   with chunk boundaries, then no synchronization is required."
     # TODO: incorporate synchronizer to allow writes from multiple dask
     # threads
@@ -378,6 +378,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_write_region",
         "_safe_chunks",
         "_write_empty",
+        "_close_store_on_close",
     )
 
     @classmethod
@@ -461,6 +462,7 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
+        close_store_on_close = zarr_group.store is not store
         return cls(
             zarr_group,
             mode,
@@ -469,6 +471,7 @@ class ZarrStore(AbstractWritableDataStore):
             write_region,
             safe_chunks,
             write_empty,
+            close_store_on_close,
         )
 
     def __init__(
@@ -480,6 +483,7 @@ class ZarrStore(AbstractWritableDataStore):
         write_region=None,
         safe_chunks=True,
         write_empty: bool | None = None,
+        close_store_on_close: bool = False,
     ):
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
@@ -491,6 +495,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
         self._safe_chunks = safe_chunks
         self._write_empty = write_empty
+        self._close_store_on_close = close_store_on_close
 
     @property
     def ds(self):
@@ -596,8 +601,9 @@ class ZarrStore(AbstractWritableDataStore):
         """
         import zarr
 
+        existing_keys = tuple(self.zarr_group.array_keys())
         existing_variable_names = {
-            vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
+            vn for vn in variables if _encode_variable_name(vn) in existing_keys
         }
         new_variables = set(variables) - existing_variable_names
         variables_without_encoding = {vn: variables[vn] for vn in new_variables}
@@ -621,12 +627,10 @@ class ZarrStore(AbstractWritableDataStore):
             variables_encoded.update(vars_with_encoding)
 
             for var_name in existing_variable_names:
-                new_var = variables_encoded[var_name]
-                existing_var = existing_vars[var_name]
-                new_var = _validate_and_transpose_existing_dims(
+                variables_encoded[var_name] = _validate_and_transpose_existing_dims(
                     var_name,
-                    new_var,
-                    existing_var,
+                    variables_encoded[var_name],
+                    existing_vars[var_name],
                     self._write_region,
                     self._append_dim,
                 )
@@ -664,6 +668,8 @@ class ZarrStore(AbstractWritableDataStore):
 
         import zarr
 
+        existing_keys = tuple(self.zarr_group.array_keys())
+
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -676,7 +682,7 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if name in self.zarr_group:
+            if name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
@@ -758,7 +764,8 @@ class ZarrStore(AbstractWritableDataStore):
             writer.add(v.data, zarr_array, region)
 
     def close(self):
-        pass
+        if self._close_store_on_close:
+            self.zarr_group.store.close()
 
 
 def open_zarr(
