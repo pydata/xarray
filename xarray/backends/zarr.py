@@ -599,8 +599,9 @@ class ZarrStore(AbstractWritableDataStore):
         """
         import zarr
 
+        existing_keys = tuple(self.zarr_group.array_keys())
         existing_variable_names = {
-            vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
+            vn for vn in variables if _encode_variable_name(vn) in existing_keys
         }
         new_variables = set(variables) - existing_variable_names
         variables_without_encoding = {vn: variables[vn] for vn in new_variables}
@@ -665,6 +666,8 @@ class ZarrStore(AbstractWritableDataStore):
 
         import zarr
 
+        existing_keys = tuple(self.zarr_group.array_keys())
+
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -677,7 +680,7 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if name in self.zarr_group:
+            if name in existing_keys:
                 # existing variable
                 # TODO: if mode="a", consider overriding the existing variable
                 # metadata. This would need some case work properly with region
