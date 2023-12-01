@@ -3487,6 +3487,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
     )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
@@ -3495,6 +3496,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         ) as actual:
             assert "Temperature" in list(actual)
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
         driver_kwds = {
             "secret_id": b"",
@@ -5270,6 +5272,16 @@ class TestNCZarr:
 def test_pickle_open_mfdataset_dataset():
     ds = open_example_mfdataset(["bears.nc"])
     assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+
+
+@requires_zarr
+def test_zarr_closing_internal_zip_store():
+    store_name = "tmp.zarr.zip"
+    original_da = DataArray(np.arange(12).reshape((3, 4)))
+    original_da.to_zarr(store_name, mode="w")
+
+    with open_dataarray(store_name, engine="zarr") as loaded_da:
+        assert_identical(original_da, loaded_da)
 
 
 @requires_zarr
