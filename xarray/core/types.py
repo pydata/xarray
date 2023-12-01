@@ -282,3 +282,6 @@ QuantileMethods = Literal[
     "midpoint",
     "nearest",
 ]
+
+
+ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
