@@ -25,8 +25,8 @@ New Features
 
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-
-
+- Avoid overwriting unchanged existing coordinate variables when appending by setting ``mode='a-'``.
+  By `Ryan Abernathey <https://github.com/rabernat>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -177,6 +177,9 @@ Bug fixes
 - Fix a bug where :py:meth:`DataArray.to_dataset` silently drops a variable
   if a coordinate with the same name already exists (:pull:`8433`, :issue:`7823`).
   By `András Gunyhó <https://github.com/mgunyho>`_.
+- Fix for :py:meth:`DataArray.to_zarr` & :py:meth:`Dataset.to_zarr` to close
+  the created zarr store when passing a path with `.zip` extension (:pull:`8425`).
+  By `Carl Andersson <https://github.com/CarlAndersson>_`.
 
 Documentation
 ~~~~~~~~~~~~~
