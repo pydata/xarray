@@ -7979,8 +7979,8 @@ class Dataset(
             variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
-        aligned_self = aligned_vars[0]
-        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]
+        aligned_self = cast("Self", aligned_vars[0])
+        aligned_other_vars = cast(tuple[DataArray, ...], aligned_vars[1:])
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
