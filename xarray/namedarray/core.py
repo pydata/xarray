@@ -974,7 +974,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         # ensure the dimensions are in the correct order
         ordered_dims = list(broadcast_shape.keys())
         ordered_shape = tuple(broadcast_shape[d] for d in ordered_dims)
-        data = duck_array_ops.broadcast_to(self._data, ordered_shape)
+        data = duck_array_ops.broadcast_to(
+            self._data, ordered_shape
+        )  # TODO: use array-api-compat function
         return self._new(data=data, dims=ordered_dims)
 
     def expand_dims(
