@@ -488,6 +488,8 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     would also be valid for a FrozenSet, e.g. iteration).
     """
 
+    __slots__ = ("mapping",)
+
     def _warn(self) -> None:
         warnings.warn(
             "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
@@ -499,6 +501,18 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     def __getitem__(self, key: K) -> V:
         self._warn()
         return super().__getitem__(key)
+
+    @overload
+    def get(self, key: K, /) -> V | None:
+        ...
+
+    @overload
+    def get(self, key: K, /, default: V | T) -> V | T:
+        ...
+
+    def get(self, key: K, default: T | None = None) -> V | T | None:
+        self._warn()
+        return super().get(key, default)
 
     def keys(self) -> KeysView[K]:
         self._warn()
