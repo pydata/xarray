@@ -3464,6 +3464,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
     )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
@@ -3472,6 +3473,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         ) as actual:
             assert "Temperature" in list(actual)
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
         driver_kwds = {
             "secret_id": b"",
