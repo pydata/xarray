@@ -5252,6 +5252,16 @@ def test_pickle_open_mfdataset_dataset():
 
 
 @requires_zarr
+def test_zarr_closing_internal_zip_store():
+    store_name = "tmp.zarr.zip"
+    original_da = DataArray(np.arange(12).reshape((3, 4)))
+    original_da.to_zarr(store_name, mode="w")
+
+    with open_dataarray(store_name, engine="zarr") as loaded_da:
+        assert_identical(original_da, loaded_da)
+
+
+@requires_zarr
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
         x = np.arange(0, 50, 10)
