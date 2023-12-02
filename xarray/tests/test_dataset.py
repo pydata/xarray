@@ -687,6 +687,7 @@ class TestDataset:
         # test coordinate variables copied
         assert ds.variables["x"] is not coords.variables["x"]
 
+    @pytest.mark.filterwarnings("ignore:return type")
     def test_properties(self) -> None:
         ds = create_test_data()
 
