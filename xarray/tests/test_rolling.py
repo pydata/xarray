@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from calendar import c
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
-from cycler import V
 
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
 from xarray.tests import (
     assert_allclose,
-    assert_array_equal,
     assert_equal,
     assert_identical,
     has_dask,
