@@ -667,8 +667,10 @@ class DataArrayRolling(Rolling["DataArray"]):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
+
         if rolling_agg_func:
             return rolling_agg_func(self, keep_attrs=self._get_keep_attrs(keep_attrs))
+
         if fillna is not None:
             if fillna is dtypes.INF:
                 fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
