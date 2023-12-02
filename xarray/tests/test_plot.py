@@ -730,22 +730,20 @@ class TestPlot(PlotTestCase):
         expected = "dim_0_bins_center [m]"
         assert actual == expected
 
-    @pytest.mark.parametrize("brackets", ("()", "<>", "in ."))
-    def test_option_plot_unit_brackets(self, brackets: str) -> None:
-        """Test if options to set units works."""
+    @pytest.mark.parametrize("format", ("({})", "<{}>", "in {}."))
+    def test_option_plot_unit_format(self, format: str) -> None:
+        """Test if options to set units format works."""
 
         bins = [-1, 0, 1, 2]
         arr = self.darray.groupby_bins("dim_0", bins).mean(...)
         arr.dim_0_bins.attrs["units"] = "m"
 
-        left = brackets[:-1]
-        right = brackets[-1]
-        with set_options(plot_unit_brackets=(left, right)):
+        with set_options(plot_unit_format=format):
             (mappable,) = arr.plot(x="dim_0_bins")
             ax = mappable.figure.gca()
             actual = ax.get_xlabel()
 
-            expected = f"dim_0_bins_center {left}m{right}"
+            expected = "dim_0_bins_center " + format.format("m")
             assert actual == expected
 
     def test_multiplot_over_length_one_dim(self) -> None:

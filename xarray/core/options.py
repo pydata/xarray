@@ -30,7 +30,7 @@ if TYPE_CHECKING:
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
-        "plot_unit_brackets",
+        "plot_unit_format",
     ]
 
     class T_Options(TypedDict):
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
         use_flox: bool
         use_numbagg: bool
         use_opt_einsum: bool
-        plot_unit_brackets: tuple[str, str]
+        plot_unit_format: str
 
 
 OPTIONS: T_Options = {
@@ -80,7 +80,7 @@ OPTIONS: T_Options = {
     "use_flox": True,
     "use_numbagg": True,
     "use_opt_einsum": True,
-    "plot_unit_brackets": ("[", "]"),
+    "plot_unit_format": "[{}]",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -111,7 +111,7 @@ _VALIDATORS = {
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
-    "plot_unit_brackets": lambda value: isinstance(value, tuple) and len(value) == 2,
+    "plot_unit_format": lambda value: isinstance(value, str) and "{}" in value,
 }
 
 
@@ -250,8 +250,8 @@ class set_options:
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.
-    plot_unit_brackets: tuple[str, str], default: ("[", "]")
-        Enclosing brackets for units in plots. Use this to change
+    plot_unit_format: str, default: "[{}]"
+        Format units in plots. Must contain "{}". Use this to change
         `[unit]` (default) to e.g. `(unit)`.
 
     Examples
