@@ -1,6 +1,7 @@
 """Base classes implementing arithmetic for xarray objects."""
 from __future__ import annotations
 
+import inspect
 import numbers
 
 import numpy as np
@@ -41,6 +42,59 @@ class SupportsArithmetic:
         bytes,
         str,
     )
+
+    def __array_function__(self, func, types, args, kwargs):
+        """
+        When ``np.clip(da, foo, bar)`` is called, this forwards that call to
+        ``da.clip(foo, bar)``. It's similiar to ``__array_ufunc__``, but for non-ufuncs.
+
+        This has the advantage of preserving attributes / retaining chunks / etc.
+        """
+        if not all(issubclass(t, SupportsArithmetic) for t in types):
+            return NotImplemented
+
+        # Define the mapping for numpy functions to internal methods and argument
+        # mappings — currently only `np.clip`
+        func_mappings = {np.clip: (self.clip, {"a_min": "min", "a_max": "max"}, {"a"})}
+
+        if func in func_mappings:
+            internal_method, arg_mapping, special_args = func_mappings[func]
+
+            # Inspect the signature of the internal method
+            method_sig = inspect.signature(internal_method)
+            method_params = set(method_sig.parameters.keys())
+
+            # Bind args and kwargs for the numpy function
+            func_sig = inspect.signature(func)
+            bound_arguments = func_sig.bind(*args, **kwargs)
+            bound_arguments.apply_defaults()
+
+            # Prepare arguments for the internal method
+            method_args = {}
+            for arg_name, value in bound_arguments.arguments.items():
+                if arg_name in arg_mapping:
+                    # Map numpy function argument names to internal method argument names
+                    method_args[arg_mapping[arg_name]] = value
+                elif arg_name in method_params:
+                    # Pass arguments that share the same name
+                    method_args[arg_name] = value
+
+            # Check for any unsupported keyword arguments
+            allowed_kwargs = set(arg_mapping.keys()) | special_args
+            unsupported_kwargs = set(kwargs.keys()) - allowed_kwargs - method_params
+            if unsupported_kwargs:
+                # There's some case for returning `NotImplemented` here, so another type
+                # could attempt to handle the function call. But the error message would
+                # be quite unclear, and it seems quite unlikely that we'd hit this. It
+                # might also be possible to defer to `np.clip`, but that has similar
+                # downsides.
+                raise ValueError(
+                    f"Unsupported keyword arguments for {internal_method.__name__}: {unsupported_kwargs}"
+                )
+
+            return internal_method(**method_args)
+
+        return NotImplemented
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         from xarray.core.computation import apply_ufunc

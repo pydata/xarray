@@ -2501,3 +2501,17 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
 
     actual = xr.cross(a, b, dim=dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
+
+
+@requires_dask
+@pytest.mark.parametrize("backend", ["dask"], indirect=True)
+def test_array_function_clip(da):
+    import dask
+
+    assert isinstance(np.clip(da, 0, 1).data, dask.array.core.Array)
+    assert isinstance(np.clip(a=da, a_min=0, a_max=1).data, dask.array.core.Array)
+
+    with pytest.raises(ValueError):
+        np.clip(a=da, a_min=0, a_max=1, bar="foo")
+    with pytest.raises(ValueError):
+        np.clip(a=da, a_min=0, a_max=1, out=xr.DataArray(), bar="foo")
