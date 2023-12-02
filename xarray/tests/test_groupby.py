@@ -2541,3 +2541,20 @@ def test_default_flox_method():
         assert kwargs["method"] == "cohorts"
     else:
         assert "method" not in kwargs
+
+
+def test_season_to_month_tuple():
+    from xarray.core.groupers import season_to_month_tuple
+
+    assert season_to_month_tuple(["JF", "MAM", "JJAS", "OND"]) == [
+        [1, 2],
+        [3, 4, 5],
+        [6, 7, 8, 9],
+        [10, 11, 12],
+    ]
+    assert season_to_month_tuple(["DJFM", "AM", "JJAS", "ON"]) == [
+        [12, 1, 2, 3],
+        [4, 5],
+        [6, 7, 8, 9],
+        [10, 11],
+    ]
