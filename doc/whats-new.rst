@@ -74,10 +74,11 @@ Documentation
   This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
   in ``resample`` (:pull:`8479`).
   By `Doug Latornell <https://github.com/douglatornell>`_.
-
 - Improved error message when attempting to get a variable which doesn't exist from a Dataset.
   (:pull:`8474`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix default value of ``combine_attrs `` in :py:func:`xarray.combine_by_coords` (:pull:`8471`)
+  By `Gregorio L. Trevisan <https://github.com/gtrevisan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
