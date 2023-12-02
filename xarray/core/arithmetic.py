@@ -103,16 +103,28 @@ class SupportsArithmetic:
                 )
 
             return internal_method(**method_args)
-        else:
-            # Coerce to numpy arrays and call the original method. This is discussed at
-            # https://numpy.org/neps/nep-0018-array-function-protocol.html#partial-implementation-of-numpy-s-api
-            return func(
-                *(np.asarray(a) if hasattr(a, "__array__") else a for a in args),
-                **{
-                    k: (np.asarray(v) if hasattr(v, "__array__") else v)
-                    for k, v in kwargs.items()
-                },
-            )
+
+            # else:
+            # Some previous efforts
+            # from xarray.core.computation import apply_ufunc
+            # from xarray.core.dataset import Dataset
+
+            # # Coerce to numpy arrays and call the original method. This is discussed at
+            # # https://numpy.org/neps/nep-0018-array-function-protocol.html#partial-implementation-of-numpy-s-api
+            # if any(isinstance(a, Dataset) for a in args) or any(
+            #     isinstance(v, Dataset) for v in kwargs.values()
+            # ):
+            #     raise ValueError
+            # # breakpoint()
+            # return apply_ufunc(func, args, kwargs=kwargs)
+
+            # func(
+            #         *(np.asarray(a) if hasattr(a, "__array__") else a for a in args),
+            #         **{
+            #             k: (np.asarray(v) if hasattr(v, "__array__") else v)
+            #             for k, v in kwargs.items()
+            #         },
+            #     )
 
         return NotImplemented
 
