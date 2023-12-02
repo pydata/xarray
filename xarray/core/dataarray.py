@@ -6975,7 +6975,7 @@ class DataArray(
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
 
-        >>> da.cumulative('time').sum()
+        >>> da.cumulative("time").sum()
         <xarray.DataArray (time: 12)>
         array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
         Coordinates:

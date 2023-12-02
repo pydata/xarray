@@ -10409,12 +10409,16 @@ class Dataset(
 
         if isinstance(dim, str):
             if dim not in self.dims:
-                raise ValueError(f"Dimension {dim} not found in data dimensions: {self.dims}")
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
             dim = {dim: self.sizes[dim]}
         else:
             missing_dims = set(dim) - set(self.dims)
             if missing_dims:
-                raise ValueError(f"Dimensions {missing_dims} not found in data dimensions: {self.dims}")
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
             dim = {d: self.sizes[d] for d in dim}
 
         return DatasetRolling(self, dim, min_periods=min_periods or 1, center=False)
