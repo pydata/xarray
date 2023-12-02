@@ -55,6 +55,7 @@ Deprecations
   from a mapping of dimension names to lengths to a set of dimension names.
   This is to increase consistency with :py:meth:`DataArray.dims`.
   To access a mapping of dimension names to lengths please use :py:meth:`Dataset.sizes`.
+  The same change also applies to `DatasetGroupBy.dims`.
   (:issue:`8496`, :pull:`8500`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
