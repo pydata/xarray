@@ -485,6 +485,24 @@ class TestDataArrayRollingExp:
         ):
             da.rolling_exp(time=10, keep_attrs=True)
 
+    @pytest.mark.parametrize("func", ["mean", "sum"])
+    @pytest.mark.parametrize("min_periods", [None, 1, 20])
+    def test_cumulative(self, da, func, min_periods) -> None:
+        # One dim
+        result = getattr(da.cumulative("time", min_periods=min_periods), func)()
+        expected = getattr(
+            da.rolling(time=da.time.size, min_periods=min_periods or 1), func
+        )()
+        assert_identical(result, expected)
+
+        # Multiple dim
+        result = getattr(da.cumulative(["time", "a"], min_periods=min_periods), func)()
+        expected = getattr(
+            da.rolling(time=da.time.size, a=da.a.size, min_periods=min_periods or 1),
+            func,
+        )()
+        assert_identical(result, expected)
+
 
 class TestDatasetRolling:
     @pytest.mark.parametrize(
@@ -808,6 +826,25 @@ class TestDatasetRolling:
         actual = getattr(rolling_obj, name)()
         expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
         assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize("func", ["mean", "sum"])
+    @pytest.mark.parametrize("ds", (2,), indirect=True)
+    @pytest.mark.parametrize("min_periods", [None, 1, 20])
+    def test_cumulative(self, ds, func, min_periods) -> None:
+        # One dim
+        result = getattr(ds.cumulative("time", min_periods=min_periods), func)()
+        expected = getattr(
+            ds.rolling(time=ds.time.size, min_periods=min_periods or 1), func
+        )()
+        assert_identical(result, expected)
+
+        # Multiple dim
+        result = getattr(ds.cumulative(["time", "x"], min_periods=min_periods), func)()
+        expected = getattr(
+            ds.rolling(time=ds.time.size, x=ds.x.size, min_periods=min_periods or 1),
+            func,
+        )()
+        assert_identical(result, expected)
 
 
 @requires_numbagg
