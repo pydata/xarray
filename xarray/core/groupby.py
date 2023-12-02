@@ -81,7 +81,8 @@ def _maybe_squeeze_indices(
         if squeeze is None and warn:
             emit_user_level_warning(
                 "The `squeeze` kwarg to GroupBy is being removed."
-                "Pass .groupby(..., squeeze=False) to silence this warning."
+                "Pass .groupby(..., squeeze=False) to disable squeezing,"
+                " which is the new default, and to silence this warning."
             )
         if isinstance(indices, slice):
             assert indices.stop - indices.start == 1
