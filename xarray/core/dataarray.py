@@ -3041,7 +3041,7 @@ class DataArray(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable] | Callable,
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -3110,6 +3110,8 @@ class DataArray(
                [ 9, 10, 11]])
         Dimensions without coordinates: x, y
         """
+        if callable(names):
+            names = names(self)
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
 

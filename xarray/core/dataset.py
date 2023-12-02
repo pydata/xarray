@@ -19,7 +19,7 @@ from collections.abc import (
 )
 from html import escape
 from numbers import Number
-from operator import methodcaller
+from operator import is_, methodcaller
 from os import PathLike
 from typing import IO, TYPE_CHECKING, Any, Callable, Generic, Literal, cast, overload
 
@@ -5723,7 +5723,7 @@ class Dataset(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable] | Callable,
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -5860,7 +5860,7 @@ class Dataset(
         for var in names_set:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
-                idx_coord_names = set(maybe_midx.index.names_set + [maybe_midx.dim])
+                idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
                 idx_other_names = idx_coord_names - set(names_set)
                 other_names.update(idx_other_names)
         if other_names:
@@ -5976,6 +5976,9 @@ class Dataset(
                 PendingDeprecationWarning,
                 stacklevel=2,
             )
+            # for mypy
+            if is_scalar(labels):
+                labels = [labels]
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
             warnings.warn(
