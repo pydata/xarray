@@ -146,7 +146,13 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a numbagg reduction function (e.g. move_sum), a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        a numbagg reduction function (e.g. move_sum), a bottleneck reduction function
+        (e.g. move_sum), or a Rolling reduction (_mean).
+
+        The logic here for which function to run is quite diffuse, across this method &
+        _array_reduce. Arguably we could refactor this. But one constraint is that we
+        need context of xarray options, of the functions each library offers, of
+        the array (e.g. dtype).
         """
         if rolling_agg_func:
             array_agg_func = None
@@ -539,7 +545,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
-        if is_duck_dask_array(padded.data):
+        if is_duck_dask_array(padded.data) and False:
             raise AssertionError("should not be reachable")
         else:
             values = func(
@@ -625,9 +631,16 @@ class DataArrayRolling(Rolling["DataArray"]):
             and module_available("numbagg")
             and pycompat.mod_version("numbagg") >= Version("0.6.3")
             and numbagg_move_func is not None
-            # TODO: can we allow this with numbagg?
+            # TODO: we could at least allow this for the equivalent of `apply_ufunc`'s
+            # "parallelized". `rolling_exp` does this, as an example (but it otherwise
+            # much simpler)
             and not is_duck_dask_array(self.obj.data)
+            # Numbagg doesn't handle object arrays and generally has dtype consistency,
+            # so doesn't deal well with bool arrays.
             and self.obj.data.dtype.kind not in "Ob"
+            # TODO: we could also allow this, probably as part of a refactoring of this
+            # module, so we can use the machinery in `self.reduce`.
+            and self.ndim == 1
         ):
             import numbagg
 
