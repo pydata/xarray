@@ -50,12 +50,22 @@ class SupportsArithmetic:
 
         This has the advantage of preserving attributes / retaining chunks / etc.
         """
-        if not all(issubclass(t, SupportsArithmetic) for t in types):
+
+        # The `np.ndarray` isn't in the example at
+        # https://numpy.org/neps/nep-0018-array-function-protocol.html#example-for-a-project-implementing-the-numpy-api,
+        # but without it, we fail on a combination of an xarray object and a numpy
+        # array, since numpy will raise if all types return `NotImplemented`, and numpy
+        # returns `NotImplemented`...
+        if not all(issubclass(t, (SupportsArithmetic, np.ndarray)) for t in types):
             return NotImplemented
 
         # Define the mapping for numpy functions to internal methods and argument
-        # mappings — currently only `np.clip`
-        func_mappings = {np.clip: (self.clip, {"a_min": "min", "a_max": "max"}, {"a"})}
+        # mappings. We don't yet have `np.concantenate` or `np.stack` here.
+        func_mappings = {
+            np.clip: (self.clip, {"a_min": "min", "a_max": "max"}, {"a"}),
+            np.round: (self.round, {"decimals": "decimals"}, {"a"}),
+            np.any: (self.any, {"axis": "axis", "keepdims": "keepdims"}, {"a"}),
+        }
 
         if func in func_mappings:
             internal_method, arg_mapping, special_args = func_mappings[func]
@@ -93,6 +103,16 @@ class SupportsArithmetic:
                 )
 
             return internal_method(**method_args)
+        else:
+            # Coerce to numpy arrays and call the original method. This is discussed at
+            # https://numpy.org/neps/nep-0018-array-function-protocol.html#partial-implementation-of-numpy-s-api
+            return func(
+                *(np.asarray(a) if hasattr(a, "__array__") else a for a in args),
+                **{
+                    k: (np.asarray(v) if hasattr(v, "__array__") else v)
+                    for k, v in kwargs.items()
+                },
+            )
 
         return NotImplemented
 
