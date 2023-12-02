@@ -146,7 +146,7 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        a numbagg reduction function (e.g. move_sum), a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
         """
         if rolling_agg_func:
             array_agg_func = None
@@ -164,7 +164,7 @@ class Rolling(Generic[T_Xarray]):
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
-            return self._numpy_or_bottleneck_reduce(
+            return self._array_reduce(
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
                 numbagg_move_func=numbagg_move_func,
@@ -600,7 +600,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             values, self.obj.coords, attrs=attrs, name=self.obj.name
         )
 
-    def _numpy_or_bottleneck_reduce(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
@@ -776,7 +776,7 @@ class DatasetRolling(Rolling["Dataset"]):
             DataArrayRolling._counts, keep_attrs=keep_attrs
         )
 
-    def _numpy_or_bottleneck_reduce(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
@@ -786,7 +786,7 @@ class DatasetRolling(Rolling["Dataset"]):
     ):
         return self._dataset_implementation(
             functools.partial(
-                DataArrayRolling._numpy_or_bottleneck_reduce,
+                DataArrayRolling._array_reduce,
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
                 rolling_agg_func=rolling_agg_func,
