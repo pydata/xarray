@@ -3936,7 +3936,7 @@ class Dataset(
             try:
                 return obj._variables[k]
             except KeyError:
-                return as_variable((k, range(obj.dims[k])))
+                return as_variable((k, range(obj.sizes[k])))
 
         def _validate_interp_indexer(x, new_x):
             # In the case of datetimes, the restrictions placed on indexers
