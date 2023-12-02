@@ -65,6 +65,9 @@ Bug fixes
 - Static typing of ``p0`` and ``bounds`` arguments of :py:func:`xarray.DataArray.curvefit` and :py:func:`xarray.Dataset.curvefit`
   was changed to ``Mapping`` (:pull:`8502`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix typing of :py:func:`xarray.DataArray.to_netcdf` and :py:func:`xarray.Dataset.to_netcdf`
+  when ``compute`` is evaluated to bool instead of a Literal (:pull:`8268`).
+  By `Jens Hedegaard Nielsen <https://github.com/jenshnielsen>`_.
 
 Documentation
 ~~~~~~~~~~~~~
