@@ -2159,22 +2159,6 @@ class Dataset(
     ) -> bytes:
         ...
 
-    # default return None
-    @overload
-    def to_netcdf(
-        self,
-        path: str | PathLike,
-        mode: Literal["w", "a"] = "w",
-        format: T_NetcdfTypes | None = None,
-        group: str | None = None,
-        engine: T_NetcdfEngine | None = None,
-        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
-        unlimited_dims: Iterable[Hashable] | None = None,
-        compute: Literal[True] = True,
-        invalid_netcdf: bool = False,
-    ) -> None:
-        ...
-
     # compute=False returns dask.Delayed
     @overload
     def to_netcdf(
@@ -2192,6 +2176,22 @@ class Dataset(
     ) -> Delayed:
         ...
 
+    # default return None
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: Literal[True] = True,
+        invalid_netcdf: bool = False,
+    ) -> None:
+        ...
+
     # if compute cannot be evaluated at type check time
     # we may get back either Delayed or None
     @overload
@@ -2204,8 +2204,7 @@ class Dataset(
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
-        *,
-        compute: bool,
+        compute: bool = True,
         invalid_netcdf: bool = False,
     ) -> Delayed | None:
         ...
