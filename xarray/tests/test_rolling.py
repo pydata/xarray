@@ -394,7 +394,7 @@ class TestDataArrayRollingExp:
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-    @pytest.mark.parametrize("func", ["mean", "sum"])
+    @pytest.mark.parametrize("func", ["mean", "sum", "var", "std"])
     def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
         da = da.where(da > 0.2)
 
@@ -631,7 +631,7 @@ class TestDatasetRolling:
         ds_rolling_mean = ds_rolling.construct("window", stride=2, fill_value=0.0).mean(
             "window"
         )
-        assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim="vars").all()
+        assert (ds_rolling_mean.isnull().sum() == 0).to_dataarray(dim="vars").all()
         assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
 
     @pytest.mark.parametrize("center", (True, False))
@@ -788,7 +788,9 @@ class TestDatasetRolling:
 
 @requires_numbagg
 class TestDatasetRollingExp:
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=requires_dask)], indirect=True
+    )
     def test_rolling_exp(self, ds) -> None:
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)

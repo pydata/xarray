@@ -140,6 +140,8 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
     ):
         import h5netcdf
 
@@ -161,7 +163,10 @@ class H5NetCDFStore(WritableCFDataStore):
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
             "decode_vlen_strings": decode_vlen_strings,
+            "driver": driver,
         }
+        if driver_kwds is not None:
+            kwargs.update(driver_kwds)
         if phony_dims is not None:
             kwargs["phony_dims"] = phony_dims
 
@@ -266,15 +271,6 @@ class H5NetCDFStore(WritableCFDataStore):
         dtype = _get_datatype(variable, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop("_FillValue", None)
-        if dtype is str and fillvalue is not None:
-            raise NotImplementedError(
-                "h5netcdf does not yet support setting a fill value for "
-                "variable-length strings "
-                "(https://github.com/h5netcdf/h5netcdf/issues/37). "
-                f"Either remove '_FillValue' from encoding on variable {name!r} "
-                "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type."
-            )
 
         if dtype is str:
             dtype = h5py.special_dtype(vlen=str)
@@ -397,6 +393,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         invalid_netcdf=None,
         phony_dims=None,
         decode_vlen_strings=True,
+        driver=None,
+        driver_kwds=None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
@@ -407,6 +405,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
             decode_vlen_strings=decode_vlen_strings,
+            driver=driver,
+            driver_kwds=driver_kwds,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

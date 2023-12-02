@@ -2332,9 +2332,9 @@ class TestDataset:
         assert np.isnan(left2["var3"][-2:]).all()
 
         with pytest.raises(ValueError, match=r"invalid value for join"):
-            align(left, right, join="foobar")  # type: ignore[arg-type]
+            align(left, right, join="foobar")  # type: ignore[call-overload]
         with pytest.raises(TypeError):
-            align(left, right, foo="bar")  # type: ignore[call-arg]
+            align(left, right, foo="bar")  # type: ignore[call-overload]
 
     def test_align_exact(self) -> None:
         left = xr.Dataset(coords={"x": [0, 1]})
@@ -2651,19 +2651,19 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
@@ -2736,9 +2736,9 @@ class TestDataset:
         ds5 = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
 
         arr = DataArray(range(3), dims=["c"])
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.coords)
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.xindexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
@@ -2959,7 +2959,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"contain all variables in original"):
             orig.copy(data={"var1": new_var1})
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         orig = create_test_data()
         vencoding = {"scale_factor": 10}
         orig.encoding = {"foo": "bar"}
@@ -2967,7 +2967,7 @@ class TestDataset:
         for k, v in orig.variables.items():
             orig[k].encoding = vencoding
 
-        actual = orig.reset_encoding()
+        actual = orig.drop_encoding()
         assert actual.encoding == {}
         for k, v in actual.variables.items():
             assert v.encoding == {}
@@ -3032,8 +3032,7 @@ class TestDataset:
     def test_rename_same_name(self) -> None:
         data = create_test_data()
         newnames = {"var1": "var1", "dim2": "dim2"}
-        with pytest.warns(UserWarning, match="does not create an index anymore"):
-            renamed = data.rename(newnames)
+        renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
     def test_rename_dims(self) -> None:
@@ -3102,6 +3101,15 @@ class TestDataset:
             UserWarning, match="rename 'x' to 'y' does not create an index.*"
         ):
             ds.rename(x="y")
+
+        # No operation should not raise a warning
+        ds = Dataset(
+            data_vars={"data": (("x", "y"), np.ones((2, 3)))},
+            coords={"x": range(2), "y": range(3), "a": ("x", [3, 4])},
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.rename(x="x")
 
     def test_rename_multiindex(self) -> None:
         midx = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
@@ -4029,7 +4037,7 @@ class TestDataset:
 
     def test_virtual_variable_same_name(self) -> None:
         # regression test for GH367
-        times = pd.date_range("2000-01-01", freq="H", periods=5)
+        times = pd.date_range("2000-01-01", freq="h", periods=5)
         data = Dataset({"time": times})
         actual = data["time.time"]
         expected = DataArray(times.time, [("time", times)], name="time")
@@ -4561,7 +4569,7 @@ class TestDataset:
         selected = data.squeeze(drop=True)
         assert_identical(data, selected)
 
-    def test_to_array(self) -> None:
+    def test_to_dataarray(self) -> None:
         ds = Dataset(
             {"a": 1, "b": ("x", [1, 2, 3])},
             coords={"c": 42},
@@ -4571,10 +4579,10 @@ class TestDataset:
         coords = {"c": 42, "variable": ["a", "b"]}
         dims = ("variable", "x")
         expected = DataArray(data, coords, dims, attrs=ds.attrs)
-        actual = ds.to_array()
+        actual = ds.to_dataarray()
         assert_identical(expected, actual)
 
-        actual = ds.to_array("abc", name="foo")
+        actual = ds.to_dataarray("abc", name="foo")
         expected = expected.rename({"variable": "abc"}).rename("foo")
         assert_identical(expected, actual)
 
@@ -4688,6 +4696,17 @@ class TestDataset:
         ds = df.set_index(["i1", "i2"]).to_xarray()
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
+
+    def test_from_dataframe_categorical_string_categories(self) -> None:
+        cat = pd.CategoricalIndex(
+            pd.Categorical.from_codes(
+                np.array([1, 1, 0, 2]),
+                categories=pd.Index(["foo", "bar", "baz"], dtype="string"),
+            )
+        )
+        ser = pd.Series(1, index=cat)
+        ds = ser.to_xarray()
+        assert ds.coords.dtypes["index"] == np.dtype("O")
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
@@ -5051,9 +5070,9 @@ class TestDataset:
         ):
             ds.dropna("foo")
         with pytest.raises(ValueError, match=r"invalid how"):
-            ds.dropna("a", how="somehow")  # type: ignore
+            ds.dropna("a", how="somehow")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
-            ds.dropna("a", how=None)  # type: ignore
+            ds.dropna("a", how=None)  # type: ignore[arg-type]
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})

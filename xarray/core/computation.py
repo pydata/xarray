@@ -26,6 +26,7 @@ from xarray.core.pycompat import is_chunked_array, is_duck_dask_array
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import is_dict_like, is_scalar
 from xarray.core.variable import Variable
+from xarray.util.deprecation_helpers import deprecate_dims
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
@@ -289,8 +290,14 @@ def apply_dataarray_vfunc(
     from xarray.core.dataarray import DataArray
 
     if len(args) > 1:
-        args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
+        args = tuple(
+            deep_align(
+                args,
+                join=join,
+                copy=False,
+                exclude=exclude_dims,
+                raise_on_invalid=False,
+            )
         )
 
     objs = _all_of_type(args, DataArray)
@@ -402,7 +409,7 @@ def _unpack_dict_tuples(
 
 def _check_core_dims(signature, variable_args, name):
     """
-    Chcek if an arg has all the core dims required by the signature.
+    Check if an arg has all the core dims required by the signature.
 
     Slightly awkward design, of returning the error message. But we want to
     give a detailed error message, which requires inspecting the variable in
@@ -506,8 +513,14 @@ def apply_dataset_vfunc(
     objs = _all_of_type(args, Dataset)
 
     if len(args) > 1:
-        args = deep_align(
-            args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
+        args = tuple(
+            deep_align(
+                args,
+                join=join,
+                copy=False,
+                exclude=exclude_dims,
+                raise_on_invalid=False,
+            )
         )
 
     list_of_coords, list_of_indexes = build_output_coords_and_indexes(
@@ -1129,8 +1142,12 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
+
     :ref:`dask.automatic-parallelization`
         User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
+
+    :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
+        Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
 
     References
     ----------
@@ -1587,7 +1604,9 @@ def cross(
     >>> ds_a = xr.Dataset(dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
     >>> ds_b = xr.Dataset(dict(x=("dim_0", [4]), y=("dim_0", [5]), z=("dim_0", [6])))
     >>> c = xr.cross(
-    ...     ds_a.to_array("cartesian"), ds_b.to_array("cartesian"), dim="cartesian"
+    ...     ds_a.to_dataarray("cartesian"),
+    ...     ds_b.to_dataarray("cartesian"),
+    ...     dim="cartesian",
     ... )
     >>> c.to_dataset(dim="cartesian")
     <xarray.Dataset>
@@ -1673,28 +1692,40 @@ def cross(
     return c
 
 
+@deprecate_dims
 def dot(
     *arrays,
-    dims: Dims = None,
+    dim: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like np.einsum, but
-    provides a simpler interface based on array dimensions.
+    """Generalized dot product for xarray objects. Like ``np.einsum``, but
+    provides a simpler interface based on array dimension names.
 
     Parameters
     ----------
     *arrays : DataArray or Variable
         Arrays to compute.
-    dims : str, iterable of hashable, "..." or None, optional
+    dim : str, iterable of hashable, "..." or None, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict
-        Additional keyword arguments passed to numpy.einsum or
-        dask.array.einsum
+        Additional keyword arguments passed to ``numpy.einsum`` or
+        ``dask.array.einsum``
 
     Returns
     -------
     DataArray
+
+    See Also
+    --------
+    numpy.einsum
+    dask.array.einsum
+    opt_einsum.contract
+
+    Notes
+    -----
+    We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
+    which is passed through to ``np.einsum``, and works for most array backends.
 
     Examples
     --------
@@ -1727,18 +1758,18 @@ def dot(
            [3, 4, 5]])
     Dimensions without coordinates: c, d
 
-    >>> xr.dot(da_a, da_b, dims=["a", "b"])
+    >>> xr.dot(da_a, da_b, dim=["a", "b"])
     <xarray.DataArray (c: 2)>
     array([110, 125])
     Dimensions without coordinates: c
 
-    >>> xr.dot(da_a, da_b, dims=["a"])
+    >>> xr.dot(da_a, da_b, dim=["a"])
     <xarray.DataArray (b: 2, c: 2)>
     array([[40, 46],
            [70, 79]])
     Dimensions without coordinates: b, c
 
-    >>> xr.dot(da_a, da_b, da_c, dims=["b", "c"])
+    >>> xr.dot(da_a, da_b, da_c, dim=["b", "c"])
     <xarray.DataArray (a: 3, d: 3)>
     array([[  9,  14,  19],
            [ 93, 150, 207],
@@ -1750,7 +1781,7 @@ def dot(
     array([110, 125])
     Dimensions without coordinates: c
 
-    >>> xr.dot(da_a, da_b, dims=...)
+    >>> xr.dot(da_a, da_b, dim=...)
     <xarray.DataArray ()>
     array(235)
     """
@@ -1774,18 +1805,18 @@ def dot(
     einsum_axes = "abcdefghijklmnopqrstuvwxyz"
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    if dims is ...:
-        dims = all_dims
-    elif isinstance(dims, str):
-        dims = (dims,)
-    elif dims is None:
+    if dim is ...:
+        dim = all_dims
+    elif isinstance(dim, str):
+        dim = (dim,)
+    elif dim is None:
         # find dimensions that occur more than one times
         dim_counts: Counter = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
-        dims = tuple(d for d, c in dim_counts.items() if c > 1)
+        dim = tuple(d for d, c in dim_counts.items() if c > 1)
 
-    dot_dims: set[Hashable] = set(dims)
+    dot_dims: set[Hashable] = set(dim)
 
     # dimensions to be parallelized
     broadcast_dims = common_dims - dot_dims
@@ -2123,7 +2154,8 @@ def _calc_idxminmax(
         chunkmanager = get_chunked_array_type(array.data)
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = chunkmanager.from_array(array[dim].data, chunks=chunks[dim])
-        res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
+        data = dask_coord[duck_array_ops.ravel(indx.data)]
+        res = indx.copy(data=duck_array_ops.reshape(data, indx.shape))
         # we need to attach back the dim name
         res.name = dim
     else:

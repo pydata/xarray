@@ -1,20 +1,29 @@
 from __future__ import annotations
 
-import importlib
 import sys
-import typing
+from collections.abc import Hashable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
 
-# temporary placeholder for indicating an array api compliant type.
-# hopefully in the future we can narrow this down more
-T_DuckArray = typing.TypeVar("T_DuckArray", bound=typing.Any)
+    from numpy.typing import NDArray
+
+    from xarray.namedarray._typing import (
+        duckarray,
+    )
+
+    try:
+        from dask.array.core import Array as DaskArray
+        from dask.typing import DaskCollection
+    except ImportError:
+        DaskArray = NDArray  # type: ignore
+        DaskCollection: Any = NDArray  # type: ignore
 
 
 def module_available(module: str) -> bool:
@@ -32,37 +41,53 @@ def module_available(module: str) -> bool:
     available : bool
         Whether the module is installed.
     """
-    return importlib.util.find_spec(module) is not None
+    from importlib.util import find_spec
+
+    return find_spec(module) is not None
 
 
-def is_dask_collection(x: typing.Any) -> bool:
+def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
-        from dask.base import is_dask_collection
+        from dask.typing import DaskCollection
 
-        return is_dask_collection(x)
+        return isinstance(x, DaskCollection)
     return False
 
 
-def is_duck_array(value: typing.Any) -> TypeGuard[T_DuckArray]:
-    if isinstance(value, np.ndarray):
-        return True
-    return (
-        hasattr(value, "ndim")
-        and hasattr(value, "shape")
-        and hasattr(value, "dtype")
-        and (
-            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
-            or hasattr(value, "__array_namespace__")
-        )
-    )
+def is_duck_dask_array(x: duckarray[Any, Any]) -> TypeGuard[DaskArray]:
+    return is_dask_collection(x)
 
 
-def is_duck_dask_array(x: typing.Any) -> bool:
-    return is_duck_array(x) and is_dask_collection(x)
-
-
-def to_0d_object_array(value: typing.Any) -> np.ndarray:
+def to_0d_object_array(
+    value: object,
+) -> NDArray[np.object_]:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value
     return result
+
+
+class ReprObject:
+    """Object that prints as the given value, for use with sentinel values."""
+
+    __slots__ = ("_value",)
+
+    _value: str
+
+    def __init__(self, value: str):
+        self._value = value
+
+    def __repr__(self) -> str:
+        return self._value
+
+    def __eq__(self, other: ReprObject | Any) -> bool:
+        # TODO: What type can other be? ArrayLike?
+        return self._value == other._value if isinstance(other, ReprObject) else False
+
+    def __hash__(self) -> int:
+        return hash((type(self), self._value))
+
+    def __dask_tokenize__(self) -> Hashable:
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))  # type: ignore[no-any-return]

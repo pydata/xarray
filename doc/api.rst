@@ -110,9 +110,9 @@ Dataset contents
    Dataset.drop_indexes
    Dataset.drop_duplicates
    Dataset.drop_dims
+   Dataset.drop_encoding
    Dataset.set_coords
    Dataset.reset_coords
-   Dataset.reset_encoding
    Dataset.convert_calendar
    Dataset.interp_calendar
    Dataset.get_index
@@ -303,8 +303,8 @@ DataArray contents
    DataArray.drop_vars
    DataArray.drop_indexes
    DataArray.drop_duplicates
+   DataArray.drop_encoding
    DataArray.reset_coords
-   DataArray.reset_encoding
    DataArray.copy
    DataArray.convert_calendar
    DataArray.interp_calendar
@@ -557,6 +557,7 @@ Datetimelike properties
    DataArray.dt.seconds
    DataArray.dt.microseconds
    DataArray.dt.nanoseconds
+   DataArray.dt.total_seconds
 
 **Timedelta methods**:
 
@@ -602,7 +603,7 @@ Dataset methods
    Dataset.as_numpy
    Dataset.from_dataframe
    Dataset.from_dict
-   Dataset.to_array
+   Dataset.to_dataarray
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
@@ -627,11 +628,9 @@ DataArray methods
    load_dataarray
    open_dataarray
    DataArray.as_numpy
-   DataArray.from_cdms2
    DataArray.from_dict
    DataArray.from_iris
    DataArray.from_series
-   DataArray.to_cdms2
    DataArray.to_dask_dataframe
    DataArray.to_dataframe
    DataArray.to_dataset
@@ -1116,7 +1115,6 @@ arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
    backends.NetCDF4DataStore
    backends.H5NetCDFStore
-   backends.PseudoNetCDFDataStore
    backends.PydapDataStore
    backends.ScipyDataStore
    backends.ZarrStore
@@ -1132,7 +1130,6 @@ used filetypes in the xarray universe.
 
    backends.NetCDF4BackendEntrypoint
    backends.H5netcdfBackendEntrypoint
-   backends.PseudoNetCDFBackendEntrypoint
    backends.PydapBackendEntrypoint
    backends.ScipyBackendEntrypoint
    backends.StoreBackendEntrypoint

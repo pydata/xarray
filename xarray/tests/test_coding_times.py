@@ -203,7 +203,7 @@ def test_decode_standard_calendar_inside_timestamp_range(calendar) -> None:
     import cftime
 
     units = "days since 0001-01-01"
-    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
+    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="h")
     time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
     expected = times.values
     expected_dtype = np.dtype("M8[ns]")
@@ -223,7 +223,7 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar) -> None:
     import cftime
 
     units = "days since 0001-01-01"
-    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="H")
+    times = pd.date_range("2001-04-01-00", end="2001-04-30-23", freq="h")
     non_standard_time = cftime.date2num(times.to_pydatetime(), units, calendar=calendar)
 
     expected = cftime.num2date(
@@ -513,12 +513,12 @@ def test_decoded_cf_datetime_array_2d() -> None:
 
 
 FREQUENCIES_TO_ENCODING_UNITS = {
-    "N": "nanoseconds",
-    "U": "microseconds",
-    "L": "milliseconds",
-    "S": "seconds",
-    "T": "minutes",
-    "H": "hours",
+    "ns": "nanoseconds",
+    "us": "microseconds",
+    "ms": "milliseconds",
+    "s": "seconds",
+    "min": "minutes",
+    "h": "hours",
     "D": "days",
 }
 
@@ -1032,7 +1032,7 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
 ) -> None:
     if not has_cftime and date_range == cftime_range:
         pytest.skip("Test requires cftime")
-    if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
+    if (freq == "ns" or encoding_units == "nanoseconds") and date_range == cftime_range:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
     units = f"{encoding_units} since 2000-01-01"
@@ -1049,7 +1049,7 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 def test_encode_decode_roundtrip_datetime64(freq) -> None:
     # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
-    # "S", "L", "U", and "N".
+    # "s", "ms", "us", and "ns".
     initial_time = pd.date_range("1678-01-01", periods=1)
     times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
@@ -1059,7 +1059,7 @@ def test_encode_decode_roundtrip_datetime64(freq) -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
+@pytest.mark.parametrize("freq", ["us", "ms", "s", "min", "h", "D"])
 def test_encode_decode_roundtrip_cftime(freq) -> None:
     initial_time = cftime_range("0001", periods=1)
     times = initial_time.append(
@@ -1363,10 +1363,15 @@ def test_roundtrip_timedelta64_nanosecond_precision_warning() -> None:
 
 
 def test_roundtrip_float_times() -> None:
+    # Regression test for GitHub issue #8271
     fill_value = 20.0
-    times = [np.datetime64("2000-01-01 12:00:00", "ns"), np.datetime64("NaT", "ns")]
+    times = [
+        np.datetime64("1970-01-01 00:00:00", "ns"),
+        np.datetime64("1970-01-01 06:00:00", "ns"),
+        np.datetime64("NaT", "ns"),
+    ]
 
-    units = "days since 2000-01-01"
+    units = "days since 1960-01-01"
     var = Variable(
         ["time"],
         times,
@@ -1374,7 +1379,7 @@ def test_roundtrip_float_times() -> None:
     )
 
     encoded_var = conventions.encode_cf_variable(var)
-    np.testing.assert_array_equal(encoded_var, np.array([0.5, 20.0]))
+    np.testing.assert_array_equal(encoded_var, np.array([3653, 3653.25, 20.0]))
     assert encoded_var.attrs["units"] == units
     assert encoded_var.attrs["_FillValue"] == fill_value
 

@@ -84,6 +84,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinxext.rediraffe",
     "sphinx_design",
+    "sphinx_inline_tabs",
 ]
 
 
@@ -230,6 +231,7 @@ html_theme_options = dict(
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
     repository_branch="main",
+    navigation_with_keys=False,  # pydata/pydata-sphinx-theme#1492
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
@@ -240,6 +242,7 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
+    announcement="🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
 )
 
 
@@ -325,6 +328,8 @@ intersphinx_mapping = {
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "cubed": ("https://tom-e-white.com/cubed/", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
+    # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
 }
 
 

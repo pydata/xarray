@@ -217,8 +217,9 @@ def _apply_mask(
 
 def _is_time_like(units):
     # test for time-like
+    if units is None:
+        return False
     time_strings = [
-        "since",
         "days",
         "hours",
         "minutes",
@@ -227,7 +228,19 @@ def _is_time_like(units):
         "microseconds",
         "nanoseconds",
     ]
-    return any(tstr in str(units) for tstr in time_strings)
+    units = str(units)
+    # to prevent detecting units like `days accumulated` as time-like
+    # special casing for datetime-units and timedelta-units (GH-8269)
+    if "since" in units:
+        from xarray.coding.times import _unpack_netcdf_time_units
+
+        try:
+            _unpack_netcdf_time_units(units)
+        except ValueError:
+            return False
+        return True
+    else:
+        return any(tstr == units for tstr in time_strings)
 
 
 class CFMaskCoder(VariableCoder):
@@ -549,3 +562,15 @@ class NonStringCoder(VariableCoder):
 
     def decode(self):
         raise NotImplementedError()
+
+
+class ObjectVLenStringCoder(VariableCoder):
+    def encode(self):
+        return NotImplementedError
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if variable.dtype == object and variable.encoding.get("dtype", False) == str:
+            variable = variable.astype(variable.encoding["dtype"])
+            return variable
+        else:
+            return variable

@@ -21,6 +21,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     is_scalar,
 )
+from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 
 try:
     import cftime
@@ -217,6 +218,7 @@ class AbstractArray:
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -860,7 +862,6 @@ class DataWithCoords(AttrAccessMixin):
         base: int | None,
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
-        keep_attrs: bool | None,
         loffset: datetime.timedelta | str | None,
         restore_coord_dims: bool | None,
         **indexer_kwargs: str,
@@ -989,13 +990,6 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.core.pdcompat import _convert_base_to_offset
         from xarray.core.resample import RESAMPLE_DIM
 
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``resample`` has no effect and will raise an"
-                " error in xarray 0.20. Pass ``keep_attrs`` directly to the applied"
-                " function, e.g. ``resample(...).mean(keep_attrs=True)``."
-            )
-
         # note: the second argument (now 'skipna') use to be 'dim'
         if (
             (skipna is not None and not isinstance(skipna, bool))
@@ -1018,8 +1012,11 @@ class DataWithCoords(AttrAccessMixin):
 
         if loffset is not None:
             emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample will be deprecated "
-                "in a future version of xarray.  Switch to using time offset arithmetic.",
+                "Following pandas, the `loffset` parameter to resample is deprecated.  "
+                "Switch to updating the resampled dataset time coordinate using "
+                "time offset arithmetic.  For example:\n"
+                "    >>> offset = pd.tseries.frequencies.to_offset(freq) / 2\n"
+                '    >>> resampled_ds["time"] = resampled_ds.get_index("time") + offset',
                 FutureWarning,
             )
 
@@ -1073,7 +1070,8 @@ class DataWithCoords(AttrAccessMixin):
         ----------
         cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
-            If a callable, it must expect this object as its only parameter.
+            If a callable, the callable is passed this object, and the result is used as
+            the value for cond.
         other : scalar, DataArray, Dataset, or callable, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations are filled with NA. If a callable, it must
@@ -1162,7 +1160,7 @@ class DataWithCoords(AttrAccessMixin):
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r} (or a callable than returns one)."
                 )
 
-            self, cond = align(self, cond)  # type: ignore[assignment]
+            self, cond = align(self, cond)
 
             def _dataarray_indexer(dim: Hashable) -> DataArray:
                 return cond.any(dim=(d for d in cond.dims if d != dim))
@@ -1172,7 +1170,7 @@ class DataWithCoords(AttrAccessMixin):
                     var for var in cond if dim not in cond[var].dims
                 )
                 keepany = cond_wdim.any(dim=(d for d in cond.dims.keys() if d != dim))
-                return keepany.to_array().any("variable")
+                return keepany.to_dataarray().any("variable")
 
             _get_indexer = (
                 _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer
