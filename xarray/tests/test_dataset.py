@@ -2651,19 +2651,19 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
@@ -2736,9 +2736,9 @@ class TestDataset:
         ds5 = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
 
         arr = DataArray(range(3), dims=["c"])
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.coords)
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.xindexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
