@@ -24,7 +24,7 @@ New Features
 ~~~~~~~~~~~~
 
 - :py:meth:`rolling` uses numbagg <https://github.com/numbagg/numbagg>`_ for
-  most of its computations by default, which is up to 5x faster than bottleneck
+  most of its computations by default. Numbagg is up to 5x faster than bottleneck
   where parallelization is possible. Where parallelization isn't possible — for
   example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
   than pandas' default functions. (:pull:`8493`). numbagg is an optional

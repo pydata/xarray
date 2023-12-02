@@ -169,7 +169,9 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
-    def test_rolling_pandas_compat(self, center, window, min_periods) -> None:
+    def test_rolling_pandas_compat(
+        self, center, window, min_periods, compute_backend
+    ) -> None:
         s = pd.Series(np.arange(10))
         da = DataArray.from_series(s)
 
@@ -219,7 +221,9 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
     @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-    def test_rolling_reduce(self, da, center, min_periods, window, name) -> None:
+    def test_rolling_reduce(
+        self, da, center, min_periods, window, name, compute_backend
+    ) -> None:
         if min_periods is not None and window < min_periods:
             min_periods = window
 
@@ -239,7 +243,9 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
     @pytest.mark.parametrize("window", (1, 2, 3, 4))
     @pytest.mark.parametrize("name", ("sum", "max"))
-    def test_rolling_reduce_nonnumeric(self, center, min_periods, window, name) -> None:
+    def test_rolling_reduce_nonnumeric(
+        self, center, min_periods, window, name, compute_backend
+    ) -> None:
         da = DataArray(
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
         ).isnull()
@@ -255,7 +261,7 @@ class TestDataArrayRolling:
         assert_allclose(actual, expected)
         assert actual.dims == expected.dims
 
-    def test_rolling_count_correct(self) -> None:
+    def test_rolling_count_correct(self, compute_backend) -> None:
         da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
         kwargs: list[dict[str, Any]] = [
@@ -295,34 +301,31 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1))
     @pytest.mark.parametrize("name", ("sum", "mean", "max"))
-    def test_ndrolling_reduce(self, da, center, min_periods, name) -> None:
-        # FIXME
-        # with xr.set_options(use_numbagg=False):
-        if True:
-            rolling_obj = da.rolling(
-                time=3, x=2, center=center, min_periods=min_periods
+    def test_ndrolling_reduce(
+        self, da, center, min_periods, name, compute_backend
+    ) -> None:
+        rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
+
+        actual = getattr(rolling_obj, name)()
+        expected = getattr(
+            getattr(
+                da.rolling(time=3, center=center, min_periods=min_periods), name
+            )().rolling(x=2, center=center, min_periods=min_periods),
+            name,
+        )()
+
+        assert_allclose(actual, expected)
+        assert actual.dims == expected.dims
+
+        if name in ["mean"]:
+            # test our reimplementation of nanmean using np.nanmean
+            expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
+                ["tw", "xw"]
             )
-
-            actual = getattr(rolling_obj, name)()
-            expected = getattr(
-                getattr(
-                    da.rolling(time=3, center=center, min_periods=min_periods), name
-                )().rolling(x=2, center=center, min_periods=min_periods),
-                name,
-            )()
-
-            assert_allclose(actual, expected)
-            assert actual.dims == expected.dims
-
-            if name in ["mean"]:
-                # test our reimplementation of nanmean using np.nanmean
-                expected = getattr(
-                    rolling_obj.construct({"time": "tw", "x": "xw"}), name
-                )(["tw", "xw"])
-                count = rolling_obj.count()
-                if min_periods is None:
-                    min_periods = 1
-                assert_allclose(actual, expected.where(count >= min_periods))
+            count = rolling_obj.count()
+            if min_periods is None:
+                min_periods = 1
+            assert_allclose(actual, expected.where(count >= min_periods))
 
     @pytest.mark.parametrize("center", (True, False, (True, False)))
     @pytest.mark.parametrize("fill_value", (np.nan, 0.0))

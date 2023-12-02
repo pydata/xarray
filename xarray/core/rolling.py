@@ -632,11 +632,11 @@ class DataArrayRolling(Rolling["DataArray"]):
             and pycompat.mod_version("numbagg") >= Version("0.6.3")
             and numbagg_move_func is not None
             # TODO: we could at least allow this for the equivalent of `apply_ufunc`'s
-            # "parallelized". `rolling_exp` does this, as an example (but it otherwise
+            # "parallelized". `rolling_exp` does this, as an example (but rolling_exp is
             # much simpler)
             and not is_duck_dask_array(self.obj.data)
             # Numbagg doesn't handle object arrays and generally has dtype consistency,
-            # so doesn't deal well with bool arrays.
+            # so doesn't deal well with bool arrays which are expected to change type.
             and self.obj.data.dtype.kind not in "ObMm"
             # TODO: we could also allow this, probably as part of a refactoring of this
             # module, so we can use the machinery in `self.reduce`.
