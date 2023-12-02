@@ -5845,9 +5845,9 @@ class Dataset(
         DataArray.drop_vars
 
         """
-        # the Iterable check is required for mypy
         if callable(names):
             names = names(self)
+        # the Iterable check is required for mypy
         if is_scalar(names) or not isinstance(names, Iterable):
             names_set = {names}
         else:
