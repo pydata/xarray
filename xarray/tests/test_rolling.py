@@ -23,6 +23,19 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(params=["numbagg", "bottleneck"])
+def compute_backend(request):
+    if request.param == "bottleneck":
+        options = dict(use_bottleneck=True, use_numbagg=False)
+    elif request.param == "numbagg":
+        options = dict(use_bottleneck=False, use_numbagg=True)
+    else:
+        raise ValueError
+
+    with xr.set_options(**options):
+        yield request.param
+
+
 class TestDataArrayRolling:
     @pytest.mark.parametrize("da", (1, 2), indirect=True)
     @pytest.mark.parametrize("center", [True, False])
@@ -86,40 +99,30 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-    @pytest.mark.parametrize("compute_backend", ["bottleneck", "numbagg"])
     def test_rolling_wrapped_bottleneck(
         self, da, name, center, min_periods, compute_backend
     ) -> None:
         bn = pytest.importorskip("bottleneck", minversion="1.1")
-        if compute_backend == "bottleneck":
-            options = dict(use_bottleneck=True, use_numbagg=False)
-        elif compute_backend == "numbagg":
-            options = dict(use_bottleneck=False, use_numbagg=True)
-        else:
-            raise ValueError
+        # Test all bottleneck functions
+        rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
-        with xr.set_options(**options):
-            # Test all bottleneck functions
-            rolling_obj = da.rolling(time=7, min_periods=min_periods)
+        func_name = f"move_{name}"
+        actual = getattr(rolling_obj, name)()
+        expected = getattr(bn, func_name)(
+            da.values, window=7, axis=1, min_count=min_periods
+        )
 
-            func_name = f"move_{name}"
-            actual = getattr(rolling_obj, name)()
-            expected = getattr(bn, func_name)(
-                da.values, window=7, axis=1, min_count=min_periods
-            )
+        # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
+        np.testing.assert_allclose(actual.values, expected)
 
-            # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
-            np.testing.assert_allclose(actual.values, expected)
+        with pytest.warns(DeprecationWarning, match="Reductions are applied"):
+            getattr(rolling_obj, name)(dim="time")
 
-            with pytest.warns(DeprecationWarning, match="Reductions are applied"):
-                getattr(rolling_obj, name)(dim="time")
-
-            # Test center
-            rolling_obj = da.rolling(time=7, center=center)
-            actual = getattr(rolling_obj, name)()["time"]
-            np.testing.assert_allclose(actual.values, expected)
-            # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
-            assert_allclose(actual, da["time"])
+        # Test center
+        rolling_obj = da.rolling(time=7, center=center)
+        actual = getattr(rolling_obj, name)()["time"]
+        # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
+        assert_allclose(actual, da["time"])
 
     @requires_dask
     @pytest.mark.parametrize("name", ("mean", "count"))
@@ -578,7 +581,7 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("key", ("z1", "z2"))
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_wrapped_bottleneck(
-        self, ds, name, center, min_periods, key
+        self, ds, name, center, min_periods, key, compute_backend
     ) -> None:
         bn = pytest.importorskip("bottleneck", minversion="1.1")
 
