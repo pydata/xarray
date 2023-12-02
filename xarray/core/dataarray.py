@@ -6322,7 +6322,7 @@ class DataArray(
         ...     param="time_constant"
         ... )  # doctest: +NUMBER
         <xarray.DataArray 'curvefit_coefficients' (x: 3)>
-        array([1.0569203, 1.7354963, 2.9421577])
+        array([1.05692035, 1.73549638, 2.9421577 ])
         Coordinates:
           * x        (x) int64 0 1 2
             param    <U13 'time_constant'
