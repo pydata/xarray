@@ -242,6 +242,7 @@ html_theme_options = dict(
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_dev",
     icon_links=[],  # workaround for pydata/pydata-sphinx-theme#1220
+    announcement="🍾 <a href='https://github.com/pydata/xarray/discussions/8462'>Xarray is now 10 years old!</a> 🎉",
 )
 
 
@@ -327,6 +328,7 @@ intersphinx_mapping = {
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "cubed": ("https://tom-e-white.com/cubed/", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
+    "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
     # "opt_einsum": ("https://dgasmith.github.io/opt_einsum/", None),
 }
 
