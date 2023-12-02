@@ -829,7 +829,7 @@ class TestDatasetRolling:
 
     @pytest.mark.parametrize("func", ["mean", "sum"])
     @pytest.mark.parametrize("ds", (2,), indirect=True)
-    @pytest.mark.parametrize("min_periods", [None, 1, 20])
+    @pytest.mark.parametrize("min_periods", [None, 1, 10])
     def test_cumulative(self, ds, func, min_periods) -> None:
         # One dim
         result = getattr(ds.cumulative("time", min_periods=min_periods), func)()
