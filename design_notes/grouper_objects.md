@@ -65,13 +65,6 @@ Grouper objects will close the gap.
 
 ## Usage and impact
 
-<!-- This section describes how users of NumPy will use features described in this -->
-<!-- NEP. It should be comprised mainly of code examples that wouldn't be possible -->
-<!-- without acceptance and implementation of this NEP, as well as the impact the -->
-<!-- proposed changes would have on the ecosystem. This section should be written -->
-<!-- from the perspective of the users of NumPy, and the benefits it will provide -->
-<!-- them; and as such, it should include implementation details only if -->
-<!-- necessary to explain the functionality. -->
 
 Grouper objects
 1. Will abstract useful factorization algorithms, and
