@@ -77,7 +77,7 @@ def _maybe_squeeze_indices(
     indices, squeeze: bool | None, grouper: ResolvedGrouper, warn: bool
 ):
     if squeeze in [None, True] and grouper.can_squeeze:
-        if squeeze is None and warn:
+        if (squeeze is None and warn) or squeeze is True:
             emit_user_level_warning(
                 "The `squeeze` kwarg to GroupBy is being removed."
                 "Pass .groupby(..., squeeze=False) to disable squeezing,"
@@ -727,7 +727,7 @@ class GroupBy(Generic[T_Xarray]):
         self,
         obj: T_Xarray,
         groupers: tuple[ResolvedGrouper],
-        squeeze: bool = False,
+        squeeze: bool | None = False,
         restore_coord_dims: bool = True,
     ) -> None:
         """Create a GroupBy object
@@ -859,7 +859,7 @@ class GroupBy(Generic[T_Xarray]):
         (grouper,) = self.groupers
         for idx, indices in enumerate(self._group_indices):
             indices = _maybe_squeeze_indices(
-                indices, self._squeeze, grouper, warn=idx > 0
+                indices, self._squeeze, grouper, warn=idx == 0
             )
             yield self._obj.isel({self._group_dim: indices})
 
@@ -1363,7 +1363,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         (grouper,) = self.groupers
         for idx, indices in enumerate(self._group_indices):
             indices = _maybe_squeeze_indices(
-                indices, self._squeeze, grouper, warn=idx > 0
+                indices, self._squeeze, grouper, warn=idx == 0
             )
             yield var[{self._group_dim: indices}]
 

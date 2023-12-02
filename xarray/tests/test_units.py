@@ -3933,9 +3933,12 @@ class TestDataArray:
             for key, value in func.kwargs.items()
         }
         expected = attach_units(
-            func(strip_units(data_array).groupby("y"), **stripped_kwargs), units
+            func(
+                strip_units(data_array).groupby("y", squeeze=False), **stripped_kwargs
+            ),
+            units,
         )
-        actual = func(data_array.groupby("y"))
+        actual = func(data_array.groupby("y", squeeze=False))
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -5440,9 +5443,9 @@ class TestDataset:
             name: strip_units(value) for name, value in func.kwargs.items()
         }
         expected = attach_units(
-            func(strip_units(ds).groupby("y"), **stripped_kwargs), units
+            func(strip_units(ds).groupby("y", squeeze=False), **stripped_kwargs), units
         )
-        actual = func(ds.groupby("y"))
+        actual = func(ds.groupby("y", squeeze=False))
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)

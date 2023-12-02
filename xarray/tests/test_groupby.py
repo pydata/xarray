@@ -59,27 +59,34 @@ def test_consolidate_slices() -> None:
         _consolidate_slices([slice(3), 4])  # type: ignore[list-item]
 
 
-def test_groupby_dims_property(dataset) -> None:
-    assert dataset.groupby("x").dims == dataset.isel(x=1).dims
-    assert dataset.groupby("y").dims == dataset.isel(y=1).dims
+def test_groupby_dims_property(dataset, recwarn) -> None:
+    # dims is sensitive to squeeze, always warn
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert dataset.groupby("x").dims == dataset.isel(x=1).dims
+        assert dataset.groupby("y").dims == dataset.isel(y=1).dims
 
+    # when squeeze=False, no warning should be raised
     assert dataset.groupby("x", squeeze=False).dims == dataset.isel(x=slice(1, 2)).dims
     assert dataset.groupby("y", squeeze=False).dims == dataset.isel(y=slice(1, 2)).dims
+    assert len(recwarn) == 0
 
     stacked = dataset.stack({"xy": ("x", "y")})
     assert stacked.groupby("xy", squeeze=False).dims == stacked.isel(xy=[0]).dims
+    assert len(recwarn) == 0
 
 
 def test_multi_index_groupby_map(dataset) -> None:
     # regression test for GH873
     ds = dataset.isel(z=1, drop=True)[["foo"]]
     expected = 2 * ds
-    actual = (
-        ds.stack(space=["x", "y"])
-        .groupby("space")
-        .map(lambda x: 2 * x)
-        .unstack("space")
-    )
+    # The function in `map` may be sensitive to squeeze, always warn
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual = (
+            ds.stack(space=["x", "y"])
+            .groupby("space")
+            .map(lambda x: 2 * x)
+            .unstack("space")
+        )
     assert_equal(expected, actual)
 
 
@@ -202,7 +209,9 @@ def test_ds_groupby_map_func_args() -> None:
 
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
     expected = xr.Dataset({"foo": ("x", [3, 3, 3])}, {"x": [1, 2, 3]})
-    actual = dataset.groupby("x").map(func, args=(1,), arg3=1)
+    # The function in `map` may be sensitive to squeeze, always warn
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual = dataset.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
@@ -887,7 +896,7 @@ def test_groupby_bins_cut_kwargs(use_flox: bool) -> None:
 
     with xr.set_options(use_flox=use_flox):
         actual = da.groupby_bins(
-            "x", bins=x_bins, include_lowest=True, right=False
+            "x", bins=x_bins, include_lowest=True, right=False, squeeze=False
         ).mean()
     expected = xr.DataArray(
         np.array([[1.0, 2.0], [5.0, 6.0], [9.0, 10.0]]),
@@ -1135,8 +1144,8 @@ class TestDataArrayGroupBy:
         "by, use_da", [("x", False), ("y", False), ("y", True), ("abc", False)]
     )
     @pytest.mark.parametrize("shortcut", [True, False])
-    @pytest.mark.parametrize("squeeze", [True, False])
-    def test_groupby_map_identity(self, by, use_da, shortcut, squeeze) -> None:
+    @pytest.mark.parametrize("squeeze", [None])
+    def test_groupby_map_identity(self, by, use_da, shortcut, squeeze, recwarn) -> None:
         expected = self.da
         if use_da:
             by = expected.coords[by]
@@ -1147,6 +1156,10 @@ class TestDataArrayGroupBy:
         grouped = expected.groupby(by, squeeze=squeeze)
         actual = grouped.map(identity, shortcut=shortcut)
         assert_identical(expected, actual)
+
+        # abc is not a dim coordinate so no warnings expected!
+        if (by.name if use_da else by) != "abc":
+            assert len(recwarn) == (1 if squeeze in [None, True] else 0)
 
     def test_groupby_sum(self):
         array = self.da
@@ -1508,7 +1521,7 @@ class TestDataArrayGroupBy:
         da = xr.DataArray(np.ones((2, 3, 4)))
         bins = [-1, 0, 1, 2]
         with xr.set_options(use_flox=False):
-            actual = da.groupby_bins("dim_0", bins).mean(...)
+            actual = da.groupby_bins("dim_0", bins, squeeze=False).mean(...)
         with xr.set_options(use_flox=True):
             expected = da.groupby_bins("dim_0", bins).mean(...)
         assert_allclose(actual, expected)
