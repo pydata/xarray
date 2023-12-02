@@ -1117,8 +1117,11 @@ class TestDataArrayGroupBy:
         ):
             assert exp_x == act_x
             assert_identical(exp_ds["foo"], act_dv)
-        for (_, exp_dv), (_, act_dv) in zip(self.dv.groupby("x"), self.dv.groupby("x")):
-            assert_identical(exp_dv, act_dv)
+        with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+            for (_, exp_dv), (_, act_dv) in zip(
+                self.dv.groupby("x"), self.dv.groupby("x")
+            ):
+                assert_identical(exp_dv, act_dv)
 
     def test_groupby_properties(self):
         grouped = self.da.groupby("abc")
@@ -1480,7 +1483,7 @@ class TestDataArrayGroupBy:
         df = array.to_dataframe()
         df["dim_0_bins"] = pd.cut(array["dim_0"], bins, **cut_kwargs)
 
-        expected_df = df.groupby("dim_0_bins").sum()
+        expected_df = df.groupby("dim_0_bins", observed=True).sum()
         # TODO: can't convert df with IntervalIndex to Xarray
         expected = (
             expected_df.reset_index(drop=True)
