@@ -46,7 +46,7 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray.core import NamedArray
+from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -2596,7 +2596,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Use sparse-array as backend.
         """
-        from xarray.namedarray.utils import _default as _default_named
+        from xarray.namedarray._typing import _default as _default_named
 
         if sparse_format is _default:
             sparse_format = _default_named
@@ -2876,11 +2876,8 @@ def _unified_dims(variables):
     all_dims = {}
     for var in variables:
         var_dims = var.dims
-        if len(set(var_dims)) < len(var_dims):
-            raise ValueError(
-                "broadcasting cannot handle duplicate "
-                f"dimensions: {list(var_dims)!r}"
-            )
+        _raise_if_any_duplicate_dimensions(var_dims, err_context="Broadcasting")
+
         for d, s in zip(var_dims, var.shape):
             if d not in all_dims:
                 all_dims[d] = s

@@ -49,7 +49,12 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.types import DaCompatible, T_DataArray, T_DataArrayOrSet
+from xarray.core.types import (
+    DaCompatible,
+    T_DataArray,
+    T_DataArrayOrSet,
+    ZarrWriteModes,
+)
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
@@ -4074,7 +4079,7 @@ class DataArray(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         *,
@@ -4095,7 +4100,7 @@ class DataArray(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -4114,7 +4119,7 @@ class DataArray(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -4150,10 +4155,11 @@ class DataArray(
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", "r+", None}, optional
+        mode : {"w", "w-", "a", "a-", r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist);
+            "a" means override all existing variables including dimension coordinates (create if does not exist);
+            "a-" means only append those variables that have ``append_dim``.
             "r+" means modify existing array *values* only (raise an error if
             any metadata or shapes would change).
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
@@ -6214,8 +6220,8 @@ class DataArray(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, float | DataArray] | None = None,
-        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
+        p0: Mapping[str, float | DataArray] | None = None,
+        bounds: Mapping[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,

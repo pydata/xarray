@@ -10,9 +10,13 @@ import numpy as np
 import pytest
 
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.namedarray._typing import _arrayfunction_or_api, _DType_co, _ShapeType_co
+from xarray.namedarray._typing import (
+    _arrayfunction_or_api,
+    _default,
+    _DType_co,
+    _ShapeType_co,
+)
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import _default
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -20,13 +24,13 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, DTypeLike, NDArray
 
     from xarray.namedarray._typing import (
+        Default,
         _AttrsLike,
         _DimsLike,
         _DType,
         _Shape,
         duckarray,
     )
-    from xarray.namedarray.utils import Default
 
 
 class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
@@ -475,3 +479,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         var_float2: Variable[Any, np.dtype[np.float32]]
         var_float2 = var_float._replace(("x",), np_val2)
         assert var_float2.dtype == dtype_float
+
+    def test_warn_on_repeated_dimension_names(self) -> None:
+        with pytest.warns(UserWarning, match="Duplicate dimension names"):
+            NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
