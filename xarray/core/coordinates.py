@@ -575,9 +575,9 @@ class Coordinates(AbstractCoordinates):
             A mapping whose keys are the names of the coordinates and values are the
             coordinates to assign. The mapping will generally be a dict or
             :class:`Coordinates`.
-            - If a value is a standard data value — for example, a ``DataArray``,
+            * If a value is a standard data value — for example, a ``DataArray``,
               scalar, or array — the data is simply assigned as a coordinate.
-            - A coordinate can also be defined and attached to an existing dimension
+            * A coordinate can also be defined and attached to an existing dimension
               using a tuple with the first element the dimension name and the second
               element the values for this new coordinate.
         **coords_kwargs
