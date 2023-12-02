@@ -199,7 +199,8 @@ def test_da_groupby_map_func_args() -> None:
 
     array = xr.DataArray([1, 1, 1], [("x", [1, 2, 3])])
     expected = xr.DataArray([3, 3, 3], [("x", [1, 2, 3])])
-    actual = array.groupby("x", squeeze=False).map(func, args=(1,), arg3=1)
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual = array.groupby("x").map(func, args=(1,), arg3=1)
     assert_identical(expected, actual)
 
 
