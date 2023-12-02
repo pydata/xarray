@@ -1144,7 +1144,7 @@ class TestDataArrayGroupBy:
         "by, use_da", [("x", False), ("y", False), ("y", True), ("abc", False)]
     )
     @pytest.mark.parametrize("shortcut", [True, False])
-    @pytest.mark.parametrize("squeeze", [None])
+    @pytest.mark.parametrize("squeeze", [None, True, False])
     def test_groupby_map_identity(self, by, use_da, shortcut, squeeze, recwarn) -> None:
         expected = self.da
         if use_da:
