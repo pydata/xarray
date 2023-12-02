@@ -1099,14 +1099,14 @@ class TestDataArrayGroupBy:
         y_vals = [2, 3]
 
         arr = xr.DataArray(data, dims=dims, coords={"y": y_vals})
-        actual1 = arr.stack(z=dims).groupby("z", squeeze=False).first()
+        actual1 = arr.stack(z=dims).groupby("z").first()
         midx1 = pd.MultiIndex.from_product([[0, 1], [2, 3]], names=dims)
         expected1 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx1})
         assert_equal(actual1, expected1)
 
         # GH: 3287.  Note that y coord values are not in sorted order.
         arr = xr.DataArray(data, dims=dims, coords={"y": y_vals[::-1]})
-        actual2 = arr.stack(z=dims).groupby("z", squeeze=False).first()
+        actual2 = arr.stack(z=dims).groupby("z").first()
         midx2 = pd.MultiIndex.from_product([[0, 1], [3, 2]], names=dims)
         expected2 = xr.DataArray(data_flat, dims=["z"], coords={"z": midx2})
         assert_equal(actual2, expected2)
@@ -1420,7 +1420,7 @@ class TestDataArrayGroupBy:
         actual = array.groupby(by).first()
         assert_identical(expected, actual)
 
-        actual = array.groupby("x", squeeze=False).first()
+        actual = array.groupby("x").first()
         expected = array  # should be a no-op
         assert_identical(expected, actual)
 

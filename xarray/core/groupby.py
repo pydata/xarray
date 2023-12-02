@@ -33,7 +33,6 @@ from xarray.core.indexes import (
     safe_cast_to_index,
 )
 from xarray.core.options import _get_keep_attrs
-from xarray.core.pycompat import integer_types
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
     either_dict_or_kwargs,
@@ -1296,7 +1295,11 @@ class GroupBy(Generic[T_Xarray]):
         return ops.where_method(self, cond, other)
 
     def _first_or_last(self, op, skipna, keep_attrs):
-        if isinstance(self._group_indices[0], integer_types):
+        if all(
+            isinstance(maybe_slice, slice)
+            and (maybe_slice.stop == maybe_slice.start + 1)
+            for maybe_slice in self._group_indices
+        ):
             # NB. this is currently only used for reductions along an existing
             # dimension
             return self._obj
