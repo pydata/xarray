@@ -6938,7 +6938,7 @@ class DataArray(
         min_periods: int | None = 1,
     ) -> DataArrayRolling:
         """
-        Rolling window object for DataArrays.
+        Accumulating object for DataArrays.
 
         Parameters
         ----------
