@@ -2651,19 +2651,19 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
@@ -2736,9 +2736,9 @@ class TestDataset:
         ds5 = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
 
         arr = DataArray(range(3), dims=["c"])
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.coords)
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.xindexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
@@ -4037,7 +4037,7 @@ class TestDataset:
 
     def test_virtual_variable_same_name(self) -> None:
         # regression test for GH367
-        times = pd.date_range("2000-01-01", freq="H", periods=5)
+        times = pd.date_range("2000-01-01", freq="h", periods=5)
         data = Dataset({"time": times})
         actual = data["time.time"]
         expected = DataArray(times.time, [("time", times)], name="time")
@@ -4696,6 +4696,17 @@ class TestDataset:
         ds = df.set_index(["i1", "i2"]).to_xarray()
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
+
+    def test_from_dataframe_categorical_string_categories(self) -> None:
+        cat = pd.CategoricalIndex(
+            pd.Categorical.from_codes(
+                np.array([1, 1, 0, 2]),
+                categories=pd.Index(["foo", "bar", "baz"], dtype="string"),
+            )
+        )
+        ser = pd.Series(1, index=cat)
+        ds = ser.to_xarray()
+        assert ds.coords.dtypes["index"] == np.dtype("O")
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:

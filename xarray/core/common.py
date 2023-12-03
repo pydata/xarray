@@ -21,6 +21,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     is_scalar,
 )
+from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 
 try:
     import cftime
@@ -217,6 +218,7 @@ class AbstractArray:
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -1010,8 +1012,11 @@ class DataWithCoords(AttrAccessMixin):
 
         if loffset is not None:
             emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample will be deprecated "
-                "in a future version of xarray.  Switch to using time offset arithmetic.",
+                "Following pandas, the `loffset` parameter to resample is deprecated.  "
+                "Switch to updating the resampled dataset time coordinate using "
+                "time offset arithmetic.  For example:\n"
+                "    >>> offset = pd.tseries.frequencies.to_offset(freq) / 2\n"
+                '    >>> resampled_ds["time"] = resampled_ds.get_index("time") + offset',
                 FutureWarning,
             )
 

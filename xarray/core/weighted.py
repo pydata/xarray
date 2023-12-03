@@ -228,7 +228,7 @@ class Weighted(Generic[T_Xarray]):
 
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
-        return dot(da, weights, dims=dim)
+        return dot(da, weights, dim=dim)
 
     def _sum_of_weights(self, da: DataArray, dim: Dims = None) -> DataArray:
         """Calculate the sum of weights, accounting for missing values"""
