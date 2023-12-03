@@ -3914,6 +3914,23 @@ class DataArray(
     ) -> bytes:
         ...
 
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
     # default return None
     @overload
     def to_netcdf(
@@ -3930,7 +3947,8 @@ class DataArray(
     ) -> None:
         ...
 
-    # compute=False returns dask.Delayed
+    # if compute cannot be evaluated at type check time
+    # we may get back either Delayed or None
     @overload
     def to_netcdf(
         self,
@@ -3941,10 +3959,9 @@ class DataArray(
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
-        *,
-        compute: Literal[False],
+        compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed:
+    ) -> Delayed | None:
         ...
 
     def to_netcdf(
