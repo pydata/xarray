@@ -15,6 +15,7 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
+from xarray.core.options import set_options
 from xarray.core.utils import module_available
 from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
@@ -728,6 +729,22 @@ class TestPlot(PlotTestCase):
 
         expected = "dim_0_bins_center [m]"
         assert actual == expected
+
+    @pytest.mark.parametrize("format", ("({})", "<{}>", "in {}."))
+    def test_option_plot_unit_format(self, format: str) -> None:
+        """Test if options to set units format works."""
+
+        bins = [-1, 0, 1, 2]
+        arr = self.darray.groupby_bins("dim_0", bins).mean(...)
+        arr.dim_0_bins.attrs["units"] = "m"
+
+        with set_options(plot_unit_format=format):
+            (mappable,) = arr.plot(x="dim_0_bins")
+            ax = mappable.figure.gca()
+            actual = ax.get_xlabel()
+
+            expected = "dim_0_bins_center " + format.format("m")
+            assert actual == expected
 
     def test_multiplot_over_length_one_dim(self) -> None:
         a = easy_array((3, 1, 1, 1))

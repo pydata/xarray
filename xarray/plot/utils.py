@@ -500,7 +500,7 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
 def _get_units_from_attrs(da: DataArray) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
-    units = " [{}]"
+    units = " " + OPTIONS["plot_unit_format"]
     if isinstance(da.data, pint_array_type):
         return units.format(str(da.data.units))
     if "units" in da.attrs:
