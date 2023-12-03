@@ -30,6 +30,10 @@ New Features
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` allow passing a
+  callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
+  (:pull:`8511`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

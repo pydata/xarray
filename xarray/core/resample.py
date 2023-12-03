@@ -63,7 +63,7 @@ class Resample(GroupBy[T_Xarray]):
         obj = self._obj
         for k, v in obj.coords.items():
             if k != self._dim and self._dim in v.dims:
-                obj = obj.drop_vars(k)
+                obj = obj.drop_vars([k])
         return obj
 
     def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
@@ -244,7 +244,7 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         # dimension, then we need to do so before we can rename the proxy
         # dimension we used.
         if self._dim in combined.coords:
-            combined = combined.drop_vars(self._dim)
+            combined = combined.drop_vars([self._dim])
 
         if RESAMPLE_DIM in combined.dims:
             combined = combined.rename({RESAMPLE_DIM: self._dim})
