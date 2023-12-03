@@ -101,15 +101,15 @@ import abc
 
 class Grouper(abc.ABC):
     @abc.abstractmethod
-    def factorize(self, group):
+    def factorize(self, by: DataArray):
         raise NotImplementedError
 
 class CustomGrouper(Grouper):
-    def factorize(self, group):
+    def factorize(self, by: DataArray):
         ...
         return codes, group_indices, unique_coord, full_index
 
-    def weights(self, group):
+    def weights(self, by: DataArray) -> DataArray:
         ...
         return weights
 ```
@@ -142,7 +142,10 @@ For example, the boolean weights for `group=np.array(['a', 'b', 'c', 'a', 'a'])`
  [0, 1, 0, 0, 0],
  [0, 0, 1, 0, 0]]
 ```
-This is the boolean "summarization matrix" referred to in the classic Iverson (1980, Section 4.3)[^2].
+This is the boolean "summarization matrix" referred to in the classic Iverson (1980, Section 4.3)[^2] and "nub sieve" in [various APLs](https://aplwiki.com/wiki/Nub_Sieve).
+
+> [!NOTE]
+> We can always construct `weights` automatically using `group_indices` from `factorize`, so this is not a required method.
 
 For a rolling resampling, windowed weights are possible
 ```
