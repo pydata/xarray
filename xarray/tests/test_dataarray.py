@@ -3969,13 +3969,13 @@ class TestDataArray:
         assert_equal(expected3, actual3)
 
         # Ellipsis: all dims are shared
-        actual4 = da.dot(da, dims=...)
+        actual4 = da.dot(da, dim=...)
         expected4 = da.dot(da)
         assert_equal(expected4, actual4)
 
         # Ellipsis: not all dims are shared
-        actual5 = da.dot(dm3, dims=...)
-        expected5 = da.dot(dm3, dims=("j", "x", "y", "z"))
+        actual5 = da.dot(dm3, dim=...)
+        expected5 = da.dot(dm3, dim=("j", "x", "y", "z"))
         assert_equal(expected5, actual5)
 
         with pytest.raises(NotImplementedError):
