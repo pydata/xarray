@@ -112,6 +112,7 @@ from xarray.core.utils import (
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     infix_dims,
     is_dict_like,
     is_scalar,
@@ -5946,10 +5947,9 @@ class Dataset(
             raise ValueError('errors must be either "raise" or "ignore"')
 
         if is_dict_like(labels) and not isinstance(labels, dict):
-            warnings.warn(
-                "dropping coordinates using `drop` is be deprecated; use drop_vars.",
-                FutureWarning,
-                stacklevel=2,
+            emit_user_level_warning(
+                "dropping coordinates using `drop` is deprecated; use drop_vars.",
+                DeprecationWarning,
             )
             return self.drop_vars(labels, errors=errors)
 
@@ -5959,10 +5959,9 @@ class Dataset(
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
         if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
-            warnings.warn(
-                "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
-                PendingDeprecationWarning,
-                stacklevel=2,
+            emit_user_level_warning(
+                "dropping variables using `drop` is deprecated; use drop_vars.",
+                DeprecationWarning,
             )
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
@@ -5974,10 +5973,9 @@ class Dataset(
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
-        warnings.warn(
-            "dropping labels using `drop` will be deprecated; using drop_sel is encouraged.",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "dropping labels using `drop` is deprecated; use `drop_sel` instead.",
+            DeprecationWarning,
         )
         return self.drop_sel(labels, errors=errors)
 

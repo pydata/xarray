@@ -58,6 +58,10 @@ Deprecations
   The same change also applies to `DatasetGroupBy.dims`.
   (:issue:`8496`, :pull:`8500`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+  several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
+  replace them for labels & variables respectively. (:pull:`8497`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -77,10 +81,11 @@ Documentation
   This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
   in ``resample`` (:pull:`8479`).
   By `Doug Latornell <https://github.com/douglatornell>`_.
-
 - Improved error message when attempting to get a variable which doesn't exist from a Dataset.
   (:pull:`8474`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix default value of ``combine_attrs `` in :py:func:`xarray.combine_by_coords` (:pull:`8471`)
+  By `Gregorio L. Trevisan <https://github.com/gtrevisan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

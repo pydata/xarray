@@ -248,12 +248,12 @@ html_theme_options = dict(
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/dataset-diagram-logo.png"
+html_logo = "_static/logos/Xarray_Logo_RGB_Final.svg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = "_static/favicon.ico"
+html_favicon = "_static/logos/Xarray_Icon_Final.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -264,11 +264,11 @@ html_css_files = ["style.css"]
 
 # configuration for sphinxext.opengraph
 ogp_site_url = "https://docs.xarray.dev/en/latest/"
-ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
     '<meta property="twitter:site" content="@xarray_dev" />',
-    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/logos/Xarray_Logo_RGB_Final.png" />',
 ]
 
 # Redirects for pages that were moved to new locations
