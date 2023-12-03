@@ -9512,11 +9512,11 @@ class Dataset(
             )
 
     def eval(
-        self: T_Dataset,
+        self,
         statement: str,
         *,
         parser: QueryParserOptions = "pandas",
-    ) -> T_Dataset | T_DataArray:
+    ) -> Self | T_DataArray:
         """
         Calculate an expression supplied as a string in the context of the dataset.
 
