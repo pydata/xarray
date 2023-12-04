@@ -2652,6 +2652,14 @@ class TestDataArray:
         actual = renamed.drop_vars("foo", errors="ignore")
         assert_identical(actual, renamed)
 
+    def test_drop_vars_callable(self) -> None:
+        A = DataArray(
+            np.random.randn(2, 3), dims=["x", "y"], coords={"x": [1, 2], "y": [3, 4, 5]}
+        )
+        expected = A.drop_vars(["x", "y"])
+        actual = A.drop_vars(lambda x: x.indexes)
+        assert_identical(expected, actual)
+
     def test_drop_multiindex_level(self) -> None:
         # GH6505
         expected = self.mda.drop_vars(["x", "level_1", "level_2"])

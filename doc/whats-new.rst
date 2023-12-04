@@ -30,6 +30,10 @@ New Features
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` allow passing a
+  callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
+  (:pull:`8511`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -65,6 +69,9 @@ Bug fixes
 - Static typing of ``p0`` and ``bounds`` arguments of :py:func:`xarray.DataArray.curvefit` and :py:func:`xarray.Dataset.curvefit`
   was changed to ``Mapping`` (:pull:`8502`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix typing of :py:func:`xarray.DataArray.to_netcdf` and :py:func:`xarray.Dataset.to_netcdf`
+  when ``compute`` is evaluated to bool instead of a Literal (:pull:`8268`).
+  By `Jens Hedegaard Nielsen <https://github.com/jenshnielsen>`_.
 
 Documentation
 ~~~~~~~~~~~~~
