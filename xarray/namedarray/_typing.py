@@ -193,7 +193,8 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
 
     def __getitem__(
         self,
-        key: _IndexKeyLike | Any,  # TODO: Any should be _arrayapi
+        key: _IndexKeyLike
+        | Any,  # TODO: Any should be _arrayapi[Any, _dtype[np.integer]]
         /,
     ) -> _arrayapi[Any, Any]:
         ...
