@@ -18,13 +18,13 @@ repos:
         files: ^xarray/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: 'v0.1.4'
+    rev: 'v0.1.6'
     hooks:
       - id: ruff
         args: ["--fix"]
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 23.10.1
+    rev: 23.11.0
     hooks:
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
@@ -35,7 +35,7 @@ repos:
         additional_dependencies: ["black==23.10.1"]
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.6.1
+    rev: v1.7.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
