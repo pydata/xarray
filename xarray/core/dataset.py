@@ -5742,7 +5742,7 @@ class Dataset(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable],
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -5750,8 +5750,9 @@ class Dataset(
 
         Parameters
         ----------
-        names : hashable or iterable of hashable
-            Name(s) of variables to drop.
+        names : Hashable or iterable of Hashable or Callable
+            Name(s) of variables to drop. If a Callable, this object is passed as its
+            only argument and its result is used.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
@@ -5793,7 +5794,7 @@ class Dataset(
             humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Drop the 'humidity' variable
+        Drop the 'humidity' variable
 
         >>> dataset.drop_vars(["humidity"])
         <xarray.Dataset>
@@ -5806,7 +5807,7 @@ class Dataset(
             temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Drop the 'humidity', 'temperature' variables
+        Drop the 'humidity', 'temperature' variables
 
         >>> dataset.drop_vars(["humidity", "temperature"])
         <xarray.Dataset>
@@ -5818,7 +5819,18 @@ class Dataset(
         Data variables:
             wind_speed  (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Attempt to drop non-existent variable with errors="ignore"
+        Drop all indexes
+
+        >>> dataset.drop_vars(lambda x: x.indexes)
+        <xarray.Dataset>
+        Dimensions:      (time: 1, latitude: 2, longitude: 2)
+        Dimensions without coordinates: time, latitude, longitude
+        Data variables:
+            temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
+            humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
+            wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
+
+        Attempt to drop non-existent variable with errors="ignore"
 
         >>> dataset.drop_vars(["pressure"], errors="ignore")
         <xarray.Dataset>
@@ -5832,7 +5844,7 @@ class Dataset(
             humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Attempt to drop non-existent variable with errors="raise"
+        Attempt to drop non-existent variable with errors="raise"
 
         >>> dataset.drop_vars(["pressure"], errors="raise")
         Traceback (most recent call last):
@@ -5852,24 +5864,26 @@ class Dataset(
         DataArray.drop_vars
 
         """
+        if callable(names):
+            names = names(self)
         # the Iterable check is required for mypy
         if is_scalar(names) or not isinstance(names, Iterable):
-            names = {names}
+            names_set = {names}
         else:
-            names = set(names)
+            names_set = set(names)
         if errors == "raise":
-            self._assert_all_in_dataset(names)
+            self._assert_all_in_dataset(names_set)
 
         # GH6505
         other_names = set()
-        for var in names:
+        for var in names_set:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
                 idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
-                idx_other_names = idx_coord_names - set(names)
+                idx_other_names = idx_coord_names - set(names_set)
                 other_names.update(idx_other_names)
         if other_names:
-            names |= set(other_names)
+            names_set |= set(other_names)
             warnings.warn(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
@@ -5877,11 +5891,11 @@ class Dataset(
                 stacklevel=2,
             )
 
-        assert_no_index_corrupted(self.xindexes, names)
+        assert_no_index_corrupted(self.xindexes, names_set)
 
-        variables = {k: v for k, v in self._variables.items() if k not in names}
+        variables = {k: v for k, v in self._variables.items() if k not in names_set}
         coord_names = {k for k in self._coord_names if k in variables}
-        indexes = {k: v for k, v in self._indexes.items() if k not in names}
+        indexes = {k: v for k, v in self._indexes.items() if k not in names_set}
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
@@ -5979,6 +5993,9 @@ class Dataset(
                 "dropping variables using `drop` is deprecated; use drop_vars.",
                 DeprecationWarning,
             )
+            # for mypy
+            if is_scalar(labels):
+                labels = [labels]
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
             warnings.warn(
