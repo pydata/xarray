@@ -24,6 +24,8 @@ from xarray.tests import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_numbagg,
+    requires_numbagg_or_bottleneck,
     requires_scipy,
 )
 
@@ -407,7 +409,7 @@ def test_interpolate_dask_expected_dtype(dtype, method):
     assert da.dtype == da.compute().dtype
 
 
-@requires_bottleneck
+@requires_numbagg_or_bottleneck
 def test_ffill():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     expected = xr.DataArray(np.array([4, 5, 5], dtype=np.float64), dims="x")
@@ -415,9 +417,9 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
-def test_ffill_use_bottleneck():
+def test_ffill_use_bottleneck_numbagg():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.ffill("x")
 
@@ -426,14 +428,24 @@ def test_ffill_use_bottleneck():
 def test_ffill_use_bottleneck_dask():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.ffill("x")
 
 
+@requires_numbagg
+@requires_dask
+def test_ffill_use_numbagg_dask():
+    with xr.set_options(use_bottleneck=False):
+        da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+        da = da.chunk(x=-1)
+        # Succeeds with a single chunk:
+        _ = da.ffill("x").compute()
+
+
 def test_bfill_use_bottleneck():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.bfill("x")
 
@@ -442,7 +454,7 @@ def test_bfill_use_bottleneck():
 def test_bfill_use_bottleneck_dask():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     da = da.chunk({"x": 1})
-    with xr.set_options(use_bottleneck=False):
+    with xr.set_options(use_bottleneck=False, use_numbagg=False):
         with pytest.raises(RuntimeError):
             da.bfill("x")
 
@@ -645,12 +657,12 @@ def test_interpolate_na_max_gap_errors(da_time):
     with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
-    da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
+    da_time["t"] = pd.date_range("2001-01-01", freq="h", periods=11)
     with pytest.raises(TypeError, match=r"Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
     with pytest.raises(TypeError, match=r"Expected integer or floating point"):
-        da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
+        da_time.interpolate_na("t", max_gap="1h", use_coordinate=False)
 
     with pytest.raises(ValueError, match=r"Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
@@ -663,12 +675,12 @@ def test_interpolate_na_max_gap_errors(da_time):
 )
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
-    "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
+    "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
 )
 def test_interpolate_na_max_gap_time_specifier(
     da_time, max_gap, transform, time_range_func
 ):
-    da_time["t"] = time_range_func("2001-01-01", freq="H", periods=11)
+    da_time["t"] = time_range_func("2001-01-01", freq="h", periods=11)
     expected = transform(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )

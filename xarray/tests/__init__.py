@@ -53,7 +53,8 @@ def _importorskip(
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if Version(mod.__version__) < Version(minversion):
+            v = getattr(mod, "__version__", "999")
+            if Version(v) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
@@ -63,7 +64,14 @@ def _importorskip(
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_pydap, requires_pydap = _importorskip("pydap.client")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="'cgi' is deprecated and slated for removal in Python 3.13",
+        category=DeprecationWarning,
+    )
+
+    has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
@@ -87,6 +95,10 @@ has_flox, requires_flox = _importorskip("flox")
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
+has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
+requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
 # _importorskip does not work for development versions

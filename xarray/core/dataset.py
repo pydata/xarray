@@ -100,6 +100,7 @@ from xarray.core.types import (
     T_Chunks,
     T_DataArrayOrSet,
     T_Dataset,
+    ZarrWriteModes,
 )
 from xarray.core.utils import (
     Default,
@@ -110,6 +111,7 @@ from xarray.core.utils import (
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     infix_dims,
     is_dict_like,
     is_scalar,
@@ -1539,10 +1541,18 @@ class Dataset(
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
+        from xarray.core.formatting import shorten_list_repr
+
         if utils.is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
-            return self._construct_dataarray(key)
+            try:
+                return self._construct_dataarray(key)
+            except KeyError as e:
+                raise KeyError(
+                    f"No variable named {key!r}. Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                ) from e
+
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
         raise ValueError(f"Unsupported key-type {type(key)}")
@@ -2149,6 +2159,23 @@ class Dataset(
     ) -> bytes:
         ...
 
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Any, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
     # default return None
     @overload
     def to_netcdf(
@@ -2165,7 +2192,8 @@ class Dataset(
     ) -> None:
         ...
 
-    # compute=False returns dask.Delayed
+    # if compute cannot be evaluated at type check time
+    # we may get back either Delayed or None
     @overload
     def to_netcdf(
         self,
@@ -2176,10 +2204,9 @@ class Dataset(
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Any, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
-        *,
-        compute: Literal[False],
+        compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed:
+    ) -> Delayed | None:
         ...
 
     def to_netcdf(
@@ -2297,7 +2324,7 @@ class Dataset(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -2320,7 +2347,7 @@ class Dataset(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -2341,7 +2368,7 @@ class Dataset(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -2379,10 +2406,11 @@ class Dataset(
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", "r+", None}, optional
+        mode : {"w", "w-", "a", "a-", r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist);
+            "a" means override all existing variables including dimension coordinates (create if does not exist);
+            "a-" means only append those variables that have ``append_dim``.
             "r+" means modify existing array *values* only (raise an error if
             any metadata or shapes would change).
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
@@ -5713,7 +5741,7 @@ class Dataset(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable],
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -5721,8 +5749,9 @@ class Dataset(
 
         Parameters
         ----------
-        names : hashable or iterable of hashable
-            Name(s) of variables to drop.
+        names : Hashable or iterable of Hashable or Callable
+            Name(s) of variables to drop. If a Callable, this object is passed as its
+            only argument and its result is used.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
@@ -5764,7 +5793,7 @@ class Dataset(
             humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Drop the 'humidity' variable
+        Drop the 'humidity' variable
 
         >>> dataset.drop_vars(["humidity"])
         <xarray.Dataset>
@@ -5777,7 +5806,7 @@ class Dataset(
             temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Drop the 'humidity', 'temperature' variables
+        Drop the 'humidity', 'temperature' variables
 
         >>> dataset.drop_vars(["humidity", "temperature"])
         <xarray.Dataset>
@@ -5789,7 +5818,18 @@ class Dataset(
         Data variables:
             wind_speed  (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Attempt to drop non-existent variable with errors="ignore"
+        Drop all indexes
+
+        >>> dataset.drop_vars(lambda x: x.indexes)
+        <xarray.Dataset>
+        Dimensions:      (time: 1, latitude: 2, longitude: 2)
+        Dimensions without coordinates: time, latitude, longitude
+        Data variables:
+            temperature  (time, latitude, longitude) float64 25.5 26.3 27.1 28.0
+            humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
+            wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
+
+        Attempt to drop non-existent variable with errors="ignore"
 
         >>> dataset.drop_vars(["pressure"], errors="ignore")
         <xarray.Dataset>
@@ -5803,7 +5843,7 @@ class Dataset(
             humidity     (time, latitude, longitude) float64 65.0 63.8 58.2 59.6
             wind_speed   (time, latitude, longitude) float64 10.2 8.5 12.1 9.8
 
-        # Attempt to drop non-existent variable with errors="raise"
+        Attempt to drop non-existent variable with errors="raise"
 
         >>> dataset.drop_vars(["pressure"], errors="raise")
         Traceback (most recent call last):
@@ -5823,24 +5863,26 @@ class Dataset(
         DataArray.drop_vars
 
         """
+        if callable(names):
+            names = names(self)
         # the Iterable check is required for mypy
         if is_scalar(names) or not isinstance(names, Iterable):
-            names = {names}
+            names_set = {names}
         else:
-            names = set(names)
+            names_set = set(names)
         if errors == "raise":
-            self._assert_all_in_dataset(names)
+            self._assert_all_in_dataset(names_set)
 
         # GH6505
         other_names = set()
-        for var in names:
+        for var in names_set:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
                 idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
-                idx_other_names = idx_coord_names - set(names)
+                idx_other_names = idx_coord_names - set(names_set)
                 other_names.update(idx_other_names)
         if other_names:
-            names |= set(other_names)
+            names_set |= set(other_names)
             warnings.warn(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
@@ -5848,11 +5890,11 @@ class Dataset(
                 stacklevel=2,
             )
 
-        assert_no_index_corrupted(self.xindexes, names)
+        assert_no_index_corrupted(self.xindexes, names_set)
 
-        variables = {k: v for k, v in self._variables.items() if k not in names}
+        variables = {k: v for k, v in self._variables.items() if k not in names_set}
         coord_names = {k for k in self._coord_names if k in variables}
-        indexes = {k: v for k, v in self._indexes.items() if k not in names}
+        indexes = {k: v for k, v in self._indexes.items() if k not in names_set}
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
@@ -5934,10 +5976,9 @@ class Dataset(
             raise ValueError('errors must be either "raise" or "ignore"')
 
         if is_dict_like(labels) and not isinstance(labels, dict):
-            warnings.warn(
-                "dropping coordinates using `drop` is be deprecated; use drop_vars.",
-                FutureWarning,
-                stacklevel=2,
+            emit_user_level_warning(
+                "dropping coordinates using `drop` is deprecated; use drop_vars.",
+                DeprecationWarning,
             )
             return self.drop_vars(labels, errors=errors)
 
@@ -5947,11 +5988,13 @@ class Dataset(
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
 
         if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
-            warnings.warn(
-                "dropping variables using `drop` will be deprecated; using drop_vars is encouraged.",
-                PendingDeprecationWarning,
-                stacklevel=2,
+            emit_user_level_warning(
+                "dropping variables using `drop` is deprecated; use drop_vars.",
+                DeprecationWarning,
             )
+            # for mypy
+            if is_scalar(labels):
+                labels = [labels]
             return self.drop_vars(labels, errors=errors)
         if dim is not None:
             warnings.warn(
@@ -5962,10 +6005,9 @@ class Dataset(
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
-        warnings.warn(
-            "dropping labels using `drop` will be deprecated; using drop_sel is encouraged.",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "dropping labels using `drop` is deprecated; use `drop_sel` instead.",
+            DeprecationWarning,
         )
         return self.drop_sel(labels, errors=errors)
 
@@ -7969,8 +8011,8 @@ class Dataset(
             variables = variables
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
-        aligned_self = aligned_vars[0]
-        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]
+        aligned_self = cast("Self", aligned_vars[0])
+        aligned_other_vars = cast(tuple[DataArray, ...], aligned_vars[1:])
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
@@ -8696,7 +8738,7 @@ class Dataset(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -9612,8 +9654,8 @@ class Dataset(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, float | DataArray] | None = None,
-        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
+        p0: Mapping[str, float | DataArray] | None = None,
+        bounds: Mapping[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
@@ -10075,7 +10117,7 @@ class Dataset(
             Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
 
         :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
-            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparision with :py:func:`~xarray.Dataset.resample`.
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
 
         Dataset.groupby_bins
         DataArray.groupby
@@ -10374,6 +10416,12 @@ class Dataset(
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
+
+            .. deprecated:: 2023.03.0
+                Following pandas, the ``loffset`` parameter is deprecated in favor
+                of using time offset arithmetic, and will be removed in a future
+                version of xarray.
+
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
