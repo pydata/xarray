@@ -71,10 +71,11 @@ _Dims = tuple[_Dim, ...]
 _DimsLike = Union[str, Iterable[_Dim]]
 
 # https://data-apis.org/array-api/latest/API_specification/indexing.html
-# TODO: np.array_api doesn't allow None for some reason, maybe they're
-# recommending to use expand_dims?
+# TODO: np.array_api was bugged and didn't allow (None,), but should!
+# https://github.com/numpy/numpy/pull/25022
+# https://github.com/data-apis/array-api/pull/674
 _IndexKey = Union[int, slice, "ellipsis"]
-_IndexKeys = tuple[Union[_IndexKey], ...]
+_IndexKeys = tuple[Union[_IndexKey], ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
