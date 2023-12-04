@@ -5,7 +5,7 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
@@ -31,6 +31,7 @@ from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
+from xarray.core.types import Self
 from xarray.core.utils import (
     FrozenDict,
     close_on_error,
@@ -40,10 +41,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.types import SupportsLock, T_XarrayCanOpen
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -353,17 +352,17 @@ class NetCDF4DataStore(WritableCFDataStore):
     @classmethod
     def open(
         cls,
-        filename,
-        mode="r",
-        format="NETCDF4",
-        group=None,
-        clobber=True,
-        diskless=False,
-        persist=False,
-        lock=None,
+        filename: T_XarrayCanOpen,
+        mode: str = "r",
+        format: str | None = "NETCDF4",
+        group: str | None = None,
+        clobber: bool = True,
+        diskless: bool = False,
+        persist: bool = False,
+        lock: bool | SupportsLock | None = None,
         lock_maker=None,
-        autoclose=False,
-    ):
+        autoclose: bool = False,
+    ) -> Self:
         import netCDF4
 
         if isinstance(filename, os.PathLike):
@@ -552,10 +551,54 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
-    def guess_can_open(
+    mask_and_scale: bool
+    decode_times: bool
+    concat_characters: bool
+    decode_coords: bool | Literal["coordinates", "all"]
+    use_cftime: bool | None
+    decode_timedelta: bool | None
+    group: str | None
+    mode: str
+    format: str | None
+    clobber: bool
+    diskless: bool
+    persist: bool
+    lock: bool | None  ## TODO: check this?
+    autoclose: bool
+
+    def __init__(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        group: str | None = None,
+        mode: str = "r",
+        format: str | None = "NETCDF4",
+        clobber: bool = True,
+        diskless: bool = False,
+        persist: bool = False,
+        lock: bool | None = None,
+        autoclose: bool = False,
+    ) -> None:
+        self.mask_and_scale = mask_and_scale
+        self.decode_times = decode_times
+        self.concat_characters = concat_characters
+        self.decode_coords = decode_coords
+        self.use_cftime = use_cftime
+        self.decode_timedelta = decode_timedelta
+        self.group = group
+        self.mode = mode
+        self.format = format
+        self.clobber = clobber
+        self.diskless = diskless
+        self.persist = persist
+        self.lock = lock
+        self.autoclose = autoclose
+
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
         magic_number = try_read_magic_number_from_path(filename_or_obj)
@@ -569,50 +612,39 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        group=None,
-        mode="r",
-        format="NETCDF4",
-        clobber=True,
-        diskless=False,
-        persist=False,
-        lock=None,
-        autoclose=False,
+        **kwargs: Any,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            mode=mode,
-            format=format,
-            group=group,
-            clobber=clobber,
-            diskless=diskless,
-            persist=persist,
-            lock=lock,
-            autoclose=autoclose,
+            mode=kwargs.get("mode", self.mode),
+            format=kwargs.get("format", self.format),
+            group=kwargs.get("group", self.group),
+            clobber=kwargs.get("clobber", self.clobber),
+            diskless=kwargs.get("diskless", self.diskless),
+            persist=kwargs.get("persist", self.persist),
+            lock=kwargs.get("lock", self.lock),
+            autoclose=kwargs.get("autoclose", self.autoclose),
         )
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
                 store,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
+                mask_and_scale=kwargs.get("mask_and_scale", self.mask_and_scale),
+                decode_times=kwargs.get("decode_times", self.decode_times),
+                concat_characters=kwargs.get(
+                    "concat_characters", self.concat_characters
+                ),
+                decode_coords=kwargs.get("decode_coords", self.decode_coords),
                 drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+                use_cftime=kwargs.get("use_cftime", self.use_cftime),
+                decode_timedelta=kwargs.get("decode_timedelta", self.decode_timedelta),
             )
         return ds
 

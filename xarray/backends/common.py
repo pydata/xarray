@@ -6,7 +6,7 @@ import time
 import traceback
 from collections.abc import Iterable
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 
@@ -17,10 +17,8 @@ from xarray.core.pycompat import is_chunked_array
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from xarray.core.dataset import Dataset
-    from xarray.core.types import NestedSequence
+    from xarray.core.types import NestedSequence, T_XarrayCanOpen
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -487,10 +485,9 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
         drop_variables: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -500,7 +497,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.

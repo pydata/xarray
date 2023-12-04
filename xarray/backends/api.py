@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     T_Engine = Union[
         T_NetcdfEngine,
         Literal["pydap", "pynio", "zarr"],
+        BackendEntrypoint,
         type[BackendEntrypoint],
         str,  # no nice typing support for custom backends
         None,
@@ -421,11 +422,10 @@ def open_dataset(
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "zarr", None}, installed backend \
-        or subclass of xarray.backends.BackendEntrypoint, optional
+        or instance or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
-        can also be used.
+        "netcdf4".
     chunks : int, dict, 'auto' or None, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
@@ -595,8 +595,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
-    engine: T_Engine | None = None,
-    chunks: T_Chunks | None = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -628,7 +628,7 @@ def open_dataarray(
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "zarr", None}, installed backend \
-        or subclass of xarray.backends.BackendEntrypoint, optional
+        or instance or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
@@ -707,16 +707,20 @@ def open_dataarray(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce the underlying data array to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the
+        `ChunkManagerEnetryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
-        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
-        chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
-        For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
-        to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+        Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array`
+        method used to create chunked arrays, via whichever chunk manager is
+        specified through the `chunked_array_type` kwarg.
+        For example if :py:func:`dask.array.Array` objects are used for chunking,
+        additional kwargs will be passed to :py:func:`dask.array.from_array`.
+        Experimental API that should not be relied upon.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
-        equivalent to `**kwargs`.
+        equivalent to `**kwargs`. Alternatively pass a configured Backend object
+        as engine.
     **kwargs: dict
         Additional keyword arguments passed on to the engine open function.
         For example:
@@ -729,7 +733,8 @@ def open_dataarray(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy", "pynio".
 
-        See engine open function for kwargs accepted by each specific engine.
+        See engine open function for kwargs accepted by each specific engine or
+        create an instance of the Backend and configure it in the constructor.
 
     Notes
     -----
@@ -790,7 +795,7 @@ def open_dataarray(
 
 def open_mfdataset(
     paths: str | NestedSequence[str | os.PathLike],
-    chunks: T_Chunks | None = None,
+    chunks: T_Chunks = None,
     concat_dim: str
     | DataArray
     | Index
@@ -800,7 +805,7 @@ def open_mfdataset(
     | None = None,
     compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_Engine | None = None,
+    engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -868,7 +873,7 @@ def open_mfdataset(
         ``ds.encoding["source"]``.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", \
         "zarr", None}, installed backend \
-        or subclass of xarray.backends.BackendEntrypoint, optional
+        or instance or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".

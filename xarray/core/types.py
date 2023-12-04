@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import datetime
+import os
 import sys
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -29,10 +31,12 @@ except ImportError:
         Self: Any = None
 
 if TYPE_CHECKING:
+    from io import BufferedIOBase
+
     from numpy._typing import _SupportsDType
     from numpy.typing import ArrayLike
 
-    from xarray.backends.common import BackendEntrypoint
+    from xarray.backends.common import AbstractDataStore, BackendEntrypoint
     from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.coordinates import Coordinates
@@ -267,7 +271,7 @@ NestedSequence = Union[
 ]
 
 
-QuantileMethods = Literal[
+QuantileMethods: TypeAlias = Literal[
     "inverted_cdf",
     "averaged_inverted_cdf",
     "closest_observation",
@@ -283,5 +287,29 @@ QuantileMethods = Literal[
     "nearest",
 ]
 
+T_XarrayCanOpen: TypeAlias = Union[
+    str, os.PathLike[Any], "BufferedIOBase", "AbstractDataStore"
+]
+ZarrWriteModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
-ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
+
+class SupportsLock(Protocol):
+    def acquire(self, blocking: bool) -> bool:
+        ...
+
+    def release(self) -> None:
+        ...
+
+    def locked(self) -> bool:
+        ...
+
+    def __enter__(self) -> bool:
+        ...
+
+    def __exit__(
+        self,
+        type: type[BaseException] | None,
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        ...

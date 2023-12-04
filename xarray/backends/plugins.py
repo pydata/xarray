@@ -197,21 +197,23 @@ def guess_engine(
     raise ValueError(error_msg)
 
 
-def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
+def get_backend(
+    engine: str | BackendEntrypoint | type[BackendEntrypoint],
+) -> BackendEntrypoint:
     """Select open_dataset method based on current engine."""
+    if isinstance(engine, BackendEntrypoint):
+        return engine
     if isinstance(engine, str):
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
                 f"unrecognized engine {engine} must be one of: {list(engines)}"
             )
-        backend = engines[engine]
-    elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
-        backend = engine()
-    else:
-        raise TypeError(
-            "engine must be a string or a subclass of "
-            f"xarray.backends.BackendEntrypoint: {engine}"
-        )
+        return engines[engine]
+    if isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
+        return engine()
 
-    return backend
+    raise TypeError(
+        "engine must be a string, a subclass of xarray.backends.BackendEntrypoint"
+        f" or an object of such a subclass, got {type(engine)}"
+    )
