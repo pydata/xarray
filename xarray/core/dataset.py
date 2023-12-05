@@ -112,8 +112,6 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
-    infix_dims,
-    is_dict_like,
     is_scalar,
     maybe_wrap_array,
 )
