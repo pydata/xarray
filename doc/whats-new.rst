@@ -30,6 +30,10 @@ New Features
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` allow passing a
+  callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
+  (:pull:`8511`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Add :py:meth:`NamedArray.expand_dims` and :py:meth:`NamedArray.broadcast_to`
   (:pull:`8380`) By `Anderson Banihirwe <https://github.com/andersy005>`_.
@@ -54,6 +58,10 @@ Deprecations
   currently ``PendingDeprecationWarning``, which are silenced by default. We'll
   convert these to ``DeprecationWarning`` in a future release.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`Dataset.drop` &
+  :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+  several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
+  replace them for labels & variables respectively.
 
 Bug fixes
 ~~~~~~~~~
@@ -64,6 +72,9 @@ Bug fixes
 - Static typing of ``p0`` and ``bounds`` arguments of :py:func:`xarray.DataArray.curvefit` and :py:func:`xarray.Dataset.curvefit`
   was changed to ``Mapping`` (:pull:`8502`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix typing of :py:func:`xarray.DataArray.to_netcdf` and :py:func:`xarray.Dataset.to_netcdf`
+  when ``compute`` is evaluated to bool instead of a Literal (:pull:`8268`).
+  By `Jens Hedegaard Nielsen <https://github.com/jenshnielsen>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -73,10 +84,11 @@ Documentation
   This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
   in ``resample`` (:pull:`8479`).
   By `Doug Latornell <https://github.com/douglatornell>`_.
-
 - Improved error message when attempting to get a variable which doesn't exist from a Dataset.
   (:pull:`8474`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix default value of ``combine_attrs`` in :py:func:`xarray.combine_by_coords` (:pull:`8471`)
+  By `Gregorio L. Trevisan <https://github.com/gtrevisan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
