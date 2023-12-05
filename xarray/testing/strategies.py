@@ -292,17 +292,14 @@ def variables(
     <xarray.Variable (eD: 4, ğŻżÂĕ: 2, T: 2)>
     array([[[-10000000., -10000000.],
             [-10000000., -10000000.]],
-
            [[-10000000., -10000000.],
             [        0., -10000000.]],
-
            [[        0., -10000000.],
             [-10000000.,        inf]],
-
            [[       -0., -10000000.],
             [-10000000.,        -0.]]], dtype=float32)
     Attributes:
-        śřĴ:      {'ĉ': {'iĥſ': array([-30117,  -1740], dtype=int16)}}
+        śřĴ:      {'ĉ': {'iĥf': array([-30117,  -1740], dtype=int16)}}
 
     Generate only Variable objects with certain dimension names:
 
