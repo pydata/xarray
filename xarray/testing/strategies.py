@@ -63,42 +63,6 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     )
 
 
-def smallish_arrays(
-    shape: Union[
-        tuple[int, ...], st.SearchStrategy[tuple[int, ...]]
-    ] = npst.array_shapes(min_dims=0, max_dims=3, min_side=0, max_side=4),
-    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = supported_dtypes(),
-    *,
-    elements=None,
-    fill=None,
-    unique=False,
-) -> st.SearchStrategy[np.ndarray]:
-    """
-    Generates arbitrary array API-compliant numpy arrays.
-
-    By default generates arrays with no more than 4 elements per axis for performance, using supported_dtypes.
-
-    Requires the hypothesis package to be installed.
-
-    Parameters
-    ----------
-    shape
-    dtype
-        Default is to use any of the scalar dtypes defined in the array API standard.
-    elements
-    fill
-    unique
-
-    See Also
-    --------
-    :ref:`testing.hypothesis`_
-    """
-    # TODO here we may also wish to generalize/restrict the dtypes produced by xarray's default test strategies
-    return npst.arrays(
-        dtype=dtype, shape=shape, elements=elements, fill=fill, unique=unique
-    )
-
-
 # TODO Generalize to all valid unicode characters once formatting bugs in xarray's reprs are fixed + docs can handle it.
 _readable_characters = st.characters(
     categories=["L", "N"], max_codepoint=0x017F
@@ -341,7 +305,8 @@ def variables(
 
     _array_strategy_fn: ArrayStrategyFn
     if array_strategy_fn is None:
-        _array_strategy_fn = smallish_arrays  # type: ignore[assignment]
+        # For some reason if I move the default value to the function signature definition mypy incorrectly says the ignore is no longer necessary, making it impossible to satisfy mypy
+        _array_strategy_fn = npst.arrays  # type: ignore[assignment]  # npst.arrays has extra kwargs that we aren't using later
     elif not callable(array_strategy_fn):
         raise InvalidArgument(
             "array_strategy_fn must be a Callable that accepts the kwargs dtype and shape and returns a hypothesis "
