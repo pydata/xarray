@@ -357,7 +357,7 @@ EMPTY_REPR = "    *empty*"
 
 
 def _calculate_col_width(col_items):
-    max_name_length = max(len(str(s)) for s in col_items) if col_items else 0
+    max_name_length = max((len(str(s)) for s in col_items), default=0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -490,7 +490,7 @@ def filter_nondefault_indexes(indexes, filter_indexes: bool):
 
 
 def indexes_repr(indexes, max_rows: int | None = None) -> str:
-    col_width = _calculate_col_width(indexes)
+    col_width = _calculate_col_width(chain.from_iterable(indexes))
 
     return _mapping_repr(
         indexes,
