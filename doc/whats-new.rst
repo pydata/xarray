@@ -23,6 +23,10 @@ v2023.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added hypothesis strategies for generating :py:class:`xarray.Variable` objects containing arbitrary data, useful for parametrizing downstream tests.
+  Accessible under :py:mod:`testing.strategies`, and documented in a new page on testing in the User Guide.
+  (:issue:`6911`, :pull:`8404`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:meth:`rolling` uses numbagg <https://github.com/numbagg/numbagg>`_ for
   most of its computations by default. Numbagg is up to 5x faster than bottleneck
   where parallelization is possible. Where parallelization isn't possible — for
