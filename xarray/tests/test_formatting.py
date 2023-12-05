@@ -795,7 +795,7 @@ def test_format_xindexes_none(as_dataset):
 def test_format_xindexes(as_dataset):
     expected = """\
     Indexes:
-        x                         PandasIndex"""
+        x        PandasIndex"""
     expected = dedent(expected)
 
     obj = xr.DataArray([1], coords={"x": [1]})
