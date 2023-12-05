@@ -916,7 +916,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"x.T requires x to have 2 dimensions, got {self.ndim}. Use x.permute_dims() to permute dimensions."
             )
 
-        data = self._data[::-1, ::-1]
+        data = self._data.T
         dims = self.dims[::-1]
         return self._replace(dims=dims, data=data)
 
@@ -938,7 +938,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         Broadcast the NamedArray to a new shape by extending its dimensions.
 
         This method allows for the expansion of the array's dimensions to a specified shape.
-        New dimensions with specified sizes can be added, and existing dimensions can be resized.
         It handles both positional and keyword arguments for specifying the dimensions to broadcast.
 
         Parameters
@@ -975,7 +974,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         self._check_dims(list(combined_dims.keys()))
 
         # create a dictionary of the current dimensions and their sizes
-        current_shape = dict(zip(self.dims, self._data.shape))
+        current_shape = self.sizes
 
         # update the current shape with the new dimensions, keeping the order of the original dimensions
         broadcast_shape = {d: current_shape.get(d, 1) for d in self.dims}
@@ -1025,10 +1024,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
         >>> array = xr.NamedArray(("x", "y"), data)
 
-        # expand dimensions without specifying any name (adds 'dim_0')
-        >>> expanded = array.expand_dims()
-        >>> expanded.dims
-        ('dim_0', 'x', 'y')
 
         # expand dimensions by specifying a new dimension name
         >>> expanded = array.expand_dims(dim="z")
@@ -1046,14 +1041,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         ('z', 'x', 'a', 'y')
         """
 
-        if dim is None and not dim_kwargs:
-            # If no dimensions specified, find a unique default dimension name
-            dim_number = 0
-            default_dim = f"dim_{dim_number}"
-            while default_dim in self.dims:
-                dim_number += 1
-                default_dim = f"dim_{dim_number}"
-            dim = {default_dim: 0}
 
         if isinstance(dim, str):
             dim = {dim: 0}
@@ -1071,10 +1058,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"Cannot assign multiple new dimensions to the same position: {positions}"
             )
 
-        for new_dim in combined_dims.keys():
-            if new_dim in self.dims:
-                raise ValueError(
-                    f"Dimension {new_dim} already exists. Please remove it from the specified dimensions: {combined_dims}"
+ 	conflicts = set(self.dims) & set(combined_dims)
+        if conflicts:
+            raise ValueError(
+                    f"Dimensions {conflicts!r} already exists. Please remove it from the specified dimensions: {combined_dims}"
                 )
 
         # create a list of all dimensions, placing new ones at their specified positions
