@@ -59,7 +59,7 @@ Consider these two examples:
 2. [Overlapping groups](https://flox.readthedocs.io/en/latest/user-stories/overlaps.html)
 3. [Rolling resampling](https://github.com/pydata/xarray/discussions/8361)
 
-Anecdotally, less sophisticated users commonly resort to the for-loopy implementation illustrated by the pseudocode above when the analysis at hand is not easily expressed using the API presented by Xarray's GroupBy object.
+Anecdotally, less experienced users commonly resort to the for-loopy implementation illustrated by the pseudocode above when the analysis at hand is not easily expressed using the API presented by Xarray's GroupBy object.
 Xarray's GroupBy API today abstracts away the split, apply, and combine stages but not the "factorize" stage.
 Grouper objects will close the gap.
 
