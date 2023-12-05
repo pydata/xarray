@@ -490,7 +490,7 @@ def filter_nondefault_indexes(indexes, filter_indexes: bool):
 
 
 def indexes_repr(indexes, max_rows: int | None = None) -> str:
-    col_width = _calculate_col_width(chain.from_iterable(indexes))
+    col_width = _calculate_col_width(indexes)
 
     return _mapping_repr(
         indexes,
