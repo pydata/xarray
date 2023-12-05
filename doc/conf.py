@@ -326,6 +326,7 @@ intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
     "cubed": ("https://tom-e-white.com/cubed/", None),
     "datatree": ("https://xarray-datatree.readthedocs.io/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
