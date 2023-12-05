@@ -776,7 +776,7 @@ def test_lazy_array_wont_compute() -> None:
 
 
 @pytest.mark.parametrize("as_dataset", (False, True))
-def test_format_xindexes_none(as_dataset):
+def test_format_xindexes_none(as_dataset: bool) -> None:
     # ensure repr for empty xindexes can be displayed #8367
 
     expected = """\
@@ -784,22 +784,22 @@ def test_format_xindexes_none(as_dataset):
         *empty*"""
     expected = dedent(expected)
 
-    obj = xr.DataArray()
+    obj: xr.DataArray | xr.Dataset = xr.DataArray()
     obj = obj._to_temp_dataset() if as_dataset else obj  # type: ignore[assignment]
 
-    actual = obj.xindexes.__repr__()
+    actual = repr(obj.xindexes)
     assert actual == expected
 
 
 @pytest.mark.parametrize("as_dataset", (False, True))
-def test_format_xindexes(as_dataset):
+def test_format_xindexes(as_dataset: bool) -> None:
     expected = """\
     Indexes:
         x        PandasIndex"""
     expected = dedent(expected)
 
-    obj = xr.DataArray([1], coords={"x": [1]})
+    obj: xr.DataArray | xr.Dataset = xr.DataArray([1], coords={"x": [1]})
     obj = obj._to_temp_dataset() if as_dataset else obj  # type: ignore[assignment]
 
-    actual = obj.xindexes.__repr__()
+    actual = repr(obj.xindexes)
     assert actual == expected
