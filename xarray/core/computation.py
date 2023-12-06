@@ -1366,10 +1366,10 @@ def cov(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-        raise TypeError(
-            "Only xr.DataArray is supported."
-            f"Given {type(weights)}."
-        )
+            raise TypeError(
+                "Only xr.DataArray is supported."
+                f"Given {type(weights)}."
+            )
         return _weighted_cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
     else
         return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
@@ -1458,10 +1458,10 @@ def corr(da_a: T_DataArray,
 
     if weights is not None:
         if not isinstance(weights, DataArray):
-        raise TypeError(
-            "Only xr.DataArray is supported."
-            f"Given {type(weights)}."
-        )
+            raise TypeError(
+                "Only xr.DataArray is supported."
+                f"Given {type(weights)}."
+            )
         return _weighted_cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
     else
         return _cov_corr(da_a, da_b, dim=dim, method="corr")
