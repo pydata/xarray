@@ -14,6 +14,7 @@ from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array
+from xarray.core.types import T_BackendDatasetLike
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
@@ -125,9 +126,9 @@ def _decode_variable_name(name):
     return name
 
 
-def find_root_and_group(ds):
+def find_root_and_group(ds: T_BackendDatasetLike) -> tuple[T_BackendDatasetLike, str]:
     """Find the root and group name of a netCDF4/h5netcdf dataset."""
-    hierarchy = ()
+    hierarchy: tuple[str, ...] = ()
     while ds.parent is not None:
         hierarchy = (ds.name.split("/")[-1],) + hierarchy
         ds = ds.parent

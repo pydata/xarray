@@ -294,7 +294,7 @@ T_XarrayCanOpen: TypeAlias = Union[
 ZarrWriteModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 
-class SupportsLock(Protocol):
+class LockLike(Protocol):
     def acquire(self, blocking: bool) -> bool:
         ...
 
@@ -314,3 +314,16 @@ class SupportsLock(Protocol):
         traceback: TracebackType | None,
     ) -> None:
         ...
+
+
+class BackendDatasetLike(Protocol):
+    @property
+    def parent(self) -> Self | None:
+        ...
+
+    @property
+    def name(self) -> str:
+        ...
+
+
+T_BackendDatasetLike = TypeVar("T_BackendDatasetLike", bound=BackendDatasetLike)

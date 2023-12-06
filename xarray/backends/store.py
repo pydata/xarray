@@ -26,7 +26,7 @@ class StoreBackendEntrypoint(BackendEntrypoint):
     ) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,

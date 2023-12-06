@@ -41,8 +41,13 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    try:
+        import netCDF4
+    except ImportError:
+        netCDF: Any = None
+    from xarray.backends.file_manager import FileManager
     from xarray.core.dataset import Dataset
-    from xarray.core.types import SupportsLock, T_XarrayCanOpen
+    from xarray.core.types import LockLike, T_XarrayCanOpen
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -171,7 +176,7 @@ def _netcdf4_create_group(dataset, name):
     return dataset.createGroup(name)
 
 
-def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
+def _nc4_require_group(ds, group: str | None, mode, create_group=_netcdf4_create_group):
     if group in {None, "", "/"}:
         # use the root group
         return ds
@@ -323,8 +328,19 @@ class NetCDF4DataStore(WritableCFDataStore):
         "_mode",
     )
 
+    _manager: FileManager
+    _group: str | None
+    _mode: str | None
+    lock: bool | LockLike | None
+    autoclose: bool
+
     def __init__(
-        self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
+        self,
+        manager: netCDF4.Dataset | FileManager,
+        group: str | None = None,
+        mode: str | None = None,
+        lock: bool | LockLike | None = NETCDF4_PYTHON_LOCK,
+        autoclose: bool = False,
     ):
         import netCDF4
 
@@ -359,7 +375,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         clobber: bool = True,
         diskless: bool = False,
         persist: bool = False,
-        lock: bool | SupportsLock | None = None,
+        lock: bool | LockLike | None = None,
         lock_maker=None,
         autoclose: bool = False,
     ) -> Self:
@@ -398,7 +414,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
-    def _acquire(self, needs_lock=True):
+    def _acquire(self, needs_lock: bool = True):
         with self._manager.acquire_context(needs_lock) as root:
             ds = _nc4_require_group(root, self._group, self._mode)
         return ds
@@ -551,44 +567,26 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
-    mask_and_scale: bool
-    decode_times: bool
-    concat_characters: bool
-    decode_coords: bool | Literal["coordinates", "all"]
-    use_cftime: bool | None
-    decode_timedelta: bool | None
     group: str | None
     mode: str
     format: str | None
     clobber: bool
     diskless: bool
     persist: bool
-    lock: bool | None  ## TODO: check this?
+    lock: bool | LockLike | None  # TODO: is True allowed?
     autoclose: bool
 
     def __init__(
         self,
-        mask_and_scale: bool = True,
-        decode_times: bool = True,
-        concat_characters: bool = True,
-        decode_coords: bool | Literal["coordinates", "all"] = True,
-        use_cftime: bool | None = None,
-        decode_timedelta: bool | None = None,
         group: str | None = None,
         mode: str = "r",
         format: str | None = "NETCDF4",
         clobber: bool = True,
         diskless: bool = False,
         persist: bool = False,
-        lock: bool | None = None,
+        lock: bool | LockLike | None = None,
         autoclose: bool = False,
     ) -> None:
-        self.mask_and_scale = mask_and_scale
-        self.decode_times = decode_times
-        self.concat_characters = concat_characters
-        self.decode_coords = decode_coords
-        self.use_cftime = use_cftime
-        self.decode_timedelta = decode_timedelta
         self.group = group
         self.mode = mode
         self.format = format
@@ -617,6 +615,12 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         filename_or_obj: T_XarrayCanOpen,
         *,
         drop_variables: str | Iterable[str] | None = None,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
         **kwargs: Any,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -636,15 +640,13 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
                 store,
-                mask_and_scale=kwargs.get("mask_and_scale", self.mask_and_scale),
-                decode_times=kwargs.get("decode_times", self.decode_times),
-                concat_characters=kwargs.get(
-                    "concat_characters", self.concat_characters
-                ),
-                decode_coords=kwargs.get("decode_coords", self.decode_coords),
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
                 drop_variables=drop_variables,
-                use_cftime=kwargs.get("use_cftime", self.use_cftime),
-                decode_timedelta=kwargs.get("decode_timedelta", self.decode_timedelta),
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
             )
         return ds
 

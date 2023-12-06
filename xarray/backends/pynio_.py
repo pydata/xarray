@@ -125,7 +125,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         https://github.com/pydata/xarray/issues/4491 for more information
     """
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
         filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
         *,
