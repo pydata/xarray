@@ -23,6 +23,17 @@ v2023.11.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added hypothesis strategies for generating :py:class:`xarray.Variable` objects containing arbitrary data, useful for parametrizing downstream tests.
+  Accessible under :py:mod:`testing.strategies`, and documented in a new page on testing in the User Guide.
+  (:issue:`6911`, :pull:`8404`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`rolling` uses numbagg <https://github.com/numbagg/numbagg>`_ for
+  most of its computations by default. Numbagg is up to 5x faster than bottleneck
+  where parallelization is possible. Where parallelization isn't possible — for
+  example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
+  than pandas' default functions. (:pull:`8493`). numbagg is an optional
+  dependency, so requires installing separately.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Avoid overwriting unchanged existing coordinate variables when appending by setting ``mode='a-'``.
@@ -87,13 +98,13 @@ Documentation
 - Improved error message when attempting to get a variable which doesn't exist from a Dataset.
   (:pull:`8474`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Fix default value of ``combine_attrs `` in :py:func:`xarray.combine_by_coords` (:pull:`8471`)
+- Fix default value of ``combine_attrs`` in :py:func:`xarray.combine_by_coords` (:pull:`8471`)
   By `Gregorio L. Trevisan <https://github.com/gtrevisan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
+- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg <https://github.com/numbagg/numbagg>`_ by
   default, which is up to 5x faster where parallelization is possible. (:pull:`8339`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Update mypy version to 1.7 (:issue:`8448`, :pull:`8501`).
