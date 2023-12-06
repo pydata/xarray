@@ -21,6 +21,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     is_scalar,
 )
+from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 
 try:
     import cftime
@@ -217,6 +218,7 @@ class AbstractArray:
             return self._get_axis_num(dim)
 
     def _get_axis_num(self: Any, dim: Hashable) -> int:
+        _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
         except ValueError:
@@ -474,7 +476,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def assign_coords(
         self,
-        coords: Mapping[Any, Any] | None = None,
+        coords: Mapping | None = None,
         **coords_kwargs: Any,
     ) -> Self:
         """Assign new coordinates to this object.
@@ -484,15 +486,21 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict-like or None, optional
-            A dict where the keys are the names of the coordinates
-            with the new values to assign. If the values are callable, they are
-            computed on this object and assigned to new coordinate variables.
-            If the values are not callable, (e.g. a ``DataArray``, scalar, or
-            array), they are simply assigned. A new coordinate can also be
-            defined and attached to an existing dimension using a tuple with
-            the first element the dimension name and the second element the
-            values for this new coordinate.
+        coords : mapping of dim to coord, optional
+            A mapping whose keys are the names of the coordinates and values are the
+            coordinates to assign. The mapping will generally be a dict or
+            :class:`Coordinates`.
+
+            * If a value is a standard data value — for example, a ``DataArray``,
+              scalar, or array — the data is simply assigned as a coordinate.
+
+            * If a value is callable, it is called with this object as the only
+              parameter, and the return value is used as new coordinate variables.
+
+            * A coordinate can also be defined and attached to an existing dimension
+              using a tuple with the first element the dimension name and the second
+              element the values for this new coordinate.
+
         **coords_kwargs : optional
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
@@ -592,14 +600,6 @@ class DataWithCoords(AttrAccessMixin):
             precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
         Attributes:
             description:  Weather-related data
-
-        Notes
-        -----
-        Since ``coords_kwargs`` is a dictionary, the order of your arguments
-        may not be preserved, and so the order of the new variables is not well
-        defined. Assigning multiple variables within the same ``assign_coords``
-        is possible, but you cannot reference other variables created within
-        the same ``assign_coords`` call.
 
         See Also
         --------
@@ -1010,8 +1010,11 @@ class DataWithCoords(AttrAccessMixin):
 
         if loffset is not None:
             emit_user_level_warning(
-                "Following pandas, the `loffset` parameter to resample will be deprecated "
-                "in a future version of xarray.  Switch to using time offset arithmetic.",
+                "Following pandas, the `loffset` parameter to resample is deprecated.  "
+                "Switch to updating the resampled dataset time coordinate using "
+                "time offset arithmetic.  For example:\n"
+                "    >>> offset = pd.tseries.frequencies.to_offset(freq) / 2\n"
+                '    >>> resampled_ds["time"] = resampled_ds.get_index("time") + offset',
                 FutureWarning,
             )
 

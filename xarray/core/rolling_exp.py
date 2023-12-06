@@ -6,18 +6,12 @@ from typing import Any, Generic
 import numpy as np
 from packaging.version import Version
 
+from xarray.core import pycompat
 from xarray.core.computation import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.pdcompat import count_not_none
 from xarray.core.types import T_DataWithCoords
-
-try:
-    import numbagg
-    from numbagg import move_exp_nanmean, move_exp_nansum
-
-    _NUMBAGG_VERSION: Version | None = Version(numbagg.__version__)
-except ImportError:
-    _NUMBAGG_VERSION = None
+from xarray.core.utils import module_available
 
 
 def _get_alpha(
@@ -83,17 +77,17 @@ class RollingExp(Generic[T_DataWithCoords]):
         window_type: str = "span",
         min_weight: float = 0.0,
     ):
-        if _NUMBAGG_VERSION is None:
+        if not module_available("numbagg"):
             raise ImportError(
                 "numbagg >= 0.2.1 is required for rolling_exp but currently numbagg is not installed"
             )
-        elif _NUMBAGG_VERSION < Version("0.2.1"):
+        elif pycompat.mod_version("numbagg") < Version("0.2.1"):
             raise ImportError(
-                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.2.1 is required for rolling_exp but currently version {pycompat.mod_version('numbagg')} is installed"
             )
-        elif _NUMBAGG_VERSION < Version("0.3.1") and min_weight > 0:
+        elif pycompat.mod_version("numbagg") < Version("0.3.1") and min_weight > 0:
             raise ImportError(
-                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.3.1 is required for `min_weight > 0` within `.rolling_exp` but currently version {pycompat.mod_version('numbagg')} is installed"
             )
 
         self.obj: T_DataWithCoords = obj
@@ -127,13 +121,15 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
+        import numbagg
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
         dim_order = self.obj.dims
 
         return apply_ufunc(
-            move_exp_nanmean,
+            numbagg.move_exp_nanmean,
             self.obj,
             input_core_dims=[[self.dim]],
             kwargs=self.kwargs,
@@ -163,13 +159,15 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
+        import numbagg
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
         dim_order = self.obj.dims
 
         return apply_ufunc(
-            move_exp_nansum,
+            numbagg.move_exp_nansum,
             self.obj,
             input_core_dims=[[self.dim]],
             kwargs=self.kwargs,
@@ -194,10 +192,12 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().std(), currently {pycompat.mod_version('numbagg')} is installed"
             )
+        import numbagg
+
         dim_order = self.obj.dims
 
         return apply_ufunc(
@@ -225,12 +225,12 @@ class RollingExp(Generic[T_DataWithCoords]):
         array([       nan, 0.        , 0.46153846, 0.18461538, 0.06446281])
         Dimensions without coordinates: x
         """
-
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().var(), currently {pycompat.mod_version('numbagg')} is installed"
             )
         dim_order = self.obj.dims
+        import numbagg
 
         return apply_ufunc(
             numbagg.move_exp_nanvar,
@@ -258,11 +258,12 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {pycompat.mod_version('numbagg')} is installed"
             )
         dim_order = self.obj.dims
+        import numbagg
 
         return apply_ufunc(
             numbagg.move_exp_nancov,
@@ -291,11 +292,12 @@ class RollingExp(Generic[T_DataWithCoords]):
         Dimensions without coordinates: x
         """
 
-        if _NUMBAGG_VERSION is None or _NUMBAGG_VERSION < Version("0.4.0"):
+        if pycompat.mod_version("numbagg") < Version("0.4.0"):
             raise ImportError(
-                f"numbagg >= 0.4.0 is required for rolling_exp().cov(), currently {_NUMBAGG_VERSION} is installed"
+                f"numbagg >= 0.4.0 is required for rolling_exp().corr(), currently {pycompat.mod_version('numbagg')} is installed"
             )
         dim_order = self.obj.dims
+        import numbagg
 
         return apply_ufunc(
             numbagg.move_exp_nancorr,

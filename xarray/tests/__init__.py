@@ -53,7 +53,8 @@ def _importorskip(
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if Version(mod.__version__) < Version(minversion):
+            v = getattr(mod, "__version__", "999")
+            if Version(v) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
@@ -96,11 +97,16 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
+requires_numbagg_or_bottleneck = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
 # _importorskip does not work for development versions
 has_pandas_version_two = Version(pd.__version__).major >= 2
 requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
 )
+has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
 has_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
 requires_h5netcdf_ros3 = pytest.mark.skipif(
     not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
