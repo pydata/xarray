@@ -1371,7 +1371,7 @@ def cov(
                 f"Given {type(weights)}."
             )
         return _weighted_cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
-    else
+    else:
         return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
@@ -1463,7 +1463,7 @@ def corr(da_a: T_DataArray,
                 f"Given {type(weights)}."
             )
         return _weighted_cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
-    else
+    else:
         return _cov_corr(da_a, da_b, dim=dim, method="corr")
 
 
