@@ -4,6 +4,8 @@
 micromamba install "cython>=0.29.20"
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg
+# temporarily remove backends
+micromamba remove -y cf_units h5py netcdf4
 # forcibly remove packages to avoid artifacts
 conda uninstall -y --force \
     numpy \
@@ -51,5 +53,5 @@ python -m pip install \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/xarray-contrib/flox \
-    git+https://github.com/h5netcdf/h5netcdf \
     git+https://github.com/dgasmith/opt_einsum
+    # git+https://github.com/h5netcdf/h5netcdf
