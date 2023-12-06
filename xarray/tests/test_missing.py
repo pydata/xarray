@@ -548,7 +548,7 @@ def test_ffill_limit():
 def test_interpolate_dataset(ds):
     actual = ds.interpolate_na(dim="time")
     # no missing values in var1
-    assert actual["var1"].count("time") == actual.dims["time"]
+    assert actual["var1"].count("time") == actual.sizes["time"]
 
     # var2 should be the same as it was
     assert_array_equal(actual["var2"], ds["var2"])

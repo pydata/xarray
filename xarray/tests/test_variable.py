@@ -1705,6 +1705,7 @@ class TestVariable(VariableSubclassobjects):
             v * w[0], Variable(["a", "b", "c", "d"], np.einsum("ab,cd->abcd", x, y[0]))
         )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_broadcasting_failures(self):
         a = Variable(["x"], np.arange(10))
         b = Variable(["x"], np.arange(5))

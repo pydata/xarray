@@ -1167,7 +1167,7 @@ class DataWithCoords(AttrAccessMixin):
                 cond_wdim = cond.drop_vars(
                     var for var in cond if dim not in cond[var].dims
                 )
-                keepany = cond_wdim.any(dim=(d for d in cond.dims.keys() if d != dim))
+                keepany = cond_wdim.any(dim=(d for d in cond.dims if d != dim))
                 return keepany.to_dataarray().any("variable")
 
             _get_indexer = (

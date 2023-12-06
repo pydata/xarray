@@ -1378,7 +1378,7 @@ def test_apply_dask_new_output_sizes() -> None:
     expected = extract(ds)
 
     actual = extract(ds.chunk())
-    assert actual.dims == {"lon_new": 3, "lat_new": 6}
+    assert actual.sizes == {"lon_new": 3, "lat_new": 6}
     assert_identical(expected.chunk(), actual)
 
 

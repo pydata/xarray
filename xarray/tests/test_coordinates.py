@@ -79,9 +79,10 @@ class TestCoordinates:
         for name in ("x", "one", "two"):
             assert_identical(expected[name], coords.variables[name])
 
+    @pytest.mark.filterwarnings("ignore:return type")
     def test_dims(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})
-        assert coords.dims == {"x": 3}
+        assert set(coords.dims) == {"x"}
 
     def test_sizes(self) -> None:
         coords = Coordinates(coords={"x": [0, 1, 2]})

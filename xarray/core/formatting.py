@@ -739,7 +739,7 @@ def dataset_repr(ds):
 
 
 def diff_dim_summary(a, b):
-    if a.dims != b.dims:
+    if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""

@@ -59,12 +59,21 @@ def test_consolidate_slices() -> None:
         _consolidate_slices([slice(3), 4])  # type: ignore[list-item]
 
 
+@pytest.mark.filterwarnings("ignore:return type")
 def test_groupby_dims_property(dataset) -> None:
     assert dataset.groupby("x").dims == dataset.isel(x=1).dims
     assert dataset.groupby("y").dims == dataset.isel(y=1).dims
 
     stacked = dataset.stack({"xy": ("x", "y")})
     assert stacked.groupby("xy").dims == stacked.isel(xy=0).dims
+
+
+def test_groupby_sizes_property(dataset) -> None:
+    assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
+    assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
+
+    stacked = dataset.stack({"xy": ("x", "y")})
+    assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
 
 
 def test_multi_index_groupby_map(dataset) -> None:
