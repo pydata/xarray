@@ -98,6 +98,7 @@ from xarray.core.types import (
     Self,
     T_ChunkDim,
     T_Chunks,
+    T_DataArray,
     T_DataArrayOrSet,
     T_Dataset,
     ZarrWriteModes,
@@ -9553,6 +9554,68 @@ class Dataset(
                 "dicts cannot be contained in a Dataset, so cannot call "
                 "Dataset.argmin() with a sequence or ... for dim"
             )
+
+    def eval(
+        self,
+        statement: str,
+        *,
+        parser: QueryParserOptions = "pandas",
+    ) -> Self | T_DataArray:
+        """
+        Calculate an expression supplied as a string in the context of the dataset.
+
+        This is currently experimental; the API may change particularly around
+        assignments, which currently returnn a ``Dataset`` with the additional variable.
+        Currently only the ``python`` engine is supported, which has the same
+        performance as executing in python.
+
+        Parameters
+        ----------
+        statement : str
+            String containing the Python-like expression to evaluate.
+
+        Returns
+        -------
+        result : Dataset or DataArray, depending on whether ``statement`` contains an
+        assignment.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"a": ("x", np.arange(0, 5, 1)), "b": ("x", np.linspace(0, 1, 5))}
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+
+        >>> ds.eval("a + b")
+        <xarray.DataArray (x: 5)>
+        array([0.  , 1.25, 2.5 , 3.75, 5.  ])
+        Dimensions without coordinates: x
+
+        >>> ds.eval("c = a + b")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+            c        (x) float64 0.0 1.25 2.5 3.75 5.0
+        """
+
+        return pd.eval(
+            statement,
+            resolvers=[self],
+            target=self,
+            parser=parser,
+            # Because numexpr returns a numpy array, using that engine results in
+            # different behavior. We'd be very open to a contribution handling this.
+            engine="python",
+        )
 
     def query(
         self,

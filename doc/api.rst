@@ -192,6 +192,7 @@ Computation
    Dataset.map_blocks
    Dataset.polyfit
    Dataset.curvefit
+   Dataset.eval
 
 Aggregation
 -----------
