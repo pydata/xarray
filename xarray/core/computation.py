@@ -1366,19 +1366,19 @@ def cov(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError(
-                "Only xr.DataArray is supported."
-                f"Given {type(weights)}."
-            )
-        return _weighted_cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
+            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+        return _weighted_cov_corr(
+            da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov"
+        )
     else:
         return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
-def corr(da_a: T_DataArray,
-         da_b: T_DataArray,
-         dim: Dims = None,
-         weights: T_DataArray = None,
+def corr(
+    da_a: T_DataArray,
+    da_b: T_DataArray,
+    dim: Dims = None,
+    weights: T_DataArray = None,
 ) -> T_DataArray:
     """
     Compute the Pearson correlation coefficient between
@@ -1458,10 +1458,7 @@ def corr(da_a: T_DataArray,
 
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError(
-                "Only xr.DataArray is supported."
-                f"Given {type(weights)}."
-            )
+            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
         return _weighted_cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
     else:
         return _cov_corr(da_a, da_b, dim=dim, method="corr")
@@ -1508,6 +1505,7 @@ def _cov_corr(
         corr = cov / (da_a_std * da_b_std)
         return corr
 
+
 def _weighted_cov_corr(
     da_a: T_DataArray,
     da_b: T_DataArray,
@@ -1535,8 +1533,10 @@ def _weighted_cov_corr(
     # 4. Compute covariance along the given dim
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a.conj() * demeaned_da_b).weighted(weights).mean(
-        dim=dim, skipna=True, min_count=1
+    cov = (
+        (demeaned_da_a.conj() * demeaned_da_b)
+        .weighted(weights)
+        .mean(dim=dim, skipna=True, min_count=1)
     )
 
     if method == "cov":
@@ -1551,6 +1551,7 @@ def _weighted_cov_corr(
         da_b_std = da_b.weighted(weights).std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
         return corr
+
 
 def cross(
     a: DataArray | Variable, b: DataArray | Variable, *, dim: Hashable
