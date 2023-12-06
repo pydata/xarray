@@ -66,10 +66,17 @@ Deprecations
   currently ``PendingDeprecationWarning``, which are silenced by default. We'll
   convert these to ``DeprecationWarning`` in a future release.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- :py:meth:`Dataset.drop` &
-  :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+- Raise a ``FutureWarning`` warning that the type of :py:meth:`Dataset.dims` will be changed
+  from a mapping of dimension names to lengths to a set of dimension names.
+  This is to increase consistency with :py:meth:`DataArray.dims`.
+  To access a mapping of dimension names to lengths please use :py:meth:`Dataset.sizes`.
+  The same change also applies to `DatasetGroupBy.dims`.
+  (:issue:`8496`, :pull:`8500`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
   several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
-  replace them for labels & variables respectively.
+  replace them for labels & variables respectively. (:pull:`8497`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
