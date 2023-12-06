@@ -33,6 +33,8 @@ except ImportError:
 if TYPE_CHECKING:
     from io import BufferedIOBase
 
+    from cftime import datetime as CFTimeDatetime
+    from dask.array import Array as DaskArray
     from numpy._typing import _SupportsDType
     from numpy.typing import ArrayLike
 
@@ -45,21 +47,6 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
-
-    try:
-        from dask.array import Array as DaskArray
-    except ImportError:
-        DaskArray = np.ndarray  # type: ignore
-
-    try:
-        from cubed import Array as CubedArray
-    except ImportError:
-        CubedArray = np.ndarray
-
-    try:
-        from zarr.core import Array as ZarrArray
-    except ImportError:
-        ZarrArray = np.ndarray
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -88,10 +75,6 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType[np.dtype[Any]],
     ]
-    try:
-        from cftime import datetime as CFTimeDatetime
-    except ImportError:
-        CFTimeDatetime = Any
     DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
     DTypeLikeSave: Any = None

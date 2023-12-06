@@ -41,10 +41,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    try:
-        import netCDF4
-    except ImportError:
-        netCDF: Any = None
+    import netCDF4
+
     from xarray.backends.file_manager import FileManager
     from xarray.core.dataset import Dataset
     from xarray.core.types import LockLike, T_XarrayCanOpen
