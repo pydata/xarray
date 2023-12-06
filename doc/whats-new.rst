@@ -41,6 +41,9 @@ New Features
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add a :py:meth:`Dataset.eval` method, similar to the pandas' method of the
+  same name. (:pull:`7163`). This is currently marked as experimental and
+  doesn't yet support the ``numexpr`` engine.
 - :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` allow passing a
   callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
   (:pull:`8511`).
@@ -66,10 +69,17 @@ Deprecations
   currently ``PendingDeprecationWarning``, which are silenced by default. We'll
   convert these to ``DeprecationWarning`` in a future release.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- :py:meth:`Dataset.drop` &
-  :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+- Raise a ``FutureWarning`` warning that the type of :py:meth:`Dataset.dims` will be changed
+  from a mapping of dimension names to lengths to a set of dimension names.
+  This is to increase consistency with :py:meth:`DataArray.dims`.
+  To access a mapping of dimension names to lengths please use :py:meth:`Dataset.sizes`.
+  The same change also applies to `DatasetGroupBy.dims`.
+  (:issue:`8496`, :pull:`8500`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
   several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
-  replace them for labels & variables respectively.
+  replace them for labels & variables respectively. (:pull:`8497`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
