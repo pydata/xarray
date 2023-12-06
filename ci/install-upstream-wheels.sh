@@ -23,6 +23,7 @@ conda uninstall -y --force \
     sparse \
     flox \
     h5netcdf \
+    numcodecs \
     xarray
 # to limit the runtime of Upstream CI
 python -m pip install \
@@ -35,10 +36,12 @@ python -m pip install \
     matplotlib \
     pandas
 # without build isolation for packages compiling against numpy
+# TODO: remove once there are `numpy>=2.0` builds for numcodecs and cftime
 python -m pip install \
     --no-deps \
     --upgrade \
     --no-build-isolation \
+    git+https://github.com/zarr-developers/numcodecs \
     git+https://github.com/Unidata/cftime
 python -m pip install \
     --no-deps \
