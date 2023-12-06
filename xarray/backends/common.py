@@ -6,7 +6,7 @@ import time
 import traceback
 from collections.abc import Iterable
 from glob import glob
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
 
 import numpy as np
 
@@ -27,8 +27,20 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
+T = TypeVar("T")
 
-def _normalize_path(path):
+
+@overload
+def _normalize_path(path: os.PathLike) -> str:  # type: ignore[overload-overlap]
+    ...
+
+
+@overload
+def _normalize_path(path: T) -> T:
+    ...
+
+
+def _normalize_path(path: os.PathLike | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -51,9 +63,9 @@ def _normalize_path(path):
         path = os.fspath(path)
 
     if isinstance(path, str) and not is_remote_uri(path):
-        path = os.path.abspath(os.path.expanduser(path))
+        return os.path.abspath(os.path.expanduser(path))
 
-    return path
+    return path  # type: ignore[return-value]
 
 
 def _find_absolute_paths(

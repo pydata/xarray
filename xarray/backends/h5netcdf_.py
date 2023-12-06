@@ -3,8 +3,8 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Literal
 
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -34,10 +34,8 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.types import LockLike, Self, T_XarrayCanOpen
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -131,18 +129,18 @@ class H5NetCDFStore(WritableCFDataStore):
     @classmethod
     def open(
         cls,
-        filename,
-        mode="r",
-        format=None,
-        group=None,
-        lock=None,
-        autoclose=False,
-        invalid_netcdf=None,
-        phony_dims=None,
-        decode_vlen_strings=True,
+        filename: T_XarrayCanOpen,
+        mode: str = "r",
+        format: str | None = None,
+        group: str | None = None,
+        lock: bool | LockLike | None = None,
+        autoclose: bool = False,
+        invalid_netcdf: bool | None = None,
+        phony_dims: Literal["sort", "access", None] = None,
+        decode_vlen_strings: bool = True,
         driver=None,
-        driver_kwds=None,
-    ):
+        driver_kwds: Mapping[str, Any] | None = None,
+    ) -> Self:
         import h5netcdf
 
         if isinstance(filename, bytes):
@@ -154,7 +152,7 @@ class H5NetCDFStore(WritableCFDataStore):
             magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
-                    f"{magic_number} is not the signature of a valid netCDF4 file"
+                    f"{magic_number.decode()} is not the signature of a valid netCDF4 file"
                 )
 
         if format not in [None, "NETCDF4"]:
@@ -350,6 +348,38 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     For more information about the underlying library, visit:
     https://h5netcdf.org
 
+    Parameters
+    ----------
+    group:
+    mode:
+    format:
+    lock:
+    autoclose:
+    driver: str or None, optional
+        Name of the driver to use. Legal values are None (default,
+        recommended), "core", "sec2", "direct", "stdio", "mpio", "ros3".
+    driver_kwds: Mapping or None, optional
+        Additional driver options. See h5py.File for more infos.
+    invalid_netcdf : bool or None, optional
+        Allow writing netCDF4 with data types and attributes that would
+        otherwise not generate netCDF4 files that can be read by other
+        applications. See :ref:`invalid netcdf` for more details.
+    phony_dims: {"sort", "access"} or None, optional
+        Change how variables with no dimension scales associated with
+        one of their axes are accessed.
+
+        - None: raises a ValueError (default)
+
+        - "sort": invent phony dimensions according to netCDF behaviour.
+        Note, that this iterates once over the whole group-hierarchy.
+        This has affects on performance in case you rely on laziness
+        of group access.
+
+        - "access": defer phony dimension creation to group access time.
+        The created phony dimension naming will differ from netCDF behaviour.
+    decode_vlan_strings: bool
+
+
     See Also
     --------
     backends.H5NetCDFStore
@@ -362,10 +392,42 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
-    def guess_can_open(
+    group: str | None
+    mode: str
+    format: str | None
+    lock: bool | LockLike | None  # TODO: is True allowed?
+    autoclose: bool
+    invalid_netcdf: bool | None
+    phony_dims: Literal["sort", "access", None]
+    decode_vlen_strings: bool
+    driver: str | None
+    driver_kwds: Mapping[str, Any] | None
+
+    def __init__(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
+        group: str | None = None,
+        mode: str = "r",
+        format: str | None = "NETCDF4",
+        lock: bool | LockLike | None = None,
+        autoclose: bool = False,
+        invalid_netcdf: bool | None = None,
+        phony_dims: Literal["sort", "access", None] = None,
+        decode_vlen_strings: bool = True,
+        driver: str | None = None,
+        driver_kwds: Mapping[str, Any] | None = None,
+    ) -> None:
+        self.group = group
+        self.mode = mode
+        self.format = format
+        self.lock = lock
+        self.autoclose = autoclose
+        self.invalid_netcdf = invalid_netcdf
+        self.phony_dims = phony_dims
+        self.decode_vlen_strings = decode_vlen_strings
+        self.driver = driver
+        self.driver_kwds = driver_kwds
+
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
             return magic_number.startswith(b"\211HDF\r\n\032\n")
@@ -378,39 +440,35 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        format=None,
-        group=None,
-        lock=None,
-        invalid_netcdf=None,
-        phony_dims=None,
-        decode_vlen_strings=True,
-        driver=None,
-        driver_kwds=None,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
+        **kwargs: Any,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
-            format=format,
-            group=group,
-            lock=lock,
-            invalid_netcdf=invalid_netcdf,
-            phony_dims=phony_dims,
-            decode_vlen_strings=decode_vlen_strings,
-            driver=driver,
-            driver_kwds=driver_kwds,
+            mode=kwargs.get("mode", self.mode),
+            format=kwargs.get("format", self.format),
+            group=kwargs.get("group", self.group),
+            lock=kwargs.get("lock", self.lock),
+            autoclose=kwargs.get("autoclose", self.autoclose),
+            invalid_netcdf=kwargs.get("invalid_netcdf", self.invalid_netcdf),
+            phony_dims=kwargs.get("phony_dims", self.phony_dims),
+            decode_vlen_strings=kwargs.get(
+                "decode_vlen_strings", self.decode_vlen_strings
+            ),
+            driver=kwargs.get("driver", self.driver),
+            driver_kwds=kwargs.get("driver_kwds", self.driver_kwds),
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-
         ds = store_entrypoint.open_dataset(
             store,
             mask_and_scale=mask_and_scale,
