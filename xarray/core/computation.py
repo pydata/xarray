@@ -1376,8 +1376,8 @@ def cov(
 
 
 def corr(da_a: T_DataArray,
-         da_b: T_DataArray, 
-         dim: Dims = None, 
+         da_b: T_DataArray,
+         dim: Dims = None,
          weights: T_DataArray = None,
 ) -> T_DataArray:
     """
