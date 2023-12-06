@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 import os
 import warnings
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Iterable, Mapping, MutableMapping
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
@@ -30,10 +30,10 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
+    import zarr
 
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
+    from xarray.core.types import Self, T_XarrayCanOpen
 
 
 # need some special secret attributes to tell us the dimensions
@@ -387,19 +387,19 @@ class ZarrStore(AbstractWritableDataStore):
         cls,
         store,
         mode: ZarrWriteModes = "r",
-        synchronizer=None,
-        group=None,
-        consolidated=False,
-        consolidate_on_close=False,
-        chunk_store=None,
-        storage_options=None,
+        synchronizer: object | None = None,
+        group: str | None = None,
+        consolidated: bool | None = False,
+        consolidate_on_close: bool = False,
+        chunk_store: MutableMapping | str | os.PathLike | None = None,
+        storage_options: Mapping[str, Any] | None = None,
         append_dim=None,
         write_region=None,
         safe_chunks=True,
-        stacklevel=2,
-        zarr_version=None,
+        stacklevel: int = 2,
+        zarr_version: int | None = None,
         write_empty: bool | None = None,
-    ):
+    ) -> Self:
         import zarr
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
@@ -478,15 +478,15 @@ class ZarrStore(AbstractWritableDataStore):
 
     def __init__(
         self,
-        zarr_group,
-        mode=None,
-        consolidate_on_close=False,
+        zarr_group: zarr.Group,
+        mode: ZarrWriteModes | None = None,
+        consolidate_on_close: bool = False,
         append_dim=None,
         write_region=None,
-        safe_chunks=True,
+        safe_chunks: bool = True,
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
-    ):
+    ) -> None:
         self.zarr_group = zarr_group
         self._read_only = self.zarr_group.read_only
         self._synchronizer = self.zarr_group.synchronizer
@@ -977,10 +977,36 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
-    def guess_can_open(
+    group: str | None
+    mode: ZarrWriteModes
+    synchronizer: object | None
+    consolidated: bool | None
+    chunk_store: MutableMapping | str | os.PathLike | None
+    storage_options: Mapping[str, Any] | None
+    stacklevel: int
+    zarr_version: int | None
+
+    def __init__(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
+        group: str | None = None,
+        mode: ZarrWriteModes = "r",
+        synchronizer: object | None = None,
+        consolidated: bool | None = None,
+        chunk_store: MutableMapping | str | os.PathLike | None = None,
+        storage_options: Mapping[str, Any] | None = None,
+        stacklevel: int = 3,
+        zarr_version: int | None = None,
+    ) -> None:
+        self.group = group
+        self.mode = mode
+        self.synchronizer = synchronizer
+        self.consolidated = consolidated
+        self.chunk_store = chunk_store
+        self.storage_options = storage_options
+        self.stacklevel = stacklevel
+        self.zarr_version = zarr_version
+
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         if isinstance(filename_or_obj, (str, os.PathLike)):
             _, ext = os.path.splitext(filename_or_obj)
             return ext in {".zarr"}
@@ -989,36 +1015,29 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        group=None,
-        mode="r",
-        synchronizer=None,
-        consolidated=None,
-        chunk_store=None,
-        storage_options=None,
-        stacklevel=3,
-        zarr_version=None,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
+        **kwargs: Any,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
-            group=group,
-            mode=mode,
-            synchronizer=synchronizer,
-            consolidated=consolidated,
+            group=kwargs.get("group", self.group),
+            mode=kwargs.get("mode", self.mode),
+            synchronizer=kwargs.get("synchronizer", self.synchronizer),
+            consolidated=kwargs.get("consolidated", self.consolidated),
             consolidate_on_close=False,
-            chunk_store=chunk_store,
-            storage_options=storage_options,
-            stacklevel=stacklevel + 1,
-            zarr_version=zarr_version,
+            chunk_store=kwargs.get("chunk_store", self.chunk_store),
+            storage_options=kwargs.get("storage_options", self.storage_options),
+            stacklevel=kwargs.get("stacklevel", self.stacklevel) + 1,
+            zarr_version=kwargs.get("zarr_version", self.zarr_version),
         )
 
         store_entrypoint = StoreBackendEntrypoint()
