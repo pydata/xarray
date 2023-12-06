@@ -785,7 +785,7 @@ def test_format_xindexes_none(as_dataset: bool) -> None:
     expected = dedent(expected)
 
     obj: xr.DataArray | xr.Dataset = xr.DataArray()
-    obj = obj._to_temp_dataset() if as_dataset else obj  # type: ignore[assignment]
+    obj = obj._to_temp_dataset() if as_dataset else obj
 
     actual = repr(obj.xindexes)
     assert actual == expected
@@ -799,7 +799,7 @@ def test_format_xindexes(as_dataset: bool) -> None:
     expected = dedent(expected)
 
     obj: xr.DataArray | xr.Dataset = xr.DataArray([1], coords={"x": [1]})
-    obj = obj._to_temp_dataset() if as_dataset else obj  # type: ignore[assignment]
+    obj = obj._to_temp_dataset() if as_dataset else obj
 
     actual = repr(obj.xindexes)
     assert actual == expected
