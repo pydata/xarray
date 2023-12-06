@@ -335,7 +335,10 @@ def fillna(data, other):
 
 def concatenate(arrays, axis=0):
     """concatenate() with better dtype promotion rules."""
-    if hasattr(arrays[0], "__array_namespace__"):
+    # TODO: remove the additional check once `numpy` adds `concat` to its array namespace
+    if hasattr(arrays[0], "__array_namespace__") and not isinstance(
+        arrays[0], np.ndarray
+    ):
         xp = get_array_namespace(arrays[0])
         return xp.concat(as_shared_dtype(arrays, xp=xp), axis=axis)
     return _concatenate(as_shared_dtype(arrays), axis=axis)
