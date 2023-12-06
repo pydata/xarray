@@ -1536,7 +1536,7 @@ def _weighted_cov_corr(
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
     cov = (demeaned_da_a.conj() * demeaned_da_b).weighted(weights).mean(
-        dim=dim, skipna=True, min_count=1
+        dim=dim, skipna=True
     )
 
     if method == "cov":
