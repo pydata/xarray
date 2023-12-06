@@ -46,7 +46,7 @@ from xarray.core.utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray.core import NamedArray
+from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
@@ -1541,15 +1541,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once_full(self, dims: Mapping[Any, int], old_dim: Hashable) -> Self:
+    def _unstack_once_full(self, dim: Mapping[Any, int], old_dim: Hashable) -> Self:
         """
         Unstacks the variable without needing an index.
 
         Unlike `_unstack_once`, this function requires the existing dimension to
         contain the full product of the new dimensions.
         """
-        new_dim_names = tuple(dims.keys())
-        new_dim_sizes = tuple(dims.values())
+        new_dim_names = tuple(dim.keys())
+        new_dim_sizes = tuple(dim.values())
 
         if old_dim not in self.dims:
             raise ValueError(f"invalid existing dimension: {old_dim}")
@@ -2068,6 +2068,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        # This could / should arguably be implemented at the DataArray & Dataset level
         if not OPTIONS["use_bottleneck"]:
             raise RuntimeError(
                 "rank requires bottleneck to be enabled."
@@ -2076,24 +2077,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         import bottleneck as bn
 
-        data = self.data
-
-        if is_duck_dask_array(data):
-            raise TypeError(
-                "rank does not work for arrays stored as dask "
-                "arrays. Load the data via .compute() or .load() "
-                "prior to calling this method."
-            )
-        elif not isinstance(data, np.ndarray):
-            raise TypeError(f"rank is not implemented for {type(data)} objects.")
-
-        axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind == "f" else bn.rankdata
-        ranked = func(data, axis=axis)
+        ranked = xr.apply_ufunc(
+            func,
+            self,
+            input_core_dims=[[dim]],
+            output_core_dims=[[dim]],
+            dask="parallelized",
+            kwargs=dict(axis=-1),
+        ).transpose(*self.dims)
+
         if pct:
-            count = np.sum(~np.isnan(data), axis=axis, keepdims=True)
+            count = self.notnull().sum(dim)
             ranked /= count
-        return Variable(self.dims, ranked)
+        return ranked
 
     def rolling_window(
         self, dim, window, window_dim, center=False, fill_value=dtypes.NA
@@ -2604,7 +2601,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         Use sparse-array as backend.
         """
-        from xarray.namedarray.utils import _default as _default_named
+        from xarray.namedarray._typing import _default as _default_named
 
         if sparse_format is _default:
             sparse_format = _default_named
@@ -2884,11 +2881,8 @@ def _unified_dims(variables):
     all_dims = {}
     for var in variables:
         var_dims = var.dims
-        if len(set(var_dims)) < len(var_dims):
-            raise ValueError(
-                "broadcasting cannot handle duplicate "
-                f"dimensions: {list(var_dims)!r}"
-            )
+        _raise_if_any_duplicate_dimensions(var_dims, err_context="Broadcasting")
+
         for d, s in zip(var_dims, var.shape):
             if d not in all_dims:
                 all_dims[d] = s

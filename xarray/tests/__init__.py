@@ -53,7 +53,8 @@ def _importorskip(
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if Version(mod.__version__) < Version(minversion):
+            v = getattr(mod, "__version__", "999")
+            if Version(v) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
@@ -63,11 +64,17 @@ def _importorskip(
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_pydap, requires_pydap = _importorskip("pydap.client")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="'cgi' is deprecated and slated for removal in Python 3.13",
+        category=DeprecationWarning,
+    )
+
+    has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
-has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
@@ -90,10 +97,19 @@ has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
 )
+has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
+requires_numbagg_or_bottleneck = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
 # _importorskip does not work for development versions
 has_pandas_version_two = Version(pd.__version__).major >= 2
 requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
+)
+has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
+has_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
+requires_h5netcdf_ros3 = pytest.mark.skipif(
+    not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
 )
 
 # change some global options for tests
@@ -207,11 +223,18 @@ def source_ndarray(array):
     return base
 
 
+def format_record(record) -> str:
+    """Format warning record like `FutureWarning('Function will be deprecated...')`"""
+    return f"{str(record.category)[8:-2]}('{record.message}'))"
+
+
 @contextmanager
 def assert_no_warnings():
     with warnings.catch_warnings(record=True) as record:
         yield record
-        assert len(record) == 0, "got unexpected warning(s)"
+        assert (
+            len(record) == 0
+        ), f"Got {len(record)} unexpected warning(s): {[format_record(r) for r in record]}"
 
 
 # Internal versions of xarray's test functions that validate additional

@@ -687,6 +687,7 @@ class TestDataset:
         # test coordinate variables copied
         assert ds.variables["x"] is not coords.variables["x"]
 
+    @pytest.mark.filterwarnings("ignore:return type")
     def test_properties(self) -> None:
         ds = create_test_data()
 
@@ -694,10 +695,11 @@ class TestDataset:
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
+        # TODO change after deprecation cycle in GH #8500 is complete
         assert isinstance(ds.dims.mapping, dict)
         assert type(ds.dims.mapping) is dict  # noqa: E721
-        assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
-        assert ds.sizes == ds.dims
+        assert ds.dims == ds.sizes
+        assert ds.sizes == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
 
         # dtypes
         assert isinstance(ds.dtypes, utils.Frozen)
@@ -748,6 +750,27 @@ class TestDataset:
             Dataset({"x": np.int64(1), "y": np.array([1, 2], dtype=np.float32)}).nbytes
             == 16
         )
+
+    def test_warn_ds_dims_deprecation(self) -> None:
+        # TODO remove after deprecation cycle in GH #8500 is complete
+        ds = create_test_data()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims["dim1"]
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.keys()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.values()
+
+        with pytest.warns(FutureWarning, match="return type"):
+            ds.dims.items()
+
+        with assert_no_warnings():
+            len(ds.dims)
+            ds.dims.__iter__()
+            "dim1" in ds.dims
 
     def test_asarray(self) -> None:
         ds = Dataset({"x": 0})
@@ -804,7 +827,7 @@ class TestDataset:
         b = Dataset()
         b["x"] = ("x", vec, attributes)
         assert_identical(a["x"], b["x"])
-        assert a.dims == b.dims
+        assert a.sizes == b.sizes
         # this should work
         a["x"] = ("x", vec[:5])
         a["z"] = ("x", np.arange(5))
@@ -865,7 +888,7 @@ class TestDataset:
         assert expected == actual
 
         # dims
-        assert coords.dims == {"x": 2, "y": 3}
+        assert coords.sizes == {"x": 2, "y": 3}
 
         # dtypes
         assert coords.dtypes == {
@@ -1215,9 +1238,9 @@ class TestDataset:
         assert list(data.dims) == list(ret.dims)
         for d in data.dims:
             if d in slicers:
-                assert ret.dims[d] == np.arange(data.dims[d])[slicers[d]].size
+                assert ret.sizes[d] == np.arange(data.sizes[d])[slicers[d]].size
             else:
-                assert data.dims[d] == ret.dims[d]
+                assert data.sizes[d] == ret.sizes[d]
         # Verify that the data is what we expect
         for v in data.variables:
             assert data[v].dims == ret[v].dims
@@ -1251,19 +1274,19 @@ class TestDataset:
         assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
 
         ret = data.isel(dim1=0)
-        assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
+        assert {"time": 20, "dim2": 9, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
-        assert {"time": 2, "dim2": 5, "dim3": 10} == ret.dims
+        assert {"time": 2, "dim2": 5, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
-        assert {"dim2": 5, "dim3": 10} == ret.dims
+        assert {"dim2": 5, "dim3": 10} == ret.sizes
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
         assert set(data.xindexes) == set(list(ret.xindexes) + ["time"])
@@ -2651,19 +2674,19 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(DeprecationWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
@@ -2736,9 +2759,9 @@ class TestDataset:
         ds5 = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
 
         arr = DataArray(range(3), dims=["c"])
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.coords)
-        with pytest.warns(FutureWarning):
+        with pytest.warns(DeprecationWarning):
             data.drop(arr.xindexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
@@ -4037,7 +4060,7 @@ class TestDataset:
 
     def test_virtual_variable_same_name(self) -> None:
         # regression test for GH367
-        times = pd.date_range("2000-01-01", freq="H", periods=5)
+        times = pd.date_range("2000-01-01", freq="h", periods=5)
         data = Dataset({"time": times})
         actual = data["time.time"]
         expected = DataArray(times.time, [("time", times)], name="time")
@@ -4569,7 +4592,7 @@ class TestDataset:
         selected = data.squeeze(drop=True)
         assert_identical(data, selected)
 
-    def test_to_array(self) -> None:
+    def test_to_dataarray(self) -> None:
         ds = Dataset(
             {"a": 1, "b": ("x", [1, 2, 3])},
             coords={"c": 42},
@@ -4579,10 +4602,10 @@ class TestDataset:
         coords = {"c": 42, "variable": ["a", "b"]}
         dims = ("variable", "x")
         expected = DataArray(data, coords, dims, attrs=ds.attrs)
-        actual = ds.to_array()
+        actual = ds.to_dataarray()
         assert_identical(expected, actual)
 
-        actual = ds.to_array("abc", name="foo")
+        actual = ds.to_dataarray("abc", name="foo")
         expected = expected.rename({"variable": "abc"}).rename("foo")
         assert_identical(expected, actual)
 
@@ -4696,6 +4719,17 @@ class TestDataset:
         ds = df.set_index(["i1", "i2"]).to_xarray()
         assert len(ds["i1"]) == 2
         assert len(ds["i2"]) == 2
+
+    def test_from_dataframe_categorical_string_categories(self) -> None:
+        cat = pd.CategoricalIndex(
+            pd.Categorical.from_codes(
+                np.array([1, 1, 0, 2]),
+                categories=pd.Index(["foo", "bar", "baz"], dtype="string"),
+            )
+        )
+        ser = pd.Series(1, index=cat)
+        ds = ser.to_xarray()
+        assert ds.coords.dtypes["index"] == np.dtype("O")
 
     @requires_sparse
     def test_from_dataframe_sparse(self) -> None:
@@ -4960,7 +4994,7 @@ class TestDataset:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
         # regression test for #167:
-        assert data.dims == roundtripped.dims
+        assert data.sizes == roundtripped.sizes
 
     def test_lazy_load(self) -> None:
         store = InaccessibleVariableDataStore()
@@ -5418,7 +5452,7 @@ class TestDataset:
         data2 = create_test_data(seed=44)
         add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
-            size = tuple(data1.dims[d] for d in dims)
+            size = tuple(data1.sizes[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
 
@@ -6467,7 +6501,7 @@ class TestDataset:
         assert padded["var1"].shape == (8, 11)
         assert padded["var2"].shape == (8, 11)
         assert padded["var3"].shape == (10, 8)
-        assert dict(padded.dims) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
+        assert dict(padded.sizes) == {"dim1": 8, "dim2": 11, "dim3": 10, "time": 20}
 
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
@@ -6682,6 +6716,23 @@ class TestDataset:
 
 
 # pytest tests — new tests should go here, rather than in the class.
+
+
+@pytest.mark.parametrize("parser", ["pandas", "python"])
+def test_eval(ds, parser) -> None:
+    """Currently much more minimal testing that `query` above, and much of the setup
+    isn't used. But the risks are fairly low — `query` shares much of the code, and
+    the method is currently experimental."""
+
+    actual = ds.eval("z1 + 5", parser=parser)
+    expect = ds["z1"] + 5
+    assert_identical(expect, actual)
+
+    # check pandas query syntax is supported
+    if parser == "pandas":
+        actual = ds.eval("(z1 > 5) and (z2 > 0)", parser=parser)
+        expect = (ds["z1"] > 5) & (ds["z2"] > 0)
+        assert_identical(expect, actual)
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
@@ -7162,7 +7213,7 @@ def test_clip(ds) -> None:
     assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
-    assert result.dims == ds.dims
+    assert result.sizes == ds.sizes
 
 
 class TestDropDuplicates:

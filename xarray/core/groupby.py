@@ -36,6 +36,7 @@ from xarray.core.options import _get_keep_attrs
 from xarray.core.pycompat import integer_types
 from xarray.core.types import Dims, QuantileMethods, T_DataArray, T_Xarray
 from xarray.core.utils import (
+    FrozenMappingWarningOnValuesAccess,
     either_dict_or_kwargs,
     hashable,
     is_scalar,
@@ -250,6 +251,10 @@ class _DummyGroup(Generic[T_Xarray]):
         return DataArray(
             data=self.data, dims=(self.name,), coords=self.coords, name=self.name
         )
+
+    def to_array(self) -> DataArray:
+        """Deprecated version of to_dataarray."""
+        return self.to_dataarray()
 
 
 T_Group = Union["T_DataArray", "IndexVariable", _DummyGroup]
@@ -1515,7 +1520,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         if self._dims is None:
             self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
 
-        return self._dims
+        return FrozenMappingWarningOnValuesAccess(self._dims)
 
     def map(
         self,

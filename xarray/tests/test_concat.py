@@ -509,7 +509,7 @@ class TestConcatDataset:
 
         actual = concat(datasets, data[dim], coords=coords)
         if coords == "all":
-            expected = np.array([data["extra"].values for _ in range(data.dims[dim])])
+            expected = np.array([data["extra"].values for _ in range(data.sizes[dim])])
             assert_array_equal(actual["extra"].values, expected)
 
         else:
@@ -1070,10 +1070,10 @@ class TestConcatDataArray:
     def test_concat_join_kwarg(self) -> None:
         ds1 = Dataset(
             {"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]}
-        ).to_array()
+        ).to_dataarray()
         ds2 = Dataset(
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
-        ).to_array()
+        ).to_dataarray()
 
         expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
@@ -1101,7 +1101,7 @@ class TestConcatDataArray:
 
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
-            assert_equal(actual, expected[join].to_array())
+            assert_equal(actual, expected[join].to_dataarray())
 
     def test_concat_combine_attrs_kwarg(self) -> None:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
@@ -1214,7 +1214,7 @@ def test_concat_preserve_coordinate_order() -> None:
     # check dimension order
     for act, exp in zip(actual.dims, expected.dims):
         assert act == exp
-        assert actual.dims[act] == expected.dims[exp]
+        assert actual.sizes[act] == expected.sizes[exp]
 
     # check coordinate order
     for act, exp in zip(actual.coords, expected.coords):
@@ -1224,7 +1224,7 @@ def test_concat_preserve_coordinate_order() -> None:
 
 def test_concat_typing_check() -> None:
     ds = Dataset({"foo": 1}, {"bar": 2})
-    da = Dataset({"foo": 3}, {"bar": 4}).to_array(dim="foo")
+    da = Dataset({"foo": 3}, {"bar": 4}).to_dataarray(dim="foo")
 
     # concatenate a list of non-homogeneous types must raise TypeError
     with pytest.raises(
