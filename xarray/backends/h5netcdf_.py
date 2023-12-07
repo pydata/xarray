@@ -377,7 +377,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         - "access": defer phony dimension creation to group access time.
         The created phony dimension naming will differ from netCDF behaviour.
-    decode_vlan_strings: bool
+    decode_vlan_strings: bool, default: True
+        Return VLEN string data as str instead of bytes.
 
 
     See Also

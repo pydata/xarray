@@ -579,20 +579,20 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         group: str | None = None,
         mode: str = "r",
         format: str | None = "NETCDF4",
+        lock: bool | LockLike | None = None,
+        autoclose: bool = False,
         clobber: bool = True,
         diskless: bool = False,
         persist: bool = False,
-        lock: bool | LockLike | None = None,
-        autoclose: bool = False,
     ) -> None:
         self.group = group
         self.mode = mode
         self.format = format
+        self.lock = lock
+        self.autoclose = autoclose
         self.clobber = clobber
         self.diskless = diskless
         self.persist = persist
-        self.lock = lock
-        self.autoclose = autoclose
 
     def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
