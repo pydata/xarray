@@ -509,7 +509,7 @@ class TestConcatDataset:
 
         actual = concat(datasets, data[dim], coords=coords)
         if coords == "all":
-            expected = np.array([data["extra"].values for _ in range(data.dims[dim])])
+            expected = np.array([data["extra"].values for _ in range(data.sizes[dim])])
             assert_array_equal(actual["extra"].values, expected)
 
         else:
@@ -1214,7 +1214,7 @@ def test_concat_preserve_coordinate_order() -> None:
     # check dimension order
     for act, exp in zip(actual.dims, expected.dims):
         assert act == exp
-        assert actual.dims[act] == expected.dims[exp]
+        assert actual.sizes[act] == expected.sizes[exp]
 
     # check coordinate order
     for act, exp in zip(actual.coords, expected.coords):
