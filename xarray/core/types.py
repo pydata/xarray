@@ -299,6 +299,9 @@ class LockLike(Protocol):
         ...
 
 
+T_LockLike = TypeVar("T_LockLike", bound=LockLike)
+
+
 class BackendDatasetLike(Protocol):
     @property
     def parent(self) -> Self | None:

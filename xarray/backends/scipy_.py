@@ -4,7 +4,7 @@ import gzip
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
@@ -33,10 +33,9 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
-    from xarray.backends.common import AbstractDataStore
+    from xarray.backends import FileManager
     from xarray.core.dataset import Dataset
+    from xarray.core.types import LockLike, T_XarrayCanOpen
 
 
 def _decode_string(s):
@@ -131,9 +130,18 @@ class ScipyDataStore(WritableCFDataStore):
     It only supports the NetCDF3 file-format.
     """
 
+    _manager: FileManager
+    lock: LockLike
+
     def __init__(
-        self, filename_or_obj, mode="r", format=None, group=None, mmap=None, lock=None
-    ):
+        self,
+        filename_or_obj: T_XarrayCanOpen,
+        mode: str = "r",
+        format: str | None = None,
+        group: str | None = None,
+        mmap: bool | None = None,
+        lock: Literal[False] | LockLike | None = None,
+    ) -> None:
         if group is not None:
             raise ValueError("cannot save to a group with the scipy.io.netcdf backend")
 
@@ -150,7 +158,7 @@ class ScipyDataStore(WritableCFDataStore):
         self.lock = ensure_lock(lock)
 
         if isinstance(filename_or_obj, str):
-            manager = CachingFileManager(
+            self._manager = CachingFileManager(
                 _open_scipy_netcdf,
                 filename_or_obj,
                 mode=mode,
@@ -161,9 +169,7 @@ class ScipyDataStore(WritableCFDataStore):
             scipy_dataset = _open_scipy_netcdf(
                 filename_or_obj, mode=mode, mmap=mmap, version=version
             )
-            manager = DummyFileManager(scipy_dataset)
-
-        self._manager = manager
+            self._manager = DummyFileManager(scipy_dataset)
 
     @property
     def ds(self):
@@ -251,30 +257,55 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the scipy package.
 
-    It can open ".nc", ".nc4", ".cdf" and ".gz" files but will only be
-    selected as the default if the "netcdf4" and "h5netcdf" engines are
-    not available. It has the advantage that is is a lightweight engine
-    that has no system requirements (unlike netcdf4 and h5netcdf).
+    It can open ".nc", ".nc4", ".cdf" and ".gz" files but will only be selected
+    as the default if the "netcdf4" and "h5netcdf" engines are not available. It
+    has the advantage that is is a lightweight engine that has no system
+    requirements (unlike netcdf4 and h5netcdf).
 
     Additionally it can open gizp compressed (".gz") files.
 
     For more information about the underlying library, visit:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.netcdf_file.html
 
+    Parameters
+    ----------
+    mmap: bool or None, optional
+        Whether to mmap filename when reading. Default is True when filename is
+        a file name, False when filename is a file-like object. Note that when
+        mmap is in use, data arrays returned refer directly to the mmapped data
+        on disk, and the file cannot be closed as long as references to it
+        exist.
+
     See Also
     --------
-    backends.ScipyDataStore
-    backends.NetCDF4BackendEntrypoint
+    backends.ScipyDataStore backends.NetCDF4BackendEntrypoint
     backends.H5netcdfBackendEntrypoint
     """
 
     description = "Open netCDF files (.nc, .nc4, .cdf and .gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
-    def guess_can_open(
+    group: str | None
+    mode: str
+    format: str | None
+    lock: Literal[False] | LockLike | None
+    mmap: bool | None
+
+    def __init__(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
+        group: str | None = None,
+        mode: str = "r",
+        format: str | None = "NETCDF4",
+        lock: Literal[False] | LockLike | None = None,
+        mmap: bool | None = None,
+    ) -> None:
+        self.group = group
+        self.mode = mode
+        self.format = format
+        self.lock = lock
+        self.mmap = mmap
+
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
             with gzip.open(filename_or_obj) as f:  # type: ignore[arg-type]
@@ -290,24 +321,25 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        mode="r",
-        format=None,
-        group=None,
-        mmap=None,
-        lock=None,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
+        **kwargs: Any,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
-            filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
+            filename_or_obj,
+            mode=kwargs.get("mode", self.mode),
+            format=kwargs.get("format", self.format),
+            group=kwargs.get("group", self.group),
+            mmap=kwargs.get("mmap", self.mmap),
+            lock=kwargs.get("lock", self.lock),
         )
 
         store_entrypoint = StoreBackendEntrypoint()

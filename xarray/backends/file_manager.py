@@ -7,12 +7,15 @@ import threading
 import uuid
 import warnings
 from collections.abc import Hashable
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
+
+if TYPE_CHECKING:
+    from xarray.core.types import LockLike
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
@@ -79,13 +82,17 @@ class CachingFileManager(FileManager):
 
     """
 
+    _use_default_lock: bool
+    _lock: LockLike
+    _manager_id: Hashable
+
     def __init__(
         self,
         opener,
         *args,
         mode=_DEFAULT_MODE,
         kwargs=None,
-        lock=None,
+        lock: Literal[False] | LockLike | None = None,
         cache=None,
         manager_id: Hashable | None = None,
         ref_counts=None,
@@ -135,7 +142,7 @@ class CachingFileManager(FileManager):
         self._kwargs = {} if kwargs is None else dict(kwargs)
 
         self._use_default_lock = lock is None or lock is False
-        self._lock = threading.Lock() if self._use_default_lock else lock
+        self._lock = threading.Lock() if lock is None or lock is False else lock
 
         # cache[self._key] stores the file associated with this object.
         if cache is None:

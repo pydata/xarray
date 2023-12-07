@@ -133,7 +133,7 @@ class H5NetCDFStore(WritableCFDataStore):
         mode: str = "r",
         format: str | None = None,
         group: str | None = None,
-        lock: bool | LockLike | None = None,
+        lock: Literal[False] | LockLike | None = None,
         autoclose: bool = False,
         invalid_netcdf: bool | None = None,
         phony_dims: Literal["sort", "access", None] = None,
@@ -396,7 +396,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     group: str | None
     mode: str
     format: str | None
-    lock: bool | LockLike | None  # TODO: is True allowed?
+    lock: Literal[False] | LockLike | None
     autoclose: bool
     invalid_netcdf: bool | None
     phony_dims: Literal["sort", "access", None]
@@ -409,7 +409,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         group: str | None = None,
         mode: str = "r",
         format: str | None = "NETCDF4",
-        lock: bool | LockLike | None = None,
+        lock: Literal[False] | LockLike | None = None,
         autoclose: bool = False,
         invalid_netcdf: bool | None = None,
         phony_dims: Literal["sort", "access", None] = None,

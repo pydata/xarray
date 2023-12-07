@@ -200,10 +200,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         self.verify = verify
         self.user_charset = user_charset
 
-    def guess_can_open(
-        self,
-        filename_or_obj: T_XarrayCanOpen,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(

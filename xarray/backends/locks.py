@@ -4,7 +4,7 @@ import multiprocessing
 import threading
 import weakref
 from collections.abc import MutableMapping
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 try:
     from dask.utils import SerializableLock
@@ -12,6 +12,8 @@ except ImportError:
     # no need to worry about serializing the lock
     SerializableLock = threading.Lock  # type: ignore
 
+if TYPE_CHECKING:
+    from xarray.core.types import T_LockLike
 
 # Locks used by multiple backends.
 # Neither HDF5 nor the netCDF-C library are thread-safe.
@@ -210,7 +212,17 @@ def combine_locks(locks):
         return DummyLock()
 
 
-def ensure_lock(lock):
+@overload
+def ensure_lock(lock: Literal[False] | None) -> DummyLock:
+    ...
+
+
+@overload
+def ensure_lock(lock: T_LockLike) -> T_LockLike:
+    ...
+
+
+def ensure_lock(lock: Literal[False] | T_LockLike | None) -> T_LockLike | DummyLock:
     """Ensure that the given object is a lock."""
     if lock is None or lock is False:
         return DummyLock()

@@ -329,7 +329,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     _manager: FileManager
     _group: str | None
     _mode: str | None
-    lock: bool | LockLike | None
+    lock: Literal[False] | LockLike | None
     autoclose: bool
 
     def __init__(
@@ -337,7 +337,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         manager: netCDF4.Dataset | FileManager,
         group: str | None = None,
         mode: str | None = None,
-        lock: bool | LockLike | None = NETCDF4_PYTHON_LOCK,
+        lock: Literal[False] | LockLike | None = NETCDF4_PYTHON_LOCK,
         autoclose: bool = False,
     ):
         import netCDF4
@@ -373,7 +373,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         clobber: bool = True,
         diskless: bool = False,
         persist: bool = False,
-        lock: bool | LockLike | None = None,
+        lock: Literal[False] | LockLike | None = None,
         lock_maker=None,
         autoclose: bool = False,
     ) -> Self:
@@ -571,7 +571,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     clobber: bool
     diskless: bool
     persist: bool
-    lock: bool | LockLike | None  # TODO: is True allowed?
+    lock: Literal[False] | LockLike | None
     autoclose: bool
 
     def __init__(
@@ -579,7 +579,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         group: str | None = None,
         mode: str = "r",
         format: str | None = "NETCDF4",
-        lock: bool | LockLike | None = None,
+        lock: Literal[False] | LockLike | None = None,
         autoclose: bool = False,
         clobber: bool = True,
         diskless: bool = False,
