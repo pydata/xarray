@@ -1041,7 +1041,6 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         ('z', 'x', 'a', 'y')
         """
 
-
         if isinstance(dim, str):
             dim = {dim: 0}
 
@@ -1058,11 +1057,10 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 f"Cannot assign multiple new dimensions to the same position: {positions}"
             )
 
- 	conflicts = set(self.dims) & set(combined_dims)
-        if conflicts:
+        if conflicts := set(self.dims) & set(combined_dims):
             raise ValueError(
-                    f"Dimensions {conflicts!r} already exists. Please remove it from the specified dimensions: {combined_dims}"
-                )
+                f"Dimensions {conflicts!r} already exists. Please remove it from the specified dimensions: {combined_dims}"
+            )
 
         # create a list of all dimensions, placing new ones at their specified positions
         all_dims_with_pos = [(d, i) for i, d in enumerate(self.dims)]
