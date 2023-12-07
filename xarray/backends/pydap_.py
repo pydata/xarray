@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
@@ -25,10 +25,11 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    import os
-    from io import BufferedIOBase
+    import pydap.model
+    import requests
 
     from xarray.core.dataset import Dataset
+    from xarray.core.types import Self, T_XarrayCanOpen
 
 
 class PydapArrayWrapper(BackendArray):
@@ -88,7 +89,9 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, ds):
+    ds: pydap.model.DatasetType
+
+    def __init__(self, ds: pydap.model.DatasetType) -> None:
         """
         Parameters
         ----------
@@ -99,14 +102,14 @@ class PydapDataStore(AbstractDataStore):
     @classmethod
     def open(
         cls,
-        url,
-        application=None,
-        session=None,
-        output_grid=None,
-        timeout=None,
-        verify=None,
-        user_charset=None,
-    ):
+        url: str,
+        application: Any = None,
+        session: requests.Session | None = None,
+        output_grid: bool | None = None,
+        timeout: float | None = None,
+        verify: Any = None,
+        user_charset: Any = None,
+    ) -> Self:
         import pydap.client
         import pydap.lib
 
@@ -156,6 +159,16 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     For more information about the underlying library, visit:
     https://www.pydap.org
 
+    Parameters
+    ----------
+    application:
+    session:
+    output_grid:
+    timeout: float or None, default: 120
+        Timeout in seconds.
+    verify:
+    user_charset:
+
     See Also
     --------
     backends.PydapDataStore
@@ -164,38 +177,60 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
+    application: Any
+    session: requests.Session | None
+    output_grid: bool | None
+    timeout: float | None
+    verify: Any
+    user_charset: Any
+
+    def __init__(
+        self,
+        application: Any = None,
+        session: requests.Session | None = None,
+        output_grid: bool | None = None,
+        timeout: float | None = None,
+        verify: Any = None,
+        user_charset: Any = None,
+    ) -> None:
+        self.application = application
+        self.session = session
+        self.output_grid = output_grid
+        self.timeout = timeout
+        self.verify = verify
+        self.user_charset = user_charset
+
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
     ) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        application=None,
-        session=None,
-        output_grid=None,
-        timeout=None,
-        verify=None,
-        user_charset=None,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
+        **kwargs: Any,
     ) -> Dataset:
+        if not isinstance(filename_or_obj, str):
+            raise ValueError(
+                f"'filename_or_obj' must be a str (url), got {type(filename_or_obj)}."
+            )
         store = PydapDataStore.open(
             url=filename_or_obj,
-            application=application,
-            session=session,
-            output_grid=output_grid,
-            timeout=timeout,
-            verify=verify,
-            user_charset=user_charset,
+            application=kwargs.get("application", self.application),
+            session=kwargs.get("session", self.session),
+            output_grid=kwargs.get("output_grid", self.output_grid),
+            timeout=kwargs.get("timeout", self.timeout),
+            verify=kwargs.get("verify", self.verify),
+            user_charset=kwargs.get("user_charset", self.user_charset),
         )
 
         store_entrypoint = StoreBackendEntrypoint()
