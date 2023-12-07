@@ -21,7 +21,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
-from xarray.core.types import ZarrWriteModes
+from xarray.core.types import ZarrOpenModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
@@ -386,7 +386,7 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(
         cls,
         store,
-        mode: ZarrWriteModes = "r",
+        mode: ZarrOpenModes = "r",
         synchronizer: object | None = None,
         group: str | None = None,
         consolidated: bool | None = False,
@@ -479,7 +479,7 @@ class ZarrStore(AbstractWritableDataStore):
     def __init__(
         self,
         zarr_group: zarr.Group,
-        mode: ZarrWriteModes | None = None,
+        mode: ZarrOpenModes | None = None,
         consolidate_on_close: bool = False,
         append_dim=None,
         write_region=None,
@@ -978,7 +978,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
 
     group: str | None
-    mode: ZarrWriteModes
+    mode: ZarrOpenModes
     synchronizer: object | None
     consolidated: bool | None
     chunk_store: MutableMapping | str | os.PathLike | None
@@ -989,7 +989,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     def __init__(
         self,
         group: str | None = None,
-        mode: ZarrWriteModes = "r",
+        mode: ZarrOpenModes = "r",
         synchronizer: object | None = None,
         consolidated: bool | None = None,
         chunk_store: MutableMapping | str | os.PathLike | None = None,

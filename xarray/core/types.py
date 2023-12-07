@@ -274,7 +274,7 @@ QuantileMethods: TypeAlias = Literal[
 T_XarrayCanOpen: TypeAlias = Union[
     str, os.PathLike[Any], "BufferedIOBase", "AbstractDataStore"
 ]
-ZarrWriteModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
+ZarrOpenModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 
 class LockLike(Protocol):

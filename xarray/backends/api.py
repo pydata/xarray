@@ -39,7 +39,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset, _get_chunk, _maybe_chunk
 from xarray.core.indexes import Index
 from xarray.core.parallelcompat import guess_chunkmanager
-from xarray.core.types import ZarrWriteModes
+from xarray.core.types import ZarrOpenModes
 from xarray.core.utils import is_remote_uri
 
 if TYPE_CHECKING:
@@ -1638,7 +1638,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: ZarrWriteModes | None = None,
+    mode: ZarrOpenModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
@@ -1662,7 +1662,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: ZarrWriteModes | None = None,
+    mode: ZarrOpenModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
@@ -1684,7 +1684,7 @@ def to_zarr(
     dataset: Dataset,
     store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
-    mode: ZarrWriteModes | None = None,
+    mode: ZarrOpenModes | None = None,
     synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
