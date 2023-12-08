@@ -277,6 +277,14 @@ T_XarrayCanOpen: TypeAlias = Union[
 ZarrOpenModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 
+class FileLike(Protocol):
+    def close(self) -> None:
+        ...
+
+
+T_FileLike = TypeVar("T_FileLike", bound=FileLike)
+
+
 class LockLike(Protocol):
     def acquire(self, blocking: bool) -> bool:
         ...
