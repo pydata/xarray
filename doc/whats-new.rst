@@ -20,7 +20,7 @@ What's New
 v2023.12.0 (2023 Dec 08)
 ------------------------
 
-This release brings new [hypothesis]() strategies for testing, significantly faster rolling aggregations as well as
+This release brings new `hypothesis <https://hypothesis.works/>`_ strategies for testing, significantly faster rolling aggregations as well as
 ``ffill`` and ``bfill`` with ``numbagg``, a new :py:meth:`Dataset.eval` method, and improvements to
 reading and writing Zarr arrays (including a new ``"a-"`` mode).
 
