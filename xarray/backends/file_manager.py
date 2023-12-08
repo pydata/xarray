@@ -28,7 +28,7 @@ REF_COUNTS: dict[Hashable, int] = {}
 _DEFAULT_MODE = utils.ReprObject("<unused>")
 
 
-class FileManager:
+class FileManager(Generic[T_FileLike]):
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend
@@ -36,12 +36,12 @@ class FileManager:
     many open files and transferring them between multiple processes.
     """
 
-    def acquire(self, needs_lock: bool = True) -> FileLike:
+    def acquire(self, needs_lock: bool = True) -> T_FileLike:
         """Acquire the file object from this manager."""
         raise NotImplementedError()
 
     @contextlib.contextmanager
-    def acquire_context(self, needs_lock: bool = True) -> Iterator[FileLike]:
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_FileLike]:
         """Context manager for acquiring a file. Yields a file object.
 
         The context manager unwinds any actions taken as part of acquisition
@@ -360,7 +360,7 @@ class _HashedSequence(list):
         self[:] = tuple_value
         self.hashvalue = hash(tuple_value)
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> int:  # type: ignore[override]
         return self.hashvalue
 
 
