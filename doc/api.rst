@@ -182,6 +182,7 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.cumulative
    Dataset.weighted
    Dataset.coarsen
    Dataset.resample
@@ -379,6 +380,7 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.cumulative
    DataArray.weighted
    DataArray.coarsen
    DataArray.resample

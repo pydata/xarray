@@ -10369,13 +10369,59 @@ class Dataset(
 
         See Also
         --------
-        core.rolling.DatasetRolling
+        Dataset.cumulative
         DataArray.rolling
+        core.rolling.DatasetRolling
         """
         from xarray.core.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
+
+    def cumulative(
+        self,
+        dim: str | Iterable[Hashable],
+        min_periods: int = 1,
+    ) -> DatasetRolling:
+        """
+        Accumulating object for Datasets
+
+        Parameters
+        ----------
+        dims : iterable of hashable
+            The name(s) of the dimensions to create the cumulative window along
+        min_periods : int, default: 1
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default is 1 (note this is different
+            from ``Rolling``, whose default is the size of the window).
+
+        Returns
+        -------
+        core.rolling.DatasetRolling
+
+        See Also
+        --------
+        Dataset.rolling
+        DataArray.cumulative
+        core.rolling.DatasetRolling
+        """
+        from xarray.core.rolling import DatasetRolling
+
+        if isinstance(dim, str):
+            if dim not in self.dims:
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
+            dim = {dim: self.sizes[dim]}
+        else:
+            missing_dims = set(dim) - set(self.dims)
+            if missing_dims:
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
+            dim = {d: self.sizes[d] for d in dim}
+
+        return DatasetRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,
