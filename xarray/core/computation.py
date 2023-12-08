@@ -1285,7 +1285,7 @@ def cov(
     da_b: T_DataArray,
     dim: Dims = None,
     ddof: int = 1,
-    weights: T_DataArray = None,
+    weights: T_DataArray | None = None,
 ) -> T_DataArray:
     """
     Compute covariance between two DataArray objects along a shared dimension.
@@ -1391,7 +1391,7 @@ def corr(
     da_a: T_DataArray,
     da_b: T_DataArray,
     dim: Dims = None,
-    weights: T_DataArray = None,
+    weights: T_DataArray | None = None,
 ) -> T_DataArray:
     """
     Compute the Pearson correlation coefficient between
@@ -1494,7 +1494,7 @@ def corr(
 def _cov_corr(
     da_a: T_DataArray,
     da_b: T_DataArray,
-    weights: T_DataArray = None,
+    weights: T_DataArray | None = None,
     dim: Dims = None,
     ddof: int = 0,
     method: Literal["cov", "corr", None] = None,
