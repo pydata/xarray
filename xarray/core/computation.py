@@ -1457,48 +1457,6 @@ def corr(
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
 
 
-def old_cov_corr(
-    da_a: T_DataArray,
-    da_b: T_DataArray,
-    dim: Dims = None,
-    ddof: int = 0,
-    method: Literal["cov", "corr", None] = None,
-) -> T_DataArray:
-    """
-    Internal method for xr.cov() and xr.corr() so only have to
-    sanitize the input arrays once and we don't repeat code.
-    """
-    # 1. Broadcast the two arrays
-    da_a, da_b = align(da_a, da_b, join="inner", copy=False)
-
-    # 2. Ignore the nans
-    valid_values = da_a.notnull() & da_b.notnull()
-    da_a = da_a.where(valid_values)
-    da_b = da_b.where(valid_values)
-    valid_count = valid_values.sum(dim) - ddof
-
-    # 3. Detrend along the given dim
-    demeaned_da_a = da_a - da_a.mean(dim=dim)
-    demeaned_da_b = da_b - da_b.mean(dim=dim)
-
-    # 4. Compute covariance along the given dim
-    # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
-    # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a.conj() * demeaned_da_b).sum(
-        dim=dim, skipna=True, min_count=1
-    ) / (valid_count)
-
-    if method == "cov":
-        return cov
-
-    else:
-        # compute std + corr
-        da_a_std = da_a.std(dim=dim)
-        da_b_std = da_b.std(dim=dim)
-        corr = cov / (da_a_std * da_b_std)
-        return corr
-
-
 def _cov_corr(
     da_a: T_DataArray,
     da_b: T_DataArray,
