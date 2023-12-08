@@ -1356,6 +1356,23 @@ def cov(
     array([ 0.2       , -0.5       ,  1.69333333])
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
+    >>> weights = DataArray(
+    ...     [4, 2, 1],
+    ...     dims=("space"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...     ],
+    ... )
+    >>> weights
+    <xarray.DataArray (space: 3)>
+    array([4, 2, 1])
+    Coordinates:
+      * space    (space) <U2 'IA' 'IL' 'IN'
+    >>> xr.cov(da_a, da_b, dim="space", weights=weights)
+    <xarray.DataArray (time: 3)>
+    array([-4.69346939, -4.49632653, -3.37959184])
+    Coordinates:
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -1443,6 +1460,23 @@ def corr(
     array([ 1., -1.,  1.])
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
+    >>> weights = DataArray(
+    ...     [4, 2, 1],
+    ...     dims=("space"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...     ],
+    ... )
+    >>> weights
+    <xarray.DataArray (space: 3)>
+    array([4, 2, 1])
+    Coordinates:
+      * space    (space) <U2 'IA' 'IL' 'IN'
+    >>> xr.corr(da_a, da_b, dim="space", weights=weights)
+    <xarray.DataArray (time: 3)>
+    array([-0.50240504, -0.83215028, -0.99057446])
+    Coordinates:
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
