@@ -282,8 +282,10 @@ NetcdfFormats = Literal[
     "NETCDF3_64BIT_DATA",
     "NETCDF3_CLASSIC",
 ]
+ScipyFormats = Literal["NETCDF3_64BIT", "NETCDF3_64BIT_OFFSET", "NETCDF3_CLASSIC", None]
 NetCDFOpenModes: TypeAlias = Literal["w", "x", "a", "r+", "r"]
 H5netcdfOpenModes: TypeAlias = Literal["w", "a", "r+", "r"]
+ScipyOpenModes: TypeAlias = Literal["w", "a", "r"]
 ZarrOpenModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 

@@ -33,9 +33,16 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    import scipy.io
+
     from xarray.backends import FileManager
     from xarray.core.dataset import Dataset
-    from xarray.core.types import LockLike, T_XarrayCanOpen
+    from xarray.core.types import (
+        LockLike,
+        ScipyFormats,
+        ScipyOpenModes,
+        T_XarrayCanOpen,
+    )
 
 
 def _decode_string(s):
@@ -83,7 +90,7 @@ class ScipyArrayWrapper(BackendArray):
                     raise
 
 
-def _open_scipy_netcdf(filename, mode, mmap, version):
+def _open_scipy_netcdf(filename, mode, mmap, version) -> scipy.io.netcdf_file:
     import scipy.io
 
     # if the string ends with .gz, then gunzip and open as netcdf file
@@ -130,14 +137,14 @@ class ScipyDataStore(WritableCFDataStore):
     It only supports the NetCDF3 file-format.
     """
 
-    _manager: FileManager
+    _manager: FileManager[scipy.io.netcdf_file]
     lock: LockLike
 
     def __init__(
         self,
         filename_or_obj: T_XarrayCanOpen,
-        mode: str = "r",
-        format: str | None = None,
+        mode: ScipyOpenModes = "r",
+        format: ScipyFormats = None,
         group: str | None = None,
         mmap: bool | None = None,
         lock: Literal[False] | LockLike | None = None,
@@ -145,7 +152,7 @@ class ScipyDataStore(WritableCFDataStore):
         if group is not None:
             raise ValueError("cannot save to a group with the scipy.io.netcdf backend")
 
-        if format is None or format == "NETCDF3_64BIT":
+        if format in (None, "NETCDF3_64BIT", "NETCDF3_64BIT_OFFSET"):
             version = 2
         elif format == "NETCDF3_CLASSIC":
             version = 1
@@ -172,7 +179,7 @@ class ScipyDataStore(WritableCFDataStore):
             self._manager = DummyFileManager(scipy_dataset)
 
     @property
-    def ds(self):
+    def ds(self) -> scipy.io.netcdf_file:
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
@@ -286,7 +293,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
     group: str | None
-    mode: str
+    mode: ScipyOpenModes
     format: str | None
     lock: Literal[False] | LockLike | None
     mmap: bool | None
@@ -294,8 +301,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     def __init__(
         self,
         group: str | None = None,
-        mode: str = "r",
-        format: str | None = "NETCDF4",
+        mode: ScipyOpenModes = "r",
+        format: ScipyFormats = None,
         lock: Literal[False] | LockLike | None = None,
         mmap: bool | None = None,
     ) -> None:
