@@ -35,7 +35,7 @@ New Features
   Accessible under :py:mod:`testing.strategies`, and documented in a new page on testing in the User Guide.
   (:issue:`6911`, :pull:`8404`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- :py:meth:`rolling` uses numbagg <https://github.com/numbagg/numbagg>`_ for
+- :py:meth:`rolling` uses `numbagg <https://github.com/numbagg/numbagg>`_ for
   most of its computations by default. Numbagg is up to 5x faster than bottleneck
   where parallelization is possible. Where parallelization isn't possible — for
   example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
@@ -44,7 +44,7 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Avoid overwriting unchanged existing coordinate variables when appending by setting ``mode='a-'``.
+- Avoid overwriting unchanged existing coordinate variables when appending with :py:meth:`Dataset.to_zarr` by setting ``mode='a-'``.
   By `Ryan Abernathey <https://github.com/rabernat>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
