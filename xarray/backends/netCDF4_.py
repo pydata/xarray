@@ -5,7 +5,7 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import numpy as np
 
@@ -45,7 +45,12 @@ if TYPE_CHECKING:
 
     from xarray.backends.file_manager import FileManager
     from xarray.core.dataset import Dataset
-    from xarray.core.types import LockLike, T_XarrayCanOpen
+    from xarray.core.types import (
+        LockLike,
+        NetcdfFormats,
+        NetCDFOpenModes,
+        T_XarrayCanOpen,
+    )
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -170,11 +175,20 @@ def _nc4_dtype(var):
     return dtype
 
 
-def _netcdf4_create_group(dataset, name):
+def _netcdf4_create_group(
+    dataset: netCDF4.Dataset | netCDF4.Group, name: str
+) -> netCDF4.Group:
     return dataset.createGroup(name)
 
 
-def _nc4_require_group(ds, group: str | None, mode, create_group=_netcdf4_create_group):
+def _nc4_require_group(
+    ds: netCDF4.Dataset,
+    group: str | None,
+    mode: str | None,
+    create_group: Callable[
+        [netCDF4.Dataset | netCDF4.Group, str], netCDF4.Group
+    ] = _netcdf4_create_group,
+) -> netCDF4.Dataset | netCDF4.Group:
     if group in {None, "", "/"}:
         # use the root group
         return ds
@@ -316,27 +330,30 @@ class NetCDF4DataStore(WritableCFDataStore):
     """
 
     __slots__ = (
-        "autoclose",
+        "_manager",
+        "_group",
+        "_mode",
+        "_filename",
         "format",
         "is_remote",
         "lock",
-        "_filename",
-        "_group",
-        "_manager",
-        "_mode",
+        "autoclose",
     )
 
-    _manager: FileManager
+    _manager: FileManager[netCDF4.Dataset]
     _group: str | None
-    _mode: str | None
+    _mode: NetCDFOpenModes
+    _filename: str
+    format: NetcdfFormats
+    is_remote: bool
     lock: Literal[False] | LockLike | None
     autoclose: bool
 
     def __init__(
         self,
-        manager: netCDF4.Dataset | FileManager,
+        manager: netCDF4.Dataset | FileManager[netCDF4.Dataset],
         group: str | None = None,
-        mode: str | None = None,
+        mode: NetCDFOpenModes = "r",
         lock: Literal[False] | LockLike | None = NETCDF4_PYTHON_LOCK,
         autoclose: bool = False,
     ):
@@ -367,8 +384,8 @@ class NetCDF4DataStore(WritableCFDataStore):
     def open(
         cls,
         filename: T_XarrayCanOpen,
-        mode: str = "r",
-        format: str | None = "NETCDF4",
+        mode: NetCDFOpenModes = "r",
+        format: NetcdfFormats | None = "NETCDF4",
         group: str | None = None,
         clobber: bool = True,
         diskless: bool = False,
@@ -412,13 +429,13 @@ class NetCDF4DataStore(WritableCFDataStore):
         )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
-    def _acquire(self, needs_lock: bool = True):
+    def _acquire(self, needs_lock: bool = True) -> netCDF4.Dataset | netCDF4.Group:
         with self._manager.acquire_context(needs_lock) as root:
             ds = _nc4_require_group(root, self._group, self._mode)
         return ds
 
     @property
-    def ds(self):
+    def ds(self) -> netCDF4.Dataset | netCDF4.Group:
         return self._acquire()
 
     def open_store_variable(self, name, var):
@@ -542,16 +559,51 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
 
-    It can open ".nc", ".nc4", ".cdf" files and will be chosen
-    as default for these files.
+    It can open ".nc", ".nc4", ".cdf" files and will be chosen as default for
+    these files.
 
     Additionally it can open valid HDF5 files, see
-    https://h5netcdf.org/#invalid-netcdf-files for more info.
-    It will not be detected as valid backend for such files, so make
-    sure to specify ``engine="netcdf4"`` in ``open_dataset``.
+    https://h5netcdf.org/#invalid-netcdf-files for more info. It will not be
+    detected as valid backend for such files, so make sure to specify
+    ``engine="netcdf4"`` in ``open_dataset``.
 
     For more information about the underlying library, visit:
     https://unidata.github.io/netcdf4-python
+
+    Parameters
+    ----------
+    group: str or None, optional
+        Path to the netCDF4 group in the given file to open. None (default) uses
+        the root group.
+    mode: {"w", "x", "a", "r+", "r"}, default: "r"
+        Access mode of the NetCDF file. "r" means read-only; no data can be
+        modified. "w" means write; a new file is created, an existing file with
+        the same name is deleted. "x" means write, but fail if an existing file
+        with the same name already exists. "a" and "r+" mean append; an existing
+        file is opened for reading and writing, if file does not exist already,
+        one is created.
+    format: {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
+            "NETCDF3_64BIT_OFFSET", "NETCDF3_64BIT_DATA", "NETCDF3_CLASSIC"} \
+            or None, optional
+        Format of the NetCDF file, defaults to "NETCDF4".
+    lock: False, None or Lock-like, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. If None (default) appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
+    autoclose: bool, default: False
+        If True, automatically close files to avoid OS Error of too many files
+        being open. However, this option doesn't work with streams, e.g.,
+        BytesIO.
+    clobber: bool, default: False
+        If True, opening a file with mode="w" will clobber an existing file with
+        the same name. If False, an exception will be raised if a file with the
+        same name already exists. mode="x" is identical to mode="w" with
+        clobber=False.
+    diskless: bool, default: False
+        If True, create diskless (in-core) file.
+    persist: bool, default: False
+        If True, persist file to disk when closed.
 
     See Also
     --------
@@ -566,8 +618,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
 
     group: str | None
-    mode: str
-    format: str | None
+    mode: NetCDFOpenModes
+    format: NetcdfFormats | None
     clobber: bool
     diskless: bool
     persist: bool
@@ -577,8 +629,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     def __init__(
         self,
         group: str | None = None,
-        mode: str = "r",
-        format: str | None = "NETCDF4",
+        mode: NetCDFOpenModes = "r",
+        format: NetcdfFormats | None = "NETCDF4",
         lock: Literal[False] | LockLike | None = None,
         autoclose: bool = False,
         clobber: bool = True,
