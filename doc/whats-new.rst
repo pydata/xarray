@@ -15,10 +15,18 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.11.1:
+.. _whats-new.2023.12.0:
 
-v2023.11.1 (unreleased)
------------------------
+v2023.11.1 (2023 Dec 08)
+------------------------
+
+This release brings new [hypothesis]() strategies for testing, significantly faster rolling aggregations as well as
+``ffill`` and ``bfill`` with ``numbagg``, a new :py:meth:`Dataset.eval` method, and improvements to
+reading and writing Zarr arrays (including a new ``"a-"`` mode).
+
+Thanks to our 16 contributors:
+
+Anderson Banihirwe, Ben Mares, Carl Andersson, Deepak Cherian, Doug Latornell, Gregorio L. Trevisan, Illviljan, Jens Hedegaard Nielsen, Justus Magin, Mathias Hauser, Max Jones, Maximilian Roos, Michael Niklas, Patrick Hoefler, Ryan Abernathey, Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
