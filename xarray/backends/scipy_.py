@@ -276,6 +276,23 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
     Parameters
     ----------
+    group: str or None, optional
+        Path to the netCDF4 group in the given file to open. None (default) uses
+        the root group.
+    mode: {"w", "a", "r"}, default: "r"
+        Access mode of the NetCDF file. "r" means read-only; no data can be
+        modified. "w" means write; a new file is created, an existing file with
+        the same name is deleted. "a" means append; an existing file is opened
+        for reading and writing, if file does not exist already, one is created.
+    format: {"NETCDF3_64BIT", "NETCDF3_64BIT_OFFSET", "NETCDF3_CLASSIC"} or \
+            None, optional
+        Format of the NetCDF file. Only classic NetCDF files supported. For newer
+        NetCDF version use a different backend.
+    lock: False, None or Lock-like, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. If None (default) appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     mmap: bool or None, optional
         Whether to mmap filename when reading. Default is True when filename is
         a file name, False when filename is a file-like object. Note that when
