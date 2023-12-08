@@ -54,10 +54,10 @@ def test_cumulative(d, func, min_periods) -> None:
 
 
 def test_cumulative_vs_cum(d) -> None:
-    result = d.cumulative("x").sum()
-    expected = d.cumsum("x")
+    result = d.cumulative("z").sum()
+    expected = d.cumsum("z")
     # cumsum drops the coord of the dimension; cumulative doesn't
-    expected = expected.assign_coords(x=result["x"])
+    expected = expected.assign_coords(z=result["z"])
     assert_identical(result, expected)
 
 
