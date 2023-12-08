@@ -6935,7 +6935,7 @@ class DataArray(
     def cumulative(
         self,
         dim: str | Iterable[Hashable],
-        min_periods: int | None = 1,
+        min_periods: int = 1,
     ) -> DataArrayRolling:
         """
         Accumulating object for DataArrays.
@@ -6944,7 +6944,7 @@ class DataArray(
         ----------
         dims : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
-        min_periods : int or None, default: None
+        min_periods : int, default: 1
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default is 1 (note this is different
             from ``Rolling``, whose default is the size of the window).
@@ -7005,7 +7005,7 @@ class DataArray(
                 )
             dim = {d: self.sizes[d] for d in dim}
 
-        return DataArrayRolling(self, dim, min_periods=min_periods or 1, center=False)
+        return DataArrayRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,

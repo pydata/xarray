@@ -486,21 +486,26 @@ class TestDataArrayRollingExp:
             da.rolling_exp(time=10, keep_attrs=True)
 
     @pytest.mark.parametrize("func", ["mean", "sum"])
-    @pytest.mark.parametrize("min_periods", [None, 1, 20])
+    @pytest.mark.parametrize("min_periods", [1, 20])
     def test_cumulative(self, da, func, min_periods) -> None:
         # One dim
         result = getattr(da.cumulative("time", min_periods=min_periods), func)()
         expected = getattr(
-            da.rolling(time=da.time.size, min_periods=min_periods or 1), func
+            da.rolling(time=da.time.size, min_periods=min_periods), func
         )()
         assert_identical(result, expected)
 
         # Multiple dim
         result = getattr(da.cumulative(["time", "a"], min_periods=min_periods), func)()
         expected = getattr(
-            da.rolling(time=da.time.size, a=da.a.size, min_periods=min_periods or 1),
+            da.rolling(time=da.time.size, a=da.a.size, min_periods=min_periods),
             func,
         )()
+        assert_identical(result, expected)
+
+    def test_cumulative_vs_cum(self, da) -> None:
+        result = da.cumulative("time").sum()
+        expected = da.cumsum("time")
         assert_identical(result, expected)
 
 
@@ -829,19 +834,19 @@ class TestDatasetRolling:
 
     @pytest.mark.parametrize("func", ["mean", "sum"])
     @pytest.mark.parametrize("ds", (2,), indirect=True)
-    @pytest.mark.parametrize("min_periods", [None, 1, 10])
+    @pytest.mark.parametrize("min_periods", [1, 10])
     def test_cumulative(self, ds, func, min_periods) -> None:
         # One dim
         result = getattr(ds.cumulative("time", min_periods=min_periods), func)()
         expected = getattr(
-            ds.rolling(time=ds.time.size, min_periods=min_periods or 1), func
+            ds.rolling(time=ds.time.size, min_periods=min_periods), func
         )()
         assert_identical(result, expected)
 
         # Multiple dim
         result = getattr(ds.cumulative(["time", "x"], min_periods=min_periods), func)()
         expected = getattr(
-            ds.rolling(time=ds.time.size, x=ds.x.size, min_periods=min_periods or 1),
+            ds.rolling(time=ds.time.size, x=ds.x.size, min_periods=min_periods),
             func,
         )()
         assert_identical(result, expected)
