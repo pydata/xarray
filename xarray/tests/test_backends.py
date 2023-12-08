@@ -123,7 +123,7 @@ default_value = object()
 dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.backends.api import NetcdfFormats, T_NetcdfEngine
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -267,7 +267,7 @@ class TestCommon:
 
 
 class NetCDF3Only:
-    netcdf3_formats: tuple[T_NetcdfTypes, ...] = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
+    netcdf3_formats: tuple[NetcdfFormats, ...] = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
 
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
@@ -292,7 +292,7 @@ class NetCDF3Only:
 
 class DatasetIOBase:
     engine: T_NetcdfEngine | None = None
-    file_format: T_NetcdfTypes | None = None
+    file_format: NetcdfFormats | None = None
 
     def create_store(self):
         raise NotImplementedError()
@@ -3041,7 +3041,7 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
 @requires_netCDF4
 class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     engine: T_NetcdfEngine = "netcdf4"
-    file_format: T_NetcdfTypes = "NETCDF3_CLASSIC"
+    file_format: NetcdfFormats = "NETCDF3_CLASSIC"
 
     @contextlib.contextmanager
     def create_store(self):
@@ -3062,7 +3062,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 @requires_netCDF4
 class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     engine: T_NetcdfEngine = "netcdf4"
-    file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
+    file_format: NetcdfFormats = "NETCDF4_CLASSIC"
 
     @contextlib.contextmanager
     def create_store(self):
@@ -3077,7 +3077,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
-    file_format: T_NetcdfTypes = "NETCDF3_64BIT"
+    file_format: NetcdfFormats = "NETCDF3_64BIT"
 
     def test_write_store(self) -> None:
         # there's no specific store to test here

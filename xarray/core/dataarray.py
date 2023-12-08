@@ -91,7 +91,7 @@ if TYPE_CHECKING:
         iris_Cube = None
 
     from xarray.backends import ZarrStore
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from xarray.backends.api import NetcdfFormats, T_NetcdfEngine
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.parallelcompat import ChunkManagerEntrypoint
     from xarray.core.resample import DataArrayResample
@@ -3915,7 +3915,7 @@ class DataArray(
         self,
         path: None = None,
         mode: Literal["w", "a"] = "w",
-        format: T_NetcdfTypes | None = None,
+        format: NetcdfFormats | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -3931,7 +3931,7 @@ class DataArray(
         self,
         path: str | PathLike,
         mode: Literal["w", "a"] = "w",
-        format: T_NetcdfTypes | None = None,
+        format: NetcdfFormats | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -3948,7 +3948,7 @@ class DataArray(
         self,
         path: str | PathLike,
         mode: Literal["w", "a"] = "w",
-        format: T_NetcdfTypes | None = None,
+        format: NetcdfFormats | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -3965,7 +3965,7 @@ class DataArray(
         self,
         path: str | PathLike,
         mode: Literal["w", "a"] = "w",
-        format: T_NetcdfTypes | None = None,
+        format: NetcdfFormats | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -3979,7 +3979,7 @@ class DataArray(
         self,
         path: str | PathLike | None = None,
         mode: Literal["w", "a"] = "w",
-        format: T_NetcdfTypes | None = None,
+        format: NetcdfFormats | None = None,
         group: str | None = None,
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,

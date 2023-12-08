@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         CompatOptions,
         JoinOptions,
         NestedSequence,
+        NetcdfFormats,
         T_Chunks,
     )
 
@@ -67,9 +68,7 @@ if TYPE_CHECKING:
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_NetcdfTypes = Literal[
-        "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
-    ]
+
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -1097,7 +1096,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None = None,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1116,7 +1115,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: None = None,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1134,7 +1133,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1153,7 +1152,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1172,7 +1171,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1191,7 +1190,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1209,7 +1208,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
@@ -1225,7 +1224,7 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None = None,
     mode: Literal["w", "a"] = "w",
-    format: T_NetcdfTypes | None = None,
+    format: NetcdfFormats | None = None,
     group: str | None = None,
     engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
