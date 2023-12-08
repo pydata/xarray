@@ -15,10 +15,48 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.11.1:
 
-v2023.11.1 (unreleased)
+.. _whats-new.2023.12.1:
+
+v2023.12.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2023.12.0:
+
+v2023.12.0 (2023 Dec 08)
+------------------------
+
+This release brings new `hypothesis <https://hypothesis.works/>`_ strategies for testing, significantly faster rolling aggregations as well as
+``ffill`` and ``bfill`` with ``numbagg``, a new :py:meth:`Dataset.eval` method, and improvements to
+reading and writing Zarr arrays (including a new ``"a-"`` mode).
+
+Thanks to our 16 contributors:
+
+Anderson Banihirwe, Ben Mares, Carl Andersson, Deepak Cherian, Doug Latornell, Gregorio L. Trevisan, Illviljan, Jens Hedegaard Nielsen, Justus Magin, Mathias Hauser, Max Jones, Maximilian Roos, Michael Niklas, Patrick Hoefler, Ryan Abernathey, Tom Nicholas
 
 New Features
 ~~~~~~~~~~~~
@@ -27,7 +65,7 @@ New Features
   Accessible under :py:mod:`testing.strategies`, and documented in a new page on testing in the User Guide.
   (:issue:`6911`, :pull:`8404`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- :py:meth:`rolling` uses numbagg <https://github.com/numbagg/numbagg>`_ for
+- :py:meth:`rolling` uses `numbagg <https://github.com/numbagg/numbagg>`_ for
   most of its computations by default. Numbagg is up to 5x faster than bottleneck
   where parallelization is possible. Where parallelization isn't possible — for
   example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
@@ -36,11 +74,14 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Avoid overwriting unchanged existing coordinate variables when appending by setting ``mode='a-'``.
+- Avoid overwriting unchanged existing coordinate variables when appending with :py:meth:`Dataset.to_zarr` by setting ``mode='a-'``.
   By `Ryan Abernathey <https://github.com/rabernat>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add a :py:meth:`Dataset.eval` method, similar to the pandas' method of the
+  same name. (:pull:`7163`). This is currently marked as experimental and
+  doesn't yet support the ``numexpr`` engine.
 - :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` allow passing a
   callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
   (:pull:`8511`).
@@ -66,10 +107,17 @@ Deprecations
   currently ``PendingDeprecationWarning``, which are silenced by default. We'll
   convert these to ``DeprecationWarning`` in a future release.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- :py:meth:`Dataset.drop` &
-  :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+- Raise a ``FutureWarning`` warning that the type of :py:meth:`Dataset.dims` will be changed
+  from a mapping of dimension names to lengths to a set of dimension names.
+  This is to increase consistency with :py:meth:`DataArray.dims`.
+  To access a mapping of dimension names to lengths please use :py:meth:`Dataset.sizes`.
+  The same change also applies to `DatasetGroupBy.dims`.
+  (:issue:`8496`, :pull:`8500`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
   several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
-  replace them for labels & variables respectively.
+  replace them for labels & variables respectively. (:pull:`8497`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
