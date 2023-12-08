@@ -37,17 +37,17 @@ def compute_backend(request):
 
 
 @pytest.mark.parametrize("func", ["mean", "sum"])
-@pytest.mark.parametrize("min_periods", [1, 20])
+@pytest.mark.parametrize("min_periods", [1, 10])
 def test_cumulative(d, func, min_periods) -> None:
     # One dim
-    result = getattr(d.cumulative("x", min_periods=min_periods), func)()
-    expected = getattr(d.rolling(x=d["x"].size, min_periods=min_periods), func)()
+    result = getattr(d.cumulative("z", min_periods=min_periods), func)()
+    expected = getattr(d.rolling(z=d["z"].size, min_periods=min_periods), func)()
     assert_identical(result, expected)
 
     # Multiple dim
-    result = getattr(d.cumulative(["x", "y"], min_periods=min_periods), func)()
+    result = getattr(d.cumulative(["z", "x"], min_periods=min_periods), func)()
     expected = getattr(
-        d.rolling(x=d["x"].size, y=d["y"].size, min_periods=min_periods),
+        d.rolling(z=d["z"].size, x=d["x"].size, min_periods=min_periods),
         func,
     )()
     assert_identical(result, expected)

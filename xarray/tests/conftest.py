@@ -95,14 +95,14 @@ def d(request, backend, type) -> DataArray | Dataset:
     if request.param == 1:
         ds = Dataset(
             dict(
-                a=(["x", "y"], np.arange(16).reshape(8, 2)),
-                b=(["y", "z"], np.arange(12, 32).reshape(2, 10).astype(np.float64)),
+                a=(["x", "z"], np.arange(24).reshape(2, 12)),
+                b=(["y", "z"], np.arange(100, 136).reshape(3, 12).astype(np.float64)),
             ),
             dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                y=range(2),
-                z=("z", np.linspace(0, 1.0, 10)),
-                w=("y", ["a", "b"]),
+                x=("x", np.linspace(0, 1.0, 2)),
+                y=range(3),
+                z=("z", pd.date_range("2000-01-01", periods=12)),
+                w=("x", ["a", "b"]),
             ),
         )
         if type == DataArray:
