@@ -34,8 +34,11 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
+    import h5netcdf
+
+    from xarray.backends.file_manager import FileManager
     from xarray.core.dataset import Dataset
-    from xarray.core.types import LockLike, Self, T_XarrayCanOpen
+    from xarray.core.types import H5netcdfOpenModes, LockLike, Self, T_XarrayCanOpen
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -90,17 +93,35 @@ class H5NetCDFStore(WritableCFDataStore):
     """Store for reading and writing data via h5netcdf"""
 
     __slots__ = (
+        "_manager",
+        "_group",
+        "_mode",
+        "_filename",
         "autoclose",
         "format",
         "is_remote",
         "lock",
-        "_filename",
-        "_group",
-        "_manager",
-        "_mode",
     )
 
-    def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+    _manager: FileManager[h5netcdf.File | h5netcdf.Group]
+    _group: str | None
+    _mode: H5netcdfOpenModes
+    _filename: str
+    autoclose: bool
+    format: None
+    is_remote: bool
+    lock: LockLike
+
+    def __init__(
+        self,
+        manager: h5netcdf.File
+        | h5netcdf.Group
+        | FileManager[h5netcdf.File | h5netcdf.Group],
+        group: str | None = None,
+        mode: H5netcdfOpenModes = "r",
+        lock: Literal[False] | LockLike | None = HDF5_LOCK,
+        autoclose: bool = False,
+    ):
         import h5netcdf
 
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
@@ -130,7 +151,7 @@ class H5NetCDFStore(WritableCFDataStore):
     def open(
         cls,
         filename: T_XarrayCanOpen,
-        mode: str = "r",
+        mode: H5netcdfOpenModes = "r",
         format: str | None = None,
         group: str | None = None,
         lock: Literal[False] | LockLike | None = None,
@@ -138,7 +159,7 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf: bool | None = None,
         phony_dims: Literal["sort", "access", None] = None,
         decode_vlen_strings: bool = True,
-        driver=None,
+        driver: str | None = None,
         driver_kwds: Mapping[str, Any] | None = None,
     ) -> Self:
         import h5netcdf
@@ -177,7 +198,7 @@ class H5NetCDFStore(WritableCFDataStore):
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
-    def _acquire(self, needs_lock=True):
+    def _acquire(self, needs_lock: bool = True) -> h5netcdf.File | h5netcdf.Group:
         with self._manager.acquire_context(needs_lock) as root:
             ds = _nc4_require_group(
                 root, self._group, self._mode, create_group=_h5netcdf_create_group
@@ -185,7 +206,7 @@ class H5NetCDFStore(WritableCFDataStore):
         return ds
 
     @property
-    def ds(self):
+    def ds(self) -> h5netcdf.File | h5netcdf.Group:
         return self._acquire()
 
     def open_store_variable(self, name, var):
@@ -350,16 +371,26 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     Parameters
     ----------
-    group:
-    mode:
-    format:
-    lock:
-    autoclose:
-    driver: str or None, optional
-        Name of the driver to use. Legal values are None (default,
-        recommended), "core", "sec2", "direct", "stdio", "mpio", "ros3".
-    driver_kwds: Mapping or None, optional
-        Additional driver options. See h5py.File for more infos.
+    group: str or None, optional
+        Path to the netCDF4 group in the given file to open. None (default) uses
+        the root group.
+    mode: {"w", "a", "r+", "r"}, default: "r"
+        Access mode of the NetCDF file. "r" means read-only; no data can be
+        modified. "w" means write; a new file is created, an existing file with
+        the same name is deleted. "a" and "r+" mean append; an existing file is
+        opened for reading and writing, if file does not exist already, one is
+        created.
+    format: "NETCDF4", or None, optional
+        Format of the NetCDF file. Only "NETCDF4" is supported by h5netcdf.
+    lock: False, None or Lock-like, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. If None (default) appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
+    autoclose: bool, default: False
+        If True, automatically close files to avoid OS Error of too many files
+        being open. However, this option doesn't work with streams, e.g.,
+        BytesIO.
     invalid_netcdf : bool or None, optional
         Allow writing netCDF4 with data types and attributes that would
         otherwise not generate netCDF4 files that can be read by other
@@ -377,9 +408,14 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         - "access": defer phony dimension creation to group access time.
         The created phony dimension naming will differ from netCDF behaviour.
-    decode_vlan_strings: bool, default: True
-        Return VLEN string data as str instead of bytes.
 
+    decode_vlen_strings: bool, default: True
+        Return vlen string data as str instead of bytes.
+    driver: str or None, optional
+        Name of the driver to use. Legal values are None (default,
+        recommended), "core", "sec2", "direct", "stdio", "mpio", "ros3".
+    driver_kwds: Mapping or None, optional
+        Additional driver options. See h5py.File for more infos.
 
     See Also
     --------
@@ -394,7 +430,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
 
     group: str | None
-    mode: str
+    mode: H5netcdfOpenModes
     format: str | None
     lock: Literal[False] | LockLike | None
     autoclose: bool
@@ -407,7 +443,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     def __init__(
         self,
         group: str | None = None,
-        mode: str = "r",
+        mode: H5netcdfOpenModes = "r",
         format: str | None = "NETCDF4",
         lock: Literal[False] | LockLike | None = None,
         autoclose: bool = False,

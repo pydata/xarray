@@ -283,6 +283,7 @@ NetcdfFormats = Literal[
     "NETCDF3_CLASSIC",
 ]
 NetCDFOpenModes: TypeAlias = Literal["w", "x", "a", "r+", "r"]
+H5netcdfOpenModes: TypeAlias = Literal["w", "a", "r+", "r"]
 ZarrOpenModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
 
