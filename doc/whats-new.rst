@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.2023.12.0:
 
-v2023.11.1 (2023 Dec 08)
+v2023.12.0 (2023 Dec 08)
 ------------------------
 
 This release brings new [hypothesis]() strategies for testing, significantly faster rolling aggregations as well as
