@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -75,5 +77,46 @@ def da(request, backend):
         return da.chunk()
     elif backend == "numpy":
         return da
+    else:
+        raise ValueError
+
+
+@pytest.fixture(params=[Dataset, DataArray])
+def type(request):
+    return request.param
+
+
+@pytest.fixture(params=[1])
+def d(request, backend, type) -> DataArray | Dataset:
+    """
+    For tests which can test either a DataArray or a Dataset.
+    """
+    result: DataArray | Dataset
+    if request.param == 1:
+        ds = Dataset(
+            dict(
+                a=(["x", "y"], np.arange(16).reshape(8, 2)),
+                b=(["y", "z"], np.arange(12, 32).reshape(2, 10).astype(np.float64)),
+            ),
+            dict(
+                x=("x", np.linspace(0, 1.0, 8)),
+                y=range(2),
+                z=("z", np.linspace(0, 1.0, 10)),
+                w=("y", ["a", "b"]),
+            ),
+        )
+        if type == DataArray:
+            result = ds["a"].assign_coords(w=ds.coords["w"])
+        elif type == Dataset:
+            result = ds
+        else:
+            raise ValueError
+    else:
+        raise ValueError
+
+    if backend == "dask":
+        return result.chunk()
+    elif backend == "numpy":
+        return result
     else:
         raise ValueError
