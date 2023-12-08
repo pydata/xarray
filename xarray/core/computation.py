@@ -9,7 +9,7 @@ import operator
 import warnings
 from collections import Counter
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence, Set
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, cast, overload
 
 import numpy as np
 
@@ -1535,7 +1535,10 @@ def _cov_corr(
         # Adjust covariance for degrees of freedom
         valid_count = valid_values.sum(dim)
         adjust = valid_count / (valid_count - ddof)
-        return cov * adjust
+        # I think the cast is required because of `T_DataArray` + `T_Xarray` (would be
+        # the same with `T_DatasetOrArray`)
+        # https://github.com/pydata/xarray/pull/8384#issuecomment-1784228026
+        return cast(T_DataArray, cov * adjust)
 
     else:
         # Compute std and corr
@@ -1546,7 +1549,7 @@ def _cov_corr(
             da_a_std = da_a.std(dim=dim)
             da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return corr
+        return cast(T_DataArray, corr)
 
 
 def cross(
