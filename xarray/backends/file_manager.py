@@ -6,16 +6,13 @@ import threading
 import uuid
 import warnings
 from collections.abc import Hashable, Iterator, MutableMapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Union, cast
+from typing import Any, Callable, Generic, Literal, Union, cast
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
-from xarray.core.types import TypeAlias
-
-if TYPE_CHECKING:
-    from xarray.core.types import FileLike, LockLike, T_FileLike
+from xarray.core.types import FileLike, LockLike, T_FileLike, TypeAlias
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Hashable, FileLike] = LRUCache(
@@ -364,7 +361,7 @@ class _HashedSequence(list):
         return self.hashvalue
 
 
-class DummyFileManager(FileManager, Generic["T_FileLike"]):
+class DummyFileManager(FileManager, Generic[T_FileLike]):
     """FileManager that simply wraps an open file in the FileManager interface."""
 
     _value: T_FileLike
