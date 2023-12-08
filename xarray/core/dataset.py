@@ -10384,7 +10384,7 @@ class Dataset(
         min_periods: int | None = 1,
     ) -> DatasetRolling:
         """
-        Rolling window object for Datasets
+        Accumulating object for Datasets
 
         Parameters
         ----------
