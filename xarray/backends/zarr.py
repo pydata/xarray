@@ -319,7 +319,11 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
 
 
 def _validate_and_transpose_existing_dims(
-    var_name, new_var, existing_var, region, append_dim
+    var_name,
+    new_var,
+    existing_var,
+    region: Mapping[str, slice] | None,
+    append_dim: str,
 ):
     if new_var.dims != existing_var.dims:
         if set(existing_var.dims) == set(new_var.dims):
@@ -381,11 +385,22 @@ class ZarrStore(AbstractWritableDataStore):
         "_write_empty",
         "_close_store_on_close",
     )
+    zarr_group: zarr.Group
+    _append_dim: str | None
+    _consolidate_on_close: bool
+    _group: str
+    _mode: ZarrOpenModes
+    _read_only: bool
+    _synchronizer: object | None
+    _write_region: Mapping[str, slice | Literal["auto"]] | Literal["auto"] | None
+    _safe_chunks: bool
+    _write_empty: bool | None
+    _close_store_on_close: bool
 
     @classmethod
     def open_group(
         cls,
-        store,
+        store: T_XarrayCanOpen | MutableMapping | None,
         mode: ZarrOpenModes = "r",
         synchronizer: object | None = None,
         group: str | None = None,
@@ -393,9 +408,11 @@ class ZarrStore(AbstractWritableDataStore):
         consolidate_on_close: bool = False,
         chunk_store: MutableMapping | str | os.PathLike | None = None,
         storage_options: Mapping[str, Any] | None = None,
-        append_dim=None,
-        write_region=None,
-        safe_chunks=True,
+        append_dim: str | None = None,
+        write_region: Mapping[str, slice | Literal["auto"]]
+        | Literal["auto"]
+        | None = None,
+        safe_chunks: bool = True,
         stacklevel: int = 2,
         zarr_version: int | None = None,
         write_empty: bool | None = None,
@@ -479,10 +496,12 @@ class ZarrStore(AbstractWritableDataStore):
     def __init__(
         self,
         zarr_group: zarr.Group,
-        mode: ZarrOpenModes | None = None,
+        mode: ZarrOpenModes = "r",
         consolidate_on_close: bool = False,
-        append_dim=None,
-        write_region=None,
+        append_dim: str | None = None,
+        write_region: Mapping[str, slice | Literal["auto"]]
+        | Literal["auto"]
+        | None = None,
         safe_chunks: bool = True,
         write_empty: bool | None = None,
         close_store_on_close: bool = False,
@@ -500,7 +519,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._close_store_on_close = close_store_on_close
 
     @property
-    def ds(self):
+    def ds(self) -> zarr.Group:
         # TODO: consider deprecating this in favor of zarr_group
         return self.zarr_group
 
@@ -1015,7 +1034,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
         self,
-        filename_or_obj: T_XarrayCanOpen,
+        filename_or_obj: T_XarrayCanOpen | MutableMapping | None,
         *,
         drop_variables: str | Iterable[str] | None = None,
         mask_and_scale: bool = True,
