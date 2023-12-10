@@ -473,20 +473,21 @@ class BackendEntrypoint:
     Attributes
     ----------
 
-    open_dataset_parameters : tuple, default: None
-        A list of ``open_dataset`` method parameters.
-        The setting of this attribute is not mandatory.
     description : str, default: ""
         A short string describing the engine.
         The setting of this attribute is not mandatory.
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
+    open_dataset_parameters : tuple, default: None
+        A list of ``open_dataset`` method parameters.
+        The setting of this attribute is only mandatory if the
+        open_dataset method contains *args or **kwargs.
     """
 
-    open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    open_dataset_parameters: ClassVar[tuple[str, ...] | None] = None
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"

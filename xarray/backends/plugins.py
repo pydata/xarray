@@ -6,22 +6,20 @@ import itertools
 import sys
 import warnings
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
-    import os
     from importlib.metadata import EntryPoint
 
     if sys.version_info >= (3, 10):
         from importlib.metadata import EntryPoints
     else:
         EntryPoints = list[EntryPoint]
-    from io import BufferedIOBase
 
-    from xarray.backends.common import AbstractDataStore
+    from xarray.core.types import T_XarrayCanOpen
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -143,9 +141,7 @@ def refresh_engines() -> None:
     list_engines.cache_clear()
 
 
-def guess_engine(
-    store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-) -> str | type[BackendEntrypoint]:
+def guess_engine(store_spec: T_XarrayCanOpen) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
     for engine, backend in engines.items():
