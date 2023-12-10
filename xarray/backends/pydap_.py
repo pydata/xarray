@@ -107,8 +107,8 @@ class PydapDataStore(AbstractDataStore):
         session: requests.Session | None = None,
         output_grid: bool | None = None,
         timeout: float | None = None,
-        verify: Any = None,
-        user_charset: Any = None,
+        verify: bool | None = None,
+        user_charset: str | None = None,
     ) -> Self:
         import pydap.client
         import pydap.lib
@@ -190,8 +190,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     session: requests.Session | None
     output_grid: bool | None
     timeout: float | None
-    verify: Any
-    user_charset: Any
+    verify: bool | None
+    user_charset: str | None
 
     def __init__(
         self,
@@ -199,8 +199,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         session: requests.Session | None = None,
         output_grid: bool | None = None,
         timeout: float | None = None,
-        verify: Any = None,
-        user_charset: Any = None,
+        verify: bool | None = None,
+        user_charset: str | None = None,
     ) -> None:
         self.application = application
         self.session = session
