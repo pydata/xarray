@@ -948,6 +948,12 @@ def _plot1d(plotfunc):
             size_ = kwargs.pop("_size", linewidth)
             size_r = _LINEWIDTH_RANGE
 
+        # Remove any nulls, .where(m, drop=True) doesn't work when m is a dask array,
+        # so load the array to memory.
+        # It will have to be loaded to memory at some point anyway:
+        darray = darray.load()
+        darray = darray.where(darray.notnull(), drop=True)
+
         # Get data to plot:
         coords_to_plot: MutableMapping[str, Hashable | None] = dict(
             x=x, z=z, hue=hue, size=size_
