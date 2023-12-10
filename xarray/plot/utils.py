@@ -2003,6 +2003,8 @@ def _line(
     auto_scale(*auto_scale_args)
 
     return collection
+
+
 def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
     """
     Use ConciseDateFormatter which is meant to improve the
