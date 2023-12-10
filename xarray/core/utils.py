@@ -491,12 +491,11 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     __slots__ = ("mapping",)
 
     def _warn(self) -> None:
-        warnings.warn(
+        emit_user_level_warning(
             "The return type of `Dataset.dims` will be changed to return a set of dimension names in future, "
             "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
             "please use `Dataset.sizes`.",
             FutureWarning,
-            stacklevel=3,
         )
 
     def __getitem__(self, key: K) -> V:
