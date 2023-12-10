@@ -1,4 +1,4 @@
-from xarray.testing import ensure_warnings
+from xarray.testing.assertions import ensure_warnings
 
 from .datatree import DataTree
 from .formatting import diff_tree_repr

@@ -26,6 +26,10 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Minimum required version of xarray is now 2023.12.0, i.e. the latest version.
+  This is required to prevent recent changes to xarray's internals from breaking datatree.
+  (:issue:`293`, :pull:`294`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Change default write mode of :py:meth:`DataTree.to_zarr` to ``'w-'`` to match ``xarray``
   default and prevent accidental directory overwrites. (:issue:`274`, :pull:`275`)
   By `Sam Levang <https://github.com/slevang>`_.
