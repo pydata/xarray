@@ -496,6 +496,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
             "in order to be more consistent with `DataArray.dims`. To access a mapping from dimension names to lengths, "
             "please use `Dataset.sizes`.",
             FutureWarning,
+            stacklevel=3,
         )
 
     def __getitem__(self, key: K) -> V:
