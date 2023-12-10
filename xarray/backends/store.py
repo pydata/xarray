@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Literal
 
 from xarray import conventions
 from xarray.backends.common import (
@@ -12,31 +12,36 @@ from xarray.backends.common import (
 from xarray.core.dataset import Dataset
 
 if TYPE_CHECKING:
-    import os
-    from io import BufferedIOBase
+    from xarray.core.types import T_XarrayCanOpen
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
+    open_dataset_parameters = (
+        "drop_variables",
+        "mask_and_scale",
+        "decode_times",
+        "concat_characters",
+        "use_cftime",
+        "decode_timedelta",
+        "decode_coords",
+    )
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
     ) -> Dataset:
         assert isinstance(filename_or_obj, AbstractDataStore)
 
