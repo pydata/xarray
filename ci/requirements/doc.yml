@@ -9,6 +9,7 @@ dependencies:
   - cartopy
   - cfgrib
   - dask-core>=2022.1
+  - hypothesis>=6.75.8
   - h5netcdf>=0.13
   - ipykernel
   - ipywidgets  # silence nbsphinx warning
@@ -34,6 +35,7 @@ dependencies:
   - sphinx-book-theme >= 0.3.0
   - sphinx-copybutton
   - sphinx-design
+  - sphinx-inline-tabs
   - sphinx>=5.0
   - zarr>=2.10
   - pip:

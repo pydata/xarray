@@ -23,7 +23,7 @@ from xarray.core.indexes import (
     create_default_index_implicit,
 )
 from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import Self, T_DataArray
+from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -425,7 +425,7 @@ class Coordinates(AbstractCoordinates):
         # redirect to DatasetCoordinates.__delitem__
         del self._data.coords[key]
 
-    def equals(self, other: Coordinates) -> bool:
+    def equals(self, other: Self) -> bool:
         """Two Coordinates objects are equal if they have matching variables,
         all of which are equal.
 
@@ -437,7 +437,7 @@ class Coordinates(AbstractCoordinates):
             return False
         return self.to_dataset().equals(other.to_dataset())
 
-    def identical(self, other: Coordinates) -> bool:
+    def identical(self, other: Self) -> bool:
         """Like equals, but also checks all variable attributes.
 
         See Also
@@ -565,19 +565,24 @@ class Coordinates(AbstractCoordinates):
 
         self._update_coords(coords, indexes)
 
-    def assign(
-        self, coords: Mapping | None = None, **coords_kwargs: Any
-    ) -> Coordinates:
+    def assign(self, coords: Mapping | None = None, **coords_kwargs: Any) -> Self:
         """Assign new coordinates (and indexes) to a Coordinates object, returning
         a new object with all the original coordinates in addition to the new ones.
 
         Parameters
         ----------
-        coords : :class:`Coordinates` or mapping of hashable to Any
-            Mapping from coordinate names to the new values. If a ``Coordinates``
-            object is passed, its indexes are assigned in the returned object.
-            Otherwise, a default (pandas) index is created for each dimension
-            coordinate found in the mapping.
+        coords : mapping of dim to coord, optional
+            A mapping whose keys are the names of the coordinates and values are the
+            coordinates to assign. The mapping will generally be a dict or
+            :class:`Coordinates`.
+
+            * If a value is a standard data value — for example, a ``DataArray``,
+              scalar, or array — the data is simply assigned as a coordinate.
+
+            * A coordinate can also be defined and attached to an existing dimension
+              using a tuple with the first element the dimension name and the second
+              element the values for this new coordinate.
+
         **coords_kwargs
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
@@ -607,6 +612,7 @@ class Coordinates(AbstractCoordinates):
           * y_level_1  (y) int64 0 1 0 1
 
         """
+        # TODO: this doesn't support a callable, which is inconsistent with `DataArray.assign_coords`
         coords = either_dict_or_kwargs(coords, coords_kwargs, "assign")
         new_coords = self.copy()
         new_coords.update(coords)
@@ -656,7 +662,7 @@ class Coordinates(AbstractCoordinates):
         self,
         deep: bool = False,
         memo: dict[int, Any] | None = None,
-    ) -> Coordinates:
+    ) -> Self:
         """Return a copy of this Coordinates object."""
         # do not copy indexes (may corrupt multi-coordinate indexes)
         # TODO: disable variables deepcopy? it may also be problematic when they
@@ -664,8 +670,16 @@ class Coordinates(AbstractCoordinates):
         variables = {
             k: v._copy(deep=deep, memo=memo) for k, v in self.variables.items()
         }
-        return Coordinates._construct_direct(
-            coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+
+        # TODO: getting an error with `self._construct_direct`, possibly because of how
+        # a subclass implements `_construct_direct`. (This was originally the same
+        # runtime code, but we switched the type definitions in #8216, which
+        # necessitates the cast.)
+        return cast(
+            Self,
+            Coordinates._construct_direct(
+                coords=variables, indexes=dict(self.xindexes), dims=dict(self.sizes)
+            ),
         )
 
 
@@ -915,9 +929,7 @@ def drop_indexed_coords(
     return Coordinates._construct_direct(coords=new_variables, indexes=new_indexes)
 
 
-def assert_coordinate_consistent(
-    obj: T_DataArray | Dataset, coords: Mapping[Any, Variable]
-) -> None:
+def assert_coordinate_consistent(obj: T_Xarray, coords: Mapping[Any, Variable]) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 
     obj: DataArray or Dataset
@@ -933,7 +945,7 @@ def assert_coordinate_consistent(
 
 
 def create_coords_with_default_indexes(
-    coords: Mapping[Any, Any], data_vars: Mapping[Any, Any] | None = None
+    coords: Mapping[Any, Any], data_vars: DataVars | None = None
 ) -> Coordinates:
     """Returns a Coordinates object from a mapping of coordinates (arbitrary objects).
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
+from typing import Generic
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,7 @@ from xarray.core.indexing import (
     VectorizedIndexer,
 )
 from xarray.core.pycompat import array_type
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
@@ -44,6 +46,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.test_namedarray import NamedArraySubclassobjects
 
 dask_array_type = array_type("dask")
 
@@ -61,34 +64,11 @@ def var():
     return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
-class VariableSubclassobjects(ABC):
-    @abstractmethod
-    def cls(self, *args, **kwargs) -> Variable:
-        raise NotImplementedError
-
-    def test_properties(self):
-        data = 0.5 * np.arange(10)
-        v = self.cls(["time"], data, {"foo": "bar"})
-        assert v.dims == ("time",)
-        assert_array_equal(v.values, data)
-        assert v.dtype == float
-        assert v.shape == (10,)
-        assert v.size == 10
-        assert v.sizes == {"time": 10}
-        assert v.nbytes == 80
-        assert v.ndim == 1
-        assert len(v) == 10
-        assert v.attrs == {"foo": "bar"}
-
-    def test_attrs(self):
-        v = self.cls(["time"], 0.5 * np.arange(10))
-        assert v.attrs == {}
-        attrs = {"foo": "bar"}
-        v.attrs = attrs
-        assert v.attrs == attrs
-        assert isinstance(v.attrs, dict)
-        v.attrs["foo"] = "baz"
-        assert v.attrs["foo"] == "baz"
+class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
+    @pytest.fixture
+    def target(self, data):
+        data = 0.5 * np.arange(10).reshape(2, 5)
+        return Variable(["x", "y"], data)
 
     def test_getitem_dict(self):
         v = self.cls(["x"], np.random.randn(5))
@@ -366,7 +346,7 @@ class VariableSubclassobjects(ABC):
             assert_array_equal(v >> 2, x >> 2)
         # binary ops with numpy arrays
         assert_array_equal((v * x).values, x**2)
-        assert_array_equal((x * v).values, x**2)  # type: ignore[attr-defined] # TODO: Fix mypy thinking numpy takes priority, GH7780
+        assert_array_equal((x * v).values, x**2)
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
         if dtype is int:
@@ -471,12 +451,12 @@ class VariableSubclassobjects(ABC):
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
-    def test_reset_encoding(self) -> None:
+    def test_drop_encoding(self) -> None:
         encoding1 = {"scale_factor": 1}
         # encoding set via cls constructor
         v1 = self.cls(["a"], [0, 1, 2], encoding=encoding1)
         assert v1.encoding == encoding1
-        v2 = v1.reset_encoding()
+        v2 = v1.drop_encoding()
         assert v1.encoding == encoding1
         assert v2.encoding == {}
 
@@ -484,7 +464,7 @@ class VariableSubclassobjects(ABC):
         encoding3 = {"scale_factor": 10}
         v3 = self.cls(["a"], [0, 1, 2], encoding=encoding3)
         assert v3.encoding == encoding3
-        v4 = v3.reset_encoding()
+        v4 = v3.drop_encoding()
         assert v3.encoding == encoding3
         assert v4.encoding == {}
 
@@ -615,7 +595,7 @@ class VariableSubclassobjects(ABC):
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
-            orig.copy(data=new_data)
+            orig.copy(data=new_data)  # type: ignore[arg-type]
 
     def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
@@ -883,20 +863,10 @@ class VariableSubclassobjects(ABC):
         "mode",
         [
             "mean",
-            pytest.param(
-                "median",
-                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
-            ),
-            pytest.param(
-                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
-            ),
+            "median",
+            "reflect",
             "edge",
-            pytest.param(
-                "linear_ramp",
-                marks=pytest.mark.xfail(
-                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
-                ),
-            ),
+            "linear_ramp",
             "maximum",
             "minimum",
             "symmetric",
@@ -924,7 +894,7 @@ class VariableSubclassobjects(ABC):
 
         actual = v.pad(**xr_arg)
         expected = np.pad(
-            np.array(v.data.astype(float)),
+            np.array(duck_array_ops.astype(v.data, float)),
             np_arg,
             mode="constant",
             constant_values=np.nan,
@@ -1073,9 +1043,8 @@ class TestVariable(VariableSubclassobjects):
     def setup(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
-    def test_data_and_values(self):
+    def test_values(self):
         v = Variable(["time", "x"], self.d)
-        assert_array_equal(v.data, self.d)
         assert_array_equal(v.values, self.d)
         assert source_ndarray(v.values) is self.d
         with pytest.raises(ValueError):
@@ -1084,9 +1053,6 @@ class TestVariable(VariableSubclassobjects):
         d2 = np.random.random((10, 3))
         v.values = d2
         assert source_ndarray(v.values) is d2
-        d3 = np.random.random((10, 3))
-        v.data = d3
-        assert source_ndarray(v.data) is d3
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
@@ -1739,6 +1705,7 @@ class TestVariable(VariableSubclassobjects):
             v * w[0], Variable(["a", "b", "c", "d"], np.einsum("ab,cd->abcd", x, y[0]))
         )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_broadcasting_failures(self):
         a = Variable(["x"], np.arange(10))
         b = Variable(["x"], np.arange(5))
@@ -1886,9 +1853,20 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     @requires_bottleneck
-    def test_rank_dask_raises(self):
-        v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
-        with pytest.raises(TypeError, match=r"arrays stored as dask"):
+    def test_rank_dask(self):
+        # Instead of a single test here, we could parameterize the other tests for both
+        # arrays. But this is sufficient.
+        v = Variable(
+            ["x", "y"], [[30.0, 1.0, np.nan, 20.0, 4.0], [30.0, 1.0, np.nan, 20.0, 4.0]]
+        ).chunk(x=1)
+        expected = Variable(
+            ["x", "y"], [[4.0, 1.0, np.nan, 3.0, 2.0], [4.0, 1.0, np.nan, 3.0, 2.0]]
+        )
+        assert_equal(v.rank("y").compute(), expected)
+
+        with pytest.raises(
+            ValueError, match=r" with dask='parallelized' consists of multiple chunks"
+        ):
             v.rank("x")
 
     def test_rank_use_bottleneck(self):
@@ -1920,7 +1898,8 @@ class TestVariable(VariableSubclassobjects):
         v_expect = Variable(["x"], [0.75, 0.25, np.nan, 0.5, 1.0])
         assert_equal(v.rank("x", pct=True), v_expect)
         # invalid dim
-        with pytest.raises(ValueError, match=r"not found"):
+        with pytest.raises(ValueError):
+            # apply_ufunc error message isn't great here — `ValueError: tuple.index(x): x not in tuple`
             v.rank("y")
 
     def test_big_endian_reduce(self):
@@ -2343,11 +2322,34 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
-    @pytest.mark.xfail(
-        reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203"
-    )
     def test_multiindex(self):
         super().test_multiindex()
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "mean",
+            pytest.param(
+                "median",
+                marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
+            ),
+            pytest.param(
+                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
+            ),
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.filterwarnings(
+        r"ignore:dask.array.pad.+? converts integers to floats."
+    )
+    def test_pad(self, mode, xr_arg, np_arg):
+        super().test_pad(mode, xr_arg, np_arg)
 
 
 @requires_sparse
@@ -2529,7 +2531,7 @@ class TestIndexVariable(VariableSubclassobjects):
         assert a.dims == ("x",)
 
 
-class TestAsCompatibleData:
+class TestAsCompatibleData(Generic[T_DuckArray]):
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
@@ -2610,17 +2612,17 @@ class TestAsCompatibleData:
         times_s = times_ns.astype(pd.DatetimeTZDtype("s", tz))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(times_s)
+            actual: T_DuckArray = as_compatible_data(times_s)
         assert actual.array == times_s
         assert actual.array.dtype == pd.DatetimeTZDtype("ns", tz)
 
         series = pd.Series(times_s)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            actual = as_compatible_data(series)
+            actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual, series.values)
-        assert actual.dtype == np.dtype("datetime64[ns]")
+        np.testing.assert_array_equal(actual2, series.values)
+        assert actual2.dtype == np.dtype("datetime64[ns]")
 
     def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
@@ -2648,7 +2650,7 @@ class TestAsCompatibleData:
     def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
-        ).chunk(((1, 1), (2,)))
+        ).chunk(dict(x=(1, 1), y=(2,)))
 
         def check(actual, expect_dtype, expect_values):
             assert actual.dtype == expect_dtype
@@ -2930,6 +2932,7 @@ def test_datetime_conversion_warning(values, warns_under_pandas_version_two) -> 
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("America/New_York")
         )
@@ -2963,6 +2966,7 @@ def test_pandas_two_only_datetime_conversion_warnings() -> None:
         # The only case where a non-datetime64 dtype can occur currently is in
         # the case that the variable is backed by a timezone-aware
         # DatetimeIndex, and thus is hidden within the PandasIndexingAdapter class.
+        assert isinstance(var._data, PandasIndexingAdapter)
         assert var._data.array.dtype == pd.DatetimeTZDtype(
             "ns", pytz.timezone("America/New_York")
         )

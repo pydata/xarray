@@ -257,6 +257,168 @@ def test_apply_two_outputs() -> None:
     assert_identical(out1, dataset)
 
 
+def test_apply_missing_dims() -> None:
+    ## Single arg
+
+    def add_one(a, core_dims, on_missing_core_dim):
+        return apply_ufunc(
+            lambda x: x + 1,
+            a,
+            input_core_dims=core_dims,
+            output_core_dims=core_dims,
+            on_missing_core_dim=on_missing_core_dim,
+        )
+
+    array = np.arange(6).reshape(2, 3)
+    variable = xr.Variable(["x", "y"], array)
+    variable_no_y = xr.Variable(["x", "z"], array)
+
+    ds = xr.Dataset({"x_y": variable, "x_z": variable_no_y})
+
+    # Check the standard stuff works OK
+    assert_identical(
+        add_one(ds[["x_y"]], core_dims=[["y"]], on_missing_core_dim="raise"),
+        ds[["x_y"]] + 1,
+    )
+
+    # `raise` — should raise on a missing dim
+    with pytest.raises(ValueError):
+        add_one(ds, core_dims=[["y"]], on_missing_core_dim="raise")
+
+    # `drop` — should drop the var with the missing dim
+    assert_identical(
+        add_one(ds, core_dims=[["y"]], on_missing_core_dim="drop"),
+        (ds + 1).drop_vars("x_z"),
+    )
+
+    # `copy` — should not add one to the missing with `copy`
+    copy_result = add_one(ds, core_dims=[["y"]], on_missing_core_dim="copy")
+    assert_identical(copy_result["x_y"], (ds + 1)["x_y"])
+    assert_identical(copy_result["x_z"], ds["x_z"])
+
+    ## Multiple args
+
+    def sum_add(a, b, core_dims, on_missing_core_dim):
+        return apply_ufunc(
+            lambda a, b, axis=None: a.sum(axis) + b.sum(axis),
+            a,
+            b,
+            input_core_dims=core_dims,
+            on_missing_core_dim=on_missing_core_dim,
+        )
+
+    # Check the standard stuff works OK
+    assert_identical(
+        sum_add(
+            ds[["x_y"]],
+            ds[["x_y"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="raise",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    # `raise` — should raise on a missing dim
+    with pytest.raises(
+        ValueError,
+        match=r".*Missing core dims \{'y'\} from arg number 1 on a variable named `x_z`:\n.*<xarray.Variable \(x: 2, z: ",
+    ):
+        sum_add(
+            ds[["x_z"]],
+            ds[["x_z"]],
+            core_dims=[["x", "y"], ["x", "z"]],
+            on_missing_core_dim="raise",
+        )
+
+    # `raise` on a missing dim on a non-first arg
+    with pytest.raises(
+        ValueError,
+        match=r".*Missing core dims \{'y'\} from arg number 2 on a variable named `x_z`:\n.*<xarray.Variable \(x: 2, z: ",
+    ):
+        sum_add(
+            ds[["x_z"]],
+            ds[["x_z"]],
+            core_dims=[["x", "z"], ["x", "y"]],
+            on_missing_core_dim="raise",
+        )
+
+    # `drop` — should drop the var with the missing dim
+    assert_identical(
+        sum_add(
+            ds[["x_z"]],
+            ds[["x_z"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="drop",
+        ),
+        ds[[]],
+    )
+
+    # `copy` — should drop the var with the missing dim
+    assert_identical(
+        sum_add(
+            ds[["x_z"]],
+            ds[["x_z"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="copy",
+        ),
+        ds[["x_z"]],
+    )
+
+    ## Multiple vars per arg
+    assert_identical(
+        sum_add(
+            ds[["x_y", "x_y"]],
+            ds[["x_y", "x_y"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="raise",
+        ),
+        ds[["x_y", "x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            ds,
+            ds,
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="drop",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            # The first one has the wrong dims — using `z` for the `x_t` var
+            ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
+            ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="drop",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
+            # The second one has the wrong dims — using `z` for the `x_t` var (seems
+            # duplicative but this was a bug in the initial impl...)
+            ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="drop",
+        ),
+        ds[["x_y"]].sum() * 2,
+    )
+
+    assert_identical(
+        sum_add(
+            ds.assign(x_t=ds["x_y"])[["x_y", "x_t"]],
+            ds.assign(x_t=ds["x_z"])[["x_y", "x_t"]],
+            core_dims=[["x", "y"], ["x", "y"]],
+            on_missing_core_dim="copy",
+        ),
+        ds.drop_vars("x_z").assign(x_y=30, x_t=ds["x_y"]),
+    )
+
+
 @requires_dask
 def test_apply_dask_parallelized_two_outputs() -> None:
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
@@ -1028,7 +1190,7 @@ def test_apply_dask() -> None:
 
     # unknown setting for dask array handling
     with pytest.raises(ValueError):
-        apply_ufunc(identity, array, dask="unknown")
+        apply_ufunc(identity, array, dask="unknown")  # type: ignore
 
     def dask_safe_identity(x):
         return apply_ufunc(identity, x, dask="allowed")
@@ -1087,7 +1249,7 @@ def test_apply_dask_parallelized_two_args() -> None:
         assert actual.data.chunks == array.chunks
         assert_identical(data_array, actual)
 
-    check(data_array, 0),
+    check(data_array, 0)
     check(0, data_array)
     check(data_array, xr.DataArray(0))
     check(data_array, 0 * data_array)
@@ -1216,7 +1378,7 @@ def test_apply_dask_new_output_sizes() -> None:
     expected = extract(ds)
 
     actual = extract(ds.chunk())
-    assert actual.dims == {"lon_new": 3, "lat_new": 6}
+    assert actual.sizes == {"lon_new": 3, "lat_new": 6}
     assert_identical(expected.chunk(), actual)
 
 
@@ -1668,7 +1830,7 @@ def test_output_wrong_number() -> None:
 
     with pytest.raises(
         ValueError,
-        match=r"number of outputs.*Result is not a tuple of 2 elements:\n\narray\(\[0",
+        match=r"number of outputs.* Received a <class 'numpy.ndarray'> with 10 elements. Expected a tuple of 2 elements:\n\narray\(\[0",
     ):
         apply_ufunc(identity, variable, output_core_dims=[(), ()])
 
@@ -1774,7 +1936,7 @@ def test_dot(use_dask: bool) -> None:
         da_a = da_a.chunk({"a": 3})
         da_b = da_b.chunk({"a": 3})
         da_c = da_c.chunk({"c": 3})
-    actual = xr.dot(da_a, da_b, dims=["a", "b"])
+    actual = xr.dot(da_a, da_b, dim=["a", "b"])
     assert actual.dims == ("c",)
     assert (actual.data == np.einsum("ij,ijk->k", a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
@@ -1798,33 +1960,33 @@ def test_dot(use_dask: bool) -> None:
     if use_dask:
         da_a = da_a.chunk({"a": 3})
         da_b = da_b.chunk({"a": 3})
-        actual = xr.dot(da_a, da_b, dims=["b"])
+        actual = xr.dot(da_a, da_b, dim=["b"])
         assert actual.dims == ("a", "c")
         assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
         assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-    actual = xr.dot(da_a, da_b, dims=["b"])
+    actual = xr.dot(da_a, da_b, dim=["b"])
     assert actual.dims == ("a", "c")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, dims="b")
+    actual = xr.dot(da_a, da_b, dim="b")
     assert actual.dims == ("a", "c")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, dims="a")
+    actual = xr.dot(da_a, da_b, dim="a")
     assert actual.dims == ("b", "c")
     assert (actual.data == np.einsum("ij,ijk->jk", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, dims="c")
+    actual = xr.dot(da_a, da_b, dim="c")
     assert actual.dims == ("a", "b")
     assert (actual.data == np.einsum("ij,ijk->ij", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, da_c, dims=["a", "b"])
+    actual = xr.dot(da_a, da_b, da_c, dim=["a", "b"])
     assert actual.dims == ("c", "e")
     assert (actual.data == np.einsum("ij,ijk,kl->kl ", a, b, c)).all()
 
     # should work with tuple
-    actual = xr.dot(da_a, da_b, dims=("c",))
+    actual = xr.dot(da_a, da_b, dim=("c",))
     assert actual.dims == ("a", "b")
     assert (actual.data == np.einsum("ij,ijk->ij", a, b)).all()
 
@@ -1834,47 +1996,47 @@ def test_dot(use_dask: bool) -> None:
     assert (actual.data == np.einsum("ij,ijk,kl->l ", a, b, c)).all()
 
     # 1 array summation
-    actual = xr.dot(da_a, dims="a")
+    actual = xr.dot(da_a, dim="a")
     assert actual.dims == ("b",)
     assert (actual.data == np.einsum("ij->j ", a)).all()
 
     # empty dim
-    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims="a")
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dim="a")
     assert actual.dims == ("b",)
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Ellipsis (...) sums over all dimensions
-    actual = xr.dot(da_a, da_b, dims=...)
+    actual = xr.dot(da_a, da_b, dim=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij,ijk->", a, b)).all()
 
-    actual = xr.dot(da_a, da_b, da_c, dims=...)
+    actual = xr.dot(da_a, da_b, da_c, dim=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij,ijk,kl-> ", a, b, c)).all()
 
-    actual = xr.dot(da_a, dims=...)
+    actual = xr.dot(da_a, dim=...)
     assert actual.dims == ()
     assert (actual.data == np.einsum("ij-> ", a)).all()
 
-    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims=...)
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dim=...)
     assert actual.dims == ()
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Invalid cases
     if not use_dask:
         with pytest.raises(TypeError):
-            xr.dot(da_a, dims="a", invalid=None)
+            xr.dot(da_a, dim="a", invalid=None)
     with pytest.raises(TypeError):
-        xr.dot(da_a.to_dataset(name="da"), dims="a")
+        xr.dot(da_a.to_dataset(name="da"), dim="a")
     with pytest.raises(TypeError):
-        xr.dot(dims="a")
+        xr.dot(dim="a")
 
     # einsum parameters
-    actual = xr.dot(da_a, da_b, dims=["b"], order="C")
+    actual = xr.dot(da_a, da_b, dim=["b"], order="C")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
     assert actual.values.flags["C_CONTIGUOUS"]
     assert not actual.values.flags["F_CONTIGUOUS"]
-    actual = xr.dot(da_a, da_b, dims=["b"], order="F")
+    actual = xr.dot(da_a, da_b, dim=["b"], order="F")
     assert (actual.data == np.einsum("ij,ijk->ik", a, b)).all()
     # dask converts Fortran arrays to C order when merging the final array
     if not use_dask:
@@ -1916,7 +2078,7 @@ def test_dot_align_coords(use_dask: bool) -> None:
     expected = (da_a * da_b).sum(["a", "b"])
     xr.testing.assert_allclose(expected, actual)
 
-    actual = xr.dot(da_a, da_b, dims=...)
+    actual = xr.dot(da_a, da_b, dim=...)
     expected = (da_a * da_b).sum()
     xr.testing.assert_allclose(expected, actual)
 
@@ -2157,7 +2319,7 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
 
     x = xr.DataArray(
-        xr.date_range(date, freq="1S", periods=3, use_cftime=True),
+        xr.date_range(date, freq="1s", periods=3, use_cftime=True),
         dims="x",
     )
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
@@ -2177,7 +2339,7 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
         xr.DataArray(
             [0, 1e9, 2e9],
             dims="x",
-            coords={"x": xr.date_range(date, freq="1S", periods=3, use_cftime=True)},
+            coords={"x": xr.date_range(date, freq="1s", periods=3, use_cftime=True)},
         )
         + offset
     )

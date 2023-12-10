@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable
-from typing import TYPE_CHECKING, Any, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from xarray.core.merge import (
     merge_attrs,
     merge_collected,
 )
-from xarray.core.types import T_DataArray, T_Dataset
+from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.variable import Variable
 from xarray.core.variable import concat as concat_vars
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 @overload
 def concat(
     objs: Iterable[T_Dataset],
-    dim: Hashable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -49,7 +49,7 @@ def concat(
 @overload
 def concat(
     objs: Iterable[T_DataArray],
-    dim: Hashable | T_DataArray | pd.Index,
+    dim: Hashable | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -80,11 +80,11 @@ def concat(
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
-    dim : Hashable or DataArray or pandas.Index
+    dim : Hashable or Variable or DataArray or pandas.Index
         Name of the dimension to concatenate along. This can either be a new
         dimension name, in which case it is added along axis=0, or an existing
         dimension name, in which case the location of the dimension is
-        unchanged. If dimension is provided as a DataArray or Index, its name
+        unchanged. If dimension is provided as a Variable, DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
     data_vars : {"minimal", "different", "all"} or list of Hashable, optional
@@ -315,7 +315,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                 if dim in ds:
                     ds = ds.set_coords(dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
-        concat_dim_lengths.append(ds.dims.get(dim, 1))
+        concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
     def process_subset_opt(opt, subset):
         if isinstance(opt, str):
@@ -431,7 +431,7 @@ def _parse_datasets(
     variables_order: dict[Hashable, Variable] = {}  # variables in order of appearance
 
     for ds in datasets:
-        dims_sizes.update(ds.dims)
+        dims_sizes.update(ds.sizes)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
         variables_order.update(ds.variables)
@@ -450,7 +450,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: list[T_Dataset],
-    dim: str | T_DataArray | pd.Index,
+    dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
@@ -504,8 +504,7 @@ def _dataset_concat(
 
     # case where concat dimension is a coordinate or data_var but not a dimension
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
-        # TODO: Overriding type because .expand_dims has incorrect typing:
-        datasets = [cast(T_Dataset, ds.expand_dims(dim)) for ds in datasets]
+        datasets = [ds.expand_dims(dim) for ds in datasets]
 
     # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
@@ -677,7 +676,7 @@ def _dataset_concat(
 
 def _dataarray_concat(
     arrays: Iterable[T_DataArray],
-    dim: str | T_DataArray | pd.Index,
+    dim: str | T_Variable | T_DataArray | pd.Index,
     data_vars: T_DataVars,
     coords: str | list[str],
     compat: CompatOptions,
@@ -708,8 +707,7 @@ def _dataarray_concat(
             if compat == "identical":
                 raise ValueError("array names not identical")
             else:
-                # TODO: Overriding type because .rename has incorrect typing:
-                arr = cast(T_DataArray, arr.rename(name))
+                arr = arr.rename(name)
         datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(

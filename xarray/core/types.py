@@ -19,9 +19,9 @@ import pandas as pd
 
 try:
     if sys.version_info >= (3, 11):
-        from typing import Self
+        from typing import Self, TypeAlias
     else:
-        from typing_extensions import Self
+        from typing_extensions import Self, TypeAlias
 except ImportError:
     if TYPE_CHECKING:
         raise
@@ -38,7 +38,6 @@ if TYPE_CHECKING:
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.groupby import DataArrayGroupBy, GroupBy
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
@@ -63,7 +62,7 @@ if TYPE_CHECKING:
     _DTypeLikeNested = Any  # TODO: wait for support for recursive types
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
-    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # conflicts with numpys own DTypeLike (with dtypes for fields).
     # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[
@@ -107,7 +106,7 @@ class Alignable(Protocol):
         ...
 
     @property
-    def sizes(self) -> Frozen[Hashable, int]:
+    def sizes(self) -> Mapping[Hashable, int]:
         ...
 
     @property
@@ -146,6 +145,8 @@ class Alignable(Protocol):
         ...
 
 
+T_Alignable = TypeVar("T_Alignable", bound="Alignable")
+
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
@@ -154,24 +155,44 @@ T_Coordinates = TypeVar("T_Coordinates", bound="Coordinates")
 T_Array = TypeVar("T_Array", bound="AbstractArray")
 T_Index = TypeVar("T_Index", bound="Index")
 
+# `T_Xarray` is a type variable that can be either "DataArray" or "Dataset". When used
+# in a function definition, all inputs and outputs annotated with `T_Xarray` must be of
+# the same concrete type, either "DataArray" or "Dataset". This is generally preferred
+# over `T_DataArrayOrSet`, given the type system can determine the exact type.
+T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
+
+# `T_DataArrayOrSet` is a type variable that is bounded to either "DataArray" or
+# "Dataset". Use it for functions that might return either type, but where the exact
+# type cannot be determined statically using the type system.
 T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
 
-# Maybe we rename this to T_Data or something less Fortran-y?
-T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
+# For working directly with `DataWithCoords`. It will only allow using methods defined
+# on `DataWithCoords`.
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
-T_Alignable = TypeVar("T_Alignable", bound="Alignable")
+
+
+# Temporary placeholder for indicating an array api compliant type.
+# hopefully in the future we can narrow this down more:
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
-DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArray"]
-DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
-GroupByIncompatible = Union["Variable", "GroupBy"]
+DaCompatible = Union["DataArray", "VarCompatible"]
+DsCompatible = Union["Dataset", "DaCompatible"]
+GroupByCompatible = Union["Dataset", "DataArray"]
 
 Dims = Union[str, Iterable[Hashable], "ellipsis", None]
 OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
 
-T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+# FYI in some cases we don't allow `None`, which this doesn't take account of.
+T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
+# We allow the tuple form of this (though arguably we could transition to named dims only)
+T_Chunks: TypeAlias = Union[T_ChunkDim, Mapping[Any, T_ChunkDim]]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
+
+DataVars = Mapping[Any, Any]
+
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
@@ -262,3 +283,6 @@ QuantileMethods = Literal[
     "midpoint",
     "nearest",
 ]
+
+
+ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]

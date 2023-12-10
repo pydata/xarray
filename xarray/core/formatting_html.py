@@ -28,7 +28,7 @@ def _load_static_files():
     ]
 
 
-def short_data_repr_html(array):
+def short_data_repr_html(array) -> str:
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
@@ -37,23 +37,24 @@ def short_data_repr_html(array):
     return f"<pre>{text}</pre>"
 
 
-def format_dims(dims, dims_with_index):
-    if not dims:
+def format_dims(dim_sizes, dims_with_index) -> str:
+    if not dim_sizes:
         return ""
 
     dim_css_map = {
-        dim: " class='xr-has-index'" if dim in dims_with_index else "" for dim in dims
+        dim: " class='xr-has-index'" if dim in dims_with_index else ""
+        for dim in dim_sizes
     }
 
     dims_li = "".join(
         f"<li><span{dim_css_map[dim]}>" f"{escape(str(dim))}</span>: {size}</li>"
-        for dim, size in dims.items()
+        for dim, size in dim_sizes.items()
     )
 
     return f"<ul class='xr-dim-list'>{dims_li}</ul>"
 
 
-def summarize_attrs(attrs):
+def summarize_attrs(attrs) -> str:
     attrs_dl = "".join(
         f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
         for k, v in attrs.items()
@@ -62,7 +63,7 @@ def summarize_attrs(attrs):
     return f"<dl class='xr-attrs'>{attrs_dl}</dl>"
 
 
-def _icon(icon_name):
+def _icon(icon_name) -> str:
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
         f"<svg class='icon xr-{icon_name}'>"
@@ -72,7 +73,7 @@ def _icon(icon_name):
     )
 
 
-def summarize_variable(name, var, is_index=False, dtype=None):
+def summarize_variable(name, var, is_index=False, dtype=None) -> str:
     variable = var.variable if hasattr(var, "variable") else var
 
     cssclass_idx = " class='xr-has-index'" if is_index else ""
@@ -109,7 +110,7 @@ def summarize_variable(name, var, is_index=False, dtype=None):
     )
 
 
-def summarize_coords(variables):
+def summarize_coords(variables) -> str:
     li_items = []
     for k, v in variables.items():
         li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
@@ -120,7 +121,7 @@ def summarize_coords(variables):
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
-def summarize_vars(variables):
+def summarize_vars(variables) -> str:
     vars_li = "".join(
         f"<li class='xr-var-item'>{summarize_variable(k, v)}</li>"
         for k, v in variables.items()
@@ -129,14 +130,14 @@ def summarize_vars(variables):
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
-def short_index_repr_html(index):
+def short_index_repr_html(index) -> str:
     if hasattr(index, "_repr_html_"):
         return index._repr_html_()
 
     return f"<pre>{escape(repr(index))}</pre>"
 
 
-def summarize_index(coord_names, index):
+def summarize_index(coord_names, index) -> str:
     name = "<br>".join([escape(str(n)) for n in coord_names])
 
     index_id = f"index-{uuid.uuid4()}"
@@ -155,7 +156,7 @@ def summarize_index(coord_names, index):
     )
 
 
-def summarize_indexes(indexes):
+def summarize_indexes(indexes) -> str:
     indexes_li = "".join(
         f"<li class='xr-var-item'>{summarize_index(v, i)}</li>"
         for v, i in indexes.items()
@@ -165,7 +166,7 @@ def summarize_indexes(indexes):
 
 def collapsible_section(
     name, inline_details="", details="", n_items=None, enabled=True, collapsed=False
-):
+) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
 
@@ -187,7 +188,7 @@ def collapsible_section(
 
 def _mapping_section(
     mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True
-):
+) -> str:
     n_items = len(mapping)
     expanded = _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
@@ -203,15 +204,15 @@ def _mapping_section(
     )
 
 
-def dim_section(obj):
-    dim_list = format_dims(obj.dims, obj.xindexes.dims)
+def dim_section(obj) -> str:
+    dim_list = format_dims(obj.sizes, obj.xindexes.dims)
 
     return collapsible_section(
         "Dimensions", inline_details=dim_list, enabled=False, collapsed=True
     )
 
 
-def array_section(obj):
+def array_section(obj) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
     collapsed = (
@@ -296,7 +297,7 @@ def _obj_repr(obj, header_components, sections):
     )
 
 
-def array_repr(arr):
+def array_repr(arr) -> str:
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
     if hasattr(arr, "xindexes"):
         indexed_dims = arr.xindexes.dims
@@ -326,7 +327,7 @@ def array_repr(arr):
     return _obj_repr(arr, header_components, sections)
 
 
-def dataset_repr(ds):
+def dataset_repr(ds) -> str:
     obj_type = f"xarray.{type(ds).__name__}"
 
     header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]

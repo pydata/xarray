@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import functools
 import operator
-import sys
 
 import numpy as np
 import pandas as pd
 import pytest
-from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
@@ -18,6 +16,7 @@ from xarray.tests import (
     assert_identical,
     requires_dask,
     requires_matplotlib,
+    requires_numbagg,
 )
 from xarray.tests.test_plot import PlotTestCase
 from xarray.tests.test_variable import _PAD_XR_NP_ARGS
@@ -304,11 +303,13 @@ class method:
         all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
+        from xarray.core.groupby import GroupBy
+
         xarray_classes = (
             xr.Variable,
             xr.DataArray,
             xr.Dataset,
-            xr.core.groupby.GroupBy,
+            GroupBy,
         )
 
         if not isinstance(obj, xarray_classes):
@@ -1499,20 +1500,17 @@ def test_dot_dataarray(dtype):
     data_array = xr.DataArray(data=array1, dims=("x", "y"))
     other = xr.DataArray(data=array2, dims=("y", "z"))
 
-    expected = attach_units(
-        xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
-    )
-    actual = xr.dot(data_array, other)
+    with xr.set_options(use_opt_einsum=False):
+        expected = attach_units(
+            xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
+        )
+        actual = xr.dot(data_array, other)
 
     assert_units_equal(expected, actual)
     assert_identical(expected, actual)
 
 
 class TestVariable:
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -1535,13 +1533,6 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2344,10 +2335,6 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2400,13 +2387,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2425,10 +2405,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2462,8 +2438,9 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         units = extract_units(func(array))
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -2548,7 +2525,6 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3827,8 +3803,9 @@ class TestDataArray:
         if not isinstance(func, (function, method)):
             units.update(extract_units(func(array.reshape(-1))))
 
-        expected = attach_units(func(strip_units(data_array)), units)
-        actual = func(data_array)
+        with xr.set_options(use_opt_einsum=False):
+            expected = attach_units(func(strip_units(data_array)), units)
+            actual = func(data_array)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
@@ -3849,23 +3826,21 @@ class TestDataArray:
             method("groupby", "x"),
             method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
-            pytest.param(
-                method("rolling", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
-                ),
-            ),
-            pytest.param(
-                method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(
-                    reason="numbagg functions are not supported by pint"
-                ),
-            ),
+            method("rolling", y=3),
+            pytest.param(method("rolling_exp", y=3), marks=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
     def test_computation_objects(self, func, variant, dtype):
+        if variant == "data":
+            if func.name == "rolling_exp":
+                pytest.xfail(reason="numbagg functions are not supported by pint")
+            elif func.name == "rolling":
+                pytest.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                )
+
         unit = unit_registry.m
 
         variants = {
@@ -3896,11 +3871,11 @@ class TestDataArray:
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
 
-        time = pd.date_range("10-09-2010", periods=len(array), freq="1y")
+        time = pd.date_range("10-09-2010", periods=len(array), freq="Y")
         data_array = xr.DataArray(data=array, coords={"time": time}, dims="time")
         units = extract_units(data_array)
 
-        func = method("resample", time="6m")
+        func = method("resample", time="6M")
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
         actual = func(data_array).mean()
@@ -4082,10 +4057,6 @@ class TestDataset:
         # warnings or errors, but does not check the result
         func(ds)
 
-    @pytest.mark.skipif(
-        (sys.version_info >= (3, 11)) and sys.platform.startswith("win"),
-        reason="fails for some reason on win and 3.11, GH7971",
-    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -4107,13 +4078,6 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if (
-            func.name == "prod"
-            and dtype.kind == "f"
-            and version.parse(pint.__version__) < version.parse("0.19")
-        ):
-            pytest.xfail(reason="nanprod is not by older `pint` versions")
-
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
@@ -5407,7 +5371,7 @@ class TestDataset:
         array1 = np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit1
         array2 = np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit2
 
-        t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="1y")
+        t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="Y")
         y = np.arange(5) * dim_unit
         z = np.arange(8) * dim_unit
 
@@ -5419,7 +5383,7 @@ class TestDataset:
         )
         units = extract_units(ds)
 
-        func = method("resample", time="6m")
+        func = method("resample", time="6M")
 
         expected = attach_units(func(strip_units(ds)).mean(), units)
         actual = func(ds).mean()
@@ -5644,10 +5608,6 @@ class TestDataset:
 
 @requires_dask
 class TestPintWrappingDask:
-    @pytest.mark.skipif(
-        version.parse(pint.__version__) <= version.parse("0.21"),
-        reason="pint didn't support dask properly before 0.21",
-    )
     def test_duck_array_ops(self):
         import dask.array
 

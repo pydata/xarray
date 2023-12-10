@@ -47,9 +47,9 @@ complete examples, please consult the relevant documentation.*
         all but one of these degrees of freedom is fixed. We can think of each
         dimension axis as having a name, for example the "x dimension".  In
         xarray, a ``DataArray`` object's *dimensions* are its named dimension
-        axes, and the name of the ``i``-th dimension is ``arr.dims[i]``. If an
-        array is created without dimension names, the default dimension names are
-        ``dim_0``, ``dim_1``, and so forth.
+        axes ``da.dims``, and the name of the ``i``-th dimension is ``da.dims[i]``.
+        If an array is created without specifying dimension names, the default dimension
+        names will be ``dim_0``, ``dim_1``, and so forth.
 
     Coordinate
         An array that labels a dimension or set of dimensions of another
@@ -61,8 +61,7 @@ complete examples, please consult the relevant documentation.*
         ``arr.coords[x]``. A ``DataArray`` can have more coordinates than
         dimensions because a single dimension can be labeled by multiple
         coordinate arrays. However, only one coordinate array can be a assigned
-        as a particular dimension's dimension coordinate array. As a
-        consequence, ``len(arr.dims) <= len(arr.coords)`` in general.
+        as a particular dimension's dimension coordinate array.
 
     Dimension coordinate
         A one-dimensional coordinate array assigned to ``arr`` with both a name
@@ -90,7 +89,7 @@ complete examples, please consult the relevant documentation.*
         dimensions although in most cases it is also a :term:`Dimension
         coordinate`. It may or may not be grouped with other indexed coordinates
         depending on whether they share the same index. Indexed coordinates are
-        marked by ``*`` when printing a ``DataArray`` or ``Dataset``.
+        marked by an asterisk ``*`` when printing a ``DataArray`` or ``Dataset``.
 
     Non-indexed coordinate
         A coordinate which has no associated :term:`Index`. It may still

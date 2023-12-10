@@ -31,6 +31,8 @@ property needs to obey `numpy's broadcasting rules <https://numpy.org/doc/stable
 (see also the `Python Array API standard's explanation <https://data-apis.org/array-api/latest/API_specification/broadcasting.html>`_
 of these same rules).
 
+.. _internals.duckarrays.array_api_standard:
+
 Python Array API standard support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
