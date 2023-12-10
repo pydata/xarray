@@ -1054,6 +1054,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         decode_coords: bool | Literal["coordinates", "all"] = True,
         **kwargs: Any,
     ) -> Dataset:
+        if "auto_chunk" in kwargs:
+            raise TypeError(
+                "open_dataset got an unexpected keyword argument 'auto_chunk'"
+            )
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
