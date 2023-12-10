@@ -254,6 +254,7 @@ known-first-party = ["xarray"]
 addopts = ["--strict-config", "--strict-markers"]
 filterwarnings = [
   "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:FutureWarning",
+  "ignore:h5py is running against HDF5 1.14.3", # https://github.com/pydata/xarray/issues/8537
 ]
 log_cli_level = "INFO"
 markers = [
