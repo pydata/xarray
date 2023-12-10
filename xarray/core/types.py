@@ -29,6 +29,7 @@ except ImportError:
         raise
     else:
         Self: Any = None
+        TypeAlias: Any = None
 
 if TYPE_CHECKING:
     from io import BufferedIOBase
