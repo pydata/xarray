@@ -547,11 +547,11 @@ def _localize(var, indexes_coords):
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        minval = np.nanmin(new_x.values)
-        maxval = np.nanmax(new_x.values)
+        new_x_loaded = new_x.values
+        minval = np.nanmin(new_x_loaded)
+        maxval = np.nanmax(new_x_loaded)
         index = x.to_index()
-        imin = index.get_indexer([minval], method="nearest").item()
-        imax = index.get_indexer([maxval], method="nearest").item()
+        imin, imax = index.get_indexer([minval, maxval], method="nearest")
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords
