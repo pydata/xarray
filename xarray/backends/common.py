@@ -479,7 +479,7 @@ class BackendEntrypoint:
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
-    open_dataset_parameters : tuple, default: None
+    open_dataset_parameters : tuple or str or None, optional
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is only mandatory if the
         open_dataset method contains *args or **kwargs.

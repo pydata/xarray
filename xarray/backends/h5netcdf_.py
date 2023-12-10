@@ -394,7 +394,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     invalid_netcdf : bool or None, optional
         Allow writing netCDF4 with data types and attributes that would
         otherwise not generate netCDF4 files that can be read by other
-        applications. See :ref:`invalid netcdf` for more details.
+        applications. See :ref:`invalid-netcdf-files` for more details.
     phony_dims: {"sort", "access"} or None, optional
         Change how variables with no dimension scales associated with
         one of their axes are accessed.
@@ -402,12 +402,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         - None: raises a ValueError (default)
 
         - "sort": invent phony dimensions according to netCDF behaviour.
-        Note, that this iterates once over the whole group-hierarchy.
-        This has affects on performance in case you rely on laziness
-        of group access.
+          Note, that this iterates once over the whole group-hierarchy.
+          This has affects on performance in case you rely on laziness
+          of group access.
 
         - "access": defer phony dimension creation to group access time.
-        The created phony dimension naming will differ from netCDF behaviour.
+          The created phony dimension naming will differ from netCDF behaviour.
 
     decode_vlen_strings: bool, default: True
         Return vlen string data as str instead of bytes.
