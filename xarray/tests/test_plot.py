@@ -3380,7 +3380,8 @@ def test_plot1d_filtered_nulls() -> None:
     y = ds.y.where(ds.y > 0.2)
     expected = y.notnull().sum().item()
 
-    pc = y.plot.scatter()
-    actual = pc.get_offsets().shape[0]
+    with figure_context():
+        pc = y.plot.scatter()
+        actual = pc.get_offsets().shape[0]
 
-    assert expected == actual
+        assert expected == actual
