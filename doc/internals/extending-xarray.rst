@@ -101,9 +101,21 @@ Back in an interactive IPython session, we can use these properties:
 
 The intent here is that libraries that extend xarray could add such an accessor
 to implement subclass specific functionality rather than using actual subclasses
-or patching in a large number of domain specific methods. For further reading
-on ways to write new accessors and the philosophy behind the approach, see
-:issue:`1080`.
+or patching in a large number of domain specific methods.
+
+.. note::
+
+   With the exception of ``__init__``, ``__del__`` and the descriptor protocols it is
+   possible to take advantage of any standard python protocol. For example, the builtin
+   ``str`` accessor defines ``__getitem__`` as vectorized string indexing,
+   ``__add__`` as string concatenation and ``__mod__`` as string interpolation.
+
+   Keep in mind, however, that accessors are designed to add new
+   namespaces to the :py:class:`Dataset` and :py:class:`DataArray`
+   objects. As such, this feature should not be used to add new methods.
+
+For further reading on ways to write new accessors and the philosophy
+behind the approach, see :issue:`1080`.
 
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
