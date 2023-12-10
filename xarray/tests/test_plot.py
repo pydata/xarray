@@ -3372,3 +3372,15 @@ def test_plot1d_default_rcparams() -> None:
         np.testing.assert_allclose(
             ax.collections[0].get_edgecolor(), mpl.colors.to_rgba_array("k")
         )
+
+
+@requires_matplotlib
+def test_plot1d_filtered_nulls():
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+    y = ds.y.where(ds.y > 0.2)
+    expected = y.notnull().sum().item()
+
+    pc = y.plot.scatter()
+    actual = pc.get_offsets().shape[0]
+
+    assert expected == actual
