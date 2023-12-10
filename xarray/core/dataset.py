@@ -2372,7 +2372,7 @@ class Dataset(
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrOpenModes | None = None,
-        synchronizer=None,
+        synchronizer: object | None = None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,

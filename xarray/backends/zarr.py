@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     import zarr
 
     from xarray.core.dataset import Dataset
-    from xarray.core.types import Self, T_XarrayCanOpen
+    from xarray.core.types import Self, T_Chunks, T_XarrayCanOpen
 
 
 # need some special secret attributes to tell us the dimensions
@@ -804,26 +804,26 @@ class ZarrStore(AbstractWritableDataStore):
 
 def open_zarr(
     store,
-    group=None,
-    synchronizer=None,
-    chunks="auto",
-    decode_cf=True,
-    mask_and_scale=True,
-    decode_times=True,
-    concat_characters=True,
-    decode_coords=True,
-    drop_variables=None,
-    consolidated=None,
-    overwrite_encoded_chunks=False,
-    chunk_store=None,
-    storage_options=None,
-    decode_timedelta=None,
-    use_cftime=None,
-    zarr_version=None,
+    group: str | None = None,
+    synchronizer: object | None = None,
+    chunks: T_Chunks = "auto",
+    decode_cf: bool = True,
+    mask_and_scale: bool = True,
+    decode_times: bool = True,
+    concat_characters: bool = True,
+    decode_coords: bool | Literal["coordinates", "all"] = True,
+    drop_variables: str | Iterable[str] | None = None,
+    consolidated: bool | None = None,
+    overwrite_encoded_chunks: bool = False,
+    chunk_store: MutableMapping | str | os.PathLike | None = None,
+    storage_options: Mapping[str, Any] | None = None,
+    decode_timedelta: bool | None = None,
+    use_cftime: bool | None = None,
+    zarr_version: int | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> Dataset:
     """Load and decode a dataset from a Zarr store.
 
     The `store` object should be a valid store for a Zarr group. `store`
@@ -950,15 +950,15 @@ def open_zarr(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
         )
 
-    backend_kwargs = {
-        "synchronizer": synchronizer,
-        "consolidated": consolidated,
-        "overwrite_encoded_chunks": overwrite_encoded_chunks,
-        "chunk_store": chunk_store,
-        "storage_options": storage_options,
-        "stacklevel": 4,
-        "zarr_version": zarr_version,
-    }
+    zarr_backend = ZarrBackendEntrypoint(
+        group=group,
+        synchronizer=synchronizer,
+        consolidated=consolidated,
+        chunk_store=chunk_store,
+        storage_options=storage_options,
+        stacklevel=4,
+        zarr_version=zarr_version,
+    )
 
     ds = open_dataset(
         filename_or_obj=store,
@@ -968,15 +968,15 @@ def open_zarr(
         decode_times=decode_times,
         concat_characters=concat_characters,
         decode_coords=decode_coords,
-        engine="zarr",
+        engine=zarr_backend,
         chunks=chunks,
         drop_variables=drop_variables,
         chunked_array_type=chunked_array_type,
         from_array_kwargs=from_array_kwargs,
-        backend_kwargs=backend_kwargs,
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
         zarr_version=zarr_version,
+        overwrite_encoded_chunks=overwrite_encoded_chunks,
     )
     return ds
 
