@@ -71,7 +71,7 @@ with warnings.catch_warnings():
         category=DeprecationWarning,
     )
 
-    has_pydap, requires_pydap = _importorskip("pydap.client")
+has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
