@@ -1405,7 +1405,7 @@ def corr(
         Array to compute.
     dim : str, iterable of hashable, "..." or None, optional
         The dimension along which the correlation will be computed
-    weights : DataArray, default: None
+    weights : DataArray, optional
         Array of weights.
 
     Returns
