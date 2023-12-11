@@ -46,8 +46,9 @@ from xarray.backends.netCDF4_ import (
     NetCDF4BackendEntrypoint,
     _extract_nc4_variable_encoding,
 )
-from xarray.backends.pydap_ import PydapDataStore
+from xarray.backends.pydap_ import PydapBackendEntrypoint, PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.backends.zarr import ZarrBackendEntrypoint
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
@@ -123,6 +124,8 @@ default_value = object()
 dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
+    import pydap.model
+
     from xarray.backends.api import NetcdfFormats, T_NetcdfEngine
     from xarray.core.types import T_XarrayCanOpen
 
@@ -1879,6 +1882,15 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
+@requires_netCDF4
+class TestNetCDF4Instance(TestNetCDF4Data):
+    @contextlib.contextmanager
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
+        engine = NetCDF4BackendEntrypoint()
+        with open_dataset(path, engine=engine, **kwargs) as ds:
+            yield ds
+
+
 @requires_zarr
 class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -2946,6 +2958,17 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
 
 
 @requires_zarr
+class TestZarrrInstance(TestZarrWriteEmpty):
+    @contextlib.contextmanager
+    def open(self, store_target, **kwargs):
+        engine = ZarrBackendEntrypoint()
+        with xr.open_dataset(
+            store_target, engine=engine, **kwargs, **self.version_kwargs
+        ) as ds:
+            yield ds
+
+
+@requires_zarr
 @requires_fsspec
 def test_zarr_storage_options() -> None:
     pytest.importorskip("aiobotocore")
@@ -3045,6 +3068,15 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
 
             with pytest.raises(TypeError, match=r"pip install netcdf4"):
                 open_dataset(tmp_file, engine="scipy")
+
+
+@requires_scipy
+class TestScipyInstance(TestScipyFileObject):
+    @contextlib.contextmanager
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
+        engine = ScipyBackendEntrypoint()
+        with open_dataset(path, engine=engine, **kwargs) as ds:
+            yield ds
 
 
 @requires_netCDF4
@@ -3513,6 +3545,15 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
         ) as actual:
             assert "Temperature" in list(actual)
+
+
+@requires_h5netcdf
+class TestH5NetCDFInstance(TestH5NetCDFData):
+    @contextlib.contextmanager
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
+        engine = H5netcdfBackendEntrypoint()
+        with open_dataset(path, engine=engine, **kwargs) as ds:
+            yield ds
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
@@ -4370,7 +4411,7 @@ class TestDask(DatasetIOBase):
 @requires_pydap
 @pytest.mark.filterwarnings("ignore:The binary mode of fromstring is deprecated")
 class TestPydap:
-    def convert_to_pydap_dataset(self, original):
+    def convert_to_pydap_dataset(self, original: Dataset) -> pydap.model.DatasetType:
         from pydap.model import BaseType, DatasetType, GridType
 
         ds = DatasetType("bears", **original.attrs)
@@ -4388,10 +4429,10 @@ class TestPydap:
         return ds
 
     @contextlib.contextmanager
-    def create_datasets(self, **kwargs):
+    def create_datasets(self, **kwargs) -> Iterator[tuple[Dataset, Dataset]]:
         with open_example_dataset("bears.nc") as expected:
             pydap_ds = self.convert_to_pydap_dataset(expected)
-            actual = open_dataset(PydapDataStore(pydap_ds))
+            actual = open_dataset(PydapDataStore(pydap_ds), **kwargs)
             # TODO solve this workaround:
             # netcdf converts string to byte not unicode
             expected["bears"] = expected["bears"].astype(str)
@@ -4471,6 +4512,21 @@ class TestPydapOnline(TestPydap):
             output_grid=True,
             timeout=120,
         )
+
+
+@network
+@requires_scipy_or_netCDF4
+@requires_pydap
+class TestPydapInstance(TestPydapOnline):
+    @contextlib.contextmanager
+    def create_datasets(self, **kwargs):
+        url = "http://test.opendap.org/opendap/hyrax/data/nc/bears.nc"
+        engine = PydapBackendEntrypoint()
+        actual = open_dataset(url, engine=engine, **kwargs)
+        with open_example_dataset("bears.nc") as expected:
+            # workaround to restore string which is converted to byte
+            expected["bears"] = expected["bears"].astype(str)
+            yield actual, expected
 
 
 @requires_scipy
