@@ -57,6 +57,7 @@ if TYPE_CHECKING:
         NestedSequence,
         NetcdfFormats,
         T_Chunks,
+        T_XarrayCanOpen,
     )
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
@@ -390,7 +391,7 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    filename_or_obj: T_XarrayCanOpen,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,

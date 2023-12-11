@@ -124,6 +124,7 @@ dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
     from xarray.backends.api import NetcdfFormats, T_NetcdfEngine
+    from xarray.core.types import T_XarrayCanOpen
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -299,8 +300,12 @@ class DatasetIOBase:
 
     @contextlib.contextmanager
     def roundtrip(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
+        self,
+        data,
+        save_kwargs: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
+        allow_cleanup_failure: bool = False,
+    ) -> Iterator[Dataset]:
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
@@ -312,8 +317,12 @@ class DatasetIOBase:
 
     @contextlib.contextmanager
     def roundtrip_append(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
+        self,
+        data,
+        save_kwargs=None,
+        open_kwargs=None,
+        allow_cleanup_failure: bool = False,
+    ) -> Iterator[Dataset]:
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
@@ -332,7 +341,7 @@ class DatasetIOBase:
         )
 
     @contextlib.contextmanager
-    def open(self, path, **kwargs):
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
         with open_dataset(path, engine=self.engine, **kwargs) as ds:
             yield ds
 
@@ -642,13 +651,13 @@ class DatasetIOBase:
         with self.roundtrip(in_memory) as on_disk:
             indexers = {"dim1": [1, 2, 0], "dim2": [3, 2, 0, 3], "dim3": np.arange(5)}
             expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             # make sure the array is not yet loaded into memory
             assert not actual["var1"].variable._in_memory
             assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
 
     def test_vectorized_indexing(self) -> None:
@@ -659,13 +668,13 @@ class DatasetIOBase:
                 "dim2": DataArray([0, 2, 3], dims="a"),
             }
             expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             # make sure the array is not yet loaded into memory
             assert not actual["var1"].variable._in_memory
             assert_identical(expected, actual.load())
             # do it twice, to make sure we're switched from
             # vectorized -> numpy when we cached the values
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
 
         def multiple_indexing(indexers):
@@ -772,7 +781,7 @@ class DatasetIOBase:
             actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
             assert_identical(expected, actual)
 
-    def validate_array_type(self, ds):
+    def validate_array_type(self, ds: Dataset) -> None:
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
@@ -798,12 +807,12 @@ class DatasetIOBase:
             self.validate_array_type(on_disk)
             indexers = {"dim1": [1, 2, 0], "dim2": [3, 2, 0, 3], "dim3": np.arange(5)}
             expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
             self.validate_array_type(actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
             self.validate_array_type(actual)
 
@@ -3377,15 +3386,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
 
     def test_open_badbytes(self) -> None:
         with pytest.raises(ValueError, match=r"HDF5 as bytes"):
-            with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):  # type: ignore[arg-type]
+            with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
         with pytest.raises(
             ValueError, match=r"match in any of xarray's currently installed IO"
         ):
-            with open_dataset(b"garbage"):  # type: ignore[arg-type]
+            with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
-            with open_dataset(b"garbage", engine="netcdf4"):  # type: ignore[arg-type]
+            with open_dataset(b"garbage", engine="netcdf4"):
                 pass
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
@@ -4412,14 +4421,14 @@ class TestPydap:
 
         with self.create_datasets() as (actual, expected):
             indexers = {"i": [1, 0, 0], "j": [1, 2, 0, 1]}
-            assert_equal(actual.isel(**indexers), expected.isel(**indexers))
+            assert_equal(actual.isel(indexers), expected.isel(indexers))
 
         with self.create_datasets() as (actual, expected):
             indexers2 = {
                 "i": DataArray([0, 1, 0], dims="a"),
                 "j": DataArray([0, 2, 1], dims="a"),
             }
-            assert_equal(actual.isel(**indexers2), expected.isel(**indexers2))
+            assert_equal(actual.isel(indexers2), expected.isel(indexers2))
 
     def test_compatible_to_netcdf(self) -> None:
         # make sure it can be saved as a netcdf
@@ -5168,7 +5177,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
-    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")  # type: ignore[arg-type]
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
 
 
 @requires_h5netcdf

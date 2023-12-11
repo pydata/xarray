@@ -273,7 +273,7 @@ QuantileMethods: TypeAlias = Literal[
 ]
 
 T_XarrayCanOpen: TypeAlias = Union[
-    str, os.PathLike[Any], "BufferedIOBase", "AbstractDataStore"
+    str, bytes, os.PathLike[Any], "BufferedIOBase", "AbstractDataStore"
 ]
 NetcdfFormats = Literal[
     "NETCDF4",

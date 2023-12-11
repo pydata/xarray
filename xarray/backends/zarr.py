@@ -475,7 +475,7 @@ class ZarrStore(AbstractWritableDataStore):
                         stacklevel=stacklevel,
                     )
                 except zarr.errors.GroupNotFoundError:
-                    raise FileNotFoundError(f"No such file or directory: '{store}'")
+                    raise FileNotFoundError(f"No such file or directory: '{store!r}'")
         elif consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
