@@ -1301,7 +1301,7 @@ def cov(
     ddof : int, default: 1
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
-    weights : DataArray, default: None
+    weights : DataArray, optional
         Array of weights.
 
     Returns
