@@ -38,9 +38,6 @@ For netCDF and IO
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
-- `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
-  for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
-  (ffi1001) and many other.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 

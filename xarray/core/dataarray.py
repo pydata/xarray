@@ -49,14 +49,18 @@ from xarray.core.indexes import (
 from xarray.core.indexing import is_fancy_indexer, map_index_queries
 from xarray.core.merge import PANDAS_TYPES, MergeError
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.core.types import DaCompatible, T_DataArray, T_DataArrayOrSet
+from xarray.core.types import (
+    DaCompatible,
+    T_DataArray,
+    T_DataArrayOrSet,
+    ZarrWriteModes,
+)
 from xarray.core.utils import (
     Default,
     HybridMappingProxy,
     ReprObject,
     _default,
     either_dict_or_kwargs,
-    emit_user_level_warning,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -66,7 +70,7 @@ from xarray.core.variable import (
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
-from xarray.util.deprecation_helpers import _deprecate_positional_args
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
@@ -81,10 +85,6 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
-    try:
-        from cdms2 import Variable as cdms2_Variable
-    except ImportError:
-        cdms2_Variable = None
     try:
         from iris.cube import Cube as iris_Cube
     except ImportError:
@@ -120,14 +120,14 @@ if TYPE_CHECKING:
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
-def _check_coords_dims(shape, coords, dims):
-    sizes = dict(zip(dims, shape))
+def _check_coords_dims(shape, coords, dim):
+    sizes = dict(zip(dim, shape))
     for k, v in coords.items():
-        if any(d not in dims for d in v.dims):
+        if any(d not in dim for d in v.dims):
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                f"dimensions {dims}"
+                f"dimensions {dim}"
             )
 
         for d, s in v.sizes.items():
@@ -579,9 +579,24 @@ class DataArray(
             array.attrs = {}
             return as_variable(array)
 
-        variables = {label: subset(dim, label) for label in self.get_index(dim)}
-        variables.update({k: v for k, v in self._coords.items() if k != dim})
+        variables_from_split = {
+            label: subset(dim, label) for label in self.get_index(dim)
+        }
         coord_names = set(self._coords) - {dim}
+
+        ambiguous_vars = set(variables_from_split) & coord_names
+        if ambiguous_vars:
+            rename_msg_fmt = ", ".join([f"{v}=..." for v in sorted(ambiguous_vars)])
+            raise ValueError(
+                f"Splitting along the dimension {dim!r} would produce the variables "
+                f"{tuple(sorted(ambiguous_vars))} which are also existing coordinate "
+                f"variables. Use DataArray.rename({rename_msg_fmt}) or "
+                f"DataArray.assign_coords({dim}=...) to resolve this ambiguity."
+            )
+
+        variables = variables_from_split | {
+            k: v for k, v in self._coords.items() if k != dim
+        }
         indexes = filter_indexes_from_coords(self._indexes, coord_names)
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
@@ -3026,7 +3041,7 @@ class DataArray(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable],
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -3034,8 +3049,9 @@ class DataArray(
 
         Parameters
         ----------
-        names : Hashable or iterable of Hashable
-            Name(s) of variables to drop.
+        names : Hashable or iterable of Hashable or Callable
+            Name(s) of variables to drop. If a Callable, this object is passed as its
+            only argument and its result is used.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
@@ -3085,7 +3101,17 @@ class DataArray(
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Dimensions without coordinates: x, y
+
+        >>> da.drop_vars(lambda x: x.coords)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Dimensions without coordinates: x, y
         """
+        if callable(names):
+            names = names(self)
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
 
@@ -3899,6 +3925,23 @@ class DataArray(
     ) -> bytes:
         ...
 
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
     # default return None
     @overload
     def to_netcdf(
@@ -3915,7 +3958,8 @@ class DataArray(
     ) -> None:
         ...
 
-    # compute=False returns dask.Delayed
+    # if compute cannot be evaluated at type check time
+    # we may get back either Delayed or None
     @overload
     def to_netcdf(
         self,
@@ -3926,10 +3970,9 @@ class DataArray(
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
-        *,
-        compute: Literal[False],
+        compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed:
+    ) -> Delayed | None:
         ...
 
     def to_netcdf(
@@ -4069,7 +4112,7 @@ class DataArray(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         *,
@@ -4090,7 +4133,7 @@ class DataArray(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -4109,7 +4152,7 @@ class DataArray(
         self,
         store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: Literal["w", "w-", "a", "r+", None] = None,
+        mode: ZarrWriteModes | None = None,
         synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
@@ -4145,10 +4188,11 @@ class DataArray(
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", "r+", None}, optional
+        mode : {"w", "w-", "a", "a-", r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist);
+            "a" means override all existing variables including dimension coordinates (create if does not exist);
+            "a-" means only append those variables that have ``append_dim``.
             "r+" means modify existing array *values* only (raise an error if
             any metadata or shapes would change).
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
@@ -4406,47 +4450,6 @@ class DataArray(
         result = ds[temp_name]
         result.name = series.name
         return result
-
-    def to_cdms2(self) -> cdms2_Variable:
-        """Convert this array into a cdms2.Variable
-
-        .. deprecated:: 2023.06.0
-            The `cdms2`_ library has been deprecated. Please consider using the
-            `xcdat`_ library instead.
-
-        .. _cdms2: https://github.com/CDAT/cdms
-        .. _xcdat: https://github.com/xCDAT/xcdat
-        """
-        from xarray.convert import to_cdms2
-
-        emit_user_level_warning(
-            "The cdms2 library has been deprecated."
-            " Please consider using the xcdat library instead.",
-            DeprecationWarning,
-        )
-
-        return to_cdms2(self)
-
-    @classmethod
-    def from_cdms2(cls, variable: cdms2_Variable) -> Self:
-        """Convert a cdms2.Variable into an xarray.DataArray
-
-        .. deprecated:: 2023.06.0
-            The `cdms2`_ library has been deprecated. Please consider using the
-            `xcdat`_ library instead.
-
-        .. _cdms2: https://github.com/CDAT/cdms
-        .. _xcdat: https://github.com/xCDAT/xcdat
-        """
-        from xarray.convert import from_cdms2
-
-        emit_user_level_warning(
-            "The cdms2 library has been deprecated."
-            " Please consider using the xcdat library instead.",
-            DeprecationWarning,
-        )
-
-        return from_cdms2(variable)
 
     def to_iris(self) -> iris_Cube:
         """Convert this array into a iris.cube.Cube"""
@@ -4931,10 +4934,11 @@ class DataArray(
         """
         return self._replace(self.variable.imag)
 
+    @deprecate_dims
     def dot(
         self,
         other: T_Xarray,
-        dims: Dims = None,
+        dim: Dims = None,
     ) -> T_Xarray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -4944,7 +4948,7 @@ class DataArray(
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims : ..., str, Iterable of Hashable or None, optional
+        dim : ..., str, Iterable of Hashable or None, optional
             Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
@@ -4983,7 +4987,7 @@ class DataArray(
         if not isinstance(other, DataArray):
             raise TypeError("dot only operates on DataArrays.")
 
-        return computation.dot(self, other, dims=dims)
+        return computation.dot(self, other, dim=dim)
 
     def sortby(
         self,
@@ -5495,7 +5499,7 @@ class DataArray(
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         ...
-        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="ME")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
@@ -6249,8 +6253,8 @@ class DataArray(
         func: Callable[..., Any],
         reduce_dims: Dims = None,
         skipna: bool = True,
-        p0: dict[str, float | DataArray] | None = None,
-        bounds: dict[str, tuple[float | DataArray, float | DataArray]] | None = None,
+        p0: Mapping[str, float | DataArray] | None = None,
+        bounds: Mapping[str, tuple[float | DataArray, float | DataArray]] | None = None,
         param_names: Sequence[str] | None = None,
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
@@ -6924,13 +6928,89 @@ class DataArray(
 
         See Also
         --------
-        core.rolling.DataArrayRolling
+        DataArray.cumulative
         Dataset.rolling
+        core.rolling.DataArrayRolling
         """
         from xarray.core.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
+
+    def cumulative(
+        self,
+        dim: str | Iterable[Hashable],
+        min_periods: int = 1,
+    ) -> DataArrayRolling:
+        """
+        Accumulating object for DataArrays.
+
+        Parameters
+        ----------
+        dims : iterable of hashable
+            The name(s) of the dimensions to create the cumulative window along
+        min_periods : int, default: 1
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default is 1 (note this is different
+            from ``Rolling``, whose default is the size of the window).
+
+        Returns
+        -------
+        core.rolling.DataArrayRolling
+
+        Examples
+        --------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "1999-12-15",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
+
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        >>> da.cumulative("time").sum()
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        See Also
+        --------
+        DataArray.rolling
+        Dataset.cumulative
+        core.rolling.DataArrayRolling
+        """
+        from xarray.core.rolling import DataArrayRolling
+
+        # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
+        # with the same method in Dataset.
+        if isinstance(dim, str):
+            if dim not in self.dims:
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
+            dim = {dim: self.sizes[dim]}
+        else:
+            missing_dims = set(dim) - set(self.dims)
+            if missing_dims:
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
+            dim = {d: self.sizes[d] for d in dim}
+
+        return DataArrayRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,
@@ -7026,7 +7106,6 @@ class DataArray(
         base: int | None = None,
         offset: pd.Timedelta | datetime.timedelta | str | None = None,
         origin: str | DatetimeLike = "start_day",
-        keep_attrs: bool | None = None,
         loffset: datetime.timedelta | str | None = None,
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: str,
@@ -7068,6 +7147,12 @@ class DataArray(
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
+
+            .. deprecated:: 2023.03.0
+                Following pandas, the ``loffset`` parameter is deprecated in favor
+                of using time offset arithmetic, and will be removed in a future
+                version of xarray.
+
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -7148,7 +7233,6 @@ class DataArray(
             base=base,
             offset=offset,
             origin=origin,
-            keep_attrs=keep_attrs,
             loffset=loffset,
             restore_coord_dims=restore_coord_dims,
             **indexer_kwargs,

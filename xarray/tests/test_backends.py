@@ -69,9 +69,9 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
-    requires_pseudonetcdf,
     requires_pydap,
     requires_pynio,
     requires_scipy,
@@ -864,12 +864,13 @@ class CFEncodedBase(DatasetIOBase):
         assert check_vlen_dtype(original["a"].dtype) == str
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
-            assert object == actual["a"].dtype
-            assert actual["a"].dtype == original["a"].dtype
-            # only check metadata for capable backends
-            # eg. NETCDF3 based backends do not roundtrip metadata
-            if actual["a"].dtype.metadata is not None:
-                assert check_vlen_dtype(actual["a"].dtype) == str
+            if np.issubdtype(actual["a"].dtype, object):
+                # only check metadata for capable backends
+                # eg. NETCDF3 based backends do not roundtrip metadata
+                if actual["a"].dtype.metadata is not None:
+                    assert check_vlen_dtype(actual["a"].dtype) == str
+            else:
+                assert actual["a"].dtype == np.dtype("<U1")
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
@@ -1374,32 +1375,39 @@ class NetCDF4Base(NetCDFBase):
             with self.open(tmp_file, group="data/2") as actual2:
                 assert_identical(data2, actual2)
 
-    def test_encoding_kwarg_vlen_string(self) -> None:
-        for input_strings in [[b"foo", b"bar", b"baz"], ["foo", "bar", "baz"]]:
-            original = Dataset({"x": input_strings})
-            expected = Dataset({"x": ["foo", "bar", "baz"]})
-            kwargs = dict(encoding={"x": {"dtype": str}})
-            with self.roundtrip(original, save_kwargs=kwargs) as actual:
-                assert actual["x"].encoding["dtype"] is str
-                assert_identical(actual, expected)
+    @pytest.mark.parametrize(
+        "input_strings, is_bytes",
+        [
+            ([b"foo", b"bar", b"baz"], True),
+            (["foo", "bar", "baz"], False),
+            (["foó", "bár", "baź"], False),
+        ],
+    )
+    def test_encoding_kwarg_vlen_string(
+        self, input_strings: list[str], is_bytes: bool
+    ) -> None:
+        original = Dataset({"x": input_strings})
 
-    def test_roundtrip_string_with_fill_value_vlen(self) -> None:
+        expected_string = ["foo", "bar", "baz"] if is_bytes else input_strings
+        expected = Dataset({"x": expected_string})
+        kwargs = dict(encoding={"x": {"dtype": str}})
+        with self.roundtrip(original, save_kwargs=kwargs) as actual:
+            assert actual["x"].encoding["dtype"] == "<U3"
+            assert actual["x"].dtype == "<U3"
+            assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("fill_value", ["XXX", "", "bár"])
+    def test_roundtrip_string_with_fill_value_vlen(self, fill_value: str) -> None:
         values = np.array(["ab", "cdef", np.nan], dtype=object)
         expected = Dataset({"x": ("t", values)})
 
-        # netCDF4-based backends don't support an explicit fillvalue
-        # for variable length strings yet.
-        # https://github.com/Unidata/netcdf4-python/issues/730
-        # https://github.com/h5netcdf/h5netcdf/issues/37
-        original = Dataset({"x": ("t", values, {}, {"_FillValue": "XXX"})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                assert_identical(expected, actual)
+        original = Dataset({"x": ("t", values, {}, {"_FillValue": fill_value})})
+        with self.roundtrip(original) as actual:
+            assert_identical(expected, actual)
 
         original = Dataset({"x": ("t", values, {}, {"_FillValue": ""})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                assert_identical(expected, actual)
+        with self.roundtrip(original) as actual:
+            assert_identical(expected, actual)
 
     def test_roundtrip_character_array(self) -> None:
         with create_tmp_file() as tmp_file:
@@ -2483,6 +2491,29 @@ class ZarrBase(CFEncodedBase):
                 xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
 
+    def test_append_with_append_dim_no_overwrite(self) -> None:
+        ds, ds_to_append, _ = create_append_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            original = xr.concat([ds, ds_to_append], dim="time")
+            original2 = xr.concat([original, ds_to_append], dim="time")
+
+            # overwrite a coordinate;
+            # for mode='a-', this will not get written to the store
+            # because it does not have the append_dim as a dim
+            ds_to_append.lon.data[:] = -999
+            ds_to_append.to_zarr(
+                store_target, mode="a-", append_dim="time", **self.version_kwargs
+            )
+            actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            assert_identical(original, actual)
+
+            # by default, mode="a" will overwrite all coordinates.
+            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            original2.lon.data[:] = -999
+            assert_identical(original2, actual)
+
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
@@ -2679,7 +2710,7 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(
                 ValueError,
                 match=re.escape(
-                    "cannot set region unless mode='a', mode='r+' or mode=None"
+                    "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
                 ),
             ):
                 data.to_zarr(
@@ -2929,6 +2960,43 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 ls = listdir(os.path.join(store, "test"))
                 assert set(expected) == set([file for file in ls if file[0] != "."])
 
+    def test_avoid_excess_metadata_calls(self) -> None:
+        """Test that chunk requests do not trigger redundant metadata requests.
+
+        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
+        to retrieve chunk data after initialization do not trigger additional
+        metadata requests.
+
+        https://github.com/pydata/xarray/issues/8290
+        """
+
+        import zarr
+
+        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
+
+        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
+        # so that we can inspect calls to this method - specifically count of calls.
+        # Use of side_effect means that calls are passed through to the original method
+        # rather than a mocked method.
+        Group = zarr.hierarchy.Group
+        with (
+            self.create_zarr_target() as store,
+            patch.object(
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
+            ) as mock,
+        ):
+            ds.to_zarr(store, mode="w")
+
+            # We expect this to request array metadata information, so call_count should be == 1,
+            xrds = xr.open_zarr(store)
+            call_count = mock.call_count
+            assert call_count == 1
+
+            # compute() requests array data, which should not trigger additional metadata requests
+            # we assert that the number of calls has not increased after fetchhing the array
+            xrds.test.compute(scheduler="sync")
+            assert mock.call_count == call_count
+
 
 class ZarrBaseV3(ZarrBase):
     zarr_version = 3
@@ -2967,47 +3035,6 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
-
-
-@requires_zarr
-class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
-    def test_avoid_excess_metadata_calls(self) -> None:
-        """Test that chunk requests do not trigger redundant metadata requests.
-
-        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
-        to retrieve chunk data after initialization do not trigger additional
-        metadata requests.
-
-        https://github.com/pydata/xarray/issues/8290
-        """
-
-        import zarr
-
-        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
-
-        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
-        # so that we can inspect calls to this method - specifically count of calls.
-        # Use of side_effect means that calls are passed through to the original method
-        # rather than a mocked method.
-        Group = zarr.hierarchy.Group
-        with (
-            self.create_zarr_target() as store,
-            patch.object(
-                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
-            ) as mock,
-        ):
-            ds.to_zarr(store, mode="w")
-
-            # We expect this to request array metadata information, so call_count should be >= 1,
-            # At time of writing, 2 calls are made
-            xrds = xr.open_zarr(store)
-            call_count = mock.call_count
-            assert call_count > 0
-
-            # compute() requests array data, which should not trigger additional metadata requests
-            # we assert that the number of calls has not increased after fetchhing the array
-            xrds.test.compute(scheduler="sync")
-            assert mock.call_count == call_count
 
 
 @requires_zarr
@@ -3548,6 +3575,36 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         with self.roundtrip(ds) as actual:
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
+
+
+@requires_h5netcdf_ros3
+class TestH5NetCDFDataRos3Driver(TestCommon):
+    engine: T_NetcdfEngine = "h5netcdf"
+    test_remote_dataset: str = (
+        "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    )
+
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
+    def test_get_variable_list(self) -> None:
+        with open_dataset(
+            self.test_remote_dataset,
+            engine="h5netcdf",
+            backend_kwargs={"driver": "ros3"},
+        ) as actual:
+            assert "Temperature" in list(actual)
+
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
+    def test_get_variable_list_empty_driver_kwds(self) -> None:
+        driver_kwds = {
+            "secret_id": b"",
+            "secret_key": b"",
+        }
+        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+
+        with open_dataset(
+            self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
+        ) as actual:
+            assert "Temperature" in list(actual)
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
@@ -4541,226 +4598,6 @@ class TestPyNio(CFEncodedBase, NetCDF3Only):
             assert_identical(actual, expected)
 
 
-@requires_pseudonetcdf
-@pytest.mark.filterwarnings("ignore:IOAPI_ISPH is assumed to be 6370000")
-class TestPseudoNetCDFFormat:
-    def open(self, path, **kwargs):
-        return open_dataset(path, engine="pseudonetcdf", **kwargs)
-
-    @contextlib.contextmanager
-    def roundtrip(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
-        if save_kwargs is None:
-            save_kwargs = {}
-        if open_kwargs is None:
-            open_kwargs = {}
-        with create_tmp_file(allow_cleanup_failure=allow_cleanup_failure) as path:
-            self.save(data, path, **save_kwargs)
-            with self.open(path, **open_kwargs) as ds:
-                yield ds
-
-    def test_ict_format(self) -> None:
-        """
-        Open a CAMx file and test data variables
-        """
-        stdattr = {
-            "fill_value": -9999.0,
-            "missing_value": -9999,
-            "scale": 1,
-            "llod_flag": -8888,
-            "llod_value": "N/A",
-            "ulod_flag": -7777,
-            "ulod_value": "N/A",
-        }
-
-        def myatts(**attrs):
-            outattr = stdattr.copy()
-            outattr.update(attrs)
-            return outattr
-
-        input = {
-            "coords": {},
-            "attrs": {
-                "fmt": "1001",
-                "n_header_lines": 29,
-                "PI_NAME": "Henderson, Barron",
-                "ORGANIZATION_NAME": "U.S. EPA",
-                "SOURCE_DESCRIPTION": "Example file with artificial data",
-                "MISSION_NAME": "JUST_A_TEST",
-                "VOLUME_INFO": "1, 1",
-                "SDATE": "2018, 04, 27",
-                "WDATE": "2018, 04, 27",
-                "TIME_INTERVAL": "0",
-                "INDEPENDENT_VARIABLE_DEFINITION": "Start_UTC",
-                "INDEPENDENT_VARIABLE": "Start_UTC",
-                "INDEPENDENT_VARIABLE_UNITS": "Start_UTC",
-                "ULOD_FLAG": "-7777",
-                "ULOD_VALUE": "N/A",
-                "LLOD_FLAG": "-8888",
-                "LLOD_VALUE": ("N/A, N/A, N/A, N/A, 0.025"),
-                "OTHER_COMMENTS": (
-                    "www-air.larc.nasa.gov/missions/etc/" + "IcarttDataFormat.htm"
-                ),
-                "REVISION": "R0",
-                "R0": "No comments for this revision.",
-                "TFLAG": "Start_UTC",
-            },
-            "dims": {"POINTS": 4},
-            "data_vars": {
-                "Start_UTC": {
-                    "data": [43200.0, 46800.0, 50400.0, 50400.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="Start_UTC", standard_name="Start_UTC"),
-                },
-                "lat": {
-                    "data": [41.0, 42.0, 42.0, 42.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="degrees_north", standard_name="lat"),
-                },
-                "lon": {
-                    "data": [-71.0, -72.0, -73.0, -74.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="degrees_east", standard_name="lon"),
-                },
-                "elev": {
-                    "data": [5.0, 15.0, 20.0, 25.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="meters", standard_name="elev"),
-                },
-                "TEST_ppbv": {
-                    "data": [1.2345, 2.3456, 3.4567, 4.5678],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(units="ppbv", standard_name="TEST_ppbv"),
-                },
-                "TESTM_ppbv": {
-                    "data": [2.22, -9999.0, -7777.0, -8888.0],
-                    "dims": ("POINTS",),
-                    "attrs": myatts(
-                        units="ppbv", standard_name="TESTM_ppbv", llod_value=0.025
-                    ),
-                },
-            },
-        }
-        chkfile = Dataset.from_dict(input)
-        with open_example_dataset(
-            "example.ict", engine="pseudonetcdf", backend_kwargs={"format": "ffi1001"}
-        ) as ictfile:
-            assert_identical(ictfile, chkfile)
-
-    def test_ict_format_write(self) -> None:
-        fmtkw = {"format": "ffi1001"}
-        with open_example_dataset(
-            "example.ict", engine="pseudonetcdf", backend_kwargs=fmtkw
-        ) as expected:
-            with self.roundtrip(
-                expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
-            ) as actual:
-                assert_identical(expected, actual)
-
-    def test_uamiv_format_read(self) -> None:
-        """
-        Open a CAMx file and test data variables
-        """
-
-        camxfile = open_example_dataset(
-            "example.uamiv", engine="pseudonetcdf", backend_kwargs={"format": "uamiv"}
-        )
-        data = np.arange(20, dtype="f").reshape(1, 1, 4, 5)
-        expected = xr.Variable(
-            ("TSTEP", "LAY", "ROW", "COL"),
-            data,
-            dict(units="ppm", long_name="O3".ljust(16), var_desc="O3".ljust(80)),
-        )
-        actual = camxfile.variables["O3"]
-        assert_allclose(expected, actual)
-
-        data = np.array([[[2002154, 0]]], dtype="i")
-        expected = xr.Variable(
-            ("TSTEP", "VAR", "DATE-TIME"),
-            data,
-            dict(
-                long_name="TFLAG".ljust(16),
-                var_desc="TFLAG".ljust(80),
-                units="DATE-TIME".ljust(16),
-            ),
-        )
-        actual = camxfile.variables["TFLAG"]
-        assert_allclose(expected, actual)
-        camxfile.close()
-
-    @requires_dask
-    def test_uamiv_format_mfread(self) -> None:
-        """
-        Open a CAMx file and test data variables
-        """
-
-        camxfile = open_example_mfdataset(
-            ["example.uamiv", "example.uamiv"],
-            engine="pseudonetcdf",
-            concat_dim="TSTEP",
-            combine="nested",
-            backend_kwargs={"format": "uamiv"},
-        )
-
-        data1 = np.arange(20, dtype="f").reshape(1, 1, 4, 5)
-        data = np.concatenate([data1] * 2, axis=0)
-        expected = xr.Variable(
-            ("TSTEP", "LAY", "ROW", "COL"),
-            data,
-            dict(units="ppm", long_name="O3".ljust(16), var_desc="O3".ljust(80)),
-        )
-        actual = camxfile.variables["O3"]
-        assert_allclose(expected, actual)
-
-        data = np.array([[[2002154, 0]]], dtype="i").repeat(2, 0)
-        attrs = dict(
-            long_name="TFLAG".ljust(16),
-            var_desc="TFLAG".ljust(80),
-            units="DATE-TIME".ljust(16),
-        )
-        dims = ("TSTEP", "VAR", "DATE-TIME")
-        expected = xr.Variable(dims, data, attrs)
-        actual = camxfile.variables["TFLAG"]
-        assert_allclose(expected, actual)
-        camxfile.close()
-
-    @pytest.mark.xfail(reason="Flaky; see GH3711")
-    def test_uamiv_format_write(self) -> None:
-        fmtkw = {"format": "uamiv"}
-
-        expected = open_example_dataset(
-            "example.uamiv", engine="pseudonetcdf", backend_kwargs=fmtkw
-        )
-        with self.roundtrip(
-            expected,
-            save_kwargs=fmtkw,
-            open_kwargs={"backend_kwargs": fmtkw},
-            allow_cleanup_failure=True,
-        ) as actual:
-            assert_identical(expected, actual)
-
-        expected.close()
-
-    def save(self, dataset, path, **save_kwargs):
-        import PseudoNetCDF as pnc
-
-        pncf = pnc.PseudoNetCDFFile()
-        pncf.dimensions = {
-            k: pnc.PseudoNetCDFDimension(pncf, k, v) for k, v in dataset.dims.items()
-        }
-        pncf.variables = {
-            k: pnc.PseudoNetCDFVariable(
-                pncf, k, v.dtype.char, v.dims, values=v.data[...], **v.attrs
-            )
-            for k, v in dataset.variables.items()
-        }
-        for pk, pv in dataset.attrs.items():
-            setattr(pncf, pk, pv)
-
-        pnc.pncwrite(pncf, path, **save_kwargs)
-
-
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
@@ -5532,3 +5369,213 @@ class TestNCZarr:
 def test_pickle_open_mfdataset_dataset():
     ds = open_example_mfdataset(["bears.nc"])
     assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+
+
+@requires_zarr
+def test_zarr_closing_internal_zip_store():
+    store_name = "tmp.zarr.zip"
+    original_da = DataArray(np.arange(12).reshape((3, 4)))
+    original_da.to_zarr(store_name, mode="w")
+
+    with open_dataarray(store_name, engine="zarr") as loaded_da:
+        assert_identical(original_da, loaded_da)
+
+
+@requires_zarr
+class TestZarrRegionAuto:
+    def test_zarr_region_auto_all(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(tmp_path / "test.zarr", region="auto")
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_mixed(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        ds_region.to_zarr(
+            tmp_path / "test.zarr", region={"x": "auto", "y": slice(6, 8)}
+        )
+
+        ds_updated = xr.open_zarr(tmp_path / "test.zarr")
+
+        expected = ds.copy()
+        expected["test"][2:4, 6:8] += 1
+        assert_identical(ds_updated, expected)
+
+    def test_zarr_region_auto_noncontiguous(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        ds_region = 1 + ds.isel(x=[0, 2, 3], y=[5, 6])
+        with pytest.raises(ValueError):
+            ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+
+    def test_zarr_region_auto_new_coord_vals(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        x = np.arange(5, 55, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+        with pytest.raises(KeyError):
+            ds_region.to_zarr(tmp_path / "test.zarr", region={"x": "auto", "y": "auto"})
+
+    def test_zarr_region_index_write(self, tmp_path):
+        from xarray.backends.zarr import ZarrStore
+
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+
+        ds_region = 1 + ds.isel(x=slice(2, 4), y=slice(6, 8))
+
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        with patch.object(
+            ZarrStore,
+            "set_variables",
+            side_effect=ZarrStore.set_variables,
+            autospec=True,
+        ) as mock:
+            ds_region.to_zarr(tmp_path / "test.zarr", region="auto", mode="r+")
+
+            # should write the data vars but never the index vars with auto mode
+            for call in mock.call_args_list:
+                written_variables = call.args[1].keys()
+                assert "test" in written_variables
+                assert "x" not in written_variables
+                assert "y" not in written_variables
+
+    def test_zarr_region_append(self, tmp_path):
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = np.ones((5, 10))
+        ds = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data,
+                    dims=("x", "y"),
+                    coords={"x": x, "y": y},
+                )
+            }
+        )
+        ds.to_zarr(tmp_path / "test.zarr")
+
+        x_new = np.arange(40, 70, 10)
+        data_new = np.ones((3, 10))
+        ds_new = xr.Dataset(
+            {
+                "test": xr.DataArray(
+                    data_new,
+                    dims=("x", "y"),
+                    coords={"x": x_new, "y": y},
+                )
+            }
+        )
+
+        # Don't allow auto region detection in append mode due to complexities in
+        # implementing the overlap logic and lack of safety with parallel writes
+        with pytest.raises(ValueError):
+            ds_new.to_zarr(
+                tmp_path / "test.zarr", mode="a", append_dim="x", region="auto"
+            )
+
+
+@requires_zarr
+def test_zarr_region(tmp_path):
+    x = np.arange(0, 50, 10)
+    y = np.arange(0, 20, 2)
+    data = np.ones((5, 10))
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                data,
+                dims=("x", "y"),
+                coords={"x": x, "y": y},
+            )
+        }
+    )
+    ds.to_zarr(tmp_path / "test.zarr")
+
+    ds_transposed = ds.transpose("y", "x")
+
+    ds_region = 1 + ds_transposed.isel(x=[0], y=[0])
+    ds_region.to_zarr(
+        tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
+    )
+
+    # Write without region
+    ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")
