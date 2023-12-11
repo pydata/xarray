@@ -16,11 +16,11 @@ dependencies:
   - dask-core=2022.7
   - distributed=2022.7
   - flox=0.5
-  - h5netcdf=1.0
+  - h5netcdf=1.1
   # h5py and hdf5 tend to cause conflicts
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
   # prioritize bumping other packages instead
-  - h5py=3.6
+  - h5py=3.7
   - hdf5=1.12
   - hypothesis
   - iris=3.2

@@ -315,7 +315,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars: T_DataVars, coords, c
                 if dim in ds:
                     ds = ds.set_coords(dim)
         concat_over.update(k for k, v in ds.variables.items() if dim in v.dims)
-        concat_dim_lengths.append(ds.dims.get(dim, 1))
+        concat_dim_lengths.append(ds.sizes.get(dim, 1))
 
     def process_subset_opt(opt, subset):
         if isinstance(opt, str):
@@ -431,7 +431,7 @@ def _parse_datasets(
     variables_order: dict[Hashable, Variable] = {}  # variables in order of appearance
 
     for ds in datasets:
-        dims_sizes.update(ds.dims)
+        dims_sizes.update(ds.sizes)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
         variables_order.update(ds.variables)

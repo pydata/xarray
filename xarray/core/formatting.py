@@ -6,7 +6,7 @@ import contextlib
 import functools
 import math
 from collections import defaultdict
-from collections.abc import Collection, Hashable
+from collections.abc import Collection, Hashable, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
@@ -357,7 +357,7 @@ EMPTY_REPR = "    *empty*"
 
 
 def _calculate_col_width(col_items):
-    max_name_length = max(len(str(s)) for s in col_items) if col_items else 0
+    max_name_length = max((len(str(s)) for s in col_items), default=0)
     col_width = max(max_name_length, 7) + 6
     return col_width
 
@@ -739,7 +739,7 @@ def dataset_repr(ds):
 
 
 def diff_dim_summary(a, b):
-    if a.dims != b.dims:
+    if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
         return ""
@@ -937,3 +937,16 @@ def diff_dataset_repr(a, b, compat):
         summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
 
     return "\n".join(summary)
+
+
+def shorten_list_repr(items: Sequence, max_items: int) -> str:
+    if len(items) <= max_items:
+        return repr(items)
+    else:
+        first_half = repr(items[: max_items // 2])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        second_half = repr(items[-max_items // 2 :])[
+            1:-1
+        ]  # Convert to string and remove brackets
+        return f"[{first_half}, ..., {second_half}]"
