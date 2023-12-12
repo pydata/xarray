@@ -527,7 +527,7 @@ class IOReadSingleFile(IOSingleNetCDF):
 class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
         """
-        The custom backend does the bare mininum to be considered a lazy backend. But
+        The custom backend does the bare minimum to be considered a lazy backend. But
         the data in it is still in memory so slow file reading shouldn't affect the
         results.
         """
@@ -593,7 +593,7 @@ class IOReadCustomEngine:
                 n_variables = 2000
 
                 # Important to have a shape and dtype for lazy loading.
-                shape = (1,)
+                shape = (1000,)
                 dtype = np.dtype(int)
                 variables = {
                     f"long_variable_name_{v}": xr.Variable(
@@ -643,7 +643,7 @@ class IOReadCustomEngine:
 
         self.engine = PerformanceBackend
 
-    @parameterized(["chunks"], ([None, {}]))
+    @parameterized(["chunks"], ([None, {}, {"time": 10}]))
     def time_open_dataset(self, chunks):
         """
         Time how fast xr.open_dataset is without the slow data reading part.

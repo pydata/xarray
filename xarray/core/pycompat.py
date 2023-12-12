@@ -12,7 +12,7 @@ from xarray.core.utils import is_duck_array, is_scalar, module_available
 integer_types = (int, np.integer)
 
 if TYPE_CHECKING:
-    ModType = Literal["dask", "pint", "cupy", "sparse", "cubed"]
+    ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
 
 
@@ -47,6 +47,9 @@ class DuckArrayModule:
                 duck_array_type = (duck_array_module.SparseArray,)
             elif mod == "cubed":
                 duck_array_type = (duck_array_module.Array,)
+            # Not a duck array module, but using this system regardless, to get lazy imports
+            elif mod == "numbagg":
+                duck_array_type = ()
             else:
                 raise NotImplementedError
 
@@ -101,3 +104,37 @@ def is_chunked_array(x) -> bool:
 
 def is_0d_dask_array(x):
     return is_duck_dask_array(x) and is_scalar(x)
+
+
+def to_numpy(data) -> np.ndarray:
+    from xarray.core.indexing import ExplicitlyIndexed
+    from xarray.core.parallelcompat import get_chunked_array_type
+
+    if isinstance(data, ExplicitlyIndexed):
+        data = data.get_duck_array()
+
+    # TODO first attempt to call .to_numpy() once some libraries implement it
+    if hasattr(data, "chunks"):
+        chunkmanager = get_chunked_array_type(data)
+        data, *_ = chunkmanager.compute(data)
+    if isinstance(data, array_type("cupy")):
+        data = data.get()
+    # pint has to be imported dynamically as pint imports xarray
+    if isinstance(data, array_type("pint")):
+        data = data.magnitude
+    if isinstance(data, array_type("sparse")):
+        data = data.todense()
+    data = np.asarray(data)
+
+    return data
+
+
+def to_duck_array(data):
+    from xarray.core.indexing import ExplicitlyIndexed
+
+    if isinstance(data, ExplicitlyIndexed):
+        return data.get_duck_array()
+    elif is_duck_array(data):
+        return data
+    else:
+        return np.asarray(data)

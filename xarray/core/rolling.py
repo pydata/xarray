@@ -8,13 +8,14 @@ from collections.abc import Hashable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 import numpy as np
+from packaging.version import Version
 
-from xarray.core import dtypes, duck_array_ops, utils
+from xarray.core import dtypes, duck_array_ops, pycompat, utils
 from xarray.core.arithmetic import CoarsenArithmetic
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
-from xarray.core.utils import either_dict_or_kwargs
+from xarray.core.utils import either_dict_or_kwargs, module_available
 
 try:
     import bottleneck
@@ -61,6 +62,11 @@ class Rolling(Generic[T_Xarray]):
 
     __slots__ = ("obj", "window", "min_periods", "center", "dim")
     _attributes = ("window", "min_periods", "center", "dim")
+    dim: list[Hashable]
+    window: list[int]
+    center: list[bool]
+    obj: T_Xarray
+    min_periods: int
 
     def __init__(
         self,
@@ -91,8 +97,8 @@ class Rolling(Generic[T_Xarray]):
         -------
         rolling : type of input argument
         """
-        self.dim: list[Hashable] = []
-        self.window: list[int] = []
+        self.dim = []
+        self.window = []
         for d, w in windows.items():
             self.dim.append(d)
             if w <= 0:
@@ -100,7 +106,15 @@ class Rolling(Generic[T_Xarray]):
             self.window.append(w)
 
         self.center = self._mapping_to_list(center, default=False)
-        self.obj: T_Xarray = obj
+        self.obj = obj
+
+        missing_dims = tuple(dim for dim in self.dim if dim not in self.obj.dims)
+        if missing_dims:
+            # NOTE: we raise KeyError here but ValueError in Coarsen.
+            raise KeyError(
+                f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
+                f"dimensions {tuple(self.obj.dims)}"
+            )
 
         # attributes
         if min_periods is not None and min_periods <= 0:
@@ -132,7 +146,13 @@ class Rolling(Generic[T_Xarray]):
         name: str, fillna: Any, rolling_agg_func: Callable | None = None
     ) -> Callable[..., T_Xarray]:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean).
+        a numbagg reduction function (e.g. move_sum), a bottleneck reduction function
+        (e.g. move_sum), or a Rolling reduction (_mean).
+
+        The logic here for which function to run is quite diffuse, across this method &
+        _array_reduce. Arguably we could refactor this. But one constraint is that we
+        need context of xarray options, of the functions each library offers, of
+        the array (e.g. dtype).
         """
         if rolling_agg_func:
             array_agg_func = None
@@ -140,14 +160,21 @@ class Rolling(Generic[T_Xarray]):
             array_agg_func = getattr(duck_array_ops, name)
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
+        if module_available("numbagg"):
+            import numbagg
+
+            numbagg_move_func = getattr(numbagg, "move_" + name, None)
+        else:
+            numbagg_move_func = None
 
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
-            return self._numpy_or_bottleneck_reduce(
-                array_agg_func,
-                bottleneck_move_func,
-                rolling_agg_func,
+            return self._array_reduce(
+                array_agg_func=array_agg_func,
+                bottleneck_move_func=bottleneck_move_func,
+                numbagg_move_func=numbagg_move_func,
+                rolling_agg_func=rolling_agg_func,
                 keep_attrs=keep_attrs,
                 fillna=fillna,
                 **kwargs,
@@ -467,9 +494,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
 
-        result = windows.reduce(
-            func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
-        )
+        dim = list(rolling_dim.values())
+        result = windows.reduce(func, dim=dim, keep_attrs=keep_attrs, **kwargs)
 
         # Find valid windows based on count.
         counts = self._counts(keep_attrs=False)
@@ -486,6 +512,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
+        dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
@@ -493,13 +520,51 @@ class DataArrayRolling(Rolling["DataArray"]):
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
-            .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
+            .sum(dim=dim, skipna=False, keep_attrs=keep_attrs)
         )
         return counts
 
-    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
-        from xarray.core.dataarray import DataArray
+    def _numbagg_reduce(self, func, keep_attrs, **kwargs):
+        # Some of this is copied from `_bottleneck_reduce`, we could reduce this as part
+        # of a wider refactor.
 
+        axis = self.obj.get_axis_num(self.dim[0])
+
+        padded = self.obj.variable
+        if self.center[0]:
+            if is_duck_dask_array(padded.data):
+                # workaround to make the padded chunk size larger than
+                # self.window - 1
+                shift = -(self.window[0] + 1) // 2
+                offset = (self.window[0] - 1) // 2
+                valid = (slice(None),) * axis + (
+                    slice(offset, offset + self.obj.shape[axis]),
+                )
+            else:
+                shift = (-self.window[0] // 2) + 1
+                valid = (slice(None),) * axis + (slice(-shift, None),)
+            padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
+
+        if is_duck_dask_array(padded.data) and False:
+            raise AssertionError("should not be reachable")
+        else:
+            values = func(
+                padded.data,
+                window=self.window[0],
+                min_count=self.min_periods,
+                axis=axis,
+            )
+
+        if self.center[0]:
+            values = values[valid]
+
+        attrs = self.obj.attrs if keep_attrs else {}
+
+        return self.obj.__class__(
+            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        )
+
+    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
         # Note bottleneck only works with 1d-rolling.
@@ -537,12 +602,15 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
+        return self.obj.__class__(
+            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        )
 
-    def _numpy_or_bottleneck_reduce(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
+        numbagg_move_func,
         rolling_agg_func,
         keep_attrs,
         fillna,
@@ -559,19 +627,50 @@ class DataArrayRolling(Rolling["DataArray"]):
             del kwargs["dim"]
 
         if (
+            OPTIONS["use_numbagg"]
+            and module_available("numbagg")
+            and pycompat.mod_version("numbagg") >= Version("0.6.3")
+            and numbagg_move_func is not None
+            # TODO: we could at least allow this for the equivalent of `apply_ufunc`'s
+            # "parallelized". `rolling_exp` does this, as an example (but rolling_exp is
+            # much simpler)
+            and not is_duck_dask_array(self.obj.data)
+            # Numbagg doesn't handle object arrays and generally has dtype consistency,
+            # so doesn't deal well with bool arrays which are expected to change type.
+            and self.obj.data.dtype.kind not in "ObMm"
+            # TODO: we could also allow this, probably as part of a refactoring of this
+            # module, so we can use the machinery in `self.reduce`.
+            and self.ndim == 1
+        ):
+            import numbagg
+
+            # Numbagg has a default ddof of 1. I (@max-sixty) think we should make
+            # this the default in xarray too, but until we do, don't use numbagg for
+            # std and var unless ddof is set to 1.
+            if (
+                numbagg_move_func not in [numbagg.move_std, numbagg.move_var]
+                or kwargs.get("ddof") == 1
+            ):
+                return self._numbagg_reduce(
+                    numbagg_move_func, keep_attrs=keep_attrs, **kwargs
+                )
+
+        if (
             OPTIONS["use_bottleneck"]
             and bottleneck_move_func is not None
             and not is_duck_dask_array(self.obj.data)
             and self.ndim == 1
         ):
-            # TODO: renable bottleneck with dask after the issues
+            # TODO: re-enable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
+
         if rolling_agg_func:
             return rolling_agg_func(self, keep_attrs=self._get_keep_attrs(keep_attrs))
+
         if fillna is not None:
             if fillna is dtypes.INF:
                 fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
@@ -624,8 +723,7 @@ class DatasetRolling(Rolling["Dataset"]):
         xarray.DataArray.groupby
         """
         super().__init__(obj, windows, min_periods, center)
-        if any(d not in self.obj.dims for d in self.dim):
-            raise KeyError(self.dim)
+
         # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
@@ -693,7 +791,7 @@ class DatasetRolling(Rolling["Dataset"]):
             DataArrayRolling._counts, keep_attrs=keep_attrs
         )
 
-    def _numpy_or_bottleneck_reduce(
+    def _array_reduce(
         self,
         array_agg_func,
         bottleneck_move_func,
@@ -703,7 +801,7 @@ class DatasetRolling(Rolling["Dataset"]):
     ):
         return self._dataset_implementation(
             functools.partial(
-                DataArrayRolling._numpy_or_bottleneck_reduce,
+                DataArrayRolling._array_reduce,
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
                 rolling_agg_func=rolling_agg_func,
@@ -778,11 +876,14 @@ class DatasetRolling(Rolling["Dataset"]):
             if not keep_attrs:
                 dataset[key].attrs = {}
 
+        # Need to stride coords as well. TODO: is there a better way?
+        coords = self.obj.isel(
+            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
+        ).coords
+
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
-            {d: slice(None, None, s) for d, s in zip(self.dim, strides)}
-        )
+        return Dataset(dataset, coords=coords, attrs=attrs)
 
 
 class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
@@ -804,6 +905,10 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     )
     _attributes = ("windows", "side", "trim_excess")
     obj: T_Xarray
+    windows: Mapping[Hashable, int]
+    side: SideOptions | Mapping[Hashable, SideOptions]
+    boundary: CoarsenBoundaryOptions
+    coord_func: Mapping[Hashable, str | Callable]
 
     def __init__(
         self,
@@ -833,23 +938,28 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
         Returns
         -------
         coarsen
+
         """
         self.obj = obj
         self.windows = windows
         self.side = side
         self.boundary = boundary
 
-        absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
-        if absent_dims:
+        missing_dims = tuple(dim for dim in windows.keys() if dim not in self.obj.dims)
+        if missing_dims:
             raise ValueError(
-                f"Dimensions {absent_dims!r} not found in {self.obj.__class__.__name__}."
+                f"Window dimensions {missing_dims} not found in {self.obj.__class__.__name__} "
+                f"dimensions {tuple(self.obj.dims)}"
             )
-        if not utils.is_dict_like(coord_func):
-            coord_func = {d: coord_func for d in self.obj.dims}  # type: ignore[misc]
+
+        if utils.is_dict_like(coord_func):
+            coord_func_map = coord_func
+        else:
+            coord_func_map = {d: coord_func for d in self.obj.dims}
         for c in self.obj.coords:
-            if c not in coord_func:
-                coord_func[c] = duck_array_ops.mean  # type: ignore[index]
-        self.coord_func: Mapping[Hashable, str | Callable] = coord_func
+            if c not in coord_func_map:
+                coord_func_map[c] = duck_array_ops.mean  # type: ignore[index]
+        self.coord_func = coord_func_map
 
     def _get_keep_attrs(self, keep_attrs):
         if keep_attrs is None:

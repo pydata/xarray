@@ -14,15 +14,6 @@ from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
-__all__ = (
-    "assert_allclose",
-    "assert_chunks_equal",
-    "assert_duckarray_equal",
-    "assert_duckarray_allclose",
-    "assert_equal",
-    "assert_identical",
-)
-
 
 def ensure_warnings(func):
     # sometimes tests elevate warnings to errors
@@ -364,7 +355,7 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         set(ds._variables),
     )
 
-    assert type(ds._dims) is dict, ds._dims
+    assert type(ds._dims) is dict, ds._dims  # noqa: E721
     assert all(isinstance(v, int) for v in ds._dims.values()), ds._dims
     var_dims: set[Hashable] = set()
     for v in ds._variables.values():

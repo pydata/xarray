@@ -53,3 +53,43 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         # See issue dask/dask#6516
         coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da, rhs)
     return coeffs, residuals
+
+
+def push(array, n, axis):
+    """
+    Dask-aware bottleneck.push
+    """
+    import dask.array as da
+    import numpy as np
+
+    from xarray.core.duck_array_ops import _push
+
+    def _fill_with_last_one(a, b):
+        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
+        # the missing values using the last data of the previous chunk
+        return np.where(~np.isnan(b), b, a)
+
+    if n is not None and 0 < n < array.shape[axis] - 1:
+        arange = da.broadcast_to(
+            da.arange(
+                array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
+            ).reshape(
+                tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
+            ),
+            array.shape,
+            array.chunks,
+        )
+        valid_arange = da.where(da.notnull(array), arange, np.nan)
+        valid_limits = (arange - push(valid_arange, None, axis)) <= n
+        # omit the forward fill that violate the limit
+        return da.where(valid_limits, push(array, None, axis), np.nan)
+
+    # The method parameter makes that the tests for python 3.7 fails.
+    return da.reductions.cumreduction(
+        func=_push,
+        binop=_fill_with_last_one,
+        ident=np.nan,
+        x=array,
+        axis=axis,
+        dtype=array.dtype,
+    )

@@ -207,7 +207,7 @@ def _ensure_fill_value_valid(data, attributes):
     # work around for netCDF4/scipy issue where _FillValue has the wrong type:
     # https://github.com/Unidata/netcdf4-python/issues/271
     if data.dtype.kind == "S" and "_FillValue" in attributes:
-        attributes["_FillValue"] = np.string_(attributes["_FillValue"])
+        attributes["_FillValue"] = np.bytes_(attributes["_FillValue"])
 
 
 def _force_native_endianness(var):
@@ -426,6 +426,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             else:
                 encoding["contiguous"] = False
                 encoding["chunksizes"] = tuple(chunking)
+                encoding["preferred_chunks"] = dict(zip(var.dimensions, chunking))
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()
@@ -489,16 +490,6 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         fill_value = attrs.pop("_FillValue", None)
 
-        if datatype is str and fill_value is not None:
-            raise NotImplementedError(
-                "netCDF4 does not yet support setting a fill value for "
-                "variable-length strings "
-                "(https://github.com/Unidata/netcdf4-python/issues/730). "
-                f"Either remove '_FillValue' from encoding on variable {name!r} "
-                "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type."
-            )
-
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
@@ -538,7 +529,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
 
-    It can open ".nc", ".nc4", ".cdf" files and will be choosen
+    It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.
 
     Additionally it can open valid HDF5 files, see

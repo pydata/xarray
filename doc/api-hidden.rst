@@ -22,6 +22,7 @@
    Coordinates.to_dataset
    Coordinates.to_index
    Coordinates.update
+   Coordinates.assign
    Coordinates.merge
    Coordinates.copy
    Coordinates.equals
@@ -39,8 +40,9 @@
    core.coordinates.DatasetCoordinates.to_dataset
    core.coordinates.DatasetCoordinates.to_index
    core.coordinates.DatasetCoordinates.update
+   core.coordinates.DatasetCoordinates.assign
    core.coordinates.DatasetCoordinates.merge
-   core.coordinates.DataArrayCoordinates.copy
+   core.coordinates.DatasetCoordinates.copy
    core.coordinates.DatasetCoordinates.equals
    core.coordinates.DatasetCoordinates.identical
 
@@ -79,6 +81,7 @@
    core.coordinates.DataArrayCoordinates.to_dataset
    core.coordinates.DataArrayCoordinates.to_index
    core.coordinates.DataArrayCoordinates.update
+   core.coordinates.DataArrayCoordinates.assign
    core.coordinates.DataArrayCoordinates.merge
    core.coordinates.DataArrayCoordinates.copy
    core.coordinates.DataArrayCoordinates.equals
@@ -262,7 +265,7 @@
    Variable.dims
    Variable.dtype
    Variable.encoding
-   Variable.reset_encoding
+   Variable.drop_encoding
    Variable.imag
    Variable.nbytes
    Variable.ndim
@@ -347,6 +350,36 @@
    IndexVariable.size
    IndexVariable.sizes
    IndexVariable.values
+
+
+   namedarray.core.NamedArray.all
+   namedarray.core.NamedArray.any
+   namedarray.core.NamedArray.attrs
+   namedarray.core.NamedArray.chunks
+   namedarray.core.NamedArray.chunksizes
+   namedarray.core.NamedArray.copy
+   namedarray.core.NamedArray.count
+   namedarray.core.NamedArray.cumprod
+   namedarray.core.NamedArray.cumsum
+   namedarray.core.NamedArray.data
+   namedarray.core.NamedArray.dims
+   namedarray.core.NamedArray.dtype
+   namedarray.core.NamedArray.get_axis_num
+   namedarray.core.NamedArray.max
+   namedarray.core.NamedArray.mean
+   namedarray.core.NamedArray.median
+   namedarray.core.NamedArray.min
+   namedarray.core.NamedArray.nbytes
+   namedarray.core.NamedArray.ndim
+   namedarray.core.NamedArray.prod
+   namedarray.core.NamedArray.reduce
+   namedarray.core.NamedArray.shape
+   namedarray.core.NamedArray.size
+   namedarray.core.NamedArray.sizes
+   namedarray.core.NamedArray.std
+   namedarray.core.NamedArray.sum
+   namedarray.core.NamedArray.var
+
 
    plot.plot
    plot.line
@@ -557,20 +590,6 @@
    backends.H5netcdfBackendEntrypoint.url
    backends.H5netcdfBackendEntrypoint.guess_can_open
    backends.H5netcdfBackendEntrypoint.open_dataset
-
-   backends.PseudoNetCDFDataStore.close
-   backends.PseudoNetCDFDataStore.get_attrs
-   backends.PseudoNetCDFDataStore.get_dimensions
-   backends.PseudoNetCDFDataStore.get_encoding
-   backends.PseudoNetCDFDataStore.get_variables
-   backends.PseudoNetCDFDataStore.open
-   backends.PseudoNetCDFDataStore.open_store_variable
-   backends.PseudoNetCDFDataStore.ds
-
-   backends.PseudoNetCDFBackendEntrypoint.description
-   backends.PseudoNetCDFBackendEntrypoint.url
-   backends.PseudoNetCDFBackendEntrypoint.guess_can_open
-   backends.PseudoNetCDFBackendEntrypoint.open_dataset
 
    backends.PydapDataStore.close
    backends.PydapDataStore.get_attrs

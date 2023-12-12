@@ -474,10 +474,11 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
-    out = []
+    out: list[DatasetLike] = []
     for obj in objects:
+        variables: DatasetLike
         if isinstance(obj, (Dataset, Coordinates)):
-            variables: DatasetLike = obj
+            variables = obj
         else:
             variables = {}
             if isinstance(obj, PANDAS_TYPES):
@@ -491,7 +492,7 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
 
 
 def _get_priority_vars_and_indexes(
-    objects: list[DatasetLike],
+    objects: Sequence[DatasetLike],
     priority_arg: int | None,
     compat: CompatOptions = "equals",
 ) -> dict[Hashable, MergeElement]:
@@ -503,7 +504,7 @@ def _get_priority_vars_and_indexes(
 
     Parameters
     ----------
-    objects : list of dict-like of Variable
+    objects : sequence of dict-like of Variable
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
@@ -723,6 +724,9 @@ def merge_core(
     dims = calculate_dimensions(variables)
 
     coord_names, noncoord_names = determine_coords(coerced)
+    if compat == "minimal":
+        # coordinates may be dropped in merged results
+        coord_names.intersection_update(variables)
     if explicit_coords is not None:
         assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)

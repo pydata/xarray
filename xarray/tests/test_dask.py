@@ -299,6 +299,17 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
+    def test_tokenize_empty_attrs(self) -> None:
+        # Issue #6970
+        assert self.eager_var._attrs is None
+        expected = dask.base.tokenize(self.eager_var)
+        assert self.eager_var.attrs == self.eager_var._attrs == {}
+        assert (
+            expected
+            == dask.base.tokenize(self.eager_var)
+            == dask.base.tokenize(self.lazy_var.compute())
+        )
+
     @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
@@ -597,11 +608,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         v = self.lazy_array
 
         expected = u.assign_coords(x=u["x"])
-        self.assertLazyAndEqual(expected, v.to_dataset("x").to_array("x"))
+        self.assertLazyAndEqual(expected, v.to_dataset("x").to_dataarray("x"))
 
     def test_merge(self):
         def duplicate_and_merge(array):
-            return xr.merge([array, array.rename("bar")]).to_array()
+            return xr.merge([array, array.rename("bar")]).to_dataarray()
 
         expected = duplicate_and_merge(self.eager_array)
         actual = duplicate_and_merge(self.lazy_array)
@@ -1295,12 +1306,12 @@ def test_map_blocks_kwargs(obj):
     assert_identical(actual, expected)
 
 
-def test_map_blocks_to_array(map_ds):
+def test_map_blocks_to_dataarray(map_ds):
     with raise_if_dask_computes():
-        actual = xr.map_blocks(lambda x: x.to_array(), map_ds)
+        actual = xr.map_blocks(lambda x: x.to_dataarray(), map_ds)
 
-    # to_array does not preserve name, so cannot use assert_identical
-    assert_equal(actual, map_ds.to_array())
+    # to_dataarray does not preserve name, so cannot use assert_identical
+    assert_equal(actual, map_ds.to_dataarray())
 
 
 @pytest.mark.parametrize(
@@ -1365,8 +1376,8 @@ def test_map_blocks_template_convert_object():
     assert_identical(actual, template)
 
     ds = da.to_dataset()
-    func = lambda x: x.to_array().isel(x=[1])
-    template = ds.to_array().isel(x=[1, 5, 9])
+    func = lambda x: x.to_dataarray().isel(x=[1])
+    template = ds.to_dataarray().isel(x=[1, 5, 9])
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, ds, template=template)
     assert_identical(actual, template)

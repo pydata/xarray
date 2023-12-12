@@ -89,7 +89,7 @@ items and with the `slice` object:
 
 .. ipython:: python
 
-    time = pd.date_range("2000-01-01", freq="H", periods=365 * 24)
+    time = pd.date_range("2000-01-01", freq="h", periods=365 * 24)
     ds = xr.Dataset({"foo": ("time", np.arange(365 * 24)), "time": time})
     ds.sel(time="2000-01")
     ds.sel(time=slice("2000-06-01", "2000-06-10"))
@@ -115,7 +115,7 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
 .. ipython:: python
 
-    time = pd.date_range("2000-01-01", freq="6H", periods=365 * 4)
+    time = pd.date_range("2000-01-01", freq="6h", periods=365 * 4)
     ds = xr.Dataset({"foo": ("time", np.arange(365 * 4)), "time": time})
     ds.time.dt.hour
     ds.time.dt.dayofweek
@@ -207,7 +207,7 @@ For example, we can downsample our dataset from hourly to 6-hourly:
 .. ipython:: python
     :okwarning:
 
-    ds.resample(time="6H")
+    ds.resample(time="6h")
 
 This will create a specialized ``Resample`` object which saves information
 necessary for resampling. All of the reduction methods which work with
@@ -216,21 +216,21 @@ necessary for resampling. All of the reduction methods which work with
 .. ipython:: python
     :okwarning:
 
-    ds.resample(time="6H").mean()
+    ds.resample(time="6h").mean()
 
 You can also supply an arbitrary reduction function to aggregate over each
 resampling group:
 
 .. ipython:: python
 
-    ds.resample(time="6H").reduce(np.mean)
+    ds.resample(time="6h").reduce(np.mean)
 
 You can also resample on the time dimension while applying reducing along other dimensions at the same time
 by specifying the `dim` keyword argument
 
 .. code-block:: python
 
-    ds.resample(time="6H").mean(dim=["time", "latitude", "longitude"])
+    ds.resample(time="6h").mean(dim=["time", "latitude", "longitude"])
 
 For upsampling, xarray provides six methods: ``asfreq``, ``ffill``, ``bfill``, ``pad``,
 ``nearest`` and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d``
@@ -243,8 +243,20 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 .. ipython:: python
 
-    ds.resample(time="1H").nearest(tolerance="1H")
+    ds.resample(time="1h").nearest(tolerance="1h")
 
+It is often desirable to center the time values after a resampling operation.
+That can be accomplished by updating the resampled dataset time coordinate values
+using time offset arithmetic via the `pandas.tseries.frequencies.to_offset`_ function.
+
+.. _pandas.tseries.frequencies.to_offset: https://pandas.pydata.org/docs/reference/api/pandas.tseries.frequencies.to_offset.html
+
+.. ipython:: python
+
+    resampled_ds = ds.resample(time="6h").mean()
+    offset = pd.tseries.frequencies.to_offset("6h") / 2
+    resampled_ds["time"] = resampled_ds.get_index("time") + offset
+    resampled_ds
 
 For more examples of using grouped operations on a time dimension, see
 :doc:`../examples/weather-data`.
