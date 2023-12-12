@@ -98,6 +98,7 @@ from xarray.core.types import (
     Self,
     T_ChunkDim,
     T_Chunks,
+    T_DataArray,
     T_DataArrayOrSet,
     T_Dataset,
     ZarrWriteModes,
@@ -105,6 +106,7 @@ from xarray.core.types import (
 from xarray.core.utils import (
     Default,
     Frozen,
+    FrozenMappingWarningOnValuesAccess,
     HybridMappingProxy,
     OrderedSet,
     _default,
@@ -778,14 +780,15 @@ class Dataset(
 
         Note that type of this object differs from `DataArray.dims`.
         See `Dataset.sizes` and `DataArray.sizes` for consistently named
-        properties.
+        properties. This property will be changed to return a type more consistent with
+        `DataArray.dims` in the future, i.e. a set of dimension names.
 
         See Also
         --------
         Dataset.sizes
         DataArray.dims
         """
-        return Frozen(self._dims)
+        return FrozenMappingWarningOnValuesAccess(self._dims)
 
     @property
     def sizes(self) -> Frozen[Hashable, int]:
@@ -800,7 +803,7 @@ class Dataset(
         --------
         DataArray.sizes
         """
-        return self.dims
+        return Frozen(self._dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -1411,7 +1414,7 @@ class Dataset(
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name, self.dims
+                    self._variables, name, self.sizes
                 )
                 variables[var_name] = var
                 if ref_name in self._coord_names or ref_name in self.dims:
@@ -1426,7 +1429,7 @@ class Dataset(
         for v in variables.values():
             needed_dims.update(v.dims)
 
-        dims = {k: self.dims[k] for k in needed_dims}
+        dims = {k: self.sizes[k] for k in needed_dims}
 
         # preserves ordering of coordinates
         for k in self._variables:
@@ -1448,7 +1451,7 @@ class Dataset(
         try:
             variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(self._variables, name, self.dims)
+            _, name, variable = _get_virtual_variable(self._variables, name, self.sizes)
 
         needed_dims = set(variable.dims)
 
@@ -1475,7 +1478,7 @@ class Dataset(
         yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
 
         # virtual coordinates
-        yield HybridMappingProxy(keys=self.dims, mapping=self)
+        yield HybridMappingProxy(keys=self.sizes, mapping=self)
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
@@ -2569,7 +2572,7 @@ class Dataset(
         lines = []
         lines.append("xarray.Dataset {")
         lines.append("dimensions:")
-        for name, size in self.dims.items():
+        for name, size in self.sizes.items():
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
         for name, da in self.variables.items():
@@ -2697,10 +2700,10 @@ class Dataset(
         else:
             chunks_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        bad_dims = chunks_mapping.keys() - self.dims.keys()
+        bad_dims = chunks_mapping.keys() - self.sizes.keys()
         if bad_dims:
             raise ValueError(
-                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.dims)}"
+                f"chunks keys {tuple(bad_dims)} not found in data dimensions {tuple(self.sizes.keys())}"
             )
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
@@ -3952,7 +3955,7 @@ class Dataset(
             try:
                 return obj._variables[k]
             except KeyError:
-                return as_variable((k, range(obj.dims[k])))
+                return as_variable((k, range(obj.sizes[k])))
 
         def _validate_interp_indexer(x, new_x):
             # In the case of datetimes, the restrictions placed on indexers
@@ -4176,7 +4179,7 @@ class Dataset(
         return variables, coord_names
 
     def _rename_dims(self, name_dict: Mapping[Any, Hashable]) -> dict[Hashable, int]:
-        return {name_dict.get(k, k): v for k, v in self.dims.items()}
+        return {name_dict.get(k, k): v for k, v in self.sizes.items()}
 
     def _rename_indexes(
         self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
@@ -5168,7 +5171,7 @@ class Dataset(
             if dim in self._variables:
                 var = self._variables[dim]
             else:
-                _, _, var = _get_virtual_variable(self._variables, dim, self.dims)
+                _, _, var = _get_virtual_variable(self._variables, dim, self.sizes)
             # dummy index (only `stack_coords` will be used to construct the multi-index)
             stack_index = PandasIndex([0], dim)
             stack_coords = {dim: var}
@@ -5195,7 +5198,7 @@ class Dataset(
             if any(d in var.dims for d in dims):
                 add_dims = [d for d in dims if d not in var.dims]
                 vdims = list(var.dims) + add_dims
-                shape = [self.dims[d] for d in vdims]
+                shape = [self.sizes[d] for d in vdims]
                 exp_var = var.set_dims(vdims, shape)
                 stacked_var = exp_var.stack(**{new_dim: dims})
                 new_variables[name] = stacked_var
@@ -6351,7 +6354,7 @@ class Dataset(
         if subset is None:
             subset = iter(self.data_vars)
 
-        count = np.zeros(self.dims[dim], dtype=np.int64)
+        count = np.zeros(self.sizes[dim], dtype=np.int64)
         size = np.int_(0)  # for type checking
 
         for k in subset:
@@ -6359,7 +6362,7 @@ class Dataset(
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
                 count += np.asarray(array.count(dims))
-                size += math.prod([self.dims[d] for d in dims])
+                size += math.prod([self.sizes[d] for d in dims])
 
         if thresh is not None:
             mask = count >= thresh
@@ -7136,7 +7139,7 @@ class Dataset(
                 f"Dataset: {list(self.dims)}"
             )
 
-        ordered_dims = {k: self.dims[k] for k in dim_order}
+        ordered_dims = {k: self.sizes[k] for k in dim_order}
 
         return ordered_dims
 
@@ -7396,7 +7399,7 @@ class Dataset(
                 var = self.variables[name]
             except KeyError:
                 # dimension without a matching coordinate
-                size = self.dims[name]
+                size = self.sizes[name]
                 data = da.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 
@@ -7469,7 +7472,7 @@ class Dataset(
         d: dict = {
             "coords": {},
             "attrs": decode_numpy_dict_values(self.attrs),
-            "dims": dict(self.dims),
+            "dims": dict(self.sizes),
             "data_vars": {},
         }
         for k in self.coords:
@@ -9552,6 +9555,68 @@ class Dataset(
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def eval(
+        self,
+        statement: str,
+        *,
+        parser: QueryParserOptions = "pandas",
+    ) -> Self | T_DataArray:
+        """
+        Calculate an expression supplied as a string in the context of the dataset.
+
+        This is currently experimental; the API may change particularly around
+        assignments, which currently returnn a ``Dataset`` with the additional variable.
+        Currently only the ``python`` engine is supported, which has the same
+        performance as executing in python.
+
+        Parameters
+        ----------
+        statement : str
+            String containing the Python-like expression to evaluate.
+
+        Returns
+        -------
+        result : Dataset or DataArray, depending on whether ``statement`` contains an
+        assignment.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"a": ("x", np.arange(0, 5, 1)), "b": ("x", np.linspace(0, 1, 5))}
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+
+        >>> ds.eval("a + b")
+        <xarray.DataArray (x: 5)>
+        array([0.  , 1.25, 2.5 , 3.75, 5.  ])
+        Dimensions without coordinates: x
+
+        >>> ds.eval("c = a + b")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+            c        (x) float64 0.0 1.25 2.5 3.75 5.0
+        """
+
+        return pd.eval(
+            statement,
+            resolvers=[self],
+            target=self,
+            parser=parser,
+            # Because numexpr returns a numpy array, using that engine results in
+            # different behavior. We'd be very open to a contribution handling this.
+            engine="python",
+        )
+
     def query(
         self,
         queries: Mapping[Any, Any] | None = None,
@@ -10304,13 +10369,59 @@ class Dataset(
 
         See Also
         --------
-        core.rolling.DatasetRolling
+        Dataset.cumulative
         DataArray.rolling
+        core.rolling.DatasetRolling
         """
         from xarray.core.rolling import DatasetRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DatasetRolling(self, dim, min_periods=min_periods, center=center)
+
+    def cumulative(
+        self,
+        dim: str | Iterable[Hashable],
+        min_periods: int = 1,
+    ) -> DatasetRolling:
+        """
+        Accumulating object for Datasets
+
+        Parameters
+        ----------
+        dims : iterable of hashable
+            The name(s) of the dimensions to create the cumulative window along
+        min_periods : int, default: 1
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default is 1 (note this is different
+            from ``Rolling``, whose default is the size of the window).
+
+        Returns
+        -------
+        core.rolling.DatasetRolling
+
+        See Also
+        --------
+        Dataset.rolling
+        DataArray.cumulative
+        core.rolling.DatasetRolling
+        """
+        from xarray.core.rolling import DatasetRolling
+
+        if isinstance(dim, str):
+            if dim not in self.dims:
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
+            dim = {dim: self.sizes[dim]}
+        else:
+            missing_dims = set(dim) - set(self.dims)
+            if missing_dims:
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
+            dim = {d: self.sizes[d] for d in dim}
+
+        return DatasetRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,
