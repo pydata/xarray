@@ -642,6 +642,14 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         data = array_func(results, *args, **kwargs)
         return type(self)(self._dims, data, attrs=self._attrs)
 
+    @overload
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
+        ...
+
+    @overload
+    def get_axis_num(self, dim: Hashable) -> int:
+        ...
+
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
