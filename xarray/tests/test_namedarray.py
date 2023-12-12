@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         _AttrsLike,
         _DimsLike,
         _DType,
+        _IndexKeyLike,
         _Shape,
         duckarray,
     )
@@ -58,6 +59,19 @@ class CustomArrayIndexable(
     ExplicitlyIndexed,
     Generic[_ShapeType_co, _DType_co],
 ):
+    def __getitem__(
+        self, key: _IndexKeyLike | CustomArrayIndexable[Any, Any], /
+    ) -> CustomArrayIndexable[Any, _DType_co]:
+        if isinstance(key, CustomArrayIndexable):
+            if isinstance(key.array, type(self.array)):
+                # TODO: key.array is duckarray here, can it be narrowed down further?
+                # an _arrayapi cannot be used on a _arrayfunction for example.
+                return type(self)(array=self.array[key.array])  # type: ignore[index]
+            else:
+                raise TypeError("key must have the same array type as self")
+        else:
+            return type(self)(array=self.array[key])
+
     def __array_namespace__(self) -> ModuleType:
         return np
 
