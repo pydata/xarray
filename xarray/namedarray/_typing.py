@@ -29,7 +29,6 @@ _default = Default.token
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 
-
 _dtype = np.dtype
 _DType = TypeVar("_DType", bound=np.dtype[Any])
 _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
@@ -68,15 +67,16 @@ _Chunks = tuple[_Shape, ...]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
-_DimsLike = Union[str, Iterable[_Dim], Default]
+# _DimsLike = Union[str, Iterable[_Dim], Default]
+_DimsLike = Union[str, Iterable[_Dim]]
 _DimsLikeAgg = Union[_DimsLike, "ellipsis", None]
 
-
 # https://data-apis.org/array-api/latest/API_specification/indexing.html
-# TODO: np.array_api doesn't allow None for some reason, maybe they're
-# recommending to use expand_dims?
+# TODO: np.array_api was bugged and didn't allow (None,), but should!
+# https://github.com/numpy/numpy/pull/25022
+# https://github.com/data-apis/array-api/pull/674
 _IndexKey = Union[int, slice, "ellipsis"]
-_IndexKeys = tuple[Union[_IndexKey, None], ...]
+_IndexKeys = tuple[_IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
 _IndexKeyLike = Union[_IndexKey, _IndexKeys]
 
 _AttrsLike = Union[Mapping[Any, Any], None]
@@ -122,18 +122,20 @@ class _arrayfunction(
     """
 
     @overload
-    def __getitem__(self, key: _IndexKeyLike) -> Any:
+    def __getitem__(
+        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...], /
+    ) -> _arrayfunction[Any, _DType_co]:
         ...
 
     @overload
-    def __getitem__(
-        self, key: _arrayfunction[Any, Any] | tuple[_arrayfunction[Any, Any], ...]
-    ) -> _arrayfunction[Any, _DType_co]:
+    def __getitem__(self, key: _IndexKeyLike, /) -> Any:
         ...
 
     def __getitem__(
         self,
-        key: _IndexKeyLike | _arrayfunction[Any, Any],
+        key: _IndexKeyLike
+        | _arrayfunction[Any, Any]
+        | tuple[_arrayfunction[Any, Any], ...],
         /,
     ) -> _arrayfunction[Any, _DType_co] | Any:
         ...
@@ -190,25 +192,12 @@ class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType
     Corresponds to np.ndarray.
     """
 
-    # TODO: Only integer _arrayapi:
-    # def __getitem__(
-    #     self,
-    #     key: Union[
-    #         int,
-    #         slice,
-    #         "ellipsis",
-    #         tuple[Union[int, slice, "ellipsis", None], ...],
-    #         _arrayapi[Any, Any],
-    #     ],
-    #     /,
-    # ) -> _arrayapi[Any, _DType_co]:
-    #     ...
-
     def __getitem__(
         self,
-        key: Any,
+        key: _IndexKeyLike
+        | Any,  # TODO: Any should be _arrayapi[Any, _dtype[np.integer]]
         /,
-    ) -> _arrayapi[Any, _DType_co]:
+    ) -> _arrayapi[Any, Any]:
         ...
 
     def __array_namespace__(self) -> ModuleType:
