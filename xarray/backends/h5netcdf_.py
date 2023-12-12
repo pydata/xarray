@@ -394,7 +394,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     invalid_netcdf : bool or None, optional
         Allow writing netCDF4 with data types and attributes that would
         otherwise not generate netCDF4 files that can be read by other
-        applications. See :ref:`invalid-netcdf-files` for more details.
+        applications. See https://h5netcdf.org/#invalid-netcdf-files for
+        more details.
     phony_dims: {"sort", "access"} or None, optional
         Change how variables with no dimension scales associated with
         one of their axes are accessed.

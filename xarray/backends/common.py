@@ -467,7 +467,7 @@ class BackendEntrypoint:
       ``drop_variables`` keyword argument.
       For more details see :ref:`RST open_dataset`.
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
-      ``filename_or_obj``, ``False`` otherwise. The implementation of this
+      ``filename_or_obj`` , ``False`` otherwise. The implementation of this
       method is not mandatory.
 
     Attributes
@@ -479,10 +479,10 @@ class BackendEntrypoint:
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
-    open_dataset_parameters : tuple or str or None, optional
+    open_dataset_parameters : tuple of str or None, optional
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is only mandatory if the
-        open_dataset method contains *args or **kwargs.
+        open_dataset method contains ``*args`` or ``**kwargs``.
     """
 
     description: ClassVar[str] = ""
