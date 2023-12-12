@@ -74,7 +74,7 @@ Internal Changes
 - :py:func:`as_variable` now consistently includes the variable name in any exceptions
   raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
 - Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
-  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.ffill` to
+  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
   use non-dask chunked array types.
   (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
