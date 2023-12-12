@@ -5,6 +5,7 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import numpy as np
@@ -555,6 +556,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+@dataclass(repr=False)
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
@@ -626,34 +628,14 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         "decode_coords",
     )
 
-    group: str | None
-    mode: NetCDFOpenModes
-    format: NetcdfFormats | None
-    clobber: bool
-    diskless: bool
-    persist: bool
-    lock: Literal[False] | LockLike | None
-    autoclose: bool
-
-    def __init__(
-        self,
-        group: str | None = None,
-        mode: NetCDFOpenModes = "r",
-        format: NetcdfFormats | None = "NETCDF4",
-        lock: Literal[False] | LockLike | None = None,
-        autoclose: bool = False,
-        clobber: bool = True,
-        diskless: bool = False,
-        persist: bool = False,
-    ) -> None:
-        self.group = group
-        self.mode = mode
-        self.format = format
-        self.lock = lock
-        self.autoclose = autoclose
-        self.clobber = clobber
-        self.diskless = diskless
-        self.persist = persist
+    group: str | None = None
+    mode: NetCDFOpenModes = "r"
+    format: NetcdfFormats | None = "NETCDF4"
+    lock: Literal[False] | LockLike | None = None
+    autoclose: bool = False
+    clobber: bool = True
+    diskless: bool = False
+    persist: bool = False
 
     def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -148,6 +149,7 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
 
+@dataclass(repr=False)
 class PydapBackendEntrypoint(BackendEntrypoint):
     """
     Backend for steaming datasets over the internet using
@@ -186,28 +188,12 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         "decode_coords",
     )
 
-    application: Any
-    session: requests.Session | None
-    output_grid: bool | None
-    timeout: float | None
-    verify: bool | None
-    user_charset: str | None
-
-    def __init__(
-        self,
-        application: Any = None,
-        session: requests.Session | None = None,
-        output_grid: bool | None = None,
-        timeout: float | None = None,
-        verify: bool | None = None,
-        user_charset: str | None = None,
-    ) -> None:
-        self.application = application
-        self.session = session
-        self.output_grid = output_grid
-        self.timeout = timeout
-        self.verify = verify
-        self.user_charset = user_charset
+    application: Any = None
+    session: requests.Session | None = None
+    output_grid: bool | None = None
+    timeout: float | None = None
+    verify: bool | None = None
+    user_charset: str | None = None
 
     def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)

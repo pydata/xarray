@@ -4,6 +4,7 @@ import functools
 import io
 import os
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 from xarray.backends.common import (
@@ -354,6 +355,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+@dataclass(repr=False)
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the h5netcdf package.
@@ -439,40 +441,16 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         "decode_coords",
     )
 
-    group: str | None
-    mode: H5netcdfOpenModes
-    format: str | None
-    lock: Literal[False] | LockLike | None
-    autoclose: bool
-    invalid_netcdf: bool | None
-    phony_dims: Literal["sort", "access", None]
-    decode_vlen_strings: bool
-    driver: str | None
-    driver_kwds: Mapping[str, Any] | None
-
-    def __init__(
-        self,
-        group: str | None = None,
-        mode: H5netcdfOpenModes = "r",
-        format: str | None = "NETCDF4",
-        lock: Literal[False] | LockLike | None = None,
-        autoclose: bool = False,
-        invalid_netcdf: bool | None = None,
-        phony_dims: Literal["sort", "access", None] = None,
-        decode_vlen_strings: bool = True,
-        driver: str | None = None,
-        driver_kwds: Mapping[str, Any] | None = None,
-    ) -> None:
-        self.group = group
-        self.mode = mode
-        self.format = format
-        self.lock = lock
-        self.autoclose = autoclose
-        self.invalid_netcdf = invalid_netcdf
-        self.phony_dims = phony_dims
-        self.decode_vlen_strings = decode_vlen_strings
-        self.driver = driver
-        self.driver_kwds = driver_kwds
+    group: str | None = None
+    mode: H5netcdfOpenModes = "r"
+    format: str | None = "NETCDF4"
+    lock: Literal[False] | LockLike | None = None
+    autoclose: bool = False
+    invalid_netcdf: bool | None = None
+    phony_dims: Literal["sort", "access", None] = None
+    decode_vlen_strings: bool = True
+    driver: str | None = None
+    driver_kwds: Mapping[str, Any] | None = None
 
     def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)

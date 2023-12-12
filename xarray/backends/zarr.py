@@ -4,6 +4,7 @@ import json
 import os
 import warnings
 from collections.abc import Iterable, Mapping, MutableMapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -981,6 +982,7 @@ def open_zarr(
     return ds
 
 
+@dataclass(repr=False)
 class ZarrBackendEntrypoint(BackendEntrypoint):
     """
     Backend for ".zarr" files based on the zarr package.
@@ -1005,34 +1007,14 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         "decode_coords",
     )
 
-    group: str | None
-    mode: ZarrOpenModes
-    synchronizer: object | None
-    consolidated: bool | None
-    chunk_store: MutableMapping | str | os.PathLike | None
-    storage_options: Mapping[str, Any] | None
-    stacklevel: int
-    zarr_version: int | None
-
-    def __init__(
-        self,
-        group: str | None = None,
-        mode: ZarrOpenModes = "r",
-        synchronizer: object | None = None,
-        consolidated: bool | None = None,
-        chunk_store: MutableMapping | str | os.PathLike | None = None,
-        storage_options: Mapping[str, Any] | None = None,
-        stacklevel: int = 3,
-        zarr_version: int | None = None,
-    ) -> None:
-        self.group = group
-        self.mode = mode
-        self.synchronizer = synchronizer
-        self.consolidated = consolidated
-        self.chunk_store = chunk_store
-        self.storage_options = storage_options
-        self.stacklevel = stacklevel
-        self.zarr_version = zarr_version
+    group: str | None = None
+    mode: ZarrOpenModes = "r"
+    synchronizer: object | None = None
+    consolidated: bool | None = None
+    chunk_store: MutableMapping | str | os.PathLike | None = None
+    storage_options: Mapping[str, Any] | None = None
+    stacklevel: int = 3
+    zarr_version: int | None = None
 
     def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         if isinstance(filename_or_obj, (str, os.PathLike)):

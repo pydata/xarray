@@ -4,6 +4,7 @@ import gzip
 import io
 import os
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
@@ -260,6 +261,7 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager.close()
 
 
+@dataclass(repr=False)
 class ScipyBackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the scipy package.
@@ -318,25 +320,11 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         "decode_coords",
     )
 
-    group: str | None
-    mode: ScipyOpenModes
-    format: str | None
-    lock: Literal[False] | LockLike | None
-    mmap: bool | None
-
-    def __init__(
-        self,
-        group: str | None = None,
-        mode: ScipyOpenModes = "r",
-        format: ScipyFormats = None,
-        lock: Literal[False] | LockLike | None = None,
-        mmap: bool | None = None,
-    ) -> None:
-        self.group = group
-        self.mode = mode
-        self.format = format
-        self.lock = lock
-        self.mmap = mmap
+    group: str | None = None
+    mode: ScipyOpenModes = "r"
+    format: ScipyFormats = None
+    lock: Literal[False] | LockLike | None = None
+    mmap: bool | None = None
 
     def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
