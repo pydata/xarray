@@ -24,6 +24,8 @@ v2023.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`xr.cov` and :py:meth:`xr.corr` now support using weights (:issue:`8527`, :pull:`7392`).
+  By `Llorenç Lledó <https://github.com/lluritu>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
