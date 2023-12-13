@@ -7,8 +7,7 @@ import xarray as xr
 from xarray.core import dtypes, merge
 from xarray.core.merge import MergeError
 from xarray.testing import assert_equal, assert_identical
-
-from .test_dataset import create_test_data
+from xarray.tests.test_dataset import create_test_data
 
 
 class TestMergeInternals:
@@ -236,6 +235,13 @@ class TestMergeFunction:
         expected = xr.Dataset({"x": [12], "y": ("x", [13])})
         assert_identical(actual, expected)
 
+    def test_merge_coordinates(self):
+        coords1 = xr.Coordinates({"x": ("x", [0, 1, 2])})
+        coords2 = xr.Coordinates({"y": ("y", [3, 4, 5])})
+        expected = xr.Dataset(coords={"x": [0, 1, 2], "y": [3, 4, 5]})
+        actual = xr.merge([coords1, coords2])
+        assert_identical(actual, expected)
+
     def test_merge_error(self):
         ds = xr.Dataset({"x": 0})
         with pytest.raises(xr.MergeError):
@@ -375,6 +381,16 @@ class TestMergeMethod:
             ds1.merge(ds2, compat="foobar")
 
         assert ds1.identical(ds1.merge(ds2, compat="override"))
+
+    def test_merge_compat_minimal(self) -> None:
+        # https://github.com/pydata/xarray/issues/7405
+        # https://github.com/pydata/xarray/issues/7588
+        ds1 = xr.Dataset(coords={"foo": [1, 2, 3], "bar": 4})
+        ds2 = xr.Dataset(coords={"foo": [1, 2, 3], "bar": 5})
+
+        actual = xr.merge([ds1, ds2], compat="minimal")
+        expected = xr.Dataset(coords={"foo": [1, 2, 3]})
+        assert_identical(actual, expected)
 
     def test_merge_auto_align(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})

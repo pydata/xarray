@@ -41,10 +41,12 @@ Geosciences
   harmonic wind analysis in Python.
 - `wradlib <https://wradlib.org/>`_: An Open Source Library for Weather Radar Data Processing.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
+- `xarray-regrid <https://github.com/EXCITED-CO2/xarray-regrid>`_: xarray extension for regridding rectilinear data.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-spatial <https://xarray-spatial.org/>`_: Numba-accelerated raster-based spatial processing tools (NDVI, curvature, zonal-statistics, proximity, hillshading, viewshed, etc.)
 - `xarray-topo <https://xarray-topo.readthedocs.io/>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
+- `xCDAT <https://xcdat.readthedocs.io/>`_: An extension of xarray for climate data analysis on structured grids.
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
 - `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.

@@ -8,8 +8,12 @@ import pytest
 from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
-
-from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
+from xarray.tests import (
+    IndexerMaker,
+    assert_array_equal,
+    assert_identical,
+    requires_dask,
+)
 
 with suppress(ImportError):
     import dask.array as da
@@ -27,6 +31,10 @@ def test_vlen_dtype() -> None:
     assert not strings.is_unicode_dtype(dtype)
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
+
+    # check h5py variant ("vlen")
+    dtype = np.dtype("O", metadata={"vlen": str})  # type: ignore[call-overload,unused-ignore]
+    assert strings.check_vlen_dtype(dtype) is str
 
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 

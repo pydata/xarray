@@ -25,12 +25,12 @@ notebooks-examples:
 
   - title: Applying unvectorized functions with apply_ufunc
     path: examples/apply_ufunc_vectorize_1d.html
-    thumbnail: _static/dataset-diagram-square-logo.png
+    thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
 external-examples:
   - title: Managing raster data with rioxarray
     path: https://corteva.github.io/rioxarray/stable/examples/examples.html
-    thumbnail: _static/dataset-diagram-square-logo.png
+    thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Xarray and dask on the cloud with Pangeo
     path: https://gallery.pangeo.io/
@@ -38,7 +38,7 @@ external-examples:
 
   - title: Xarray with Dask Arrays
     path: https://examples.dask.org/xarray.html_
-    thumbnail: _static/dataset-diagram-square-logo.png
+    thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Project Pythia Foundations Book
     path: https://foundations.projectpythia.org/core/xarray.html

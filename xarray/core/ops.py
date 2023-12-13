@@ -10,7 +10,7 @@ import operator
 
 import numpy as np
 
-from . import dtypes, duck_array_ops
+from xarray.core import dtypes, duck_array_ops
 
 try:
     import bottleneck as bn
@@ -33,6 +33,8 @@ NUM_BINARY_OPS = [
     "and",
     "xor",
     "or",
+    "lshift",
+    "rshift",
 ]
 
 # methods which pass on the numpy return value unchanged
@@ -51,7 +53,6 @@ NAN_REDUCE_METHODS = [
     "var",
     "median",
 ]
-NAN_CUM_METHODS = ["cumsum", "cumprod"]
 # TODO: wrap take, dot, sort
 
 
@@ -141,7 +142,7 @@ def fillna(data, other, join="left", dataset_join="left"):
         - "left": take only variables from the first object
         - "right": take only variables from the last object
     """
-    from .computation import apply_ufunc
+    from xarray.core.computation import apply_ufunc
 
     return apply_ufunc(
         duck_array_ops.fillna,
@@ -170,7 +171,7 @@ def where_method(self, cond, other=dtypes.NA):
     -------
     Same type as caller.
     """
-    from .computation import apply_ufunc
+    from xarray.core.computation import apply_ufunc
 
     # alignment for three arguments is complicated, so don't support it yet
     join = "inner" if other is dtypes.NA else "exact"
@@ -261,20 +262,6 @@ def inject_reduce_methods(cls):
         setattr(cls, name, func)
 
 
-def inject_cum_methods(cls):
-    methods = [(name, getattr(duck_array_ops, name), True) for name in NAN_CUM_METHODS]
-    for name, f, include_skipna in methods:
-        numeric_only = getattr(f, "numeric_only", False)
-        func = cls._reduce_method(f, include_skipna, numeric_only)
-        func.__name__ = name
-        func.__doc__ = _CUM_DOCSTRING_TEMPLATE.format(
-            name=name,
-            cls=cls.__name__,
-            extra_args=cls._cum_extra_args_docstring.format(name=name),
-        )
-        setattr(cls, name, func)
-
-
 def op_str(name):
     return f"__{name}__"
 
@@ -312,16 +299,6 @@ class IncludeReduceMethods:
 
         if getattr(cls, "_reduce_method", None):
             inject_reduce_methods(cls)
-
-
-class IncludeCumMethods:
-    __slots__ = ()
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        if getattr(cls, "_reduce_method", None):
-            inject_cum_methods(cls)
 
 
 class IncludeNumpySameMethods:

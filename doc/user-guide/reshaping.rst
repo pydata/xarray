@@ -4,7 +4,12 @@
 Reshaping and reorganizing data
 ###############################
 
-These methods allow you to reorganize
+Reshaping and reorganizing data refers to the process of changing the structure or organization of data by modifying dimensions, array shapes, order of values, or indexes. Xarray provides several methods to accomplish these tasks.
+
+These methods are particularly useful for reshaping xarray objects for use in machine learning packages, such as scikit-learn, that usually require two-dimensional numpy arrays as inputs. Reshaping can also be required before passing data to external visualization tools, for example geospatial data might expect input organized into a particular format corresponding to stacks of satellite images.
+
+Importing the library
+---------------------
 
 .. ipython:: python
     :suppress:
@@ -20,7 +25,7 @@ Reordering dimensions
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
 on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An
-ellipsis (`...`) can be use to represent all other dimensions:
+ellipsis (`...`) can be used to represent all other dimensions:
 
 .. ipython:: python
 
@@ -54,11 +59,11 @@ use :py:meth:`~xarray.DataArray.squeeze`
 Converting between datasets and arrays
 --------------------------------------
 
-To convert from a Dataset to a DataArray, use :py:meth:`~xarray.Dataset.to_array`:
+To convert from a Dataset to a DataArray, use :py:meth:`~xarray.Dataset.to_dataarray`:
 
 .. ipython:: python
 
-    arr = ds.to_array()
+    arr = ds.to_dataarray()
     arr
 
 This method broadcasts all data variables in the dataset against each other,
@@ -72,7 +77,7 @@ To convert back from a DataArray to a Dataset, use
 
     arr.to_dataset(dim="variable")
 
-The broadcasting behavior of ``to_array`` means that the resulting array
+The broadcasting behavior of ``to_dataarray`` means that the resulting array
 includes the union of data variable dimensions:
 
 .. ipython:: python
@@ -83,7 +88,7 @@ includes the union of data variable dimensions:
     ds2
 
     # the resulting array has 6 elements
-    ds2.to_array()
+    ds2.to_dataarray()
 
 Otherwise, the result could not be represented as an orthogonal array.
 
@@ -156,8 +161,8 @@ arrays as inputs. For datasets with only one variable, we only need ``stack``
 and ``unstack``, but combining multiple variables in a
 :py:class:`xarray.Dataset` is more complicated. If the variables in the dataset
 have matching numbers of dimensions, we can call
-:py:meth:`~xarray.Dataset.to_array` and then stack along the the new coordinate.
-But :py:meth:`~xarray.Dataset.to_array` will broadcast the dataarrays together,
+:py:meth:`~xarray.Dataset.to_dataarray` and then stack along the the new coordinate.
+But :py:meth:`~xarray.Dataset.to_dataarray` will broadcast the dataarrays together,
 which will effectively tile the lower dimensional variable along the missing
 dimensions. The method :py:meth:`xarray.Dataset.to_stacked_array` allows
 combining variables of differing dimensions without this wasteful copying while
@@ -269,7 +274,7 @@ Sort
 ----
 
 One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
-:py:meth:`~xarray.DataArray.sortby`.  The input can be an individual or list of
+:py:meth:`~xarray.Dataset.sortby`.  The input can be an individual or list of
 1D ``DataArray`` objects:
 
 .. ipython:: python
@@ -292,3 +297,54 @@ As a shortcut, you can refer to existing coordinates by name:
     ds.sortby("x")
     ds.sortby(["y", "x"])
     ds.sortby(["y", "x"], ascending=False)
+
+.. _reshape.coarsen:
+
+Reshaping via coarsen
+---------------------
+
+Whilst :py:class:`~xarray.DataArray.coarsen` is normally used for reducing your data's resolution by applying a reduction function
+(see the :ref:`page on computation<compute.coarsen>`),
+it can also be used to reorganise your data without applying a computation via :py:meth:`~xarray.core.rolling.DataArrayCoarsen.construct`.
+
+Taking our example tutorial air temperature dataset over the Northern US
+
+.. ipython:: python
+    :suppress:
+
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+
+    mpl.rcdefaults()
+
+.. ipython:: python
+
+    air = xr.tutorial.open_dataset("air_temperature")["air"]
+
+    @savefig pre_coarsening.png
+    air.isel(time=0).plot(x="lon", y="lat")
+
+we can split this up into sub-regions of size ``(9, 18)`` points using :py:meth:`~xarray.core.rolling.DataArrayCoarsen.construct`:
+
+.. ipython:: python
+
+    regions = air.coarsen(lat=9, lon=18, boundary="pad").construct(
+        lon=("x_coarse", "x_fine"), lat=("y_coarse", "y_fine")
+    )
+    regions
+
+9 new regions have been created, each of size 9 by 18 points.
+The ``boundary="pad"`` kwarg ensured that all regions are the same size even though the data does not evenly divide into these sizes.
+
+By plotting these 9 regions together via :ref:`faceting<plotting.faceting>` we can see how they relate to the original data.
+
+.. ipython:: python
+
+    @savefig post_coarsening.png
+    regions.isel(time=0).plot(
+        x="x_fine", y="y_fine", col="x_coarse", row="y_coarse", yincrease=False
+    )
+
+We are now free to easily apply any custom computation to each coarsened region of our new dataarray.
+This would involve specifying that applied functions should act over the ``"x_fine"`` and ``"y_fine"`` dimensions,
+but broadcast over the ``"x_coarse"`` and ``"y_coarse"`` dimensions.

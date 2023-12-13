@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
+from packaging.version import Version
 
 from xarray import DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
-
-from . import requires_cftime
+from xarray.tests import requires_cftime
 
 cftime = pytest.importorskip("cftime")
 
@@ -19,7 +20,7 @@ cftime = pytest.importorskip("cftime")
         ("standard", "noleap", None, "D"),
         ("noleap", "proleptic_gregorian", True, "D"),
         ("noleap", "all_leap", None, "D"),
-        ("all_leap", "proleptic_gregorian", False, "4H"),
+        ("all_leap", "proleptic_gregorian", False, "4h"),
     ],
 )
 def test_convert_calendar(source, target, use_cftime, freq):
@@ -68,7 +69,7 @@ def test_convert_calendar(source, target, use_cftime, freq):
     [
         ("standard", "360_day", "D"),
         ("360_day", "proleptic_gregorian", "D"),
-        ("proleptic_gregorian", "360_day", "4H"),
+        ("proleptic_gregorian", "360_day", "4h"),
     ],
 )
 @pytest.mark.parametrize("align_on", ["date", "year"])
@@ -112,8 +113,8 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
     "source,target,freq",
     [
         ("standard", "noleap", "D"),
-        ("noleap", "proleptic_gregorian", "4H"),
-        ("noleap", "all_leap", "M"),
+        ("noleap", "proleptic_gregorian", "4h"),
+        ("noleap", "all_leap", "ME"),
         ("360_day", "noleap", "D"),
         ("noleap", "360_day", "D"),
     ],
@@ -133,7 +134,15 @@ def test_convert_calendar_missing(source, target, freq):
         np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
     )
     out = convert_calendar(da_src, target, missing=np.nan, align_on="date")
-    assert infer_freq(out.time) == freq
+
+    if Version(pd.__version__) < Version("2.2"):
+        if freq == "4h" and target == "proleptic_gregorian":
+            expected_freq = "4H"
+        else:
+            expected_freq = freq
+    else:
+        expected_freq = freq
+    assert infer_freq(out.time) == expected_freq
 
     expected = date_range(
         "2004-01-01",
@@ -143,7 +152,7 @@ def test_convert_calendar_missing(source, target, freq):
     )
     np.testing.assert_array_equal(out.time, expected)
 
-    if freq != "M":
+    if freq != "ME":
         out_without_missing = convert_calendar(da_src, target, align_on="date")
         expected_nan = out.isel(time=~out.time.isin(out_without_missing.time))
         assert expected_nan.isnull().all()
@@ -182,7 +191,7 @@ def test_convert_calendar_errors():
 
 def test_convert_calendar_same_calendar():
     src = DataArray(
-        date_range("2000-01-01", periods=12, freq="6H", use_cftime=False),
+        date_range("2000-01-01", periods=12, freq="6h", use_cftime=False),
         dims=("time",),
         name="time",
     )

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import warnings
 
-from .dataarray import DataArray
-from .dataset import Dataset
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
 
 
 class AccessorRegistrationWarning(Warning):
@@ -105,6 +105,7 @@ def register_dataset_accessor(name):
     ...     def plot(self):
     ...         # plot this array's data on a map, e.g., using Cartopy
     ...         pass
+    ...
 
     Back in an interactive IPython session:
 

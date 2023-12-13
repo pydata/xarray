@@ -6,20 +6,23 @@ from typing import TYPE_CHECKING, Generic
 import numpy as np
 import pandas as pd
 
-from ..coding.times import infer_calendar_name
-from .common import (
+from xarray.coding.times import infer_calendar_name
+from xarray.core import duck_array_ops
+from xarray.core.common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from .npcompat import DTypeLike
-from .pycompat import is_duck_dask_array
-from .types import T_DataArray
+from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.types import T_DataArray
+from xarray.core.variable import IndexVariable
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
-    from .types import CFCalendar
+    from numpy.typing import DTypeLike
+
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.types import CFCalendar
 
 
 def _season_from_months(months):
@@ -45,9 +48,12 @@ def _access_through_cftimeindex(values, name):
     """Coerce an array of datetime-like values to a CFTimeIndex
     and access requested datetime component
     """
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
-    values_as_cftimeindex = CFTimeIndex(values.ravel())
+    if not isinstance(values, CFTimeIndex):
+        values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
+    else:
+        values_as_cftimeindex = values
     if name == "season":
         months = values_as_cftimeindex.month
         field_values = _season_from_months(months)
@@ -64,16 +70,32 @@ def _access_through_series(values, name):
     """Coerce an array of datetime-like values to a pandas Series and
     access requested datetime component
     """
-    values_as_series = pd.Series(values.ravel())
+    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif name == "total_seconds":
+        field_values = values_as_series.dt.total_seconds().values
     elif name == "isocalendar":
+        # special NaT-handling can be removed when
+        # https://github.com/pandas-dev/pandas/issues/54657 is resolved
+        field_values = values_as_series.dt.isocalendar()
+        # test for <NA> and apply needed dtype
+        hasna = any(field_values.year.isnull())
+        if hasna:
+            field_values = np.dstack(
+                [
+                    getattr(field_values, name).astype(np.float64, copy=False).values
+                    for name in ["year", "week", "day"]
+                ]
+            )
+        else:
+            field_values = np.array(field_values, dtype=np.int64)
         # isocalendar returns iso- year, week, and weekday -> reshape
-        field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
         return field_values.T.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
+
     return field_values.reshape(values.shape)
 
 
@@ -105,7 +127,7 @@ def _get_date_field(values, name, dtype):
         from dask.array import map_blocks
 
         new_axis = chunks = None
-        # isocalendar adds adds an axis
+        # isocalendar adds an axis
         if name == "isocalendar":
             chunks = (3,) + values.chunksize
             new_axis = 0
@@ -114,20 +136,25 @@ def _get_date_field(values, name, dtype):
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
-        return access_method(values, name)
+        out = access_method(values, name)
+        # cast only for integer types to keep float64 in presence of NaT
+        # see https://github.com/pydata/xarray/issues/7928
+        if np.issubdtype(out.dtype, np.integer):
+            out = out.astype(dtype, copy=False)
+        return out
 
 
 def _round_through_series_or_index(values, name, freq):
     """Coerce an array of datetime-like values to a pandas Series or xarray
     CFTimeIndex and apply requested rounding
     """
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
     if is_np_datetime_like(values.dtype):
-        values_as_series = pd.Series(values.ravel())
+        values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
         method = getattr(values_as_series.dt, name)
     else:
-        values_as_cftimeindex = CFTimeIndex(values.ravel())
+        values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
         method = getattr(values_as_cftimeindex, name)
 
     field_values = method(freq=freq).values
@@ -169,9 +196,9 @@ def _strftime_through_cftimeindex(values, date_format: str):
     """Coerce an array of cftime-like values to a CFTimeIndex
     and access requested datetime component
     """
-    from ..coding.cftimeindex import CFTimeIndex
+    from xarray.coding.cftimeindex import CFTimeIndex
 
-    values_as_cftimeindex = CFTimeIndex(values.ravel())
+    values_as_cftimeindex = CFTimeIndex(duck_array_ops.ravel(values))
 
     field_values = values_as_cftimeindex.strftime(date_format)
     return field_values.values.reshape(values.shape)
@@ -181,7 +208,7 @@ def _strftime_through_series(values, date_format: str):
     """Coerce an array of datetime-like values to a pandas Series and
     apply string formatting
     """
-    values_as_series = pd.Series(values.ravel())
+    values_as_series = pd.Series(duck_array_ops.ravel(values), copy=False)
     strs = values_as_series.dt.strftime(date_format)
     return strs.values.reshape(values.shape)
 
@@ -199,8 +226,14 @@ def _strftime(values, date_format):
         return access_method(values, date_format)
 
 
-class TimeAccessor(Generic[T_DataArray]):
+def _index_or_data(obj):
+    if isinstance(obj.variable, IndexVariable):
+        return obj.to_index()
+    else:
+        return obj.data
 
+
+class TimeAccessor(Generic[T_DataArray]):
     __slots__ = ("_obj",)
 
     def __init__(self, obj: T_DataArray) -> None:
@@ -209,14 +242,14 @@ class TimeAccessor(Generic[T_DataArray]):
     def _date_field(self, name: str, dtype: DTypeLike) -> T_DataArray:
         if dtype is None:
             dtype = self._obj.dtype
-        obj_type = type(self._obj)
-        result = _get_date_field(self._obj.data, name, dtype)
-        return obj_type(result, name=name, coords=self._obj.coords, dims=self._obj.dims)
+        result = _get_date_field(_index_or_data(self._obj), name, dtype)
+        newvar = self._obj.variable.copy(data=result, deep=False)
+        return self._obj._replace(newvar, name=name)
 
     def _tslib_round_accessor(self, name: str, freq: str) -> T_DataArray:
-        obj_type = type(self._obj)
-        result = _round_field(self._obj.data, name, freq)
-        return obj_type(result, name=name, coords=self._obj.coords, dims=self._obj.dims)
+        result = _round_field(_index_or_data(self._obj), name, freq)
+        newvar = self._obj.variable.copy(data=result, deep=False)
+        return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
         """
@@ -344,7 +377,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         The iso year and weekday differ from the nominal year and weekday.
         """
 
-        from .dataset import Dataset
+        from xarray.core.dataset import Dataset
 
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
@@ -543,6 +576,13 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
            43200, 64800])
     Coordinates:
       * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt.total_seconds()
+    <xarray.DataArray 'total_seconds' (time: 20)>
+    array([ 86400., 108000., 129600., 151200., 172800., 194400., 216000.,
+           237600., 259200., 280800., 302400., 324000., 345600., 367200.,
+           388800., 410400., 432000., 453600., 475200., 496800.])
+    Coordinates:
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     """
 
     @property
@@ -565,16 +605,21 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
         """Number of nanoseconds (>= 0 and less than 1 microsecond) for each element"""
         return self._date_field("nanoseconds", np.int64)
 
+    # Not defined as a property in order to match the Pandas API
+    def total_seconds(self) -> T_DataArray:
+        """Total duration of each element expressed in seconds."""
+        return self._date_field("total_seconds", np.float64)
+
 
 class CombinedDatetimelikeAccessor(
     DatetimeAccessor[T_DataArray], TimedeltaAccessor[T_DataArray]
 ):
     def __new__(cls, obj: T_DataArray) -> CombinedDatetimelikeAccessor:
-        # CombinedDatetimelikeAccessor isn't really instatiated. Instead
+        # CombinedDatetimelikeAccessor isn't really instantiated. Instead
         # we need to choose which parent (datetime or timedelta) is
         # appropriate. Since we're checking the dtypes anyway, we'll just
         # do all the validation here.
-        if not _contains_datetime_like_objects(obj):
+        if not _contains_datetime_like_objects(obj.variable):
             raise TypeError(
                 "'.dt' accessor only available for "
                 "DataArray with datetime64 timedelta64 dtype or "

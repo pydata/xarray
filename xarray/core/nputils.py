@@ -1,21 +1,33 @@
 from __future__ import annotations
 
 import warnings
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+from packaging.version import Version
 
-from .options import OPTIONS
+from xarray.core import pycompat
+from xarray.core.utils import module_available
+
+# remove once numpy 2.0 is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from numpy import RankWarning
+
+from xarray.core.options import OPTIONS
+from xarray.core.pycompat import is_duck_array
 
 try:
     import bottleneck as bn
 
-    _USE_BOTTLENECK = True
+    _BOTTLENECK_AVAILABLE = True
 except ImportError:
     # use numpy methods instead
     bn = np
-    _USE_BOTTLENECK = False
+    _BOTTLENECK_AVAILABLE = False
 
 
 def _select_along_axis(values, idx, axis):
@@ -24,26 +36,40 @@ def _select_along_axis(values, idx, axis):
     return values[sl]
 
 
-def nanfirst(values, axis):
+def nanfirst(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     idx_first = np.argmax(~pd.isnull(values), axis=axis)
-    return _select_along_axis(values, idx_first, axis)
+    result = _select_along_axis(values, idx_first, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
-def nanlast(values, axis):
+def nanlast(values, axis, keepdims=False):
+    if isinstance(axis, tuple):
+        (axis,) = axis
     axis = normalize_axis_index(axis, values.ndim)
     rev = (slice(None),) * axis + (slice(None, None, -1),)
     idx_last = -1 - np.argmax(~pd.isnull(values)[rev], axis=axis)
-    return _select_along_axis(values, idx_last, axis)
+    result = _select_along_axis(values, idx_last, axis)
+    if keepdims:
+        return np.expand_dims(result, axis=axis)
+    else:
+        return result
 
 
-def inverse_permutation(indices):
+def inverse_permutation(indices: np.ndarray, N: int | None = None) -> np.ndarray:
     """Return indices for an inverse permutation.
 
     Parameters
     ----------
     indices : 1D np.ndarray with dtype=int
         Integer positions to assign elements to.
+    N : int, optional
+        Size of the array
 
     Returns
     -------
@@ -51,8 +77,10 @@ def inverse_permutation(indices):
         Integer indices to take from the original array to create the
         permutation.
     """
+    if N is None:
+        N = len(indices)
     # use intp instead of int64 because of windows :(
-    inverse_permutation = np.empty(len(indices), dtype=np.intp)
+    inverse_permutation = np.full(N, -1, dtype=np.intp)
     inverse_permutation[indices] = np.arange(len(indices), dtype=np.intp)
     return inverse_permutation
 
@@ -109,7 +137,10 @@ def _advanced_indexer_subspaces(key):
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
-    ndim = len(np.broadcast(*non_slices).shape)
+    broadcasted_shape = np.broadcast_shapes(
+        *[item.shape if is_duck_array(item) else (0,) for item in non_slices]
+    )
+    ndim = len(broadcasted_shape)
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)
     vindex_positions = np.arange(ndim)
     return mixed_positions, vindex_positions
@@ -135,13 +166,33 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def _create_bottleneck_method(name, npmodule=np):
+def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
         bn_func = getattr(bn, name, None)
 
         if (
-            _USE_BOTTLENECK
+            module_available("numbagg")
+            and pycompat.mod_version("numbagg") >= Version("0.5.0")
+            and OPTIONS["use_numbagg"]
+            and isinstance(values, np.ndarray)
+            # numbagg uses ddof=1 only, but numpy uses ddof=0 by default
+            and (("var" in name or "std" in name) and kwargs.get("ddof", 0) == 1)
+            # TODO: bool?
+            and values.dtype.kind in "uifc"
+            # and values.dtype.isnative
+            and (dtype is None or np.dtype(dtype) == values.dtype)
+        ):
+            import numbagg
+
+            nba_func = getattr(numbagg, name, None)
+            if nba_func is not None:
+                # numbagg does not take care dtype, ddof
+                kwargs.pop("dtype", None)
+                kwargs.pop("ddof", None)
+                return nba_func(values, axis=axis, **kwargs)
+        if (
+            _BOTTLENECK_AVAILABLE
             and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
@@ -174,7 +225,7 @@ def _nanpolyfit_1d(arr, x, rcond=None):
 
 def warn_on_deficient_rank(rank, order):
     if rank != order:
-        warnings.warn("Polyfit may be poorly conditioned", np.RankWarning, stacklevel=2)
+        warnings.warn("Polyfit may be poorly conditioned", RankWarning, stacklevel=2)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
@@ -207,14 +258,14 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     return coeffs, residuals
 
 
-nanmin = _create_bottleneck_method("nanmin")
-nanmax = _create_bottleneck_method("nanmax")
-nanmean = _create_bottleneck_method("nanmean")
-nanmedian = _create_bottleneck_method("nanmedian")
-nanvar = _create_bottleneck_method("nanvar")
-nanstd = _create_bottleneck_method("nanstd")
-nanprod = _create_bottleneck_method("nanprod")
-nancumsum = _create_bottleneck_method("nancumsum")
-nancumprod = _create_bottleneck_method("nancumprod")
-nanargmin = _create_bottleneck_method("nanargmin")
-nanargmax = _create_bottleneck_method("nanargmax")
+nanmin = _create_method("nanmin")
+nanmax = _create_method("nanmax")
+nanmean = _create_method("nanmean")
+nanmedian = _create_method("nanmedian")
+nanvar = _create_method("nanvar")
+nanstd = _create_method("nanstd")
+nanprod = _create_method("nanprod")
+nancumsum = _create_method("nancumsum")
+nancumprod = _create_method("nancumprod")
+nanargmin = _create_method("nanargmin")
+nanargmax = _create_method("nanargmax")

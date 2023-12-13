@@ -4,10 +4,14 @@ import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
-from importlib.resources import read_binary
+from importlib.resources import files
 
-from .formatting import inline_variable_array_repr, short_data_repr
-from .options import _get_boolean_with_default
+from xarray.core.formatting import (
+    inline_index_repr,
+    inline_variable_array_repr,
+    short_data_repr,
+)
+from xarray.core.options import _get_boolean_with_default
 
 STATIC_FILES = (
     ("xarray.static.html", "icons-svg-inline.html"),
@@ -19,12 +23,12 @@ STATIC_FILES = (
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        read_binary(package, resource).decode("utf-8")
+        files(package).joinpath(resource).read_text(encoding="utf-8")
         for package, resource in STATIC_FILES
     ]
 
 
-def short_data_repr_html(array):
+def short_data_repr_html(array) -> str:
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
@@ -33,23 +37,24 @@ def short_data_repr_html(array):
     return f"<pre>{text}</pre>"
 
 
-def format_dims(dims, dims_with_index):
-    if not dims:
+def format_dims(dim_sizes, dims_with_index) -> str:
+    if not dim_sizes:
         return ""
 
     dim_css_map = {
-        dim: " class='xr-has-index'" if dim in dims_with_index else "" for dim in dims
+        dim: " class='xr-has-index'" if dim in dims_with_index else ""
+        for dim in dim_sizes
     }
 
     dims_li = "".join(
         f"<li><span{dim_css_map[dim]}>" f"{escape(str(dim))}</span>: {size}</li>"
-        for dim, size in dims.items()
+        for dim, size in dim_sizes.items()
     )
 
     return f"<ul class='xr-dim-list'>{dims_li}</ul>"
 
 
-def summarize_attrs(attrs):
+def summarize_attrs(attrs) -> str:
     attrs_dl = "".join(
         f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
         for k, v in attrs.items()
@@ -58,17 +63,17 @@ def summarize_attrs(attrs):
     return f"<dl class='xr-attrs'>{attrs_dl}</dl>"
 
 
-def _icon(icon_name):
+def _icon(icon_name) -> str:
     # icon_name should be defined in xarray/static/html/icon-svg-inline.html
     return (
-        "<svg class='icon xr-{0}'>"
-        "<use xlink:href='#{0}'>"
+        f"<svg class='icon xr-{icon_name}'>"
+        f"<use xlink:href='#{icon_name}'>"
         "</use>"
-        "</svg>".format(icon_name)
+        "</svg>"
     )
 
 
-def summarize_variable(name, var, is_index=False, dtype=None):
+def summarize_variable(name, var, is_index=False, dtype=None) -> str:
     variable = var.variable if hasattr(var, "variable") else var
 
     cssclass_idx = " class='xr-has-index'" if is_index else ""
@@ -105,7 +110,7 @@ def summarize_variable(name, var, is_index=False, dtype=None):
     )
 
 
-def summarize_coords(variables):
+def summarize_coords(variables) -> str:
     li_items = []
     for k, v in variables.items():
         li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
@@ -116,7 +121,7 @@ def summarize_coords(variables):
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
-def summarize_vars(variables):
+def summarize_vars(variables) -> str:
     vars_li = "".join(
         f"<li class='xr-var-item'>{summarize_variable(k, v)}</li>"
         for k, v in variables.items()
@@ -125,9 +130,43 @@ def summarize_vars(variables):
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
+def short_index_repr_html(index) -> str:
+    if hasattr(index, "_repr_html_"):
+        return index._repr_html_()
+
+    return f"<pre>{escape(repr(index))}</pre>"
+
+
+def summarize_index(coord_names, index) -> str:
+    name = "<br>".join([escape(str(n)) for n in coord_names])
+
+    index_id = f"index-{uuid.uuid4()}"
+    preview = escape(inline_index_repr(index))
+    details = short_index_repr_html(index)
+
+    data_icon = _icon("icon-database")
+
+    return (
+        f"<div class='xr-index-name'><div>{name}</div></div>"
+        f"<div class='xr-index-preview'>{preview}</div>"
+        f"<div></div>"
+        f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
+        f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
+        f"<div class='xr-index-data'>{details}</div>"
+    )
+
+
+def summarize_indexes(indexes) -> str:
+    indexes_li = "".join(
+        f"<li class='xr-var-item'>{summarize_index(v, i)}</li>"
+        for v, i in indexes.items()
+    )
+    return f"<ul class='xr-var-list'>{indexes_li}</ul>"
+
+
 def collapsible_section(
     name, inline_details="", details="", n_items=None, enabled=True, collapsed=False
-):
+) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
 
@@ -149,7 +188,7 @@ def collapsible_section(
 
 def _mapping_section(
     mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True
-):
+) -> str:
     n_items = len(mapping)
     expanded = _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
@@ -165,15 +204,15 @@ def _mapping_section(
     )
 
 
-def dim_section(obj):
-    dim_list = format_dims(obj.dims, obj.xindexes.dims)
+def dim_section(obj) -> str:
+    dim_list = format_dims(obj.sizes, obj.xindexes.dims)
 
     return collapsible_section(
         "Dimensions", inline_details=dim_list, enabled=False, collapsed=True
     )
 
 
-def array_section(obj):
+def array_section(obj) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
     collapsed = (
@@ -213,6 +252,13 @@ datavar_section = partial(
     expand_option_name="display_expand_data_vars",
 )
 
+index_section = partial(
+    _mapping_section,
+    name="Indexes",
+    details_func=summarize_indexes,
+    max_items_collapse=0,
+    expand_option_name="display_expand_indexes",
+)
 
 attr_section = partial(
     _mapping_section,
@@ -221,6 +267,12 @@ attr_section = partial(
     max_items_collapse=10,
     expand_option_name="display_expand_attrs",
 )
+
+
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
 
 
 def _obj_repr(obj, header_components, sections):
@@ -245,7 +297,7 @@ def _obj_repr(obj, header_components, sections):
     )
 
 
-def array_repr(arr):
+def array_repr(arr) -> str:
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
     if hasattr(arr, "xindexes"):
         indexed_dims = arr.xindexes.dims
@@ -266,12 +318,16 @@ def array_repr(arr):
     if hasattr(arr, "coords"):
         sections.append(coord_section(arr.coords))
 
+    if hasattr(arr, "xindexes"):
+        indexes = _get_indexes_dict(arr.xindexes)
+        sections.append(index_section(indexes))
+
     sections.append(attr_section(arr.attrs))
 
     return _obj_repr(arr, header_components, sections)
 
 
-def dataset_repr(ds):
+def dataset_repr(ds) -> str:
     obj_type = f"xarray.{type(ds).__name__}"
 
     header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]
@@ -280,6 +336,7 @@ def dataset_repr(ds):
         dim_section(ds),
         coord_section(ds.coords),
         datavar_section(ds.data_vars),
+        index_section(_get_indexes_dict(ds.xindexes)),
         attr_section(ds.attrs),
     ]
 

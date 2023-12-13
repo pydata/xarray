@@ -5,15 +5,21 @@ Useful for:
 * building tutorials in the documentation.
 
 """
+from __future__ import annotations
+
 import os
 import pathlib
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .backends.api import open_dataset as _open_dataset
-from .backends.rasterio_ import open_rasterio as _open_rasterio
-from .core.dataarray import DataArray
-from .core.dataset import Dataset
+from xarray.backends.api import open_dataset as _open_dataset
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+
+if TYPE_CHECKING:
+    from xarray.backends.api import T_Engine
+
 
 _default_cache_dir_name = "xarray_tutorial_data"
 base_url = "https://github.com/pydata/xarray-data"
@@ -32,10 +38,6 @@ def _construct_cache_dir(path):
 
 
 external_urls = {}  # type: dict
-external_rasterio_urls = {
-    "RGB.byte": "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/RGB.byte.tif",
-    "shade": "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/shade.tif",
-}
 file_formats = {
     "air_temperature": 3,
     "air_temperature_gradient": 4,
@@ -77,13 +79,13 @@ def _check_netcdf_engine_installed(name):
 
 # idea borrowed from Seaborn
 def open_dataset(
-    name,
-    cache=True,
-    cache_dir=None,
+    name: str,
+    cache: bool = True,
+    cache_dir: None | str | os.PathLike = None,
     *,
-    engine=None,
+    engine: T_Engine = None,
     **kws,
-):
+) -> Dataset:
     """
     Open a dataset from the online repository (requires internet).
 
@@ -145,6 +147,12 @@ def open_dataset(
         elif path.suffix == ".grib":
             if engine is None:
                 engine = "cfgrib"
+                try:
+                    import cfgrib  # noqa
+                except ImportError as e:
+                    raise ImportError(
+                        "Reading this tutorial dataset requires the cfgrib package."
+                    ) from e
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
@@ -158,72 +166,7 @@ def open_dataset(
     return ds
 
 
-def open_rasterio(
-    name,
-    engine=None,
-    cache=True,
-    cache_dir=None,
-    **kws,
-):
-    """
-    Open a rasterio dataset from the online repository (requires internet).
-
-    If a local copy is found then always use that to avoid network traffic.
-
-    Available datasets:
-
-    * ``"RGB.byte"``: TIFF file derived from USGS Landsat 7 ETM imagery.
-    * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
-
-    ``RGB.byte`` and ``shade`` are downloaded from the ``rasterio`` repository [1]_.
-
-    Parameters
-    ----------
-    name : str
-        Name of the file containing the dataset.
-        e.g. 'RGB.byte'
-    cache_dir : path-like, optional
-        The directory in which to search for and write cached data.
-    cache : bool, optional
-        If True, then cache data locally for use on subsequent calls
-    **kws : dict, optional
-        Passed to xarray.open_rasterio
-
-    See Also
-    --------
-    xarray.open_rasterio
-
-    References
-    ----------
-    .. [1] https://github.com/rasterio/rasterio
-    """
-    try:
-        import pooch
-    except ImportError as e:
-        raise ImportError(
-            "tutorial.open_rasterio depends on pooch to download and manage datasets."
-            " To proceed please install pooch."
-        ) from e
-
-    logger = pooch.get_logger()
-    logger.setLevel("WARNING")
-
-    cache_dir = _construct_cache_dir(cache_dir)
-    url = external_rasterio_urls.get(name)
-    if url is None:
-        raise ValueError(f"unknown rasterio dataset: {name}")
-
-    # retrieve the file
-    filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
-    arr = _open_rasterio(filepath, **kws)
-    if not cache:
-        arr = arr.load()
-        pathlib.Path(filepath).unlink()
-
-    return arr
-
-
-def load_dataset(*args, **kwargs):
+def load_dataset(*args, **kwargs) -> Dataset:
     """
     Open, load into memory, and close a dataset from the online repository
     (requires internet).
@@ -264,7 +207,7 @@ def load_dataset(*args, **kwargs):
         return ds.load()
 
 
-def scatter_example_dataset(*, seed=None) -> Dataset:
+def scatter_example_dataset(*, seed: None | int = None) -> Dataset:
     """
     Create an example dataset.
 

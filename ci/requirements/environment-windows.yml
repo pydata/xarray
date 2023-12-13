@@ -5,8 +5,6 @@ dependencies:
   - boto3
   - bottleneck
   - cartopy
-  # - cdms2  # Not available on Windows
-  # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
   - cftime
   - dask-core
   - distributed
@@ -17,24 +15,24 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml # Optional dep of pydap
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
+  - numbagg
   - numpy
   - packaging
   - pandas
-  - pint
+  - pint>=0.22
   - pip
   - pre-commit
-  - pseudonetcdf
-  # - pydap  # https://github.com/pydap/pydap/pull/210
-  # - pynio  # Not available on Windows
+  - pydap
   - pytest
   - pytest-cov
   - pytest-env
   - pytest-xdist
+  - pytest-timeout
   - rasterio
   - scipy
   - seaborn
@@ -42,5 +40,3 @@ dependencies:
   - toolz
   - typing_extensions
   - zarr
-  - pip:
-      - numbagg

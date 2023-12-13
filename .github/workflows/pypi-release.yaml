@@ -12,28 +12,28 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
-          python-version: 3.8
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install setuptools setuptools-scm wheel twine check-manifest
+          python -m pip install build twine
 
       - name: Build tarball and wheels
         run: |
           git clean -xdf
           git restore -SW .
-          python -m build --sdist --wheel .
+          python -m build
 
       - name: Check built artifacts
         run: |
-          python -m twine check dist/*
+          python -m twine check --strict dist/*
           pwd
           if [ -f dist/xarray-0.0.0.tar.gz ]; then
             echo "❌ INVALID VERSION NUMBER"
@@ -50,10 +50,10 @@ jobs:
     needs: build-artifacts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
-          python-version: 3.8
+          python-version: "3.11"
       - uses: actions/download-artifact@v3
         with:
           name: releases
@@ -70,12 +70,26 @@ jobs:
           python -m pip install dist/xarray*.whl
           python -m xarray.util.print_versions
 
+  upload-to-test-pypi:
+    needs: test-built-dist
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://test.pypi.org/p/xarray
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: releases
+          path: dist
       - name: Publish package to TestPyPI
         if: github.event_name == 'push'
-        uses: pypa/gh-action-pypi-publish@v1.5.1
+        uses: pypa/gh-action-pypi-publish@v1.8.11
         with:
-          user: __token__
-          password: ${{ secrets.TESTPYPI_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
           verbose: true
 
@@ -84,14 +98,19 @@ jobs:
     needs: test-built-dist
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/xarray
+    permissions:
+      id-token: write
+
     steps:
       - uses: actions/download-artifact@v3
         with:
           name: releases
           path: dist
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.5.1
+        uses: pypa/gh-action-pypi-publish@v1.8.11
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
           verbose: true
