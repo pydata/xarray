@@ -944,6 +944,12 @@ def _plot1d(plotfunc):
         if plotfunc.__name__ == "scatter":
             size_ = kwargs.pop("_size", markersize)
             size_r = _MARKERSIZE_RANGE
+
+            # Remove any nulls, .where(m, drop=True) doesn't work when m is
+            # a dask array, so load the array to memory.
+            # It will have to be loaded to memory at some point anyway:
+            darray = darray.load()
+            darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)
             size_r = _LINEWIDTH_RANGE
