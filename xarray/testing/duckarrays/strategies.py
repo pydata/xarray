@@ -5,8 +5,7 @@ import hypothesis.strategies as st
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
-
-from . import utils
+from xarray.testing.duckarrays import utils
 
 all_dtypes = (
     npst.integer_dtypes()

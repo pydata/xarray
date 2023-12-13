@@ -4,9 +4,8 @@ import numpy.testing as npt
 from hypothesis import given, settings
 
 import xarray as xr
-
-from . import strategies
-from .utils import create_dimension_names
+from xarray.testing.duckarrays import strategies
+from xarray.testing.duckarrays.utils import create_dimension_names
 
 
 class ArrayConstructorChecks:

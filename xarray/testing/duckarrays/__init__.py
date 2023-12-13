@@ -1,9 +1,13 @@
-from .constructors import (
+from xarray.testing.duckarrays.constructors import (
     DataArrayConstructorTests,
     DatasetConstructorTests,
     VariableConstructorTests,
 )
-from .reduce import DataArrayReduceTests, DatasetReduceTests, VariableReduceTests
+from xarray.testing.duckarrays.reduce import (
+    DataArrayReduceTests,
+    DatasetReduceTests,
+    VariableReduceTests,
+)
 
 __all__ = [
     "VariableConstructorTests",

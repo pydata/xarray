@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 from hypothesis import given, note, settings
 
-from ... import assert_identical
-from . import strategies
+from xarray import assert_identical
+from xarray.testing.duckarrays import strategies
 
 
 class VariableReduceTests:

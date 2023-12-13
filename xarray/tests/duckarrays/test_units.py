@@ -9,10 +9,10 @@ pytest.importorskip("hypothesis")
 import hypothesis.strategies as st
 from hypothesis import note
 
-from .. import assert_allclose
-from ..test_units import assert_units_equal, attach_units, strip_units
-from . import base
-from .base import strategies, utils
+from xarray.tests import assert_allclose
+from xarray.testing.duckarrays import base
+from xarray.testing.duckarrays.base import strategies, utils
+from xarray.tests.test_units import assert_units_equal, attach_units, strip_units
 
 pint = pytest.importorskip("pint")
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)

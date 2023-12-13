@@ -9,9 +9,9 @@ from xarray import DataArray, Dataset, Variable
 pytest.importorskip("hypothesis")
 # isort: on
 
-from .. import assert_allclose
-from . import base
-from .base import strategies
+from xarray.tests import assert_allclose
+from xarray.testing.duckarrays import base
+from xarray.testing.duckarrays.base import strategies
 
 sparse = pytest.importorskip("sparse")
 
