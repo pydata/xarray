@@ -416,7 +416,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
         General version of a 1D scan, also known as a cumulative array reduction.
 
-        Used in ``ffill`` and ``bfill` in xarray.
+        Used in ``ffill`` and ``bfill`` in xarray.
 
         Parameters
         ----------
