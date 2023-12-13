@@ -46,6 +46,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Remove null values before plotting. (:pull:`8535`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2023.12.0:
 
