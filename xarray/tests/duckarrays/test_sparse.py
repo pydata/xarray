@@ -1,19 +1,21 @@
+from typing import TYPE_CHECKING
+
+import hypothesis.extra.numpy as npst
+import hypothesis.strategies as st
 import numpy as np
 import numpy.testing as npt
 import pytest
 
-from xarray import DataArray, Dataset, Variable
+import xarray.testing.strategies as xrst
+from xarray.testing import duckarrays
+from xarray.tests import _importorskip
 
-# isort: off
-# needs to stay here to avoid ImportError for the strategy imports
-pytest.importorskip("hypothesis")
-# isort: on
+if TYPE_CHECKING:
+    from xarray.core.types import _DTypeLikeNested, _ShapeLike
 
-from xarray.tests import assert_allclose
-from xarray.testing.duckarrays import base
-from xarray.testing.duckarrays.base import strategies
 
-sparse = pytest.importorskip("sparse")
+_importorskip("sparse")
+import sparse
 
 
 @pytest.fixture(autouse=True)
@@ -24,117 +26,43 @@ def disable_bottleneck():
         yield
 
 
-def create(shape, dtypes):
-    def convert(arr):
+# sparse does not support float16
+sparse_dtypes = xrst.supported_dtypes().filter(
+    lambda dtype: (
+        not np.issubdtype(dtype, np.float16)
+    )
+)
+
+
+@st.composite
+def sparse_arrays_fn(
+    draw: st.DrawFn,
+    *,
+    shape: "_ShapeLike",
+    dtype: "_DTypeLikeNested",
+) -> sparse.COO:
+    """When called generates an arbitrary sparse.COO array of the given shape and dtype."""
+    np_arr = draw(npst.arrays(dtype, shape))
+
+    def to_sparse(arr: np.ndarray) -> sparse.COO:
         if arr.ndim == 0:
             return arr
 
         return sparse.COO.from_numpy(arr)
 
-    if dtypes is None:
-        dtypes = strategies.all_dtypes
-
-    # sparse does not support float16, and there's a bug with complex64 (pydata/sparse#553)
-    sparse_dtypes = dtypes.filter(
-        lambda dtype: (
-            not np.issubdtype(dtype, np.float16)
-            and not np.issubdtype(dtype, np.complexfloating)
-        )
-    )
-    return strategies.numpy_array(shape, sparse_dtypes).map(convert)
+    return to_sparse(np_arr)
 
 
-def as_dense(obj):
-    if isinstance(obj, (Variable, DataArray, Dataset)):
-        new_obj = obj.as_numpy()
-    else:
-        new_obj = obj
+class TestVariableConstructors(duckarrays.VariableConstructorTests):
+    # dtypes = nxps.scalar_dtypes()
+    array_strategy_fn = sparse_arrays_fn
 
-    return new_obj
-
-
-class TestVariableConstructors(base.VariableConstructorTests):
     @staticmethod
-    def create(shape, dtypes):
-        return create(shape, dtypes)
+    def array_strategy_fn(
+        shape: "_ShapeLike",
+        dtype: "_DTypeLikeNested",
+    ) -> st.SearchStrategy[sparse.COO]:
+        return sparse_arrays_fn
 
     def check_values(self, var, arr):
         npt.assert_equal(var.to_numpy(), arr.todense())
-
-
-class TestDataArrayConstructors(base.DataArrayConstructorTests):
-    @staticmethod
-    def create(shape, dtypes):
-        return create(shape, dtypes)
-
-    def check_values(self, da, arr):
-        npt.assert_equal(da.to_numpy(), arr.todense())
-
-
-@pytest.mark.apply_marks(
-    {
-        "test_reduce": {
-            "[cumprod]": pytest.mark.skip(reason="cumprod not implemented by sparse"),
-            "[cumsum]": pytest.mark.skip(reason="cumsum not implemented by sparse"),
-            "[median]": pytest.mark.skip(reason="median not implemented by sparse"),
-            "[std]": pytest.mark.skip(reason="nanstd not implemented by sparse"),
-            "[var]": pytest.mark.skip(reason="nanvar not implemented by sparse"),
-        }
-    }
-)
-class TestSparseVariableReduceMethods(base.VariableReduceTests):
-    @staticmethod
-    def create(shape, dtypes):
-        return create(shape, dtypes)
-
-    def check_reduce(self, obj, op, *args, **kwargs):
-        actual = as_dense(getattr(obj, op)(*args, **kwargs))
-        expected = getattr(as_dense(obj), op)(*args, **kwargs)
-
-        assert_allclose(actual, expected)
-
-
-@pytest.mark.apply_marks(
-    {
-        "test_reduce": {
-            "[cumprod]": pytest.mark.skip(reason="cumprod not implemented by sparse"),
-            "[cumsum]": pytest.mark.skip(reason="cumsum not implemented by sparse"),
-            "[median]": pytest.mark.skip(reason="median not implemented by sparse"),
-            "[std]": pytest.mark.skip(reason="nanstd not implemented by sparse"),
-            "[var]": pytest.mark.skip(reason="nanvar not implemented by sparse"),
-        }
-    }
-)
-class TestSparseDataArrayReduceMethods(base.DataArrayReduceTests):
-    @staticmethod
-    def create(shape, dtypes):
-        return create(shape, dtypes)
-
-    def check_reduce(self, obj, op, *args, **kwargs):
-        actual = as_dense(getattr(obj, op)(*args, **kwargs))
-        expected = getattr(as_dense(obj), op)(*args, **kwargs)
-
-        assert_allclose(actual, expected)
-
-
-@pytest.mark.apply_marks(
-    {
-        "test_reduce": {
-            "[cumprod]": pytest.mark.skip(reason="cumprod not implemented by sparse"),
-            "[cumsum]": pytest.mark.skip(reason="cumsum not implemented by sparse"),
-            "[median]": pytest.mark.skip(reason="median not implemented by sparse"),
-            "[std]": pytest.mark.skip(reason="nanstd not implemented by sparse"),
-            "[var]": pytest.mark.skip(reason="nanvar not implemented by sparse"),
-        }
-    }
-)
-class TestSparseDatasetReduceMethods(base.DatasetReduceTests):
-    @staticmethod
-    def create(shape, dtypes):
-        return create(shape, dtypes)
-
-    def check_reduce(self, obj, op, *args, **kwargs):
-        actual = as_dense(getattr(obj, op)(*args, **kwargs))
-        expected = getattr(as_dense(obj), op)(*args, **kwargs)
-
-        assert_allclose(actual, expected)
