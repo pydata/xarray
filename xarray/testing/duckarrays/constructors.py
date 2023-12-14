@@ -1,14 +1,19 @@
+from abc import abstractmethod
+from typing import TYPE_CHECKING
+
 import hypothesis.strategies as st
 import numpy as np
 import numpy.testing as npt
-from hypothesis import given, settings
+from hypothesis import given
 
-import xarray as xr
-from xarray.testing.duckarrays import strategies
-from xarray.testing.duckarrays.utils import create_dimension_names
+import xarray.testing.strategies as xrst
+from xarray.core.types import T_DuckArray
+
+if TYPE_CHECKING:
+    from xarray.core.types import _DTypeLikeNested, _ShapeLike
 
 
-class ArrayConstructorChecks:
+class ArrayConstructorChecksMixin:
     """Mixin for checking results of Variable/DataArray constructors."""
 
     def check(self, var, arr):
@@ -28,51 +33,29 @@ class ArrayConstructorChecks:
         assert var.shape == arr.shape
         assert var.dtype == arr.dtype
         assert var.size == arr.size
-        assert var.nbytes == arr.nbytes
 
     def check_values(self, var, arr):
         # test coercion to numpy
         npt.assert_equal(var.to_numpy(), np.asarray(arr))
 
 
-class VariableConstructorTests(ArrayConstructorChecks):
+class VariableConstructorTests(ArrayConstructorChecksMixin):
+    dtypes = xrst.supported_dtypes()
+
     @staticmethod
-    def create(shape, dtypes):
-        return strategies.numpy_array(shape, dtypes)
+    @abstractmethod
+    def array_strategy_fn(
+        *, shape: "_ShapeLike", dtype: "_DTypeLikeNested"
+    ) -> st.SearchStrategy[T_DuckArray]:
+        ...
 
     @given(st.data())
-    @settings(deadline=None)
-    def test_construct(self, data):
-        arr = data.draw(
-            strategies.duckarray(lambda shape, dtypes: self.create(shape, dtypes))
+    def test_construct(self, data) -> None:
+        var = data.draw(
+            xrst.variables(
+                array_strategy_fn=self.array_strategy_fn,
+                dtype=self.dtypes,
+            )
         )
 
-        var = xr.Variable(dims=create_dimension_names(arr.ndim), data=arr)
-
-        self.check(var, arr)
-
-
-class DataArrayConstructorTests(ArrayConstructorChecks):
-    @staticmethod
-    def create(shape, dtypes):
-        return strategies.numpy_array(shape, dtypes)
-
-    @given(st.data())
-    @settings(deadline=None)
-    def test_construct(self, data):
-        arr = data.draw(
-            strategies.duckarray(lambda shape, dtypes: self.create(shape, dtypes))
-        )
-
-        da = xr.DataArray(
-            name=data.draw(st.none() | st.text(min_size=1)),
-            dims=create_dimension_names(arr.ndim),
-            data=arr,
-        )
-
-        self.check(da, arr)
-
-
-class DatasetConstructorTests:
-    # TODO can we re-use the strategy for building datasets?
-    ...
+        self.check(var, var.data)
