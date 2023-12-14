@@ -1,11 +1,13 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
+import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 import numpy.testing as npt
 from hypothesis import given
 
+import xarray as xr
 import xarray.testing.strategies as xrst
 from xarray.core.types import T_DuckArray
 
@@ -40,6 +42,7 @@ class ArrayConstructorChecksMixin:
 
 
 class VariableConstructorTests(ArrayConstructorChecksMixin):
+    shapes = npst.array_shapes()
     dtypes = xrst.supported_dtypes()
 
     @staticmethod
@@ -47,15 +50,18 @@ class VariableConstructorTests(ArrayConstructorChecksMixin):
     def array_strategy_fn(
         *, shape: "_ShapeLike", dtype: "_DTypeLikeNested"
     ) -> st.SearchStrategy[T_DuckArray]:
+        # TODO can we just make this an attribute?
         ...
 
     @given(st.data())
     def test_construct(self, data) -> None:
-        var = data.draw(
-            xrst.variables(
-                array_strategy_fn=self.array_strategy_fn,
-                dtype=self.dtypes,
-            )
-        )
+        shape = data.draw(self.shapes)
+        dtype = data.draw(self.dtypes)
+        arr = data.draw(self.array_strategy_fn(shape=shape, dtype=dtype))
 
-        self.check(var, var.data)
+        dim_names = data.draw(
+            xrst.dimension_names(min_dims=len(shape), max_dims=len(shape))
+        )
+        var = xr.Variable(data=arr, dims=dim_names)
+
+        self.check(var, arr)
