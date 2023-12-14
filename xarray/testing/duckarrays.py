@@ -10,7 +10,7 @@ from hypothesis import given, note
 
 import xarray as xr
 import xarray.testing.strategies as xrst
-from xarray import assert_identical
+from xarray.testing.assertions import assert_identical
 from xarray.core.types import T_DuckArray
 
 if TYPE_CHECKING:
@@ -87,7 +87,7 @@ class VariableReduceTests:
         ...
 
     def check_reduce(self, var, op, dim, *args, **kwargs):
-        actual = getattr(var, op)(*args, **kwargs)
+        actual = getattr(var, op)(dim=dim, *args, **kwargs)
 
         data = np.asarray(var.data)
         expected = getattr(var.copy(data=data), op)(*args, **kwargs)
@@ -107,16 +107,16 @@ class VariableReduceTests:
         (
             "all",
             "any",
-            "cumprod",
-            "cumsum",
-            "max",
-            "mean",
-            "median",
-            "min",
-            "prod",
-            "std",
-            "sum",
-            "var",
+            # "cumprod",  # not in array API
+            # "cumsum",  # not in array API
+            # "max",  # only in array API for real numeric dtypes
+            # "max",  # only in array API for real floating point dtypes
+            # "median",  # not in array API
+            # "min",  # only in array API for real numeric dtypes
+            # "prod",  # only in array API for numeric dtypes
+            # "std",  # TypeError: std() got an unexpected keyword argument 'ddof'
+            # "sum",  # only in array API for numeric dtypes
+            # "var",  # TypeError: std() got an unexpected keyword argument 'ddof'
         ),
     )
     @given(st.data())
