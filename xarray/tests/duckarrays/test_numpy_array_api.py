@@ -30,3 +30,14 @@ class TestVariableConstructors(duckarrays.VariableConstructorTests):
         dtype: "_DTypeLikeNested",
     ) -> st.SearchStrategy[T_DuckArray]:
         return nxps.arrays(shape=shape, dtype=dtype)
+
+
+class TestVariableReductions(duckarrays.VariableReduceTests):
+    dtypes = nxps.scalar_dtypes()
+
+    @staticmethod
+    def array_strategy_fn(
+        shape: "_ShapeLike",
+        dtype: "_DTypeLikeNested",
+    ) -> st.SearchStrategy[T_DuckArray]:
+        return nxps.arrays(shape=shape, dtype=dtype)
