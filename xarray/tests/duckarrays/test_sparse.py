@@ -28,9 +28,7 @@ def disable_bottleneck():
 
 # sparse does not support float16
 sparse_dtypes = xrst.supported_dtypes().filter(
-    lambda dtype: (
-        not np.issubdtype(dtype, np.float16)
-    )
+    lambda dtype: (not np.issubdtype(dtype, np.float16))
 )
 
 
@@ -54,8 +52,7 @@ def sparse_arrays_fn(
 
 
 class TestVariableConstructors(duckarrays.VariableConstructorTests):
-    # dtypes = nxps.scalar_dtypes()
-    array_strategy_fn = sparse_arrays_fn
+    dtypes = sparse_dtypes()
 
     @staticmethod
     def array_strategy_fn(
@@ -66,3 +63,14 @@ class TestVariableConstructors(duckarrays.VariableConstructorTests):
 
     def check_values(self, var, arr):
         npt.assert_equal(var.to_numpy(), arr.todense())
+
+
+class TestVariableReductions(duckarrays.VariableReduceTests):
+    dtypes = nxps.scalar_dtypes()
+
+    @staticmethod
+    def array_strategy_fn(
+        shape: "_ShapeLike",
+        dtype: "_DTypeLikeNested",
+    ) -> st.SearchStrategy[T_DuckArray]:
+        return nxps.arrays(shape=shape, dtype=dtype)
