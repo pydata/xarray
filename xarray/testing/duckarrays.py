@@ -10,8 +10,8 @@ from hypothesis import given, note
 
 import xarray as xr
 import xarray.testing.strategies as xrst
-from xarray.testing.assertions import assert_identical
 from xarray.core.types import T_DuckArray
+from xarray.testing.assertions import assert_identical
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
