@@ -38,6 +38,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
