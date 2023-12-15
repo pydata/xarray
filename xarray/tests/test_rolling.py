@@ -95,7 +95,9 @@ class TestDataArrayRolling:
         ):
             da.rolling(foo=2)
 
-    @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
+    @pytest.mark.parametrize(
+        "name", ("sum", "mean", "std", "min", "max", "median", "argmin", "argmax")
+    )
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
@@ -108,9 +110,15 @@ class TestDataArrayRolling:
 
         func_name = f"move_{name}"
         actual = getattr(rolling_obj, name)()
+        window = 7
         expected = getattr(bn, func_name)(
-            da.values, window=7, axis=1, min_count=min_periods
+            da.values, window=window, axis=1, min_count=min_periods
         )
+        # index 0 is at the rightmost edge of the window
+        # need to reverse index here
+        # see GH #8541
+        if func_name in ["move_argmin", "move_argmax"]:
+            expected = window - 1 - expected
 
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         np.testing.assert_allclose(actual.values, expected)
