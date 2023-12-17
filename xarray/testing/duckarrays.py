@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "VariableConstructorTests",
-    "VariableReduceTests",
+    "ConstructorTests",
+    "ReduceTests",
 ]
 
 
@@ -49,7 +49,7 @@ class ArrayConstructorChecksMixin:
         npt.assert_equal(var.to_numpy(), np.asarray(arr))
 
 
-class VariableConstructorTests(ArrayConstructorChecksMixin):
+class ConstructorTests(ArrayConstructorChecksMixin):
     shapes = npst.array_shapes()
     dtypes = xrst.supported_dtypes()
 
@@ -62,7 +62,7 @@ class VariableConstructorTests(ArrayConstructorChecksMixin):
         ...
 
     @given(st.data())
-    def test_construct(self, data) -> None:
+    def test_construct_variable(self, data) -> None:
         shape = data.draw(self.shapes)
         dtype = data.draw(self.dtypes)
         arr = data.draw(self.array_strategy_fn(shape=shape, dtype=dtype))
@@ -75,7 +75,7 @@ class VariableConstructorTests(ArrayConstructorChecksMixin):
         self.check(var, arr)
 
 
-class VariableReduceTests:
+class ReduceTests:
     dtypes = xrst.supported_dtypes()
 
     @staticmethod
@@ -120,7 +120,7 @@ class VariableReduceTests:
         ),
     )
     @given(st.data())
-    def test_reduce(self, method, data):
+    def test_reduce_variable(self, method, data):
         """
         Test that the reduction applied to an xarray Variable is always equal
         to the same reduction applied to the underlying array.

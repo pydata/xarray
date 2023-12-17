@@ -51,7 +51,7 @@ def sparse_arrays_fn(
     return to_sparse(np_arr)
 
 
-class TestVariableConstructors(duckarrays.VariableConstructorTests):
+class TestConstructors(duckarrays.ConstructorTests):
     dtypes = sparse_dtypes()
 
     @staticmethod
@@ -65,7 +65,7 @@ class TestVariableConstructors(duckarrays.VariableConstructorTests):
         npt.assert_equal(var.to_numpy(), arr.todense())
 
 
-class TestVariableReductions(duckarrays.VariableReduceTests):
+class TestReductions(duckarrays.ReduceTests):
     dtypes = nxps.scalar_dtypes()
 
     @staticmethod

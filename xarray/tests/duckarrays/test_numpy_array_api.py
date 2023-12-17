@@ -23,7 +23,7 @@ with suppress_warning(
 nxps = make_strategies_namespace(nxp)
 
 
-class TestVariableConstructors(duckarrays.VariableConstructorTests):
+class TestConstructors(duckarrays.ConstructorTests):
     dtypes = nxps.scalar_dtypes()
 
     @staticmethod
@@ -34,7 +34,7 @@ class TestVariableConstructors(duckarrays.VariableConstructorTests):
         return nxps.arrays(shape=shape, dtype=dtype)
 
 
-class TestVariableReductions(duckarrays.VariableReduceTests):
+class TestReductions(duckarrays.ReduceTests):
     dtypes = nxps.scalar_dtypes()
 
     @staticmethod
