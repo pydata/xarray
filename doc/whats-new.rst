@@ -15,20 +15,86 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.2023.11.1:
 
-v2023.11.1 (unreleased)
+.. _whats-new.2023.12.1:
+
+v2023.12.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`xr.cov` and :py:meth:`xr.corr` now support using weights (:issue:`8527`, :pull:`7392`).
+  By `Llorenç Lledó <https://github.com/lluritu>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Remove null values before plotting. (:pull:`8535`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+.. _whats-new.2023.12.0:
+
+v2023.12.0 (2023 Dec 08)
+------------------------
+
+This release brings new `hypothesis <https://hypothesis.works/>`_ strategies for testing, significantly faster rolling aggregations as well as
+``ffill`` and ``bfill`` with ``numbagg``, a new :py:meth:`Dataset.eval` method, and improvements to
+reading and writing Zarr arrays (including a new ``"a-"`` mode).
+
+Thanks to our 16 contributors:
+
+Anderson Banihirwe, Ben Mares, Carl Andersson, Deepak Cherian, Doug Latornell, Gregorio L. Trevisan, Illviljan, Jens Hedegaard Nielsen, Justus Magin, Mathias Hauser, Max Jones, Maximilian Roos, Michael Niklas, Patrick Hoefler, Ryan Abernathey, Tom Nicholas
+
+New Features
+~~~~~~~~~~~~
+
+- Added hypothesis strategies for generating :py:class:`xarray.Variable` objects containing arbitrary data, useful for parametrizing downstream tests.
+  Accessible under :py:mod:`testing.strategies`, and documented in a new page on testing in the User Guide.
+  (:issue:`6911`, :pull:`8404`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`rolling` uses `numbagg <https://github.com/numbagg/numbagg>`_ for
+  most of its computations by default. Numbagg is up to 5x faster than bottleneck
+  where parallelization is possible. Where parallelization isn't possible — for
+  example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
+  than pandas' default functions. (:pull:`8493`). numbagg is an optional
+  dependency, so requires installing separately.
+- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
+  cumulative aggregations, such as ``sum``, along a dimension — for example
+  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
+  and mostly equivalent to ``.cumsum`` methods, or to
+  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
+  (:pull:`8512`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Avoid overwriting unchanged existing coordinate variables when appending by setting ``mode='a-'``.
+- Avoid overwriting unchanged existing coordinate variables when appending with :py:meth:`Dataset.to_zarr` by setting ``mode='a-'``.
   By `Ryan Abernathey <https://github.com/rabernat>`_ and `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`~xarray.DataArray.rank` now operates on dask-backed arrays, assuming
   the core dim has exactly one chunk. (:pull:`8475`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add a :py:meth:`Dataset.eval` method, similar to the pandas' method of the
+  same name. (:pull:`7163`). This is currently marked as experimental and
+  doesn't yet support the ``numexpr`` engine.
+- :py:meth:`Dataset.drop_vars` & :py:meth:`DataArray.drop_vars` allow passing a
+  callable, similar to :py:meth:`Dataset.where` & :py:meth:`Dataset.sortby` & others.
+  (:pull:`8511`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Breaking changes
@@ -53,6 +119,17 @@ Deprecations
   currently ``PendingDeprecationWarning``, which are silenced by default. We'll
   convert these to ``DeprecationWarning`` in a future release.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Raise a ``FutureWarning`` warning that the type of :py:meth:`Dataset.dims` will be changed
+  from a mapping of dimension names to lengths to a set of dimension names.
+  This is to increase consistency with :py:meth:`DataArray.dims`.
+  To access a mapping of dimension names to lengths please use :py:meth:`Dataset.sizes`.
+  The same change also applies to `DatasetGroupBy.dims`.
+  (:issue:`8496`, :pull:`8500`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`Dataset.drop` & :py:meth:`DataArray.drop` are now deprecated, since pending deprecation for
+  several years. :py:meth:`DataArray.drop_sel` & :py:meth:`DataArray.drop_var`
+  replace them for labels & variables respectively. (:pull:`8497`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -63,6 +140,9 @@ Bug fixes
 - Static typing of ``p0`` and ``bounds`` arguments of :py:func:`xarray.DataArray.curvefit` and :py:func:`xarray.Dataset.curvefit`
   was changed to ``Mapping`` (:pull:`8502`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix typing of :py:func:`xarray.DataArray.to_netcdf` and :py:func:`xarray.Dataset.to_netcdf`
+  when ``compute`` is evaluated to bool instead of a Literal (:pull:`8268`).
+  By `Jens Hedegaard Nielsen <https://github.com/jenshnielsen>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -72,15 +152,16 @@ Documentation
   This is the recommended technique to replace the use of the deprecated ``loffset`` parameter
   in ``resample`` (:pull:`8479`).
   By `Doug Latornell <https://github.com/douglatornell>`_.
-
 - Improved error message when attempting to get a variable which doesn't exist from a Dataset.
   (:pull:`8474`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix default value of ``combine_attrs`` in :py:func:`xarray.combine_by_coords` (:pull:`8471`)
+  By `Gregorio L. Trevisan <https://github.com/gtrevisan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg by
+- :py:meth:`DataArray.bfill` & :py:meth:`DataArray.ffill` now use numbagg <https://github.com/numbagg/numbagg>`_ by
   default, which is up to 5x faster where parallelization is possible. (:pull:`8339`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Update mypy version to 1.7 (:issue:`8448`, :pull:`8501`).

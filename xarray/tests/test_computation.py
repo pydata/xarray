@@ -1378,7 +1378,7 @@ def test_apply_dask_new_output_sizes() -> None:
     expected = extract(ds)
 
     actual = extract(ds.chunk())
-    assert actual.dims == {"lon_new": 3, "lat_new": 6}
+    assert actual.sizes == {"lon_new": 3, "lat_new": 6}
     assert_identical(expected.chunk(), actual)
 
 
@@ -1773,6 +1773,97 @@ def test_complex_cov() -> None:
     da = xr.DataArray([1j, -1j])
     actual = xr.cov(da, da)
     assert abs(actual.item()) == 2
+
+
+@pytest.mark.parametrize("weighted", [True, False])
+def test_bilinear_cov_corr(weighted: bool) -> None:
+    # Test the bilinear properties of covariance and correlation
+    da = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
+    db = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
+    dc = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
+    if weighted:
+        weights = xr.DataArray(
+            np.abs(np.random.random(4)),
+            dims=("x"),
+        )
+    else:
+        weights = None
+    k = np.random.random(1)[0]
+
+    # Test covariance properties
+    assert_allclose(
+        xr.cov(da + k, db, weights=weights), xr.cov(da, db, weights=weights)
+    )
+    assert_allclose(
+        xr.cov(da, db + k, weights=weights), xr.cov(da, db, weights=weights)
+    )
+    assert_allclose(
+        xr.cov(da + dc, db, weights=weights),
+        xr.cov(da, db, weights=weights) + xr.cov(dc, db, weights=weights),
+    )
+    assert_allclose(
+        xr.cov(da, db + dc, weights=weights),
+        xr.cov(da, db, weights=weights) + xr.cov(da, dc, weights=weights),
+    )
+    assert_allclose(
+        xr.cov(k * da, db, weights=weights), k * xr.cov(da, db, weights=weights)
+    )
+    assert_allclose(
+        xr.cov(da, k * db, weights=weights), k * xr.cov(da, db, weights=weights)
+    )
+
+    # Test correlation properties
+    assert_allclose(
+        xr.corr(da + k, db, weights=weights), xr.corr(da, db, weights=weights)
+    )
+    assert_allclose(
+        xr.corr(da, db + k, weights=weights), xr.corr(da, db, weights=weights)
+    )
+    assert_allclose(
+        xr.corr(k * da, db, weights=weights), xr.corr(da, db, weights=weights)
+    )
+    assert_allclose(
+        xr.corr(da, k * db, weights=weights), xr.corr(da, db, weights=weights)
+    )
+
+
+def test_equally_weighted_cov_corr() -> None:
+    # Test that equal weights for all values produces same results as weights=None
+    da = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
+    db = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
+    #
+    assert_allclose(
+        xr.cov(da, db, weights=None), xr.cov(da, db, weights=xr.DataArray(1))
+    )
+    assert_allclose(
+        xr.cov(da, db, weights=None), xr.cov(da, db, weights=xr.DataArray(2))
+    )
+    assert_allclose(
+        xr.corr(da, db, weights=None), xr.corr(da, db, weights=xr.DataArray(1))
+    )
+    assert_allclose(
+        xr.corr(da, db, weights=None), xr.corr(da, db, weights=xr.DataArray(2))
+    )
 
 
 @requires_dask

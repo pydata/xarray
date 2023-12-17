@@ -173,7 +173,8 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
-T_DuckArray = TypeVar("T_DuckArray", bound=Any)
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]

@@ -3041,7 +3041,7 @@ class DataArray(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable],
+        names: str | Iterable[Hashable] | Callable[[Self], str | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
@@ -3049,8 +3049,9 @@ class DataArray(
 
         Parameters
         ----------
-        names : Hashable or iterable of Hashable
-            Name(s) of variables to drop.
+        names : Hashable or iterable of Hashable or Callable
+            Name(s) of variables to drop. If a Callable, this object is passed as its
+            only argument and its result is used.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
@@ -3100,7 +3101,17 @@ class DataArray(
                [ 6,  7,  8],
                [ 9, 10, 11]])
         Dimensions without coordinates: x, y
+
+        >>> da.drop_vars(lambda x: x.coords)
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Dimensions without coordinates: x, y
         """
+        if callable(names):
+            names = names(self)
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
 
@@ -3914,6 +3925,23 @@ class DataArray(
     ) -> bytes:
         ...
 
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
     # default return None
     @overload
     def to_netcdf(
@@ -3930,7 +3958,8 @@ class DataArray(
     ) -> None:
         ...
 
-    # compute=False returns dask.Delayed
+    # if compute cannot be evaluated at type check time
+    # we may get back either Delayed or None
     @overload
     def to_netcdf(
         self,
@@ -3941,10 +3970,9 @@ class DataArray(
         engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
-        *,
-        compute: Literal[False],
+        compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Delayed:
+    ) -> Delayed | None:
         ...
 
     def to_netcdf(
@@ -6895,13 +6923,89 @@ class DataArray(
 
         See Also
         --------
-        core.rolling.DataArrayRolling
+        DataArray.cumulative
         Dataset.rolling
+        core.rolling.DataArrayRolling
         """
         from xarray.core.rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
+
+    def cumulative(
+        self,
+        dim: str | Iterable[Hashable],
+        min_periods: int = 1,
+    ) -> DataArrayRolling:
+        """
+        Accumulating object for DataArrays.
+
+        Parameters
+        ----------
+        dims : iterable of hashable
+            The name(s) of the dimensions to create the cumulative window along
+        min_periods : int, default: 1
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default is 1 (note this is different
+            from ``Rolling``, whose default is the size of the window).
+
+        Returns
+        -------
+        core.rolling.DataArrayRolling
+
+        Examples
+        --------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "1999-12-15",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
+
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        >>> da.cumulative("time").sum()
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        See Also
+        --------
+        DataArray.rolling
+        Dataset.cumulative
+        core.rolling.DataArrayRolling
+        """
+        from xarray.core.rolling import DataArrayRolling
+
+        # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
+        # with the same method in Dataset.
+        if isinstance(dim, str):
+            if dim not in self.dims:
+                raise ValueError(
+                    f"Dimension {dim} not found in data dimensions: {self.dims}"
+                )
+            dim = {dim: self.sizes[dim]}
+        else:
+            missing_dims = set(dim) - set(self.dims)
+            if missing_dims:
+                raise ValueError(
+                    f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
+                )
+            dim = {d: self.sizes[d] for d in dim}
+
+        return DataArrayRolling(self, dim, min_periods=min_periods, center=False)
 
     def coarsen(
         self,
