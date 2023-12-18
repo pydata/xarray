@@ -1,14 +1,11 @@
 from typing import TYPE_CHECKING
 
-import hypothesis.strategies as st
 import hypothesis.extra.numpy as npst
+import hypothesis.strategies as st
 
 from xarray.core.types import T_DuckArray
 from xarray.testing import duckarrays
-from xarray.testing.utils import suppress_warning
-from xarray.tests import _importorskip
 from xarray.testing.strategies import supported_dtypes
-
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
