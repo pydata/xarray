@@ -1710,6 +1710,9 @@ class NetCDF4Base(NetCDFBase):
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
+    def nc4_version(self):
+        return Version(nc4.__version__)
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -1782,6 +1785,10 @@ class TestNetCDF4Data(NetCDF4Base):
         ],
     )
     def test_compression_encoding(self, compression) -> None:
+        if self.nc4_version < Version("1.6.2"):
+            pytest.skip(
+                "Compression options only available for netcdf4-python >= 1.6.2, running with {self.nc_version}."
+            )
         data = create_test_data(dim_sizes=(20, 40, 10))
         encoding_params = dict(compression=compression, blosc_shuffle=1)
         data["var2"].encoding.update(encoding_params)
