@@ -1767,9 +1767,9 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
 
-    def test_compression_encoding(self) -> None:
-        data = create_test_data(dim_sizes=(20, 40, 10))
-        compression_vals = (
+    @pytest.mark.parametrize(
+        "compression",
+        [
             None,
             "zlib",
             "szip",
@@ -1779,58 +1779,60 @@ class TestNetCDF4Data(NetCDF4Base):
             "blosc_lz4hc",
             "blosc_zlib",
             "blosc_zstd",
+        ],
+    )
+    def test_compression_encoding(self, compression) -> None:
+        data = create_test_data(dim_sizes=(20, 40, 10))
+        encoding_params = dict(compression=compression, blosc_shuffle=1)
+        data["var2"].encoding.update(encoding_params)
+        data["var2"].encoding.update(
+            {
+                "chunksizes": (20, 20),
+                "original_shape": data.var2.shape,
+                "blosc_shuffle": 1,
+                "fletcher32": False,
+            }
         )
-        for compression in compression_vals:
-            encoding_params = dict(compression=compression, blosc_shuffle=1)
-            data["var2"].encoding.update(encoding_params)
-            data["var2"].encoding.update(
-                {
-                    "chunksizes": (20, 20),
-                    "original_shape": data.var2.shape,
-                    "blosc_shuffle": 1,
-                    "fletcher32": False,
-                }
-            )
-            with self.roundtrip(data) as actual:
-                expected_encoding = data["var2"].encoding.copy()
-                # compression does not appear in the retrieved encoding, that differs
-                # from the input encoding. shuffle also chantges. Here we modify the
-                # expected encoding to account for this
-                compression = expected_encoding.pop("compression")
-                blosc_shuffle = expected_encoding.pop("blosc_shuffle")
-                if compression is not None:
-                    if "blosc" in compression and blosc_shuffle:
-                        expected_encoding["blosc"] = {
-                            "compressor": compression,
-                            "shuffle": blosc_shuffle,
-                        }
-                        expected_encoding["shuffle"] = False
-                    elif compression == "szip":
-                        expected_encoding["szip"] = {
-                            "coding": "nn",
-                            "pixels_per_block": 8,
-                        }
-                        expected_encoding["shuffle"] = False
-                    else:
-                        # This will set a key like zlib=true which is what appears in
-                        # the encoding when we read it.
-                        expected_encoding[compression] = True
-                        if compression == "zstd":
-                            expected_encoding["shuffle"] = False
-                else:
+        with self.roundtrip(data) as actual:
+            expected_encoding = data["var2"].encoding.copy()
+            # compression does not appear in the retrieved encoding, that differs
+            # from the input encoding. shuffle also chantges. Here we modify the
+            # expected encoding to account for this
+            compression = expected_encoding.pop("compression")
+            blosc_shuffle = expected_encoding.pop("blosc_shuffle")
+            if compression is not None:
+                if "blosc" in compression and blosc_shuffle:
+                    expected_encoding["blosc"] = {
+                        "compressor": compression,
+                        "shuffle": blosc_shuffle,
+                    }
                     expected_encoding["shuffle"] = False
+                elif compression == "szip":
+                    expected_encoding["szip"] = {
+                        "coding": "nn",
+                        "pixels_per_block": 8,
+                    }
+                    expected_encoding["shuffle"] = False
+                else:
+                    # This will set a key like zlib=true which is what appears in
+                    # the encoding when we read it.
+                    expected_encoding[compression] = True
+                    if compression == "zstd":
+                        expected_encoding["shuffle"] = False
+            else:
+                expected_encoding["shuffle"] = False
 
-                actual_encoding = actual["var2"].encoding
-                for k, v in expected_encoding.items():
-                    assert v == actual_encoding[k]
-            if (
-                encoding_params["compression"] is not None
-                and "blosc" not in encoding_params["compression"]
-            ):
-                # regression test for #156
-                expected = data.isel(dim1=0)
-                with self.roundtrip(expected) as actual:
-                    assert_equal(expected, actual)
+            actual_encoding = actual["var2"].encoding
+            for k, v in expected_encoding.items():
+                assert v == actual_encoding[k]
+        if (
+            encoding_params["compression"] is not None
+            and "blosc" not in encoding_params["compression"]
+        ):
+            # regression test for #156
+            expected = data.isel(dim1=0)
+            with self.roundtrip(expected) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self) -> None:
