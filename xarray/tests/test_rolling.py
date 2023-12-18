@@ -36,6 +36,31 @@ def compute_backend(request):
         yield request.param
 
 
+@pytest.mark.parametrize("func", ["mean", "sum"])
+@pytest.mark.parametrize("min_periods", [1, 10])
+def test_cumulative(d, func, min_periods) -> None:
+    # One dim
+    result = getattr(d.cumulative("z", min_periods=min_periods), func)()
+    expected = getattr(d.rolling(z=d["z"].size, min_periods=min_periods), func)()
+    assert_identical(result, expected)
+
+    # Multiple dim
+    result = getattr(d.cumulative(["z", "x"], min_periods=min_periods), func)()
+    expected = getattr(
+        d.rolling(z=d["z"].size, x=d["x"].size, min_periods=min_periods),
+        func,
+    )()
+    assert_identical(result, expected)
+
+
+def test_cumulative_vs_cum(d) -> None:
+    result = d.cumulative("z").sum()
+    expected = d.cumsum("z")
+    # cumsum drops the coord of the dimension; cumulative doesn't
+    expected = expected.assign_coords(z=result["z"])
+    assert_identical(result, expected)
+
+
 class TestDataArrayRolling:
     @pytest.mark.parametrize("da", (1, 2), indirect=True)
     @pytest.mark.parametrize("center", [True, False])
@@ -485,29 +510,6 @@ class TestDataArrayRollingExp:
         ):
             da.rolling_exp(time=10, keep_attrs=True)
 
-    @pytest.mark.parametrize("func", ["mean", "sum"])
-    @pytest.mark.parametrize("min_periods", [1, 20])
-    def test_cumulative(self, da, func, min_periods) -> None:
-        # One dim
-        result = getattr(da.cumulative("time", min_periods=min_periods), func)()
-        expected = getattr(
-            da.rolling(time=da.time.size, min_periods=min_periods), func
-        )()
-        assert_identical(result, expected)
-
-        # Multiple dim
-        result = getattr(da.cumulative(["time", "a"], min_periods=min_periods), func)()
-        expected = getattr(
-            da.rolling(time=da.time.size, a=da.a.size, min_periods=min_periods),
-            func,
-        )()
-        assert_identical(result, expected)
-
-    def test_cumulative_vs_cum(self, da) -> None:
-        result = da.cumulative("time").sum()
-        expected = da.cumsum("time")
-        assert_identical(result, expected)
-
 
 class TestDatasetRolling:
     @pytest.mark.parametrize(
@@ -831,25 +833,6 @@ class TestDatasetRolling:
         actual = getattr(rolling_obj, name)()
         expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
         assert_allclose(actual, expected)
-
-    @pytest.mark.parametrize("func", ["mean", "sum"])
-    @pytest.mark.parametrize("ds", (2,), indirect=True)
-    @pytest.mark.parametrize("min_periods", [1, 10])
-    def test_cumulative(self, ds, func, min_periods) -> None:
-        # One dim
-        result = getattr(ds.cumulative("time", min_periods=min_periods), func)()
-        expected = getattr(
-            ds.rolling(time=ds.time.size, min_periods=min_periods), func
-        )()
-        assert_identical(result, expected)
-
-        # Multiple dim
-        result = getattr(ds.cumulative(["time", "x"], min_periods=min_periods), func)()
-        expected = getattr(
-            ds.rolling(time=ds.time.size, x=ds.x.size, min_periods=min_periods),
-            func,
-        )()
-        assert_identical(result, expected)
 
 
 @requires_numbagg
