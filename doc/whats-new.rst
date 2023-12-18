@@ -24,6 +24,8 @@ v2023.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`xr.cov` and :py:meth:`xr.corr` now support using weights (:issue:`8527`, :pull:`7392`).
+  By `Llorenç Lledó <https://github.com/lluritu>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -44,6 +46,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Remove null values before plotting. (:pull:`8535`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2023.12.0:
 
