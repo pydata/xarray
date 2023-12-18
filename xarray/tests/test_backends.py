@@ -72,11 +72,12 @@ from xarray.tests import (
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
+    requires_netCDF4_1_6_2_or_above,
     requires_pydap,
     requires_pynio,
     requires_scipy,
     requires_scipy_or_netCDF4,
-    requires_zarr, requires_netCDF4_1_6_2_or_above,
+    requires_zarr,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
