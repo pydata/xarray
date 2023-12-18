@@ -1790,12 +1790,12 @@ class TestNetCDF4Data(NetCDF4Base):
             pytest.skip(
                 "Compression options only available for netcdf4-python >= 1.6.2, running with {self.nc_version}."
             )
-        data = create_test_data(dim_sizes=(20, 40, 10))
+        data = create_test_data(dim_sizes=(20, 80, 10))
         encoding_params = dict(compression=compression, blosc_shuffle=1)
         data["var2"].encoding.update(encoding_params)
         data["var2"].encoding.update(
             {
-                "chunksizes": (20, 20),
+                "chunksizes": (20, 40),
                 "original_shape": data.var2.shape,
                 "blosc_shuffle": 1,
                 "fletcher32": False,
