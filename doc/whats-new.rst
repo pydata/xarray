@@ -38,6 +38,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Support non-string hashable dimensions in :py:class:`xarray.DataArray` (:issue:`8546`, :pull:`8559`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
