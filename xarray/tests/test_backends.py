@@ -1710,7 +1710,8 @@ class NetCDF4Base(NetCDFBase):
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
-    def nc4_version(self):
+    @property
+    def nc4_version(self) -> Version:
         return Version(nc4.__version__)
 
     @contextlib.contextmanager
@@ -1784,7 +1785,7 @@ class TestNetCDF4Data(NetCDF4Base):
             "blosc_zstd",
         ],
     )
-    def test_compression_encoding(self, compression) -> None:
+    def test_compression_encoding(self, compression: str | None) -> None:
         if self.nc4_version < Version("1.6.2"):
             pytest.skip(
                 "Compression options only available for netcdf4-python >= 1.6.2, running with {self.nc_version}."
