@@ -450,6 +450,7 @@ def map_blocks(
         coords = []
 
         chunk_tuple = tuple(chunk_index.values())
+        chunk_dims_set = set(chunk_index)
         for name, variable in dataset.variables.items():
             # make a task that creates tuple of (dims, chunk)
             if dask.is_dask_collection(variable.data):
@@ -472,15 +473,17 @@ def map_blocks(
                     for dim in variable.dims
                 }
                 subset = variable.isel(subsetter)
-                if name in chunk_index:
+                if set(variable.dims) < chunk_dims_set:
                     # We are including a dimension coordinate,
                     # minimize duplication by not copying it in the graph for every chunk.
-                    this_var_chunk_tuple = (chunk_index[name],)
+                    this_var_chunk_tuple = tuple(
+                        chunk_index[dim] for dim in variable.dims
+                    )
                 else:
                     this_var_chunk_tuple = chunk_tuple
 
                 chunk_variable_task = (
-                    f"{name}-{gname}-{dask.base.tokenize(subset)}",
+                    f"{name}-{gname}-{dask.base.tokenize(subsetter)}",
                 ) + this_var_chunk_tuple
                 if chunk_variable_task not in graph:
                     graph[chunk_variable_task] = (
