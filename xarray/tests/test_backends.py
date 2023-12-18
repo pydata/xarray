@@ -76,7 +76,7 @@ from xarray.tests import (
     requires_pynio,
     requires_scipy,
     requires_scipy_or_netCDF4,
-    requires_zarr,
+    requires_zarr, requires_netCDF4_1_6_2_or_above,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -1785,13 +1785,10 @@ class TestNetCDF4Data(NetCDF4Base):
             "blosc_zstd",
         ],
     )
+    @requires_netCDF4_1_6_2_or_above
     def test_compression_encoding(self, compression: str | None) -> None:
-        if self.nc4_version < Version("1.6.2"):
-            pytest.skip(
-                "Compression options only available for netcdf4-python >= 1.6.2, running with {self.nc_version}."
-            )
         data = create_test_data(dim_sizes=(20, 80, 10))
-        encoding_params = dict(compression=compression, blosc_shuffle=1)
+        encoding_params: dict[str, Any] = dict(compression=compression, blosc_shuffle=1)
         data["var2"].encoding.update(encoding_params)
         data["var2"].encoding.update(
             {

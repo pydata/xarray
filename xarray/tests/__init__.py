@@ -113,6 +113,10 @@ requires_h5netcdf_ros3 = pytest.mark.skipif(
     not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
 )
 
+has_netCDF4_1_6_2_or_above = _importorskip("netCDF4", "1.6.2")
+requires_netCDF4_1_6_2_or_above = pytest.mark.skipif(
+    not has_netCDF4_1_6_2_or_above, reason="requires netCDF4 1.6.2 or above.")
+
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
 
