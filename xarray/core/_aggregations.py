@@ -2424,7 +2424,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
@@ -2522,7 +2522,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
@@ -2620,7 +2620,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
@@ -2735,7 +2735,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -2851,7 +2851,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -2969,7 +2969,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -3105,7 +3105,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -3242,7 +3242,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -3376,7 +3376,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -3510,7 +3510,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -3614,7 +3614,7 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 nan 2.0 1.5
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -3715,7 +3715,7 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 3.0 4.0 nan
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -3816,7 +3816,7 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 3.0 0.0 4.0 nan
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -3938,7 +3938,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
@@ -4036,7 +4036,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
@@ -4134,7 +4134,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
@@ -4249,7 +4249,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -4365,7 +4365,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -4483,7 +4483,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -4619,7 +4619,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -4756,7 +4756,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -4890,7 +4890,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -5024,7 +5024,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -5112,23 +5112,23 @@ class DatasetResampleAggregations:
 
         >>> ds.resample(time="3M").median()
         <xarray.Dataset>
-        Dimensions:  (time: 3)
+        Dimensions:           (__resample_dim__: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
         Data variables:
-            da       (time) float64 1.0 2.0 2.0
+            da                (__resample_dim__) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").median(skipna=False)
         <xarray.Dataset>
-        Dimensions:  (time: 3)
+        Dimensions:           (__resample_dim__: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
         Data variables:
-            da       (time) float64 1.0 2.0 nan
+            da                (__resample_dim__) float64 1.0 2.0 nan
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -5229,7 +5229,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 5.0 5.0 2.0 nan
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -5330,7 +5330,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 1.0 2.0 6.0 0.0 2.0 nan
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -5446,7 +5446,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -5537,7 +5537,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -5628,7 +5628,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -5734,7 +5734,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -5841,7 +5841,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -5950,7 +5950,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -6075,7 +6075,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -6201,7 +6201,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -6324,7 +6324,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -6447,7 +6447,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -6543,7 +6543,7 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -6640,7 +6640,7 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -6737,7 +6737,7 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -6852,7 +6852,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -6943,7 +6943,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -7034,7 +7034,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
@@ -7140,7 +7140,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -7247,7 +7247,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -7356,7 +7356,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -7481,7 +7481,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -7607,7 +7607,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -7730,7 +7730,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -7853,7 +7853,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            return self._reduce_without_squeeze_warn(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -7936,20 +7936,20 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").median()
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (__resample_dim__: 3)>
         array([1., 2., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").median(skipna=False)
-        <xarray.DataArray (time: 3)>
+        <xarray.DataArray (__resample_dim__: 3)>
         array([ 1.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -8034,8 +8034,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8043,10 +8043,10 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -8131,8 +8131,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8140,10 +8140,10 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
-        return self.reduce(
+        return self._reduce_without_squeeze_warn(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,

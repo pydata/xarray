@@ -67,21 +67,30 @@ def test_groupby_dims_property(dataset, recwarn) -> None:
         assert dataset.groupby("y").dims == dataset.isel(y=1).dims
 
     # when squeeze=False, no warning should be raised
-    assert dataset.groupby("x", squeeze=False).dims == dataset.isel(x=slice(1, 2)).dims
-    assert dataset.groupby("y", squeeze=False).dims == dataset.isel(y=slice(1, 2)).dims
+    assert tuple(dataset.groupby("x", squeeze=False).dims) == tuple(
+        dataset.isel(x=slice(1, 2)).dims
+    )
+    assert tuple(dataset.groupby("y", squeeze=False).dims) == tuple(
+        dataset.isel(y=slice(1, 2)).dims
+    )
     assert len(recwarn) == 0
 
     stacked = dataset.stack({"xy": ("x", "y")})
-    assert stacked.groupby("xy", squeeze=False).dims == stacked.isel(xy=[0]).dims
+    assert tuple(stacked.groupby("xy", squeeze=False).dims) == tuple(
+        stacked.isel(xy=[0]).dims
+    )
     assert len(recwarn) == 0
 
 
 def test_groupby_sizes_property(dataset) -> None:
-    assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
-    assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert dataset.groupby("x").sizes == dataset.isel(x=1).sizes
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert dataset.groupby("y").sizes == dataset.isel(y=1).sizes
 
     stacked = dataset.stack({"xy": ("x", "y")})
-    assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert stacked.groupby("xy").sizes == stacked.isel(xy=0).sizes
 
 
 def test_multi_index_groupby_map(dataset) -> None:
@@ -490,8 +499,10 @@ def test_da_groupby_assign_coords() -> None:
     actual = xr.DataArray(
         [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": range(2), "x": range(3)}
     )
-    actual1 = actual.groupby("x", squeeze=False).assign_coords({"y": [-1, -2]})
-    actual2 = actual.groupby("x", squeeze=False).assign_coords(y=[-1, -2])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual1 = actual.groupby("x").assign_coords({"y": [-1, -2]})
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        actual2 = actual.groupby("x").assign_coords(y=[-1, -2])
     expected = xr.DataArray(
         [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": [-1, -2], "x": range(3)}
     )
@@ -639,13 +650,17 @@ def test_groupby_grouping_errors() -> None:
 
 def test_groupby_reduce_dimension_error(array) -> None:
     grouped = array.groupby("y")
+    # assert_identical(array, grouped.mean())
+
     with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean("huh")
 
     with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean(("x", "y", "asd"))
 
-    assert_identical(array, grouped.mean())
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
+        assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
 
     grouped = array.groupby("y", squeeze=False)
     assert_identical(array, grouped.mean())
@@ -688,6 +703,15 @@ def test_groupby_none_group_name() -> None:
 
 
 def test_groupby_getitem(dataset) -> None:
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+
     assert_identical(dataset.sel(x=["a"]), dataset.groupby("x", squeeze=False)["a"])
     assert_identical(dataset.sel(z=[1]), dataset.groupby("z", squeeze=False)[1])
 
@@ -727,6 +751,36 @@ def test_groupby_dataset() -> None:
     for k in ["x", "c", "y"]:
         actual2 = data.groupby(k, squeeze=False).map(identity)
         assert_equal(data, actual2)
+
+
+def test_groupby_dataset_squeeze_None() -> None:
+    """Delete when removing squeeze."""
+    data = Dataset(
+        {"z": (["x", "y"], np.random.randn(3, 5))},
+        {"x": ("x", list("abc")), "c": ("x", [0, 1, 0]), "y": range(5)},
+    )
+    groupby = data.groupby("x")
+    assert len(groupby) == 3
+    expected_groups = {"a": 0, "b": 1, "c": 2}
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert groupby.groups == expected_groups
+    expected_items = [
+        ("a", data.isel(x=0)),
+        ("b", data.isel(x=1)),
+        ("c", data.isel(x=2)),
+    ]
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        for actual1, expected1 in zip(groupby, expected_items):
+            assert actual1[0] == expected1[0]
+            assert_equal(actual1[1], expected1[1])
+
+    def identity(x):
+        return x
+
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        for k in ["x", "c"]:
+            actual2 = data.groupby(k).map(identity)
+            assert_equal(data, actual2)
 
 
 def test_groupby_dataset_returns_new_type() -> None:
