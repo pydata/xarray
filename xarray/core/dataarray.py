@@ -61,6 +61,7 @@ from xarray.core.utils import (
     ReprObject,
     _default,
     either_dict_or_kwargs,
+    hashable,
 )
 from xarray.core.variable import (
     IndexVariable,
@@ -140,7 +141,9 @@ def _check_coords_dims(shape, coords, dim):
 
 
 def _infer_coords_and_dims(
-    shape, coords, dims
+    shape: tuple[int, ...],
+    coords: Sequence[Sequence[Any] | pd.Index | DataArray] | Mapping[Any, Any] | None,
+    dims: str | Iterable[Hashable] | None,
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
@@ -157,8 +160,7 @@ def _infer_coords_and_dims(
 
     if isinstance(dims, str):
         dims = (dims,)
-
-    if dims is None:
+    elif dims is None:
         dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
@@ -168,16 +170,16 @@ def _infer_coords_and_dims(
                 for n, (dim, coord) in enumerate(zip(dims, coords)):
                     coord = as_variable(coord, name=dims[n]).to_index_variable()
                     dims[n] = coord.name
-        dims = tuple(dims)
-    elif len(dims) != len(shape):
+    dims_tuple = tuple(dims)
+    if len(dims_tuple) != len(shape):
         raise ValueError(
             "different number of dimensions on data "
-            f"and dims: {len(shape)} vs {len(dims)}"
+            f"and dims: {len(shape)} vs {len(dims_tuple)}"
         )
     else:
-        for d in dims:
-            if not isinstance(d, str):
-                raise TypeError(f"dimension {d} is not a string")
+        for d in dims_tuple:
+            if not hashable(d):
+                raise TypeError(f"Dimension {d} is not hashable")
 
     new_coords: Mapping[Hashable, Any]
 
@@ -189,17 +191,21 @@ def _infer_coords_and_dims(
             for k, v in coords.items():
                 new_coords[k] = as_variable(v, name=k)
         elif coords is not None:
-            for dim, coord in zip(dims, coords):
+            for dim, coord in zip(dims_tuple, coords):
                 var = as_variable(coord, name=dim)
                 var.dims = (dim,)
                 new_coords[dim] = var.to_index_variable()
 
-    _check_coords_dims(shape, new_coords, dims)
+    _check_coords_dims(shape, new_coords, dims_tuple)
 
-    return new_coords, dims
+    return new_coords, dims_tuple
 
 
-def _check_data_shape(data, coords, dims):
+def _check_data_shape(
+    data: Any,
+    coords: Sequence[Sequence[Any] | pd.Index | DataArray] | Mapping[Any, Any] | None,
+    dims: str | Iterable[Hashable] | None,
+) -> Any:
     if data is dtypes.NA:
         data = np.nan
     if coords is not None and utils.is_scalar(data, include_0d=False):
@@ -408,7 +414,7 @@ class DataArray(
         coords: Sequence[Sequence[Any] | pd.Index | DataArray]
         | Mapping[Any, Any]
         | None = None,
-        dims: Hashable | Sequence[Hashable] | None = None,
+        dims: str | Iterable[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
         # internal parameters
