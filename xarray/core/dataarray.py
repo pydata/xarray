@@ -11,6 +11,8 @@ from typing import (
     Generic,
     Literal,
     NoReturn,
+    TypeVar,
+    Union,
     overload,
 )
 
@@ -74,22 +76,10 @@ from xarray.plot.utils import _get_units_from_attrs
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
-    from typing import TypeVar, Union
-
+    from dask.dataframe import DataFrame as DaskDataFrame
+    from dask.delayed import Delayed
+    from iris.cube import Cube as iris_Cube
     from numpy.typing import ArrayLike
-
-    try:
-        from dask.dataframe import DataFrame as DaskDataFrame
-    except ImportError:
-        DaskDataFrame = None  # type: ignore
-    try:
-        from dask.delayed import Delayed
-    except ImportError:
-        Delayed = None  # type: ignore
-    try:
-        from iris.cube import Cube as iris_Cube
-    except ImportError:
-        iris_Cube = None
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
