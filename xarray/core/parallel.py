@@ -11,6 +11,7 @@ import numpy as np
 from xarray.core.alignment import align
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.merge import merge
 from xarray.core.pycompat import is_dask_collection
 
 if TYPE_CHECKING:
@@ -345,13 +346,16 @@ def map_blocks(
         for arg in aligned
     )
 
+    merged_coordinates = merge([arg.coords for arg in aligned]).coords
+
     _, npargs = unzip(
         sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
     )
 
+    # TODO (dcherian) cleanup to just use a Coordinates object
+    input_indexes = dict(npargs[0]._indexes)
     # check that chunk sizes are compatible
     input_chunks = dict(npargs[0].chunks)
-    input_indexes = dict(npargs[0]._indexes)
     for arg in xarray_objs[1:]:
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
@@ -360,18 +364,29 @@ def map_blocks(
     if template is None:
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
-        template_indexes = set(template._indexes)
-        preserved_indexes = template_indexes & set(input_indexes)
-        new_indexes = template_indexes - set(input_indexes)
-        indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template._indexes[k] for k in new_indexes})
+        template_coords = set(template.coords)
+        preserved_indexes = template_coords & set(merged_coordinates)
+        new_indexes = template_coords - set(merged_coordinates)
+
+        preserved_coords = merged_coordinates.to_dataset()[preserved_indexes]
+        # preserved_coords contains all coordinates bariables that share a dimension
+        # with any index variable in preserved_indexes
+        # Drop any unneeded vars in a second pass, this is required for e.g.
+        # if the mapped function were to drop a non-dimension coordinate variable.
+        preserved_coords = preserved_coords.drop_vars(
+            tuple(k for k in preserved_coords.variables if k not in template_coords)
+        )
+
+        coordinates = merge(
+            (preserved_coords, template.coords.to_dataset()[new_indexes])
+        ).coords
         output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        indexes = dict(template._indexes)
+        coordinates = template.coords
         output_chunks = template.chunksizes
         if not output_chunks:
             raise ValueError(
@@ -496,8 +511,10 @@ def map_blocks(
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
         expected["indexes"] = {
-            dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
-            for dim in indexes
+            dim: coordinates.xindexes[dim][
+                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
+            ]
+            for dim in coordinates.xindexes
         }
 
         from_wrapper = (gname,) + chunk_tuple
@@ -506,7 +523,7 @@ def map_blocks(
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
         for name, variable in template.variables.items():
-            if name in indexes:
+            if name in coordinates.indexes:
                 continue
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
@@ -543,12 +560,7 @@ def map_blocks(
         },
     )
 
-    # TODO: benbovy - flexible indexes: make it work with custom indexes
-    # this will need to pass both indexes and coords to the Dataset constructor
-    result = Dataset(
-        coords={k: idx.to_pandas_index() for k, idx in indexes.items()},
-        attrs=template.attrs,
-    )
+    result = Dataset(coords=coordinates, attrs=template.attrs)
 
     for index in result._indexes:
         result[index].attrs = template[index].attrs
