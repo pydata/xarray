@@ -352,14 +352,11 @@ def map_blocks(
         sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
     )
 
-    # TODO (dcherian) cleanup to just use a Coordinates object
-    input_indexes = dict(npargs[0]._indexes)
     # check that chunk sizes are compatible
     input_chunks = dict(npargs[0].chunks)
     for arg in xarray_objs[1:]:
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
-        input_indexes.update(arg._indexes)
 
     if template is None:
         # infer template by providing zero-shaped arrays
