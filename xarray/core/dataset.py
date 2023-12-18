@@ -171,7 +171,7 @@ if TYPE_CHECKING:
     try:
         from dask.dataframe import DataFrame as DaskDataFrame
     except ImportError:
-        DaskDataFrame = None  # type: ignore
+        DaskDataFrame = None
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info

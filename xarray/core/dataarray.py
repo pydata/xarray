@@ -80,7 +80,7 @@ if TYPE_CHECKING:
     try:
         from dask.dataframe import DataFrame as DaskDataFrame
     except ImportError:
-        DaskDataFrame = None  # type: ignore
+        DaskDataFrame = None
     try:
         from dask.delayed import Delayed
     except ImportError:

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from xarray.core.alignment import align
+from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.merge import merge
@@ -358,6 +359,7 @@ def map_blocks(
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
 
+    coordinates: Coordinates
     if template is None:
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
@@ -499,7 +501,7 @@ def map_blocks(
 
         # expected["shapes", "coords", "data_vars", "indexes"] are used to
         # raise nice error messages in _wrapper
-        expected = {}
+        expected: dict[Hashable, dict] = {}
         # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
         # even if length of dimension is changed by the applied function
         expected["shapes"] = {
