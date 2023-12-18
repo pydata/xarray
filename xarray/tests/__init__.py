@@ -58,7 +58,11 @@ def _importorskip(
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
-    func = pytest.mark.skipif(not has, reason=f"requires {modname}")
+
+    reason = f"requires {modname}"
+    if minversion is not None:
+        reason += f">={minversion}"
+    func = pytest.mark.skipif(not has, reason=reason)
     return has, func
 
 
@@ -107,10 +111,7 @@ requires_pandas_version_two = pytest.mark.skipif(
     not has_pandas_version_two, reason="requires pandas 2.0.0"
 )
 has_numpy_array_api, requires_numpy_array_api = _importorskip("numpy", "1.26.0")
-has_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
-requires_h5netcdf_ros3 = pytest.mark.skipif(
-    not has_h5netcdf_ros3[0], reason="requires h5netcdf 1.3.0"
-)
+has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip("h5netcdf", "1.3.0")
 
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
