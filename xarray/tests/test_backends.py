@@ -1711,10 +1711,6 @@ class NetCDF4Base(NetCDFBase):
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
-    @property
-    def nc4_version(self) -> Version:
-        return Version(nc4.__version__)
-
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
