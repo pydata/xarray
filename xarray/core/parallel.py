@@ -491,8 +491,6 @@ def map_blocks(
                     for dim in variable.dims
                 }
                 if set(variable.dims) < chunk_dims_set:
-                    # We are including a dimension coordinate,
-                    # minimize duplication by not copying it in the graph for every chunk.
                     this_var_chunk_tuple = tuple(
                         chunk_index[dim] for dim in variable.dims
                     )
@@ -502,6 +500,8 @@ def map_blocks(
                 chunk_variable_task = (
                     f"{name}-{gname}-{dask.base.tokenize(subsetter)}",
                 ) + this_var_chunk_tuple
+                # We are including a dimension coordinate,
+                # minimize duplication by not copying it in the graph for every chunk.
                 if variable.ndim == 0 or chunk_variable_task not in graph:
                     subset = variable.isel(subsetter)
                     graph[chunk_variable_task] = (
@@ -539,7 +539,6 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-
         # Minimize duplication due to broadcasting by only including any new or modified indexes
         # Others can be inferred by inputs to wrapper (GH8412)
         expected["indexes"] = {
@@ -560,14 +559,11 @@ def map_blocks(
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
 
-            key: tuple[Any, ...] = (gname_l,)
-            for dim in variable.dims:
-                if dim in chunk_index:
-                    key += (chunk_index[dim],)
-                else:
-                    # unchunked dimensions in the input have one chunk in the result
-                    # output can have new dimensions with exactly one chunk
-                    key += (0,)
+            # unchunked dimensions in the input have one chunk in the result
+            # output can have new dimensions with exactly one chunk
+            key: tuple[Any, ...] = (gname_l,) + tuple(
+                chunk_index[dim] if dim in chunk_index else 0 for dim in variable.dims
+            )
 
             # We're adding multiple new layers to the graph:
             # The first new layer is the result of the computation on
