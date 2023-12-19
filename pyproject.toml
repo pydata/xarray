@@ -91,6 +91,7 @@ module = [
   "cf_units.*",
   "cfgrib.*",
   "cftime.*",
+  "cloudpickle.*",
   "cubed.*",
   "cupy.*",
   "dask.types.*",

@@ -14,6 +14,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.merge import merge
 from xarray.core.pycompat import is_dask_collection
+from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
@@ -290,8 +291,9 @@ def map_blocks(
                         f"Expected length {expected['shapes'][name]}."
                     )
 
+            # ChainMap wants MutableMapping, but xindexes is Mapping
             merged_indexes = collections.ChainMap(
-                expected["indexes"], merged_coordinates.xindexes
+                expected["indexes"], merged_coordinates.xindexes  # type: ignore[arg-type]
             )
             expected_index = merged_indexes.get(name, None)
             if expected_index is not None and not index.equals(expected_index):
@@ -467,6 +469,7 @@ def map_blocks(
 
         chunk_tuple = tuple(chunk_index.values())
         chunk_dims_set = set(chunk_index)
+        variable: Variable
         for name, variable in dataset.variables.items():
             # make a task that creates tuple of (dims, chunk)
             if dask.is_dask_collection(variable.data):
