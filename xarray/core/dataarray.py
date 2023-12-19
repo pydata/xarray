@@ -166,10 +166,9 @@ def _infer_coords_and_dims(
             "different number of dimensions on data "
             f"and dims: {len(shape)} vs {len(dims_tuple)}"
         )
-    else:
-        for d in dims_tuple:
-            if not hashable(d):
-                raise TypeError(f"Dimension {d} is not hashable")
+    for d in dims_tuple:
+        if not hashable(d):
+            raise TypeError(f"Dimension {d} is not hashable")
 
     new_coords: Mapping[Hashable, Any]
 
