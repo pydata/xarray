@@ -520,6 +520,7 @@ def map_blocks(
 
         return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
 
+    include_variables = set(template.variables) - set(coordinates.indexes)
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
@@ -556,9 +557,8 @@ def map_blocks(
 
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
-        for name, variable in template.variables.items():
-            if name in coordinates.indexes:
-                continue
+        for name in include_variables:
+            variable = template.variables[name]
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
 
