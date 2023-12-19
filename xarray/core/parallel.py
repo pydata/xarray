@@ -364,10 +364,10 @@ def map_blocks(
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
         template_coords = set(template.coords)
-        preserved_indexes = template_coords & set(merged_coordinates)
-        new_indexes = template_coords - set(merged_coordinates)
+        preserved_coord_vars = template_coords & set(merged_coordinates)
+        new_coord_vars = template_coords - set(merged_coordinates)
 
-        preserved_coords = merged_coordinates.to_dataset()[preserved_indexes]
+        preserved_coords = merged_coordinates.to_dataset()[preserved_coord_vars]
         # preserved_coords contains all coordinates bariables that share a dimension
         # with any index variable in preserved_indexes
         # Drop any unneeded vars in a second pass, this is required for e.g.
@@ -377,7 +377,7 @@ def map_blocks(
         )
 
         coordinates = merge(
-            (preserved_coords, template.coords.to_dataset()[new_indexes])
+            (preserved_coords, template.coords.to_dataset()[new_coord_vars])
         ).coords
         output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
@@ -487,7 +487,9 @@ def map_blocks(
 
         return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
 
-    include_variables = set(template.variables) - set(coordinates.indexes)
+    # variable names that depend on the computation. Currently, indexes
+    # cannot be modified in the mapped function, so we exclude thos
+    computed_variables = set(template.variables) - set(coordinates.xindexes)
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
@@ -522,7 +524,7 @@ def map_blocks(
 
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
-        for name in include_variables:
+        for name in computed_variables:
             variable = template.variables[name]
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
