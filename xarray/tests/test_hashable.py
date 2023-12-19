@@ -10,14 +10,14 @@ from xarray import DataArray, Dataset, Variable
 if TYPE_CHECKING:
     from xarray.core.types import TypeAlias
 
-    DimT: TypeAlias = Union[int, tuple, "DEnum", "CustmomHashable"]
+    DimT: TypeAlias = Union[int, tuple, "DEnum", "CustomHashable"]
 
 
 class DEnum(Enum):
     dim = "dim"
 
 
-class CustmomHashable:
+class CustomHashable:
     def __init__(self, a: int) -> None:
         self.a = a
 
@@ -31,7 +31,7 @@ parametrize_dim = pytest.mark.parametrize(
         pytest.param(5, id="int"),
         pytest.param(("a", "b"), id="tuple"),
         pytest.param(DEnum.dim, id="enum"),
-        pytest.param(CustmomHashable(3), id="HashableObject"),
+        pytest.param(CustomHashable(3), id="HashableObject"),
     ],
 )
 
