@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import pytest
 
 from xarray import DataArray, Dataset, Variable
-from xarray.core.types import TypeAlias
+
+if TYPE_CHECKING:
+    from xarray.core.types import TypeAlias
+
+    DimT: TypeAlias = Union[int, tuple, "DEnum", "CustmomHashable"]
 
 
 class DEnum(Enum):
@@ -30,7 +34,6 @@ parametrize_dim = pytest.mark.parametrize(
         pytest.param(CustmomHashable(3), id="HashableObject"),
     ],
 )
-DimT: TypeAlias = Union[int, tuple, DEnum, CustmomHashable]
 
 
 @parametrize_dim
