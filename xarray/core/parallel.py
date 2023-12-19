@@ -270,6 +270,10 @@ def map_blocks(
 
         result = func(*converted_args, **kwargs)
 
+        merged_coordinates = merge(
+            [arg.coords for arg in args if isinstance(arg, (Dataset, DataArray))]
+        ).coords
+
         # check all dims are present
         missing_dimensions = set(expected["shapes"]) - set(result.sizes)
         if missing_dimensions:
@@ -285,12 +289,15 @@ def map_blocks(
                         f"Received dimension {name!r} of length {result.sizes[name]}. "
                         f"Expected length {expected['shapes'][name]}."
                     )
-            if name in expected["indexes"]:
-                expected_index = expected["indexes"][name]
-                if not index.equals(expected_index):
-                    raise ValueError(
-                        f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
-                    )
+
+            merged_indexes = collections.ChainMap(
+                expected["indexes"], merged_coordinates.xindexes
+            )
+            expected_index = merged_indexes.get(name, None)
+            if expected_index is not None and not index.equals(expected_index):
+                raise ValueError(
+                    f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
+                )
 
         # check that all expected variables were returned
         check_result_variables(result, expected, "coords")
@@ -364,11 +371,11 @@ def map_blocks(
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
         template_coords = set(template.coords)
-        preserved_indexes = template_coords & set(merged_coordinates)
-        new_indexes = template_coords - set(merged_coordinates)
+        preserved_coord_names = template_coords & set(merged_coordinates)
+        new_indexes = set(template.xindexes) - set(merged_coordinates)
 
-        preserved_coords = merged_coordinates.to_dataset()[preserved_indexes]
-        # preserved_coords contains all coordinates bariables that share a dimension
+        preserved_coords = merged_coordinates.to_dataset()[preserved_coord_names]
+        # preserved_coords contains all coordinate variables that share a dimension
         # with any index variable in preserved_indexes
         # Drop any unneeded vars in a second pass, this is required for e.g.
         # if the mapped function were to drop a non-dimension coordinate variable.
@@ -392,6 +399,13 @@ def map_blocks(
                 "Provided template has no dask arrays. "
                 " Please construct a template with appropriately chunked dask arrays."
             )
+
+    new_indexes = set(template.xindexes) - set(merged_coordinates)
+    modified_indexes = set(
+        name
+        for name, xindex in coordinates.xindexes.items()
+        if not xindex.equals(merged_coordinates.xindexes.get(name, None))
+    )
 
     for dim in output_chunks:
         if dim in input_chunks and len(input_chunks[dim]) != len(output_chunks[dim]):
@@ -521,9 +535,14 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
+
+        # Minimize duplication due to broadcasting by only including any new or modified indexes
+        # Others can be inferred by inputs to wrapper (GH8412)
         expected["indexes"] = {
-            dim: index[_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
-            for dim, index in coordinates.xindexes.items()
+            name: coordinates.xindexes[name][
+                _get_chunk_slicer(name, chunk_index, output_chunk_bounds)
+            ]
+            for name in (new_indexes | modified_indexes)
         }
 
         from_wrapper = (gname,) + chunk_tuple
