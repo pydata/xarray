@@ -268,10 +268,13 @@ def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
+_DEFAULT_TEST_DIM_SIZES = (8, 9, 10)
+
+
 def create_test_data(
     seed: int | None = None,
     add_attrs: bool = True,
-    dim_sizes: tuple[int, int, int] = (8, 9, 10),
+    dim_sizes: tuple[int, int, int] = _DEFAULT_TEST_DIM_SIZES,
 ) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
@@ -294,10 +297,12 @@ def create_test_data(
         obj[v] = (dims, data)
         if add_attrs:
             obj[v].attrs = {"foo": "variable"}
-    obj.coords["numbers"] = (
-        "dim3",
-        np.random.randint(0, 3, _dims["dim3"], dtype="int64"),
-    )
+
+    if dim_sizes == _DEFAULT_TEST_DIM_SIZES:
+        numbers_values = np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64")
+    else:
+        numbers_values = np.random.randint(0, 3, _dims["dim3"], dtype="int64")
+    obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj
