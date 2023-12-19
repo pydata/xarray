@@ -132,7 +132,7 @@ def _check_coords_dims(shape, coords, dim):
 
 def _infer_coords_and_dims(
     shape: tuple[int, ...],
-    coords: Sequence[Sequence[Any] | pd.Index | DataArray] | Mapping[Any, Any] | None,
+    coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None,
     dims: str | Iterable[Hashable] | None,
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
@@ -193,7 +193,7 @@ def _infer_coords_and_dims(
 
 def _check_data_shape(
     data: Any,
-    coords: Sequence[Sequence[Any] | pd.Index | DataArray] | Mapping[Any, Any] | None,
+    coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None,
     dims: str | Iterable[Hashable] | None,
 ) -> Any:
     if data is dtypes.NA:
@@ -401,9 +401,7 @@ class DataArray(
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Sequence[Sequence[Any] | pd.Index | DataArray]
-        | Mapping[Any, Any]
-        | None = None,
+        coords: Sequence[Sequence | pd.Index | DataArray] | Mapping | None = None,
         dims: str | Iterable[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
