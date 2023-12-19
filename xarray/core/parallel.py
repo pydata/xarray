@@ -4,7 +4,7 @@ import collections
 import itertools
 import operator
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict
 
 import numpy as np
 
@@ -12,11 +12,19 @@ from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.indexes import Index
 from xarray.core.merge import merge
 from xarray.core.pycompat import is_dask_collection
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
+
+
+class ExpectedDict(TypedDict):
+    shapes: dict[Hashable, int]
+    coords: set[Hashable]
+    data_vars: set[Hashable]
+    indexes: dict[Hashable, Index]
 
 
 def unzip(iterable):
@@ -33,7 +41,9 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 
 
 def check_result_variables(
-    result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
+    result: DataArray | Dataset,
+    expected: ExpectedDict,
+    kind: Literal["coords", "data_vars"],
 ):
     if kind == "coords":
         nice_str = "coordinate"
@@ -256,7 +266,7 @@ def map_blocks(
         args: list,
         kwargs: dict,
         arg_is_array: Iterable[bool],
-        expected: dict,
+        expected: ExpectedDict,
     ):
         """
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
@@ -502,21 +512,23 @@ def map_blocks(
             for isxr, arg in zip(is_xarray, npargs)
         ]
 
-        # expected["shapes", "coords", "data_vars", "indexes"] are used to
         # raise nice error messages in _wrapper
-        expected: dict[Hashable, dict] = {}
-        # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
-        # even if length of dimension is changed by the applied function
-        expected["shapes"] = {
-            k: output_chunks[k][v] for k, v in chunk_index.items() if k in output_chunks
-        }
-        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
-        expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        expected["indexes"] = {
-            dim: coordinates.xindexes[dim][
-                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-            ]
-            for dim in coordinates.xindexes
+        expected: ExpectedDict = {
+            # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
+            # even if length of dimension is changed by the applied function
+            "shapes": {
+                k: output_chunks[k][v]
+                for k, v in chunk_index.items()
+                if k in output_chunks
+            },
+            "data_vars": set(template.data_vars.keys()),
+            "coords": set(template.coords.keys()),
+            "indexes": {
+                dim: coordinates.xindexes[dim][
+                    _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
+                ]
+                for dim in coordinates.xindexes
+            },
         }
 
         from_wrapper = (gname,) + chunk_tuple
