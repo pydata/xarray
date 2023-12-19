@@ -522,10 +522,8 @@ def map_blocks(
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
         expected["indexes"] = {
-            dim: coordinates.xindexes[dim][
-                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-            ]
-            for dim in coordinates.xindexes
+            dim: index[_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
+            for dim, index in coordinates.xindexes.items()
         }
 
         from_wrapper = (gname,) + chunk_tuple
