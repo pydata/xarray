@@ -353,6 +353,8 @@ def map_blocks(
         dataarray_to_dataset(arg) if isinstance(arg, DataArray) else arg
         for arg in aligned
     )
+    # rechunk any numpy variables appropriately
+    xarray_objs = tuple(arg.chunk(arg.chunksizes) for arg in xarray_objs)
 
     merged_coordinates = merge([arg.coords for arg in aligned]).coords
 
@@ -480,6 +482,8 @@ def map_blocks(
                     [variable.dims, chunk, variable.attrs],
                 )
             else:
+                assert name in dataset.dims or variable.ndim == 0
+
                 # non-dask array possibly with dimensions chunked on other variables
                 # index into variable appropriately
                 subsetter = {
@@ -498,7 +502,7 @@ def map_blocks(
                 chunk_variable_task = (
                     f"{name}-{gname}-{dask.base.tokenize(subsetter)}",
                 ) + this_var_chunk_tuple
-                if chunk_variable_task not in graph:
+                if variable.ndim == 0 or chunk_variable_task not in graph:
                     subset = variable.isel(subsetter)
                     graph[chunk_variable_task] = (
                         tuple,
