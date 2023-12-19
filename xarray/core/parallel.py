@@ -472,7 +472,6 @@ def map_blocks(
                     dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
                     for dim in variable.dims
                 }
-                subset = variable.isel(subsetter)
                 if set(variable.dims) < chunk_dims_set:
                     # We are including a dimension coordinate,
                     # minimize duplication by not copying it in the graph for every chunk.
@@ -486,6 +485,7 @@ def map_blocks(
                     f"{name}-{gname}-{dask.base.tokenize(subsetter)}",
                 ) + this_var_chunk_tuple
                 if chunk_variable_task not in graph:
+                    subset = variable.isel(subsetter)
                     graph[chunk_variable_task] = (
                         tuple,
                         [subset.dims, subset._data, subset.attrs],
@@ -522,7 +522,9 @@ def map_blocks(
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
         expected["indexes"] = {
-            dim: coordinates.xindexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
+            dim: coordinates.xindexes[dim][
+                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
+            ]
             for dim in coordinates.xindexes
         }
 
