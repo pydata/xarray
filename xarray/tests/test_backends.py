@@ -1783,6 +1783,7 @@ class TestNetCDF4Data(NetCDF4Base):
         ],
     )
     @requires_netCDF4_1_6_2_or_above
+    @pytest.mark.xfail(ON_WINDOWS, reason="new compression not yet implemented")
     def test_compression_encoding(self, compression: str | None) -> None:
         data = create_test_data(dim_sizes=(20, 80, 10))
         encoding_params: dict[str, Any] = dict(compression=compression, blosc_shuffle=1)
