@@ -1825,8 +1825,7 @@ class TestNetCDF4Data(NetCDF4Base):
                 expected_encoding["shuffle"] = False
 
             actual_encoding = actual["var2"].encoding
-            for k, v in expected_encoding.items():
-                assert v == actual_encoding[k]
+            assert expected_encoding.items() <= actual_encoding.items()
         if (
             encoding_params["compression"] is not None
             and "blosc" not in encoding_params["compression"]
