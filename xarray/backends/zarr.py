@@ -524,7 +524,6 @@ def _put_attrs(zarr_obj, attrs):
         zarr_obj.attrs.put(attrs)
     except TypeError as e:
         raise TypeError("Invalid attribute in Dataset.attrs.") from e
-    return zarr_obj
 
 
 class ZarrStore(AbstractWritableDataStore):
@@ -920,7 +919,7 @@ class ZarrStore(AbstractWritableDataStore):
                     fill_value=fill_value,
                     **encoding,
                 )
-                zarr_array = _put_attrs(zarr_array, encoded_attrs)
+                _put_attrs(zarr_array, encoded_attrs)
 
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
