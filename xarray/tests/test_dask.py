@@ -1749,17 +1749,25 @@ def test_new_index_var_computes_once():
 
 
 def test_minimize_graph_size():
-    import cloudpickle
-
     # regression test for https://github.com/pydata/xarray/issues/8409
     ds = Dataset(
-        {"foo": (("x", "y", "z"), dask.array.ones((120, 120, 120)))},
+        {
+            "foo": (
+                ("x", "y", "z"),
+                dask.array.ones((120, 120, 120), chunks=(20, 20, 1)),
+            )
+        },
         coords={"x": np.arange(120), "y": np.arange(120), "z": np.arange(120)},
-    ).chunk(x=20, y=20, z=1)
+    )
 
-    actual = len(cloudpickle.dumps(ds.map_blocks(lambda x: x)))
-    expected = len(cloudpickle.dumps(ds.drop_vars(ds.dims).map_blocks(lambda x: x)))
+    mapped = ds.map_blocks(lambda x: x)
+    graph = dict(mapped.__dask_graph__())
 
-    # prior to https://github.com/pydata/xarray/pull/8412
-    # actual is ~5x expected
-    assert actual < 2 * expected
+    numchunks = {k: len(v) for k, v in ds.chunksizes.items()}
+    for var in "xyz":
+        actual = len([key for key in graph if var in key[0]])
+        # assert that we only include each chunk of an index variable
+        # is only included once, not the product of number of chunks of
+        # all the other dimenions.
+        # e.g. previously for 'x',  actual == numchunks['y'] * numchunks['z']
+        assert actual == numchunks[var], (actual, numchunks[var])
