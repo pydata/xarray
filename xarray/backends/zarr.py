@@ -129,12 +129,26 @@ def initialize_zarr(
         return ds
 
 
-def add_array(vn: str, var: Variable, group: zarr.Group, is_coord: bool) -> None:
+def add_array_to_store(
+    vn: str,
+    var: Variable,
+    group: zarr.Group,
+    safe_chunks,
+    write_empty,
+    raise_on_invalid: bool,
+    write_data: bool = False,
+    encode: bool = False,
+) -> None:
     """
     Add an array to the Zarr group after encoding it and its attributes
     """
+    attrs = var.attrs.copy()
+
     name = _encode_variable_name(vn)
-    var = encode_zarr_variable(var)
+    if encode:
+        # only true for initialize_zarr
+        # other wise encoding is handled by the normal backend code path
+        var = encode_zarr_variable(var)
 
     # handle the fill value
     fill_value = var.attrs.pop("_FillValue", None)
@@ -142,24 +156,48 @@ def add_array(vn: str, var: Variable, group: zarr.Group, is_coord: bool) -> None
         var.encoding = {}
 
     # encode the variable
-    encoding = extract_zarr_variable_encoding(var)
-
-    # create the array
-    arr = group.create(
-        name, shape=var.shape, dtype=var.dtype, fill_value=fill_value, **encoding
+    encoding = extract_zarr_variable_encoding(
+        var, raise_on_invalid=raise_on_invalid, name=vn, safe_chunks=safe_chunks
     )
+
+    if write_empty is not None:
+        if (
+            "write_empty_chunks" in encoding
+            and encoding["write_empty_chunks"] != write_empty
+        ):
+            raise ValueError(
+                'Differing "write_empty_chunks" values in encoding and parameters'
+                f'Got {encoding["write_empty_chunks"] = } and {write_empty = }'
+            )
+        else:
+            encoding["write_empty_chunks"] = write_empty
+
+    # encoding = extract_zarr_variable_encoding(var)
 
     # handle the attributes
     attrs = {DIMENSION_KEY: var.dims, **var.attrs}
     encoded_attrs = {k: encode_zarr_attr_value(v) for k, v in attrs.items()}
-    _put_attrs(arr, encoded_attrs)
 
-    # write the data if this is a dimension coordinate
-    if is_coord:
-        arr[:] = var.data
+    dtype = var.dtype
+    if coding.strings.check_vlen_dtype(dtype) == str:
+        dtype = str
+
+    # create the array
+    array = group.create(
+        name, shape=var.shape, dtype=dtype, fill_value=fill_value, **encoding
+    )
+
+    _put_attrs(array, encoded_attrs)
+    # write the data if requested
+    if write_data:
+        array[:] = var.data
+
+    return array
 
 
-def init_zarr_v2(ds, store: MutableMapping | None = None) -> MutableMapping:
+def init_zarr_v2(
+    ds, store: MutableMapping | None = None, consolidated: bool = True
+) -> MutableMapping:
     """
     Initialize a Zarr store with metadata including dimension coordinates
 
@@ -848,15 +886,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
-            check = vn in check_encoding_set
-            attrs = v.attrs.copy()
             dims = v.dims
-            dtype = v.dtype
-            shape = v.shape
-
-            fill_value = attrs.pop("_FillValue", None)
-            if v.encoding == {"_FillValue": None} and fill_value is None:
-                v.encoding = {}
 
             if name in existing_keys:
                 # existing variable
@@ -887,39 +917,14 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     zarr_array = self.zarr_group[name]
             else:
-                # new variable
-                encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
+                zarr_array = add_array_to_store(
+                    vn,
+                    v,
+                    group=self.zarr_group,
+                    safe_chunks=self._safe_chunks,
+                    raise_on_invalid=vn in check_encoding_set,
+                    write_empty=self._write_empty,
                 )
-                encoded_attrs = {}
-                # the magic for storing the hidden dimension data
-                encoded_attrs[DIMENSION_KEY] = dims
-                for k2, v2 in attrs.items():
-                    encoded_attrs[k2] = self.encode_attribute(v2)
-
-                if coding.strings.check_vlen_dtype(dtype) == str:
-                    dtype = str
-
-                if self._write_empty is not None:
-                    if (
-                        "write_empty_chunks" in encoding
-                        and encoding["write_empty_chunks"] != self._write_empty
-                    ):
-                        raise ValueError(
-                            'Differing "write_empty_chunks" values in encoding and parameters'
-                            f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
-                        )
-                    else:
-                        encoding["write_empty_chunks"] = self._write_empty
-
-                zarr_array = self.zarr_group.create(
-                    name,
-                    shape=shape,
-                    dtype=dtype,
-                    fill_value=fill_value,
-                    **encoding,
-                )
-                _put_attrs(zarr_array, encoded_attrs)
 
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
