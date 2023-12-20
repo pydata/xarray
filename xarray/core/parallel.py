@@ -439,8 +439,6 @@ def map_blocks(
 
     merged_coordinates = merge([arg.coords for arg in aligned]).coords
 
-    merged_coordinates = merge([arg.coords for arg in aligned]).coords
-
     _, npargs = unzip(
         sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
     )
@@ -460,7 +458,7 @@ def map_blocks(
         new_coord_vars = template_coords - set(merged_coordinates)
 
         preserved_coords = merged_coordinates.to_dataset()[preserved_coord_vars]
-        # preserved_coords contains all coordinates bariables that share a dimension
+        # preserved_coords contains all coordinates variables that share a dimension
         # with any index variable in preserved_indexes
         # Drop any unneeded vars in a second pass, this is required for e.g.
         # if the mapped function were to drop a non-dimension coordinate variable.
@@ -556,6 +554,7 @@ def map_blocks(
             },
             "data_vars": set(template.data_vars.keys()),
             "coords": set(template.coords.keys()),
+            # only include new or modified indexes to minimize duplication of data, and graph size.
             "indexes": {
                 dim: coordinates.xindexes[dim][
                     _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
