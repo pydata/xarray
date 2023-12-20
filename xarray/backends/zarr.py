@@ -21,7 +21,7 @@ from xarray.backends.common import (
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.parallelcompat import guess_chunkmanager
-from xarray.core.pycompat import integer_types
+from xarray.core.pycompat import integer_types, is_chunked_array
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -46,7 +46,7 @@ def initialize_zarr(
     ds: Dataset,
     store: MutableMapping | None = None,
     *,
-    region_dims: Iterable[Hashable] | None = None,
+    region_dims: Iterable[Hashable] = tuple(),
     mode: Literal["w", "w-"] = "w-",
     consolidated: bool | None = None,
     zarr_version: int | None = None,
@@ -90,7 +90,7 @@ def initialize_zarr(
     if "compute" in kwargs:
         raise ValueError("The ``compute`` kwarg is not supported in `initialize_zarr`.")
 
-    if not ds.chunks:
+    if not any(is_chunked_array(v._data) for v in ds._variables.values()):
         raise ValueError("This function should be used with chunked Datasets.")
 
     if mode not in ["w", "w-"]:
@@ -125,7 +125,13 @@ def initialize_zarr(
     for k, v in ds._variables.items():
         if k in ds.dims or not (set(v.dims) & set(region_dims)):
             vars_to_write.append(k)
-    ds[vars_to_write].to_zarr(store=temp_store, **kwargs)
+    ds[vars_to_write].to_zarr(
+        store=temp_store,
+        mode=mode,
+        consolidated=consolidated,
+        zarr_version=zarr_version,
+        **kwargs,
+    )
 
     if "encoding" in kwargs:
         raise NotImplementedError
@@ -133,13 +139,19 @@ def initialize_zarr(
     path = kwargs.pop("group", None)
 
     # write Zarr metadata for these variables.
-    group = zarr.open_group(store=temp_store, path=path, mode="a")
+    # TODO: more kwargs here?
+    # cache_attrs=True, synchronizer=None, chunk_store=None, storage_options=None, meta_array=None
+    group = zarr.open_group(
+        store=temp_store, path=path, mode="a", zarr_version=zarr_version
+    )
     array_kwargs = {
         key: kwargs[key]
         for key in ["safe_chunks", "write_empty", "raise_on_invalid"]
         if key in kwargs
     }
     array_kwargs.setdefault("write_empty", False)
+    if mode == "w":
+        array_kwargs.setdefault("overwrite", True)
     for var in set(ds.variables) - set(vars_to_write):
         encoded = encode_zarr_variable(ds.variables[var])
         add_array_to_store(var, encoded, group=group, **array_kwargs)
@@ -169,6 +181,7 @@ def add_array_to_store(
     safe_chunks: bool = True,
     write_empty: bool = False,
     raise_on_invalid: bool = True,
+    **kwargs,
 ) -> zarr.Array:
     """
     Add an array to the Zarr group after encoding it and its attributes
@@ -211,7 +224,12 @@ def add_array_to_store(
 
     # create the array
     array = group.create(
-        name, shape=var.shape, dtype=dtype, fill_value=fill_value, **encoding
+        name,
+        shape=var.shape,
+        dtype=dtype,
+        fill_value=fill_value,
+        **encoding,
+        **kwargs,
     )
     _put_attrs(array, encoded_attrs)
 
