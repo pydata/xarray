@@ -4,7 +4,7 @@ import collections
 import itertools
 import operator
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict
 
 import numpy as np
 
@@ -12,12 +12,20 @@ from xarray.core.alignment import align
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
+from xarray.core.indexes import Index
 from xarray.core.merge import merge
 from xarray.core.pycompat import is_dask_collection
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
     from xarray.core.types import T_Xarray
+
+
+class ExpectedDict(TypedDict):
+    shapes: dict[Hashable, int]
+    coords: set[Hashable]
+    data_vars: set[Hashable]
+    indexes: dict[Hashable, Index]
 
 
 def unzip(iterable):
@@ -34,7 +42,9 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 
 
 def check_result_variables(
-    result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
+    result: DataArray | Dataset,
+    expected: ExpectedDict,
+    kind: Literal["coords", "data_vars"],
 ):
     if kind == "coords":
         nice_str = "coordinate"
@@ -326,7 +336,7 @@ def map_blocks(
         args: list,
         kwargs: dict,
         arg_is_array: Iterable[bool],
-        expected: dict,
+        expected: ExpectedDict,
     ):
         """
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
@@ -429,6 +439,8 @@ def map_blocks(
 
     merged_coordinates = merge([arg.coords for arg in aligned]).coords
 
+    merged_coordinates = merge([arg.coords for arg in aligned]).coords
+
     _, npargs = unzip(
         sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
     )
@@ -444,11 +456,11 @@ def map_blocks(
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
         template_coords = set(template.coords)
-        preserved_coord_names = template_coords & set(merged_coordinates)
-        new_indexes = set(template.xindexes) - set(merged_coordinates)
+        preserved_coord_vars = template_coords & set(merged_coordinates)
+        new_coord_vars = template_coords - set(merged_coordinates)
 
-        preserved_coords = merged_coordinates.to_dataset()[preserved_coord_names]
-        # preserved_coords contains all coordinate variables that share a dimension
+        preserved_coords = merged_coordinates.to_dataset()[preserved_coord_vars]
+        # preserved_coords contains all coordinates bariables that share a dimension
         # with any index variable in preserved_indexes
         # Drop any unneeded vars in a second pass, this is required for e.g.
         # if the mapped function were to drop a non-dimension coordinate variable.
@@ -457,7 +469,7 @@ def map_blocks(
         )
 
         coordinates = merge(
-            (preserved_coords, template.coords.to_dataset()[new_indexes])
+            (preserved_coords, template.coords.to_dataset()[new_coord_vars])
         ).coords
         output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
@@ -520,7 +532,7 @@ def map_blocks(
         dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in output_chunks.items()
     }
 
-    include_variables = set(template.variables) - set(coordinates.indexes)
+    computed_variables = set(template.variables) - set(coordinates.indexes)
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
@@ -533,23 +545,23 @@ def map_blocks(
             for isxr, arg in zip(is_xarray, npargs)
         ]
 
-        # expected["shapes", "coords", "data_vars", "indexes"] are used to
         # raise nice error messages in _wrapper
-        expected: dict[Hashable, dict] = {}
-        # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
-        # even if length of dimension is changed by the applied function
-        expected["shapes"] = {
-            k: output_chunks[k][v] for k, v in chunk_index.items() if k in output_chunks
-        }
-        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
-        expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        # Minimize duplication due to broadcasting by only including any new or modified indexes
-        # Others can be inferred by inputs to wrapper (GH8412)
-        expected["indexes"] = {
-            name: coordinates.xindexes[name][
-                _get_chunk_slicer(name, chunk_index, output_chunk_bounds)
-            ]
-            for name in (new_indexes | modified_indexes)
+        expected: ExpectedDict = {
+            # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
+            # even if length of dimension is changed by the applied function
+            "shapes": {
+                k: output_chunks[k][v]
+                for k, v in chunk_index.items()
+                if k in output_chunks
+            },
+            "data_vars": set(template.data_vars.keys()),
+            "coords": set(template.coords.keys()),
+            "indexes": {
+                dim: coordinates.xindexes[dim][
+                    _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
+                ]
+                for dim in (new_indexes | modified_indexes)
+            },
         }
 
         from_wrapper = (gname,) + chunk_tuple
@@ -557,7 +569,7 @@ def map_blocks(
 
         # mapping from variable name to dask graph key
         var_key_map: dict[Hashable, str] = {}
-        for name in include_variables:
+        for name in computed_variables:
             variable = template.variables[name]
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
