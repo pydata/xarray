@@ -30,7 +30,7 @@ p = air.plot(
     transform=ccrs.PlateCarree(),  # the data's projection
     col="time",
     col_wrap=1,  # multiplot settings
-    aspect=ds.dims["lon"] / ds.dims["lat"],  # for a sensible figsize
+    aspect=ds.sizes["lon"] / ds.sizes["lat"],  # for a sensible figsize
     subplot_kws={"projection": map_proj},  # the plot's projection
 )
 

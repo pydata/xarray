@@ -1367,6 +1367,25 @@ def test_map_blocks_da_ds_with_template(obj):
     assert_identical(actual, template)
 
 
+def test_map_blocks_roundtrip_string_index():
+    ds = xr.Dataset(
+        {"data": (["label"], [1, 2, 3])}, coords={"label": ["foo", "bar", "baz"]}
+    ).chunk(label=1)
+    assert ds.label.dtype == np.dtype("<U3")
+
+    mapped = ds.map_blocks(lambda x: x, template=ds)
+    assert mapped.label.dtype == ds.label.dtype
+
+    mapped = ds.map_blocks(lambda x: x, template=None)
+    assert mapped.label.dtype == ds.label.dtype
+
+    mapped = ds.data.map_blocks(lambda x: x, template=ds.data)
+    assert mapped.label.dtype == ds.label.dtype
+
+    mapped = ds.data.map_blocks(lambda x: x, template=None)
+    assert mapped.label.dtype == ds.label.dtype
+
+
 def test_map_blocks_template_convert_object():
     da = make_da()
     func = lambda x: x.to_dataset().isel(x=[1])

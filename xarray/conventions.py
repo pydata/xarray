@@ -52,15 +52,31 @@ def _var_as_tuple(var: Variable) -> T_VarTuple:
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
-def _infer_dtype(array, name: T_Name = None) -> np.dtype:
-    """Given an object array with no missing values, infer its dtype from its
-    first element
-    """
+def _infer_dtype(array, name=None):
+    """Given an object array with no missing values, infer its dtype from all elements."""
     if array.dtype.kind != "O":
         raise TypeError("infer_type must be called on a dtype=object array")
 
     if array.size == 0:
         return np.dtype(float)
+
+    native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
+    if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
+        raise ValueError(
+            "unable to infer dtype on variable {!r}; object array "
+            "contains mixed native types: {}".format(
+                name, ", ".join(x.__name__ for x in native_dtypes)
+            )
+        )
+
+    native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
+    if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
+        raise ValueError(
+            "unable to infer dtype on variable {!r}; object array "
+            "contains mixed native types: {}".format(
+                name, ", ".join(x.__name__ for x in native_dtypes)
+            )
+        )
 
     element = array[(0,) * array.ndim]
     # We use the base types to avoid subclasses of bytes and str (which might
@@ -264,6 +280,10 @@ def decode_cf_variable(
         if stack_char_dim:
             var = strings.CharacterArrayCoder().decode(var, name=name)
         var = strings.EncodedStringCoder().decode(var)
+
+    if original_dtype == object:
+        var = variables.ObjectVLenStringCoder().decode(var)
+        original_dtype = var.dtype
 
     if mask_and_scale:
         for coder in [
