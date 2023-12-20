@@ -5507,22 +5507,20 @@ def test_initialize_zarr(tmp_path) -> None:
     store = tmp_path / "foo.zarr"
 
     with pytest.raises(ValueError, match="Only mode"):
-        initialize_zarr(store, ds, mode="r")
+        initialize_zarr(ds, store, mode="r")
 
     expected_on_disk = ds.copy(deep=True).assign(
         {
-            # chunked variables are all NaNs (really fill_value?)
+            # variables sharing dimensions with `region_dims` are all fill_value.
             "xy": xr.full_like(ds.xy, fill_value=np.nan),
             "xonly": xr.full_like(ds.xonly, fill_value=np.nan),
-            # eager variables with region_dim are all zeros (since we do zeros_like)
-            "eager_xonly": xr.full_like(ds.xonly, fill_value=0),
+            "eager_xonly": xr.full_like(ds.xonly, fill_value=np.nan),
             # eager variables without region_dim are identical
-            # but are subject to two writes, first zeros then actual values
             "eager_yonly": ds.yonly,
         }
     )
     expected_after_init = ds.drop_vars(["yonly", "eager_yonly", "y", "scalar"])
-    after_init = initialize_zarr(store, ds, region_dims=("x",))
+    after_init = initialize_zarr(ds, store, region_dims=("x",))
     assert_identical(expected_after_init, after_init)
 
     with xr.open_zarr(store) as actual:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
+from collections import ChainMap
 from collections.abc import Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -19,7 +20,6 @@ from xarray.backends.common import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
-from xarray.core.common import zeros_like
 from xarray.core.parallelcompat import guess_chunkmanager
 from xarray.core.pycompat import integer_types
 from xarray.core.types import ZarrWriteModes
@@ -43,11 +43,13 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
 def initialize_zarr(
-    store,
     ds: Dataset,
+    store: MutableMapping | None = None,
     *,
     region_dims: Iterable[Hashable] | None = None,
     mode: Literal["w", "w-"] = "w-",
+    consolidated: bool | None = None,
+    zarr_version: int | None = None,
     **kwargs,
 ) -> Dataset:
     """
@@ -61,15 +63,17 @@ def initialize_zarr(
 
     Parameters
     ----------
-    store : MutableMapping or str
-        Zarr store to write to.
     ds : Dataset
         Dataset to write.
+    store : MutableMapping or str (optional)
+        Zarr store to write to. If not provided, will use a Zarr MemoryStore
     region_dims : Iterable[Hashable], optional
         An iterable of dimension names that will be passed to the ``region``
         kwarg of ``to_zarr`` later.
     mode : {'w', 'w-'}
         Write mode for initializing the store.
+    consolidated: bool (optional)
+        Consolidate Zarr metadata.
 
     Returns
     -------
@@ -80,8 +84,8 @@ def initialize_zarr(
     Raises
     ------
     ValueError
-
     """
+    import zarr
 
     if "compute" in kwargs:
         raise ValueError("The ``compute`` kwarg is not supported in `initialize_zarr`.")
@@ -94,36 +98,64 @@ def initialize_zarr(
             f"Only mode='w' or mode='w-' is allowed for initialize_zarr. Received mode={mode!r}"
         )
 
-    # TODO: what should we do here.
-    # compute=False only skips dask variables.
-    # - We could reaplce all dask variables with zeros_like
-    # - and then write all other variables eagerly.
-    # Right now we do two writes for eager variables
-    template = zeros_like(ds)
-    template.to_zarr(store, mode=mode, **kwargs, compute=False)
+    if zarr_version is None:
+        # default to 2 if store doesn't specify it's version (e.g. a path)
+        zarr_version = int(getattr(store, "_store_version", 2))
 
-    if region_dims:
-        after_drop = ds.drop_dims(region_dims)
+    if zarr_version == 2:
+        temp_store = zarr.MemoryStore()
+    elif zarr_version == 3:
+        temp_store = zarr.MemoryStoreV3()
+    else:
+        raise ValueError(f"Invalid zarr_version={zarr_version}.")
 
-        # we have to remove the dropped variables from the encoding dictionary :/
-        new_encoding = kwargs.pop("encoding", None)
-        if new_encoding:
-            new_encoding = {k: v for k, v in new_encoding.items() if k in after_drop}
-
-        after_drop.to_zarr(
-            store, **kwargs, encoding=new_encoding, compute=True, mode="a"
+    if store is None:
+        store = temp_store
+    else:
+        # Needed to handle `store` being a string path
+        store = zarr.hierarchy.normalize_store_arg(
+            store,
+            zarr_version=zarr_version,
+            mode=mode,
+            storage_options=kwargs.get("storage_options", None),
         )
 
-        # can't use drop_dims since that will also remove any variable
-        # with any of the dims to be dropped
-        # even if they also have one or more of region_dims
-        dims_to_drop = set(ds.dims) - set(region_dims)
-        vars_to_drop = [
-            name
-            for name, var in ds._variables.items()
-            if set(var.dims).issubset(dims_to_drop)
-        ]
-        return ds.drop_vars(vars_to_drop)
+    # write the data for these variables.
+    vars_to_write = []
+    for k, v in ds._variables.items():
+        if k in ds.dims or not (set(v.dims) & set(region_dims)):
+            vars_to_write.append(k)
+    ds[vars_to_write].to_zarr(store=temp_store, **kwargs)
+
+    if "encoding" in kwargs:
+        raise NotImplementedError
+
+    path = kwargs.pop("group", None)
+
+    # write Zarr metadata for these variables.
+    group = zarr.open_group(store=temp_store, path=path, mode="a")
+    array_kwargs = {
+        key: kwargs[key]
+        for key in ["safe_chunks", "write_empty", "raise_on_invalid"]
+        if key in kwargs
+    }
+    array_kwargs.setdefault("write_empty", False)
+    for var in set(ds.variables) - set(vars_to_write):
+        encoded = encode_zarr_variable(ds.variables[var])
+        add_array_to_store(var, encoded, group=group, **array_kwargs)
+
+    if zarr_version == 2 and consolidated in (None, True):
+        zarr.consolidate_metadata(temp_store)
+
+    if store is not temp_store:
+        # if a store was provided, flush the temp store there at once
+        try:
+            store.setitems(temp_store)
+        except AttributeError:  # not all stores have setitems :(
+            store.update(temp_store)
+
+    if region_dims:
+        return ds.drop_vars([var for var in vars_to_write if var not in region_dims])
 
     else:
         return ds
@@ -132,32 +164,29 @@ def initialize_zarr(
 def add_array_to_store(
     vn: str,
     var: Variable,
+    *,
     group: zarr.Group,
-    safe_chunks,
-    write_empty,
-    raise_on_invalid: bool,
-    write_data: bool = False,
-    encode: bool = False,
-) -> None:
+    safe_chunks: bool = True,
+    write_empty: bool = False,
+    raise_on_invalid: bool = True,
+) -> zarr.Array:
     """
     Add an array to the Zarr group after encoding it and its attributes
     """
-    attrs = var.attrs.copy()
-
     name = _encode_variable_name(vn)
-    if encode:
-        # only true for initialize_zarr
-        # other wise encoding is handled by the normal backend code path
-        var = encode_zarr_variable(var)
 
     # handle the fill value
-    fill_value = var.attrs.pop("_FillValue", None)
+    attrs = var.attrs.copy()
+    fill_value = attrs.pop("_FillValue", None)
     if var.encoding == {"_FillValue": None} and fill_value is None:
         var.encoding = {}
 
     # encode the variable
     encoding = extract_zarr_variable_encoding(
-        var, raise_on_invalid=raise_on_invalid, name=vn, safe_chunks=safe_chunks
+        var,
+        raise_on_invalid=raise_on_invalid,
+        name=vn,
+        safe_chunks=safe_chunks,
     )
 
     if write_empty is not None:
@@ -172,10 +201,8 @@ def add_array_to_store(
         else:
             encoding["write_empty_chunks"] = write_empty
 
-    # encoding = extract_zarr_variable_encoding(var)
-
     # handle the attributes
-    attrs = {DIMENSION_KEY: var.dims, **var.attrs}
+    attrs = ChainMap({DIMENSION_KEY: var.dims}, attrs)
     encoded_attrs = {k: encode_zarr_attr_value(v) for k, v in attrs.items()}
 
     dtype = var.dtype
@@ -186,58 +213,9 @@ def add_array_to_store(
     array = group.create(
         name, shape=var.shape, dtype=dtype, fill_value=fill_value, **encoding
     )
-
     _put_attrs(array, encoded_attrs)
-    # write the data if requested
-    if write_data:
-        array[:] = var.data
 
     return array
-
-
-def init_zarr_v2(
-    ds, store: MutableMapping | None = None, consolidated: bool = True
-) -> MutableMapping:
-    """
-    Initialize a Zarr store with metadata including dimension coordinates
-
-    Parameters
-    ----------
-    ds : Dataset
-    store : MutableMapping (optional)
-        Target store. If not provided, a temporary in-memory store will be created.
-    """
-    import zarr
-
-    temp_store = zarr.MemoryStore()
-    if store is None:
-        store = temp_store
-
-    # encode the dataset (importantly, coordinates)
-    variables, attrs = conventions.encode_dataset_coordinates(ds)
-
-    # create the group
-    group = zarr.open_group(store=temp_store)
-    # set the group's attributes
-    _put_attrs(group, attrs)
-
-    # add the arrays
-    for k, v in variables.items():
-        is_coord = k in ds.dims
-        add_array(k, v, group, is_coord)
-
-    # consolidate metadata
-    # TODO: this should be optional
-    zarr.consolidate_metadata(temp_store)
-
-    if store is not temp_store:
-        # if a store was provided, flush the temp store there at once
-        try:
-            store.setitems(temp_store)
-        except AttributeError:  # not all stores have setitems :(
-            store.update(temp_store)
-
-    return store
 
 
 def encode_zarr_attr_value(value):
