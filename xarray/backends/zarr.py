@@ -117,6 +117,8 @@ def initialize_zarr(
             mode=mode,
             storage_options=kwargs.get("storage_options", None),
         )
+    if TYPE_CHECKING:
+        assert isinstance(store, MutableMapping)
 
     # Use this to open the group once with all the expected default options
     # We will reuse xzstore.zarr_group later.
@@ -160,7 +162,7 @@ def initialize_zarr(
     # if a store was provided, flush the temp store there at once
     if store is not temp_store:
         try:
-            store.setitems(temp_store)
+            store.setitems(temp_store)  # type: ignore[attr-defined]
         except AttributeError:  # not all stores have setitems :(
             store.update(temp_store)
 
@@ -173,7 +175,7 @@ def initialize_zarr(
 
 
 def add_array_to_store(
-    vn: str,
+    vn: Hashable,
     var: Variable,
     *,
     group: zarr.Group,
@@ -214,8 +216,8 @@ def add_array_to_store(
             encoding["write_empty_chunks"] = write_empty
 
     # handle the attributes
-    attrs = ChainMap({DIMENSION_KEY: var.dims}, attrs)
-    encoded_attrs = {k: encode_zarr_attr_value(v) for k, v in attrs.items()}
+    attrs_all = ChainMap({DIMENSION_KEY: var.dims}, attrs)
+    encoded_attrs = {k: encode_zarr_attr_value(v) for k, v in attrs_all.items()}
 
     dtype = var.dtype
     if coding.strings.check_vlen_dtype(dtype) == str:

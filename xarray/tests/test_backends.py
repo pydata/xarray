@@ -5510,7 +5510,7 @@ def test_initialize_zarr(tmp_path) -> None:
     store = tmp_path / "foo.zarr"
 
     with pytest.raises(ValueError, match="Only mode"):
-        initialize_zarr(ds, store, mode="r")
+        initialize_zarr(ds, store, mode="r")  # type: ignore[arg-type]
 
     expected_on_disk = ds.copy(deep=True).assign(
         {
