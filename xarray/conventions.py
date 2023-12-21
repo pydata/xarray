@@ -97,10 +97,14 @@ def _infer_dtype(array, name=None):
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
-    if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
+    if (
+        isinstance(var, IndexVariable)
+        and var.dtype.kind == "O"
+        and isinstance(var[0], tuple)
+    ):
         raise NotImplementedError(
             f"variable {name!r} is a MultiIndex, which cannot yet be "
-            "serialized to netCDF files. Instead, either use reset_index() "
+            "serialized. Instead, either use reset_index() "
             "to convert MultiIndex levels into coordinate variables instead "
             "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
         )
