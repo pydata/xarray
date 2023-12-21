@@ -84,7 +84,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None
+        Delayed = None  # type: ignore[assignment]
     try:
         from iris.cube import Cube as iris_Cube
     except ImportError:
