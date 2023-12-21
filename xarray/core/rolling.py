@@ -596,6 +596,11 @@ class DataArrayRolling(Rolling["DataArray"]):
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
             )
+            # index 0 is at the rightmost edge of the window
+            # need to reverse index here
+            # see GH #8541
+            if func in [bottleneck.move_argmin, bottleneck.move_argmax]:
+                values = self.window[0] - 1 - values
 
         if self.center[0]:
             values = values[valid]
