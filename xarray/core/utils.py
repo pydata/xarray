@@ -1045,7 +1045,7 @@ def parse_dims(
     if isinstance(dim, str):
         dim = (dim,)
     if check_exists:
-        _check_dims(set(dim), set(all_dims))
+        check_dims(set(dim), set(all_dims))
     return tuple(dim)
 
 
@@ -1107,7 +1107,7 @@ def parse_ordered_dims(
         dims_set: set[Hashable | ellipsis] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
-            _check_dims(dims_set, all_dims_set)
+            check_dims(dims_set, all_dims_set)
         if len(all_dims_set) != len(all_dims):
             raise ValueError("Cannot use ellipsis with repeated dims")
         dims = tuple(dim)
@@ -1126,13 +1126,35 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
-    wrong_dims = dim - all_dims
+def check_dims(
+    dims: Sequence[Hashable | ellipsis],
+    all_dims: Sequence[Hashable],
+    message_fmt: str | None = None,
+    obj: Any = None,
+    exc_type: Exception = ValueError,
+) -> None:
+    """
+    Check if any of the dimensions in 'dims' is missing from 'all_dims'.
+
+    Parameters
+    ----------
+    dims : Sequence of Hashable or "..."
+        Dimension(s) to check. "..." is ignored.
+    all_dims : Sequence of Hashable
+        The expected dimensions to check against.
+    message_fmt : str
+        Error message of the exception raised if some of 'dims' can not be
+        found in 'all_dims'. Will be formatted with two arguments: the missing
+        dimensions and the expected dimensions. If not given, a default message
+        is used.
+    exc_type : Exception
+        The exception type to raise.
+    """
+    if message_fmt is None:
+        message_fmt = "Dimension(s) {!r} not found in data dimensions {}"
+    wrong_dims = set(dims) - set(all_dims)
     if wrong_dims and wrong_dims != {...}:
-        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
-        raise ValueError(
-            f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
-        )
+        raise exc_type(message_fmt.format(tuple(wrong_dims), tuple(all_dims)))
 
 
 _Accessor = TypeVar("_Accessor")
