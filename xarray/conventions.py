@@ -16,7 +16,7 @@ from xarray.core.common import (
 )
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import IndexVariable, Variable
+from xarray.core.variable import Variable
 
 CF_RELATED_DATA = (
     "bounds",
@@ -97,11 +97,7 @@ def _infer_dtype(array, name=None):
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
-    if (
-        isinstance(var, IndexVariable)
-        and var.dtype.kind == "O"
-        and isinstance(var[0], tuple)
-    ):
+    if isinstance(var._data, indexing.PandasMultiIndexingAdapter):
         raise NotImplementedError(
             f"variable {name!r} is a MultiIndex, which cannot yet be "
             "serialized. Instead, either use reset_index() "
