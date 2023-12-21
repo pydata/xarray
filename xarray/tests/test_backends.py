@@ -5492,6 +5492,7 @@ def test_initialize_zarr(tmp_path) -> None:
     # 5. no region_dims
     # different chunksizes along same dimension
     # initializing existing store with mode="w" should succeed
+    # consolidated
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
     data = dask.array.ones((5, 10), chunks=(1, -1))

@@ -13,6 +13,7 @@ from xarray import coding, conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
+    ArrayWriter,
     BackendArray,
     BackendEntrypoint,
     _encode_variable_name,
@@ -48,7 +49,6 @@ def initialize_zarr(
     *,
     region_dims: Iterable[Hashable] = tuple(),
     mode: Literal["w", "w-"] = "w-",
-    consolidated: bool | None = None,
     zarr_version: int | None = None,
     **kwargs,
 ) -> Dataset:
@@ -72,8 +72,6 @@ def initialize_zarr(
         kwarg of ``to_zarr`` later.
     mode : {'w', 'w-'}
         Write mode for initializing the store.
-    consolidated: bool (optional)
-        Consolidate Zarr metadata.
 
     Returns
     -------
@@ -120,30 +118,33 @@ def initialize_zarr(
             storage_options=kwargs.get("storage_options", None),
         )
 
+    # Use this to open the group once with all the expected default options
+    # We will reuse xzstore.zarr_group later.
+    xzstore = ZarrStore.open_group(
+        temp_store,
+        mode=mode,
+        zarr_version=zarr_version,
+        **kwargs,
+    )
+
     # write the data for these variables.
     vars_to_write = []
     for k, v in ds._variables.items():
         if k in ds.dims or not (set(v.dims) & set(region_dims)):
             vars_to_write.append(k)
-    ds[vars_to_write].to_zarr(
-        store=temp_store,
-        mode=mode,
-        consolidated=consolidated,
-        zarr_version=zarr_version,
-        **kwargs,
+
+    writer = ArrayWriter()
+    xzstore.store(
+        {k: v for k, v in ds._variables.items() if k in vars_to_write},
+        ds.attrs,
+        writer=writer,
     )
+    writer.sync()
 
     if "encoding" in kwargs:
         raise NotImplementedError
 
-    path = kwargs.pop("group", None)
-
-    # write Zarr metadata for these variables.
-    # TODO: more kwargs here?
-    # cache_attrs=True, synchronizer=None, chunk_store=None, storage_options=None, meta_array=None
-    group = zarr.open_group(
-        store=temp_store, path=path, mode="a", zarr_version=zarr_version
-    )
+    # Now initialize the arrays we have not written.
     array_kwargs = {
         key: kwargs[key]
         for key in ["safe_chunks", "write_empty", "raise_on_invalid"]
@@ -154,18 +155,16 @@ def initialize_zarr(
         array_kwargs.setdefault("overwrite", True)
     for var in set(ds.variables) - set(vars_to_write):
         encoded = encode_zarr_variable(ds.variables[var])
-        add_array_to_store(var, encoded, group=group, **array_kwargs)
+        add_array_to_store(var, encoded, group=xzstore.zarr_group, **array_kwargs)
 
-    if zarr_version == 2 and consolidated in (None, True):
-        zarr.consolidate_metadata(temp_store)
-
+    # if a store was provided, flush the temp store there at once
     if store is not temp_store:
-        # if a store was provided, flush the temp store there at once
         try:
             store.setitems(temp_store)
         except AttributeError:  # not all stores have setitems :(
             store.update(temp_store)
 
+    # Return a Dataset that can be easily used for further region writes.
     if region_dims:
         return ds.drop_vars([var for var in vars_to_write if var not in region_dims])
 
@@ -631,7 +630,7 @@ class ZarrStore(AbstractWritableDataStore):
             if consolidated is None:
                 consolidated = False
 
-        if consolidated is None:
+        if consolidated is None and mode in ["r", "r+"]:
             try:
                 zarr_group = zarr.open_consolidated(store, **open_kwargs)
             except KeyError:
