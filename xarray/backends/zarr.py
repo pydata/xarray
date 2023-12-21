@@ -350,7 +350,7 @@ def extract_zarr_variable_encoding(
 
 # Function below is copied from conventions.encode_cf_variable.
 # The only change is to raise an error for object dtypes.
-def encode_zarr_variable(var, needs_copy=True, name=None):
+def encode_zarr_variable(var: Variable, needs_copy=True, name=None):
     """
     Converts an Variable into an Variable which follows some
     of the CF conventions:
