@@ -5482,54 +5482,107 @@ def test_zarr_region(tmp_path):
 
 @requires_dask
 @requires_zarr
-def test_initialize_zarr(tmp_path) -> None:
-    # TODO:
-    # 1. with encoding
-    # 2. with regions
+def test_initialize_zarr_modes(tmp_path):
     # 3. w-
-    # 4. mode = r?
-    # 5. mode=w+?
-    # 5. no region_dims
-    # different chunksizes along same dimension
     # initializing existing store with mode="w" should succeed
-    # consolidated
-    x = np.arange(0, 50, 10)
-    y = np.arange(0, 20, 2)
-    data = dask.array.ones((5, 10), chunks=(1, -1))
-    ds = xr.Dataset(
-        {
-            "xy": (("x", "y"), data),
-            "xonly": ("x", data[:, 0]),
-            "yonly": ("y", data[0, :]),
-            "eager_xonly": ("x", data[:, 0].compute()),
-            "eager_yonly": ("y", data[0, :].compute().astype(int)),
-            "scalar": 2,
-        },
-        coords={"x": x, "y": y},
-    )
+
     store = tmp_path / "foo.zarr"
+
+    ds = xr.Dataset({"a": ("x", dask.array.from_array([1, 2]))})
+    ds.to_zarr(store)
 
     with pytest.raises(ValueError, match="Only mode"):
         initialize_zarr(ds, store, mode="r")  # type: ignore[arg-type]
 
-    expected_on_disk = ds.copy(deep=True).assign(
+    with pytest.raises(ValueError):
+        initialize_zarr(ds, store, mode="w-")
+
+    initialize_zarr(ds, store, mode="w")
+
+
+@requires_dask
+@requires_zarr
+@pytest.mark.parametrize(
+    "zarr_version, consolidated", ((2, True), (2, None), (3, None), (None, None))
+)
+@pytest.mark.parametrize("region_dims", ((), ("x",), ("y",), ("x", "y")))
+def test_initialize_zarr(
+    region_dims: tuple, zarr_version: int | None, consolidated: bool | None, tmp_path
+) -> None:
+    # TODO:
+    # 1. with encoding
+    store = tmp_path / "foo.zarr"
+
+    x = np.arange(0, 50, 10)
+    y = np.arange(0, 20, 2)
+    data = dask.array.full((5, 10), 10, chunks=(1, -1))
+    ds = xr.Dataset(
         {
-            # variables sharing dimensions with `region_dims` are all fill_value.
-            "xy": xr.full_like(ds.xy, fill_value=np.nan),
-            "xonly": xr.full_like(ds.xonly, fill_value=np.nan),
-            "eager_xonly": xr.full_like(ds.xonly, fill_value=np.nan),
-            # eager variables without region_dim are identical
-            "eager_yonly": ds.yonly,
-        }
+            "xy": (("x", "y"), data),
+            "xonly": ("x", data[:, 0]),
+            # var with different chunksize along 'y'
+            "yonly": ("y", data[0, :].rechunk(5)),
+            "eager_xonly": ("x", data[:, 0].compute()),
+            "eager_yonly": ("y", data[0, :].compute().astype(int)),
+            "scalar": 2,
+        },
+        coords={"x": x, "y": y, "foo": ("z", [1, 2, 3])},
     )
-    expected_after_init = ds.drop_vars(["yonly", "eager_yonly", "y", "scalar"])
-    after_init = initialize_zarr(ds, store, region_dims=("x",))
+
+    fillvalues = dict(zip(ds.data_vars, np.arange(len(ds.data_vars)) + 1))
+    for varname, fv in fillvalues.items():
+        ds[varname].encoding["_FillValue"] = fv
+
+    vars_with_region = {
+        name for name, var in ds.data_vars.items() if set(var.dims) & set(region_dims)
+    }
+    vars_without_region = set(ds.data_vars) - vars_with_region
+
+    expected_after_init = (
+        ds[vars_with_region].drop_vars(set(ds.dims) - set(region_dims), errors="ignore")
+        if region_dims
+        else ds
+    )
+    after_init = initialize_zarr(
+        ds,
+        store,
+        region_dims=region_dims,
+        zarr_version=zarr_version,
+        consolidated=consolidated,
+    )
     assert_identical(expected_after_init, after_init)
 
-    with xr.open_zarr(store) as actual:
+    expected_on_disk = (
+        ds.copy(deep=True)
+        .assign(
+            # variables sharing dimensions with `region_dims` are all fill_value.
+            {
+                var: xr.full_like(ds[var], fill_value=fillvalues[var])
+                for var in vars_with_region
+            }
+        )
+        .assign(
+            # eager variables without region_dim are identical
+            {var: ds[var] for var in vars_without_region},
+        )
+    )
+    for varname, fv in fillvalues.items():
+        expected_on_disk[varname].attrs["_FillValue"] = fv
+    with xr.open_zarr(store, zarr_version=zarr_version, mask_and_scale=False) as actual:
         assert_identical(expected_on_disk, actual)
 
-    for i in range(ds.sizes["x"]):
-        after_init.isel(x=[i]).to_zarr(store, region={"x": slice(i, i + 1)})
-    with xr.open_zarr(store) as actual:
-        assert_identical(ds, actual)
+    # explicit region
+    if len(region_dims) == 1:
+        (dim,) = region_dims
+        for i in range(ds.sizes[dim]):
+            after_init.isel({dim: [i]}).to_zarr(
+                store, zarr_version=zarr_version, region={dim: slice(i, i + 1)}
+            )
+        with xr.open_zarr(store, zarr_version=zarr_version) as actual:
+            assert_identical(ds, actual)
+
+        # region = "auto"
+        # for i in range(ds.sizes[dim]):
+        #     after_init.isel({dim: [i]}).to_zarr(store, region="auto")
+        # with xr.open_zarr(store, consolidated=False) as actual:
+        #     assert_identical(ds, actual)

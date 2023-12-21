@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
@@ -1830,7 +1829,7 @@ def to_zarr(
                 )
 
     return write_to_zarr_store(
-        dataset, store, encoding, compute, chunkmanager_store_kwargs
+        dataset, zstore, encoding, compute, chunkmanager_store_kwargs
     )
 
 
@@ -1858,6 +1857,7 @@ def initialize_zarr(
     region_dims: Iterable[Hashable] = tuple(),
     mode: Literal["w", "w-"] = "w-",
     zarr_version: int | None = None,
+    consolidated: bool | None = None,
     **kwargs,
 ) -> Dataset:
     """
@@ -1914,6 +1914,8 @@ def initialize_zarr(
         temp_store = zarr.MemoryStore()
     elif zarr_version == 3:
         temp_store = zarr.MemoryStoreV3()
+        if consolidated:
+            raise ValueError("Consolidating metadata is not supported by Zarr V3.")
     else:
         raise ValueError(f"Invalid zarr_version={zarr_version}.")
 
@@ -1927,6 +1929,7 @@ def initialize_zarr(
             mode=mode,
             storage_options=kwargs.get("storage_options", None),
         )
+        # TODO: Handle mode="w-", this isn't raising an error yet.
     if TYPE_CHECKING:
         assert isinstance(store, MutableMapping)
 
@@ -1934,8 +1937,9 @@ def initialize_zarr(
     # We will reuse xzstore.zarr_group later.
     xzstore = backends.ZarrStore.open_group(
         temp_store,
-        mode=mode,
+        mode="w",  # always write to the temp store
         zarr_version=zarr_version,
+        consolidated=False,
         **kwargs,
     )
 
@@ -1969,6 +1973,9 @@ def initialize_zarr(
         encoded = encode_zarr_variable(ds.variables[var])
         add_array_to_store(var, encoded, group=xzstore.zarr_group, **array_kwargs)
 
+    if zarr_version == 2 and consolidated in (True, None):
+        zarr.consolidate_metadata(temp_store)
+
     # if a store was provided, flush the temp store there at once
     if store is not temp_store:
         try:
@@ -1979,7 +1986,7 @@ def initialize_zarr(
     # Return a Dataset that can be easily used for further region writes.
     if region_dims:
         needed_dims = set(
-            itertools.chain(*[ds.variables[var].dims for var in vars_to_write])
+            # itertools.chain(*[ds.variables[var].dims for var in vars_to_write])
         )
         to_drop = [
             var
