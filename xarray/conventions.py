@@ -647,7 +647,9 @@ def cf_decoder(
     return variables, attributes
 
 
-def _encode_coordinates(variables, attributes, non_dim_coord_names):
+def _encode_coordinates(
+    variables: T_Variables, attributes: T_Attrs, non_dim_coord_names
+):
     # calculate global and variable specific coordinates
     non_dim_coord_names = set(non_dim_coord_names)
 
@@ -675,7 +677,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
             if any(
-                attr_name in v.encoding and coord_name in v.encoding.get(attr_name)
+                coord_name in v.encoding.get(attr_name, tuple())
                 for attr_name in CF_RELATED_DATA
             ):
                 not_technically_coordinates.add(coord_name)
@@ -742,7 +744,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     return variables, attributes
 
 
-def encode_dataset_coordinates(dataset):
+def encode_dataset_coordinates(dataset: Dataset):
     """Encode coordinates on the given dataset object into variable specific
     and global attributes.
 
@@ -764,7 +766,7 @@ def encode_dataset_coordinates(dataset):
     )
 
 
-def cf_encoder(variables, attributes):
+def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     """
     Encode a set of CF encoded variables and attributes.
     Takes a dicts of variables and attributes and encodes them
