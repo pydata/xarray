@@ -72,6 +72,7 @@ from xarray.tests import (
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
+    requires_netCDF4_1_6_2_or_above,
     requires_pydap,
     requires_pynio,
     requires_scipy,
@@ -1486,7 +1487,7 @@ class NetCDF4Base(NetCDFBase):
                         assert ds.variables["time"].getncattr("units") == units
                         assert_array_equal(ds.variables["time"], np.arange(10) + 4)
 
-    def test_compression_encoding(self) -> None:
+    def test_compression_encoding_legacy(self) -> None:
         data = create_test_data()
         data["var2"].encoding.update(
             {
@@ -1766,6 +1767,74 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(list_of_strings, totest.attrs["foo"])
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
+
+    @pytest.mark.parametrize(
+        "compression",
+        [
+            None,
+            "zlib",
+            "szip",
+            "zstd",
+            "blosc_lz",
+            "blosc_lz4",
+            "blosc_lz4hc",
+            "blosc_zlib",
+            "blosc_zstd",
+        ],
+    )
+    @requires_netCDF4_1_6_2_or_above
+    @pytest.mark.xfail(ON_WINDOWS, reason="new compression not yet implemented")
+    def test_compression_encoding(self, compression: str | None) -> None:
+        data = create_test_data(dim_sizes=(20, 80, 10))
+        encoding_params: dict[str, Any] = dict(compression=compression, blosc_shuffle=1)
+        data["var2"].encoding.update(encoding_params)
+        data["var2"].encoding.update(
+            {
+                "chunksizes": (20, 40),
+                "original_shape": data.var2.shape,
+                "blosc_shuffle": 1,
+                "fletcher32": False,
+            }
+        )
+        with self.roundtrip(data) as actual:
+            expected_encoding = data["var2"].encoding.copy()
+            # compression does not appear in the retrieved encoding, that differs
+            # from the input encoding. shuffle also chantges. Here we modify the
+            # expected encoding to account for this
+            compression = expected_encoding.pop("compression")
+            blosc_shuffle = expected_encoding.pop("blosc_shuffle")
+            if compression is not None:
+                if "blosc" in compression and blosc_shuffle:
+                    expected_encoding["blosc"] = {
+                        "compressor": compression,
+                        "shuffle": blosc_shuffle,
+                    }
+                    expected_encoding["shuffle"] = False
+                elif compression == "szip":
+                    expected_encoding["szip"] = {
+                        "coding": "nn",
+                        "pixels_per_block": 8,
+                    }
+                    expected_encoding["shuffle"] = False
+                else:
+                    # This will set a key like zlib=true which is what appears in
+                    # the encoding when we read it.
+                    expected_encoding[compression] = True
+                    if compression == "zstd":
+                        expected_encoding["shuffle"] = False
+            else:
+                expected_encoding["shuffle"] = False
+
+            actual_encoding = actual["var2"].encoding
+            assert expected_encoding.items() <= actual_encoding.items()
+        if (
+            encoding_params["compression"] is not None
+            and "blosc" not in encoding_params["compression"]
+        ):
+            # regression test for #156
+            expected = data.isel(dim1=0)
+            with self.roundtrip(expected) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self) -> None:
@@ -4518,7 +4587,7 @@ class TestEncodingInvalid:
         assert {} == encoding
 
     @requires_netCDF4
-    def test_extract_nc4_variable_encoding_netcdf4(self, monkeypatch):
+    def test_extract_nc4_variable_encoding_netcdf4(self):
         # New netCDF4 1.6.0 compression argument.
         var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
         _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)

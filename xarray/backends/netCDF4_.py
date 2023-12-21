@@ -257,6 +257,12 @@ def _extract_nc4_variable_encoding(
         "_FillValue",
         "dtype",
         "compression",
+        "significant_digits",
+        "quantize_mode",
+        "blosc_shuffle",
+        "szip_coding",
+        "szip_pixels_per_block",
+        "endian",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
@@ -497,20 +503,23 @@ class NetCDF4DataStore(WritableCFDataStore):
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
-            nc4_var = self.ds.createVariable(
+            default_args = dict(
                 varname=name,
                 datatype=datatype,
                 dimensions=variable.dims,
-                zlib=encoding.get("zlib", False),
-                complevel=encoding.get("complevel", 4),
-                shuffle=encoding.get("shuffle", True),
-                fletcher32=encoding.get("fletcher32", False),
-                contiguous=encoding.get("contiguous", False),
-                chunksizes=encoding.get("chunksizes"),
+                zlib=False,
+                complevel=4,
+                shuffle=True,
+                fletcher32=False,
+                contiguous=False,
+                chunksizes=None,
                 endian="native",
-                least_significant_digit=encoding.get("least_significant_digit"),
+                least_significant_digit=None,
                 fill_value=fill_value,
             )
+            default_args.update(encoding)
+            default_args.pop("_FillValue", None)
+            nc4_var = self.ds.createVariable(**default_args)
 
         nc4_var.setncatts(attrs)
 
