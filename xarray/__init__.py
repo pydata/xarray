@@ -2,6 +2,7 @@ from importlib.metadata import version as _version
 
 from xarray import testing, tutorial
 from xarray.backends.api import (
+    initialize_zarr,
     load_dataarray,
     load_dataset,
     open_dataarray,
@@ -9,7 +10,7 @@ from xarray.backends.api import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.zarr import initialize_zarr, open_zarr
+from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.frequencies import infer_freq

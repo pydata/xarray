@@ -39,6 +39,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
+from xarray.backends.api import initialize_zarr
 from xarray.backends.common import robust_getitem
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
@@ -48,7 +49,6 @@ from xarray.backends.netCDF4_ import (
 )
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
-from xarray.backends.zarr import initialize_zarr
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates

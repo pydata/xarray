@@ -4,8 +4,8 @@ import json
 import os
 import warnings
 from collections import ChainMap
-from collections.abc import Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -13,7 +13,6 @@ from xarray import coding, conventions
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
-    ArrayWriter,
     BackendArray,
     BackendEntrypoint,
     _encode_variable_name,
@@ -22,7 +21,7 @@ from xarray.backends.common import (
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.parallelcompat import guess_chunkmanager
-from xarray.core.pycompat import integer_types, is_chunked_array
+from xarray.core.pycompat import integer_types
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
@@ -41,137 +40,6 @@ if TYPE_CHECKING:
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-
-
-def initialize_zarr(
-    ds: Dataset,
-    store: MutableMapping | None = None,
-    *,
-    region_dims: Iterable[Hashable] = tuple(),
-    mode: Literal["w", "w-"] = "w-",
-    zarr_version: int | None = None,
-    **kwargs,
-) -> Dataset:
-    """
-    Initialize a Zarr store with metadata.
-
-    This function initializes a Zarr store with metadata that describes the entire datasets.
-    If ``region_dims`` is specified, it will also
-    1. Write variables that don't contain any of ``region_dims`` & indexes on the ``region_dims``, and
-    2. Return a dataset with the remaining variables, which contain one or more of ``region_dims``.
-       This dataset can be used for region writes in parallel.
-
-    Parameters
-    ----------
-    ds : Dataset
-        Dataset to write.
-    store : MutableMapping or str (optional)
-        Zarr store to write to. If not provided, will use a Zarr MemoryStore
-    region_dims : Iterable[Hashable], optional
-        An iterable of dimension names that will be passed to the ``region``
-        kwarg of ``to_zarr`` later.
-    mode : {'w', 'w-'}
-        Write mode for initializing the store.
-
-    Returns
-    -------
-    Dataset
-        Dataset containing variables with one or more ``region_dims``
-        dimensions. Use this for writing to the store in parallel later.
-
-    Raises
-    ------
-    ValueError
-    """
-    import zarr
-
-    if "compute" in kwargs:
-        raise ValueError("The ``compute`` kwarg is not supported in `initialize_zarr`.")
-
-    if not any(is_chunked_array(v._data) for v in ds._variables.values()):
-        raise ValueError("This function should be used with chunked Datasets.")
-
-    if mode not in ["w", "w-"]:
-        raise ValueError(
-            f"Only mode='w' or mode='w-' is allowed for initialize_zarr. Received mode={mode!r}"
-        )
-
-    if zarr_version is None:
-        # default to 2 if store doesn't specify it's version (e.g. a path)
-        zarr_version = int(getattr(store, "_store_version", 2))
-
-    if zarr_version == 2:
-        temp_store = zarr.MemoryStore()
-    elif zarr_version == 3:
-        temp_store = zarr.MemoryStoreV3()
-    else:
-        raise ValueError(f"Invalid zarr_version={zarr_version}.")
-
-    if store is None:
-        store = temp_store
-    else:
-        # Needed to handle `store` being a string path
-        store = zarr.hierarchy.normalize_store_arg(
-            store,
-            zarr_version=zarr_version,
-            mode=mode,
-            storage_options=kwargs.get("storage_options", None),
-        )
-    if TYPE_CHECKING:
-        assert isinstance(store, MutableMapping)
-
-    # Use this to open the group once with all the expected default options
-    # We will reuse xzstore.zarr_group later.
-    xzstore = ZarrStore.open_group(
-        temp_store,
-        mode=mode,
-        zarr_version=zarr_version,
-        **kwargs,
-    )
-
-    # write the data for these variables.
-    vars_to_write = []
-    for k, v in ds._variables.items():
-        if k in ds.dims or not (set(v.dims) & set(region_dims)):
-            vars_to_write.append(k)
-
-    writer = ArrayWriter()
-    xzstore.store(
-        {k: v for k, v in ds._variables.items() if k in vars_to_write},
-        ds.attrs,
-        writer=writer,
-    )
-    writer.sync()
-
-    if "encoding" in kwargs:
-        raise NotImplementedError
-
-    # Now initialize the arrays we have not written.
-    array_kwargs = {
-        key: kwargs[key]
-        for key in ["safe_chunks", "write_empty", "raise_on_invalid"]
-        if key in kwargs
-    }
-    array_kwargs.setdefault("write_empty", False)
-    if mode == "w":
-        array_kwargs.setdefault("overwrite", True)
-    for var in set(ds.variables) - set(vars_to_write):
-        encoded = encode_zarr_variable(ds.variables[var])
-        add_array_to_store(var, encoded, group=xzstore.zarr_group, **array_kwargs)
-
-    # if a store was provided, flush the temp store there at once
-    if store is not temp_store:
-        try:
-            store.setitems(temp_store)  # type: ignore[attr-defined]
-        except AttributeError:  # not all stores have setitems :(
-            store.update(temp_store)
-
-    # Return a Dataset that can be easily used for further region writes.
-    if region_dims:
-        return ds.drop_vars([var for var in vars_to_write if var not in region_dims])
-
-    else:
-        return ds
 
 
 def add_array_to_store(
