@@ -6,12 +6,7 @@ import weakref
 from collections.abc import MutableMapping
 from typing import Any
 
-try:
-    from dask.utils import SerializableLock
-except ImportError:
-    # no need to worry about serializing the lock
-    SerializableLock = threading.Lock  # type: ignore
-
+from xarray.backends.dask_lock import SerializableLock
 
 # Locks used by multiple backends.
 # Neither HDF5 nor the netCDF-C library are thread-safe.
