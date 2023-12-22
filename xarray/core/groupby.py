@@ -712,7 +712,7 @@ class GroupBy(Generic[T_Xarray]):
     )
     _obj: T_Xarray
     groupers: tuple[ResolvedGrouper]
-    _squeeze: bool
+    _squeeze: bool | None
     _restore_coord_dims: bool
 
     _original_obj: T_Xarray
