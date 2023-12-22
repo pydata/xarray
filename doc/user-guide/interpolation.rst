@@ -292,8 +292,8 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
     axes[0].set_title("Raw data")
 
     # Interpolated data
-    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims["lon"] * 4)
-    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims["lat"] * 4)
+    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.sizes["lon"] * 4)
+    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.sizes["lat"] * 4)
     dsi = ds.interp(lat=new_lat, lon=new_lon)
     dsi.air.plot(ax=axes[1])
     @savefig interpolation_sample3.png width=8in

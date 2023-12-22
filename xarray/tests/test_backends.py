@@ -72,6 +72,7 @@ from xarray.tests import (
     requires_h5netcdf_ros3,
     requires_iris,
     requires_netCDF4,
+    requires_netCDF4_1_6_2_or_above,
     requires_pydap,
     requires_pynio,
     requires_scipy,
@@ -864,12 +865,13 @@ class CFEncodedBase(DatasetIOBase):
         assert check_vlen_dtype(original["a"].dtype) == str
         with self.roundtrip(original) as actual:
             assert_identical(original, actual)
-            assert object == actual["a"].dtype
-            assert actual["a"].dtype == original["a"].dtype
-            # only check metadata for capable backends
-            # eg. NETCDF3 based backends do not roundtrip metadata
-            if actual["a"].dtype.metadata is not None:
-                assert check_vlen_dtype(actual["a"].dtype) == str
+            if np.issubdtype(actual["a"].dtype, object):
+                # only check metadata for capable backends
+                # eg. NETCDF3 based backends do not roundtrip metadata
+                if actual["a"].dtype.metadata is not None:
+                    assert check_vlen_dtype(actual["a"].dtype) == str
+            else:
+                assert actual["a"].dtype == np.dtype("<U1")
 
     @pytest.mark.parametrize(
         "decoded_fn, encoded_fn",
@@ -1374,32 +1376,39 @@ class NetCDF4Base(NetCDFBase):
             with self.open(tmp_file, group="data/2") as actual2:
                 assert_identical(data2, actual2)
 
-    def test_encoding_kwarg_vlen_string(self) -> None:
-        for input_strings in [[b"foo", b"bar", b"baz"], ["foo", "bar", "baz"]]:
-            original = Dataset({"x": input_strings})
-            expected = Dataset({"x": ["foo", "bar", "baz"]})
-            kwargs = dict(encoding={"x": {"dtype": str}})
-            with self.roundtrip(original, save_kwargs=kwargs) as actual:
-                assert actual["x"].encoding["dtype"] is str
-                assert_identical(actual, expected)
+    @pytest.mark.parametrize(
+        "input_strings, is_bytes",
+        [
+            ([b"foo", b"bar", b"baz"], True),
+            (["foo", "bar", "baz"], False),
+            (["foó", "bár", "baź"], False),
+        ],
+    )
+    def test_encoding_kwarg_vlen_string(
+        self, input_strings: list[str], is_bytes: bool
+    ) -> None:
+        original = Dataset({"x": input_strings})
 
-    def test_roundtrip_string_with_fill_value_vlen(self) -> None:
+        expected_string = ["foo", "bar", "baz"] if is_bytes else input_strings
+        expected = Dataset({"x": expected_string})
+        kwargs = dict(encoding={"x": {"dtype": str}})
+        with self.roundtrip(original, save_kwargs=kwargs) as actual:
+            assert actual["x"].encoding["dtype"] == "<U3"
+            assert actual["x"].dtype == "<U3"
+            assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("fill_value", ["XXX", "", "bár"])
+    def test_roundtrip_string_with_fill_value_vlen(self, fill_value: str) -> None:
         values = np.array(["ab", "cdef", np.nan], dtype=object)
         expected = Dataset({"x": ("t", values)})
 
-        # netCDF4-based backends don't support an explicit fillvalue
-        # for variable length strings yet.
-        # https://github.com/Unidata/netcdf4-python/issues/730
-        # https://github.com/h5netcdf/h5netcdf/issues/37
-        original = Dataset({"x": ("t", values, {}, {"_FillValue": "XXX"})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                assert_identical(expected, actual)
+        original = Dataset({"x": ("t", values, {}, {"_FillValue": fill_value})})
+        with self.roundtrip(original) as actual:
+            assert_identical(expected, actual)
 
         original = Dataset({"x": ("t", values, {}, {"_FillValue": ""})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                assert_identical(expected, actual)
+        with self.roundtrip(original) as actual:
+            assert_identical(expected, actual)
 
     def test_roundtrip_character_array(self) -> None:
         with create_tmp_file() as tmp_file:
@@ -1478,7 +1487,7 @@ class NetCDF4Base(NetCDFBase):
                         assert ds.variables["time"].getncattr("units") == units
                         assert_array_equal(ds.variables["time"], np.arange(10) + 4)
 
-    def test_compression_encoding(self) -> None:
+    def test_compression_encoding_legacy(self) -> None:
         data = create_test_data()
         data["var2"].encoding.update(
             {
@@ -1758,6 +1767,74 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(list_of_strings, totest.attrs["foo"])
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
+
+    @pytest.mark.parametrize(
+        "compression",
+        [
+            None,
+            "zlib",
+            "szip",
+            "zstd",
+            "blosc_lz",
+            "blosc_lz4",
+            "blosc_lz4hc",
+            "blosc_zlib",
+            "blosc_zstd",
+        ],
+    )
+    @requires_netCDF4_1_6_2_or_above
+    @pytest.mark.xfail(ON_WINDOWS, reason="new compression not yet implemented")
+    def test_compression_encoding(self, compression: str | None) -> None:
+        data = create_test_data(dim_sizes=(20, 80, 10))
+        encoding_params: dict[str, Any] = dict(compression=compression, blosc_shuffle=1)
+        data["var2"].encoding.update(encoding_params)
+        data["var2"].encoding.update(
+            {
+                "chunksizes": (20, 40),
+                "original_shape": data.var2.shape,
+                "blosc_shuffle": 1,
+                "fletcher32": False,
+            }
+        )
+        with self.roundtrip(data) as actual:
+            expected_encoding = data["var2"].encoding.copy()
+            # compression does not appear in the retrieved encoding, that differs
+            # from the input encoding. shuffle also chantges. Here we modify the
+            # expected encoding to account for this
+            compression = expected_encoding.pop("compression")
+            blosc_shuffle = expected_encoding.pop("blosc_shuffle")
+            if compression is not None:
+                if "blosc" in compression and blosc_shuffle:
+                    expected_encoding["blosc"] = {
+                        "compressor": compression,
+                        "shuffle": blosc_shuffle,
+                    }
+                    expected_encoding["shuffle"] = False
+                elif compression == "szip":
+                    expected_encoding["szip"] = {
+                        "coding": "nn",
+                        "pixels_per_block": 8,
+                    }
+                    expected_encoding["shuffle"] = False
+                else:
+                    # This will set a key like zlib=true which is what appears in
+                    # the encoding when we read it.
+                    expected_encoding[compression] = True
+                    if compression == "zstd":
+                        expected_encoding["shuffle"] = False
+            else:
+                expected_encoding["shuffle"] = False
+
+            actual_encoding = actual["var2"].encoding
+            assert expected_encoding.items() <= actual_encoding.items()
+        if (
+            encoding_params["compression"] is not None
+            and "blosc" not in encoding_params["compression"]
+        ):
+            # regression test for #156
+            expected = data.isel(dim1=0)
+            with self.roundtrip(expected) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self) -> None:
@@ -2382,6 +2459,29 @@ class ZarrBase(CFEncodedBase):
                 xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
 
+    def test_append_with_append_dim_no_overwrite(self) -> None:
+        ds, ds_to_append, _ = create_append_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            original = xr.concat([ds, ds_to_append], dim="time")
+            original2 = xr.concat([original, ds_to_append], dim="time")
+
+            # overwrite a coordinate;
+            # for mode='a-', this will not get written to the store
+            # because it does not have the append_dim as a dim
+            ds_to_append.lon.data[:] = -999
+            ds_to_append.to_zarr(
+                store_target, mode="a-", append_dim="time", **self.version_kwargs
+            )
+            actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            assert_identical(original, actual)
+
+            # by default, mode="a" will overwrite all coordinates.
+            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            original2.lon.data[:] = -999
+            assert_identical(original2, actual)
+
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
@@ -2578,7 +2678,7 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(
                 ValueError,
                 match=re.escape(
-                    "cannot set region unless mode='a', mode='r+' or mode=None"
+                    "cannot set region unless mode='a', mode='a-', mode='r+' or mode=None"
                 ),
             ):
                 data.to_zarr(
@@ -2828,6 +2928,43 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 ls = listdir(os.path.join(store, "test"))
                 assert set(expected) == set([file for file in ls if file[0] != "."])
 
+    def test_avoid_excess_metadata_calls(self) -> None:
+        """Test that chunk requests do not trigger redundant metadata requests.
+
+        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
+        to retrieve chunk data after initialization do not trigger additional
+        metadata requests.
+
+        https://github.com/pydata/xarray/issues/8290
+        """
+
+        import zarr
+
+        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
+
+        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
+        # so that we can inspect calls to this method - specifically count of calls.
+        # Use of side_effect means that calls are passed through to the original method
+        # rather than a mocked method.
+        Group = zarr.hierarchy.Group
+        with (
+            self.create_zarr_target() as store,
+            patch.object(
+                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
+            ) as mock,
+        ):
+            ds.to_zarr(store, mode="w")
+
+            # We expect this to request array metadata information, so call_count should be == 1,
+            xrds = xr.open_zarr(store)
+            call_count = mock.call_count
+            assert call_count == 1
+
+            # compute() requests array data, which should not trigger additional metadata requests
+            # we assert that the number of calls has not increased after fetchhing the array
+            xrds.test.compute(scheduler="sync")
+            assert mock.call_count == call_count
+
 
 class ZarrBaseV3(ZarrBase):
     zarr_version = 3
@@ -2866,47 +3003,6 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zr3") as tmp:
             yield tmp
-
-
-@requires_zarr
-class TestZarrArrayWrapperCalls(TestZarrKVStoreV3):
-    def test_avoid_excess_metadata_calls(self) -> None:
-        """Test that chunk requests do not trigger redundant metadata requests.
-
-        This test targets logic in backends.zarr.ZarrArrayWrapper, asserting that calls
-        to retrieve chunk data after initialization do not trigger additional
-        metadata requests.
-
-        https://github.com/pydata/xarray/issues/8290
-        """
-
-        import zarr
-
-        ds = xr.Dataset(data_vars={"test": (("Z",), np.array([123]).reshape(1))})
-
-        # The call to retrieve metadata performs a group lookup. We patch Group.__getitem__
-        # so that we can inspect calls to this method - specifically count of calls.
-        # Use of side_effect means that calls are passed through to the original method
-        # rather than a mocked method.
-        Group = zarr.hierarchy.Group
-        with (
-            self.create_zarr_target() as store,
-            patch.object(
-                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
-            ) as mock,
-        ):
-            ds.to_zarr(store, mode="w")
-
-            # We expect this to request array metadata information, so call_count should be >= 1,
-            # At time of writing, 2 calls are made
-            xrds = xr.open_zarr(store)
-            call_count = mock.call_count
-            assert call_count > 0
-
-            # compute() requests array data, which should not trigger additional metadata requests
-            # we assert that the number of calls has not increased after fetchhing the array
-            xrds.test.compute(scheduler="sync")
-            assert mock.call_count == call_count
 
 
 @requires_zarr
@@ -3477,6 +3573,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         "https://www.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
     )
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
@@ -3485,6 +3582,7 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
         ) as actual:
             assert "Temperature" in list(actual)
 
+    @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
         driver_kwds = {
             "secret_id": b"",
@@ -4510,7 +4608,7 @@ class TestEncodingInvalid:
         assert {} == encoding
 
     @requires_netCDF4
-    def test_extract_nc4_variable_encoding_netcdf4(self, monkeypatch):
+    def test_extract_nc4_variable_encoding_netcdf4(self):
         # New netCDF4 1.6.0 compression argument.
         var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
         _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
@@ -5263,6 +5361,16 @@ def test_pickle_open_mfdataset_dataset():
 
 
 @requires_zarr
+def test_zarr_closing_internal_zip_store():
+    store_name = "tmp.zarr.zip"
+    original_da = DataArray(np.arange(12).reshape((3, 4)))
+    original_da.to_zarr(store_name, mode="w")
+
+    with open_dataarray(store_name, engine="zarr") as loaded_da:
+        assert_identical(original_da, loaded_da)
+
+
+@requires_zarr
 class TestZarrRegionAuto:
     def test_zarr_region_auto_all(self, tmp_path):
         x = np.arange(0, 50, 10)
@@ -5436,7 +5544,7 @@ class TestZarrRegionAuto:
 
 
 @requires_zarr
-def test_zarr_region_transpose(tmp_path):
+def test_zarr_region(tmp_path):
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
     data = np.ones((5, 10))
@@ -5451,7 +5559,12 @@ def test_zarr_region_transpose(tmp_path):
     )
     ds.to_zarr(tmp_path / "test.zarr")
 
-    ds_region = 1 + ds.isel(x=[0], y=[0]).transpose()
+    ds_transposed = ds.transpose("y", "x")
+
+    ds_region = 1 + ds_transposed.isel(x=[0], y=[0])
     ds_region.to_zarr(
         tmp_path / "test.zarr", region={"x": slice(0, 1), "y": slice(0, 1)}
     )
+
+    # Write without region
+    ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")
