@@ -3019,7 +3019,7 @@ def test_zarr_storage_options() -> None:
 @requires_h5netcdf
 @requires_fsspec
 def test_h5netcdf_storage_options() -> None:
-    with create_tmp_files(2) as (f1, f2):
+    with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
         ds1 = create_test_data()
         ds1.to_netcdf(f1, engine="h5netcdf")
 
