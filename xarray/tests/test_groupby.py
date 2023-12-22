@@ -1475,10 +1475,9 @@ class TestDataArrayGroupBy:
             ("a", ("a", "y")),
             ("b", ("x", "b")),
         ]:
-            with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
-                result = array.groupby(by, restore_coord_dims=True).map(
-                    lambda x: x.squeeze()
-                )["c"]
+            result = array.groupby(by, squeeze=False, restore_coord_dims=True).map(
+                lambda x: x.squeeze()
+            )["c"]
             assert result.dims == expected_dims
 
     def test_groupby_first_and_last(self):
