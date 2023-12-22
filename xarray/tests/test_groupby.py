@@ -2483,3 +2483,15 @@ def test_groupby_math_auto_chunk():
     )
     actual = da.chunk(x=1, y=2).groupby("label") - sub
     assert actual.chunksizes == {"x": (1, 1, 1), "y": (2, 1)}
+
+
+@pytest.mark.parametrize("use_flox", [True, False])
+def test_groupby_dim_no_dim_equal(use_flox):
+    # https://github.com/pydata/xarray/issues/8263
+    da = DataArray(
+        data=[1, 2, 3, 4], dims="lat", coords={"lat": np.linspace(0, 1.01, 4)}
+    )
+    with xr.set_options(use_flox=use_flox):
+        actual1 = da.drop_vars("lat").groupby("lat", squeeze=False).sum()
+        actual2 = da.groupby("lat", squeeze=False).sum()
+    assert_identical(actual1, actual2.drop_vars("lat"))

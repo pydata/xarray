@@ -71,6 +71,7 @@ def check_reduce_dims(reduce_dims, dimensions):
             raise ValueError(
                 f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
                 f"to reduce over all dimensions or one or more of {dimensions!r}."
+                f" Try passing .groupby(..., squeeze=False)"
             )
 
 
