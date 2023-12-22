@@ -2315,6 +2315,19 @@ class DataArrayAggregations:
 class DatasetGroupByAggregations:
     _obj: Dataset
 
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -3829,6 +3842,19 @@ class DatasetGroupByAggregations:
 class DatasetResampleAggregations:
     _obj: Dataset
 
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -5112,21 +5138,21 @@ class DatasetResampleAggregations:
 
         >>> ds.resample(time="3M").median()
         <xarray.Dataset>
-        Dimensions:           (__resample_dim__: 3)
+        Dimensions:  (time: 3)
         Coordinates:
-          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da                (__resample_dim__) float64 1.0 2.0 2.0
+            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").median(skipna=False)
         <xarray.Dataset>
-        Dimensions:           (__resample_dim__: 3)
+        Dimensions:  (time: 3)
         Coordinates:
-          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da                (__resample_dim__) float64 1.0 2.0 nan
+            da       (time) float64 1.0 2.0 nan
         """
         return self._reduce_without_squeeze_warn(
             duck_array_ops.median,
@@ -5342,6 +5368,19 @@ class DatasetResampleAggregations:
 
 class DataArrayGroupByAggregations:
     _obj: DataArray
+
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
 
     def reduce(
         self,
@@ -6749,6 +6788,19 @@ class DataArrayGroupByAggregations:
 class DataArrayResampleAggregations:
     _obj: DataArray
 
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -7936,18 +7988,18 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").median()
-        <xarray.DataArray (__resample_dim__: 3)>
+        <xarray.DataArray (time: 3)>
         array([1., 2., 2.])
         Coordinates:
-          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").median(skipna=False)
-        <xarray.DataArray (__resample_dim__: 3)>
+        <xarray.DataArray (time: 3)>
         array([ 1.,  2., nan])
         Coordinates:
-          * __resample_dim__  (__resample_dim__) datetime64[ns] 2001-01-31 ... 2001-0...
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         return self._reduce_without_squeeze_warn(
             duck_array_ops.median,
@@ -8034,8 +8086,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8043,8 +8095,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
         """
         return self._reduce_without_squeeze_warn(
             duck_array_ops.cumsum,
@@ -8131,8 +8183,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8140,8 +8192,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Dimensions without coordinates: time
         """
         return self._reduce_without_squeeze_warn(
             duck_array_ops.cumprod,

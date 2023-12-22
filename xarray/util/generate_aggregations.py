@@ -89,6 +89,19 @@ GROUPBY_PREAMBLE = """
 class {obj}{cls}Aggregations:
     _obj: {obj}
 
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -112,6 +125,19 @@ RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Aggregations:
     _obj: {obj}
+
+    def _reduce_without_squeeze_warn(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
 
     def reduce(
         self,
