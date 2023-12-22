@@ -81,24 +81,32 @@ def _find_absolute_paths(
     ['common.py']
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths) and kwargs.get("engine", None) == "zarr":
+        if is_remote_uri(paths) and (engine := kwargs.get("engine", None)) in [
+            "zarr",
+            "h5netcdf",
+        ]:
             try:
                 from fsspec.core import get_fs_token_paths
             except ImportError as e:
                 raise ImportError(
-                    "The use of remote URLs for opening zarr requires the package fsspec"
+                    "The use of remote URLs for opening zarr and h5netcdf requires the package fsspec"
                 ) from e
 
+            mode = kwargs.get("mode", "rb")
+            mode_ = "rb" if mode == "r" else mode
             fs, _, _ = get_fs_token_paths(
                 paths,
-                mode="rb",
+                mode=mode_,
                 storage_options=kwargs.get("backend_kwargs", {}).get(
                     "storage_options", {}
                 ),
                 expand=False,
             )
-            tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in tmp_paths]
+            if engine == "h5netcdf":
+                paths = fs.open(paths, mode=mode_)
+            else:
+                tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+                paths = [fs.get_mapper(path) for path in tmp_paths]
         elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs "

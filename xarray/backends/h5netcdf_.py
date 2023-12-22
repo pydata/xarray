@@ -162,6 +162,8 @@ class H5NetCDFStore(WritableCFDataStore):
         driver_kwds=None,
         storage_options=None,
     ):
+        import h5netcdf
+
         if isinstance(filename, bytes):
             raise ValueError(
                 "can't open netCDF4/HDF5 as bytes "
@@ -177,11 +179,21 @@ class H5NetCDFStore(WritableCFDataStore):
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
+        # get open fsspec-handle first
+        from xarray.backends.common import _find_absolute_paths
+
+        if storage_options is not None:
+            filename = _find_absolute_paths(
+                filename,
+                engine="h5netcdf",
+                mode=mode,
+                backend_kwargs=dict(storage_options=storage_options),
+            )
+
         kwargs = {
             "invalid_netcdf": invalid_netcdf,
             "decode_vlen_strings": decode_vlen_strings,
             "driver": driver,
-            "storage_options": storage_options,
         }
         if driver_kwds is not None:
             kwargs.update(driver_kwds)
@@ -194,9 +206,7 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager = CachingFileManager(
-            _h5netcdf_opener, filename, mode=mode, kwargs=kwargs
-        )
+        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
