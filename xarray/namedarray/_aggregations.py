@@ -571,7 +571,7 @@ class NamedArrayAggregations:
         dim: Dims = None,
         *,
         skipna: bool | None = None,
-        ddof: int = 0,
+        ddof: int | None = None,
         **kwargs: Any,
     ) -> Self:
         """
