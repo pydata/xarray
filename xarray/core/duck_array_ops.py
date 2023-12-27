@@ -11,6 +11,7 @@ import inspect
 import warnings
 from functools import partial
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -37,6 +38,7 @@ from xarray.core import dask_array_ops, dtypes, nputils, pycompat
 from xarray.core.options import OPTIONS
 from xarray.core.parallelcompat import get_chunked_array_type, is_chunked_array
 from xarray.core.pycompat import array_type, is_duck_dask_array
+from xarray.core.types import T_DuckArray
 from xarray.core.utils import is_duck_array, module_available
 
 dask_available = module_available("dask")
@@ -387,6 +389,9 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
         if coerce_strings and values.dtype.kind in "SU":
             values = astype(values, object)
 
+        if name in ["std", "var"]:
+            kwargs = _handle_ddof_vs_correction_kwargs(kwargs, values)
+
         func = None
         if skipna or (skipna is None and values.dtype.kind in "cfO"):
             nanname = "nan" + name
@@ -415,6 +420,42 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
 
     f.__name__ = name
     return f
+
+
+def _handle_ddof_vs_correction_kwargs(
+    kwargs: dict[str, Any], values: T_DuckArray
+) -> dict[str, Any]:
+    # handle ddof vs correction kwargs, see GH8566
+
+    ddof = kwargs.pop("ddof", None)
+    correction = kwargs.pop("correction", None)
+
+    if ddof is None and correction is None:
+        degrees_of_freedom_correction_val = 0  # default to 0, see GH8566
+    elif ddof is not None and correction is not None:
+        if ddof != correction:
+            raise ValueError(
+                "ddof and correction both refer to the same thing, and so cannot be meaningfully set to different values. "
+                f"Got ddof={ddof} but correction={correction}"
+            )
+        else:
+            # both kwargs were passed, but they are the same value
+            warnings.warn(
+                "ddof and correction both refer to the same thing - you don't need to pass them both"
+            )
+            degrees_of_freedom_correction_val = ddof
+    else:
+        # only one of the two kwargs passed
+        degrees_of_freedom_correction_val = ddof if ddof is not None else correction
+
+    # assume that only array-API-compliant libraries will implement correction over ddof
+    # reasonable since array-API people made this name change, see https://github.com/data-apis/array-api/issues/695
+    if hasattr(values, "__array_namespace__"):
+        kwargs["correction"] = degrees_of_freedom_correction_val
+    else:
+        kwargs["ddof"] = degrees_of_freedom_correction_val
+
+    return kwargs
 
 
 # Attributes `numeric_only`, `available_min_count` is used for docs.

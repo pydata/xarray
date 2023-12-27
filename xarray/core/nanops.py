@@ -156,7 +156,7 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
-def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
+def nanstd(a, axis=None, dtype=None, out=None, ddof=None):
     return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
