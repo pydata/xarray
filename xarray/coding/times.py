@@ -22,6 +22,7 @@ from xarray.coding.variables import (
 )
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
+from xarray.core.duck_array_ops import asarray
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
 from xarray.core.pdcompat import nanosecond_precision_timestamp
 from xarray.core.pycompat import is_duck_dask_array
@@ -672,6 +673,43 @@ def encode_cf_datetime(
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
+):
+    dates = asarray(dates)
+    if isinstance(dates, np.ndarray):
+        return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
+    elif is_duck_dask_array(dates):
+        return _lazily_encode_cf_datetime(dates, units, calendar, dtype)
+
+
+def _cast_to_dtype_safe(num, dtype) -> np.ndarray:
+    cast_num = np.asarray(num, dtype=dtype)
+
+    if np.issubdtype(dtype, np.integer):
+        if not (num == cast_num).all():
+            raise ValueError(
+                f"Not possible to cast all encoded times from dtype {num.dtype!r} "
+                f"to dtype {dtype!r} without changing any of their values. "
+                f"Consider removing the dtype encoding or explicitly switching to "
+                f"a dtype encoding with a higher precision."
+            )
+    else:
+        if np.isinf(cast_num).any():
+            raise OverflowError(
+                f"Not possible to cast encoded times from dtype {num.dtype!r} "
+                f"to dtype {dtype!r} without overflow.  Consider removing the "
+                f"dtype encoding or explicitly switching to a dtype encoding "
+                f"with a higher precision."
+            )
+
+    return cast_num
+
+
+def _eagerly_encode_cf_datetime(
+    dates,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
+    called_via_map_blocks: bool = False,
 ) -> tuple[np.ndarray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
@@ -731,7 +769,7 @@ def encode_cf_datetime(
                     f"Set encoding['dtype'] to integer dtype to serialize to int64. "
                     f"Set encoding['dtype'] to floating point dtype to silence this warning."
                 )
-            elif np.issubdtype(dtype, np.integer):
+            elif np.issubdtype(dtype, np.integer) and not called_via_map_blocks:
                 new_units = f"{needed_units} since {format_timestamp(ref_date)}"
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
@@ -752,7 +790,53 @@ def encode_cf_datetime(
         # we already covered for this in pandas-based flow
         num = cast_to_int_if_safe(num)
 
-    return (num, units, calendar)
+    if dtype is not None:
+        num = _cast_to_dtype_safe(num, dtype)
+
+    if called_via_map_blocks:
+        return num
+    else:
+        return (num, units, calendar)
+
+
+def _lazily_encode_cf_datetime(
+    dates,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
+):
+    import dask.array
+
+    if calendar is None:
+        # This will only trigger minor compute if dates is an object dtype array.
+        calendar = infer_calendar_name(dates)
+
+    if units is None and dtype is None:
+        if dates.dtype == "O":
+            units = "microseconds since 1970-01-01"
+            dtype = np.dtype("int64")
+        else:
+            units = "nanoseconds since 1970-01-01"
+            dtype = np.dtype("int64")
+
+    if units is None or dtype is None:
+        raise ValueError(
+            f"When encoding chunked arrays of datetime values, both the units and "
+            f"dtype must be prescribed or both must be unprescribed.  Prescribing "
+            f"only one or the other is not currently supported.  Got a units "
+            f"encoding of {units} and a dtype encoding of {dtype}."
+        )
+
+    num = dask.array.map_blocks(
+        _eagerly_encode_cf_datetime,
+        dates,
+        units,
+        calendar,
+        dtype,
+        called_via_map_blocks=True,
+        dtype=dtype,
+    )
+    return num, units, calendar
 
 
 def encode_cf_timedelta(
