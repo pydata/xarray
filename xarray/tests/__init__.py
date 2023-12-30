@@ -91,7 +91,14 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
-has_seaborn, requires_seaborn = _importorskip("seaborn")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="is_categorical_dtype is deprecated and will be removed in a future version.",
+        category=DeprecationWarning,
+    )
+    # seaborn uses the deprecated `pandas.is_categorical_dtype`
+    has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
