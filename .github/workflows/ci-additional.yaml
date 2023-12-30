@@ -76,7 +76,11 @@ jobs:
           # Raise an error if there are warnings in the doctests, with `-Werror`.
           # This is a trial; if it presents an problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
-          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
+
+          # ignores:
+          # 1. h5py: see https://github.com/pydata/xarray/issues/8537
+          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror \
+              -W "ignore:h5py is running against HDF5 1.14.3:UserWarning"
 
   mypy:
     name: Mypy
@@ -117,7 +121,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.7" --force-reinstall
+          python -m pip install "mypy<1.8" --force-reinstall
 
       - name: Run mypy
         run: |
@@ -171,7 +175,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Install mypy
         run: |
-          python -m pip install "mypy<1.7" --force-reinstall
+          python -m pip install "mypy<1.8" --force-reinstall
 
       - name: Run mypy
         run: |
