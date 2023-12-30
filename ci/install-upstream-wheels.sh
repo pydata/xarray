@@ -11,8 +11,6 @@ conda uninstall -y --force \
     numpy \
     scipy \
     pandas \
-    matplotlib \
-    dask \
     distributed \
     fsspec \
     zarr \
@@ -20,11 +18,8 @@ conda uninstall -y --force \
     packaging \
     pint \
     bottleneck \
-    sparse \
     flox \
-    h5netcdf \
-    numcodecs \
-    xarray
+    numcodecs
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple \
