@@ -36,12 +36,17 @@ python -m pip install \
     --no-deps \
     --upgrade \
     --no-build-isolation \
+    git+https://github.com/Unidata/cftime
+python -m pip install \
+    --no-deps \
+    --upgrade \
+    --no-build-isolation \
     git+https://github.com/zarr-developers/numcodecs
 python -m pip install \
     --no-deps \
     --upgrade \
     --no-build-isolation \
-    git+https://github.com/Unidata/cftime
+    git+https://github.com/pydata/bottleneck
 python -m pip install \
     --no-deps \
     --upgrade \
@@ -50,7 +55,6 @@ python -m pip install \
     git+https://github.com/zarr-developers/zarr \
     git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/bottleneck \
     git+https://github.com/pydata/sparse \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
