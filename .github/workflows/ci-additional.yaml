@@ -76,11 +76,10 @@ jobs:
           # Raise an error if there are warnings in the doctests, with `-Werror`.
           # This is a trial; if it presents an problem, feel free to remove.
           # See https://github.com/pydata/xarray/issues/7164 for more info.
-
-          # ignores:
-          # 1. h5py: see https://github.com/pydata/xarray/issues/8537
-          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror \
-              -W "ignore:h5py is running against HDF5 1.14.3:UserWarning"
+          #
+          # If dependencies emit warnings we can't do anything about, add ignores to
+          # `xarray/tests/__init__.py`.
+          python -m pytest --doctest-modules xarray --ignore xarray/tests -Werror
 
   mypy:
     name: Mypy
