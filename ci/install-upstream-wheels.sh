@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # install cython for building cftime without build isolation
-micromamba install "cython>=0.29.20"
+micromamba install "cython>=0.29.20" py-cpuinfo
 # temporarily (?) remove numbagg and numba
 micromamba remove -y numba numbagg
 # temporarily remove backends
@@ -41,7 +41,11 @@ python -m pip install \
     --no-deps \
     --upgrade \
     --no-build-isolation \
-    git+https://github.com/zarr-developers/numcodecs \
+    git+https://github.com/zarr-developers/numcodecs
+python -m pip install \
+    --no-deps \
+    --upgrade \
+    --no-build-isolation \
     git+https://github.com/Unidata/cftime
 python -m pip install \
     --no-deps \
