@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -38,6 +38,14 @@ if TYPE_CHECKING:
     from xarray.core.types import CFCalendar
 
     T_Name = Union[Hashable, None]
+
+    # Copied from types.py to avoid a circular import
+    try:
+        from dask.array import Array as DaskArray
+    except ImportError:
+        DaskArray = np.ndarray  # type: ignore
+
+    T_NumPyOrDaskArray = TypeVar("T_NumPyOrDaskArray", np.ndarray, DaskArray)
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -705,11 +713,11 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
 
 
 def encode_cf_datetime(
-    dates,
+    dates: T_NumPyOrDaskArray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-):
+) -> tuple[T_NumPyOrDaskArray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
 
@@ -724,14 +732,18 @@ def encode_cf_datetime(
         return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
     elif is_duck_dask_array(dates):
         return _lazily_encode_cf_datetime(dates, units, calendar, dtype)
+    else:
+        raise ValueError(
+            f"dates provided have an unsupported array type: {type(dates)}."
+        )
 
 
 def _eagerly_encode_cf_datetime(
-    dates,
+    dates: np.ndarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-    called_via_map_blocks: bool = False,
+    allow_units_modification: bool = True,
 ) -> tuple[np.ndarray, str, str]:
     dates = np.asarray(dates)
 
@@ -782,7 +794,7 @@ def _eagerly_encode_cf_datetime(
                     f"Set encoding['dtype'] to integer dtype to serialize to int64. "
                     f"Set encoding['dtype'] to floating point dtype to silence this warning."
                 )
-            elif np.issubdtype(dtype, np.integer) and not called_via_map_blocks:
+            elif np.issubdtype(dtype, np.integer) and allow_units_modification:
                 new_units = f"{needed_units} since {format_timestamp(ref_date)}"
                 emit_user_level_warning(
                     f"Times can't be serialized faithfully to int64 with requested units {units!r}. "
@@ -806,18 +818,27 @@ def _eagerly_encode_cf_datetime(
     if dtype is not None:
         num = _cast_to_dtype_if_safe(num, dtype)
 
-    if called_via_map_blocks:
-        return num
-    else:
-        return num, units, calendar
+    return num, units, calendar
+
+
+def _encode_cf_datetime_within_map_blocks(
+    dates: np.ndarray,
+    units: str,
+    calendar: str,
+    dtype: np.dtype,
+) -> np.ndarray:
+    num, *_ = _eagerly_encode_cf_datetime(
+        dates, units, calendar, dtype, allow_units_modification=False
+    )
+    return num
 
 
 def _lazily_encode_cf_datetime(
-    dates,
+    dates: DaskArray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-):
+) -> tuple[DaskArray, str, str]:
     import dask.array
 
     if calendar is None:
@@ -841,32 +862,37 @@ def _lazily_encode_cf_datetime(
         )
 
     num = dask.array.map_blocks(
-        _eagerly_encode_cf_datetime,
+        _encode_cf_datetime_within_map_blocks,
         dates,
         units,
         calendar,
         dtype,
-        called_via_map_blocks=True,
         dtype=dtype,
     )
     return num, units, calendar
 
 
 def encode_cf_timedelta(
-    timedeltas, units: str | None = None, dtype: np.dtype | None = None
-):
+    timedeltas: T_NumPyOrDaskArray,
+    units: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[T_NumPyOrDaskArray, str]:
     timedeltas = asarray(timedeltas)
-    if is_duck_dask_array(timedeltas):
+    if isinstance(timedeltas, np.ndarray):
+        return _eagerly_encode_cf_timedelta(timedeltas, units, dtype)
+    elif is_duck_dask_array(timedeltas):
         return _lazily_encode_cf_timedelta(timedeltas, units, dtype)
     else:
-        return _eagerly_encode_cf_timedelta(timedeltas, units, dtype)
+        raise ValueError(
+            f"timedeltas provided have an unsupported array type: {type(timedeltas)}."
+        )
 
 
 def _eagerly_encode_cf_timedelta(
-    timedeltas,
+    timedeltas: np.ndarray,
     units: str | None = None,
     dtype: np.dtype | None = None,
-    called_via_map_blocks: bool = False,
+    allow_units_modification: bool = True,
 ) -> tuple[np.ndarray, str]:
     data_units = infer_timedelta_units(timedeltas)
 
@@ -894,7 +920,7 @@ def _eagerly_encode_cf_timedelta(
                 f"Set encoding['dtype'] to integer dtype to serialize to int64. "
                 f"Set encoding['dtype'] to floating point dtype to silence this warning."
             )
-        elif np.issubdtype(dtype, np.integer) and not called_via_map_blocks:
+        elif np.issubdtype(dtype, np.integer) and allow_units_modification:
             emit_user_level_warning(
                 f"Timedeltas can't be serialized faithfully with requested units {units!r}. "
                 f"Serializing with units {needed_units!r} instead. "
@@ -911,15 +937,23 @@ def _eagerly_encode_cf_timedelta(
     if dtype is not None:
         num = _cast_to_dtype_if_safe(num, dtype)
 
-    if called_via_map_blocks:
-        return num
-    else:
-        return num, units
+    return num, units
+
+
+def _encode_cf_timedelta_within_map_blocks(
+    timedeltas: np.ndarray,
+    units: str,
+    dtype: np.dtype,
+) -> np.ndarray:
+    num, _ = _eagerly_encode_cf_timedelta(
+        timedeltas, units, dtype, allow_units_modification=False
+    )
+    return num
 
 
 def _lazily_encode_cf_timedelta(
-    timedeltas, units: str | None = None, dtype: np.dtype | None = None
-):
+    timedeltas: DaskArray, units: str | None = None, dtype: np.dtype | None = None
+) -> tuple[DaskArray, str]:
     import dask.array
 
     if units is None and dtype is None:
@@ -936,11 +970,10 @@ def _lazily_encode_cf_timedelta(
         )
 
     num = dask.array.map_blocks(
-        _eagerly_encode_cf_timedelta,
+        _encode_cf_timedelta_within_map_blocks,
         timedeltas,
         units,
         dtype,
-        called_via_map_blocks=True,
         dtype=dtype,
     )
     return num, units
