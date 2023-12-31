@@ -75,6 +75,10 @@ class ConstructorTests(ArrayConstructorChecksMixin):
         self.check(var, arr)
 
 
+def is_real_floating(dtype):
+    return np.issubdtype(dtype, np.number) and np.issubdtype(dtype, np.floating)
+
+
 class ReduceTests:
     dtypes = xrst.supported_dtypes()
 
@@ -103,34 +107,35 @@ class ReduceTests:
         assert_identical(actual, expected)
 
     @pytest.mark.parametrize(
-        "method",
+        "method, dtype_assumption",
         (
-            "all",
-            "any",
+            ("all", lambda x: True),  # should work for any dtype
+            ("any", lambda x: True),  # should work for any dtype
             # "cumprod",  # not in array API
             # "cumsum",  # not in array API
-            # "max",  # only in array API for real numeric dtypes
-            # "max",  # only in array API for real floating point dtypes
+            ("max", is_real_floating),  # only in array API for real numeric dtypes
             # "median",  # not in array API
-            # "min",  # only in array API for real numeric dtypes
-            # "prod",  # only in array API for numeric dtypes
+            ("min", is_real_floating),  # only in array API for real numeric dtypes
+            ("prod", is_real_floating),  # only in array API for real numeric dtypes
             # "std",  # TypeError: std() got an unexpected keyword argument 'ddof'
-            # "sum",  # only in array API for numeric dtypes
+            ("sum", is_real_floating),  # only in array API for real numeric dtypes
             # "var",  # TypeError: std() got an unexpected keyword argument 'ddof'
         ),
     )
     @given(st.data())
-    def test_reduce_variable(self, method, data):
+    def test_reduce_variable(self, method, dtype_assumption, data):
         """
         Test that the reduction applied to an xarray Variable is always equal
         to the same reduction applied to the underlying array.
         """
 
+        narrowed_dtypes = self.dtypes.filter(dtype_assumption)
+
         var = data.draw(
             xrst.variables(
                 array_strategy_fn=self.array_strategy_fn,
                 dims=xrst.dimension_names(min_dims=1),
-                dtype=self.dtypes,
+                dtype=narrowed_dtypes,
             )
         )
 
