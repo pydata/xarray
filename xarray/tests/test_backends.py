@@ -2818,6 +2818,15 @@ class ZarrBase(CFEncodedBase):
                 assert original[name].chunks == actual_var.chunks
             assert original.chunks == actual.chunks
 
+    @requires_dask
+    def test_chunked_timedelta64(self) -> None:
+        # Based @malmans2's datetime64[ns] test in PR #8253
+        original = create_test_data().astype("timedelta64[ns]").chunk(1)
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
+            for name, actual_var in actual.variables.items():
+                assert original[name].chunks == actual_var.chunks
+            assert original.chunks == actual.chunks
+
     def test_vectorized_indexing_negative_step(self) -> None:
         if not has_dask:
             pytest.xfail(
