@@ -117,6 +117,15 @@ Bug fixes
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
+  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
+  :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
+  `Mattia Almansi <https://github.com/malmans2`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
