@@ -1414,7 +1414,7 @@ _ENCODE_DATETIME64_VIA_DASK_TESTS = {
     _ENCODE_DATETIME64_VIA_DASK_TESTS.values(),
     ids=_ENCODE_DATETIME64_VIA_DASK_TESTS.keys(),
 )
-def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype):
+def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype) -> None:
     import dask.array
 
     times = pd.date_range(start="1700", freq=freq, periods=3)
@@ -1449,7 +1449,9 @@ def test_encode_cf_datetime_datetime64_via_dask(freq, units, dtype):
         (pd.timedelta_range, "0D", "days", None),
     ],
 )
-def test_encode_via_dask_cannot_infer_error(range_function, start, units, dtype):
+def test_encode_via_dask_cannot_infer_error(
+    range_function, start, units, dtype
+) -> None:
     values = range_function(start=start, freq="D", periods=3)
     encoding = dict(units=units, dtype=dtype)
     variable = Variable(["time"], values, encoding=encoding).chunk({"time": 1})
@@ -1462,7 +1464,7 @@ def test_encode_via_dask_cannot_infer_error(range_function, start, units, dtype)
 @pytest.mark.parametrize(
     ("units", "dtype"), [("days since 1700-01-01", np.dtype("int32")), (None, None)]
 )
-def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype):
+def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     import dask.array
 
     calendar = "standard"
@@ -1494,7 +1496,7 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype):
     "use_cftime", [False, pytest.param(True, marks=requires_cftime)]
 )
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_datetime_casting_value_error(use_cftime, use_dask):
+def test_encode_cf_datetime_casting_value_error(use_cftime, use_dask) -> None:
     times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
     encoding = dict(units="days since 2000-01-01", dtype=np.dtype("int64"))
     variable = Variable(["time"], times, encoding=encoding)
@@ -1521,7 +1523,7 @@ def test_encode_cf_datetime_casting_value_error(use_cftime, use_dask):
 )
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
 @pytest.mark.parametrize("dtype", [np.dtype("int16"), np.dtype("float16")])
-def test_encode_cf_datetime_casting_overflow_error(use_cftime, use_dask, dtype):
+def test_encode_cf_datetime_casting_overflow_error(use_cftime, use_dask, dtype) -> None:
     # Regression test for GitHub issue #8542
     times = date_range(start="2018", freq="5h", periods=3, use_cftime=use_cftime)
     encoding = dict(units="microseconds since 2018-01-01", dtype=dtype)
@@ -1539,7 +1541,7 @@ def test_encode_cf_datetime_casting_overflow_error(use_cftime, use_dask, dtype):
 @pytest.mark.parametrize(
     ("units", "dtype"), [("days", np.dtype("int32")), (None, None)]
 )
-def test_encode_cf_timedelta_via_dask(units, dtype):
+def test_encode_cf_timedelta_via_dask(units, dtype) -> None:
     import dask.array
 
     times = pd.timedelta_range(start="0D", freq="D", periods=3)
@@ -1561,7 +1563,7 @@ def test_encode_cf_timedelta_via_dask(units, dtype):
 
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
-def test_encode_cf_timedelta_casting_value_error(use_dask):
+def test_encode_cf_timedelta_casting_value_error(use_dask) -> None:
     timedeltas = pd.timedelta_range(start="0h", freq="12h", periods=3)
     encoding = dict(units="days", dtype=np.dtype("int64"))
     variable = Variable(["time"], timedeltas, encoding=encoding)
@@ -1585,7 +1587,7 @@ def test_encode_cf_timedelta_casting_value_error(use_dask):
 
 @pytest.mark.parametrize("use_dask", [False, pytest.param(True, marks=requires_dask)])
 @pytest.mark.parametrize("dtype", [np.dtype("int16"), np.dtype("float16")])
-def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype):
+def test_encode_cf_timedelta_casting_overflow_error(use_dask, dtype) -> None:
     timedeltas = pd.timedelta_range(start="0h", freq="5h", periods=3)
     encoding = dict(units="microseconds", dtype=dtype)
     variable = Variable(["time"], timedeltas, encoding=encoding)
