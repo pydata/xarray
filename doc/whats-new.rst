@@ -44,6 +44,10 @@ Bug fixes
 
 - Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling lazy CF
+  encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
+  :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
+  `Mattia Almansi <https://github.com/malmans2`_.
 
 
 Documentation

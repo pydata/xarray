@@ -668,6 +668,42 @@ def _division(deltas, delta, floor):
     return num
 
 
+def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="overflow")
+        cast_num = np.asarray(num, dtype=dtype)
+
+    if np.issubdtype(dtype, np.integer):
+        if not (num == cast_num).all():
+            if np.issubdtype(num.dtype, np.floating):
+                raise ValueError(
+                    f"Not possible to cast all encoded times from "
+                    f"{num.dtype!r} to {dtype!r} without losing precision. "
+                    f"Consider modifying the units such that integer values "
+                    f"can be used, or removing the units and dtype encoding, "
+                    f"at which point xarray will make an appropriate choice."
+                )
+            else:
+                raise OverflowError(
+                    f"Not possible to cast encoded times from "
+                    f"{num.dtype!r} to {dtype!r} without overflow. Consider "
+                    f"removing the dtype encoding, at which point xarray will "
+                    f"make an appropriate choice, or explicitly switching to "
+                    "a larger integer dtype."
+                )
+    else:
+        if np.isinf(cast_num).any():
+            raise OverflowError(
+                f"Not possible to cast encoded times from {num.dtype!r} to "
+                f"{dtype!r} without overflow.  Consider removing the dtype "
+                f"encoding, at which point xarray will make an appropriate "
+                f"choice, or explicitly switching to a larger floating point "
+                f"dtype."
+            )
+
+    return cast_num
+
+
 def encode_cf_datetime(
     dates,
     units: str | None = None,
@@ -688,43 +724,6 @@ def encode_cf_datetime(
         return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
     elif is_duck_dask_array(dates):
         return _lazily_encode_cf_datetime(dates, units, calendar, dtype)
-
-
-def _cast_to_dtype_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="overflow")
-        cast_num = np.asarray(num, dtype=dtype)
-
-    if np.issubdtype(dtype, np.integer):
-        if not (num == cast_num).all():
-            if np.issubdtype(num.dtype, np.floating):
-                raise ValueError(
-                    f"Not possible to cast all encoded times from dtype "
-                    f"{num.dtype!r} to integer dtype {dtype!r} without losing "
-                    f"precision. Consider modifying the units such that "
-                    f"integer values can be used, or removing the units and "
-                    f"dtype encoding, at which point xarray will make an "
-                    f"appropriate choice."
-                )
-            else:
-                raise OverflowError(
-                    f"Not possible to cast encoded times from dtype "
-                    f"{num.dtype!r} to dtype {dtype!r} without overflow. "
-                    f"Consider removing the dtype encoding, at which point "
-                    f"xarray will make an appropriate choice, or explicitly "
-                    f"switching to a larger integer dtype."
-                )
-    else:
-        if np.isinf(cast_num).any():
-            raise OverflowError(
-                f"Not possible to cast encoded times from dtype {num.dtype!r} "
-                f"to dtype {dtype!r} without overflow.  Consider removing the "
-                f"dtype encoding, at which point xarray will make an "
-                f"appropriate choice, or explicitly switching to a larger "
-                f"floating point dtype."
-            )
-
-    return cast_num
 
 
 def _eagerly_encode_cf_datetime(
@@ -805,7 +804,7 @@ def _eagerly_encode_cf_datetime(
         num = cast_to_int_if_safe(num)
 
     if dtype is not None:
-        num = _cast_to_dtype_safe(num, dtype)
+        num = _cast_to_dtype_if_safe(num, dtype)
 
     if called_via_map_blocks:
         return num
@@ -910,7 +909,7 @@ def _eagerly_encode_cf_timedelta(
     num = num.values.reshape(timedeltas.shape)
 
     if dtype is not None:
-        num = _cast_to_dtype_safe(num, dtype)
+        num = _cast_to_dtype_if_safe(num, dtype)
 
     if called_via_map_blocks:
         return num
