@@ -121,6 +121,11 @@ Bug fixes
   encoding of time-like variables (:issue:`7132`, :issue:`8230`, :issue:`8432`,
   :pull:`8575`). By `Spencer Clark <https://github.com/spencerkclark>`_ and
   `Mattia Almansi <https://github.com/malmans2>`_.
+- Preserve chunks when writing time-like variables to zarr by enabling their
+  lazy encoding (:issue:`7132`, :issue:`8230`, :issue:`8432`, :pull:`8253`,
+  :pull:`8575`; see also discussion in :pull:`8253`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mattia Almansi
+  <https://github.com/malmans2>`_.
 - Raise an informative error if dtype encoding of time-like variables would
   lead to integer overflow or unsafe conversion from floating point to integer
   values (:issue:`8542`, :pull:`8575`).  By `Spencer Clark
