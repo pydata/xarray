@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Callable, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Union, overload
 
 import numpy as np
 import pandas as pd
@@ -24,8 +24,9 @@ from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import asarray
 from xarray.core.formatting import first_n_items, format_timestamp, last_item
+from xarray.core.parallelcompat import T_ChunkedArray, get_chunked_array_type
 from xarray.core.pdcompat import nanosecond_precision_timestamp
-from xarray.core.pycompat import is_duck_dask_array
+from xarray.core.pycompat import is_chunked_array, is_duck_array, is_duck_dask_array
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 
@@ -38,14 +39,6 @@ if TYPE_CHECKING:
     from xarray.core.types import CFCalendar
 
     T_Name = Union[Hashable, None]
-
-    # Copied from types.py to avoid a circular import
-    try:
-        from dask.array import Array as DaskArray
-    except ImportError:
-        DaskArray = np.ndarray  # type: ignore
-
-    T_NumPyOrDaskArray = TypeVar("T_NumPyOrDaskArray", np.ndarray, DaskArray)
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -712,12 +705,32 @@ def _cast_to_dtype_if_safe(num: np.ndarray, dtype: np.dtype) -> np.ndarray:
     return cast_num
 
 
+@overload
 def encode_cf_datetime(
-    dates: T_NumPyOrDaskArray,
+    dates: np.ndarray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[T_NumPyOrDaskArray, str, str]:
+) -> tuple[np.ndarray, str, str]:
+    ...
+
+
+@overload
+def encode_cf_datetime(
+    dates: T_ChunkedArray,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[T_ChunkedArray, str, str]:
+    ...
+
+
+def encode_cf_datetime(
+    dates: np.ndarray | T_ChunkedArray,
+    units: str | None = None,
+    calendar: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[np.ndarray | T_ChunkedArray, str, str]:
     """Given an array of datetime objects, returns the tuple `(num, units,
     calendar)` suitable for a CF compliant time variable.
 
@@ -728,10 +741,10 @@ def encode_cf_datetime(
     cftime.date2num
     """
     dates = asarray(dates)
-    if isinstance(dates, np.ndarray):
-        return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
-    elif is_duck_dask_array(dates):
+    if is_chunked_array(dates):
         return _lazily_encode_cf_datetime(dates, units, calendar, dtype)
+    elif is_duck_array(dates):
+        return _eagerly_encode_cf_datetime(dates, units, calendar, dtype)
     else:
         raise ValueError(
             f"dates provided have an unsupported array type: {type(dates)}."
@@ -834,13 +847,11 @@ def _encode_cf_datetime_within_map_blocks(
 
 
 def _lazily_encode_cf_datetime(
-    dates: DaskArray,
+    dates: T_ChunkedArray,
     units: str | None = None,
     calendar: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[DaskArray, str, str]:
-    import dask.array
-
+) -> tuple[T_ChunkedArray, str, str]:
     if calendar is None:
         # This will only trigger minor compute if dates is an object dtype array.
         calendar = infer_calendar_name(dates)
@@ -861,7 +872,8 @@ def _lazily_encode_cf_datetime(
             f"Got a units encoding of {units} and a dtype encoding of {dtype}."
         )
 
-    num = dask.array.map_blocks(
+    chunkmanager = get_chunked_array_type(dates)
+    num = chunkmanager.map_blocks(
         _encode_cf_datetime_within_map_blocks,
         dates,
         units,
@@ -872,16 +884,34 @@ def _lazily_encode_cf_datetime(
     return num, units, calendar
 
 
+@overload
 def encode_cf_timedelta(
-    timedeltas: T_NumPyOrDaskArray,
+    timedeltas: np.ndarray,
     units: str | None = None,
     dtype: np.dtype | None = None,
-) -> tuple[T_NumPyOrDaskArray, str]:
+) -> tuple[np.ndarray, str]:
+    ...
+
+
+@overload
+def encode_cf_timedelta(
+    timedeltas: T_ChunkedArray,
+    units: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[T_ChunkedArray, str]:
+    ...
+
+
+def encode_cf_timedelta(
+    timedeltas: np.ndarray | T_ChunkedArray,
+    units: str | None = None,
+    dtype: np.dtype | None = None,
+) -> tuple[np.ndarray | T_ChunkedArray, str]:
     timedeltas = asarray(timedeltas)
-    if isinstance(timedeltas, np.ndarray):
-        return _eagerly_encode_cf_timedelta(timedeltas, units, dtype)
-    elif is_duck_dask_array(timedeltas):
+    if is_chunked_array(timedeltas):
         return _lazily_encode_cf_timedelta(timedeltas, units, dtype)
+    elif is_duck_array(timedeltas):
+        return _eagerly_encode_cf_timedelta(timedeltas, units, dtype)
     else:
         raise ValueError(
             f"timedeltas provided have an unsupported array type: {type(timedeltas)}."
@@ -952,10 +982,8 @@ def _encode_cf_timedelta_within_map_blocks(
 
 
 def _lazily_encode_cf_timedelta(
-    timedeltas: DaskArray, units: str | None = None, dtype: np.dtype | None = None
-) -> tuple[DaskArray, str]:
-    import dask.array
-
+    timedeltas: T_ChunkedArray, units: str | None = None, dtype: np.dtype | None = None
+) -> tuple[T_ChunkedArray, str]:
     if units is None and dtype is None:
         units = "nanoseconds"
         dtype = np.dtype("int64")
@@ -969,7 +997,8 @@ def _lazily_encode_cf_timedelta(
             f"dtype encoding of {dtype}."
         )
 
-    num = dask.array.map_blocks(
+    chunkmanager = get_chunked_array_type(timedeltas)
+    num = chunkmanager.map_blocks(
         _encode_cf_timedelta_within_map_blocks,
         timedeltas,
         units,
