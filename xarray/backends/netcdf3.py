@@ -66,7 +66,17 @@ def coerce_nc3_dtype(arr):
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
             raise ValueError(
-                f"could not safely cast array from dtype {dtype} to {new_dtype}"
+                f"could not safely cast array from dtype {dtype} to "
+                f"{new_dtype}. A subtle cause for this can be chunked "
+                f"variables containing time-like values without explicitly "
+                f"defined dtype and units encoding values, for which "
+                f"xarray will attempt encoding with int64 values and "
+                f"maximally fine-grain units, e.g. "
+                f"'nanoseconds since 1970-01-01'. To address this, specify "
+                f"a dtype and units encoding for these variables such that "
+                f"they can be encoded with int32 values. For example, use "
+                f"units like 'seconds since 1970-01-01' and a dtype of "
+                f"np.int32 if appropriate."
             )
         arr = cast_arr
     return arr
