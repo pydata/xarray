@@ -71,10 +71,17 @@ with warnings.catch_warnings():
         message="'cgi' is deprecated and slated for removal in Python 3.13",
         category=DeprecationWarning,
     )
-
     has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
-has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+with warnings.catch_warnings():
+    # see https://github.com/pydata/xarray/issues/8537
+    warnings.filterwarnings(
+        "ignore",
+        message="h5py is running against HDF5 1.14.3",
+        category=UserWarning,
+    )
+
+    has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
@@ -84,7 +91,14 @@ has_zarr, requires_zarr = _importorskip("zarr")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg", "0.4.0")
-has_seaborn, requires_seaborn = _importorskip("seaborn")
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message="is_categorical_dtype is deprecated and will be removed in a future version.",
+        category=DeprecationWarning,
+    )
+    # seaborn uses the deprecated `pandas.is_categorical_dtype`
+    has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
