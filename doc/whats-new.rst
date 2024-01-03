@@ -52,7 +52,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
+- The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
+  This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
+  Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
