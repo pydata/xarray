@@ -414,8 +414,9 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
 
     @property
     def can_squeeze(self) -> bool:
+        is_resampler = isinstance(self.grouper, TimeResampleGrouper)
         is_dimension = self.group.dims == (self.group.name,)
-        return is_dimension and self.is_unique_and_monotonic
+        return not is_resampler and is_dimension and self.is_unique_and_monotonic
 
 
 @dataclass

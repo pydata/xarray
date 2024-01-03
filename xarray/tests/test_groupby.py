@@ -1786,6 +1786,10 @@ class TestDataArrayResample:
         times = pd.date_range("2000-01-01", freq="6h", periods=10)
         array = DataArray(np.arange(10), [("time", times)])
 
+        # resample to same frequency
+        actual = array.resample(time="6h").first()
+        assert_identical(array, actual)
+
         actual = array.resample(time="1D").first()
         expected = DataArray([0, 4, 8], [("time", times[::4])])
         assert_identical(expected, actual)
