@@ -1865,11 +1865,12 @@ def initialize_zarr(
     """
     Initialize a Zarr store with metadata.
 
-    This function initializes a Zarr store with metadata that describes the entire datasets.
+    This function initializes a Zarr store with all indexed coordinate variables, and
+    metadata for every variable in the dataset.
     If ``region_dims`` is specified, it will also
-    1. Write variables that don't contain any of ``region_dims`` & indexes on the ``region_dims``, and
-    2. Return a dataset with the remaining variables, which contain one or more of ``region_dims``.
-       This dataset can be used for region writes in parallel.
+      1. Write variables that don't have any of ``region_dims``, and
+      2. Return a dataset with the remaining variables, which contain one or more of ``region_dims``.
+         This dataset can then be used for region writes in parallel.
 
     Parameters
     ----------
@@ -1882,6 +1883,23 @@ def initialize_zarr(
         kwarg of ``to_zarr`` later.
     mode : {'w', 'w-'}
         Write mode for initializing the store.
+        - "w" means create (overwrite if exists);
+        - "w-" means create (fail if exists);
+    zarr_version : int or None, optional
+        The desired zarr spec version to target (currently 2 or 3). The
+        default of None will attempt to determine the zarr version from
+        ``store`` when possible, otherwise defaulting to 2.
+    consolidated : bool, optional
+        If True, apply zarr's `consolidate_metadata` function to the store
+        after writing metadata and read existing stores with consolidated
+        metadata; if False, do not. The default (`consolidated=None`) means
+        write consolidated metadata and attempt to read consolidated
+        metadata for existing stores (falling back to non-consolidated).
+
+        When the experimental ``zarr_version=3``, ``consolidated`` must be
+        either be ``None`` or ``False``.
+    **kwargs
+        Passed on to to_zarr
 
     Returns
     -------
@@ -1912,6 +1930,9 @@ def initialize_zarr(
         # default to 2 if store doesn't specify it's version (e.g. a path)
         zarr_version = int(getattr(store, "_store_version", 2))
 
+    # The design here is to write to an in-memory temporary store,
+    # and flush that to the actual `store`. This is a major improvement
+    # for V3 high-latency stores (e.g. cloud buckets)
     if zarr_version == 2:
         temp_store = zarr.MemoryStore()
     elif zarr_version == 3:
@@ -1932,12 +1953,16 @@ def initialize_zarr(
             storage_options=kwargs.get("storage_options", None),
         )
         # TODO: Handle mode="w-", this isn't raising an error yet.
+
     if TYPE_CHECKING:
         assert isinstance(store, MutableMapping)
 
     # Use this to open the group once with all the expected default options
     # We will reuse xzstore.zarr_group later.
-    xzstore = backends.ZarrStore.open_group(
+    # From zarr docs
+    #     - ‘w’ means create (overwrite if exists);
+    #     - ‘w-’ means create (fail if exists).
+    xtempstore = backends.ZarrStore.open_group(
         temp_store,
         mode="w",  # always write to the temp store
         zarr_version=zarr_version,
@@ -1945,15 +1970,23 @@ def initialize_zarr(
         **kwargs,
     )
 
-    # write the data for these variables.
-    vars_to_write = []
-    for k, v in ds._variables.items():
-        if k in ds.dims or not (set(v.dims) & set(region_dims)):
-            vars_to_write.append(k)
+    all_variables = set(ds._variables)
+    # TODO: how do we work with the new index API?
+    index_vars = {dim for dim in ds.dims if dim in all_variables}
+    vars_without_region = {
+        key
+        for key in all_variables - index_vars
+        if (not (set(ds._variables[key].dims) & set(region_dims)))
+    }
+    chunked_vars_without_region = {
+        key for key in vars_without_region if is_chunked_array(ds._variables[key])
+    }
 
+    # Always write index variables, and any in-memory variables without region dims
+    eager_write_vars = index_vars | (vars_without_region - chunked_vars_without_region)
     write_to_zarr_store(
-        ds[vars_to_write],
-        xzstore,
+        ds[eager_write_vars],
+        xtempstore,
         encoding=kwargs.get("encoding", None),
         compute=True,
         chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
@@ -1962,7 +1995,9 @@ def initialize_zarr(
     if "encoding" in kwargs:
         raise NotImplementedError
 
-    # Now initialize the arrays we have not written.
+    # Now initialize the arrays we have not written yet with metadata
+    # but skip any chunked vars without the region, these will get written later
+    vars_to_init = (all_variables - eager_write_vars) - chunked_vars_without_region
     array_kwargs = {
         key: kwargs[key]
         for key in ["safe_chunks", "write_empty", "raise_on_invalid"]
@@ -1971,9 +2006,9 @@ def initialize_zarr(
     array_kwargs.setdefault("write_empty", False)
     if mode == "w":
         array_kwargs.setdefault("overwrite", True)
-    for var in set(ds.variables) - set(vars_to_write):
-        encoded = encode_zarr_variable(ds.variables[var])
-        add_array_to_store(var, encoded, group=xzstore.zarr_group, **array_kwargs)
+    for var in vars_to_init:
+        encoded = encode_zarr_variable(ds._variables[var])
+        add_array_to_store(var, encoded, group=xtempstore.zarr_group, **array_kwargs)
 
     if zarr_version == 2 and consolidated in (True, None):
         zarr.consolidate_metadata(temp_store)
@@ -1987,14 +2022,26 @@ def initialize_zarr(
 
     # Return a Dataset that can be easily used for further region writes.
     if region_dims:
-        needed_dims = set(
-            # itertools.chain(*[ds.variables[var].dims for var in vars_to_write])
-        )
-        to_drop = [
-            var
-            for var in vars_to_write
-            if var not in region_dims and var not in needed_dims and var in ds.variables
-        ]
+        # Write any variables that don't overlap with region dimensions
+        # Note that these are potentially quite big dask arrays, so we
+        # do not want to write these to the MemoryStore first.
+        if chunked_vars_without_region:
+            xstore = backends.ZarrStore.open_group(
+                store,
+                mode="a-",  # append new variables, don't overwrite indexes
+                zarr_version=zarr_version,
+                consolidated=consolidated,
+                **kwargs,
+            )
+            write_to_zarr_store(
+                ds[tuple(chunked_vars_without_region)],
+                xstore,
+                encoding=kwargs.get("encoding", None),
+                compute=True,
+                chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
+            )
+
+        to_drop = (eager_write_vars | chunked_vars_without_region) - index_vars
         return ds.drop_vars(to_drop)
 
     else:

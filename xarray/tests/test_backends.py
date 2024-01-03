@@ -5500,6 +5500,30 @@ def test_initialize_zarr_modes(tmp_path):
     initialize_zarr(ds, store, mode="w")
 
 
+def split_by_chunks(dataset, dims=None):
+    # adapted from https://github.com/pydata/xarray/issues/1093#issuecomment-259213382
+    if not dims:
+        return None
+    chunksizes = dataset.chunksizes
+    if dims is None:
+        dims = set(chunksizes)
+    elif not set(dims).issubset(dataset.dims):
+        raise ValueError
+
+    def iterate_single(dim):
+        start = 0
+        for chunk in chunksizes[dim]:
+            stop = start + chunk
+            slicer = slice(start, stop)
+            start = stop
+            yield slicer
+
+    iterators = tuple((s for s in iterate_single(dim)) for dim in dims)
+    for slices in itertools.product(*iterators):
+        selection = dict(zip(dims, slices))
+        yield (selection, dataset.isel(selection))
+
+
 @requires_dask
 @requires_zarr
 @pytest.mark.parametrize(
@@ -5515,34 +5539,33 @@ def test_initialize_zarr(
 
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
-    data = dask.array.full((5, 10), 10, chunks=(1, -1))
+    data = dask.array.full((5, 10), 10.0, chunks=(1, 5))
+    eager = data.compute()
     ds = xr.Dataset(
         {
             "xy": (("x", "y"), data),
             "xonly": ("x", data[:, 0]),
-            # var with different chunksize along 'y'
-            "yonly": ("y", data[0, :].rechunk(5)),
-            "eager_xonly": ("x", data[:, 0].compute()),
-            "eager_yonly": ("y", data[0, :].compute().astype(int)),
+            "yonly": ("y", data[0, :]),
+            "eager_xy": (("x", "y"), eager * 2),
+            "eager_xonly": ("x", eager[:, 0]),
+            "eager_yonly": ("y", eager[0, :]),
             "scalar": 2,
         },
         coords={"x": x, "y": y, "foo": ("z", [1, 2, 3])},
+        attrs={"global": "attribute"},
     )
 
     fillvalues = dict(zip(ds.data_vars, np.arange(len(ds.data_vars)) + 1))
     for varname, fv in fillvalues.items():
         ds[varname].encoding["_FillValue"] = fv
+        ds[varname].encoding["dtype"] = np.int32
 
     vars_with_region = {
         name for name, var in ds.data_vars.items() if set(var.dims) & set(region_dims)
     }
     vars_without_region = set(ds.data_vars) - vars_with_region
 
-    expected_after_init = (
-        ds[vars_with_region].drop_vars(set(ds.dims) - set(region_dims), errors="ignore")
-        if region_dims
-        else ds
-    )
+    expected_after_init = ds[vars_with_region] if region_dims else ds
     after_init = initialize_zarr(
         ds,
         store,
@@ -5554,6 +5577,7 @@ def test_initialize_zarr(
 
     expected_on_disk = (
         ds.copy(deep=True)
+        .astype(np.int32)
         .assign(
             # variables sharing dimensions with `region_dims` are all fill_value.
             {
@@ -5571,18 +5595,22 @@ def test_initialize_zarr(
     with xr.open_zarr(store, zarr_version=zarr_version, mask_and_scale=False) as actual:
         assert_identical(expected_on_disk, actual)
 
-    # explicit region
-    if len(region_dims) == 1:
-        (dim,) = region_dims
-        for i in range(ds.sizes[dim]):
-            after_init.isel({dim: [i]}).to_zarr(
-                store, zarr_version=zarr_version, region={dim: slice(i, i + 1)}
-            )
-        with xr.open_zarr(store, zarr_version=zarr_version) as actual:
-            assert_identical(ds, actual)
+    # region is explicitly specified.
+    for selection, block in split_by_chunks(after_init, dims=region_dims):
+        block.to_zarr(
+            store,
+            zarr_version=zarr_version,
+            region=selection,
+        )
+    with xr.open_zarr(store, zarr_version=zarr_version) as actual:
+        assert_identical(ds, actual)
 
-        # region = "auto"
-        # for i in range(ds.sizes[dim]):
-        #     after_init.isel({dim: [i]}).to_zarr(store, region="auto")
-        # with xr.open_zarr(store, consolidated=False) as actual:
-        #     assert_identical(ds, actual)
+    # region="auto"
+    for _, block in split_by_chunks(after_init, dims=region_dims):
+        block.to_zarr(
+            store,
+            zarr_version=zarr_version,
+            region="auto",
+        )
+    with xr.open_zarr(store, zarr_version=zarr_version) as actual:
+        assert_identical(ds, actual)
