@@ -1856,7 +1856,7 @@ def write_to_zarr_store(dataset, store, encoding, compute, chunkmanager_store_kw
 
 def initialize_zarr(
     ds: Dataset,
-    store: MutableMapping | None = None,
+    store: MutableMapping,
     *,
     region_dims: Iterable[Hashable] = tuple(),
     mode: Literal["w", "w-"] = "w-",
@@ -1879,8 +1879,8 @@ def initialize_zarr(
     ----------
     ds : Dataset
         Dataset to write.
-    store : MutableMapping or str (optional)
-        Zarr store to write to. If not provided, will use a Zarr MemoryStore
+    store : MutableMapping or str)
+        Zarr store to write to.
     region_dims : Iterable[Hashable], optional
         An iterable of dimension names that will be passed to the ``region``
         kwarg of ``to_zarr`` later.
@@ -1921,6 +1921,7 @@ def initialize_zarr(
 
     if encoding is None:
         encoding = {}
+
     if "compute" in kwargs:
         raise ValueError("The ``compute`` kwarg is not supported in `initialize_zarr`.")
 
@@ -1948,32 +1949,24 @@ def initialize_zarr(
     else:
         raise ValueError(f"Invalid zarr_version={zarr_version}.")
 
-    if store is None:
-        store = temp_store
-    else:
-        # Needed to handle `store` being a string path
-        store = zarr.hierarchy.normalize_store_arg(
+    # Needed to handle `store` being a string path
+    store = zarr.hierarchy.normalize_store_arg(
+        store,
+        zarr_version=zarr_version,
+        mode=mode,
+        storage_options=kwargs.get("storage_options", None),
+    )
+    if mode == "w-":
+        # assert that the path does not already exist
+        zarr.open_group(
             store,
-            zarr_version=zarr_version,
             mode=mode,
             storage_options=kwargs.get("storage_options", None),
+            path=kwargs.get("group", None),
         )
-        if mode == "w-":
-            zarr.open_group(
-                store,
-                mode=mode,
-                storage_options=kwargs.get("storage_options", None),
-                path=kwargs.get("group", None),
-            )
-
-    if TYPE_CHECKING:
-        assert isinstance(store, MutableMapping)
 
     # Use this to open the group once with all the expected default options
     # We will reuse xzstore.zarr_group later.
-    # From zarr docs
-    #     - ‘w’ means create (overwrite if exists);
-    #     - ‘w-’ means create (fail if exists).
     xtempstore = backends.ZarrStore.open_group(
         temp_store,
         mode="w",  # always write to the temp store
@@ -2042,12 +2035,11 @@ def initialize_zarr(
     if zarr_version == 2 and consolidated in (True, None):
         zarr.consolidate_metadata(temp_store)
 
-    # if a store was provided, flush the temp store there at once
-    if store is not temp_store:
-        try:
-            store.setitems(temp_store)  # type: ignore[attr-defined]
-        except AttributeError:  # not all stores have setitems :(
-            store.update(temp_store)
+    # flush the temp store there at once
+    try:
+        store.setitems(temp_store)  # type: ignore[attr-defined]
+    except AttributeError:  # not all stores have setitems :(
+        store.update(temp_store)
 
     # Return a Dataset that can be easily used for further region writes.
     if region_dims:
