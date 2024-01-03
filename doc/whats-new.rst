@@ -44,6 +44,8 @@ Bug fixes
 
 - Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fork `SerializableLock` from dask and use as default lock for netcdf4 backends (:issue:`8442`, :pull:`8571`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
