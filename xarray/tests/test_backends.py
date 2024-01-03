@@ -2232,10 +2232,10 @@ class ZarrBase(CFEncodedBase):
             pass
 
     def test_drop_encoding(self):
-        ds = open_example_dataset("example_1.nc")
-        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
-        with self.create_zarr_target() as store:
-            ds.to_zarr(store, encoding=encodings)
+        with open_example_dataset("example_1.nc") as ds:
+            encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+            with self.create_zarr_target() as store:
+                ds.to_zarr(store, encoding=encodings)
 
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
@@ -5335,8 +5335,8 @@ class TestNCZarr:
 @requires_netCDF4
 @requires_dask
 def test_pickle_open_mfdataset_dataset():
-    ds = open_example_mfdataset(["bears.nc"])
-    assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+    with open_example_mfdataset(["bears.nc"]) as ds:
+        assert_identical(ds, pickle.loads(pickle.dumps(ds)))
 
 
 @requires_zarr
