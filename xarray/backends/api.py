@@ -1958,7 +1958,13 @@ def initialize_zarr(
             mode=mode,
             storage_options=kwargs.get("storage_options", None),
         )
-        # TODO: Handle mode="w-", this isn't raising an error yet.
+        if mode == "w-":
+            zarr.open_group(
+                store,
+                mode=mode,
+                storage_options=kwargs.get("storage_options", None),
+                path=kwargs.get("group", None),
+            )
 
     if TYPE_CHECKING:
         assert isinstance(store, MutableMapping)
