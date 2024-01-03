@@ -5530,12 +5530,22 @@ def split_by_chunks(dataset, dims=None):
     "zarr_version, consolidated", ((2, True), (2, None), (3, None), (None, None))
 )
 @pytest.mark.parametrize("region_dims", ((), ("x",), ("y",), ("x", "y")))
+@pytest.mark.parametrize(
+    "encoding", (None, {}, {"xy": {"_FillValue": 1, "dtype": np.int64}})
+)
 def test_initialize_zarr(
-    region_dims: tuple, zarr_version: int | None, consolidated: bool | None, tmp_path
+    region_dims: tuple,
+    zarr_version: int | None,
+    consolidated: bool | None,
+    encoding: None | dict,
+    tmp_path,
 ) -> None:
     # TODO:
     # 1. with encoding
+    # 2. non-dim coordinate var encoding
     store = tmp_path / "foo.zarr"
+    expected_store = tmp_path / "expected.zarr"
+    kwargs = dict(zarr_version=zarr_version, consolidated=consolidated)
 
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
@@ -5559,19 +5569,17 @@ def test_initialize_zarr(
     for varname, fv in fillvalues.items():
         ds[varname].encoding["_FillValue"] = fv
         ds[varname].encoding["dtype"] = np.int32
+    ds.to_zarr(expected_store, **kwargs)
 
     vars_with_region = {
         name for name, var in ds.data_vars.items() if set(var.dims) & set(region_dims)
     }
     vars_without_region = set(ds.data_vars) - vars_with_region
 
-    expected_after_init = ds[vars_with_region] if region_dims else ds
+    expected_after_init = ds[vars_with_region] if region_dims else ds.copy(deep=False)
+    expected_after_init.attrs["coordinates"] = "foo"
     after_init = initialize_zarr(
-        ds,
-        store,
-        region_dims=region_dims,
-        zarr_version=zarr_version,
-        consolidated=consolidated,
+        ds, store, region_dims=region_dims, encoding=encoding, **kwargs
     )
     assert_identical(expected_after_init, after_init)
 
@@ -5589,10 +5597,12 @@ def test_initialize_zarr(
             # eager variables without region_dim are identical
             {var: ds[var] for var in vars_without_region},
         )
+        .reset_coords()
     )
+    expected_on_disk.attrs["coordinates"] = "foo"
     for varname, fv in fillvalues.items():
         expected_on_disk[varname].attrs["_FillValue"] = fv
-    with xr.open_zarr(store, zarr_version=zarr_version, mask_and_scale=False) as actual:
+    with xr.open_zarr(store, decode_cf=False, **kwargs) as actual:
         assert_identical(expected_on_disk, actual)
 
     # region is explicitly specified.
@@ -5602,8 +5612,13 @@ def test_initialize_zarr(
             zarr_version=zarr_version,
             region=selection,
         )
-    with xr.open_zarr(store, zarr_version=zarr_version) as actual:
+    with xr.open_zarr(store, **kwargs) as actual:
         assert_identical(ds, actual)
+
+    with xr.open_zarr(store, decode_cf=False, **kwargs) as actual, xr.open_zarr(
+        expected_store, decode_cf=False, **kwargs
+    ) as expected:
+        assert_identical(expected, actual)
 
     # region="auto"
     for _, block in split_by_chunks(after_init, dims=region_dims):
@@ -5612,5 +5627,9 @@ def test_initialize_zarr(
             zarr_version=zarr_version,
             region="auto",
         )
-    with xr.open_zarr(store, zarr_version=zarr_version) as actual:
+    with xr.open_zarr(store, **kwargs) as actual:
         assert_identical(ds, actual)
+    with xr.open_zarr(store, decode_cf=False, **kwargs) as actual, xr.open_zarr(
+        expected_store, decode_cf=False, **kwargs
+    ) as expected:
+        assert_identical(expected, actual)

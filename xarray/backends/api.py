@@ -1348,6 +1348,7 @@ def dump_to_store(
     if encoding is None:
         encoding = {}
 
+    # IMPORTANT: Any changes here will need to be duplicated in initialize_zarr
     variables, attrs = conventions.encode_dataset_coordinates(dataset)
 
     check_encoding = set()
@@ -1860,6 +1861,7 @@ def initialize_zarr(
     mode: Literal["w", "w-"] = "w-",
     zarr_version: int | None = None,
     consolidated: bool | None = None,
+    encoding: dict | None = None,
     **kwargs,
 ) -> Dataset:
     """
@@ -1915,6 +1917,8 @@ def initialize_zarr(
 
     from xarray.backends.zarr import add_array_to_store, encode_zarr_variable
 
+    if encoding is None:
+        encoding = {}
     if "compute" in kwargs:
         raise ValueError("The ``compute`` kwarg is not supported in `initialize_zarr`.")
 
@@ -1970,6 +1974,10 @@ def initialize_zarr(
         **kwargs,
     )
 
+    # need to do this separately to get the "coordinates" attribute coorect
+    variables, attrs = conventions.encode_dataset_coordinates(ds)
+    ds = ds._replace(variables=variables, attrs=attrs)
+
     all_variables = set(ds._variables)
     # TODO: how do we work with the new index API?
     index_vars = {dim for dim in ds.dims if dim in all_variables}
@@ -1982,18 +1990,18 @@ def initialize_zarr(
         key for key in vars_without_region if is_chunked_array(ds._variables[key])
     }
 
+    def extract_encoding(varnames: Iterable[Hashable]) -> dict:
+        return {k: v for k, v in encoding.items() if k in varnames}
+
     # Always write index variables, and any in-memory variables without region dims
     eager_write_vars = index_vars | (vars_without_region - chunked_vars_without_region)
     write_to_zarr_store(
         ds[eager_write_vars],
         xtempstore,
-        encoding=kwargs.get("encoding", None),
+        encoding=extract_encoding(eager_write_vars),
         compute=True,
         chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
     )
-
-    if "encoding" in kwargs:
-        raise NotImplementedError
 
     # Now initialize the arrays we have not written yet with metadata
     # but skip any chunked vars without the region, these will get written later
@@ -2006,8 +2014,13 @@ def initialize_zarr(
     array_kwargs.setdefault("write_empty", False)
     if mode == "w":
         array_kwargs.setdefault("overwrite", True)
+    enc = extract_encoding(vars_to_init)
     for var in vars_to_init:
-        encoded = encode_zarr_variable(ds._variables[var])
+        variable = ds._variables[var]
+        # duplicates dump_to_store
+        if var in enc:
+            variable.encoding = enc[var]
+        encoded = encode_zarr_variable(variable)
         add_array_to_store(var, encoded, group=xtempstore.zarr_group, **array_kwargs)
 
     if zarr_version == 2 and consolidated in (True, None):
@@ -2036,7 +2049,7 @@ def initialize_zarr(
             write_to_zarr_store(
                 ds[tuple(chunked_vars_without_region)],
                 xstore,
-                encoding=kwargs.get("encoding", None),
+                encoding=extract_encoding(chunked_vars_without_region),
                 compute=True,
                 chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
             )
