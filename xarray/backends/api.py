@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
 from io import BytesIO
@@ -1916,6 +1917,7 @@ def initialize_zarr(
     import zarr
 
     from xarray.backends.zarr import add_array_to_store, encode_zarr_variable
+    from xarray.coding.variables import SerializationWarning
 
     if encoding is None:
         encoding = {}
@@ -1995,13 +1997,21 @@ def initialize_zarr(
 
     # Always write index variables, and any in-memory variables without region dims
     eager_write_vars = index_vars | (vars_without_region - chunked_vars_without_region)
-    write_to_zarr_store(
-        ds[eager_write_vars],
-        xtempstore,
-        encoding=extract_encoding(eager_write_vars),
-        compute=True,
-        chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
-    )
+
+    with warnings.catch_warnings():
+        # This encodes the dataset coordinates attribute again :(
+        warnings.filterwarnings(
+            "ignore",
+            category=SerializationWarning,
+            message="cannot serialize global coordinates",
+        )
+        write_to_zarr_store(
+            ds[eager_write_vars],
+            xtempstore,
+            encoding=extract_encoding(eager_write_vars),
+            compute=True,
+            chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
+        )
 
     # Now initialize the arrays we have not written yet with metadata
     # but skip any chunked vars without the region, these will get written later
@@ -2046,13 +2056,22 @@ def initialize_zarr(
                 consolidated=consolidated,
                 **kwargs,
             )
-            write_to_zarr_store(
-                ds[tuple(chunked_vars_without_region)],
-                xstore,
-                encoding=extract_encoding(chunked_vars_without_region),
-                compute=True,
-                chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
-            )
+            with warnings.catch_warnings():
+                # This encodes the dataset coordinates attribute again :(
+                warnings.filterwarnings(
+                    "ignore",
+                    category=SerializationWarning,
+                    message="cannot serialize global coordinates",
+                )
+                write_to_zarr_store(
+                    ds[tuple(chunked_vars_without_region)],
+                    xstore,
+                    encoding=extract_encoding(chunked_vars_without_region),
+                    compute=True,
+                    chunkmanager_store_kwargs=kwargs.get(
+                        "chunkmanager_store_kwargs", None
+                    ),
+                )
 
         to_drop = (eager_write_vars | chunked_vars_without_region) - index_vars
         return ds.drop_vars(to_drop)

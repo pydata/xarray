@@ -5494,10 +5494,10 @@ def test_initialize_zarr_modes(tmp_path):
     with pytest.raises(ValueError, match="Only mode"):
         initialize_zarr(ds, store, mode="r")  # type: ignore[arg-type]
 
+    initialize_zarr(ds, store, mode="w")
+
     with pytest.raises(ValueError):
         initialize_zarr(ds, store, mode="w-")
-
-    initialize_zarr(ds, store, mode="w")
 
 
 def split_by_chunks(dataset, dims=None):
@@ -5561,7 +5561,11 @@ def test_initialize_zarr(
             "eager_yonly": ("y", eager[0, :]),
             "scalar": 2,
         },
-        coords={"x": x, "y": y, "foo": ("z", [1, 2, 3])},
+        coords={
+            "x": x,
+            "y": y,
+            "foo": ("z", [1, 2, 3]),
+        },
         attrs={"global": "attribute"},
     )
 
