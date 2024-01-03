@@ -27,8 +27,7 @@ from distributed.utils_test import (  # noqa: F401
 )
 
 import xarray as xr
-from xarray.backends.dask_lock import SerializableLock
-from xarray.backends.locks import HDF5_LOCK, CombinedLock
+from xarray.backends.locks import HDF5_LOCK, CombinedLock, SerializableLock
 from xarray.tests import (
     assert_allclose,
     assert_identical,
