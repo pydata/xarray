@@ -26,6 +26,10 @@ New Features
 
 - :py:meth:`xr.cov` and :py:meth:`xr.corr` now support using weights (:issue:`8527`, :pull:`7392`).
   By `Llorenç Lledó <https://github.com/lluritu>`_.
+- Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
+  See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
+  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`) Note that some
+  new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,6 +41,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
