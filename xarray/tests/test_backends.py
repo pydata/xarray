@@ -4417,13 +4417,19 @@ class TestDask(DatasetIOBase):
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
 
-            not_inlined_ds = open_dataset(tmp, inline_array=False, chunks=chunks)
-            inlined_ds = open_dataset(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
+            with open_dataset(
+                tmp, inline_array=False, chunks=chunks
+            ) as not_inlined_ds, open_dataset(
+                tmp, inline_array=True, chunks=chunks
+            ) as inlined_ds:
+                assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
 
-            not_inlined_da = open_dataarray(tmp, inline_array=False, chunks=chunks)
-            inlined_da = open_dataarray(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
+            with open_dataarray(
+                tmp, inline_array=False, chunks=chunks
+            ) as not_inlined_da, open_dataarray(
+                tmp, inline_array=True, chunks=chunks
+            ) as inlined_da:
+                assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
 
 
 @requires_scipy_or_netCDF4
