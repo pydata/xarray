@@ -413,7 +413,7 @@ class ResolvedGrouper(ABC, Generic[T_Xarray]):
         return self._group_as_index
 
     @property
-    def can_squeeze(self):
+    def can_squeeze(self) -> bool:
         is_dimension = self.group.dims == (self.group.name,)
         return is_dimension and self.is_unique_and_monotonic
 
@@ -619,7 +619,7 @@ def _validate_groupby_squeeze(squeeze: bool | None) -> None:
     # A future version could make squeeze kwarg only, but would face
     # backward-compat issues.
     if squeeze is not None and not isinstance(squeeze, bool):
-        raise TypeError(f"`squeeze` must be True or False, but {squeeze} was supplied")
+         raise TypeError(f"`squeeze` must be None,  True or False, but {squeeze} was supplied")
 
 
 def _resolve_group(obj: T_Xarray, group: T_Group | Hashable) -> T_Group:
