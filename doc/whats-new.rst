@@ -42,7 +42,7 @@ Breaking changes
    cartopy                   0.20      0.21
    dask-core               2022.7   2022.12
    distributed             2022.7   2022.12
-   flox                       0.5      0.8
+   flox                       0.5      0.7
    iris                       3.2      3.4
    matplotlib-base            3.5      3.6
    numpy                     1.22     1.23
