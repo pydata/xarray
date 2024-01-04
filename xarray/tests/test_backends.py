@@ -2630,6 +2630,8 @@ class ZarrBase(CFEncodedBase):
             )
             .reset_coords()
         )
+        if region_dims:
+            expected_on_disk.drop_vars("scalar")
         expected_on_disk.attrs["coordinates"] = "foo"
         for varname, fv in fillvalues.items():
             expected_on_disk[varname].attrs["_FillValue"] = fv

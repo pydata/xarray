@@ -1998,10 +1998,15 @@ def initialize_zarr(
     all_variables = set(ds._variables)
     # TODO: how do we work with the new index API?
     index_vars = {dim for dim in ds.dims if dim in all_variables}
+    scalar_vars = {k for k, v in ds._variables.items() if v.ndim == 0}
     vars_without_region = {
         key
         for key in all_variables - index_vars
-        if (not (set(ds._variables[key].dims) & set(region_dims)))
+        if (
+            # write scalar vars only if we are being requested with region writes
+            (key not in scalar_vars if set(region_dims) == set(ds.dims) else True)
+            and not (set(ds._variables[key].dims) & set(region_dims))
+        )
     }
     chunked_vars_without_region = {
         key for key in vars_without_region if is_chunked_array(ds._variables[key])
