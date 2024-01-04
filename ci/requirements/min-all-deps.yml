@@ -15,7 +15,9 @@ dependencies:
   - coveralls
   - dask-core=2022.12
   - distributed=2022.12
-  - flox=0.8
+  # Flox had a bug with numbagg versions
+  # so we specify the minor version here.
+  - flox=0.8.2
   - h5netcdf=1.1
   # h5py and hdf5 tend to cause conflicts
   # for e.g. hdf5 1.12 conflicts with h5py=3.1
