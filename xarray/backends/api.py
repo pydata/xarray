@@ -1888,9 +1888,9 @@ def initialize_zarr(
     This function initializes a Zarr store with all indexed coordinate variables, and
     metadata for every variable in the dataset.
     If ``region_dims`` is specified, it will also
-      1. Write variables that don't have any of ``region_dims``, and
-      2. Return a dataset with the remaining variables, which contain one or more of ``region_dims``.
-         This dataset can then be used for region writes in parallel.
+    1. Write variables that don't have any of ``region_dims``, and
+    2. Return a dataset with the remaining variables, which contain one or more of ``region_dims``.
+       This dataset can then be used for region writes in parallel.
 
     Parameters
     ----------
