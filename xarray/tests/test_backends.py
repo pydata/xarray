@@ -5552,6 +5552,7 @@ def test_zarr_region(tmp_path):
     # Write without region
     ds_transposed.to_zarr(tmp_path / "test.zarr", mode="r+")
 
+
 @requires_zarr
 @requires_dask
 def test_zarr_region_chunk_partial(tmp_path):
@@ -5570,4 +5571,3 @@ def test_zarr_region_chunk_partial(tmp_path):
             ds.chunk(3).isel(a=[r]).to_zarr(
                 tmp_path / "foo.zarr", region=dict(a=slice(r, r + 1))
             )
-
