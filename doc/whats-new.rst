@@ -49,7 +49,7 @@ Breaking changes
    numba                     0.55     0.56
    packaging                 21.3     22.0
    seaborn                   0.11     0.12
-   scipy                      1.8      1.9
+   scipy                      1.8     1.10
    typing_extensions          4.3      4.4
    zarr                      2.12     2.13
   ===================== =========  ========

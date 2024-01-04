@@ -44,7 +44,7 @@ dependencies:
   - pytest-xdist
   - pytest-timeout
   - rasterio=1.3
-  - scipy=1.9
+  - scipy=1.10
   - seaborn=0.12
   - sparse=0.13
   - toolz=0.12
