@@ -35,7 +35,7 @@ dependencies:
   - numba=0.56
   - numbagg=0.2.1
   - numpy=1.23
-  - packaging=21.3
+  - packaging=22.0
   - pandas=1.5
   - pint=0.22
   - pip
