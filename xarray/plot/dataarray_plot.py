@@ -27,6 +27,7 @@ from xarray.plot.utils import (
     _rescale_imshow_rgb,
     _resolve_intervals_1dplot,
     _resolve_intervals_2dplot,
+    _set_concise_date,
     _update_axes,
     get_axis,
     label_from_attrs,
@@ -525,14 +526,8 @@ def line(
         assert hueplt is not None
         ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
-    # Rotate dates on xlabels
-    # Do this without calling autofmt_xdate so that x-axes ticks
-    # on other subplots (if any) are not deleted.
-    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
     if np.issubdtype(xplt.dtype, np.datetime64):
-        for xlabels in ax.get_xticklabels():
-            xlabels.set_rotation(30)
-            xlabels.set_horizontalalignment("right")
+        _set_concise_date(ax, axis="x")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
 
@@ -949,6 +944,12 @@ def _plot1d(plotfunc):
         if plotfunc.__name__ == "scatter":
             size_ = kwargs.pop("_size", markersize)
             size_r = _MARKERSIZE_RANGE
+
+            # Remove any nulls, .where(m, drop=True) doesn't work when m is
+            # a dask array, so load the array to memory.
+            # It will have to be loaded to memory at some point anyway:
+            darray = darray.load()
+            darray = darray.where(darray.notnull(), drop=True)
         else:
             size_ = kwargs.pop("_size", linewidth)
             size_r = _LINEWIDTH_RANGE
@@ -1087,14 +1088,12 @@ def _add_labels(
     add_labels: bool | Iterable[bool],
     darrays: Iterable[DataArray | None],
     suffixes: Iterable[str],
-    rotate_labels: Iterable[bool],
     ax: Axes,
 ) -> None:
     """Set x, y, z labels."""
     add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
-    for axis, add_label, darray, suffix, rotate_label in zip(
-        ("x", "y", "z"), add_labels, darrays, suffixes, rotate_labels
-    ):
+    axes: tuple[Literal["x", "y", "z"], ...] = ("x", "y", "z")
+    for axis, add_label, darray, suffix in zip(axes, add_labels, darrays, suffixes):
         if darray is None:
             continue
 
@@ -1103,14 +1102,8 @@ def _add_labels(
             if label is not None:
                 getattr(ax, f"set_{axis}label")(label)
 
-        if rotate_label and np.issubdtype(darray.dtype, np.datetime64):
-            # Rotate dates on xlabels
-            # Do this without calling autofmt_xdate so that x-axes ticks
-            # on other subplots (if any) are not deleted.
-            # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-            for labels in getattr(ax, f"get_{axis}ticklabels")():
-                labels.set_rotation(30)
-                labels.set_horizontalalignment("right")
+        if np.issubdtype(darray.dtype, np.datetime64):
+            _set_concise_date(ax, axis=axis)
 
 
 @overload
@@ -1265,7 +1258,7 @@ def scatter(
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
     plts_or_none = (xplt, yplt, zplt)
-    _add_labels(add_labels, plts_or_none, ("", "", ""), (True, False, False), ax)
+    _add_labels(add_labels, plts_or_none, ("", "", ""), ax)
 
     xplt_np = None if xplt is None else xplt.to_numpy().ravel()
     yplt_np = None if yplt is None else yplt.to_numpy().ravel()
@@ -1653,14 +1646,8 @@ def _plot2d(plotfunc):
             ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim
         )
 
-        # Rotate dates on xlabels
-        # Do this without calling autofmt_xdate so that x-axes ticks
-        # on other subplots (if any) are not deleted.
-        # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
         if np.issubdtype(xplt.dtype, np.datetime64):
-            for xlabels in ax.get_xticklabels():
-                xlabels.set_rotation(30)
-                xlabels.set_horizontalalignment("right")
+            _set_concise_date(ax, "x")
 
         return primitive
 
