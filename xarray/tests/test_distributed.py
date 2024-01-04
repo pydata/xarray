@@ -27,7 +27,7 @@ from distributed.utils_test import (  # noqa: F401
 )
 
 import xarray as xr
-from xarray.backends.locks import HDF5_LOCK, CombinedLock
+from xarray.backends.locks import HDF5_LOCK, CombinedLock, SerializableLock
 from xarray.tests import (
     assert_allclose,
     assert_identical,
@@ -273,7 +273,7 @@ async def test_async(c, s, a, b) -> None:
 
 
 def test_hdf5_lock() -> None:
-    assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
+    assert isinstance(HDF5_LOCK, SerializableLock)
 
 
 @gen_cluster(client=True)
