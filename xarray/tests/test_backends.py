@@ -2572,9 +2572,6 @@ class ZarrBase(CFEncodedBase):
         if consolidated and self.zarr_version > 2:
             pytest.skip("consolidated metadata is not supported for zarr v3 yet")
 
-        # TODO:
-        # 2. non-dim coordinate var encoding
-        # TODO: use MemoryStore here?
         expected_store = tmp_path / "expected.zarr"
 
         x = np.arange(0, 50, 10)
@@ -2651,18 +2648,27 @@ class ZarrBase(CFEncodedBase):
             ) as actual:
                 assert_identical(expected_on_disk, actual)
 
-                # region is explicitly specified.
-                for selection, block in split_by_chunks(after_init, dims=region_dims):
-                    block.to_zarr(store, region=selection)
-                with xr.open_zarr(store, consolidated=consolidated) as actual:
-                    assert_identical(ds, actual)
+            # region is explicitly specified.
+            for selection, block in split_by_chunks(after_init, dims=region_dims):
+                # if region_dims=("x",) we need to add {"y": slice(None)} to the region
+                # region="auto" does this automatically
+                selection.update(
+                    {
+                        dim: slice(None)
+                        for dim in after_init.dims
+                        if dim not in region_dims
+                    }
+                )
+                block.to_zarr(store, region=selection)
+            with xr.open_zarr(store, consolidated=consolidated) as actual:
+                assert_identical(ds, actual)
 
-                with xr.open_zarr(
-                    store, decode_cf=False, consolidated=consolidated
-                ) as actual, xr.open_zarr(
-                    expected_store, decode_cf=False, consolidated=consolidated
-                ) as expected:
-                    assert_identical(expected, actual)
+            with xr.open_zarr(
+                store, decode_cf=False, consolidated=consolidated
+            ) as actual, xr.open_zarr(
+                expected_store, decode_cf=False, consolidated=consolidated
+            ) as expected:
+                assert_identical(expected, actual)
 
             # region="auto"
             for _, block in split_by_chunks(after_init, dims=region_dims):
