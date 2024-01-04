@@ -5545,7 +5545,13 @@ def test_initialize_zarr(
     # 2. non-dim coordinate var encoding
     store = tmp_path / "foo.zarr"
     expected_store = tmp_path / "expected.zarr"
-    kwargs = dict(zarr_version=zarr_version, consolidated=consolidated)
+    from typing import TypedDict
+
+    class OpenKwargs(TypedDict):
+        zarr_version: int | None
+        consolidated: bool | None
+
+    kwargs = OpenKwargs(zarr_version=zarr_version, consolidated=consolidated)
 
     x = np.arange(0, 50, 10)
     y = np.arange(0, 20, 2)
