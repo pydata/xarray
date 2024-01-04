@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import warnings
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from functools import partial
 from io import BytesIO
@@ -1340,7 +1339,14 @@ def to_netcdf(
 
 
 def dump_to_store(
-    dataset, store, writer=None, encoder=None, encoding=None, unlimited_dims=None
+    dataset,
+    store,
+    writer=None,
+    encoder=None,
+    encoding=None,
+    unlimited_dims=None,
+    *,
+    encode_coordinates=True,
 ):
     """Store dataset contents to a backends.*DataStore object."""
     if writer is None:
@@ -1350,7 +1356,11 @@ def dump_to_store(
         encoding = {}
 
     # IMPORTANT: Any changes here will need to be duplicated in initialize_zarr
-    variables, attrs = conventions.encode_dataset_coordinates(dataset)
+    if encode_coordinates:
+        variables, attrs = conventions.encode_dataset_coordinates(dataset)
+    else:
+        variables = {k: v.copy(deep=False) for k, v in dataset._variables.items()}
+        attrs = dataset.attrs
 
     check_encoding = set()
     for k, enc in encoding.items():
@@ -1833,14 +1843,23 @@ def to_zarr(
                 )
 
     return write_to_zarr_store(
-        dataset, zstore, encoding, compute, chunkmanager_store_kwargs
+        dataset,
+        zstore,
+        encoding,
+        compute,
+        chunkmanager_store_kwargs,
+        encode_coordinates=True,
     )
 
 
-def write_to_zarr_store(dataset, store, encoding, compute, chunkmanager_store_kwargs):
+def write_to_zarr_store(
+    dataset, store, encoding, compute, chunkmanager_store_kwargs, encode_coordinates
+):
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dump_to_store(dataset, store, writer, encoding=encoding)
+    dump_to_store(
+        dataset, store, writer, encoding=encoding, encode_coordinates=encode_coordinates
+    )
     writes = writer.sync(
         compute=compute, chunkmanager_store_kwargs=chunkmanager_store_kwargs
     )
@@ -1917,7 +1936,6 @@ def initialize_zarr(
     import zarr
 
     from xarray.backends.zarr import add_array_to_store, encode_zarr_variable
-    from xarray.coding.variables import SerializationWarning
 
     if encoding is None:
         encoding = {}
@@ -1997,20 +2015,14 @@ def initialize_zarr(
     # Always write index variables, and any in-memory variables without region dims
     eager_write_vars = index_vars | (vars_without_region - chunked_vars_without_region)
 
-    with warnings.catch_warnings():
-        # This encodes the dataset coordinates attribute again :(
-        warnings.filterwarnings(
-            "ignore",
-            category=SerializationWarning,
-            message="cannot serialize global coordinates",
-        )
-        write_to_zarr_store(
-            ds[eager_write_vars],
-            xtempstore,
-            encoding=extract_encoding(eager_write_vars),
-            compute=True,
-            chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
-        )
+    write_to_zarr_store(
+        ds[eager_write_vars],
+        xtempstore,
+        encoding=extract_encoding(eager_write_vars),
+        compute=True,
+        chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
+        encode_coordinates=False,
+    )
 
     # Now initialize the arrays we have not written yet with metadata
     # but skip any chunked vars without the region, these will get written later
@@ -2054,22 +2066,15 @@ def initialize_zarr(
                 consolidated=consolidated,
                 **kwargs,
             )
-            with warnings.catch_warnings():
-                # This encodes the dataset coordinates attribute again :(
-                warnings.filterwarnings(
-                    "ignore",
-                    category=SerializationWarning,
-                    message="cannot serialize global coordinates",
-                )
-                write_to_zarr_store(
-                    ds[tuple(chunked_vars_without_region)],
-                    xstore,
-                    encoding=extract_encoding(chunked_vars_without_region),
-                    compute=True,
-                    chunkmanager_store_kwargs=kwargs.get(
-                        "chunkmanager_store_kwargs", None
-                    ),
-                )
+
+            write_to_zarr_store(
+                ds[tuple(chunked_vars_without_region)],
+                xstore,
+                encoding=extract_encoding(chunked_vars_without_region),
+                compute=True,
+                chunkmanager_store_kwargs=kwargs.get("chunkmanager_store_kwargs", None),
+                encode_coordinates=False,
+            )
 
         to_drop = (eager_write_vars | chunked_vars_without_region) - index_vars
         return ds.drop_vars(to_drop)
