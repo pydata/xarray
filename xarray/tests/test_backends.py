@@ -2555,6 +2555,127 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
                 assert_identical(ds, ds_reload)
 
+    @requires_dask
+    @requires_zarr
+    @pytest.mark.parametrize("consolidated", (True, None))
+    @pytest.mark.parametrize("region_dims", ((), ("x",), ("y",), ("x", "y")))
+    @pytest.mark.parametrize(
+        "encoding", (None, {}, {"xy": {"_FillValue": 1, "dtype": np.int64}})
+    )
+    def test_initialize_zarr(
+        self,
+        region_dims: tuple,
+        consolidated: bool | None,
+        encoding: None | dict,
+        tmp_path,
+    ) -> None:
+        if consolidated and self.zarr_version > 2:
+            pytest.skip("consolidated metadata is not supported for zarr v3 yet")
+
+        # TODO:
+        # 2. non-dim coordinate var encoding
+        # TODO: use MemoryStore here?
+        expected_store = tmp_path / "expected.zarr"
+
+        x = np.arange(0, 50, 10)
+        y = np.arange(0, 20, 2)
+        data = dask.array.full((5, 10), 10.0, chunks=(1, 5))
+        eager = data.compute()
+        ds = xr.Dataset(
+            {
+                "xy": (("x", "y"), data),
+                "xonly": ("x", data[:, 0]),
+                "yonly": ("y", data[0, :]),
+                "eager_xy": (("x", "y"), eager * 2),
+                "eager_xonly": ("x", eager[:, 0]),
+                "eager_yonly": ("y", eager[0, :]),
+                "scalar": 2,
+            },
+            coords={
+                "x": x,
+                "y": y,
+                "foo": ("z", [1, 2, 3]),
+            },
+            attrs={"global": "attribute"},
+        )
+
+        fillvalues = dict(zip(ds.data_vars, np.arange(len(ds.data_vars)) + 1))
+        for varname, fv in fillvalues.items():
+            ds[varname].encoding["_FillValue"] = fv
+            ds[varname].encoding["dtype"] = np.int32
+        ds.to_zarr(expected_store, consolidated=consolidated)
+
+        vars_with_region = {
+            name
+            for name, var in ds.data_vars.items()
+            if set(var.dims) & set(region_dims)
+        }
+        vars_without_region = set(ds.data_vars) - vars_with_region
+
+        expected_after_init = (
+            ds[vars_with_region] if region_dims else ds.copy(deep=False)
+        )
+        expected_after_init.attrs["coordinates"] = "foo"
+
+        expected_on_disk = (
+            ds.copy(deep=True)
+            .astype(np.int32)
+            .assign(
+                # variables sharing dimensions with `region_dims` are all fill_value.
+                {
+                    var: xr.full_like(ds[var], fill_value=fillvalues[var])
+                    for var in vars_with_region
+                }
+            )
+            .assign(
+                # eager variables without region_dim are identical
+                {var: ds[var] for var in vars_without_region},
+            )
+            .reset_coords()
+        )
+        expected_on_disk.attrs["coordinates"] = "foo"
+        for varname, fv in fillvalues.items():
+            expected_on_disk[varname].attrs["_FillValue"] = fv
+
+        with self.create_zarr_target() as store:
+            after_init = initialize_zarr(
+                ds,
+                store,
+                region_dims=region_dims,
+                encoding=encoding,
+                consolidated=consolidated,
+            )
+            assert_identical(expected_after_init, after_init)
+            with xr.open_zarr(
+                store, decode_cf=False, consolidated=consolidated
+            ) as actual:
+                assert_identical(expected_on_disk, actual)
+
+                # region is explicitly specified.
+                for selection, block in split_by_chunks(after_init, dims=region_dims):
+                    block.to_zarr(store, region=selection)
+                with xr.open_zarr(store, consolidated=consolidated) as actual:
+                    assert_identical(ds, actual)
+
+                with xr.open_zarr(
+                    store, decode_cf=False, consolidated=consolidated
+                ) as actual, xr.open_zarr(
+                    expected_store, decode_cf=False, consolidated=consolidated
+                ) as expected:
+                    assert_identical(expected, actual)
+
+            # region="auto"
+            for _, block in split_by_chunks(after_init, dims=region_dims):
+                block.to_zarr(store, region="auto")
+            with xr.open_zarr(store, consolidated=consolidated) as actual:
+                assert_identical(ds, actual)
+            with xr.open_zarr(
+                store, decode_cf=False, consolidated=consolidated
+            ) as actual, xr.open_zarr(
+                expected_store, decode_cf=False, consolidated=consolidated
+            ) as expected:
+                assert_identical(expected, actual)
+
     @pytest.mark.parametrize("consolidated", [False, True, None])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
@@ -2563,7 +2684,7 @@ class ZarrBase(CFEncodedBase):
         if (use_dask or not compute) and not has_dask:
             pytest.skip("requires dask")
         if consolidated and self.zarr_version > 2:
-            pytest.xfail("consolidated metadata is not supported for zarr v3 yet")
+            pytest.skip("consolidated metadata is not supported for zarr v3 yet")
 
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
@@ -5595,124 +5716,3 @@ def split_by_chunks(dataset, dims=None):
     for slices in itertools.product(*iterators):
         selection = dict(zip(dims, slices))
         yield (selection, dataset.isel(selection))
-
-
-@requires_dask
-@requires_zarr
-@pytest.mark.parametrize(
-    "zarr_version, consolidated", ((2, True), (2, None), (3, None), (None, None))
-)
-@pytest.mark.parametrize("region_dims", ((), ("x",), ("y",), ("x", "y")))
-@pytest.mark.parametrize(
-    "encoding", (None, {}, {"xy": {"_FillValue": 1, "dtype": np.int64}})
-)
-def test_initialize_zarr(
-    region_dims: tuple,
-    zarr_version: int | None,
-    consolidated: bool | None,
-    encoding: None | dict,
-    tmp_path,
-) -> None:
-    # TODO:
-    # 1. with encoding
-    # 2. non-dim coordinate var encoding
-    store = tmp_path / "foo.zarr"
-    expected_store = tmp_path / "expected.zarr"
-    from typing import TypedDict
-
-    class OpenKwargs(TypedDict):
-        zarr_version: int | None
-        consolidated: bool | None
-
-    kwargs = OpenKwargs(zarr_version=zarr_version, consolidated=consolidated)
-
-    x = np.arange(0, 50, 10)
-    y = np.arange(0, 20, 2)
-    data = dask.array.full((5, 10), 10.0, chunks=(1, 5))
-    eager = data.compute()
-    ds = xr.Dataset(
-        {
-            "xy": (("x", "y"), data),
-            "xonly": ("x", data[:, 0]),
-            "yonly": ("y", data[0, :]),
-            "eager_xy": (("x", "y"), eager * 2),
-            "eager_xonly": ("x", eager[:, 0]),
-            "eager_yonly": ("y", eager[0, :]),
-            "scalar": 2,
-        },
-        coords={
-            "x": x,
-            "y": y,
-            "foo": ("z", [1, 2, 3]),
-        },
-        attrs={"global": "attribute"},
-    )
-
-    fillvalues = dict(zip(ds.data_vars, np.arange(len(ds.data_vars)) + 1))
-    for varname, fv in fillvalues.items():
-        ds[varname].encoding["_FillValue"] = fv
-        ds[varname].encoding["dtype"] = np.int32
-    ds.to_zarr(expected_store, **kwargs)
-
-    vars_with_region = {
-        name for name, var in ds.data_vars.items() if set(var.dims) & set(region_dims)
-    }
-    vars_without_region = set(ds.data_vars) - vars_with_region
-
-    expected_after_init = ds[vars_with_region] if region_dims else ds.copy(deep=False)
-    expected_after_init.attrs["coordinates"] = "foo"
-    after_init = initialize_zarr(
-        ds, store, region_dims=region_dims, encoding=encoding, **kwargs
-    )
-    assert_identical(expected_after_init, after_init)
-
-    expected_on_disk = (
-        ds.copy(deep=True)
-        .astype(np.int32)
-        .assign(
-            # variables sharing dimensions with `region_dims` are all fill_value.
-            {
-                var: xr.full_like(ds[var], fill_value=fillvalues[var])
-                for var in vars_with_region
-            }
-        )
-        .assign(
-            # eager variables without region_dim are identical
-            {var: ds[var] for var in vars_without_region},
-        )
-        .reset_coords()
-    )
-    expected_on_disk.attrs["coordinates"] = "foo"
-    for varname, fv in fillvalues.items():
-        expected_on_disk[varname].attrs["_FillValue"] = fv
-    with xr.open_zarr(store, decode_cf=False, **kwargs) as actual:
-        assert_identical(expected_on_disk, actual)
-
-    # region is explicitly specified.
-    for selection, block in split_by_chunks(after_init, dims=region_dims):
-        block.to_zarr(
-            store,
-            zarr_version=zarr_version,
-            region=selection,
-        )
-    with xr.open_zarr(store, **kwargs) as actual:
-        assert_identical(ds, actual)
-
-    with xr.open_zarr(store, decode_cf=False, **kwargs) as actual, xr.open_zarr(
-        expected_store, decode_cf=False, **kwargs
-    ) as expected:
-        assert_identical(expected, actual)
-
-    # region="auto"
-    for _, block in split_by_chunks(after_init, dims=region_dims):
-        block.to_zarr(
-            store,
-            zarr_version=zarr_version,
-            region="auto",
-        )
-    with xr.open_zarr(store, **kwargs) as actual:
-        assert_identical(ds, actual)
-    with xr.open_zarr(store, decode_cf=False, **kwargs) as actual, xr.open_zarr(
-        expected_store, decode_cf=False, **kwargs
-    ) as expected:
-        assert_identical(expected, actual)
