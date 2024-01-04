@@ -129,7 +129,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.env }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
