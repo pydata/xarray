@@ -432,8 +432,6 @@ class DatasetIOBase:
             assert_identical(expected, computed)
 
     def test_pickle(self) -> None:
-        if not has_dask:
-            pytest.xfail("pickling requires dask for SerializableLock")
         expected = Dataset({"foo": ("x", [42])})
         with self.roundtrip(expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
             with roundtripped:
@@ -2232,10 +2230,10 @@ class ZarrBase(CFEncodedBase):
             pass
 
     def test_drop_encoding(self):
-        ds = open_example_dataset("example_1.nc")
-        encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
-        with self.create_zarr_target() as store:
-            ds.to_zarr(store, encoding=encodings)
+        with open_example_dataset("example_1.nc") as ds:
+            encodings = {v: {**ds[v].encoding} for v in ds.data_vars}
+            with self.create_zarr_target() as store:
+                ds.to_zarr(store, encoding=encodings)
 
     def test_hidden_zarr_keys(self) -> None:
         expected = create_test_data()
@@ -4438,13 +4436,19 @@ class TestDask(DatasetIOBase):
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
 
-            not_inlined_ds = open_dataset(tmp, inline_array=False, chunks=chunks)
-            inlined_ds = open_dataset(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
+            with open_dataset(
+                tmp, inline_array=False, chunks=chunks
+            ) as not_inlined_ds, open_dataset(
+                tmp, inline_array=True, chunks=chunks
+            ) as inlined_ds:
+                assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
 
-            not_inlined_da = open_dataarray(tmp, inline_array=False, chunks=chunks)
-            inlined_da = open_dataarray(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
+            with open_dataarray(
+                tmp, inline_array=False, chunks=chunks
+            ) as not_inlined_da, open_dataarray(
+                tmp, inline_array=True, chunks=chunks
+            ) as inlined_da:
+                assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
 
 
 @requires_scipy_or_netCDF4
@@ -5356,8 +5360,8 @@ class TestNCZarr:
 @requires_netCDF4
 @requires_dask
 def test_pickle_open_mfdataset_dataset():
-    ds = open_example_mfdataset(["bears.nc"])
-    assert_identical(ds, pickle.loads(pickle.dumps(ds)))
+    with open_example_mfdataset(["bears.nc"]) as ds:
+        assert_identical(ds, pickle.loads(pickle.dumps(ds)))
 
 
 @requires_zarr
