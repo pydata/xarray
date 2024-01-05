@@ -1890,7 +1890,10 @@ def initialize_zarr(
     If ``region_dims`` is specified, it will also
     1. Write variables that don't have any of ``region_dims``, and
     2. Return a dataset with the remaining variables, which contain one or more of ``region_dims``.
-       This dataset can then be used for region writes in parallel.
+       This dataset will contain all indexes attached to the dimensions associated with these
+       remaining variables.
+       This dataset can then be used for region writes in parallel; this is particularly easy with
+       ``region="auto"``
 
     Parameters
     ----------

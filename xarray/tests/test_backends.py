@@ -2645,6 +2645,11 @@ class ZarrBase(CFEncodedBase):
                 consolidated=consolidated,
             )
             assert_identical(expected_after_init, after_init)
+            # doubly make sure we drop any indexes not in the region
+            # or in any variable that shares a dimension with region_dims
+            if region_dims:
+                assert "z" not in expected_after_init
+
             with xr.open_zarr(
                 store, decode_cf=False, consolidated=consolidated
             ) as actual:
