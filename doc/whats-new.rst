@@ -64,6 +64,8 @@ Bug fixes
 
 - Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Vendor `SerializableLock` from dask and use as default lock for netcdf4 backends (:issue:`8442`, :pull:`8571`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Documentation
@@ -72,7 +74,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
+- The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
+  This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
+  Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
