@@ -16,7 +16,7 @@ from xarray.core.common import (
 )
 from xarray.core.pycompat import is_duck_dask_array
 from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import IndexVariable, Variable
+from xarray.core.variable import Variable
 
 CF_RELATED_DATA = (
     "bounds",
@@ -93,10 +93,10 @@ def _infer_dtype(array, name=None):
 
 
 def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
-    if isinstance(var, IndexVariable) and isinstance(var.to_index(), pd.MultiIndex):
+    if isinstance(var._data, indexing.PandasMultiIndexingAdapter):
         raise NotImplementedError(
             f"variable {name!r} is a MultiIndex, which cannot yet be "
-            "serialized to netCDF files. Instead, either use reset_index() "
+            "serialized. Instead, either use reset_index() "
             "to convert MultiIndex levels into coordinate variables instead "
             "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
         )
@@ -643,7 +643,9 @@ def cf_decoder(
     return variables, attributes
 
 
-def _encode_coordinates(variables, attributes, non_dim_coord_names):
+def _encode_coordinates(
+    variables: T_Variables, attributes: T_Attrs, non_dim_coord_names
+):
     # calculate global and variable specific coordinates
     non_dim_coord_names = set(non_dim_coord_names)
 
@@ -671,7 +673,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 variable_coordinates[k].add(coord_name)
 
             if any(
-                attr_name in v.encoding and coord_name in v.encoding.get(attr_name)
+                coord_name in v.encoding.get(attr_name, tuple())
                 for attr_name in CF_RELATED_DATA
             ):
                 not_technically_coordinates.add(coord_name)
@@ -738,7 +740,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     return variables, attributes
 
 
-def encode_dataset_coordinates(dataset):
+def encode_dataset_coordinates(dataset: Dataset):
     """Encode coordinates on the given dataset object into variable specific
     and global attributes.
 
@@ -760,7 +762,7 @@ def encode_dataset_coordinates(dataset):
     )
 
 
-def cf_encoder(variables, attributes):
+def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     """
     Encode a set of CF encoded variables and attributes.
     Takes a dicts of variables and attributes and encodes them
