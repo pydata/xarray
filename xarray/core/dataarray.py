@@ -3989,11 +3989,6 @@ class DataArray(
     ) -> bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
-        [netCDF4 backend only] When the CF flag_values/flag_meanings attributes are
-        set in for this DataArray, you can choose to replace these attributes with
-        EnumType by updating the encoding dictionary with a key value pair like:
-        `encoding["enum"] = "enum_name"`.
-
         Parameters
         ----------
         path : str, path-like or None, optional
@@ -4073,6 +4068,11 @@ class DataArray(
         containing a single variable. If the DataArray has no name, or if the
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
+
+        [netCDF4 backend only] When the CF flag_values/flag_meanings attributes are
+        set in for this DataArray, you can choose to replace these attributes by
+        a netcdf4 EnumType by updating the encoding dictionary with a key value pair
+        like: `encoding["enum"] = "enum_name"`.
 
         See Also
         --------
