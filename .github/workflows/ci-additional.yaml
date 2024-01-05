@@ -320,11 +320,6 @@ jobs:
       run:
         shell: bash -l {0}
 
-    strategy:
-      matrix:
-        environment-file: ["bare-minimum", "min-all-deps"]
-      fail-fast: false
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -340,6 +335,10 @@ jobs:
             conda
             python-dateutil
 
-      - name: minimum versions policy
+      - name: All-deps minimum versions policy
         run: |
-          python ci/min_deps_check.py ci/requirements/${{ matrix.environment-file }}.yml
+          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+
+      - name: Bare minimum versions policy
+        run: |
+          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
