@@ -810,7 +810,7 @@ def test_empty_cftimeindex_repr() -> None:
 
     expected = """\
     Indexes:
-        time     CFTimeIndex([], dtype='object', length=0, calendar=<undefined>, freq=None)"""
+        time     CFTimeIndex([], dtype='object', length=0, calendar=None, freq=None)"""
     expected = dedent(expected)
 
     da = xr.DataArray([], coords={"time": index})
