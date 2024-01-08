@@ -10149,7 +10149,7 @@ class Dataset(
     def groupby(
         self,
         group: Hashable | DataArray | IndexVariable,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -10217,7 +10217,7 @@ class Dataset(
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
