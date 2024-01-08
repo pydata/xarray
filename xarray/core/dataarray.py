@@ -2296,7 +2296,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. " f"Given {self.dtype}."
+                f"interp only works for a numeric type array. Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp(
             coords,
@@ -2423,7 +2423,7 @@ class DataArray(
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
-                "interp only works for a numeric type array. " f"Given {self.dtype}."
+                f"interp only works for a numeric type array. Given {self.dtype}."
             )
         ds = self._to_temp_dataset().interp_like(
             other, method=method, kwargs=kwargs, assume_sorted=assume_sorted
