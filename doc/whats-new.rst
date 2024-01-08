@@ -57,7 +57,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The `squeeze` kwarg to GroupBy is now deprecated. (:issue:`2157`, :pull:`8507`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -141,7 +142,6 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
 - As part of an effort to standardize the API, we're renaming the ``dims``
   keyword arg to ``dim`` for the minority of functions which current use
   ``dims``. This started with :py:func:`xarray.dot` & :py:meth:`DataArray.dot`
