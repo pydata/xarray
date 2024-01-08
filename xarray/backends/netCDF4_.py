@@ -426,7 +426,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         if isinstance(var.datatype, netCDF4.EnumType):
             enum_dict = var.datatype.enum_dict
             enum_name = var.datatype.name
-            encoding["enum"] = enum_name
+            attributes["enum"] = enum_name
             attributes["flag_values"] = tuple(enum_dict.values())
             attributes["flag_meanings"] = tuple(enum_dict.keys())
         _ensure_fill_value_valid(data, attributes)
@@ -504,58 +504,12 @@ class NetCDF4DataStore(WritableCFDataStore):
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
-        if (
-            encoding.get("enum")
-            and attrs.get("flag_meanings")
-            and attrs.get("flag_values")
-        ):
-            var_enum_dict = {
-                k: v for k, v in zip(attrs["flag_meanings"], attrs["flag_values"])
-            }
-            enum_name = encoding.pop("enum")
-            if enum_name in self.ds.enumtypes:
-                datatype = self.ds.enumtypes[enum_name]
-                if datatype.enum_dict != var_enum_dict:
-                    error_msg = (
-                        f"Cannot save variable `{name}` because an enum"
-                        f" `{enum_name}` already exists in the Dataset but have"
-                        " a different definition. Enums are created when"
-                        " `encoding['enum']` is set by combining flag_values"
-                        " and flag_meanings attributes. To fix this error, make sure"
-                        " each variable have a unique name for `encoding['enum']` or "
-                        " if they should have the same enum, that their flag_values and"
-                        " flag_meanings are identical."
-                    )
-                    raise ValueError(error_msg)
-            else:
-                datatype = self.ds.createEnumType(
-                    variable.dtype,
-                    enum_name,
-                    var_enum_dict,
-                )
-            # Make sure the values we are trying to assign are in enums valid range.
-            error_message = (
-                "Cannot save the variable `{0}` to netCDF4: `{0}` has values, such"
-                " as `{1}`, which are not in the enum/flag_values valid values:"
-                " `{2}`. Fix the variable data or edit its flag_values and"
-                " flag_meanings attributes and try again. Note that if the enum"
-                " values are not contiguous, there might be other invalid values"
-                " too."
-            )
-            valid_values = tuple(attrs["flag_values"])
-            max_val = np.max(variable.data)
-            min_val = np.min(variable.data)
-            if max_val not in valid_values:
-                raise ValueError(error_message.format(name, max_val, valid_values))
-            if min_val not in valid_values:
-                raise ValueError(error_message.format(name, min_val, valid_values))
-            del attrs["flag_values"]
-            del attrs["flag_meanings"]
+        if attrs.get("enum"):
+            datatype = self._build_and_get_enum(name, attrs, variable.dtype)
         else:
             datatype = _get_datatype(
                 variable, self.format, raise_on_invalid_encoding=check_encoding
             )
-            encoding.pop("dtype", None)
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
@@ -582,6 +536,35 @@ class NetCDF4DataStore(WritableCFDataStore):
         target = NetCDF4ArrayWrapper(name, self)
 
         return target, variable.data
+
+    def _build_and_get_enum(
+        self, var_name: str, attributes: dict, dtype: np.dtype
+    ) -> object:
+        flag_meanings = attributes.pop("flag_meanings")
+        flag_values = attributes.pop("flag_values")
+        enum_name = attributes.pop("enum")
+        enum_dict = {k: v for k, v in zip(flag_meanings, flag_values)}
+        if enum_name in self.ds.enumtypes:
+            datatype = self.ds.enumtypes[enum_name]
+            if datatype.enum_dict != enum_dict:
+                error_msg = (
+                    f"Cannot save variable `{var_name}` because an enum"
+                    f" `{enum_name}` already exists in the Dataset but have"
+                    " a different definition. Enums are created when"
+                    " `attrs['enum']` is filled with an enum name, then flag_values"
+                    " and flag_meanings attributes are combined. To fix this error, make sure"
+                    " each variable have a unique name for `attrs['enum']` or "
+                    " if they should be typed with the same enum, that their flag_values and"
+                    " flag_meanings are identical."
+                )
+                raise ValueError(error_msg)
+        else:
+            datatype = self.ds.createEnumType(
+                dtype,
+                enum_name,
+                enum_dict,
+            )
+        return datatype
 
     def sync(self):
         self.ds.sync()
@@ -653,6 +636,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
+        decode_enum: bool | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
@@ -678,6 +662,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 drop_variables=drop_variables,
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
+                decode_enum=decode_enum,
             )
         return ds
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from enum import EnumType
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -172,7 +173,7 @@ def _validate_attrs(dataset, invalid_netcdf=False):
     `invalid_netcdf=True`.
     """
 
-    valid_types = (str, Number, np.ndarray, np.number, list, tuple)
+    valid_types = (str, Number, np.ndarray, np.number, list, tuple, EnumType)
     if invalid_netcdf:
         valid_types += (np.bool_,)
 
@@ -407,6 +408,7 @@ def open_dataset(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    decode_enum: bool | None = None,
     **kwargs,
 ) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
@@ -512,6 +514,8 @@ def open_dataset(
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
+    decode_enum: bool, optional
+        If True, decode CF flag_values and flag_meanings into a pyton Enum.
     **kwargs: dict
         Additional keyword arguments passed on to the engine open function.
         For example:
@@ -566,6 +570,7 @@ def open_dataset(
         concat_characters=concat_characters,
         use_cftime=use_cftime,
         decode_coords=decode_coords,
+        decode_enum=decode_enum,
     )
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)

@@ -4072,7 +4072,7 @@ class DataArray(
         [netCDF4 backend only] When the CF flag_values/flag_meanings attributes are
         set in for this DataArray, you can choose to replace these attributes by
         a netcdf4 EnumType by updating the encoding dictionary with a key value pair
-        like: `encoding["enum"] = "enum_name"`.
+        like: `da.attrs["enum"] = "enum_name"`.
 
         See Also
         --------

@@ -15,6 +15,7 @@ import uuid
 import warnings
 from collections.abc import Generator, Iterator
 from contextlib import ExitStack
+from enum import Enum
 from io import BytesIO
 from os import listdir
 from pathlib import Path
@@ -1720,13 +1721,10 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=None,
                 )
                 v[:] = 1
-            with open_dataset(tmp_file) as ds:
-                assert list(ds.clouds.attrs.get("flag_meanings")) == list(
-                    cloud_type_dict.keys()
-                )
-                assert list(ds.clouds.attrs.get("flag_values")) == list(
-                    cloud_type_dict.values()
-                )
+            with open_dataset(tmp_file, decode_enum=True) as ds:
+                assert {
+                    i.name: i.value for i in ds.clouds.attrs["enum"]
+                } == cloud_type_dict
                 with create_tmp_file() as tmp_file2:
                     ds.to_netcdf(tmp_file2)
 
@@ -1744,11 +1742,11 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=255,
                 )
                 # v is filled with default fill_value of u1
-            with open_dataset(tmp_file) as ds:
+            with open_dataset(tmp_file, decode_enum=True) as ds:
                 with create_tmp_file() as tmp_file2:
                     with pytest.raises(
                         ValueError,
-                        match=("Cannot save the variable `clouds` to" " netCDF4.*"),
+                        match=("trying to assign illegal value to Enum variable"),
                     ):
                         ds.to_netcdf(tmp_file2)
 
@@ -1771,7 +1769,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as ds:
+            with open_dataset(tmp_file, decode_enum=True) as ds:
                 with create_tmp_file() as tmp_file2:
                     ds.to_netcdf(tmp_file2)
 
@@ -1794,9 +1792,10 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file) as ds:
-                ds.cloud.attrs["flag_values"] += (2,)
-                ds.cloud.attrs["flag_meanings"] += ("neblig",)
+            with open_dataset(tmp_file, decode_enum=True) as ds:
+                cloud_enum_dict = {e.name: e.value for e in ds.cloud.attrs["enum"]}
+                cloud_enum_dict.update({"neblig": 2})
+                ds.cloud.attrs["enum"] = Enum("cloud_type", cloud_enum_dict)
                 with create_tmp_file() as tmp_file2:
                     with pytest.raises(
                         ValueError,

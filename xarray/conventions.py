@@ -167,13 +167,14 @@ def encode_cf_variable(
     var: Variable, needs_copy: bool = True, name: T_Name = None
 ) -> Variable:
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into a Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
         - Rescaling via: scale_factor and add_offset
         - datetimes are converted to the CF 'units since time' format
         - dtype encodings are enforced.
+        - enum is turned into flag_values and flag_meanings
 
     Parameters
     ----------
@@ -196,6 +197,7 @@ def encode_cf_variable(
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
         variables.BooleanCoder(),
+        variables.EnumCoder(),
     ]:
         var = coder.encode(var, name=name)
 
@@ -217,6 +219,7 @@ def decode_cf_variable(
     stack_char_dim: bool = True,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
+    decode_enum: bool | None = None,
 ) -> Variable:
     """
     Decodes a variable which may hold CF encoded information.
@@ -257,6 +260,8 @@ def decode_cf_variable(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_enum: bool, optional
+        Turn the CF flag_values and flag_meanings into a python Enum in `attrs['enum']`.
 
     Returns
     -------
@@ -299,6 +304,9 @@ def decode_cf_variable(
         original_dtype = var.dtype
 
     var = variables.BooleanCoder().decode(var)
+
+    if decode_enum:
+        var = variables.EnumCoder().decode(var)
 
     dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
 
@@ -398,6 +406,7 @@ def decode_cf_variables(
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
+    decode_enum: bool | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
     """
     Decode several CF encoded variables.
@@ -450,6 +459,7 @@ def decode_cf_variables(
                 stack_char_dim=stack_char_dim,
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
+                decode_enum=decode_enum,
             )
         except Exception as e:
             raise type(e)(f"Failed to decode variable {k!r}: {e}")
@@ -514,6 +524,7 @@ def decode_cf(
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
     decode_timedelta: bool | None = None,
+    decode_enum: bool = True,
 ) -> Dataset:
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
@@ -592,6 +603,7 @@ def decode_cf(
         drop_variables=drop_variables,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
+        decode_enum=decode_enum,
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
@@ -607,6 +619,7 @@ def cf_decoder(
     concat_characters: bool = True,
     mask_and_scale: bool = True,
     decode_times: bool = True,
+    decode_enum: bool = True,
 ) -> tuple[T_Variables, T_Attrs]:
     """
     Decode a set of CF encoded variables and attributes.
@@ -638,7 +651,12 @@ def cf_decoder(
     decode_cf_variable
     """
     variables, attributes, _ = decode_cf_variables(
-        variables, attributes, concat_characters, mask_and_scale, decode_times
+        variables,
+        attributes,
+        concat_characters,
+        mask_and_scale,
+        decode_times,
+        decode_enum=decode_enum,
     )
     return variables, attributes
 

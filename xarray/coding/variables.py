@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, MutableMapping
+from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Union
 
@@ -574,3 +575,34 @@ class ObjectVLenStringCoder(VariableCoder):
             return variable
         else:
             return variable
+
+
+class EnumCoder(VariableCoder):
+    """Encode and decode Enum to CF"""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        """From python Enum to CF"""
+        dims, data, attrs, encoding = unpack_for_encoding(variable)
+        if attrs.get("enum"):
+            enum = attrs.pop("enum")
+            enum_name = enum.__name__
+            attrs["flag_meanings"] = tuple(i.name for i in enum)
+            attrs["flag_values"] = tuple(i.value for i in enum)
+            attrs["enum"] = enum_name
+        return Variable(dims, data, attrs, encoding, fastpath=True)
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        """From CF to python Enum"""
+        dims, data, attrs, encoding = unpack_for_decoding(variable)
+        if (
+            attrs.get("enum")
+            and attrs.get("flag_meanings")
+            and attrs.get("flag_values")
+        ):
+            flag_meanings = attrs.pop("flag_meanings")
+            flag_values = attrs.pop("flag_values")
+            enum_name = attrs.pop("enum")
+            enum_dict = {k: v for k, v in zip(flag_meanings, flag_values)}
+            attrs["enum"] = Enum(enum_name, enum_dict)
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        return variable
