@@ -179,7 +179,7 @@ def _check_shape_tile_ids(combined_tile_ids):
             raise ValueError(
                 "The supplied objects do not form a hypercube "
                 "because sub-lists do not have consistent "
-                "lengths along dimension" + str(dim)
+                f"lengths along dimension {dim}"
             )
 
 

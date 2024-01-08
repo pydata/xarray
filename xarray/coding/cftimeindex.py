@@ -553,7 +553,7 @@ class CFTimeIndex(pd.Index):
             return self + n * to_offset(freq)
         else:
             raise TypeError(
-                "'freq' must be of type " f"str or datetime.timedelta, got {freq}."
+                f"'freq' must be of type str or datetime.timedelta, got {freq}."
             )
 
     def __add__(self, other):
