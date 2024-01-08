@@ -803,3 +803,17 @@ def test_format_xindexes(as_dataset: bool) -> None:
 
     actual = repr(obj.xindexes)
     assert actual == expected
+
+
+def test_empty_cftimeindex_repr() -> None:
+    index = xr.coding.cftimeindex.CFTimeIndex([])
+
+    expected = """\
+    Indexes:
+        time     CFTimeIndex([], dtype='object', length=0, calendar=<undefined>, freq=None)"""
+    expected = dedent(expected)
+
+    da = xr.DataArray([], coords={"time": index})
+
+    actual = repr(da.indexes)
+    assert actual == expected

@@ -272,7 +272,7 @@ def format_attrs(index, separator=", "):
     attrs = {
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
-        "calendar": f"'{index.calendar}'",
+        "calendar": f"'{index.calendar}'" if len(index) else "<undefined>",
         "freq": f"'{index.freq}'" if len(index) >= 3 else None,
     }
 
