@@ -494,7 +494,7 @@ class TestConcatDataset:
 
     def test_concat_2(self, data) -> None:
         dim = "dim2"
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+        datasets = [g.squeeze(dim) for _, g in data.groupby(dim, squeeze=False)]
         concat_over = [k for k, v in data.coords.items() if dim in v.dims and k != dim]
         actual = concat(datasets, data[dim], coords=concat_over)
         assert_identical(data, self.rectify_dim_order(data, actual))
@@ -505,7 +505,7 @@ class TestConcatDataset:
         data = data.copy(deep=True)
         # make sure the coords argument behaves as expected
         data.coords["extra"] = ("dim4", np.arange(3))
-        datasets = [g for _, g in data.groupby(dim, squeeze=True)]
+        datasets = [g.squeeze() for _, g in data.groupby(dim, squeeze=False)]
 
         actual = concat(datasets, data[dim], coords=coords)
         if coords == "all":
@@ -1000,7 +1000,7 @@ class TestConcatDataArray:
         actual = concat([foo, bar], "w")
         assert_equal(expected, actual)
         # from iteration:
-        grouped = [g for _, g in foo.groupby("x")]
+        grouped = [g.squeeze() for _, g in foo.groupby("x", squeeze=False)]
         stacked = concat(grouped, ds["x"])
         assert_identical(foo, stacked)
         # with an index as the 'dim' argument

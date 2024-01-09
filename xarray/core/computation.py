@@ -811,7 +811,7 @@ def apply_variable_ufunc(
             pass
         else:
             raise ValueError(
-                "unknown setting for chunked array handling in " f"apply_ufunc: {dask}"
+                f"unknown setting for chunked array handling in apply_ufunc: {dask}"
             )
     else:
         if vectorize:
@@ -1383,7 +1383,7 @@ def cov(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, ddof=ddof, method="cov")
 
 
@@ -1487,7 +1487,7 @@ def corr(
         )
     if weights is not None:
         if not isinstance(weights, DataArray):
-            raise TypeError("Only xr.DataArray is supported." f"Given {type(weights)}.")
+            raise TypeError(f"Only xr.DataArray is supported. Given {type(weights)}.")
     return _cov_corr(da_a, da_b, weights=weights, dim=dim, method="corr")
 
 

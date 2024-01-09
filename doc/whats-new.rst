@@ -34,10 +34,31 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed (:pull:`8586`):
+
+  ===================== =========  ========
+   Package                    Old      New
+  ===================== =========  ========
+   cartopy                   0.20      0.21
+   dask-core               2022.7   2022.12
+   distributed             2022.7   2022.12
+   flox                       0.5      0.7
+   iris                       3.2      3.4
+   matplotlib-base            3.5      3.6
+   numpy                     1.22     1.23
+   numba                     0.55     0.56
+   packaging                 21.3     22.0
+   seaborn                   0.11     0.12
+   scipy                      1.8     1.10
+   typing_extensions          4.3      4.4
+   zarr                      2.12     2.13
+  ===================== =========  ========
+
 
 Deprecations
 ~~~~~~~~~~~~
-
+- The `squeeze` kwarg to GroupBy is now deprecated. (:issue:`2157`, :pull:`8507`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -121,7 +142,6 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
 - As part of an effort to standardize the API, we're renaming the ``dims``
   keyword arg to ``dim`` for the minority of functions which current use
   ``dims``. This started with :py:func:`xarray.dot` & :py:meth:`DataArray.dot`
