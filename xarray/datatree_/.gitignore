@@ -131,3 +131,5 @@ dmypy.json
 
 # version
 _version.py
+
+.vscode

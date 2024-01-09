@@ -50,7 +50,6 @@ Please raise any thoughts, issues, suggestions or bugs, no matter how small or l
    Reading and Writing Files <io>
    API Reference <api>
    Terminology <terminology>
-   How do I ... <howdoi>
    Contributing Guide <contributing>
    What's New <whats-new>
    GitHub repository <https://github.com/xarray-contrib/datatree>

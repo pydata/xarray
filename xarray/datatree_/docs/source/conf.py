@@ -39,7 +39,6 @@ sys.path.insert(0, parent)
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.linkcode",
@@ -57,14 +56,77 @@ extensions = [
 ]
 
 extlinks = {
-    "issue": ("https://github.com/TomNicholas/datatree/issues/%s", "GH#"),
-    "pull": ("https://github.com/TomNicholas/datatree/pull/%s", "GH#"),
+    "issue": ("https://github.com/xarray-contrib/datatree/issues/%s", "GH#%s"),
+    "pull": ("https://github.com/xarray-contrib/datatree/pull/%s", "GH#%s"),
 }
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # Generate the API documentation when building
 autosummary_generate = True
+
+
+# Napoleon configurations
+
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_use_param = False
+napoleon_use_rtype = False
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # general terms
+    "sequence": ":term:`sequence`",
+    "iterable": ":term:`iterable`",
+    "callable": ":py:func:`callable`",
+    "dict_like": ":term:`dict-like <mapping>`",
+    "dict-like": ":term:`dict-like <mapping>`",
+    "path-like": ":term:`path-like <path-like object>`",
+    "mapping": ":term:`mapping`",
+    "file-like": ":term:`file-like <file-like object>`",
+    # special terms
+    # "same type as caller": "*same type as caller*",  # does not work, yet
+    # "same type as values": "*same type as values*",  # does not work, yet
+    # stdlib type aliases
+    "MutableMapping": "~collections.abc.MutableMapping",
+    "sys.stdout": ":obj:`sys.stdout`",
+    "timedelta": "~datetime.timedelta",
+    "string": ":class:`string <str>`",
+    # numpy terms
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "hashable": ":term:`hashable <name>`",
+    # matplotlib terms
+    "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
+    "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",
+    "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
+    "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # objects without namespace: xarray
+    "DataArray": "~xarray.DataArray",
+    "Dataset": "~xarray.Dataset",
+    "Variable": "~xarray.Variable",
+    "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
+    "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
+    # objects without namespace: numpy
+    "ndarray": "~numpy.ndarray",
+    "MaskedArray": "~numpy.ma.MaskedArray",
+    "dtype": "~numpy.dtype",
+    "ComplexWarning": "~numpy.ComplexWarning",
+    # objects without namespace: pandas
+    "Index": "~pandas.Index",
+    "MultiIndex": "~pandas.MultiIndex",
+    "CategoricalIndex": "~pandas.CategoricalIndex",
+    "TimedeltaIndex": "~pandas.TimedeltaIndex",
+    "DatetimeIndex": "~pandas.DatetimeIndex",
+    "Series": "~pandas.Series",
+    "DataFrame": "~pandas.DataFrame",
+    "Categorical": "~pandas.Categorical",
+    "Path": "~~pathlib.Path",
+    # objects with abbreviated namespace (from pandas)
+    "pd.Index": "~pandas.Index",
+    "pd.NaT": "~pandas.NaT",
+}
 
 # The suffix of source filenames.
 source_suffix = ".rst"
@@ -176,11 +238,6 @@ html_theme_options = {
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
 # html_favicon = None
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

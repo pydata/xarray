@@ -44,6 +44,9 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Use ``napoleon`` instead of ``numpydoc`` to align with xarray documentation
+  (:issue:`284`, :pull:`298`).
+  By `Etienne Schalk <https://github.com/etienneschalk>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -365,7 +368,7 @@ Breaking changes
 - Removes the option to delete all data in a node by assigning None to the node (in favour of deleting data by replacing
   the node's ``.ds`` attribute with an empty Dataset), or to create a new empty node in the same way (in favour of
   assigning an empty DataTree object instead).
-- Removes the ability to create a new node by assigning a ``Dataset`` object to ``DataTree.__setitem__`.
+- Removes the ability to create a new node by assigning a ``Dataset`` object to ``DataTree.__setitem__``.
 - Several other minor API changes such as ``.pathstr`` -> ``.path``, and ``from_dict``'s dictionary argument now being
   required. (:pull:`76`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.

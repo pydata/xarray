@@ -13,8 +13,8 @@ dependencies:
   - sphinx-book-theme >= 0.0.38
   - nbsphinx
   - sphinxcontrib-srclinks
+  - pickleshare
   - pydata-sphinx-theme>=0.4.3
-  - numpydoc
   - ipython
   - h5netcdf
   - zarr
