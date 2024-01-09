@@ -222,9 +222,8 @@ New Features
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
 - Open netCDF4 enums and turn them into CF flag_meanings/flag_values.
-  This also adds a new encoding key `enum` to DataArray that tells the netCDF4 backend
-  to turn flag_meanings and flag_values into Enums when calling
-  :py:meth:`Dataset.to_netcdf`.
+  This also gives a special meaning to the 'enum' attribute in DataArrays, when it is set, this tells the netCDF4 backend
+  to turn flag_meanings and flag_values into a netCDF4 Enum named using ``attrs["enum"]`` content.
   By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
