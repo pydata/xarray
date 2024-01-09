@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
-from enum import EnumType
+from enum import EnumMeta
 from functools import partial
 from io import BytesIO
 from numbers import Number
@@ -173,7 +173,7 @@ def _validate_attrs(dataset, invalid_netcdf=False):
     `invalid_netcdf=True`.
     """
 
-    valid_types = (str, Number, np.ndarray, np.number, list, tuple, EnumType)
+    valid_types = (str, Number, np.ndarray, np.number, list, tuple, EnumMeta)
     if invalid_netcdf:
         valid_types += (np.bool_,)
 
