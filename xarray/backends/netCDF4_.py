@@ -550,12 +550,10 @@ class NetCDF4DataStore(WritableCFDataStore):
                 error_msg = (
                     f"Cannot save variable `{var_name}` because an enum"
                     f" `{enum_name}` already exists in the Dataset but have"
-                    " a different definition. Enums are created when"
-                    " `attrs['enum']` is filled with an enum name, then flag_values"
-                    " and flag_meanings attributes are combined. To fix this error, make sure"
-                    " each variable have a unique name for `attrs['enum']` or "
-                    " if they should be typed with the same enum, that their flag_values and"
-                    " flag_meanings are identical."
+                    " a different definition. To fix this error, make sure"
+                    " each variable have a unique name for their `attrs['enum']`"
+                    " or, if they should share same enum type, make sure"
+                    " their flag_values and flag_meanings are identical."
                 )
                 raise ValueError(error_msg)
         else:
