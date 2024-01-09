@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, MutableMapping
-from enum import Enum
+from enum import Enum, EnumMeta
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Union
 
@@ -581,18 +581,18 @@ class EnumCoder(VariableCoder):
     """Encode and decode Enum to CF"""
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """From python Enum to CF"""
+        """From python Enum to CF flag_*"""
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-        if attrs.get("enum"):
+        if isinstance(attrs.get("enum"), EnumMeta):
             enum = attrs.pop("enum")
             enum_name = enum.__name__
-            attrs["flag_meanings"] = tuple(i.name for i in enum)
-            attrs["flag_values"] = tuple(i.value for i in enum)
+            attrs["flag_meanings"] = " ".join(i.name for i in enum)
+            attrs["flag_values"] = ", ".join(str(i.value) for i in enum)
             attrs["enum"] = enum_name
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """From CF to python Enum"""
+        """From CF flag_* to python Enum"""
         dims, data, attrs, encoding = unpack_for_decoding(variable)
         if (
             attrs.get("enum")
@@ -600,7 +600,9 @@ class EnumCoder(VariableCoder):
             and attrs.get("flag_values")
         ):
             flag_meanings = attrs.pop("flag_meanings")
+            flag_meanings = flag_meanings.split(" ")
             flag_values = attrs.pop("flag_values")
+            flag_values = [int(v) for v in flag_values.split(", ")]
             enum_name = attrs.pop("enum")
             enum_dict = {k: v for k, v in zip(flag_meanings, flag_values)}
             attrs["enum"] = Enum(enum_name, enum_dict)

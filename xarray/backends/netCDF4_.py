@@ -419,10 +419,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         dimensions = var.dimensions
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
-        encoding = {}
         data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
-        enum_dict = None
-        enum_name = None
         if isinstance(var.datatype, netCDF4.EnumType):
             enum_dict = var.datatype.enum_dict
             enum_name = var.datatype.name
@@ -431,7 +428,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             attributes["flag_meanings"] = tuple(enum_dict.keys())
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
-
+        encoding = {}
         filters = var.filters()
         if filters is not None:
             encoding.update(filters)
@@ -501,15 +498,15 @@ class NetCDF4DataStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         fill_value = attrs.pop("_FillValue", None)
-        encoding = _extract_nc4_variable_encoding(
-            variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
-        )
         if attrs.get("enum"):
             datatype = self._build_and_get_enum(name, attrs, variable.dtype)
         else:
             datatype = _get_datatype(
                 variable, self.format, raise_on_invalid_encoding=check_encoding
             )
+        encoding = _extract_nc4_variable_encoding(
+            variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
+        )
         if name in self.ds.variables:
             nc4_var = self.ds.variables[name]
         else:
