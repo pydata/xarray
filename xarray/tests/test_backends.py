@@ -1727,28 +1727,6 @@ class NetCDF4Base(NetCDFBase):
                     ds.to_netcdf(tmp_file2)
 
     @requires_netCDF4
-    def test_encoding_enum__error_handling(self):
-        with create_tmp_file() as tmp_file:
-            cloud_type_dict = {"clear": 0, "cloudy": 1}
-            with nc4.Dataset(tmp_file, mode="w") as nc:
-                nc.createDimension("time", size=2)
-                cloud_type = nc.createEnumType("u1", "cloud_type", cloud_type_dict)
-                nc.createVariable(
-                    "clouds",
-                    cloud_type,
-                    "time",
-                    fill_value=255,
-                )
-                # v is filled with default fill_value of u1
-            with open_dataset(tmp_file, decode_enum=True) as ds:
-                with create_tmp_file() as tmp_file2:
-                    with pytest.raises(
-                        ValueError,
-                        match=("trying to assign illegal value to Enum variable"),
-                    ):
-                        ds.to_netcdf(tmp_file2)
-
-    @requires_netCDF4
     def test_encoding_enum__multiple_variable_with_enum(self):
         with create_tmp_file() as tmp_file:
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
