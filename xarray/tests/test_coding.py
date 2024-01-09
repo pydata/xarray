@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from enum import Enum, EnumMeta
+from enum import EnumMeta
 
 import numpy as np
 import pandas as pd
@@ -164,14 +164,3 @@ def test_decode_enum() -> None:
     assert isinstance(decoded.attrs["enum"], EnumMeta)
     assert decoded.attrs["enum"].flag.value == 0
     assert decoded.attrs["enum"].galf.value == 1
-
-
-def test_encode_enum() -> None:
-    decoded = xr.Variable(
-        ("x",), [42], attrs={"enum": Enum("an_enum", {"flag": 0, "galf": 1})}
-    )
-    coder = variables.EnumCoder()
-    encoded = coder.encode(decoded)
-    assert encoded.attrs["enum"] == "an_enum"
-    assert encoded.attrs["flag_values"] == "0, 1"
-    assert encoded.attrs["flag_meanings"] == "flag galf"

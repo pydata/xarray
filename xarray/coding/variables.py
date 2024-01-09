@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, MutableMapping
-from enum import Enum, EnumMeta
+from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Union
 
@@ -567,7 +567,7 @@ class NonStringCoder(VariableCoder):
 
 class ObjectVLenStringCoder(VariableCoder):
     def encode(self):
-        return NotImplementedError
+        raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.dtype == object and variable.encoding.get("dtype", False) == str:
@@ -578,18 +578,10 @@ class ObjectVLenStringCoder(VariableCoder):
 
 
 class EnumCoder(VariableCoder):
-    """Encode and decode Enum to CF"""
+    """Decode CF flag_* to python Enum"""
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """From python Enum to CF flag_*"""
-        dims, data, attrs, encoding = unpack_for_encoding(variable)
-        if isinstance(attrs.get("enum"), EnumMeta):
-            enum = attrs.pop("enum")
-            enum_name = enum.__name__
-            attrs["flag_meanings"] = " ".join(i.name for i in enum)
-            attrs["flag_values"] = ", ".join(str(i.value) for i in enum)
-            attrs["enum"] = enum_name
-        return Variable(dims, data, attrs, encoding, fastpath=True)
+        raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         """From CF flag_* to python Enum"""

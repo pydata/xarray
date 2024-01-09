@@ -165,7 +165,6 @@ def encode_cf_variable(
         - Rescaling via: scale_factor and add_offset
         - datetimes are converted to the CF 'units since time' format
         - dtype encodings are enforced.
-        - enum is turned into flag_values and flag_meanings
 
     Parameters
     ----------
@@ -188,7 +187,6 @@ def encode_cf_variable(
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
         variables.BooleanCoder(),
-        variables.EnumCoder(),
     ]:
         var = coder.encode(var, name=name)
 

@@ -5,6 +5,7 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -421,11 +422,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         if isinstance(var.datatype, netCDF4.EnumType):
-            enum_dict = var.datatype.enum_dict
-            enum_name = var.datatype.name
-            attributes["enum"] = enum_name
-            attributes["flag_values"] = tuple(enum_dict.values())
-            attributes["flag_meanings"] = tuple(enum_dict.keys())
+            attributes["enum"] = Enum(var.datatype.name, var.datatype.enum_dict)
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
         encoding = {}
@@ -537,10 +534,9 @@ class NetCDF4DataStore(WritableCFDataStore):
     def _build_and_get_enum(
         self, var_name: str, attributes: dict, dtype: np.dtype
     ) -> object:
-        flag_meanings = attributes.pop("flag_meanings")
-        flag_values = attributes.pop("flag_values")
-        enum_name = attributes.pop("enum")
-        enum_dict = {k: v for k, v in zip(flag_meanings, flag_values)}
+        enum = attributes.pop("enum")
+        enum_dict = {e.name: e.value for e in enum}
+        enum_name = enum.__name__
         if enum_name in self.ds.enumtypes:
             datatype = self.ds.enumtypes[enum_name]
             if datatype.enum_dict != enum_dict:
@@ -548,9 +544,9 @@ class NetCDF4DataStore(WritableCFDataStore):
                     f"Cannot save variable `{var_name}` because an enum"
                     f" `{enum_name}` already exists in the Dataset but have"
                     " a different definition. To fix this error, make sure"
-                    " each variable have a unique name for their `attrs['enum']`"
+                    " each variable have a unique name in `attrs['enum']`"
                     " or, if they should share same enum type, make sure"
-                    " their flag_values and flag_meanings are identical."
+                    " the enums are identical."
                 )
                 raise ValueError(error_msg)
         else:
