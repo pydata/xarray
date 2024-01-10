@@ -64,7 +64,7 @@ def convert_calendar(
       The target calendar name.
     dim : str
       Name of the time coordinate in the input DataArray or Dataset.
-    align_on : {None, 'date', 'year'}
+    align_on : {None, 'date', 'year', 'random'}
       Must be specified when either the source or target is a `"360_day"`
       calendar; ignored otherwise. See Notes.
     missing : any, optional
@@ -143,6 +143,16 @@ def convert_calendar(
       will be dropped as there are no equivalent dates in a standard calendar.
 
       This option is best used with data on a frequency coarser than daily.
+
+    "random"
+      Similar to "year", each day of year of the source is mapped to another day of year
+      of the target. However, instead of having always the same missing days according
+      the source and target years, here 5 days are chosen randomly, one for each fifth
+      of the year. However, February 29th is always missing when converting to a leap year,
+      or its value is dropped when converting from a leap year. This is similar to method
+      used in the LOCA dataset (see Pierce, Cayan, and Thrasher (2014). doi:10.1175/JHM-D-14-0082.1).
+
+      This option is best used on daily data.
     """
     from xarray.core.dataarray import DataArray
 
@@ -174,14 +184,18 @@ def convert_calendar(
 
     out = obj.copy()
 
-    if align_on == "year":
+    if align_on in ["year", "random"]:
         # Special case for conversion involving 360_day calendar
-        # Instead of translating dates directly, this tries to keep the position within a year similar.
-
-        new_doy = time.groupby(f"{dim}.year").map(
-            _interpolate_day_of_year, target_calendar=calendar, use_cftime=use_cftime
-        )
-
+        if align_on == "year": 
+            # Instead of translating dates directly, this tries to keep the position within a year similar.
+            new_doy = time.groupby(f"{dim}.year").map(
+                _interpolate_day_of_year, target_calendar=calendar, use_cftime=use_cftime,
+            )
+        elif align_on == "random":
+            # The 5 days to remove are randomly chosen, one for each of the five 72-days periods of the year.
+            new_doy = time.groupby(f"{dim}.year").map(
+                _random_day_of_year, target_calendar=calendar, use_cftime=use_cftime
+            )
         # Convert the source datetimes, but override the day of year with our new day of years.
         out[dim] = DataArray(
             [
@@ -227,6 +241,27 @@ def _interpolate_day_of_year(time, target_calendar, use_cftime):
         * time.dt.dayofyear
         / _days_in_year(year, source_calendar, use_cftime)
     ).astype(int)
+
+
+def _random_day_of_year(time, target_calendar, use_cftime, rng=None):
+    """Return a day of year in the new calendar.
+
+    Removes Feb 29th and five other days chosen randomly within five sections of 72 days.
+    """
+    year = int(time.dt.year[0])
+    source_calendar = time.dt.calendar
+    new_doy = np.arange(360) + 1
+    rm_idx = (rng or np.random.default_rng()).integers(0, 72, 5) + (np.arange(5) * 72)
+    if source_calendar == "360_day":
+        for idx in rm_idx:
+            new_doy[idx + 1 :] = new_doy[idx + 1 :] + 1
+        if _days_in_year(year, target_calendar, use_cftime) == 366:
+            new_doy[new_doy >= 60] = new_doy[new_doy >= 60] + 1
+    elif target_calendar == "360_day":
+        new_doy = np.insert(new_doy, rm_idx - np.arange(5), -1)
+        if _days_in_year(year, source_calendar, use_cftime) == 366:
+            new_doy = np.insert(new_doy, 60, -1)
+    return new_doy[time.dt.dayofyear - 1]
 
 
 def _convert_to_new_calendar_with_new_day_of_year(
