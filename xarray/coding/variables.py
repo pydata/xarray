@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Hashable, MutableMapping
-from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Union
 
@@ -575,28 +574,3 @@ class ObjectVLenStringCoder(VariableCoder):
             return variable
         else:
             return variable
-
-
-class EnumCoder(VariableCoder):
-    """Decode CF flag_* to python Enum"""
-
-    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        raise NotImplementedError
-
-    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """From CF flag_* to python Enum"""
-        dims, data, attrs, encoding = unpack_for_decoding(variable)
-        if (
-            attrs.get("enum")
-            and attrs.get("flag_meanings")
-            and attrs.get("flag_values")
-        ):
-            flag_meanings = attrs.pop("flag_meanings")
-            flag_meanings = flag_meanings.split(" ")
-            flag_values = attrs.pop("flag_values")
-            flag_values = [int(v) for v in flag_values.split(", ")]
-            enum_name = attrs.pop("enum")
-            enum_dict = {k: v for k, v in zip(flag_meanings, flag_values)}
-            attrs["enum"] = Enum(enum_name, enum_dict)
-            return Variable(dims, data, attrs, encoding, fastpath=True)
-        return variable

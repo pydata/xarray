@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from enum import EnumMeta
 
 import numpy as np
 import pandas as pd
@@ -147,20 +146,3 @@ def test_decode_signed_from_unsigned(bits) -> None:
     decoded = coder.decode(encoded)
     assert decoded.dtype == signed_dtype
     assert decoded.values == original_values
-
-
-def test_decode_enum() -> None:
-    encoded = xr.Variable(
-        ("x",),
-        [42],
-        attrs={
-            "flag_values": "0, 1",
-            "flag_meanings": "flag galf",
-            "enum": "a_flag_name",
-        },
-    )
-    coder = variables.EnumCoder()
-    decoded = coder.decode(encoded)
-    assert isinstance(decoded.attrs["enum"], EnumMeta)
-    assert decoded.attrs["enum"].flag.value == 0
-    assert decoded.attrs["enum"].galf.value == 1

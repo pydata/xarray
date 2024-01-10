@@ -37,7 +37,6 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
-        decode_enum: bool | None = None,
     ) -> Dataset:
         assert isinstance(filename_or_obj, AbstractDataStore)
 
@@ -54,7 +53,6 @@ class StoreBackendEntrypoint(BackendEntrypoint):
             drop_variables=drop_variables,
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
-            decode_enum=decode_enum,
         )
 
         ds = Dataset(vars, attrs=attrs)

@@ -1718,7 +1718,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=None,
                 )
                 v[:] = 1
-            with open_dataset(tmp_file, decode_enum=True) as ds:
+            with open_dataset(tmp_file) as ds:
                 assert (
                     ds.clouds.encoding["dtype"].metadata["enum_dict"] == cloud_type_dict
                 )
@@ -1745,9 +1745,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(
-                tmp_file, decode_enum=True
-            ) as ds, create_tmp_file() as tmp_file2:
+            with open_dataset(tmp_file) as ds, create_tmp_file() as tmp_file2:
                 # nothing to assert ; just make sure round trip ca be done
                 ds.to_netcdf(tmp_file2)
 
@@ -1774,9 +1772,7 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(
-                tmp_file, decode_enum=True
-            ) as ds, create_tmp_file() as tmp_file2:
+            with open_dataset(tmp_file) as ds, create_tmp_file() as tmp_file2:
                 modified_enum = ds.cloud.encoding["dtype"].metadata["enum_dict"]
                 modified_enum.update({"neblig": 2})
                 ds.cloud.encoding["dtype"] = np.dtype(

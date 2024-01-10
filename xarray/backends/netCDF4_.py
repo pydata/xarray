@@ -636,7 +636,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
-        decode_enum: bool | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
@@ -662,7 +661,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 drop_variables=drop_variables,
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
-                decode_enum=decode_enum,
             )
         return ds
 
