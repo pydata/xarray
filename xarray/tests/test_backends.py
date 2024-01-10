@@ -15,7 +15,6 @@ import uuid
 import warnings
 from collections.abc import Generator, Iterator
 from contextlib import ExitStack
-from enum import Enum
 from io import BytesIO
 from os import listdir
 from pathlib import Path
@@ -1720,9 +1719,10 @@ class NetCDF4Base(NetCDFBase):
                 )
                 v[:] = 1
             with open_dataset(tmp_file, decode_enum=True) as ds:
-                assert {
-                    i.name: i.value for i in ds.clouds.attrs["enum"]
-                } == cloud_type_dict
+                assert (
+                    ds.clouds.encoding["dtype"].metadata["enum_dict"] == cloud_type_dict
+                )
+                assert ds.clouds.encoding["dtype"].metadata["enum_name"] == "cloud_type"
                 with create_tmp_file() as tmp_file2:
                     ds.to_netcdf(tmp_file2)
 
@@ -1745,12 +1745,18 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file, decode_enum=True) as ds:
-                with create_tmp_file() as tmp_file2:
-                    ds.to_netcdf(tmp_file2)
+            with open_dataset(
+                tmp_file, decode_enum=True
+            ) as ds, create_tmp_file() as tmp_file2:
+                # nothing to assert ; just make sure round trip ca be done
+                ds.to_netcdf(tmp_file2)
 
     @requires_netCDF4
-    def test_encoding_enum__multiple_variable_with_changing_enum(self):
+    def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
+        """
+        Given 2 variables, if they share the same enum type,
+        the 2 enum definition should be identical.
+        """
         with create_tmp_file() as tmp_file:
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:
@@ -1768,19 +1774,23 @@ class NetCDF4Base(NetCDFBase):
                     "time",
                     fill_value=255,
                 )
-            with open_dataset(tmp_file, decode_enum=True) as ds:
-                cloud_enum_dict = {e.name: e.value for e in ds.cloud.attrs["enum"]}
-                cloud_enum_dict.update({"neblig": 2})
-                ds.cloud.attrs["enum"] = Enum("cloud_type", cloud_enum_dict)
-                with create_tmp_file() as tmp_file2:
-                    with pytest.raises(
-                        ValueError,
-                        match=(
-                            "Cannot save variable .*"
-                            " because an enum `cloud_type` already exists in the Dataset .*"
-                        ),
-                    ):
-                        ds.to_netcdf(tmp_file2)
+            with open_dataset(
+                tmp_file, decode_enum=True
+            ) as ds, create_tmp_file() as tmp_file2:
+                modified_enum = ds.cloud.encoding["dtype"].metadata["enum_dict"]
+                modified_enum.update({"neblig": 2})
+                ds.cloud.encoding["dtype"] = np.dtype(
+                    "u1",
+                    metadata={"enum_dict": modified_enum, "enum_name": "cloud_type"},
+                )
+                with pytest.raises(
+                    ValueError,
+                    match=(
+                        "Cannot save variable .*"
+                        " because an enum `cloud_type` already exists in the Dataset .*"
+                    ),
+                ):
+                    ds.to_netcdf(tmp_file2)
 
 
 @requires_netCDF4

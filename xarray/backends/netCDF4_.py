@@ -5,7 +5,6 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -141,7 +140,9 @@ def _check_encoding_dtype_is_vlen_string(dtype):
         )
 
 
-def _get_datatype(var, nc_format="NETCDF4", raise_on_invalid_encoding=False):
+def _get_datatype(
+    var, nc_format="NETCDF4", raise_on_invalid_encoding=False
+) -> np.dtype | None:
     if nc_format == "NETCDF4":
         return _nc4_dtype(var)
     if "dtype" in var.encoding:
@@ -421,11 +422,19 @@ class NetCDF4DataStore(WritableCFDataStore):
         dimensions = var.dimensions
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
+        encoding = {}
         if isinstance(var.datatype, netCDF4.EnumType):
-            attributes["enum"] = Enum(var.datatype.name, var.datatype.enum_dict)
+            encoding["dtype"] = np.dtype(
+                data.dtype,
+                metadata={
+                    "enum_dict": var.datatype.enum_dict,
+                    "enum_name": var.datatype.name,
+                },
+            )
+        else:
+            encoding["dtype"] = var.dtype
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
-        encoding = {}
         filters = var.filters()
         if filters is not None:
             encoding.update(filters)
@@ -445,7 +454,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
         encoding["original_shape"] = var.shape
-        encoding["dtype"] = var.dtype
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -495,8 +503,12 @@ class NetCDF4DataStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         fill_value = attrs.pop("_FillValue", None)
-        if attrs.get("enum"):
-            datatype = self._build_and_get_enum(name, attrs, variable.dtype)
+        if (
+            variable.dtype.metadata
+            and variable.dtype.metadata.get("enum_name")
+            and variable.dtype.metadata.get("enum_dict")
+        ):
+            datatype = self._build_and_get_enum(name, variable.dtype)
         else:
             datatype = _get_datatype(
                 variable, self.format, raise_on_invalid_encoding=check_encoding
@@ -531,30 +543,27 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return target, variable.data
 
-    def _build_and_get_enum(
-        self, var_name: str, attributes: dict, dtype: np.dtype
-    ) -> object:
-        enum = attributes.pop("enum")
-        enum_dict = {e.name: e.value for e in enum}
-        enum_name = enum.__name__
-        if enum_name in self.ds.enumtypes:
-            datatype = self.ds.enumtypes[enum_name]
-            if datatype.enum_dict != enum_dict:
-                error_msg = (
-                    f"Cannot save variable `{var_name}` because an enum"
-                    f" `{enum_name}` already exists in the Dataset but have"
-                    " a different definition. To fix this error, make sure"
-                    " each variable have a unique name in `attrs['enum']`"
-                    " or, if they should share same enum type, make sure"
-                    " the enums are identical."
-                )
-                raise ValueError(error_msg)
-        else:
-            datatype = self.ds.createEnumType(
+    def _build_and_get_enum(self, var_name: str, dtype: np.dtype) -> object:
+        """Add or get the netCDF4 Enum based on the dtype in encoding."""
+        enum_dict = dtype.metadata["enum_dict"]
+        enum_name = dtype.metadata["enum_name"]
+        if enum_name not in self.ds.enumtypes:
+            return self.ds.createEnumType(
                 dtype,
                 enum_name,
                 enum_dict,
             )
+        datatype = self.ds.enumtypes[enum_name]
+        if datatype.enum_dict != enum_dict:
+            error_msg = (
+                f"Cannot save variable `{var_name}` because an enum"
+                f" `{enum_name}` already exists in the Dataset but have"
+                " a different definition. To fix this error, make sure"
+                " each variable have a uniquely named enum in their"
+                " `encoding['dtype']` or, if they should share same enum type,"
+                " make sure the enums are identical."
+            )
+            raise ValueError(error_msg)
         return datatype
 
     def sync(self):
