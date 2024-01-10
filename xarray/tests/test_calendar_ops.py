@@ -114,7 +114,11 @@ def test_convert_calendar_360_days_random():
         dims=("time",),
         coords={
             "time": date_range(
-                "2004-01-01", "2004-12-31T23:59:59", freq="12H", calendar="standard", use_cftime=False
+                "2004-01-01",
+                "2004-12-31T23:59:59",
+                freq="12H",
+                calendar="standard",
+                use_cftime=False,
             )
         },
     )
@@ -143,6 +147,7 @@ def test_convert_calendar_360_days_random():
     nandoys = conv.time.dt.dayofyear[::2]
     assert all(nandoys < np.array([74, 147, 220, 293, 366]))
     assert all(nandoys > np.array([0, 73, 146, 219, 292]))
+
 
 @requires_cftime
 @pytest.mark.parametrize(

@@ -186,10 +186,12 @@ def convert_calendar(
 
     if align_on in ["year", "random"]:
         # Special case for conversion involving 360_day calendar
-        if align_on == "year": 
+        if align_on == "year":
             # Instead of translating dates directly, this tries to keep the position within a year similar.
             new_doy = time.groupby(f"{dim}.year").map(
-                _interpolate_day_of_year, target_calendar=calendar, use_cftime=use_cftime,
+                _interpolate_day_of_year,
+                target_calendar=calendar,
+                use_cftime=use_cftime,
             )
         elif align_on == "random":
             # The 5 days to remove are randomly chosen, one for each of the five 72-days periods of the year.
