@@ -110,25 +110,23 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
 
 def test_convert_calendar_360_days_random():
     da_std = DataArray(
-        np.linspace(0, 1, 366 * 2),
+        np.linspace(0, 1, 366),
         dims=("time",),
         coords={
             "time": date_range(
                 "2004-01-01",
-                "2004-12-31T23:59:59",
-                freq="12H",
+                "2004-12-31",
+                freq="D",
                 calendar="standard",
                 use_cftime=False,
             )
         },
     )
     da_360 = DataArray(
-        np.linspace(0, 1, 360 * 2),
+        np.linspace(0, 1, 360),
         dims=("time",),
         coords={
-            "time": date_range(
-                "2004-01-01", "2004-12-30T23:59:59", freq="12H", calendar="360_day"
-            )
+            "time": date_range("2004-01-01", "2004-12-30", freq="D", calendar="360_day")
         },
     )
 
@@ -144,7 +142,7 @@ def test_convert_calendar_360_days_random():
     # Ensure that added days are evenly distributed in the 5 fifths of each year
     conv = convert_calendar(da_360, "noleap", align_on="random", missing=np.NaN)
     conv = conv.where(conv.isnull(), drop=True)
-    nandoys = conv.time.dt.dayofyear[::2]
+    nandoys = conv.time.dt.dayofyear[:366]
     assert all(nandoys < np.array([74, 147, 220, 293, 366]))
     assert all(nandoys > np.array([0, 73, 146, 219, 292]))
 
