@@ -30,7 +30,7 @@ New Features
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
   By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`) Note that some
   new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
-- New "random" method for converting to and from 360_day calendars.
+- New "random" method for converting to and from 360_day calendars (:pull:`8603`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Breaking changes
