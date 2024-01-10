@@ -258,7 +258,6 @@ def _extract_nc4_variable_encoding(
         "_FillValue",
         "dtype",
         "compression",
-        "enum",
         "significant_digits",
         "quantize_mode",
         "blosc_shuffle",
@@ -427,7 +426,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             encoding["dtype"] = np.dtype(
                 data.dtype,
                 metadata={
-                    "enum_dict": var.datatype.enum_dict,
+                    "enum": var.datatype.enum_dict,
                     "enum_name": var.datatype.name,
                 },
             )
@@ -506,7 +505,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         if (
             variable.dtype.metadata
             and variable.dtype.metadata.get("enum_name")
-            and variable.dtype.metadata.get("enum_dict")
+            and variable.dtype.metadata.get("enum")
         ):
             datatype = self._build_and_get_enum(name, variable.dtype)
         else:
@@ -545,7 +544,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def _build_and_get_enum(self, var_name: str, dtype: np.dtype) -> object:
         """Add or get the netCDF4 Enum based on the dtype in encoding."""
-        enum_dict = dtype.metadata["enum_dict"]
+        enum_dict = dtype.metadata["enum"]
         enum_name = dtype.metadata["enum_name"]
         if enum_name not in self.ds.enumtypes:
             return self.ds.createEnumType(
@@ -560,8 +559,8 @@ class NetCDF4DataStore(WritableCFDataStore):
                 f" `{enum_name}` already exists in the Dataset but have"
                 " a different definition. To fix this error, make sure"
                 " each variable have a uniquely named enum in their"
-                " `encoding['dtype']` or, if they should share same enum type,"
-                " make sure the enums are identical."
+                " `encoding['dtype'].metadata` or, if they should share same"
+                " the same enum type, make sure the enums are identical."
             )
             raise ValueError(error_msg)
         return datatype

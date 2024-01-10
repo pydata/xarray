@@ -4069,10 +4069,8 @@ class DataArray(
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
 
-        [netCDF4 backend only] When the CF flag_values/flag_meanings attributes are
-        set in for this DataArray, you can choose to replace these attributes by
-        a netcdf4 EnumType by updating the encoding dictionary with a key value pair
-        like: `da.attrs["enum"] = "enum_name"`.
+        [netCDF4 backend only] netCDF4 enums are decoded into the
+        dataarray dtype metadata.
 
         See Also
         --------

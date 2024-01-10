@@ -1719,12 +1719,12 @@ class NetCDF4Base(NetCDFBase):
                 )
                 v[:] = 1
             with open_dataset(tmp_file) as ds:
-                assert (
-                    ds.clouds.encoding["dtype"].metadata["enum_dict"] == cloud_type_dict
-                )
+                assert ds.clouds.encoding["dtype"].metadata["enum"] == cloud_type_dict
                 assert ds.clouds.encoding["dtype"].metadata["enum_name"] == "cloud_type"
                 with create_tmp_file() as tmp_file2:
                     ds.to_netcdf(tmp_file2)
+                    with nc4.Dataset(tmp_file2, "r") as nc:
+                        assert nc.enumtypes["cloud_type"] == cloud_type_dict
 
     @requires_netCDF4
     def test_encoding_enum__multiple_variable_with_enum(self):
@@ -1746,8 +1746,9 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=255,
                 )
             with open_dataset(tmp_file) as ds, create_tmp_file() as tmp_file2:
-                # nothing to assert ; just make sure round trip ca be done
                 ds.to_netcdf(tmp_file2)
+                with nc4.Dataset(tmp_file2, "r") as nc:
+                    assert nc.enumtypes["cloud_type"] == cloud_type_dict
 
     @requires_netCDF4
     def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
@@ -1773,11 +1774,11 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=255,
                 )
             with open_dataset(tmp_file) as ds, create_tmp_file() as tmp_file2:
-                modified_enum = ds.cloud.encoding["dtype"].metadata["enum_dict"]
+                modified_enum = ds.cloud.encoding["dtype"].metadata["enum"]
                 modified_enum.update({"neblig": 2})
                 ds.cloud.encoding["dtype"] = np.dtype(
                     "u1",
-                    metadata={"enum_dict": modified_enum, "enum_name": "cloud_type"},
+                    metadata={"enum": modified_enum, "enum_name": "cloud_type"},
                 )
                 with pytest.raises(
                     ValueError,
