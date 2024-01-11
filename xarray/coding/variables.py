@@ -574,3 +574,22 @@ class ObjectVLenStringCoder(VariableCoder):
             return variable
         else:
             return variable
+
+
+class NativeEnumCoder(VariableCoder):
+    """Encode Enum into variable dtype metadata."""
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if (
+            "dtype" in variable.encoding
+            and np.dtype(variable.encoding["dtype"]).metadata
+            and "enum" in variable.encoding["dtype"].metadata
+        ):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+            data = data.astype(dtype=variable.encoding.pop("dtype"))
+            return Variable(dims, data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        raise NotImplementedError()

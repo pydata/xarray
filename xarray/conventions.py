@@ -184,6 +184,7 @@ def encode_cf_variable(
         variables.CFScaleOffsetCoder(),
         variables.CFMaskCoder(),
         variables.UnsignedIntegerCoder(),
+        variables.NativeEnumCoder(),
         variables.NonStringCoder(),
         variables.DefaultFillvalueCoder(),
         variables.BooleanCoder(),
