@@ -1719,7 +1719,10 @@ class NetCDF4Base(NetCDFBase):
                 )
                 v[:] = 1
             with open_dataset(tmp_file) as original:
-                with self.roundtrip(original) as actual:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
                     assert_equal(original, actual)
                     assert (
                         actual.clouds.encoding["dtype"].metadata["enum"]
@@ -1752,7 +1755,10 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=255,
                 )
             with open_dataset(tmp_file) as original:
-                with self.roundtrip(original) as actual:
+                save_kwargs = {}
+                if self.engine == "h5netcdf":
+                    save_kwargs["invalid_netcdf"] = True
+                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
                     assert_equal(original, actual)
                     assert (
                         actual.clouds.encoding["dtype"] == actual.tifa.encoding["dtype"]
