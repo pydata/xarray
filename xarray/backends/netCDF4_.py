@@ -502,16 +502,16 @@ class NetCDF4DataStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         fill_value = attrs.pop("_FillValue", None)
+        datatype = _get_datatype(
+            variable, self.format, raise_on_invalid_encoding=check_encoding
+        )
+        # check enum metadata and use netCDF4.EnumType
         if (
-            variable.dtype.metadata
-            and variable.dtype.metadata.get("enum_name")
-            and variable.dtype.metadata.get("enum")
+            np.dtype(datatype).metadata
+            and datatype.metadata.get("enum_name")
+            and datatype.metadata.get("enum")
         ):
-            datatype = self._build_and_get_enum(name, variable.dtype)
-        else:
-            datatype = _get_datatype(
-                variable, self.format, raise_on_invalid_encoding=check_encoding
-            )
+            datatype = self._build_and_get_enum(name, datatype)
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
