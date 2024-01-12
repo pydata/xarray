@@ -98,7 +98,6 @@ Visualization
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~
 - `xframe <https://github.com/xtensor-stack/xframe>`_: C++ data structures inspired by xarray.
-- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_ and
-  `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_: similar data structures for Julia.
+- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_, `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_ and `YAXArrays.jl <https://github.com/JuliaDataCubes/YAXArrays.jl>`_: similar data structures for Julia.
 
 More projects can be found at the `"xarray" Github topic <https://github.com/topics/xarray>`_.
