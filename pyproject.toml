@@ -22,9 +22,9 @@ readme = "README.md"
 requires-python = ">=3.9"
 
 dependencies = [
-  "numpy>=1.22",
-  "packaging>=21.3",
-  "pandas>=1.4",
+  "numpy>=1.23",
+  "packaging>=22",
+  "pandas>=1.5",
 ]
 
 [project.urls]
@@ -91,6 +91,7 @@ module = [
   "cf_units.*",
   "cfgrib.*",
   "cftime.*",
+  "cloudpickle.*",
   "cubed.*",
   "cupy.*",
   "dask.types.*",

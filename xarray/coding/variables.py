@@ -414,7 +414,7 @@ class CFScaleOffsetCoder(VariableCoder):
 class UnsignedIntegerCoder(VariableCoder):
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         # from netCDF best practices
-        # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+        # https://docs.unidata.ucar.edu/nug/current/best_practices.html#bp_Unsigned-Data
         #     "_Unsigned = "true" to indicate that
         #      integer data should be treated as unsigned"
         if variable.encoding.get("_Unsigned", "false") == "true":
