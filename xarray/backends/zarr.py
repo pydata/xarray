@@ -1043,16 +1043,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
-            group=kwargs.get("group", self.group),
-            mode=kwargs.get("mode", self.mode),
-            synchronizer=kwargs.get("synchronizer", self.synchronizer),
-            consolidated=kwargs.get("consolidated", self.consolidated),
+            group=kwargs.pop("group", self.group),
+            mode=kwargs.pop("mode", self.mode),
+            synchronizer=kwargs.pop("synchronizer", self.synchronizer),
+            consolidated=kwargs.pop("consolidated", self.consolidated),
             consolidate_on_close=False,
-            chunk_store=kwargs.get("chunk_store", self.chunk_store),
-            storage_options=kwargs.get("storage_options", self.storage_options),
-            stacklevel=kwargs.get("stacklevel", self.stacklevel) + 1,
-            zarr_version=kwargs.get("zarr_version", self.zarr_version),
+            chunk_store=kwargs.pop("chunk_store", self.chunk_store),
+            storage_options=kwargs.pop("storage_options", self.storage_options),
+            stacklevel=kwargs.pop("stacklevel", self.stacklevel) + 1,
+            zarr_version=kwargs.pop("zarr_version", self.zarr_version),
         )
+        if kwargs:
+            raise ValueError(f"Unsupported kwargs: {kwargs.values()}")
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

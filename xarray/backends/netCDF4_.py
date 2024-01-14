@@ -676,15 +676,17 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            mode=kwargs.get("mode", self.mode),
-            format=kwargs.get("format", self.format),
-            group=kwargs.get("group", self.group),
-            clobber=kwargs.get("clobber", self.clobber),
-            diskless=kwargs.get("diskless", self.diskless),
-            persist=kwargs.get("persist", self.persist),
-            lock=kwargs.get("lock", self.lock),
-            autoclose=kwargs.get("autoclose", self.autoclose),
+            mode=kwargs.pop("mode", self.mode),
+            format=kwargs.pop("format", self.format),
+            group=kwargs.pop("group", self.group),
+            clobber=kwargs.pop("clobber", self.clobber),
+            diskless=kwargs.pop("diskless", self.diskless),
+            persist=kwargs.pop("persist", self.persist),
+            lock=kwargs.pop("lock", self.lock),
+            autoclose=kwargs.pop("autoclose", self.autoclose),
         )
+        if kwargs:
+            raise ValueError(f"Unsupported kwargs: {kwargs.values()}")
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

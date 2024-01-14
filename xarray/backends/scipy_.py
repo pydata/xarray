@@ -356,12 +356,14 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj,
-            mode=kwargs.get("mode", self.mode),
-            format=kwargs.get("format", self.format),
-            group=kwargs.get("group", self.group),
-            mmap=kwargs.get("mmap", self.mmap),
-            lock=kwargs.get("lock", self.lock),
+            mode=kwargs.pop("mode", self.mode),
+            format=kwargs.pop("format", self.format),
+            group=kwargs.pop("group", self.group),
+            mmap=kwargs.pop("mmap", self.mmap),
+            lock=kwargs.pop("lock", self.lock),
         )
+        if kwargs:
+            raise ValueError(f"Unsupported kwargs: {kwargs.values()}")
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

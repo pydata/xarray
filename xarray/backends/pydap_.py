@@ -217,13 +217,15 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             )
         store = PydapDataStore.open(
             url=filename_or_obj,
-            application=kwargs.get("application", self.application),
-            session=kwargs.get("session", self.session),
-            output_grid=kwargs.get("output_grid", self.output_grid),
-            timeout=kwargs.get("timeout", self.timeout),
-            verify=kwargs.get("verify", self.verify),
-            user_charset=kwargs.get("user_charset", self.user_charset),
+            application=kwargs.pop("application", self.application),
+            session=kwargs.pop("session", self.session),
+            output_grid=kwargs.pop("output_grid", self.output_grid),
+            timeout=kwargs.pop("timeout", self.timeout),
+            verify=kwargs.pop("verify", self.verify),
+            user_charset=kwargs.pop("user_charset", self.user_charset),
         )
+        if kwargs:
+            raise ValueError(f"Unsupported kwargs: {kwargs.values()}")
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

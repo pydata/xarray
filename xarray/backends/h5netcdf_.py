@@ -481,19 +481,21 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
-            mode=kwargs.get("mode", self.mode),
-            format=kwargs.get("format", self.format),
-            group=kwargs.get("group", self.group),
-            lock=kwargs.get("lock", self.lock),
-            autoclose=kwargs.get("autoclose", self.autoclose),
-            invalid_netcdf=kwargs.get("invalid_netcdf", self.invalid_netcdf),
-            phony_dims=kwargs.get("phony_dims", self.phony_dims),
-            decode_vlen_strings=kwargs.get(
+            mode=kwargs.pop("mode", self.mode),
+            format=kwargs.pop("format", self.format),
+            group=kwargs.pop("group", self.group),
+            lock=kwargs.pop("lock", self.lock),
+            autoclose=kwargs.pop("autoclose", self.autoclose),
+            invalid_netcdf=kwargs.pop("invalid_netcdf", self.invalid_netcdf),
+            phony_dims=kwargs.pop("phony_dims", self.phony_dims),
+            decode_vlen_strings=kwargs.pop(
                 "decode_vlen_strings", self.decode_vlen_strings
             ),
-            driver=kwargs.get("driver", self.driver),
-            driver_kwds=kwargs.get("driver_kwds", self.driver_kwds),
+            driver=kwargs.pop("driver", self.driver),
+            driver_kwds=kwargs.pop("driver_kwds", self.driver_kwds),
         )
+        if kwargs:
+            raise ValueError(f"Unsupported kwargs: {kwargs.values()}")
 
         store_entrypoint = StoreBackendEntrypoint()
         ds = store_entrypoint.open_dataset(
