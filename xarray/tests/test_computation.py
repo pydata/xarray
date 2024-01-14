@@ -118,8 +118,10 @@ def test_apply_identity() -> None:
     assert_identical(variable, apply_identity(variable))
     assert_identical(data_array, apply_identity(data_array))
     assert_identical(data_array, apply_identity(data_array.groupby("x")))
+    assert_identical(data_array, apply_identity(data_array.groupby("x", squeeze=False)))
     assert_identical(dataset, apply_identity(dataset))
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
+    assert_identical(dataset, apply_identity(dataset.groupby("x", squeeze=False)))
 
 
 def add(a, b):
@@ -519,8 +521,10 @@ def test_apply_output_core_dimension() -> None:
     assert_identical(stacked_variable, stack_negative(variable))
     assert_identical(stacked_data_array, stack_negative(data_array))
     assert_identical(stacked_dataset, stack_negative(dataset))
-    assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
-    assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(stacked_data_array, stack_negative(data_array.groupby("x")))
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        assert_identical(stacked_dataset, stack_negative(dataset.groupby("x")))
 
     def original_and_stack_negative(obj):
         def func(x):
@@ -547,11 +551,13 @@ def test_apply_output_core_dimension() -> None:
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 
-    out0, out1 = original_and_stack_negative(data_array.groupby("x"))
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        out0, out1 = original_and_stack_negative(data_array.groupby("x"))
     assert_identical(data_array, out0)
     assert_identical(stacked_data_array, out1)
 
-    out0, out1 = original_and_stack_negative(dataset.groupby("x"))
+    with pytest.warns(UserWarning, match="The `squeeze` kwarg"):
+        out0, out1 = original_and_stack_negative(dataset.groupby("x"))
     assert_identical(dataset, out0)
     assert_identical(stacked_dataset, out1)
 

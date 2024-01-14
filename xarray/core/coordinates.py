@@ -213,7 +213,7 @@ class Coordinates(AbstractCoordinates):
         :py:class:`~xarray.Coordinates` object is passed, its indexes
         will be added to the new created object.
     indexes: dict-like, optional
-        Mapping of where keys are coordinate names and values are
+        Mapping where keys are coordinate names and values are
         :py:class:`~xarray.indexes.Index` objects. If None (default),
         pandas indexes will be created for each dimension coordinate.
         Passing an empty dictionary will skip this default behavior.
