@@ -401,8 +401,8 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"not a subset of the .* dim"):
             DataArray(data, {"x": [0, 1, 2]})
 
-        with pytest.raises(TypeError, match=r"is not a string"):
-            DataArray(data, dims=["x", None])
+        with pytest.raises(TypeError, match=r"is not hashable"):
+            DataArray(data, dims=["x", []])  # type: ignore[list-item]
 
         with pytest.raises(ValueError, match=r"conflicting sizes for dim"):
             DataArray([1, 2, 3], coords=[("x", [0, 1])])
