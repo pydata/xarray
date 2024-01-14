@@ -28,6 +28,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
+    hashable,
     is_remote_uri,
     read_magic_number_from_file,
     try_read_magic_number_from_file_or_path,
@@ -194,6 +195,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if mode == "r":
                 lock = HDF5_LOCK
             else:
+                assert hashable(filename)
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)

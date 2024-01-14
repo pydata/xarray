@@ -299,7 +299,7 @@ T_FileLike = TypeVar("T_FileLike", bound=FileLike)
 
 
 class LockLike(Protocol):
-    def acquire(self, blocking: bool) -> bool:
+    def acquire(self, blocking: bool = True) -> bool:
         ...
 
     def release(self) -> None:
