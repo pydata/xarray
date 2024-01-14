@@ -563,7 +563,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                 f" `{enum_name}` already exists in the Dataset but have"
                 " a different definition. To fix this error, make sure"
                 " each variable have a uniquely named enum in their"
-                " `encoding['dtype'].metadata` or, if they should share same"
+                " `encoding['dtype'].metadata` or, if they should share"
                 " the same enum type, make sure the enums are identical."
             )
             raise ValueError(error_msg)
