@@ -167,11 +167,11 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None  # type: ignore
+        Delayed = None  # type: ignore[misc,assignment]
     try:
         from dask.dataframe import DataFrame as DaskDataFrame
     except ImportError:
-        DaskDataFrame = None  # type: ignore
+        DaskDataFrame = None
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -2659,7 +2659,7 @@ class Dataset(
             already as dask array.
         chunked_array_type: str, optional
             Which chunked array type to coerce this datasets' arrays to.
-            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+            Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
             Experimental API that should not be relied upon.
         from_array_kwargs: dict, optional
             Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -7159,9 +7159,9 @@ class Dataset(
         if len(self.dims) == 1:
             return self.to_dataframe()
         raise ValueError(
-            "cannot convert Datasets with %s dimensions into "
+            f"cannot convert Datasets with {len(self.dims)} dimensions into "
             "pandas objects without changing the number of dimensions. "
-            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+            "Please use Dataset.to_dataframe() instead."
         )
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
@@ -7564,9 +7564,7 @@ class Dataset(
                 for k, v in variables
             }
         except KeyError as e:
-            raise ValueError(
-                "cannot convert dict without the key " f"'{str(e.args[0])}'"
-            )
+            raise ValueError(f"cannot convert dict without the key '{str(e.args[0])}'")
         obj = cls(variable_dict)
 
         # what if coords aren't dims?
@@ -10149,7 +10147,7 @@ class Dataset(
     def groupby(
         self,
         group: Hashable | DataArray | IndexVariable,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
@@ -10217,7 +10215,7 @@ class Dataset(
         labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
-        squeeze: bool = True,
+        squeeze: bool | None = None,
         restore_coord_dims: bool = False,
     ) -> DatasetGroupBy:
         """Returns a DatasetGroupBy object for performing grouped operations.
