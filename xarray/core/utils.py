@@ -982,9 +982,6 @@ def drop_missing_dims(
         )
 
 
-T_None = TypeVar("T_None", None, "ellipsis")
-
-
 @overload
 def parse_dims(
     dim: Dims,
@@ -1066,7 +1063,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
