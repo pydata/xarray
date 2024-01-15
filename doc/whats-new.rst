@@ -63,6 +63,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Support non-string hashable dimensions in :py:class:`xarray.DataArray` (:issue:`8546`, :pull:`8559`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Reverse index output of bottleneck's rolling move_argmax/move_argmin functions (:issue:`8541`, :pull:`8552`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Vendor `SerializableLock` from dask and use as default lock for netcdf4 backends (:issue:`8442`, :pull:`8571`).
