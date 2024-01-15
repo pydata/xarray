@@ -6,22 +6,20 @@ import itertools
 import sys
 import warnings
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.utils import module_available
 
 if TYPE_CHECKING:
-    import os
     from importlib.metadata import EntryPoint
 
     if sys.version_info >= (3, 10):
         from importlib.metadata import EntryPoints
     else:
         EntryPoints = list[EntryPoint]
-    from io import BufferedIOBase
 
-    from xarray.backends.common import AbstractDataStore
+    from xarray.core.types import T_XarrayCanOpen
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -129,9 +127,8 @@ def list_engines() -> dict[str, BackendEntrypoint]:
     -----
     This function lives in the backends namespace (``engs=xr.backends.list_engines()``).
     If available, more information is available about each backend via ``engs["eng_name"]``.
-
-    # New selection mechanism introduced with Python 3.10. See GH6514.
     """
+    # New selection mechanism introduced with Python 3.10. See GH6514.
     if sys.version_info >= (3, 10):
         entrypoints = entry_points(group="xarray.backends")
     else:
@@ -144,9 +141,7 @@ def refresh_engines() -> None:
     list_engines.cache_clear()
 
 
-def guess_engine(
-    store_spec: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-) -> str | type[BackendEntrypoint]:
+def guess_engine(store_spec: T_XarrayCanOpen) -> str | type[BackendEntrypoint]:
     engines = list_engines()
 
     for engine, backend in engines.items():
@@ -197,21 +192,23 @@ def guess_engine(
     raise ValueError(error_msg)
 
 
-def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
+def get_backend(
+    engine: str | BackendEntrypoint | type[BackendEntrypoint],
+) -> BackendEntrypoint:
     """Select open_dataset method based on current engine."""
+    if isinstance(engine, BackendEntrypoint):
+        return engine
     if isinstance(engine, str):
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
                 f"unrecognized engine {engine} must be one of: {list(engines)}"
             )
-        backend = engines[engine]
-    elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
-        backend = engine()
-    else:
-        raise TypeError(
-            "engine must be a string or a subclass of "
-            f"xarray.backends.BackendEntrypoint: {engine}"
-        )
+        return engines[engine]
+    if isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
+        return engine()
 
-    return backend
+    raise TypeError(
+        "engine must be a string, a subclass of xarray.backends.BackendEntrypoint"
+        f" or an object of such a subclass, got {type(engine)}"
+    )

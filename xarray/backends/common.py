@@ -6,7 +6,7 @@ import time
 import traceback
 from collections.abc import Iterable
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
 
 import numpy as np
 
@@ -14,13 +14,12 @@ from xarray.conventions import cf_encoder
 from xarray.core import indexing
 from xarray.core.parallelcompat import get_chunked_array_type
 from xarray.core.pycompat import is_chunked_array
+from xarray.core.types import T_BackendDatasetLike
 from xarray.core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
-
     from xarray.core.dataset import Dataset
-    from xarray.core.types import NestedSequence
+    from xarray.core.types import NestedSequence, T_XarrayCanOpen
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -28,8 +27,20 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
+T = TypeVar("T")
 
-def _normalize_path(path):
+
+@overload
+def _normalize_path(path: os.PathLike) -> str:  # type: ignore[overload-overlap]
+    ...
+
+
+@overload
+def _normalize_path(path: T) -> T:
+    ...
+
+
+def _normalize_path(path: os.PathLike | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -52,9 +63,9 @@ def _normalize_path(path):
         path = os.fspath(path)
 
     if isinstance(path, str) and not is_remote_uri(path):
-        path = os.path.abspath(os.path.expanduser(path))
+        return os.path.abspath(os.path.expanduser(path))
 
-    return path
+    return path  # type: ignore[return-value]
 
 
 def _find_absolute_paths(
@@ -127,9 +138,9 @@ def _decode_variable_name(name):
     return name
 
 
-def find_root_and_group(ds):
+def find_root_and_group(ds: T_BackendDatasetLike) -> tuple[T_BackendDatasetLike, str]:
     """Find the root and group name of a netCDF4/h5netcdf dataset."""
-    hierarchy = ()
+    hierarchy: tuple[str, ...] = ()
     while ds.parent is not None:
         hierarchy = (ds.name.split("/")[-1],) + hierarchy
         ds = ds.parent
@@ -456,26 +467,27 @@ class BackendEntrypoint:
       ``drop_variables`` keyword argument.
       For more details see :ref:`RST open_dataset`.
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
-      ``filename_or_obj``, ``False`` otherwise. The implementation of this
+      ``filename_or_obj`` , ``False`` otherwise. The implementation of this
       method is not mandatory.
 
     Attributes
     ----------
 
-    open_dataset_parameters : tuple, default: None
-        A list of ``open_dataset`` method parameters.
-        The setting of this attribute is not mandatory.
     description : str, default: ""
         A short string describing the engine.
         The setting of this attribute is not mandatory.
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
+    open_dataset_parameters : tuple of str or None, optional
+        A list of ``open_dataset`` method parameters.
+        The setting of this attribute is only mandatory if the
+        open_dataset method contains ``*args`` or ``**kwargs``.
     """
 
-    open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    open_dataset_parameters: ClassVar[tuple[str, ...] | None] = None
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
@@ -487,10 +499,9 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
         drop_variables: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> Dataset:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -500,7 +511,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.

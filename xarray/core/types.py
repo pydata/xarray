@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import datetime
+import os
 import sys
 from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -27,12 +29,17 @@ except ImportError:
         raise
     else:
         Self: Any = None
+        TypeAlias: Any = None
 
 if TYPE_CHECKING:
+    from io import BufferedIOBase
+
+    from cftime import datetime as CFTimeDatetime
+    from dask.array import Array as DaskArray
     from numpy._typing import _SupportsDType
     from numpy.typing import ArrayLike
 
-    from xarray.backends.common import BackendEntrypoint
+    from xarray.backends.common import AbstractDataStore, BackendEntrypoint
     from xarray.core.alignment import Aligner
     from xarray.core.common import AbstractArray, DataWithCoords
     from xarray.core.coordinates import Coordinates
@@ -41,21 +48,6 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import Variable
-
-    try:
-        from dask.array import Array as DaskArray
-    except ImportError:
-        DaskArray = np.ndarray  # type: ignore
-
-    try:
-        from cubed import Array as CubedArray
-    except ImportError:
-        CubedArray = np.ndarray
-
-    try:
-        from zarr.core import Array as ZarrArray
-    except ImportError:
-        ZarrArray = np.ndarray
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
@@ -84,10 +76,6 @@ if TYPE_CHECKING:
         # anything with a dtype attribute
         _SupportsDType[np.dtype[Any]],
     ]
-    try:
-        from cftime import datetime as CFTimeDatetime
-    except ImportError:
-        CFTimeDatetime = Any
     DatetimeLike = Union[pd.Timestamp, datetime.datetime, np.datetime64, CFTimeDatetime]
 else:
     DTypeLikeSave: Any = None
@@ -268,7 +256,7 @@ NestedSequence = Union[
 ]
 
 
-QuantileMethods = Literal[
+QuantileMethods: TypeAlias = Literal[
     "inverted_cdf",
     "averaged_inverted_cdf",
     "closest_observation",
@@ -284,5 +272,65 @@ QuantileMethods = Literal[
     "nearest",
 ]
 
+T_XarrayCanOpen: TypeAlias = Union[
+    str, bytes, os.PathLike[Any], "BufferedIOBase", "AbstractDataStore"
+]
+NetcdfFormats = Literal[
+    "NETCDF4",
+    "NETCDF4_CLASSIC",
+    "NETCDF3_64BIT",
+    "NETCDF3_64BIT_OFFSET",
+    "NETCDF3_64BIT_DATA",
+    "NETCDF3_CLASSIC",
+]
+ScipyFormats = Literal["NETCDF3_64BIT", "NETCDF3_64BIT_OFFSET", "NETCDF3_CLASSIC", None]
+NetCDFOpenModes: TypeAlias = Literal["w", "x", "a", "r+", "r"]
+H5netcdfOpenModes: TypeAlias = Literal["w", "a", "r+", "r"]
+ScipyOpenModes: TypeAlias = Literal["w", "a", "r"]
+ZarrOpenModes: TypeAlias = Literal["w", "w-", "a", "a-", "r+", "r"]
 
-ZarrWriteModes = Literal["w", "w-", "a", "a-", "r+", "r"]
+
+class FileLike(Protocol):
+    def close(self) -> None:
+        ...
+
+
+T_FileLike = TypeVar("T_FileLike", bound=FileLike)
+
+
+class LockLike(Protocol):
+    def acquire(self, blocking: bool = True) -> bool:
+        ...
+
+    def release(self) -> None:
+        ...
+
+    def locked(self) -> bool:
+        ...
+
+    def __enter__(self) -> bool:
+        ...
+
+    def __exit__(
+        self,
+        type: type[BaseException] | None,
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        ...
+
+
+T_LockLike = TypeVar("T_LockLike", bound=LockLike)
+
+
+class BackendDatasetLike(Protocol):
+    @property
+    def parent(self) -> Self | None:
+        ...
+
+    @property
+    def name(self) -> str:
+        ...
+
+
+T_BackendDatasetLike = TypeVar("T_BackendDatasetLike", bound=BackendDatasetLike)

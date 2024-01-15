@@ -2,30 +2,30 @@ from __future__ import annotations
 
 import atexit
 import contextlib
-import io
 import threading
 import uuid
 import warnings
-from collections.abc import Hashable
-from typing import Any
+from collections.abc import Hashable, Iterator, MutableMapping, Sequence
+from typing import Any, Callable, Generic, Literal, Union, cast
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
+from xarray.core.types import FileLike, LockLike, T_FileLike, TypeAlias
 
 # Global cache for storing open files.
-FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
+FILE_CACHE: LRUCache[Hashable, FileLike] = LRUCache(
     maxsize=OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close()
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
-REF_COUNTS: dict[Any, int] = {}
+REF_COUNTS: dict[Hashable, int] = {}
 
 _DEFAULT_MODE = utils.ReprObject("<unused>")
 
 
-class FileManager:
+class FileManager(Generic[T_FileLike]):
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend
@@ -33,11 +33,12 @@ class FileManager:
     many open files and transferring them between multiple processes.
     """
 
-    def acquire(self, needs_lock=True):
+    def acquire(self, needs_lock: bool = True) -> T_FileLike:
         """Acquire the file object from this manager."""
         raise NotImplementedError()
 
-    def acquire_context(self, needs_lock=True):
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_FileLike]:
         """Context manager for acquiring a file. Yields a file object.
 
         The context manager unwinds any actions taken as part of acquisition
@@ -46,12 +47,22 @@ class FileManager:
         """
         raise NotImplementedError()
 
-    def close(self, needs_lock=True):
+    def close(self, needs_lock: bool = True) -> None:
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError()
 
 
-class CachingFileManager(FileManager):
+_CachingFileManagerState: TypeAlias = tuple[
+    Callable[..., T_FileLike],
+    tuple[Any, ...],
+    Union[str, utils.ReprObject],
+    dict[str, Any],
+    Union[LockLike, None],
+    Hashable,
+]
+
+
+class CachingFileManager(FileManager, Generic[T_FileLike]):
     """Wrapper for automatically opening and closing file objects.
 
     Unlike files, CachingFileManager objects can be safely pickled and passed
@@ -79,17 +90,28 @@ class CachingFileManager(FileManager):
 
     """
 
+    _opener: Callable[..., T_FileLike]
+    _args: tuple[Any, ...]
+    _mode: str | utils.ReprObject
+    _kwargs: dict[str, Any]
+    _use_default_lock: bool
+    _lock: LockLike
+    _cache: MutableMapping[Hashable, FileLike]
+    _manager_id: Hashable
+    _key: Hashable
+    _ref_counter: _RefCounter
+
     def __init__(
         self,
-        opener,
-        *args,
-        mode=_DEFAULT_MODE,
-        kwargs=None,
-        lock=None,
-        cache=None,
+        opener: Callable[..., T_FileLike],
+        *args: Any,
+        mode: str | utils.ReprObject = _DEFAULT_MODE,
+        kwargs: dict[str, Any] | None = None,
+        lock: Literal[False] | LockLike | None = None,
+        cache: MutableMapping[Hashable, FileLike] | None = None,
         manager_id: Hashable | None = None,
-        ref_counts=None,
-    ):
+        ref_counts: dict[Hashable, int] | None = None,
+    ) -> None:
         """Initialize a CachingFileManager.
 
         The cache, manager_id and ref_counts arguments exist solely to
@@ -135,16 +157,12 @@ class CachingFileManager(FileManager):
         self._kwargs = {} if kwargs is None else dict(kwargs)
 
         self._use_default_lock = lock is None or lock is False
-        self._lock = threading.Lock() if self._use_default_lock else lock
+        self._lock = threading.Lock() if lock is None or lock is False else lock
 
         # cache[self._key] stores the file associated with this object.
-        if cache is None:
-            cache = FILE_CACHE
-        self._cache = cache
-        if manager_id is None:
-            # Each call to CachingFileManager should separately open files.
-            manager_id = str(uuid.uuid4())
-        self._manager_id = manager_id
+        self._cache = FILE_CACHE if cache is None else cache
+        # Each call to CachingFileManager should separately open files.
+        self._manager_id = str(uuid.uuid4()) if manager_id is None else manager_id
         self._key = self._make_key()
 
         # ref_counts[self._key] stores the number of CachingFileManager objects
@@ -155,7 +173,7 @@ class CachingFileManager(FileManager):
         self._ref_counter = _RefCounter(ref_counts)
         self._ref_counter.increment(self._key)
 
-    def _make_key(self):
+    def _make_key(self) -> Hashable:
         """Make a key for caching files in the LRU cache."""
         value = (
             self._opener,
@@ -167,7 +185,7 @@ class CachingFileManager(FileManager):
         return _HashedSequence(value)
 
     @contextlib.contextmanager
-    def _optional_lock(self, needs_lock):
+    def _optional_lock(self, needs_lock: bool) -> Iterator[None]:
         """Context manager for optionally acquiring a lock."""
         if needs_lock:
             with self._lock:
@@ -175,7 +193,7 @@ class CachingFileManager(FileManager):
         else:
             yield
 
-    def acquire(self, needs_lock=True):
+    def acquire(self, needs_lock: bool = True) -> T_FileLike:
         """Acquire a file object from the manager.
 
         A new file is only opened if it has expired from the
@@ -194,7 +212,7 @@ class CachingFileManager(FileManager):
         return file
 
     @contextlib.contextmanager
-    def acquire_context(self, needs_lock=True):
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_FileLike]:
         """Context manager for acquiring a file."""
         file, cached = self._acquire_with_cache_info(needs_lock)
         try:
@@ -204,7 +222,9 @@ class CachingFileManager(FileManager):
                 self.close(needs_lock)
             raise
 
-    def _acquire_with_cache_info(self, needs_lock=True):
+    def _acquire_with_cache_info(
+        self, needs_lock: bool = True
+    ) -> tuple[T_FileLike, bool]:
         """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
@@ -221,9 +241,9 @@ class CachingFileManager(FileManager):
                 self._cache[self._key] = file
                 return file, False
             else:
-                return file, True
+                return cast(T_FileLike, file), True
 
-    def close(self, needs_lock=True):
+    def close(self, needs_lock: bool = True) -> None:
         """Explicitly close any associated file object (if necessary)."""
         # TODO: remove needs_lock if/when we have a reentrant lock in
         # dask.distributed: https://github.com/dask/dask/issues/3832
@@ -259,7 +279,7 @@ class CachingFileManager(FileManager):
                     stacklevel=2,
                 )
 
-    def __getstate__(self):
+    def __getstate__(self) -> _CachingFileManagerState:
         """State for pickling."""
         # cache is intentionally omitted: we don't want to try to serialize
         # these global objects.
@@ -273,7 +293,7 @@ class CachingFileManager(FileManager):
             self._manager_id,
         )
 
-    def __setstate__(self, state) -> None:
+    def __setstate__(self, state: _CachingFileManagerState) -> None:
         """Restore from a pickle."""
         opener, args, mode, kwargs, lock, manager_id = state
         self.__init__(  # type: ignore
@@ -300,16 +320,19 @@ def _remove_del_method():
 class _RefCounter:
     """Class for keeping track of reference counts."""
 
-    def __init__(self, counts):
+    _counts: dict[Hashable, int]
+    _lock: threading.Lock
+
+    def __init__(self, counts: dict[Hashable, int]) -> None:
         self._counts = counts
         self._lock = threading.Lock()
 
-    def increment(self, name):
+    def increment(self, name: Hashable) -> int:
         with self._lock:
             count = self._counts[name] = self._counts.get(name, 0) + 1
         return count
 
-    def decrement(self, name):
+    def decrement(self, name: Hashable) -> int:
         with self._lock:
             count = self._counts[name] - 1
             if count:
@@ -328,29 +351,33 @@ class _HashedSequence(list):
     https://bugs.python.org/issue1462796
     """
 
-    def __init__(self, tuple_value):
+    hashvalue: int
+
+    def __init__(self, tuple_value: Sequence[Hashable]):
         self[:] = tuple_value
         self.hashvalue = hash(tuple_value)
 
-    def __hash__(self):
+    def __hash__(self) -> int:  # type: ignore[override]
         return self.hashvalue
 
 
-class DummyFileManager(FileManager):
+class DummyFileManager(FileManager, Generic[T_FileLike]):
     """FileManager that simply wraps an open file in the FileManager interface."""
 
-    def __init__(self, value):
+    _value: T_FileLike
+
+    def __init__(self, value: T_FileLike) -> None:
         self._value = value
 
-    def acquire(self, needs_lock=True):
+    def acquire(self, needs_lock=True) -> T_FileLike:
         del needs_lock  # ignored
         return self._value
 
     @contextlib.contextmanager
-    def acquire_context(self, needs_lock=True):
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_FileLike]:
         del needs_lock
         yield self._value
 
-    def close(self, needs_lock=True):
+    def close(self, needs_lock: bool = True) -> None:
         del needs_lock  # ignored
         self._value.close()

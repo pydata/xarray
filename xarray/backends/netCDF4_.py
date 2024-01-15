@@ -5,7 +5,8 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import numpy as np
 
@@ -31,6 +32,7 @@ from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
+from xarray.core.types import Self
 from xarray.core.utils import (
     FrozenDict,
     close_on_error,
@@ -40,10 +42,16 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
+    import netCDF4
 
-    from xarray.backends.common import AbstractDataStore
+    from xarray.backends.file_manager import FileManager
     from xarray.core.dataset import Dataset
+    from xarray.core.types import (
+        LockLike,
+        NetcdfFormats,
+        NetCDFOpenModes,
+        T_XarrayCanOpen,
+    )
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -168,11 +176,20 @@ def _nc4_dtype(var):
     return dtype
 
 
-def _netcdf4_create_group(dataset, name):
+def _netcdf4_create_group(
+    dataset: netCDF4.Dataset | netCDF4.Group, name: str
+) -> netCDF4.Group:
     return dataset.createGroup(name)
 
 
-def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
+def _nc4_require_group(
+    ds: netCDF4.Dataset,
+    group: str | None,
+    mode: str | None,
+    create_group: Callable[
+        [netCDF4.Dataset | netCDF4.Group, str], netCDF4.Group
+    ] = _netcdf4_create_group,
+) -> netCDF4.Dataset | netCDF4.Group:
     if group in {None, "", "/"}:
         # use the root group
         return ds
@@ -320,18 +337,32 @@ class NetCDF4DataStore(WritableCFDataStore):
     """
 
     __slots__ = (
-        "autoclose",
+        "_manager",
+        "_group",
+        "_mode",
+        "_filename",
         "format",
         "is_remote",
         "lock",
-        "_filename",
-        "_group",
-        "_manager",
-        "_mode",
+        "autoclose",
     )
 
+    _manager: FileManager[netCDF4.Dataset]
+    _group: str | None
+    _mode: NetCDFOpenModes
+    _filename: str
+    format: NetcdfFormats
+    is_remote: bool
+    lock: Literal[False] | LockLike | None
+    autoclose: bool
+
     def __init__(
-        self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
+        self,
+        manager: netCDF4.Dataset | FileManager[netCDF4.Dataset],
+        group: str | None = None,
+        mode: NetCDFOpenModes = "r",
+        lock: Literal[False] | LockLike | None = NETCDF4_PYTHON_LOCK,
+        autoclose: bool = False,
     ):
         import netCDF4
 
@@ -359,17 +390,17 @@ class NetCDF4DataStore(WritableCFDataStore):
     @classmethod
     def open(
         cls,
-        filename,
-        mode="r",
-        format="NETCDF4",
-        group=None,
-        clobber=True,
-        diskless=False,
-        persist=False,
-        lock=None,
+        filename: T_XarrayCanOpen,
+        mode: NetCDFOpenModes = "r",
+        format: NetcdfFormats | None = "NETCDF4",
+        group: str | None = None,
+        clobber: bool = True,
+        diskless: bool = False,
+        persist: bool = False,
+        lock: Literal[False] | LockLike | None = None,
         lock_maker=None,
-        autoclose=False,
-    ):
+        autoclose: bool = False,
+    ) -> Self:
         import netCDF4
 
         if isinstance(filename, os.PathLike):
@@ -405,13 +436,13 @@ class NetCDF4DataStore(WritableCFDataStore):
         )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
-    def _acquire(self, needs_lock=True):
+    def _acquire(self, needs_lock: bool = True) -> netCDF4.Dataset | netCDF4.Group:
         with self._manager.acquire_context(needs_lock) as root:
             ds = _nc4_require_group(root, self._group, self._mode)
         return ds
 
     @property
-    def ds(self):
+    def ds(self) -> netCDF4.Dataset | netCDF4.Group:
         return self._acquire()
 
     def open_store_variable(self, name, var):
@@ -534,20 +565,56 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+@dataclass(repr=False)
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
     """
     Backend for netCDF files based on the netCDF4 package.
 
-    It can open ".nc", ".nc4", ".cdf" files and will be chosen
-    as default for these files.
+    It can open ".nc", ".nc4", ".cdf" files and will be chosen as default for
+    these files.
 
     Additionally it can open valid HDF5 files, see
-    https://h5netcdf.org/#invalid-netcdf-files for more info.
-    It will not be detected as valid backend for such files, so make
-    sure to specify ``engine="netcdf4"`` in ``open_dataset``.
+    https://h5netcdf.org/#invalid-netcdf-files for more info. It will not be
+    detected as valid backend for such files, so make sure to specify
+    ``engine="netcdf4"`` in ``open_dataset``.
 
     For more information about the underlying library, visit:
     https://unidata.github.io/netcdf4-python
+
+    Parameters
+    ----------
+    group: str or None, optional
+        Path to the netCDF4 group in the given file to open. None (default) uses
+        the root group.
+    mode: {"w", "x", "a", "r+", "r"}, default: "r"
+        Access mode of the NetCDF file. "r" means read-only; no data can be
+        modified. "w" means write; a new file is created, an existing file with
+        the same name is deleted. "x" means write, but fail if an existing file
+        with the same name already exists. "a" and "r+" mean append; an existing
+        file is opened for reading and writing, if file does not exist already,
+        one is created.
+    format: {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
+            "NETCDF3_64BIT_OFFSET", "NETCDF3_64BIT_DATA", "NETCDF3_CLASSIC"} \
+            or None, optional
+        Format of the NetCDF file, defaults to "NETCDF4".
+    lock: False, None or Lock-like, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. If None (default) appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
+    autoclose: bool, default: False
+        If True, automatically close files to avoid OS Error of too many files
+        being open. However, this option doesn't work with streams, e.g.,
+        BytesIO.
+    clobber: bool, default: False
+        If True, opening a file with mode="w" will clobber an existing file with
+        the same name. If False, an exception will be raised if a file with the
+        same name already exists. mode="x" is identical to mode="w" with
+        clobber=False.
+    diskless: bool, default: False
+        If True, create diskless (in-core) file.
+    persist: bool, default: False
+        If True, persist file to disk when closed.
 
     See Also
     --------
@@ -560,11 +627,26 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
+    open_dataset_parameters = (
+        "drop_variables",
+        "mask_and_scale",
+        "decode_times",
+        "concat_characters",
+        "use_cftime",
+        "decode_timedelta",
+        "decode_coords",
+    )
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
+    group: str | None = None
+    mode: NetCDFOpenModes = "r"
+    format: NetcdfFormats | None = "NETCDF4"
+    lock: Literal[False] | LockLike | None = None
+    autoclose: bool = False
+    clobber: bool = True
+    diskless: bool = False
+    persist: bool = False
+
+    def guess_can_open(self, filename_or_obj: T_XarrayCanOpen) -> bool:
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
         magic_number = try_read_magic_number_from_path(filename_or_obj)
@@ -578,38 +660,33 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        group=None,
-        mode="r",
-        format="NETCDF4",
-        clobber=True,
-        diskless=False,
-        persist=False,
-        lock=None,
-        autoclose=False,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        decode_coords: bool | Literal["coordinates", "all"] = True,
+        **kwargs: Any,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            mode=mode,
-            format=format,
-            group=group,
-            clobber=clobber,
-            diskless=diskless,
-            persist=persist,
-            lock=lock,
-            autoclose=autoclose,
+            mode=kwargs.pop("mode", self.mode),
+            format=kwargs.pop("format", self.format),
+            group=kwargs.pop("group", self.group),
+            clobber=kwargs.pop("clobber", self.clobber),
+            diskless=kwargs.pop("diskless", self.diskless),
+            persist=kwargs.pop("persist", self.persist),
+            lock=kwargs.pop("lock", self.lock),
+            autoclose=kwargs.pop("autoclose", self.autoclose),
         )
+        if kwargs:
+            raise ValueError(f"Unsupported kwargs: {kwargs.values()}")
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

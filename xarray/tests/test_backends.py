@@ -46,8 +46,9 @@ from xarray.backends.netCDF4_ import (
     NetCDF4BackendEntrypoint,
     _extract_nc4_variable_encoding,
 )
-from xarray.backends.pydap_ import PydapDataStore
+from xarray.backends.pydap_ import PydapBackendEntrypoint, PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.backends.zarr import ZarrBackendEntrypoint
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
@@ -124,7 +125,10 @@ default_value = object()
 dask_array_type = array_type("dask")
 
 if TYPE_CHECKING:
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+    import pydap.model
+
+    from xarray.backends.api import NetcdfFormats, T_NetcdfEngine
+    from xarray.core.types import T_XarrayCanOpen
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -268,7 +272,7 @@ class TestCommon:
 
 
 class NetCDF3Only:
-    netcdf3_formats: tuple[T_NetcdfTypes, ...] = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
+    netcdf3_formats: tuple[NetcdfFormats, ...] = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
 
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
@@ -293,15 +297,19 @@ class NetCDF3Only:
 
 class DatasetIOBase:
     engine: T_NetcdfEngine | None = None
-    file_format: T_NetcdfTypes | None = None
+    file_format: NetcdfFormats | None = None
 
     def create_store(self):
         raise NotImplementedError()
 
     @contextlib.contextmanager
     def roundtrip(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
+        self,
+        data,
+        save_kwargs: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
+        allow_cleanup_failure: bool = False,
+    ) -> Iterator[Dataset]:
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
@@ -313,8 +321,12 @@ class DatasetIOBase:
 
     @contextlib.contextmanager
     def roundtrip_append(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
+        self,
+        data,
+        save_kwargs=None,
+        open_kwargs=None,
+        allow_cleanup_failure: bool = False,
+    ) -> Iterator[Dataset]:
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
@@ -333,7 +345,7 @@ class DatasetIOBase:
         )
 
     @contextlib.contextmanager
-    def open(self, path, **kwargs):
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
         with open_dataset(path, engine=self.engine, **kwargs) as ds:
             yield ds
 
@@ -639,13 +651,13 @@ class DatasetIOBase:
         with self.roundtrip(in_memory) as on_disk:
             indexers = {"dim1": [1, 2, 0], "dim2": [3, 2, 0, 3], "dim3": np.arange(5)}
             expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             # make sure the array is not yet loaded into memory
             assert not actual["var1"].variable._in_memory
             assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
 
     def test_vectorized_indexing(self) -> None:
@@ -656,13 +668,13 @@ class DatasetIOBase:
                 "dim2": DataArray([0, 2, 3], dims="a"),
             }
             expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             # make sure the array is not yet loaded into memory
             assert not actual["var1"].variable._in_memory
             assert_identical(expected, actual.load())
             # do it twice, to make sure we're switched from
             # vectorized -> numpy when we cached the values
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
 
         def multiple_indexing(indexers):
@@ -769,7 +781,7 @@ class DatasetIOBase:
             actual = on_disk.isel(dim2=on_disk["dim2"] < 3)
             assert_identical(expected, actual)
 
-    def validate_array_type(self, ds):
+    def validate_array_type(self, ds: Dataset) -> None:
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
@@ -795,12 +807,12 @@ class DatasetIOBase:
             self.validate_array_type(on_disk)
             indexers = {"dim1": [1, 2, 0], "dim2": [3, 2, 0, 3], "dim3": np.arange(5)}
             expected = in_memory.isel(indexers)
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
             self.validate_array_type(actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
-            actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(indexers)
             assert_identical(expected, actual)
             self.validate_array_type(actual)
 
@@ -1935,6 +1947,15 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
+@requires_netCDF4
+class TestNetCDF4Instance(TestNetCDF4Data):
+    @contextlib.contextmanager
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
+        engine = NetCDF4BackendEntrypoint()
+        with open_dataset(path, engine=engine, **kwargs) as ds:
+            yield ds
+
+
 @requires_zarr
 class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -3002,6 +3023,17 @@ class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
 
 
 @requires_zarr
+class TestZarrrInstance(TestZarrWriteEmpty):
+    @contextlib.contextmanager
+    def open(self, store_target, **kwargs):
+        engine = ZarrBackendEntrypoint()
+        with xr.open_dataset(
+            store_target, engine=engine, **kwargs, **self.version_kwargs
+        ) as ds:
+            yield ds
+
+
+@requires_zarr
 @requires_fsspec
 def test_zarr_storage_options() -> None:
     pytest.importorskip("aiobotocore")
@@ -3103,10 +3135,19 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
                 open_dataset(tmp_file, engine="scipy")
 
 
+@requires_scipy
+class TestScipyInstance(TestScipyFileObject):
+    @contextlib.contextmanager
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
+        engine = ScipyBackendEntrypoint()
+        with open_dataset(path, engine=engine, **kwargs) as ds:
+            yield ds
+
+
 @requires_netCDF4
 class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     engine: T_NetcdfEngine = "netcdf4"
-    file_format: T_NetcdfTypes = "NETCDF3_CLASSIC"
+    file_format: NetcdfFormats = "NETCDF3_CLASSIC"
 
     @contextlib.contextmanager
     def create_store(self):
@@ -3127,7 +3168,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 @requires_netCDF4
 class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     engine: T_NetcdfEngine = "netcdf4"
-    file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
+    file_format: NetcdfFormats = "NETCDF4_CLASSIC"
 
     @contextlib.contextmanager
     def create_store(self):
@@ -3142,7 +3183,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
 class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
-    file_format: T_NetcdfTypes = "NETCDF3_64BIT"
+    file_format: NetcdfFormats = "NETCDF3_64BIT"
 
     def test_write_store(self) -> None:
         # there's no specific store to test here
@@ -3442,15 +3483,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
 
     def test_open_badbytes(self) -> None:
         with pytest.raises(ValueError, match=r"HDF5 as bytes"):
-            with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):  # type: ignore[arg-type]
+            with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
         with pytest.raises(
             ValueError, match=r"match in any of xarray's currently installed IO"
         ):
-            with open_dataset(b"garbage"):  # type: ignore[arg-type]
+            with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
-            with open_dataset(b"garbage", engine="netcdf4"):  # type: ignore[arg-type]
+            with open_dataset(b"garbage", engine="netcdf4"):
                 pass
         with pytest.raises(
             ValueError, match=r"not the signature of a valid netCDF4 file"
@@ -3569,6 +3610,15 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
         ) as actual:
             assert "Temperature" in list(actual)
+
+
+@requires_h5netcdf
+class TestH5NetCDFInstance(TestH5NetCDFData):
+    @contextlib.contextmanager
+    def open(self, path: T_XarrayCanOpen, **kwargs) -> Iterator[Dataset]:
+        engine = H5netcdfBackendEntrypoint()
+        with open_dataset(path, engine=engine, **kwargs) as ds:
+            yield ds
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
@@ -4432,7 +4482,7 @@ class TestDask(DatasetIOBase):
 @requires_pydap
 @pytest.mark.filterwarnings("ignore:The binary mode of fromstring is deprecated")
 class TestPydap:
-    def convert_to_pydap_dataset(self, original):
+    def convert_to_pydap_dataset(self, original: Dataset) -> pydap.model.DatasetType:
         from pydap.model import BaseType, DatasetType, GridType
 
         ds = DatasetType("bears", **original.attrs)
@@ -4450,10 +4500,10 @@ class TestPydap:
         return ds
 
     @contextlib.contextmanager
-    def create_datasets(self, **kwargs):
+    def create_datasets(self, **kwargs) -> Iterator[tuple[Dataset, Dataset]]:
         with open_example_dataset("bears.nc") as expected:
             pydap_ds = self.convert_to_pydap_dataset(expected)
-            actual = open_dataset(PydapDataStore(pydap_ds))
+            actual = open_dataset(PydapDataStore(pydap_ds), **kwargs)
             # TODO solve this workaround:
             # netcdf converts string to byte not unicode
             expected["bears"] = expected["bears"].astype(str)
@@ -4483,14 +4533,14 @@ class TestPydap:
 
         with self.create_datasets() as (actual, expected):
             indexers = {"i": [1, 0, 0], "j": [1, 2, 0, 1]}
-            assert_equal(actual.isel(**indexers), expected.isel(**indexers))
+            assert_equal(actual.isel(indexers), expected.isel(indexers))
 
         with self.create_datasets() as (actual, expected):
             indexers2 = {
                 "i": DataArray([0, 1, 0], dims="a"),
                 "j": DataArray([0, 2, 1], dims="a"),
             }
-            assert_equal(actual.isel(**indexers2), expected.isel(**indexers2))
+            assert_equal(actual.isel(indexers2), expected.isel(indexers2))
 
     def test_compatible_to_netcdf(self) -> None:
         # make sure it can be saved as a netcdf
@@ -4533,6 +4583,21 @@ class TestPydapOnline(TestPydap):
             output_grid=True,
             timeout=120,
         )
+
+
+@network
+@requires_scipy_or_netCDF4
+@requires_pydap
+class TestPydapInstance(TestPydapOnline):
+    @contextlib.contextmanager
+    def create_datasets(self, **kwargs):
+        url = "http://test.opendap.org/opendap/hyrax/data/nc/bears.nc"
+        engine = PydapBackendEntrypoint()
+        actual = open_dataset(url, engine=engine, **kwargs)
+        with open_example_dataset("bears.nc") as expected:
+            # workaround to restore string which is converted to byte
+            expected["bears"] = expected["bears"].astype(str)
+            yield actual, expected
 
 
 @requires_scipy
@@ -5239,7 +5304,7 @@ def test_scipy_entrypoint(tmp_path: Path) -> None:
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc.gz")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
-    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")  # type: ignore[arg-type]
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
 
 
 @requires_h5netcdf

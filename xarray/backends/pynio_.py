@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -27,10 +27,8 @@ from xarray.core.utils import Frozen, FrozenDict, close_on_error
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    import os
-    from io import BufferedIOBase
-
     from xarray.core.dataset import Dataset
+    from xarray.core.types import T_XarrayCanOpen
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -125,9 +123,9 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         https://github.com/pydata/xarray/issues/4491 for more information
     """
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_XarrayCanOpen,
         *,
         mask_and_scale=True,
         decode_times=True,

@@ -4,9 +4,15 @@ import multiprocessing
 import threading
 import uuid
 import weakref
-from collections.abc import Hashable, MutableMapping
-from typing import Any, ClassVar
-from weakref import WeakValueDictionary
+from collections.abc import Hashable, Iterable
+from typing import TYPE_CHECKING, Callable, ClassVar, Literal, overload
+
+if TYPE_CHECKING:
+    from xarray.core.types import LockLike, T_LockLike, TypeAlias
+
+    SchedulerOptions: TypeAlias = Literal[
+        "threaded", "multiprocessing", "distributed", None
+    ]
 
 
 # SerializableLock is adapted from Dask:
@@ -41,12 +47,15 @@ class SerializableLock:
     """
 
     _locks: ClassVar[
-        WeakValueDictionary[Hashable, threading.Lock]
-    ] = WeakValueDictionary()
+        weakref.WeakValueDictionary[Hashable, threading.Lock]
+    ] = weakref.WeakValueDictionary()
     token: Hashable
     lock: threading.Lock
 
-    def __init__(self, token: Hashable | None = None):
+    def __init__(self, token: Hashable = None):
+        self._set_token_and_lock(token)
+
+    def _set_token_and_lock(self, token: Hashable) -> None:
         self.token = token or str(uuid.uuid4())
         if self.token in SerializableLock._locks:
             self.lock = SerializableLock._locks[self.token]
@@ -54,31 +63,32 @@ class SerializableLock:
             self.lock = threading.Lock()
             SerializableLock._locks[self.token] = self.lock
 
-    def acquire(self, *args, **kwargs):
+    def acquire(self, *args, **kwargs) -> bool:
         return self.lock.acquire(*args, **kwargs)
 
-    def release(self, *args, **kwargs):
-        return self.lock.release(*args, **kwargs)
+    def release(self, *args, **kwargs) -> None:
+        self.lock.release(*args, **kwargs)
 
-    def __enter__(self):
-        self.lock.__enter__()
+    def __enter__(self) -> bool:
+        return self.lock.__enter__()
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         self.lock.__exit__(*args)
 
-    def locked(self):
+    def locked(self) -> bool:
         return self.lock.locked()
 
-    def __getstate__(self):
+    def __getstate__(self) -> Hashable:
         return self.token
 
-    def __setstate__(self, token):
-        self.__init__(token)
+    def __setstate__(self, token: Hashable) -> None:
+        self._set_token_and_lock(token)
 
-    def __str__(self):
-        return f"<{self.__class__.__name__}: {self.token}>"
+    def __str__(self) -> str:
+        return f"<{type(self).__name__}: {self.token}>"
 
-    __repr__ = __str__
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.token!r})"
 
 
 # Locks used by multiple backends.
@@ -87,10 +97,12 @@ HDF5_LOCK = SerializableLock()
 NETCDFC_LOCK = SerializableLock()
 
 
-_FILE_LOCKS: MutableMapping[Any, threading.Lock] = weakref.WeakValueDictionary()
+_FILE_LOCKS: weakref.WeakValueDictionary[
+    Hashable, threading.Lock
+] = weakref.WeakValueDictionary()
 
 
-def _get_threaded_lock(key):
+def _get_threaded_lock(key: Hashable) -> threading.Lock:
     try:
         lock = _FILE_LOCKS[key]
     except KeyError:
@@ -98,14 +110,17 @@ def _get_threaded_lock(key):
     return lock
 
 
-def _get_multiprocessing_lock(key):
+def _get_multiprocessing_lock(key: Hashable) -> LockLike:
     # TODO: make use of the key -- maybe use locket.py?
     # https://github.com/mwilliamson/locket.py
     del key  # unused
-    return multiprocessing.Lock()
+    # multiprocessing.Lock is missing the "locked" method???
+    return multiprocessing.Lock()  # type: ignore[return-value]
 
 
-def _get_lock_maker(scheduler=None):
+def _get_lock_maker(
+    scheduler: SchedulerOptions = None,
+) -> Callable[[Hashable], LockLike] | None:
     """Returns an appropriate function for creating resource locks.
 
     Parameters
@@ -120,23 +135,23 @@ def _get_lock_maker(scheduler=None):
 
     if scheduler is None:
         return _get_threaded_lock
-    elif scheduler == "threaded":
+    if scheduler == "threaded":
         return _get_threaded_lock
-    elif scheduler == "multiprocessing":
+    if scheduler == "multiprocessing":
         return _get_multiprocessing_lock
-    elif scheduler == "distributed":
+    if scheduler == "distributed":
         # Lazy import distributed since it is can add a significant
         # amount of time to import
         try:
             from dask.distributed import Lock as DistributedLock
+
+            return DistributedLock
         except ImportError:
-            DistributedLock = None
-        return DistributedLock
-    else:
-        raise KeyError(scheduler)
+            return None
+    raise KeyError(scheduler)
 
 
-def _get_scheduler(get=None, collection=None) -> str | None:
+def _get_scheduler(get=None, collection=None) -> SchedulerOptions:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.
@@ -174,12 +189,12 @@ def _get_scheduler(get=None, collection=None) -> str | None:
     return "threaded"
 
 
-def get_write_lock(key):
+def get_write_lock(key: Hashable) -> LockLike:
     """Get a scheduler appropriate lock for writing to the given resource.
 
     Parameters
     ----------
-    key : str
+    key : hashable
         Name of the resource for which to acquire a lock. Typically a filename.
 
     Returns
@@ -188,10 +203,11 @@ def get_write_lock(key):
     """
     scheduler = _get_scheduler()
     lock_maker = _get_lock_maker(scheduler)
+    assert lock_maker is not None
     return lock_maker(key)
 
 
-def acquire(lock, blocking=True):
+def acquire(lock: LockLike, blocking: bool = True) -> bool:
     """Acquire a lock, possibly in a non-blocking fashion.
 
     Includes backwards compatibility hacks for old versions of Python, dask
@@ -216,29 +232,30 @@ class CombinedLock:
     locks are locked.
     """
 
-    def __init__(self, locks):
+    locks: tuple[LockLike, ...]
+
+    def __init__(self, locks: Iterable[LockLike]):
         self.locks = tuple(set(locks))  # remove duplicates
 
-    def acquire(self, blocking=True):
+    def acquire(self, blocking: bool = True) -> bool:
         return all(acquire(lock, blocking=blocking) for lock in self.locks)
 
-    def release(self):
+    def release(self) -> None:
         for lock in self.locks:
             lock.release()
 
-    def __enter__(self):
-        for lock in self.locks:
-            lock.__enter__()
+    def __enter__(self) -> bool:
+        return all(lock.__enter__() for lock in self.locks)
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         for lock in self.locks:
             lock.__exit__(*args)
 
-    def locked(self):
+    def locked(self) -> bool:
         return any(lock.locked for lock in self.locks)
 
-    def __repr__(self):
-        return f"CombinedLock({list(self.locks)!r})"
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({list(self.locks)!r})"
 
 
 class DummyLock:
@@ -260,9 +277,9 @@ class DummyLock:
         return False
 
 
-def combine_locks(locks):
+def combine_locks(locks: Iterable[LockLike]) -> LockLike:
     """Combine a sequence of locks into a single lock."""
-    all_locks = []
+    all_locks: list[LockLike] = []
     for lock in locks:
         if isinstance(lock, CombinedLock):
             all_locks.extend(lock.locks)
@@ -272,13 +289,22 @@ def combine_locks(locks):
     num_locks = len(all_locks)
     if num_locks > 1:
         return CombinedLock(all_locks)
-    elif num_locks == 1:
+    if num_locks == 1:
         return all_locks[0]
-    else:
-        return DummyLock()
+    return DummyLock()
 
 
-def ensure_lock(lock):
+@overload
+def ensure_lock(lock: Literal[False] | None) -> DummyLock:
+    ...
+
+
+@overload
+def ensure_lock(lock: T_LockLike) -> T_LockLike:
+    ...
+
+
+def ensure_lock(lock: Literal[False] | T_LockLike | None) -> T_LockLike | DummyLock:
     """Ensure that the given object is a lock."""
     if lock is None or lock is False:
         return DummyLock()
