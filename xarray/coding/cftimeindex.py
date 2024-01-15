@@ -632,7 +632,7 @@ class CFTimeIndex(pd.Index):
         """
 
         if not self._data.size:
-            return pd.Index([], dtype="datetime64[ns]")
+            return pd.DatetimeIndex([])
 
         nptimes = cftime_to_nptime(self)
         calendar = infer_calendar_name(self)

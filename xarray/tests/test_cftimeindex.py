@@ -1300,7 +1300,7 @@ def test_asi8_distant_date():
 def test_asi8_empty_cftimeindex():
     index = xr.CFTimeIndex([])
     result = index.asi8
-    expected = np.array([], dtype=int)
+    expected = np.array([], dtype=np.int64)
     np.testing.assert_array_equal(result, expected)
 
 
