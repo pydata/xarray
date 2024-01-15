@@ -238,7 +238,9 @@ def test_assert_all_valid_date_type(date_type, index):
 )
 def test_cftimeindex_field_accessors(index, field, expected):
     result = getattr(index, field)
+    expected = np.array(expected, dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
@@ -260,28 +262,33 @@ def test_cftimeindex_field_accessors(index, field, expected):
 def test_empty_cftimeindex_field_accessors(field):
     index = CFTimeIndex([])
     result = getattr(index, field)
-    assert_array_equal(result, np.array([], dtype=np.float64))
+    expected = np.array([], dtype=np.int64)
+    assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 def test_cftimeindex_dayofyear_accessor(index):
     result = index.dayofyear
-    expected = [date.dayofyr for date in index]
+    expected = np.array([date.dayofyr for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 def test_cftimeindex_dayofweek_accessor(index):
     result = index.dayofweek
-    expected = [date.dayofwk for date in index]
+    expected = np.array([date.dayofwk for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
 def test_cftimeindex_days_in_month_accessor(index):
     result = index.days_in_month
-    expected = [date.daysinmonth for date in index]
+    expected = np.array([date.daysinmonth for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
 
 
 @requires_cftime
