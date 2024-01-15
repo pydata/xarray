@@ -10,7 +10,7 @@ from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.tests import requires_dask, requires_netCDF4
+from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -802,4 +802,19 @@ def test_format_xindexes(as_dataset: bool) -> None:
     obj = obj._to_temp_dataset() if as_dataset else obj
 
     actual = repr(obj.xindexes)
+    assert actual == expected
+
+
+@requires_cftime
+def test_empty_cftimeindex_repr() -> None:
+    index = xr.coding.cftimeindex.CFTimeIndex([])
+
+    expected = """\
+    Indexes:
+        time     CFTimeIndex([], dtype='object', length=0, calendar=None, freq=None)"""
+    expected = dedent(expected)
+
+    da = xr.DataArray([], coords={"time": index})
+
+    actual = repr(da.indexes)
     assert actual == expected

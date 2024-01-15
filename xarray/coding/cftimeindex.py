@@ -187,7 +187,7 @@ def _parsed_string_to_bounds(date_type, resolution, parsed):
 
 def get_date_field(datetimes, field):
     """Adapted from pandas.tslib.get_date_field"""
-    return np.array([getattr(date, field) for date in datetimes])
+    return np.array([getattr(date, field) for date in datetimes], dtype=np.int64)
 
 
 def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
@@ -272,8 +272,8 @@ def format_attrs(index, separator=", "):
     attrs = {
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
-        "calendar": f"'{index.calendar}'",
-        "freq": f"'{index.freq}'" if len(index) >= 3 else None,
+        "calendar": f"{index.calendar!r}",
+        "freq": f"{index.freq!r}",
     }
 
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
@@ -630,6 +630,10 @@ class CFTimeIndex(pd.Index):
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
+
+        if not self._data.size:
+            return pd.DatetimeIndex([])
+
         nptimes = cftime_to_nptime(self)
         calendar = infer_calendar_name(self)
         if calendar not in _STANDARD_CALENDARS and not unsafe:
@@ -679,6 +683,9 @@ class CFTimeIndex(pd.Index):
         """Convert to integers with units of microseconds since 1970-01-01."""
         from xarray.core.resample_cftime import exact_cftime_datetime_difference
 
+        if not self._data.size:
+            return np.array([], dtype=np.int64)
+
         epoch = self.date_type(1970, 1, 1)
         return np.array(
             [
@@ -693,6 +700,9 @@ class CFTimeIndex(pd.Index):
         """The calendar used by the datetimes in the index."""
         from xarray.coding.times import infer_calendar_name
 
+        if not self._data.size:
+            return None
+
         return infer_calendar_name(self)
 
     @property
@@ -700,11 +710,18 @@ class CFTimeIndex(pd.Index):
         """The frequency used by the dates in the index."""
         from xarray.coding.frequencies import infer_freq
 
+        # min 3 elemtents required to determine freq
+        if self._data.size < 3:
+            return None
+
         return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
         from xarray.coding.cftime_offsets import CFTIME_TICKS, to_offset
+
+        if not self._data.size:
+            return CFTimeIndex(np.array(self))
 
         offset = to_offset(freq)
         if not isinstance(offset, CFTIME_TICKS):
