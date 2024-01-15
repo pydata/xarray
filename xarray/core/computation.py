@@ -1775,7 +1775,7 @@ def dot(
     ----------
     *arrays : DataArray or Variable
         Arrays to compute.
-    dim : Hashable, iterable of Hashable, ..., or None, optional
+    dim : str, iterable of hashable, "..." or None, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
     **kwargs : dict

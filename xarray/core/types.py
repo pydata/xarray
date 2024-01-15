@@ -184,7 +184,7 @@ GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
 # Read: https://github.com/pydata/xarray/issues/6142
-Dims = Dims = Union[str, Collection[Hashable], ellipsis, None]
+Dims = Union[str, Collection[Hashable], "ellipsis", None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]
