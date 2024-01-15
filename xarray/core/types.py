@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import sys
-from collections.abc import Hashable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Collection, Hashable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -182,8 +182,7 @@ DaCompatible = Union["DataArray", "VarCompatible"]
 DsCompatible = Union["Dataset", "DaCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
-Dims = Union[str, Iterable[Hashable], "ellipsis", None]
-OrderedDims = Union[str, Sequence[Union[Hashable, "ellipsis"]], "ellipsis", None]
+Dims = Union[Hashable, Collection[Hashable], None]  # Note: Hashable include ellipsis
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 T_ChunkDim: TypeAlias = Union[int, Literal["auto"], None, tuple[int, ...]]

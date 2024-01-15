@@ -76,7 +76,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn, OrderedDims, T_DuckArray
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, T_DuckArray
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -988,7 +988,7 @@ T_None = TypeVar("T_None", None, "ellipsis")
 
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -999,12 +999,12 @@ def parse_dims(
 
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | T_None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     ...
 
 
@@ -1042,16 +1042,19 @@ def parse_dims(
         if replace_none:
             return all_dims
         return dim
-    if isinstance(dim, str):
+    if isinstance(dim, Collection) and not isinstance(dim, str):
+        dim = tuple(dim)
+    else:
         dim = (dim,)
+
     if check_exists:
         _check_dims(set(dim), set(all_dims))
-    return tuple(dim)
+    return dim
 
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1062,7 +1065,7 @@ def parse_ordered_dims(
 
 @overload
 def parse_ordered_dims(
-    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1072,7 +1075,7 @@ def parse_ordered_dims(
 
 
 def parse_ordered_dims(
-    dim: OrderedDims,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
@@ -1080,16 +1083,14 @@ def parse_ordered_dims(
 ) -> tuple[Hashable, ...] | None | ellipsis:
     """Parse one or more dimensions.
 
-    A single dimension must be always a str, multiple dimensions
-    can be Hashables. This supports e.g. using a tuple as a dimension.
     An ellipsis ("...") in a sequence of dimensions will be
     replaced with all remaining dimensions. This only makes sense when
     the input is a sequence and not e.g. a set.
 
     Parameters
     ----------
-    dim : str, Sequence of Hashable or "...", "..." or None
-        Dimension(s) to parse. If "..." appears in a Sequence
+    dim : Hashable or ... (or Sequence thereof), or None
+        Dimension(s) to parse. If ... appears in a Sequence
         it always gets replaced with all remaining dims
     all_dims : tuple of Hashable
         All possible dimensions.
@@ -1103,7 +1104,7 @@ def parse_ordered_dims(
     parsed_dims : tuple of Hashable
         Input dimensions as a tuple.
     """
-    if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
+    if isinstance(dim, Sequence) and not isinstance(dim, str) and ... in dim:
         dims_set: set[Hashable | ellipsis] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
@@ -1126,9 +1127,9 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
-    wrong_dims = dim - all_dims
-    if wrong_dims and wrong_dims != {...}:
+def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+    wrong_dims = (dim - all_dims) - {...}
+    if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
