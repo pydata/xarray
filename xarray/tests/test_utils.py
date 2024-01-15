@@ -255,7 +255,6 @@ def test_infix_dims_errors(supplied, all_):
     ["dim", "expected"],
     [
         pytest.param("a", ("a",), id="str"),
-        pytest.param(1, (1,), id="non_str_hashable"),
         pytest.param(["a", "b"], ("a", "b"), id="list_of_str"),
         pytest.param(["a", 1], ("a", 1), id="list_mixed"),
         pytest.param(["a", ...], ("a", ...), id="list_with_ellipsis"),

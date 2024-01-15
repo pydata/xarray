@@ -57,7 +57,6 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
-    Sequence,
     ValuesView,
 )
 from enum import Enum
@@ -1042,14 +1041,11 @@ def parse_dims(
         if replace_none:
             return all_dims
         return dim
-    if isinstance(dim, Collection) and not isinstance(dim, str):
-        dim = tuple(dim)
-    else:
+    if isinstance(dim, str):
         dim = (dim,)
-
     if check_exists:
         _check_dims(set(dim), set(all_dims))
-    return dim
+    return tuple(dim)
 
 
 @overload
@@ -1083,14 +1079,16 @@ def parse_ordered_dims(
 ) -> tuple[Hashable, ...] | None | ellipsis:
     """Parse one or more dimensions.
 
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
     An ellipsis ("...") in a sequence of dimensions will be
     replaced with all remaining dimensions. This only makes sense when
     the input is a sequence and not e.g. a set.
 
     Parameters
     ----------
-    dim : Hashable or ... (or Sequence thereof), or None
-        Dimension(s) to parse. If ... appears in a Sequence
+    dim : str, Sequence of Hashable or "...", "..." or None
+        Dimension(s) to parse. If "..." appears in a Sequence
         it always gets replaced with all remaining dims
     all_dims : tuple of Hashable
         All possible dimensions.
@@ -1104,7 +1102,7 @@ def parse_ordered_dims(
     parsed_dims : tuple of Hashable
         Input dimensions as a tuple.
     """
-    if isinstance(dim, Sequence) and not isinstance(dim, str) and ... in dim:
+    if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
         dims_set: set[Hashable | ellipsis] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
