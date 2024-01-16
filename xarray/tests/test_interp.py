@@ -838,8 +838,8 @@ def test_interpolate_chunk_1d(
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
                             dest[dim] = dest[dim].chunk(2)
-                actual = da.interp(method=method, **dest, kwargs=kwargs)  # type: ignore
-                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)  # type: ignore
+                actual = da.interp(method=method, **dest, kwargs=kwargs)
+                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
 
                 assert_identical(actual, expected)
 
