@@ -246,7 +246,14 @@ def remove_incompatible_items(
 
 # It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
 def is_dict_like(value: Any) -> TypeGuard[Mapping]:
-    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+    """Return whether to treat value like it is a dictionary.
+    Usually, just tests whether value has 'keys' and '__getitem__' attributes.
+    However, if value._xarray_dict_like_ exists, return that instead.
+    """
+    try:
+        return value._xarray_dict_like_
+    except AttributeError:
+        return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
 def is_full_slice(value: Any) -> bool:
