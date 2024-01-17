@@ -29,8 +29,18 @@ New Features
   By `Llorenç Lledó <https://github.com/lluritu>`_.
 - Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
-  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`) Note that some
-  new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
+  Note that some new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
+  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`)
+- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
+  cumulative aggregations, such as ``sum``, along a dimension — for example
+  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
+  and mostly equivalent to ``.cumsum`` methods, or to
+  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8512`)
+- Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
+  If multiple variables share the same enum in netCDF4, each dataarray will have its own
+  enum definition in their respective dtype metadata.
+  By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -82,6 +92,10 @@ Internal Changes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
+  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
+  use non-dask chunked array types.
+  (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.2023.12.0:
 
@@ -109,13 +123,6 @@ New Features
   example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
   than pandas' default functions. (:pull:`8493`). numbagg is an optional
   dependency, so requires installing separately.
-- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
-  cumulative aggregations, such as ``sum``, along a dimension — for example
-  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
-  and mostly equivalent to ``.cumsum`` methods, or to
-  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
-  (:pull:`8512`).
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Avoid overwriting unchanged existing coordinate variables when appending with :py:meth:`Dataset.to_zarr` by setting ``mode='a-'``.
@@ -222,10 +229,6 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
-- Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
-  If multiple variables share the same enum in netCDF4, each dataarray will have its own
-  enum definition in their respective dtype metadata.
-  By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
 - Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
@@ -626,10 +629,6 @@ Internal Changes
 
 - :py:func:`as_variable` now consistently includes the variable name in any exceptions
   raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
-- Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
-  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
-  use non-dask chunked array types.
-  (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:func:`encode_dataset_coordinates` now sorts coordinates automatically assigned to
   `coordinates` attributes during serialization (:issue:`8026`, :pull:`8034`).
   `By Ian Carroll <https://github.com/itcarroll>`_.
