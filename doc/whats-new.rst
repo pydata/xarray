@@ -14,12 +14,20 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2024.01.0:
 
+v2024.01.0 (17 Jan, 2024)
+-------------------------
 
-.. _whats-new.2023.12.1:
+This release brings support for weights in correlation and covariance functions,
+a new `DataArray.cumulative` aggregation, improvements to `xr.map_blocks`,
+an update to our minimum dependencies, and various bugfixes.
 
-v2023.12.1 (unreleased)
------------------------
+Thanks to our 17 contributors to this release:
+
+Abel Aoun, Deepak Cherian, Illviljan, Johan Mathe, Justus Magin, Kai Mühlbauer,
+Llorenç Lledó, Mark Harfouche, Markel, Mathias Hauser, Maximilian Roos, Michael Niklas,
+Niclas Rieger, Sébastien Celles, Tom Nicholas, Trinh Quoc Anh, and crusaderky.
 
 New Features
 ~~~~~~~~~~~~
@@ -28,8 +36,18 @@ New Features
   By `Llorenç Lledó <https://github.com/lluritu>`_.
 - Accept the compression arguments new in netCDF 1.6.0 in the netCDF4 backend.
   See `netCDF4 documentation <https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables>`_ for details.
-  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`) Note that some
-  new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
+  Note that some new compression filters needs plugins to be installed which may not be available in all netCDF distributions.
+  By `Markel García-Díez <https://github.com/markelg>`_. (:issue:`6929`, :pull:`7551`)
+- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
+  cumulative aggregations, such as ``sum``, along a dimension — for example
+  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
+  and mostly equivalent to ``.cumsum`` methods, or to
+  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
+  By `Maximilian Roos <https://github.com/max-sixty>`_. (:pull:`8512`)
+- Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
+  If multiple variables share the same enum in netCDF4, each dataarray will have its own
+  enum definition in their respective dtype metadata.
+  By `Abel Aoun <https://github.com/bzah>`_. (:issue:`8144`, :pull:`8147`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -54,9 +72,9 @@ Breaking changes
    zarr                      2.12     2.13
   ===================== =========  ========
 
-
 Deprecations
 ~~~~~~~~~~~~
+
 - The `squeeze` kwarg to GroupBy is now deprecated. (:issue:`2157`, :pull:`8507`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -72,18 +90,19 @@ Bug fixes
 - Add tests and fixes for empty :py:class:`CFTimeIndex`, including broken html repr (:issue:`7298`, :pull:`8600`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - The implementation of :py:func:`map_blocks` has changed to minimize graph size and duplication of data.
   This should be a strict improvement even though the graphs are not always embarassingly parallel any more.
   Please open an issue if you spot a regression. (:pull:`8412`, :issue:`8409`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Remove null values before plotting. (:pull:`8535`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
+  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
+  use non-dask chunked array types.
+  (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.2023.12.0:
 
@@ -111,13 +130,6 @@ New Features
   example a 1D array — it's about the same speed as bottleneck, and 2-5x faster
   than pandas' default functions. (:pull:`8493`). numbagg is an optional
   dependency, so requires installing separately.
-- Add :py:meth:`DataArray.cumulative` & :py:meth:`Dataset.cumulative` to compute
-  cumulative aggregations, such as ``sum``, along a dimension — for example
-  ``da.cumulative('time').sum()``. This is similar to pandas' ``.expanding``,
-  and mostly equivalent to ``.cumsum`` methods, or to
-  :py:meth:`DataArray.rolling` with a window length equal to the dimension size.
-  (:pull:`8512`).
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Use a concise format when plotting datetime arrays. (:pull:`8449`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Avoid overwriting unchanged existing coordinate variables when appending with :py:meth:`Dataset.to_zarr` by setting ``mode='a-'``.
@@ -224,10 +236,6 @@ New Features
 
 - Use `opt_einsum <https://optimized-einsum.readthedocs.io/en/stable/>`_ for :py:func:`xarray.dot` by default if installed.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`7764`, :pull:`8373`).
-- Decode/Encode netCDF4 enums and store the enum definition in dataarrays' dtype metadata.
-  If multiple variables share the same enum in netCDF4, each dataarray will have its own
-  enum definition in their respective dtype metadata.
-  By `Abel Aoun <https://github.com/bzah>_`(:issue:`8144`, :pull:`8147`)
 - Add ``DataArray.dt.total_seconds()`` method to match the Pandas API. (:pull:`8435`).
   By `Ben Mares <https://github.com/maresb>`_.
 - Allow passing ``region="auto"`` in  :py:meth:`Dataset.to_zarr` to automatically infer the
@@ -628,10 +636,6 @@ Internal Changes
 
 - :py:func:`as_variable` now consistently includes the variable name in any exceptions
   raised. (:pull:`7995`). By `Peter Hill <https://github.com/ZedThree>`_
-- Redirect cumulative reduction functions internally through the :py:class:`ChunkManagerEntryPoint`,
-  potentially allowing :py:meth:`~xarray.DataArray.ffill` and :py:meth:`~xarray.DataArray.bfill` to
-  use non-dask chunked array types.
-  (:pull:`8019`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:func:`encode_dataset_coordinates` now sorts coordinates automatically assigned to
   `coordinates` attributes during serialization (:issue:`8026`, :pull:`8034`).
   `By Ian Carroll <https://github.com/itcarroll>`_.
